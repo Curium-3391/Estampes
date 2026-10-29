@@ -59,6 +59,8 @@ const ModelAnnotationSchema = z.object({
   x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
   label: z.string().max(64).optional(),
+  // AI mark input cannot explicitly claim to have been authored by a user.
+  author: z.literal("assistant").optional(),
 }).superRefine((a,ctx)=>{
   if(a.targetId && a.type==="arrow"){
     ctx.addIssue({code:"custom",message:"targetId is for points/rectangles only"});
