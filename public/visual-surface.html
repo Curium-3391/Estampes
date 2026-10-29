@@ -96,13 +96,13 @@ function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clien
  const p=point.matrixTransform(matrix.inverse());
  return {x:round(clamp(p.x/640,0,1)),y:round(clamp(p.y/360,0,1))};
 }
-function draft(a,b){return {id:"user-"+(++seq),type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:"YOU "+(userMarks.length+1)};}
+function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:"YOU "+(userMarks.length+1)};}
 function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
 hit.addEventListener("pointerdown",e=>{if(!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;hit.setPointerCapture(e.pointerId);});
 hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=fromPointer(e);if(p){renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");}});
 hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(p){
- let mark=draft(start,p);
+ let mark={...draft(start,p),id:"user-"+(++seq)};
  if(mode!=="point"&&Math.hypot(px(p.x-start.x),py(p.y-start.y))<7){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);status.textContent="已新增標註；可以繼續標記，或傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;previewEl.replaceChildren()});
