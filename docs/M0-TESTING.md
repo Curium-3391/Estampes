@@ -61,3 +61,11 @@ Per the [official ChatGPT UI documentation](https://developers.openai.com/plugin
 If `/version` reports `m0.3.1` but ChatGPT still displays `v0.1.2`, the host is using stale resource/tool metadata. Refresh the custom MCP server's actions in plugin settings where supported, then start a new conversation. Only if there is no refresh action, consider reinstalling the custom plugin to force rediscovery.
 
 `Unknown tool` with the **old** UI does not prove the new server lacks the tool. It may be an old iframe calling the current MCP server. Likewise, HTTP 200 only proves an HTTP response; the user-to-chat round trip requires the model's actual acknowledgement.
+
+## M0.3.2 — Private tool scan compatibility
+
+ChatGPT's plugin scan rejected `record_number_line_selection` with a message that private tools cannot render widgets. The app-only selection tool now has only `_meta.ui.visibility: ["app"]` with **no** UI resource URI. The public `show_number_line` tool alone advertises `ui://estampes/number-line-v031.html`.
+
+To verify the server deploy, visit `https://estampes-mcp.onrender.com/version` and confirm `version: m0.3.2`. Then rerun ChatGPT's MCP tool scan/Refresh. This is a targeted compatibility hypothesis: successful scanning does not yet demonstrate that the app-only tool is callable by the UI.
+
+If scan succeeds, start a new conversation and test the number-line button. If scan still fails, capture the exact scan error rather than changing further unrelated code.
