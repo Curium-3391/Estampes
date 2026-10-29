@@ -13,7 +13,7 @@ button.primary{background:#5865b9;color:white;border-color:transparent}
 button:disabled{opacity:.5}
 #status{min-height:1.5rem;font-size:.85rem}
 </style></head><body><main>
-<h2>Estampes · M0 Number Line</h2><p class="muted">金色是 AI 指向的位置。點選數線，藍色標記會記下你的選擇。</p>
+<h2>Estampes · M0 Number Line <small style="font-size:.65rem;color:#8b99ab">v0.1.2</small></h2><p class="muted">金色是 AI 指向的位置。點選數線，藍色標記會記下你的選擇。</p>
 <svg id="line" viewBox="0 0 560 140" role="img" aria-label="從負四到正四的數線，點選刻度可以指認數字">
 <line x1="35" y1="70" x2="525" y2="70" stroke="currentColor" stroke-width="2"/>
 <path d="M35 70 l10 -5v10z M525 70 l-10 -5v10z" fill="currentColor"/>
@@ -46,7 +46,7 @@ send.addEventListener("click",async()=>{
  const payload={schemaVersion:"0.1-draft",imageId:"number-line-m0",author:"user",type:"point",value,x:(value+4)/8,y:0.5};
  let toolSucceeded=false;
  try {
-   status.textContent="正在記錄選擇…";
+   status.textContent="v0.1.2：正在記錄選擇…";
    const tool=await request("tools/call",{name:"record_number_line_selection",arguments:{value}});
    if(tool?.isError)throw Error("Server rejected selection: "+JSON.stringify(tool));
    toolSucceeded=true;
