@@ -14,7 +14,7 @@ small,.muted{color:GrayText}
 header{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
 nav{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
 button{font:inherit;font-size:.86rem;color:inherit;background:transparent;border:1px solid #9997;border-radius:8px;padding:7px 12px;cursor:pointer}
-button[aria-pressed=true]{background:#4D78D4;color:white;border-color:#4D78D4}
+button[aria-pressed=true]{background:#356BD6;color:white;border-color:#356BD6}
 button:disabled{opacity:.5;cursor:default}
 figure{margin:0;border:1px solid #9996;border-radius:10px;overflow:hidden;background:#20252a}
 img{display:block;width:100%;height:auto;min-height:120px;max-height:520px;object-fit:contain}
@@ -27,15 +27,15 @@ figcaption{font-size:.8rem;color:GrayText;padding:8px 10px;background:Canvas}
 </head>
 <body>
 <main>
-<header><h1>Estampes · Visual Evidence</h1><small>v0.4.5 · 真實 PNG 證據</small></header>
+<header><h1>Estampes · Visual Evidence</h1><small>v0.4.7 · 舊版獨立 PNG 檢視器</small></header>
 <p id="details">準備接收影像資料…</p>
 <div id="viewer" hidden>
 <nav aria-label="切換影像來源">
-<button type="button" data-view="marked" aria-pressed="true">藍色標記全圖</button>
+<button type="button" data-view="marked" aria-pressed="true">中性焦點全圖</button>
 <button type="button" data-view="original" aria-pressed="false">原始完整圖片</button>
 <button type="button" data-view="crop" aria-pressed="false">局部放大（無標記）</button>
 </nav>
-<figure><img id="image" alt="Estampes 完整影像與標註焦點"><figcaption id="caption">藍色標記全圖</figcaption></figure>
+<figure><img id="image" alt="Estampes 完整影像與標註焦點"><figcaption id="caption">中性焦點全圖</figcaption></figure>
 </div>
 <p id="status" role="status" aria-live="polite">正在與 ChatGPT 建立元件連線…</p>
 <button type="button" id="retry" disabled>重新取得圖片</button>
