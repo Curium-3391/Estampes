@@ -36,19 +36,25 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
       await sleep(100);
     }
     assert.ok(healthy,"server failed to start: "+output);
+    const versionResponse=await fetch(base+"/version",{cache:"no-store"});
+    assert.equal(versionResponse.status,200);
+    const version=await versionResponse.json();
+    assert.equal(version.version,"m0.3.1");
+    assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
+    assert.equal(version.selectionTool,"record_number_line_selection");
     await client.connect(new StreamableHTTPClientTransport(new URL(base+"/mcp")));
     assert.equal(client.getProtocolEra(),"modern");
     const tools=await client.listTools();
     const number=tools.tools.find(t=>t.name==="show_number_line");
     assert.ok(number,"number-line tool missing");
-    assert.equal(number._meta?.ui?.resourceUri,"ui://estampes/number-line.html");
+    assert.equal(number._meta?.ui?.resourceUri,"ui://estampes/number-line-v031.html");
     const result=await client.callTool({name:"show_number_line",arguments:{target:2}});
     assert.equal(result.structuredContent?.target,2);
     assert.equal(result.structuredContent?.x,0.75);
     // M0.3: the previously missing app-scoped tool must be present and callable.
     const selectionTool=tools.tools.find(t=>t.name==="record_number_line_selection");
     assert.ok(selectionTool,"UI selection tool missing from MCP discovery");
-    assert.equal(selectionTool._meta?.ui?.resourceUri,"ui://estampes/number-line.html");
+    assert.equal(selectionTool._meta?.ui?.resourceUri,"ui://estampes/number-line-v031.html");
     assert.deepEqual(selectionTool._meta?.ui?.visibility,["app"]);
     const selection=await client.callTool({
       name:"record_number_line_selection",
@@ -59,11 +65,11 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(selection.structuredContent?.value,-2);
     assert.equal(selection.structuredContent?.x,0.25);
     assert.equal(selection.structuredContent?.y,0.5);
-    const resource=await client.readResource({uri:"ui://estampes/number-line.html"});
-    const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line.html");
+    const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
+    const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
     assert.ok(html?.text?.includes("Estampes · M0 Number Line"));
     assert.equal(html.mimeType,"text/html;profile=mcp-app");
-    assert.ok(html.text.includes("v0.3.0"),"UI resource is stale");
+    assert.ok(html.text.includes("v0.3.1"),"UI resource is stale");
     assert.ok(html.text.includes('name:"record_number_line_selection"'));
     assert.ok(html.text.includes('request("ui/message"'));
   } finally {
