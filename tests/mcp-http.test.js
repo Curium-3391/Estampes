@@ -39,9 +39,12 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.4.2");
+    assert.equal(version.version,"m0.4.3");
+    assert.equal(version.visualInputTool,"inspect_visual");
+    assert.equal(version.visualInputFormat,"mcp-image-content-png");
+    assert.equal(version.visualModelVisibility,"host-dependent-unverified");
     assert.equal(version.annotationProtocol,"0.2-draft");
-    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v042.html");
+    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v043.html");
     assert.equal(version.visualTool,"present_visual");
     assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
@@ -73,7 +76,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Generic canvas: model annotations, app-only validation, HTML resource.
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
-    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v042.html");
+    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v043.html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
     const visual=await client.callTool({name:"present_visual",arguments:{
       scene:"shapes",annotations:[visualAnnotation]
@@ -149,10 +152,34 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
       rejected=true;
     }
     assert.ok(rejected,"out-of-range rectangle must be rejected");
-    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v042.html"});
-    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v042.html");
+    // Model-only visual input bridge: verify that the MCP response contains
+    // actual PNG images, not merely structured coordinate JSON.
+    const inspectTool=tools.tools.find(t=>t.name==="inspect_visual");
+    assert.ok(inspectTool,"inspect_visual must be model-callable");
+    assert.equal(inspectTool._meta?.ui?.visibility,undefined);
+    const visualEvidence=await client.callTool({name:"inspect_visual",arguments:{
+      scene:"landscape",imageId:"demo:landscape",revision:"svg-v1",
+      focus:{type:"rect",x:0.1,y:0.42,x2:0.4,y2:0.92}
+    }});
+    assert.notEqual(visualEvidence.isError,true);
+    assert.equal(visualEvidence.structuredContent?.kind,"estampes.visual_evidence");
+    assert.equal(visualEvidence.structuredContent?.evidenceCount,3);
+    assert.equal(visualEvidence.structuredContent?.source?.logicalSize?.unit,"svg-user-unit");
+    assert.equal(visualEvidence.structuredContent?.modelVisionStatus,"host-dependent-unverified");
+    const images=visualEvidence.content.filter(item=>item.type==="image");
+    assert.equal(images.length,3,"original, marked view and raw crop must be image blocks");
+    for(const img of images){
+      assert.equal(img.mimeType,"image/png");
+      const bytes=Buffer.from(img.data,"base64");
+      assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
+    }
+    assert.match(visualEvidence.content[0]?.text,/image pixels|PNG pixels|real PNG pixels/i);
+    const chatHelp=checked.structuredContent?.chatMessage??"";
+    assert.match(chatHelp,/inspect_visual/);
+    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v043.html"});
+    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v043.html");
     assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
-    assert.ok(visualHtml?.text?.includes("v0.4.2"));
+    assert.ok(visualHtml?.text?.includes("v0.4.3"));
     assert.ok(visualHtml?.text?.includes('name:"validate_visual_annotations"'));
     const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
