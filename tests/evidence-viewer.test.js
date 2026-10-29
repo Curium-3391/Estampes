@@ -27,7 +27,7 @@ test("evidence viewer actually renders the 3 PNG blocks for user",()=>{
 });
 
 test("preview requires real png blocks and never claims to classify the subject",()=>{
- assert.match(script,/v\.mimeType==="image\/png"/);
+ assert.match(script,/estampes\.visual_evidence_view/);
  assert.match(html,/原始完整圖片/);
  assert.match(html,/局部放大/);
  assert.doesNotMatch(script,/tree|house|mountain-right/);
