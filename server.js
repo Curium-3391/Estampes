@@ -23,7 +23,7 @@ import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
 import {
-  processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay,
+  processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -42,10 +42,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -504,6 +504,36 @@ function makeServer() {
         return logSizes("load_visual_canvas", {
           content: [{ type: "text", text: "Canvas data for " + imageId + " sent to the widget." }],
           structuredContent: { kind: "estampes.visual_canvas", imageId, part, ...body, ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}) },
+        }, { appOnly: true });
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: a sharper tile of the photo while
+  // the user zooms. App-only, like load_visual_canvas.
+  registerAppTool(
+    server,
+    "load_visual_region",
+    {
+      title: "Load photo detail",
+      description: "Return a higher-resolution tile of a photo region for the Estampes widget.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        region: RegionSchema,
+        maxSide: z.number().int().min(256).max(2048).default(1600),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, region, maxSide }) => {
+      try {
+        const tile = await regionTile(getImage(imageId), region, maxSide);
+        return logSizes("load_visual_region", {
+          content: [{ type: "text", text: "Detail tile for " + imageId + " sent to the widget." }],
+          structuredContent: { kind: "estampes.visual_tile", imageId, region: tile.region,
+            width: tile.width, height: tile.height, mimeType: tile.mimeType, data: tile.data.toString("base64") },
         }, { appOnly: true });
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };

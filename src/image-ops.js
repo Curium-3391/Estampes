@@ -275,3 +275,15 @@ export async function compactForDisplay(out, maxBytes = 220_000) {
   if (data.length > maxBytes) data = await shrink(62);
   return { ...out, data, mimeType: "image/jpeg" };
 }
+
+// A sharper tile of the photo for the canvas when the user zooms in: the
+// region at native resolution (never enlarged), long side <= maxSide.
+export async function regionTile(entry, region, maxSide = 1600) {
+  const px = regionToPixels(region, entry.width, entry.height);
+  const side = Math.min(2048, Math.max(256, Math.round(maxSide)));
+  const { data, info } = await entrySharp(entry).extract(px)
+    .resize({ width: side, height: side, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
+  return { data, mimeType: "image/jpeg", width: info.width, height: info.height,
+    region: pixelsToRegion(px, entry.width, entry.height) };
+}

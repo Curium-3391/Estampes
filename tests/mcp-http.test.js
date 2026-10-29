@@ -133,6 +133,8 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // The widget reloads pixels itself when the host drops a large result.
     const loader=tools.tools.find(t=>t.name==="load_visual_canvas");
     assert.deepEqual(loader?._meta?.ui?.visibility,["app"]);
+    const tiles=tools.tools.find(t=>t.name==="load_visual_region");
+    assert.deepEqual(tiles?._meta?.ui?.visibility,["app"]);
     const missing=await client.callTool({name:"load_visual_canvas",arguments:{imageId:"img:0000000000000000"}});
     assert.equal(missing.isError,true);
     const userMarks=[{id:"user-1",type:"point",x:0,y:1,label:"Edge"},

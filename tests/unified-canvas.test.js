@@ -154,3 +154,29 @@ test("provenance colors are distinct from viewer inspection marker",()=>{
   assert.match(source,/#579DF6/);
   assert.doesNotMatch(source,/source\.images/);
 });
+
+test("zoom keeps the point under the pointer and clamps to the photo",()=>{
+  const start=source.indexOf("function setCam(next){"),stop=source.indexOf("const camCentre",start);
+  assert.ok(start>=0&&stop>start);
+  const z=new Function("let cam=null;const VW=1000,VH=1333,MAX_ZOOM=24;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));"+
+    "const applyViewBox=()=>{},scheduleRender=()=>{},scheduleDetail=()=>{};const svg={getScreenCTM:()=>({a:1})};\n"+
+    source.slice(start,stop)+"\nreturn {zoomAt,panBy,setCam,get cam(){return cam}};")();
+  z.zoomAt(4,{x:500,y:600});
+  assert.equal(z.cam.w,250);
+  // The anchor keeps its relative position inside the view.
+  assert.ok(Math.abs((500-z.cam.x)/z.cam.w-0.5)<1e-9);
+  z.panBy(-10000,-10000);
+  assert.equal(z.cam.x,750);assert.ok(Math.abs(z.cam.y+z.cam.h-1333)<1e-9);
+  z.zoomAt(1000,{x:900,y:1300});assert.ok(Math.abs(z.cam.w-1000/24)<1e-9);
+  z.zoomAt(0.001,{x:0,y:0});assert.equal(z.cam,null);
+});
+
+test("pinch, wheel and pan never draw; labels and drawing tolerances follow the zoom",()=>{
+  assert.match(source,/if\(pointers\.size>=2\)\{cancelStroke\(\)/);
+  assert.match(source,/svg\.addEventListener\("wheel"[\s\S]*passive:false/);
+  assert.match(source,/gesturechange/);
+  assert.match(source,/lk=U\(\)/);
+  assert.match(source,/1\.5\*U\(\)/);
+  assert.match(source,/name:"load_visual_region"/);
+  assert.match(html,/data-mode="pan"/);
+});

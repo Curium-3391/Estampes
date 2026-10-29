@@ -15,7 +15,10 @@ button.primary{background:#356BD6;color:white;border-color:transparent}
 button:disabled{opacity:.45;cursor:not-allowed}
 .view-tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px}
 #focus-choice{font:inherit;font-size:.84rem;border:1px solid #8887;color:CanvasText;background:Canvas;border-radius:8px;padding:7px}
-#edit-tools[hidden],#focus-choice[hidden]{display:none}
+#edit-tools[hidden],#focus-choice[hidden],#zoom-tools[hidden]{display:none}
+#zoom-level{min-width:3.5em;text-align:center;font-variant-numeric:tabular-nums}#zoom-tools .hint{font-size:.78rem;color:GrayText}
+body.fullscreen #surface{max-height:calc(100vh - 280px)}
+#surface.panning{cursor:grab}
 #context-details{margin:12px 0;border:1px solid #8885;border-radius:10px;padding:0 12px}
 #context-details>summary{cursor:pointer;padding:10px 0;font-size:.86rem}
 #context-details .context-panel{padding:0;margin:0 0 10px;border:0}
@@ -76,6 +79,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button data-pen="pen" aria-pressed="true">筆</button>
 <button data-pen="highlighter" aria-pressed="false" title="半透明，不會蓋住底下的圖">螢光筆</button>
 </div>
+<div class="toolbar" id="zoom-tools" role="group" aria-label="縮放">
+<button id="zoom-out" title="縮小" aria-label="縮小">－</button><span id="zoom-level">100%</span><button id="zoom-in" title="放大" aria-label="放大">＋</button>
+<button id="zoom-fit">整張</button>
+<button data-mode="pan" aria-pressed="false" title="拖曳移動畫面；也可以按住空白鍵或用滑鼠中鍵拖曳">移動</button>
+<span class="hint">雙指捏合或 Ctrl＋滾輪縮放，放大後畫細線</span>
+</div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
 <g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="preview"></g>
@@ -126,6 +135,7 @@ const checkView=document.querySelector("#check-view"),checkImg=document.querySel
 const checkTab=document.querySelector('[data-view="check"]'),undoBtn=document.querySelector("#undo"),redoBtn=document.querySelector("#redo");
 const exportImageBtn=document.querySelector("#export-image"),exportMarksBtn=document.querySelector("#export-marks");
 let exportLinks=null;
+const zoomTools=document.querySelector("#zoom-tools"),zoomLevel=document.querySelector("#zoom-level");
 const INTENT_TEXT={
  "point-out":"我想指出這個位置",
  "ask-about-region":"請解釋我標記的區域",
@@ -157,12 +167,19 @@ const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公�
 let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
 const IMAGE_ID=/^img:[0-9a-f]{16}$/;
 const K=()=>VW/640;
+// User zoom: the visible part of the canvas, in canvas units (null = all).
+const MAX_ZOOM=24;
+let cam=null,detail=null;
+const Z=()=>cam?VW/cam.w:1;
+// One "screen unit": K at full view, smaller when zoomed, so drawing
+// thresholds and labels stay the same size on screen.
+const U=()=>K()/Z();
 const MAX_MARKS=30;let selectedScene="landscape",assistantMarks=[],priorUserMarks=[],userMarks=[],mode="point",ready=false,start=null,seq=0,rpcId=0;
 const pending=new Map();
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const node=(tag,attributes,parent)=>{const el=document.createElementNS(NS,tag);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));parent.append(el);return el};
 const px=n=>n*VW,py=n=>n*VH;
-const round=n=>Math.round(n*10000)/10000;
+const round=n=>Math.round(n*100000)/100000;
 const in01=v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=1;
 const MAX_POINTS=128;
 const valid=(a)=>a&&["point","rect","arrow","polyline"].includes(a.type)&&[a.x,a.y].every(in01)&&
@@ -203,11 +220,11 @@ function simplify(points,tol){
 // A hand stroke is a smooth curve; ending near its start makes it a loop.
 function freehandMark(points){
  const a=points[0],b=points.at(-1);
- const loop=points.length>=4&&Math.hypot(px(b.x-a.x),py(b.y-a.y))<14*K();
+ const loop=points.length>=4&&Math.hypot(px(b.x-a.x),py(b.y-a.y))<14*U();
  return polylineMark(loop?points.slice(0,-1):points,{smooth:true,...(loop?{closed:true}:{})});
 }
 function thin(points){
- let tol=.6*K(),out=simplify(points,tol);
+ let tol=.6*U(),out=simplify(points,tol);
  while(out.length>MAX_POINTS){tol*=1.5;out=simplify(points,tol);}
  return out;
 }
@@ -220,7 +237,8 @@ function renderMarks(layer,items,color,author){
  for(const a of items){
    if(!valid(a))continue;
    const x=px(a.x),y=py(a.y),x2=px(a.x2??a.x),y2=py(a.y2??a.y);
-   const k=K(),ink=COLORS[a.color]??color,hl=a.pen==="highlighter";
+   // Ink scales with zoom (it is part of the picture); labels do not.
+   const k=K(),lk=U(),ink=COLORS[a.color]??color,hl=a.pen==="highlighter";
    // A highlighter is wide and translucent, with no dark outline.
    const w=(hl?14:3)*k*(SIZES[a.size]??1),op=hl?.38:1;
    const line={stroke:ink,"stroke-width":w,"stroke-opacity":op,"stroke-linejoin":"round","stroke-linecap":"round",fill:"none"};
@@ -244,14 +262,14 @@ function renderMarks(layer,items,color,author){
      const d=pathData(a);
      if(!hl)node("path",{d,...line,stroke:"#17212A","stroke-opacity":.55,"stroke-width":w*1.7},layer);
      node("path",{d,...line,...(hl&&a.closed?{fill:ink,"fill-opacity":.18}:{})},layer);
-     if(!hl&&a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*k,fill:ink,stroke:"#fff","stroke-width":1.5*k},layer);
+     if(!hl&&a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*lk,fill:ink,stroke:"#fff","stroke-width":1.5*lk},layer);
    }
    // Distinguish a guessed model coordinate from a known scene landmark;
    // GPT may claim it inspected the pixels (✓), which is still its own claim.
    const uncertain=author==="AI" && a.grounding!=="scene-anchor" && a.status!=="inspected";
    const label=String((a.status==="inspected"?"✓ ":uncertain?"? ":"")+(a.label||author)).slice(0,64);
    const lx=a.type==="polyline"?px(a.points[0].x):x,ly=a.type==="polyline"?py(a.points[0].y):y;
-   const labelNode=node("text",{x:clamp(lx+9*k,5*k,VW-100*k),y:clamp(ly-12*k,14*k,VH-14*k),fill:color,"font-size":15*k,"font-weight":700,stroke:"#17212A","stroke-width":.8*k,"paint-order":"stroke"},layer);
+   const labelNode=node("text",{x:clamp(lx+9*lk,5*lk,VW-100*lk),y:clamp(ly-12*lk,14*lk,VH-14*lk),fill:color,"font-size":15*lk,"font-weight":700,stroke:"#17212A","stroke-width":.8*lk,"paint-order":"stroke"},layer);
    labelNode.textContent=label;
  }
 }
@@ -322,7 +340,9 @@ function renderView(){
  const focus=marks.find(m=>m.key===selectedFocusId)?.mark;
  const r=processed?.region;
  svg.setAttribute("viewBox",processed?[r.x*VW,r.y*VH,(r.x2-r.x)*VW,(r.y2-r.y)*VH].join(" "):
-   viewMode==="zoom"&&focus?cropBox(focus):"0 0 "+VW+" "+VH);
+   viewMode==="zoom"&&focus?cropBox(focus):zoomable()&&cam?[cam.x,cam.y,cam.w,cam.h].join(" "):"0 0 "+VW+" "+VH);
+ zoomTools.hidden=!zoomable();zoomLevel.textContent=Math.round(Z()*100)+"%";
+ svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?processed.label+" · 處理後檢視（不含標註）":
    {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
  document.querySelector("#caption").textContent=(imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
@@ -331,7 +351,8 @@ function render(){
  hit.setAttribute("width",VW);hit.setAttribute("height",VH);
  if(imageId){
    sceneEl.replaceChildren();
-   if(photo){node("image",{href:photo,x:0,y:0,width:VW,height:VH,preserveAspectRatio:"none"},sceneEl);}
+   if(photo){node("image",{href:photo,x:0,y:0,width:VW,height:VH,preserveAspectRatio:"none"},sceneEl);
+     if(detail&&cam){const r=detail.region;node("image",{href:detail.href,x:r.x*VW,y:r.y*VH,width:(r.x2-r.x)*VW,height:(r.y2-r.y)*VH,preserveAspectRatio:"none"},sceneEl);}}
    else{
      node("rect",{width:VW,height:VH,fill:"#8882"},sceneEl);
      const t=node("text",{x:VW/2,y:VH/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);
@@ -371,7 +392,7 @@ function applyInput(args){
  appliedKey=key;
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
    const sameImage=args.imageId===imageId;
-   if(!sameImage){photo=null;views=[];renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    VW=1000;if(w>0&&h>0)VH=Math.round(1000*h/w);else if(!sameImage)VH=750;
@@ -493,13 +514,104 @@ function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point
 function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
 let stroke=[];
+// ---- Zoom and pan --------------------------------------------------------
+// Pinch (touch, or a trackpad as Ctrl+wheel / Safari gesture events) and
+// Ctrl+wheel zoom about the pointer; drag pans in 移動 mode, with the space
+// bar held, or with the middle button; plain wheel/two-finger scroll pans
+// once zoomed. A second finger cancels the stroke the first one started.
+const zoomable=()=>viewMode==="annotated"||viewMode==="original";
+function applyViewBox(){if(zoomable())svg.setAttribute("viewBox",cam?[cam.x,cam.y,cam.w,cam.h].join(" "):"0 0 "+VW+" "+VH);}
+let raf=0;
+function scheduleRender(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render();});}
+function setCam(next){
+ if(!next||next.w>=VW*0.999)cam=null;
+ else{const w=clamp(next.w,VW/MAX_ZOOM,VW),h=w*VH/VW;cam={w,h,x:clamp(next.x,0,VW-w),y:clamp(next.y,0,VH-h)};}
+ applyViewBox();scheduleRender();scheduleDetail();
+}
+function canvasPoint(e){const m=svg.getScreenCTM();if(!m)return {x:VW/2,y:VH/2};const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(m.inverse());return {x:q.x,y:q.y};}
+function zoomAt(f,c){const v=cam??{x:0,y:0,w:VW,h:VH};const w=clamp(v.w/f,VW/MAX_ZOOM,VW),t=w/v.w;setCam({x:c.x-(c.x-v.x)*t,y:c.y-(c.y-v.y)*t,w});}
+function panBy(dx,dy){if(!cam)return;const m=svg.getScreenCTM();const u=m?1/m.a:1;setCam({...cam,x:cam.x-dx*u,y:cam.y-dy*u});}
+const camCentre=()=>cam?{x:cam.x+cam.w/2,y:cam.y+cam.h/2}:{x:VW/2,y:VH/2};
+document.querySelector("#zoom-in").addEventListener("click",()=>zoomAt(1.6,camCentre()));
+document.querySelector("#zoom-out").addEventListener("click",()=>zoomAt(1/1.6,camCentre()));
+document.querySelector("#zoom-fit").addEventListener("click",()=>setCam(null));
+svg.addEventListener("wheel",e=>{
+ if(!zoomable())return;
+ // A mouse notch (deltaY ~100) zooms 1.65x; trackpad pinches send small deltas.
+ if(e.ctrlKey||e.metaKey){e.preventDefault();zoomAt(Math.exp(-clamp(e.deltaY*(e.deltaMode?33:1),-50,50)*0.01),canvasPoint(e));}
+ else if(cam){e.preventDefault();panBy(-e.deltaX,-e.deltaY);}
+},{passive:false});
+let gestureScale=1;
+svg.addEventListener("gesturestart",e=>{e.preventDefault();gestureScale=1;});
+svg.addEventListener("gesturechange",e=>{e.preventDefault();if(!zoomable())return;zoomAt(e.scale/gestureScale,canvasPoint(e));gestureScale=e.scale;});
+const pointers=new Map();
+let pinch=null,panning=null,gestureLock=false,spaceDown=false;
+const pinchState=()=>{const [a,b]=[...pointers.values()];return {d:Math.hypot(a.x-b.x,a.y-b.y)||1,m:{clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2}};};
+function cancelStroke(){start=null;stroke=[];previewEl.replaceChildren();}
+svg.addEventListener("pointerdown",e=>{
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(!zoomable())return;
+ if(pointers.size>=2){cancelStroke();panning=null;pinch=pinchState();gestureLock=true;e.stopPropagation();return;}
+ if(mode==="pan"||spaceDown||e.button===1||viewMode!=="annotated"){
+   e.stopPropagation();e.preventDefault();
+   if(cam){panning={x:e.clientX,y:e.clientY};svg.setPointerCapture(e.pointerId);}
+   return;
+ }
+ if(gestureLock)e.stopPropagation();
+},true);
+svg.addEventListener("pointermove",e=>{
+ if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pinch&&pointers.size>=2){
+   const now=pinchState();
+   zoomAt(now.d/pinch.d,canvasPoint(now.m));
+   panBy(now.m.clientX-pinch.m.clientX,now.m.clientY-pinch.m.clientY);
+   pinch=now;e.stopPropagation();return;
+ }
+ if(panning){panBy(e.clientX-panning.x,e.clientY-panning.y);panning={x:e.clientX,y:e.clientY};e.stopPropagation();return;}
+ if(gestureLock)e.stopPropagation();
+},true);
+function pointerEnd(e){
+ pointers.delete(e.pointerId);
+ if(pointers.size<2)pinch=null;
+ if(panning){panning=null;e.stopPropagation();}
+ if(gestureLock){e.stopPropagation();if(!pointers.size)gestureLock=false;}
+}
+svg.addEventListener("pointerup",pointerEnd,true);
+svg.addEventListener("pointercancel",pointerEnd,true);
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&!e.target.closest?.("input,textarea,select,button")&&zoomable()&&cam){spaceDown=true;e.preventDefault();}});
+document.addEventListener("keyup",e=>{if(e.code==="Space")spaceDown=false;});
+// A sharper tile of the zoomed area from the server (app-only tool), so
+// fine detail is not limited to the display copy of the photo.
+let detailTimer=0,detailSeq=0;
+function scheduleDetail(){
+ clearTimeout(detailTimer);
+ if(!imageId||!photo||!cam||Z()<1.5)return;
+ detailTimer=setTimeout(loadDetail,250);
+}
+async function loadDetail(){
+ if(!ready||!cam||!imageId)return;
+ const z=Z(),m=0.25;
+ const region={x:clamp((cam.x-cam.w*m)/VW,0,1),y:clamp((cam.y-cam.h*m)/VH,0,1),x2:clamp((cam.x+cam.w*(1+m))/VW,0,1),y2:clamp((cam.y+cam.h*(1+m))/VH,0,1)};
+ const seen=detail&&detail.zoom>=z*0.8&&detail.region.x<=cam.x/VW&&detail.region.y<=cam.y/VH&&
+   detail.region.x2>=(cam.x+cam.w)/VW&&detail.region.y2>=(cam.y+cam.h)/VH;
+ if(seen)return;
+ const id=imageId,seq=++detailSeq;
+ const maxSide=Math.min(2048,Math.ceil(Math.max(svg.clientWidth,svg.clientHeight)*(window.devicePixelRatio||1)*(1+2*m)));
+ try{
+   const result=await request("tools/call",{name:"load_visual_region",arguments:{imageId:id,region,maxSide}});
+   const r=result?.structuredContent;
+   if(result?.isError||r?.kind!=="estampes.visual_tile"||id!==imageId||seq!==detailSeq)return;
+   const href=dataUrl(r);if(!href||!inRegion(r.region))return;
+   detail={href,region:r.region,zoom:z};scheduleRender();
+ }catch{}
+}
 hit.addEventListener("pointerdown",e=>{if(!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];hit.setPointerCapture(e.pointerId);});
 hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=fromPointer(e);if(!p)return;
  if(mode==="polyline"){
    // Pens and tablets report more samples than pointermove fires; use them all.
    for(const ev of e.getCoalescedEvents?.()??[e]){
      const q=fromPointer(ev),last=stroke.at(-1);
-     if(q&&Math.hypot(px(q.x-last.x),py(q.y-last.y))>=1.5*K())stroke.push(q);
+     if(q&&Math.hypot(px(q.x-last.x),py(q.y-last.y))>=1.5*U())stroke.push(q);
    }
    if(stroke.length>1)renderMarks(previewEl,[{...polylineMark(thin(stroke),{smooth:true}),...styleFields(),label:""}],"#579DF6","YOU");
    return;
@@ -510,7 +622,7 @@ hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
    :{...draft(start,p),id:ID_PREFIX+(++seq)};
- if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
+ if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
@@ -564,6 +676,9 @@ const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput){if(o?.toolInput&
  seenOutput=o.toolOutput;seenMeta=o.toolResponseMetadata;
  applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
 window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
+// More room for the canvas when ChatGPT shows the widget full screen.
+const syncDisplayMode=()=>document.body.classList.toggle("fullscreen",window.openai?.displayMode==="fullscreen");
+window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;}
