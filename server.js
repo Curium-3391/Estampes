@@ -12,7 +12,9 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
-import { resolveSceneAnnotation, resolveCoordinateAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
+import {
+  resolveSceneAnnotation, resolveCoordinateAnnotation, replayUserAnnotation, MARK_TYPES, MAX_POLYLINE_POINTS, MARK_STATUSES,
+} from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 import { downloadImage, registerImage, getImage } from "./src/image-store.js";
@@ -34,10 +36,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -48,20 +50,35 @@ const visualHtml = loadWidget("visual-surface.html");
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
 const Point01 = z.number().finite().min(0).max(1);
 
+const PolylinePointsSchema = z.array(z.object({ x: Point01, y: Point01 }))
+  .min(2).max(MAX_POLYLINE_POINTS);
+const checkGeometry = (a, ctx) => {
+  if (a.type === "polyline") {
+    if (!a.points) ctx.addIssue({ code: "custom", message: "Polyline requires points" });
+    return;
+  }
+  if (a.x === undefined || a.y === undefined) ctx.addIssue({ code: "custom", message: "x/y are required" });
+  if (a.type !== "point" && (a.x2 === undefined || a.y2 === undefined)) {
+    ctx.addIssue({ code: "custom", message: "Rect/arrow require x2/y2" });
+  }
+};
+
 // Guaranteed geometry for renderer + user validation.
 const VisualAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
-  type: z.enum(["point", "rect", "arrow"]),
-  x: Point01, y: Point01,
+  type: z.enum(MARK_TYPES),
+  x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
+  points: PolylinePointsSchema.optional(),
+  smooth: z.boolean().optional(),
+  closed: z.boolean().optional(),
   label: z.string().max(64).optional(),
+  note: z.string().max(200).optional().describe("Assistant's finding about this mark, shown beside it (e.g. the chip's part number)"),
+  status: z.enum(MARK_STATUSES).optional().describe("inspected = you looked at the pixels (process_image); uncertain = not confirmed"),
+  role: z.enum(["focus", "context"]).optional(),
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
-}).superRefine((a,ctx)=>{
-  if(a.type!=="point" && (a.x2===undefined || a.y2===undefined)) {
-    ctx.addIssue({code:"custom",message:"Rectangle and arrow require x2/y2"});
-  }
-});
+}).superRefine(checkGeometry);
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
 // Model-facing annotations use coordinates ONLY. Legacy semantic anchors
@@ -69,19 +86,32 @@ const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 // never exposed as an object-position catalog to the model.
 const ModelAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
-  type: z.enum(["point", "rect", "arrow"]),
-  x: Point01, y: Point01,
+  type: z.enum(MARK_TYPES),
+  x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
+  points: PolylinePointsSchema.optional().describe("polyline only: ordered vertices, e.g. along a PCB trace or a freehand sketch"),
+  smooth: z.boolean().optional().describe("polyline only: draw a smooth curve through the points (freehand look)"),
+  closed: z.boolean().optional().describe("polyline only: join the last point to the first, e.g. to circle a part"),
   label: z.string().max(64).optional(),
+  note: z.string().max(200).optional().describe("Your finding about this mark, shown beside it, e.g. 'SONY CXD2500AQ, CD DSP'"),
+  status: z.enum(MARK_STATUSES).optional().describe("inspected only if you actually looked at these pixels (e.g. via process_image); otherwise uncertain or omit"),
   author: z.literal("assistant").optional(),
-}).strict().superRefine((a,ctx)=>{
-  if(a.type!=="point"&&(a.x2===undefined||a.y2===undefined)){
-    ctx.addIssue({code:"custom",message:"Rect/arrow require x2/y2"});
-  }
-});
+}).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 // M0.5 real-image schemas, shared by the image tools and present_visual.
+// ChatGPT file param shape: only download_url and file_id are guaranteed.
+const ChatFileSchema = z.object({
+  download_url: z.string(),
+  file_id: z.string(),
+  mime_type: z.string().optional(),
+  file_name: z.string().optional(),
+}).strict();
+
+async function loadImageInput({ image, imageUrl }) {
+  const bytes = await downloadImage(image ? image.download_url : imageUrl);
+  return registerImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
+}
 const RegionSchema = z.object({
   x: Point01, y: Point01, x2: Point01, y2: Point01,
 }).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
@@ -237,12 +267,17 @@ function makeServer() {
     {
       title: "Present a shared visual canvas",
       description:
-        "CANONICAL shared visual canvas the user sees in chat. Pass imageId (from load_image) to show the user's REAL photo/scan, or scene for a bundled SVG demo. " +
+        "CANONICAL shared visual canvas the user sees in chat. Users will not name tools: when they ask to show, point out, circle, box, trace or draw on a photo, call this yourself. " +
+        "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
+        "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. To answer about a user's mark, pass it back in priorUserAnnotations with your note. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
-        "Optional `views` (imageId only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
-        "Coordinates are normalized to the full image, top-left origin. Locate things first with process_image/overlay_grid, then mark them; coordinates are not evidence of recognition. " +
+        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as PCB traces, wires, freehand sketches or loose circles around a part; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
+        "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
+        "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
       inputSchema: z.object({
+        image: ChatFileSchema.optional().describe("Image file from the conversation; loads and shows it in one call"),
+        imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
         imageId: ImageIdSchema.optional(),
         scene: SceneSchema.optional().describe("Bundled demo scene; use only when there is no real image"),
         annotations: ModelAnnotationsSchema.default([]),
@@ -261,12 +296,15 @@ function makeServer() {
         annotations: VisualAnnotationsSchema,
         coordinateSystem: z.literal("normalized-top-left"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-      _meta: { ui: { resourceUri: VISUAL_URI } },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+      _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image"] },
     },
-    async ({ imageId, scene, annotations, views, priorUserAnnotations }) => {
+    async ({ image, imageUrl, imageId, scene, annotations, views, priorUserAnnotations }) => {
       try {
-        if (!imageId === !scene) throw new Error("Provide exactly one of imageId or scene");
+        if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
+          throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
+        }
+        if (image || imageUrl) imageId = (await loadImageInput({ image, imageUrl })).imageId;
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
         const ai = annotations.map(a => imageId ? resolveCoordinateAnnotation(a) : resolveSceneAnnotation(scene, a));
         const resolved = [...ai, ...priorUserAnnotations.map(replayUserAnnotation)];
@@ -539,14 +577,9 @@ function makeServer() {
     {
       title: "Load a real image for Estampes",
       description:
-        "Load a photo, scan or picture so Estampes can preprocess it. Pass `image` for a file the user attached or photographed in this ChatGPT conversation, OR `imageUrl` for a public https image you found. Returns an imageId plus a preview image. Use the imageId with process_image (enhance, threshold, edges, zoom into a region) and overlay_grid (labelled grid for precise locating). Estampes never identifies content; you do, from the returned pixels.",
+        "Load a photo, scan or picture so Estampes can preprocess it (enhance, zoom, grid). To simply SHOW the user a photo with marks, call present_visual with the image directly instead; it loads it too. Pass `image` for a file the user attached or photographed in this ChatGPT conversation, OR `imageUrl` for a public https image you found. Returns an imageId plus a preview image. Use the imageId with process_image (enhance, threshold, edges, zoom into a region) and overlay_grid (labelled grid for precise locating). Estampes never identifies content; you do, from the returned pixels.",
       inputSchema: z.object({
-        image: z.object({
-          download_url: z.string(),
-          file_id: z.string(),
-          mime_type: z.string().optional(),
-          file_name: z.string().optional(),
-        }).strict().optional().describe("Image file from the conversation"),
+        image: ChatFileSchema.optional().describe("Image file from the conversation"),
         imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
       }),
       outputSchema: z.object({
@@ -563,11 +596,7 @@ function makeServer() {
     async ({ image, imageUrl }) => {
       try {
         if (!image === !imageUrl) throw new Error("Provide exactly one of image or imageUrl");
-        const bytes = await downloadImage(image ? image.download_url : imageUrl);
-        const entry = await registerImage(bytes, {
-          source: image ? "chat-file" : "url",
-          fileName: image?.file_name ?? null,
-        });
+        const entry = await loadImageInput({ image, imageUrl });
         const preview = await previewImage(entry);
         return {
           content: [

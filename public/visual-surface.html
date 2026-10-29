@@ -27,6 +27,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #surface{display:block;width:100%;height:auto;max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
+#findings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+#findings:empty{display:none}
+#findings li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
+#findings li:hover{border-color:#8889}
+#findings .who{font-weight:700;white-space:nowrap}
+#findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
+#findings .note{overflow-wrap:anywhere}
 </style></head><body><main>
 <header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
 <p class="help">同一張圖片，同一套座標。<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>；預設顯示原圖，可直接標記、放大，或切換到 GPT 提供的處理後檢視。</p>
@@ -40,15 +47,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button data-mode="point" aria-pressed="true">點選</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
 <button data-mode="arrow" aria-pressed="false">箭頭</button>
+<button data-mode="polyline" aria-pressed="false" title="按住拖曳自由畫；滑鼠、繪圖板、Apple Pencil、S Pen 都可以">手繪</button>
 <button id="undo">復原</button><button id="clear">清除我的標註</button>
 </div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 <defs><marker id="gold-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#E4AE57"/></marker>
 <marker id="blue-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#579DF6"/></marker></defs>
-<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
+<ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
 <label for="intent">這次標註的目的</label>
 <select id="intent">
@@ -73,6 +82,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 const NS="http://www.w3.org/2000/svg";
 const svg=document.querySelector("#surface"),sceneEl=document.querySelector("#scene"),processedEl=document.querySelector("#processed");
 const tabNav=document.querySelector(".view-tabs");
+const freshEl=document.querySelector("#fresh-annotations"),findingsEl=document.querySelector("#findings");
+// Marks already sent to GPT: the next send labels them context, not focus.
+const sentIds=new Set();
 const aiEl=document.querySelector("#assistant-annotations"),userEl=document.querySelector("#user-annotations"),previewEl=document.querySelector("#preview");
 const hit=document.querySelector("#hit"), status=document.querySelector("#status"),send=document.querySelector("#send"),counter=document.querySelector("#counter");
 const intentSelect=document.querySelector("#intent"),noteInput=document.querySelector("#note"),quoteInput=document.querySelector("#quote");
@@ -115,9 +127,54 @@ const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const node=(tag,attributes,parent)=>{const el=document.createElementNS(NS,tag);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));parent.append(el);return el};
 const px=n=>n*VW,py=n=>n*VH;
 const round=n=>Math.round(n*10000)/10000;
-const valid=(a)=>a&&["point","rect","arrow"].includes(a.type)&&
- [a.x,a.y].every(v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=1)&&
- (a.type==="point"||[a.x2,a.y2].every(v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=1));
+const in01=v=>typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=1;
+const MAX_POINTS=128;
+const valid=(a)=>a&&["point","rect","arrow","polyline"].includes(a.type)&&[a.x,a.y].every(in01)&&
+ (a.type==="point"||[a.x2,a.y2].every(in01))&&
+ (a.type!=="polyline"||Array.isArray(a.points)&&a.points.length>=2&&a.points.length<=MAX_POINTS&&a.points.every(p=>p&&in01(p.x)&&in01(p.y)));
+// Polyline = ordered vertices; x/y/x2/y2 hold its bounding box.
+function polylineMark(points,extra={}){
+ const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+ return {type:"polyline",points,x:Math.min(...xs),y:Math.min(...ys),x2:Math.max(...xs),y2:Math.max(...ys),...extra};
+}
+// SVG path for a polyline; `smooth` passes a Catmull–Rom curve through
+// every vertex, `closed` joins the ends.
+function pathData(a){
+ const pts=a.points.map(p=>[px(p.x),py(p.y)]),n=pts.length,closed=a.closed===true;
+ if(a.smooth!==true||n<3)return "M"+pts.map(p=>p.join(" ")).join("L")+(closed?"Z":"");
+ const at=i=>closed?pts[(i+n)%n]:pts[Math.max(0,Math.min(n-1,i))];
+ let d="M"+pts[0].join(" ");
+ for(let i=0;i<(closed?n:n-1);i++){
+   const p0=at(i-1),p1=at(i),p2=at(i+1),p3=at(i+2);
+   d+="C"+[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]].map(v=>Math.round(v*10)/10).join(" ");
+ }
+ return d+(closed?"Z":"");
+}
+// Ramer–Douglas–Peucker in canvas units: drops points that lie on the
+// stroke's line, keeping corners; loosens until the stroke fits MAX_POINTS.
+function simplify(points,tol){
+ if(points.length<3)return points;
+ const a=points[0],b=points.at(-1),dx=px(b.x-a.x),dy=py(b.y-a.y),len=Math.hypot(dx,dy);
+ let worst=0,index=0;
+ for(let i=1;i<points.length-1;i++){
+   const qx=px(points[i].x-a.x),qy=py(points[i].y-a.y);
+   const d=len?Math.abs(qx*dy-qy*dx)/len:Math.hypot(qx,qy);
+   if(d>worst){worst=d;index=i;}
+ }
+ if(worst<=tol)return [a,b];
+ return [...simplify(points.slice(0,index+1),tol).slice(0,-1),...simplify(points.slice(index),tol)];
+}
+// A hand stroke is a smooth curve; ending near its start makes it a loop.
+function freehandMark(points){
+ const a=points[0],b=points.at(-1);
+ const loop=points.length>=4&&Math.hypot(px(b.x-a.x),py(b.y-a.y))<14*K();
+ return polylineMark(loop?points.slice(0,-1):points,{smooth:true,...(loop?{closed:true}:{})});
+}
+function thin(points){
+ let tol=.6*K(),out=simplify(points,tol);
+ while(out.length>MAX_POINTS){tol*=1.5;out=simplify(points,tol);}
+ return out;
+}
 function renderMarks(layer,items,color,author){
  layer.replaceChildren();
  for(const a of items){
@@ -127,10 +184,18 @@ function renderMarks(layer,items,color,author){
    if(a.type==="point"){node("circle",{cx:x,cy:y,r:8*k,fill:color,stroke:"#fff","stroke-width":2*k},layer);}
    if(a.type==="rect"){node("rect",{x:Math.min(x,x2),y:Math.min(y,y2),width:Math.abs(x2-x),height:Math.abs(y2-y),rx:3*k,fill:color,"fill-opacity":.12,stroke:color,"stroke-width":3*k},layer);}
    if(a.type==="arrow"){node("line",{x1:x,y1:y,x2,y2,stroke:color,"stroke-width":3*k,"marker-end":author==="AI"?"url(#gold-head)":"url(#blue-head)"},layer);}
-   // Distinguish a guessed model coordinate from a known scene landmark.
-   const uncertain=author==="AI" && a.grounding!=="scene-anchor";
-   const label=String((uncertain?"? ":"")+(a.label||author)).slice(0,64);
-   const labelNode=node("text",{x:clamp(x+9*k,5*k,VW-100*k),y:clamp(y-12*k,14*k,VH-14*k),fill:color,"font-size":15*k,"font-weight":700,stroke:"#17212A","stroke-width":.8*k,"paint-order":"stroke"},layer);
+   if(a.type==="polyline"){
+     const d=pathData(a);
+     node("path",{d,fill:"none",stroke:"#17212A","stroke-opacity":.55,"stroke-width":6*k,"stroke-linejoin":"round","stroke-linecap":"round"},layer);
+     node("path",{d,fill:"none",stroke:color,"stroke-width":3*k,"stroke-linejoin":"round","stroke-linecap":"round"},layer);
+     if(a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*k,fill:color,stroke:"#fff","stroke-width":1.5*k},layer);
+   }
+   // Distinguish a guessed model coordinate from a known scene landmark;
+   // GPT may claim it inspected the pixels (✓), which is still its own claim.
+   const uncertain=author==="AI" && a.grounding!=="scene-anchor" && a.status!=="inspected";
+   const label=String((a.status==="inspected"?"✓ ":uncertain?"? ":"")+(a.label||author)).slice(0,64);
+   const lx=a.type==="polyline"?px(a.points[0].x):x,ly=a.type==="polyline"?py(a.points[0].y):y;
+   const labelNode=node("text",{x:clamp(lx+9*k,5*k,VW-100*k),y:clamp(ly-12*k,14*k,VH-14*k),fill:color,"font-size":15*k,"font-weight":700,stroke:"#17212A","stroke-width":.8*k,"paint-order":"stroke"},layer);
    labelNode.textContent=label;
  }
 }
@@ -139,6 +204,20 @@ const markOptions=()=>[
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
 ];
+const STATUS_TEXT={inspected:"GPT 表示已看過像素",uncertain:"GPT 不確定"};
+function renderFindings(){
+ findingsEl.replaceChildren();
+ for(const item of markOptions()){
+   const m=item.mark;if(!m.note&&!m.status)continue;
+   const li=document.createElement("li");li.dataset.key=item.key;
+   const who=document.createElement("span");who.className="who";who.style.color=item.author==="AI"?"#C98A2E":"#3C7FE0";
+   who.textContent=m.label||(item.author==="AI"?"GPT":"YOU");li.append(who);
+   if(m.note){const t=document.createElement("span");t.className="note";t.textContent=m.note;li.append(t);}
+   if(STATUS_TEXT[m.status]){const b=document.createElement("span");b.className="badge";b.textContent=STATUS_TEXT[m.status];li.append(b);}
+   findingsEl.append(li);
+ }
+}
+findingsEl.addEventListener("click",e=>{const li=e.target.closest("li");if(!li)return;selectedFocusId=li.dataset.key;viewMode="zoom";render()});
 function refreshFocus(){
  const marks=markOptions(),previous=selectedFocusId;focusChoice.replaceChildren();
  for(const item of marks){
@@ -152,11 +231,12 @@ function refreshFocus(){
  if(viewMode==="zoom"&&!marks.length)viewMode="annotated";
 }
 function cropBox(mark){
- const x=mark.type==="arrow"?mark.x2:(mark.type==="rect"?(mark.x+mark.x2)/2:mark.x);
- const y=mark.type==="arrow"?mark.y2:(mark.type==="rect"?(mark.y+mark.y2)/2:mark.y);
+ const box=mark.type==="rect"||mark.type==="polyline";
+ const x=mark.type==="arrow"?mark.x2:(box?(mark.x+mark.x2)/2:mark.x);
+ const y=mark.type==="arrow"?mark.y2:(box?(mark.y+mark.y2)/2:mark.y);
  const k=K();
- const width=mark.type==="rect"?Math.abs(mark.x2-mark.x)*VW+60*k:VW*.34;
- const height=mark.type==="rect"?Math.abs(mark.y2-mark.y)*VH+34*k:VH*.34;
+ const width=box?Math.abs(mark.x2-mark.x)*VW+60*k:VW*.34;
+ const height=box?Math.abs(mark.y2-mark.y)*VH+34*k:VH*.34;
  const scale=Math.min(1,Math.max(width/VW,height/VH));
  const w=VW*scale,h=VH*scale;
  return [clamp(x*VW-w/2,0,VW-w),clamp(y*VH-h/2,0,VH-h),w,h].join(" ");
@@ -172,6 +252,7 @@ function renderView(){
  }
  for(const b of tabs)b.setAttribute("aria-pressed",String(b.dataset.view===viewMode));
  aiEl.style.display=hideMarks?"none":"";
+ freshEl.style.display=hideMarks?"none":"";
  userEl.style.display=hideMarks?"none":"";
  previewEl.style.display=hideMarks?"none":"";
  hit.style.pointerEvents=hideMarks?"none":"auto";
@@ -199,9 +280,14 @@ function render(){
    }
  }else sceneEl.innerHTML=SCENES[selectedScene];
  renderMarks(aiEl,assistantMarks,"#E4AE57","AI");
- renderMarks(userEl,[...priorUserMarks,...userMarks],"#579DF6","YOU");
- counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;
- send.disabled=!ready||userMarks.length===0;
+ renderMarks(userEl,[...priorUserMarks,...userMarks.filter(m=>sentIds.has(m.id))],"#579DF6","YOU");
+ userEl.style.opacity=".55";
+ // New (unsent) marks drawn at full strength in their own layer.
+ renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
+ const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
+ counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
+ send.disabled=!ready||fresh===0;
+ renderFindings();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -261,13 +347,27 @@ function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clien
 function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:"YOU "+(userMarks.length+1)};}
 function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
-hit.addEventListener("pointerdown",e=>{if(!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;hit.setPointerCapture(e.pointerId);});
-hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=fromPointer(e);if(p){renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");}});
+let stroke=[];
+hit.addEventListener("pointerdown",e=>{if(!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];hit.setPointerCapture(e.pointerId);});
+hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=fromPointer(e);if(!p)return;
+ if(mode==="polyline"){
+   // Pens and tablets report more samples than pointermove fires; use them all.
+   for(const ev of e.getCoalescedEvents?.()??[e]){
+     const q=fromPointer(ev),last=stroke.at(-1);
+     if(q&&Math.hypot(px(q.x-last.x),py(q.y-last.y))>=1.5*K())stroke.push(q);
+   }
+   if(stroke.length>1)renderMarks(previewEl,[{...polylineMark(thin(stroke),{smooth:true}),label:""}],"#579DF6","YOU");
+   return;
+ }
+ renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");});
 hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(p){
- let mark={...draft(start,p),id:"user-"+(++seq)};
- if(mode!=="point"&&Math.hypot(px(p.x-start.x),py(p.y-start.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
+ if(mode==="polyline")stroke.push(p);
+ let mark=mode==="polyline"
+   ?{...freehandMark(thin(stroke)),id:"user-"+(++seq),label:"YOU "+(userMarks.length+1)}
+   :{...draft(start,p),id:"user-"+(++seq)};
+ if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
-hit.addEventListener("pointercancel",()=>{start=null;previewEl.replaceChildren()});
+hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
 document.querySelector("#undo").addEventListener("click",()=>{userMarks.pop();selectedFocusId=null;render()});
 document.querySelector("#clear").addEventListener("click",()=>{userMarks=[];selectedFocusId=null;render()});
@@ -295,10 +395,12 @@ window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 send.addEventListener("click",async()=>{
- if(!ready||!userMarks.length)return;
+ const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
+ if(!ready||!freshIds.length)return;
  send.disabled=true;
- const marks=userMarks.map(({id,type,x,y,x2,y2,label})=>({
-   id,type,x,y,...(type==="point"?{}:{x2,y2}),label,
+ const marks=userMarks.map(({id,type,x,y,x2,y2,points,smooth,closed,label})=>({
+   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,
+   role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"
  }));
  const intent=intentSelect.value||"point-out";
@@ -343,8 +445,9 @@ send.addEventListener("click",async()=>{
      role:"user",content:[{type:"text",text:chatMessage}]
    });
    if(response?.isError)throw Error("Host rejected message");
+   for(const id of freshIds)sentIds.add(id);
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
-     (imageId?"請確認 GPT 是否用 process_image 查看你標的位置。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
+     (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
  }catch(err){
    status.textContent=(validated?"座標驗證成功；":"座標驗證失敗："+reason+"；")+
      "聊天傳送失敗："+String(err.message||err);

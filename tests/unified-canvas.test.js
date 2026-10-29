@@ -41,7 +41,7 @@ test("unified canvas contains all views without a second tool call",()=>{
 test("context is optional; drawing and submission require no menu completion",()=>{
   assert.match(html,/<details id="context-details">/);
   assert.match(source,/const intent=intentSelect\.value\|\|"point-out"/);
-  assert.match(source,/send\.disabled=!ready\|\|userMarks\.length===0/);
+  assert.match(source,/send\.disabled=!ready\|\|fresh===0/);
   assert.doesNotMatch(source,/!intentSelect\.value/);
 });
 
@@ -84,6 +84,18 @@ test("re-delivered host data does not reset the chosen tab or unsent marks",()=>
   // to the first tab after each click.
   assert.match(source,/if\(key===appliedKey\)return;/);
   assert.match(source,/o\.toolOutput===seenOutput/);
+});
+
+test("only new marks are focus; sent marks become context and fade",()=>{
+  assert.match(source,/role:sentIds\.has\(id\)\?"context":"focus"/);
+  assert.match(source,/for\(const id of freshIds\)sentIds\.add\(id\)/);
+  assert.match(source,/userEl\.style\.opacity="\.55"/);
+});
+
+test("GPT notes and status appear beside their marks",()=>{
+  assert.match(html,/<ol id="findings"/);
+  assert.match(source,/STATUS_TEXT\[m\.status\]/);
+  assert.match(source,/a\.status==="inspected"\?"✓ "/);
 });
 
 test("provenance colors are distinct from viewer inspection marker",()=>{

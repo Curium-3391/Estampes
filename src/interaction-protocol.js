@@ -1,6 +1,7 @@
 // Estampes Annotation/Context Protocol v0.2-draft.
 // Stable *demo* scene metadata only. Future user images need explicit
 // content identity, crop transforms and a real raster pixel resolution.
+import { MARK_TYPES, polylineWithBounds } from "./scene-catalog.js";
 export const PROTOCOL_VERSION = "0.2-draft";
 export const INTENTS = Object.freeze([
   "point-out", "ask-about-region", "answer-question", "correct-assistant",
@@ -43,16 +44,23 @@ export function buildAnnotationEvent({scene,image,annotations,intent="point-out"
   }
   const ids=new Set();
   const marks=annotations.map(raw=>{
-    if(!raw || !["point","rect","arrow"].includes(raw.type)) throw new Error("Invalid annotation type");
+    if(!raw || !MARK_TYPES.includes(raw.type)) throw new Error("Invalid annotation type");
     const id=textValue(raw.id,64);
     if(!id||ids.has(id))throw new Error("Missing or duplicate annotation ID");
     ids.add(id);
+    // focus = what this submission is about; context = earlier marks kept
+    // only as background. Missing role means focus.
+    const role=raw.role==="context"?"context":"focus";
+    if(raw.type==="polyline") {
+      return {id,author:"user",type:"polyline",role,geometry:polylineWithBounds(raw.points,raw),
+        label:textValue(raw.label,64),grounding:"user-pointer"};
+    }
     if(!in01(raw.x)||!in01(raw.y))throw new Error("Invalid normalized point");
     if(raw.type!=="point"&&(!in01(raw.x2)||!in01(raw.y2))) {
       throw new Error("Invalid normalized endpoint");
     }
     return {
-      id,author:"user",type:raw.type,
+      id,author:"user",type:raw.type,role,
       geometry:{
         x:raw.x,y:raw.y,
         ...(raw.type==="point"?{}:{x2:raw.x2,y2:raw.y2})
@@ -62,6 +70,7 @@ export function buildAnnotationEvent({scene,image,annotations,intent="point-out"
       grounding:"user-pointer",
     };
   });
+  if(!marks.some(m=>m.role==="focus"))for(const m of marks)m.role="focus";
   const cleanNote=textValue(note,500),cleanQuote=textValue(replyQuote,300);
   return {
     schemaVersion:PROTOCOL_VERSION,
@@ -100,6 +109,10 @@ export function formatAnnotationChatMessage(event) {
     "這次的目的："+(INTENT_LABELS[interaction.intent]||"指出位置")+"。",
     "希望你做的事："+interaction.requestedAssistantAction+"。",
   ];
+  const name=m=>m.label||m.id;
+  const focus=event.annotations.filter(m=>m.role!=="context"),context=event.annotations.filter(m=>m.role==="context");
+  lines.push("這次我問的是："+focus.map(name).join("、")+"（role=focus）。"+
+    (context.length?"其他標記（"+context.map(name).join("、")+"，role=context）是之前畫的，只當背景，除非我提到否則不用分析。":""));
   if(interaction.userNote)lines.push("我的補充說明（使用者親自輸入）："+interaction.userNote);
   if(interaction.replyTo?.quote) {
     lines.push("我提供的前文引述（使用者自行填寫，非外掛讀取的聊天紀錄）："+interaction.replyTo.quote);
@@ -107,12 +120,13 @@ export function formatAnnotationChatMessage(event) {
     lines.push("沒有附上前文的精確引述；請依你在目前對話中實際可見的脈絡理解，不要捏造上一輪問題。");
   }
   lines.push(
-    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向。",
+    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。",
     ...(event.image.kind==="raster"?[
       "底圖是使用者的實際照片（imageId="+event.image.id+"，"+event.image.intrinsicSize.width+"×"+event.image.intrinsicSize.height+" 像素，已依 EXIF 轉正）。所有標註使用原圖左上角為原點的正規化座標。",
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
       JSON.stringify(event),
-      "請先用 Estampes 的 process_image 檢視我標註的位置：imageId="+event.image.id+"，region 取標註周圍（框就用框本身再稍微放大；點或箭頭尖端取周圍約 0.1 的範圍），必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
+      "請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId="+event.image.id+"，region 取標註周圍（框就用框本身再稍微放大；點或箭頭尖端取周圍約 0.1 的範圍），必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
+      "回答後請用 present_visual（imageId 同上）把我的標記放進 priorUserAnnotations，附上你的 note（例如讀到的型號）與 status，讓答案留在畫布上的那個標記旁。不要對我提工具名稱。",
       "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
     ]:[
       "底圖為內建 SVG 示範場景，尺寸是 SVG 座標單位而非照片像素解析度。所有標註使用原圖左上角為原點的正規化座標。",
