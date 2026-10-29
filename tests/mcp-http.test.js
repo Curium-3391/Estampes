@@ -39,8 +39,8 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.4.0");
-    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v040.html");
+    assert.equal(version.version,"m0.4.1");
+    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v041.html");
     assert.equal(version.visualTool,"present_visual");
     assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
@@ -72,7 +72,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Generic canvas: model annotations, app-only validation, HTML resource.
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
-    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v040.html");
+    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v041.html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
     const visual=await client.callTool({name:"present_visual",arguments:{
       scene:"shapes",annotations:[visualAnnotation]
@@ -80,6 +80,27 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(visual.structuredContent?.kind,"estampes.visual_surface");
     assert.equal(visual.structuredContent?.scene,"shapes");
     assert.equal(visual.structuredContent?.annotations?.[0]?.id,"a1");
+    // Grounded scene landmarks override model-guessed coordinates.
+    const grounded=await client.callTool({name:"present_visual",arguments:{
+      scene:"landscape",
+      annotations:[{id:"mountain-point",type:"point",targetId:"mountain-right",
+                    x:0.82,y:0.49,label:"山"}],
+      priorUserAnnotations:[{id:"user-old",type:"point",x:0.25,y:0.5,label:"YOU 1"}]
+    }});
+    assert.notEqual(grounded.isError,true);
+    const mountain=grounded.structuredContent?.annotations?.find(a=>a.id==="mountain-point");
+    assert.equal(mountain?.x,0.5625);
+    assert.ok(Math.abs(mountain?.y-130/360)<1e-9);
+    assert.equal(mountain?.targetId,"mountain-right");
+    assert.equal(mountain?.author,"assistant");
+    assert.equal(mountain?.grounding,"scene-anchor");
+    const replayed=grounded.structuredContent?.annotations?.find(a=>a.id==="user-old");
+    assert.equal(replayed?.author,"user");
+    assert.equal(replayed?.grounding,"replayed-unverified");
+    const ungrounded=await client.callTool({name:"present_visual",arguments:{
+      scene:"landscape",annotations:[{id:"free-point",type:"point",x:0.82,y:0.49,label:"山"}]
+    }});
+    assert.equal(ungrounded.structuredContent?.annotations?.[0]?.grounding,"unverified");
     const privateTool=tools.tools.find(t=>t.name==="validate_visual_annotations");
     assert.ok(privateTool,"validation tool missing");
     assert.deepEqual(privateTool._meta?.ui?.visibility,["app"]);
@@ -91,7 +112,10 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     }});
     assert.notEqual(checked.isError,true);
     assert.equal(checked.structuredContent?.count,2);
-    assert.deepEqual(checked.structuredContent?.annotations,userMarks);
+    assert.equal(checked.structuredContent?.annotations?.length,2);
+    assert.deepEqual(checked.structuredContent?.annotations?.map(m=>m.author),["user","user"]);
+    assert.deepEqual(checked.structuredContent?.annotations?.map(m=>m.grounding),["user-pointer","user-pointer"]);
+    assert.equal(checked.structuredContent?.annotations?.[0]?.x,0);
     // Some MCP clients represent schema rejection as a tool error result,
     // others raise a protocol error. Both are valid rejections.
     let rejected=false;
@@ -104,10 +128,10 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
       rejected=true;
     }
     assert.ok(rejected,"out-of-range rectangle must be rejected");
-    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v040.html"});
-    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v040.html");
+    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v041.html"});
+    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v041.html");
     assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
-    assert.ok(visualHtml?.text?.includes("v0.4.0"));
+    assert.ok(visualHtml?.text?.includes("v0.4.1"));
     assert.ok(visualHtml?.text?.includes('name:"validate_visual_annotations"'));
     const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
