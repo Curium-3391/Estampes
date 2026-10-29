@@ -327,8 +327,8 @@ function makeServer() {
   );
 
 
-  // The inspector remains a standard MCP data tool; attaching a UI resource
-  // renders the SAME tool's PNG evidence in the ChatGPT conversation.
+  // Image analysis and user-facing UI have separate contracts. This resource
+  // is retained only for explicit standalone viewer compatibility.
   registerAppResource(
     server,
     "Estampes visual evidence preview",
@@ -347,8 +347,7 @@ function makeServer() {
     async()=>({contents:[{uri:EVIDENCE_V045_URI,mimeType:RESOURCE_MIME_TYPE,text:evidenceHtml}]})
   );
 
-  // Public model tool provides BOTH the MCP image blocks for model vision
-  // and an inline UI resource for human-visible preview.
+  // Model pixel-inspection tool: image blocks are for GPT, no UI attached.
   // Returns real PNG image bytes in the MCP content array, not object names.
   // Some hosts do not forward these blocks to their vision model.
   server.registerTool(
@@ -399,7 +398,7 @@ function makeServer() {
         return {
           content:[
             {type:"text",text:"Estampes visual evidence for "+imageId+" / "+revision+
-              ". The NEXT THREE MCP blocks contain real PNG pixels: (1) original whole image, (2) whole image with BLUE annotation overlay, (3) enlarged raw crop with no overlay. "+
+              ". The NEXT THREE MCP blocks contain real PNG pixels: (1) original whole image, (2) whole image with NEUTRAL inspection-focus overlay (not an authored annotation), (3) enlarged raw crop with no overlay. "+
               "Focus metadata: "+JSON.stringify({focus:evidence.focus,crop:evidence.crop})+
               ". Please identify the marked object ONLY if you can actually perceive the image content. Do not infer the answer from sceneId or coordinates alone. "+
               "If your ChatGPT host hides image blocks from the model, say you could not inspect the pixels."},
