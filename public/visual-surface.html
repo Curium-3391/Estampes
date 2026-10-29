@@ -13,11 +13,16 @@ button{font:inherit;color:inherit;background:transparent;border:1px solid #8886;
 button[aria-pressed="true"]{background:#5263b2;color:white;border-color:transparent}
 button.primary{background:#5263b2;color:white;border-color:transparent}
 button:disabled{opacity:.45;cursor:not-allowed}
+.context-panel{margin:12px 0;padding:12px;border:1px solid #8885;border-radius:10px;display:grid;gap:8px}
+.context-panel label{font-size:.85rem;font-weight:600}
+.context-panel select,.context-panel textarea,.context-panel input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #8887;background:Canvas;color:CanvasText;font:inherit;font-size:.89rem}
+.context-panel textarea{min-height:66px;resize:vertical}
+.context-panel .hint{font-size:.75rem;color:GrayText;margin:0}
 #surface{display:block;width:100%;height:auto;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 </style></head><body><main>
-<header><h2>Estampes · Visual Surface</h2><small>v0.4.1</small></header>
+<header><h2>Estampes · Visual Surface</h2><small>v0.4.2</small></header>
 <p class="help">金色：AI 標註（「?」代表未驗證的猜測位置）。藍色：使用者標註（含重新載入的標記）。請直接點擊或拖曳。</p>
 <div class="toolbar" role="group" aria-label="標註工具">
 <button data-mode="point" aria-pressed="true">點選</button>
@@ -32,6 +37,23 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
+<section class="context-panel" aria-label="標註上下文">
+<label for="intent">這次標註是為了什麼？（必選）</label>
+<select id="intent" required>
+<option value="">請選擇這次指認的目的</option>
+<option value="point-out">只是指出「這裡」</option>
+<option value="ask-about-region">請解釋這個區域</option>
+<option value="answer-question">回答你剛剛問我的問題</option>
+<option value="correct-assistant">更正你之前指錯的位置</option>
+<option value="compare">比較我標記的東西</option>
+<option value="report-issue">指出這裡有問題</option>
+</select>
+<label for="note">補充一句話（選填，但建議寫）</label>
+<textarea id="note" maxlength="500" placeholder="例如：我指的是這棵樹，不是後面的山。或：為什麼這個地方接錯了？"></textarea>
+<label for="quote">你在回覆的那句話（選填，手動貼上）</label>
+<input id="quote" maxlength="300" placeholder="例如：你剛剛問我哪一個元件發熱？">
+<p class="hint">Estampes 不會自動讀取聊天紀錄。只有你明確填寫的內容，才會作為前文引用送出。</p>
+</section>
 <div class="actions"><span id="counter">我的標註：0</span>
 <button id="send" class="primary" disabled>把標註傳給 GPT</button></div>
 <p id="status" role="status" aria-live="polite">正在連接 ChatGPT…</p>
@@ -40,6 +62,15 @@ const NS="http://www.w3.org/2000/svg";
 const svg=document.querySelector("#surface"),sceneEl=document.querySelector("#scene");
 const aiEl=document.querySelector("#assistant-annotations"),userEl=document.querySelector("#user-annotations"),previewEl=document.querySelector("#preview");
 const hit=document.querySelector("#hit"), status=document.querySelector("#status"),send=document.querySelector("#send"),counter=document.querySelector("#counter");
+const intentSelect=document.querySelector("#intent"),noteInput=document.querySelector("#note"),quoteInput=document.querySelector("#quote");
+const INTENT_TEXT={
+ "point-out":"我想指出這個位置",
+ "ask-about-region":"請解釋我標記的區域",
+ "answer-question":"我正在回答你先前的問題",
+ "correct-assistant":"我要更正你先前的指認",
+ "compare":"請比較我標記的東西",
+ "report-issue":"我想指出這裡的問題"
+};
 const SCENES={
  landscape:`<rect width="640" height="360" fill="#DBEAF0"/><rect y="230" width="640" height="130" fill="#A4C7A4"/>
  <circle cx="508" cy="73" r="39" fill="#F2C76F"/><path d="M0 255 L167 72 L324 255Z" fill="#90A9AE"/>
@@ -83,7 +114,7 @@ function renderMarks(layer,items,color,author){
  }
 }
 function render(){sceneEl.innerHTML=SCENES[selectedScene];renderMarks(aiEl,assistantMarks,"#E4AE57","AI");renderMarks(userEl,[...priorUserMarks,...userMarks],"#579DF6","YOU");
- counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;send.disabled=!ready||userMarks.length===0;
+ counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;send.disabled=!ready||userMarks.length===0||!intentSelect.value;
  document.querySelector("#caption").textContent=SCENE_NAMES[selectedScene]+" · 640×360 · 底圖與標註分離";
 }
 function applyInput(args){
@@ -110,6 +141,7 @@ hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(
  if(mode!=="point"&&Math.hypot(px(p.x-start.x),py(p.y-start.y))<7){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);status.textContent="已新增標註；可以繼續標記，或傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;previewEl.replaceChildren()});
+intentSelect.addEventListener("change",render);
 document.querySelector("#undo").addEventListener("click",()=>{userMarks.pop();render()});
 document.querySelector("#clear").addEventListener("click",()=>{userMarks=[];render()});
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
@@ -126,24 +158,62 @@ render();
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.1"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
+// The MCP server builds the canonical v0.2-draft event. The widget does
+// not invent the preceding conversation or silently infer user intent.
 send.addEventListener("click",async()=>{
- if(!ready||!userMarks.length)return;
- send.disabled=true;const marks=userMarks.map(({id,type,x,y,x2,y2,label})=>({id,type,x,y,...(type==="point"?{}:{x2,y2}),label,author:"user",grounding:"user-pointer"}));
- let validated=false,reason="";
- try{status.textContent="正在驗證 "+marks.length+" 個標註…";
- const result=await request("tools/call",{name:"validate_visual_annotations",arguments:{scene:selectedScene,annotations:marks}});
- if(result?.isError)throw Error("Tool rejected annotations");
- const r=result?.structuredContent;
- if(r?.kind!=="estampes.validated_annotations"||r.count!==marks.length)throw Error("Unexpected validation response");
- validated=true;
- }catch(err){reason=String(err.message||err)}
+ if(!ready||!userMarks.length||!intentSelect.value)return;
+ send.disabled=true;
+ const marks=userMarks.map(({id,type,x,y,x2,y2,label})=>({
+   id,type,x,y,...(type==="point"?{}:{x2,y2}),label,
+   author:"user",grounding:"user-pointer"
+ }));
+ const intent=intentSelect.value;
+ const note=noteInput.value.trim().slice(0,500);
+ const replyQuote=quoteInput.value.trim().slice(0,300);
+ let validated=false,reason="",chatMessage="";
  try{
- status.textContent=(validated?"座標驗證完成。":"驗證工具無法回應。")+" 正在送入 ChatGPT…";
- const message="我在 Estampes 視覺畫布（scene="+selectedScene+"，640x360）上標記了 "+marks.length+" 個位置。以左上角為原點，0..1 正規化座標："+JSON.stringify(marks)+"。這些 author=user 的標註由使用者繪製；下次呼叫 present_visual 時，若需重現，請放入 priorUserAnnotations，不要改成 AI 的 annotations。若要標示內建場景中的山、樹、太陽等已知物件，請使用 targetId，由 Server 精確定位，不要猜測座標。";
- const response=await request("ui/message",{role:"user",content:[{type:"text",text:message}]});
- if(response?.isError)throw Error("Host rejected message");
- status.textContent=(validated?"座標驗證成功；":"驗證失敗："+reason+"；")+"訊息已交聊天宿主，請確認 GPT 的新回覆。";
- }catch(err){status.textContent=(validated?"座標驗證成功；":"驗證失敗："+reason+"；")+"聊天傳送失敗："+String(err.message||err);}
- send.disabled=false;
+   status.textContent="正在驗證座標並整理對話上下文…";
+   const result=await request("tools/call",{
+     name:"validate_visual_annotations",
+     arguments:{scene:selectedScene,annotations:marks,intent,note,replyQuote}
+   });
+   if(result?.isError)throw Error("Tool rejected annotations");
+   const r=result?.structuredContent;
+   if(r?.kind!=="estampes.validated_annotations"||r.count!==marks.length ||
+      r?.event?.schemaVersion!=="0.2-draft" ||
+      r?.event?.interaction?.intent!==intent ||
+      typeof r?.chatMessage!=="string" || !r.chatMessage.trim()) {
+     throw Error("Unexpected protocol v0.2 response");
+   }
+   chatMessage=r.chatMessage;
+   validated=true;
+ }catch(err){reason=String(err.message||err)}
+ if(!validated){
+   // Failure fallback: still carry user-supplied intention, image identity,
+   // normalized geometry, and arrowhead meaning, without claiming validation.
+   chatMessage="我透過 Estampes 做了視覺標註，但伺服器尚未驗證這次資料。\n"+
+     "目的："+INTENT_TEXT[intent]+"。\n"+
+     (note?"我的補充："+note+"\n":"")+
+     (replyQuote?"我手動提供的前文引述："+replyQuote+"\n":
+       "沒有前文的精確引述，請勿猜測。\n")+
+     "SVG 底圖 id=demo:"+selectedScene+" revision=svg-v1 viewBox=640×360，"+
+     "原圖左上角為原點，座標為 0..1（非照片像素或 DPI）。\n"+
+     "點是位置，框是範圍，箭頭尖端(x2,y2)是目標。\n"+
+     "未經驗證的標註："+JSON.stringify(marks);
+ }
+ try{
+   status.textContent=(validated?"座標與意圖已驗證；":"驗證失敗，嘗試傳送原始資料；")+
+     "訊息送往 GPT 中…";
+   const response=await request("ui/message",{
+     role:"user",content:[{type:"text",text:chatMessage}]
+   });
+   if(response?.isError)throw Error("Host rejected message");
+   status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
+     "請確認 ChatGPT 是否真的出現新訊息並回覆。";
+ }catch(err){
+   status.textContent=(validated?"座標驗證成功；":"座標驗證失敗："+reason+"；")+
+     "聊天傳送失敗："+String(err.message||err);
+ }
+ render();
 });
 </script></main></body></html>
