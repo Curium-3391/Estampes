@@ -6,7 +6,7 @@ Estampes is an experimental, open-source project exploring a simple idea: humans
 
 Inspired by Claude Debussy's *Estampes* (1903).
 
-> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.3 adds a model-callable visual pixel evidence tool (`inspect_visual`) that returns actual PNG images of the original demo scene, blue-marked source, and unmarked crop. This is implemented but requires Render and ChatGPT vision-bridge verification.** General-purpose image grounding remains unsolved.
+> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.5 visual evidence viewer has been verified in ChatGPT by the project tester on 2026-10-29**: the blue-marked full image, unmarked original, and enlarged unmarked crop all appeared and switched correctly in the native chat widget. `inspect_visual` remains a separate model-facing PNG tool; full model-vision visibility is not established by this viewer test. General-purpose image grounding and arbitrary image imports remain unsolved.
 
 ## The problem
 
@@ -38,6 +38,7 @@ Estampes aims to remove that friction.
 - [ ] **M0.4.1 — Grounding and provenance correction:** Server resolves named demo objects from explicit scene landmarks; user marks have a separate replay channel and unverified AI coordinates are marked as such. Awaiting host verification.
 - [ ] **M0.4.2 — Annotation/context protocol:** Explicit intent selector, optional user note and manually supplied quote, canonical v0.2 event and context-aware GPT message. Implemented; live host verification pending.
 - [ ] **M0.4.3 — Visual Input Bridge:** `inspect_visual` returns real PNG pixels and source-coordinate metadata from demo artwork, separating Estampes geometry from GPT object interpretation. Live model vision visibility not yet verified.
+- [x] **M0.4.5 — Inline visual evidence viewer:** Dedicated `present_visual_evidence` renderer shows three real PNG views (marked full image, pristine full image, enlarged pristine crop) inside ChatGPT. Confirmed by user screenshots on 2026-10-29 for `demo:landscape`, point `(0.82, 0.49)`. This validates the **human-visible render path**, not general model perception.
 - [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
