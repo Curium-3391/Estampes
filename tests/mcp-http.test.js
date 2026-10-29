@@ -39,7 +39,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.3.1");
+    assert.equal(version.version,"m0.3.2");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
     assert.equal(version.selectionTool,"record_number_line_selection");
     await client.connect(new StreamableHTTPClientTransport(new URL(base+"/mcp")));
@@ -54,7 +54,8 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // M0.3: the previously missing app-scoped tool must be present and callable.
     const selectionTool=tools.tools.find(t=>t.name==="record_number_line_selection");
     assert.ok(selectionTool,"UI selection tool missing from MCP discovery");
-    assert.equal(selectionTool._meta?.ui?.resourceUri,"ui://estampes/number-line-v031.html");
+    assert.equal(selectionTool._meta?.ui?.resourceUri,undefined,"app-only tool must not advertise a widget");
+    assert.equal(selectionTool._meta?.["ui/resourceUri"],undefined,"no legacy UI alias on private tool");
     assert.deepEqual(selectionTool._meta?.ui?.visibility,["app"]);
     const selection=await client.callTool({
       name:"record_number_line_selection",
