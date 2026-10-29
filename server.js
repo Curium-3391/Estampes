@@ -13,10 +13,11 @@ import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
 import { landmarkIds, resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
+import { createVisualEvidence } from "./src/visual-input.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.2";
+const BUILD_VERSION = "m0.4.3";
 const VISUAL_URI = "ui://estampes/visual-surface-v042.html";
 const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
 const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
@@ -75,7 +76,7 @@ const ModelAnnotationSchema = z.object({
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.2" });
+  const server = new McpServer({ name: "estampes", version: "0.4.3" });
 
   registerAppResource(
     server,
@@ -296,6 +297,81 @@ function makeServer() {
     }
   );
 
+
+  // Public model tool, separate from the ChatGPT embedded UI.
+  // Returns real PNG image bytes in the MCP content array, not object names.
+  // Some hosts do not forward these blocks to their vision model.
+  registerAppTool(
+    server,
+    "inspect_visual",
+    {
+      title:"Inspect actual source pixels and annotated region",
+      description:
+        "Retrieve PIXEL IMAGES for a user-marked location on an Estampes demo SVG. Call this when asked what a marked object is, rather than inferring objects from coordinates or scene names. Pass imageId='demo:'+scene, revision='svg-v1', and focus={type:'point'|'rect'|'arrow',x,y[,x2,y2]} copied from the user's Estampes annotation; for arrows the head x2/y2 is the referent. Returns original PNG, full PNG with focus overlay, and locally cropped magnified PNG. These are image content blocks plus geometry metadata; if your host does not expose image pixels to vision, explicitly state that and do not guess the object's identity. This M0.4.3 tool supports ONLY bundled SVG demo images, not arbitrary user uploads or ChatGPT image search.",
+      inputSchema:z.object({
+        scene:SceneSchema,
+        imageId:z.string().min(1).max(80),
+        revision:z.literal("svg-v1"),
+        focus:z.object({
+          type:z.enum(["point","rect","arrow"]),
+          x:Point01,y:Point01,
+          x2:Point01.optional(),y2:Point01.optional(),
+        }).superRefine((a,ctx)=>{
+          if(a.type!=="point"&&(a.x2===undefined||a.y2===undefined)){
+            ctx.addIssue({code:"custom",message:"Rect and arrow require x2/y2"});
+          }
+        }),
+        padding:z.number().finite().min(0.02).max(0.2).default(0.08),
+      }),
+      outputSchema:z.object({
+        kind:z.literal("estampes.visual_evidence"),
+        imageId:z.string(),
+        revision:z.string(),
+        source:z.object({kind:z.literal("svg"),logicalSize:z.object({
+          width:z.number(),height:z.number(),unit:z.literal("svg-user-unit"),
+        })}),
+        rendered:z.object({width:z.number(),height:z.number(),mimeType:z.literal("image/png")}),
+        coordinateSystem:z.literal("normalized-top-left"),
+        focus:z.object({
+          type:z.string(),x:z.number(),y:z.number(),
+          x2:z.number().optional(),y2:z.number().optional(),
+        }),
+        crop:z.object({left:z.number(),top:z.number(),width:z.number(),
+          height:z.number(),origin:z.string(),target:z.string()}),
+        evidenceCount:z.literal(3),
+        modelVisionStatus:z.literal("host-dependent-unverified"),
+      }),
+      annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
+    },
+    async ({scene,imageId,revision,focus,padding})=>{
+      try {
+        const evidence=await createVisualEvidence({scene,imageId,revision,focus,padding});
+        const {images,...metadata}=evidence;
+        return {
+          content:[
+            {type:"text",text:"Estampes visual evidence for "+imageId+" / "+revision+
+              ". The NEXT THREE MCP blocks contain real PNG pixels: (1) original whole image, (2) whole image with BLUE annotation overlay, (3) enlarged raw crop with no overlay. "+
+              "Focus metadata: "+JSON.stringify({focus:evidence.focus,crop:evidence.crop})+
+              ". Please identify the marked object ONLY if you can actually perceive the image content. Do not infer the answer from sceneId or coordinates alone. "+
+              "If your ChatGPT host hides image blocks from the model, say you could not inspect the pixels."},
+            {type:"image",data:images.original.toString("base64"),mimeType:"image/png"},
+            {type:"image",data:images.marked.toString("base64"),mimeType:"image/png"},
+            {type:"image",data:images.crop.toString("base64"),mimeType:"image/png"},
+          ],
+          structuredContent:{
+            kind:"estampes.visual_evidence",
+            imageId,revision,source:metadata.source,rendered:metadata.rendered,
+            coordinateSystem:metadata.coordinateSystem,focus:metadata.focus,
+            crop:metadata.crop,evidenceCount:3,
+            modelVisionStatus:"host-dependent-unverified",
+          },
+        };
+      } catch(error) {
+        return {isError:true,content:[{type:"text",text:"Estampes image processing failed: "+String(error?.message||error)}]};
+      }
+    }
+  );
+
   return server;
 }
 
@@ -322,6 +398,9 @@ const httpServer = createHttpServer((req, res) => {
       visualTool: "present_visual",
       visualValidationTool: "validate_visual_annotations",
       annotationProtocol: "0.2-draft",
+      visualInputTool: "inspect_visual",
+      visualInputFormat: "mcp-image-content-png",
+      visualModelVisibility: "host-dependent-unverified",
     }));
     return;
   }
