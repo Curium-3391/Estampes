@@ -18,7 +18,8 @@ import { createVisualEvidence } from "./src/visual-input.js";
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
 const BUILD_VERSION = "m0.4.3";
-const VISUAL_URI = "ui://estampes/visual-surface-v042.html";
+const VISUAL_URI = "ui://estampes/visual-surface-v043.html";
+const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
 const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
 const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
 const html = readFileSync(
@@ -206,6 +207,16 @@ function makeServer() {
     { mimeType: RESOURCE_MIME_TYPE },
     async () => ({
       contents: [{ uri: VISUAL_PREVIOUS_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
+    })
+  );
+
+  registerAppResource(
+    server,
+    "Estampes visual surface v0.4.2 (legacy)",
+    VISUAL_V042_URI,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: VISUAL_V042_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
     })
   );
 
