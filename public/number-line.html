@@ -13,7 +13,7 @@ button.primary{background:#5865b9;color:white;border-color:transparent}
 button:disabled{opacity:.5}
 #status{min-height:1.5rem;font-size:.85rem}
 </style></head><body><main>
-<h2>Estampes · M0 Number Line <small style="font-size:.65rem;color:#8b99ab">v0.1.2</small></h2><p class="muted">金色是 AI 指向的位置。點選數線，藍色標記會記下你的選擇。</p>
+<h2>Estampes · M0 Number Line <small style="font-size:.65rem;color:#8b99ab">v0.3.0</small></h2><p class="muted">金色是 AI 指向的位置。點選數線，藍色標記會記下你的選擇。</p>
 <svg id="line" viewBox="0 0 560 140" role="img" aria-label="從負四到正四的數線，點選刻度可以指認數字">
 <line x1="35" y1="70" x2="525" y2="70" stroke="currentColor" stroke-width="2"/>
 <path d="M35 70 l10 -5v10z M525 70 l-10 -5v10z" fill="currentColor"/>
@@ -41,27 +41,64 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-number-line",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"});notify("ui/notifications/initialized",{});ready=true;send.disabled=selected===null;status.textContent="已連接。可以點選刻度並傳給 GPT。";}catch(err){status.textContent="尚未連上 ChatGPT："+String(err.message||err);}})();
 send.addEventListener("click",async()=>{
  if(!ready||selected===null)return;
- send.disabled=true;
  const value=selected;
- const payload={schemaVersion:"0.1-draft",imageId:"number-line-m0",author:"user",type:"point",value,x:(value+4)/8,y:0.5};
- let toolSucceeded=false;
+ send.disabled=true;
+ const payload={
+   schemaVersion:"0.1-draft",
+   imageId:"number-line-m0",
+   author:"user",
+   type:"point",
+   value,
+   x:(value+4)/8,
+   y:0.5
+ };
+
+ // Step 1: Verify the UI-to-server path. A failed tool must not prevent
+ // sending the selection directly to the conversation.
+ let validationOk=false;
+ let validationError="";
+ status.textContent="M0.3：正在驗證選取座標…";
  try {
-   status.textContent="v0.1.2：正在記錄選擇…";
-   const tool=await request("tools/call",{name:"record_number_line_selection",arguments:{value}});
-   if(tool?.isError)throw Error("Server rejected selection: "+JSON.stringify(tool));
-   toolSucceeded=true;
- } catch(err) {
-   status.textContent="工具回傳失敗："+String(err?.message||err);
- }
- if(toolSucceeded) {
-   try {
-     status.textContent="已記錄選取，正在送回對話…";
-     const result=await request("ui/message",{role:"user",content:[{type:"text",text:"Estampes: 我選了 "+value+"。標註資料："+JSON.stringify(payload)+"。請確認這個座標。"}]});
-     if(result?.isError)throw Error(JSON.stringify(result));
-     status.textContent="ChatGPT 已接受訊息，請確認對話是否收到。";
-   } catch(err) {
-     status.textContent="MCP 工具記錄成功，但聊天訊息被宿主拒絕："+String(err?.message||err)+"。選取值為 "+value+"；可直接在聊天輸入。";
+   const result=await request("tools/call",{
+     name:"record_number_line_selection",
+     arguments:{value}
+   });
+   if(result?.isError)throw Error("MCP tool returned isError");
+   const data=result?.structuredContent;
+   if(data?.kind!=="estampes.user_selection" || data?.value!==value ||
+      Math.abs(data.x-payload.x)>1e-9) {
+     throw Error("Unexpected tool result");
    }
+   validationOk=true;
+ } catch(err) {
+   validationError=String(err?.message||err);
+ }
+
+ // Step 2: Send actual user intent to the model. This is independent
+ // of server validation; a tools/call result is NOT itself a user message.
+ status.textContent=validationOk
+   ?"座標已驗證，正在送入 GPT 對話…"
+   :"工具驗證失敗，改嘗試直接傳給 GPT…";
+ try {
+   const result=await request("ui/message",{
+     role:"user",
+     content:[{
+       type:"text",
+       text:"我在 Estampes 的 -4 至 4 數線上指向 "+value+
+         "。標註："+JSON.stringify(payload)+
+         "。請確認你收到我指認的數字。"
+     }]
+   });
+   if(result?.isError)throw Error("Host returned isError");
+   status.textContent=(validationOk
+     ?"座標已驗證；"
+     :"工具驗證失敗（"+validationError+"）；")+
+     "訊息已交給聊天宿主，請確認對話是否出現新訊息。";
+ } catch(err) {
+   status.textContent=(validationOk?"座標驗證成功；":"工具驗證失敗："+validationError+"；")+
+     "聊天橋接失敗："+String(err?.message||err)+
+     "。可手動輸入：我在 Estampes 指向 "+value+
+     " (x="+payload.x+")。";
  }
  send.disabled=false;
 });
