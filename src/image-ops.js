@@ -4,6 +4,7 @@
 // coordinates normalized to the full oriented source image.
 import sharp from "sharp";
 import { labelSvg, labelWidth, GLYPH_HEIGHT } from "./pixel-font.js";
+import { entrySharp } from "./image-store.js";
 
 export const OUTPUT_LONG_SIDE = 1600;
 export const MAX_UPSCALE = 8;
@@ -59,6 +60,54 @@ function otsu(gray) {
   return threshold;
 }
 
+// Contrast-limited adaptive histogram equalization on luminance, in JS:
+// one clipped histogram per tile, bilinear blend between tile curves.
+// libvips' hist_local is O(tile²) per pixel and took seconds on a photo.
+export function clahe(img, { tile = 48, maxSlope = 3 } = {}) {
+  const { data, width, height, channels } = img;
+  const n = width * height;
+  const luma = new Uint8Array(n);
+  for (let i = 0, p = 0; i < n; i++, p += channels) {
+    luma[i] = channels >= 3 ? Math.round(0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2]) : data[p];
+  }
+  const tilesX = Math.max(1, Math.ceil(width / tile)), tilesY = Math.max(1, Math.ceil(height / tile));
+  const luts = new Uint8Array(tilesX * tilesY * 256);
+  const hist = new Float64Array(256);
+  for (let ty = 0; ty < tilesY; ty++) {
+    for (let tx = 0; tx < tilesX; tx++) {
+      hist.fill(0);
+      const x0 = tx * tile, y0 = ty * tile, x1 = Math.min(width, x0 + tile), y1 = Math.min(height, y0 + tile);
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) hist[luma[y * width + x]]++;
+      const count = (x1 - x0) * (y1 - y0), limit = Math.max(1, (maxSlope * count) / 256);
+      let excess = 0;
+      for (let v = 0; v < 256; v++) if (hist[v] > limit) { excess += hist[v] - limit; hist[v] = limit; }
+      const share = excess / 256;
+      const base = (ty * tilesX + tx) * 256;
+      let cdf = 0;
+      for (let v = 0; v < 256; v++) { cdf += hist[v] + share; luts[base + v] = Math.min(255, Math.round((cdf / count) * 255)); }
+    }
+  }
+  const out = Buffer.alloc(data.length);
+  for (let y = 0; y < height; y++) {
+    const fy = Math.min(Math.max((y + 0.5) / tile - 0.5, 0), tilesY - 1);
+    const ty0 = Math.floor(fy), ty1 = Math.min(tilesY - 1, ty0 + 1), wy = fy - ty0;
+    for (let x = 0; x < width; x++) {
+      const fx = Math.min(Math.max((x + 0.5) / tile - 0.5, 0), tilesX - 1);
+      const tx0 = Math.floor(fx), tx1 = Math.min(tilesX - 1, tx0 + 1), wx = fx - tx0;
+      const i = y * width + x, v = luma[i];
+      const a = luts[(ty0 * tilesX + tx0) * 256 + v], b = luts[(ty0 * tilesX + tx1) * 256 + v];
+      const c = luts[(ty1 * tilesX + tx0) * 256 + v], d = luts[(ty1 * tilesX + tx1) * 256 + v];
+      const mapped = (a * (1 - wx) + b * wx) * (1 - wy) + (c * (1 - wx) + d * wx) * wy;
+      const p = i * channels;
+      if (channels === 1) { out[p] = Math.round(mapped); continue; }
+      // Shift colour channels by the luminance change; keeps hue roughly intact.
+      const delta = mapped - v;
+      for (let k = 0; k < channels; k++) out[p + k] = k < 3 ? clamp(Math.round(data[p + k] + delta), 0, 255) : data[p + k];
+    }
+  }
+  return { data: out, width, height, channels };
+}
+
 async function threshold(img, { method = "adaptive", value = 128, blockSize, offset = 15 }) {
   const gray = await toGray(img);
   const out = Buffer.alloc(gray.data.length);
@@ -99,7 +148,7 @@ async function applyOp(img, step) {
   switch (step.op) {
     case "grayscale": return toGray(img);
     case "normalize": return rawImage(fromRaw(img).normalise());
-    case "clahe": return rawImage(fromRaw(img).clahe({ width: step.tile ?? 48, height: step.tile ?? 48, maxSlope: step.maxSlope ?? 3 }));
+    case "clahe": return clahe(img, { tile: step.tile ?? 48, maxSlope: step.maxSlope ?? 3 });
     case "contrast": { const f = step.factor ?? 1.5; return rawImage(fromRaw(img).linear(f, 128 * (1 - f))); }
     case "brightness": return rawImage(fromRaw(img).linear(step.factor ?? 1.3, 0));
     case "sharpen": return rawImage(fromRaw(img).sharpen({ sigma: step.sigma ?? 1.2 }));
@@ -112,11 +161,13 @@ async function applyOp(img, step) {
 }
 
 async function encode(img) {
-  // Single-channel results stay greyscale PNGs (smaller, and honest about content).
-  const base = () => img.channels === 1 ? fromRaw(img).toColourspace("b-w") : fromRaw(img);
-  const png = await base().png({ compressionLevel: 9 }).toBuffer();
-  if (png.length <= 1_500_000) return { data: png, mimeType: "image/png" };
-  return { data: await base().jpeg({ quality: 88 }).toBuffer(), mimeType: "image/jpeg" };
+  // Single-channel results (threshold, edges, grayscale) stay lossless
+  // greyscale PNGs; colour photos go straight to JPEG, which is far faster.
+  if (img.channels === 1) {
+    const png = await fromRaw(img).toColourspace("b-w").png({ compressionLevel: 6 }).toBuffer();
+    if (png.length <= 1_500_000) return { data: png, mimeType: "image/png" };
+  }
+  return { data: await fromRaw(img).jpeg({ quality: 88 }).toBuffer(), mimeType: "image/jpeg" };
 }
 
 // Crop to `region`, scale to fit the output size (enlarging small crops up to
@@ -127,7 +178,7 @@ async function prepare(entry, region) {
   const scale = Math.min(region ? MAX_UPSCALE : 1, OUTPUT_LONG_SIDE / Math.max(px.width, px.height));
   const width = Math.max(1, Math.round(px.width * scale));
   const height = Math.max(1, Math.round(px.height * scale));
-  const img = await rawImage(sharp(entry.png).extract(px).flatten({ background: "#ffffff" })
+  const img = await rawImage(entrySharp(entry).extract(px)
     .resize({ width, height, kernel: "lanczos3" }));
   return { img, px, scale };
 }
@@ -203,10 +254,13 @@ export async function previewImage(entry) {
 // only reduced, as a compact JPEG.
 export const DISPLAY_LONG_SIDE = 1600;
 export async function displayImage(entry) {
-  const { data, info } = await sharp(entry.png).flatten({ background: "#ffffff" })
+  // Cached on the entry: present_visual is often called again for one photo.
+  entry.display ??= entrySharp(entry)
     .resize({ width: DISPLAY_LONG_SIDE, height: DISPLAY_LONG_SIDE, fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 82 }).toBuffer({ resolveWithObject: true });
-  return { data, mimeType: "image/jpeg", width: info.width, height: info.height };
+    .jpeg({ quality: 82 }).toBuffer({ resolveWithObject: true })
+    .then(({ data, info }) => ({ data, mimeType: "image/jpeg", width: info.width, height: info.height }))
+    .catch((error) => { entry.display = undefined; throw error; });
+  return entry.display;
 }
 
 // Keep widget payloads small: large processed views become JPEGs.

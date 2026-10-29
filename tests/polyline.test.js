@@ -49,3 +49,32 @@ test("smooth and closed flags survive for freehand curves and loops", () => {
   });
   assert.equal(event.annotations[0].geometry.closed, true);
 });
+
+test("submission separates the focus mark from earlier context marks", () => {
+  const event = buildAnnotationEvent({
+    image: { imageId: "img:0123456789abcdef", width: 10, height: 10 },
+    annotations: [
+      { id: "user-1", type: "rect", x: 0.1, y: 0.1, x2: 0.3, y2: 0.3, label: "YOU 1", role: "context" },
+      { id: "user-2", type: "rect", x: 0.5, y: 0.5, x2: 0.7, y2: 0.7, label: "YOU 2", role: "focus" },
+    ],
+  });
+  assert.deepEqual(event.annotations.map(m => m.role), ["context", "focus"]);
+  const text = formatAnnotationChatMessage(event);
+  assert.match(text, /這次我問的是：YOU 2/);
+  assert.match(text, /YOU 1，role=context/);
+  const allContext = buildAnnotationEvent({
+    image: { imageId: "img:0123456789abcdef", width: 10, height: 10 },
+    annotations: [{ id: "user-1", type: "point", x: 0.1, y: 0.1, role: "context" }],
+  });
+  assert.equal(allContext.annotations[0].role, "focus", "a submission always has a focus");
+});
+
+test("assistant findings (note, status) are kept on marks", () => {
+  const m = resolveCoordinateAnnotation({ id: "a1", type: "rect", x: 0.1, y: 0.1, x2: 0.2, y2: 0.2, note: " SONY CXD2500AQ ", status: "inspected" });
+  assert.equal(m.note, "SONY CXD2500AQ");
+  assert.equal(m.status, "inspected");
+  assert.equal(resolveCoordinateAnnotation({ id: "a2", type: "point", x: 0.1, y: 0.1, status: "verified" }).status, undefined);
+  const replay = replayUserAnnotation({ id: "user-2", type: "rect", x: 0.5, y: 0.5, x2: 0.7, y2: 0.7, note: "CXD2500AQ", status: "inspected" });
+  assert.equal(replay.note, "CXD2500AQ");
+  assert.equal(replay.author, "user");
+});

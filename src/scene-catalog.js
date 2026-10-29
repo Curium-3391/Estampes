@@ -51,6 +51,14 @@ export function polylineWithBounds(points, { smooth, closed } = {}) {
     ...(smooth===true?{smooth:true}:{}),...(closed===true?{closed:true}:{})};
 }
 
+// What the assistant concluded about a mark, shown beside it in the canvas.
+// `status` is the assistant's own claim (inspected = it looked at pixels).
+export const MARK_STATUSES = Object.freeze(["inspected","uncertain"]);
+export function markFindings(mark) {
+  const note=typeof mark.note==="string"?mark.note.trim().slice(0,200):"";
+  return {...(note?{note}:{}),...(MARK_STATUSES.includes(mark.status)?{status:mark.status}:{})};
+}
+
 function checkAssistantMark(mark) {
   if(!mark || !MARK_TYPES.includes(mark.type)) {
     throw new Error("Unsupported annotation");
@@ -68,7 +76,7 @@ export function resolveCoordinateAnnotation(mark) {
   checkAssistantMark(mark);
   if(mark.targetId!==undefined) throw new Error("Named targets are not supported; give x/y coordinates");
   if(mark.type==="polyline") {
-    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points,mark),
+    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points,mark),...markFindings(mark),
       author:"assistant",grounding:"unverified"};
   }
   if(!Number.isFinite(mark.x)||!Number.isFinite(mark.y)||
@@ -80,7 +88,7 @@ export function resolveCoordinateAnnotation(mark) {
       mark.x2<0||mark.x2>1||mark.y2<0||mark.y2>1)) {
     throw new Error("Invalid endpoint");
   }
-  return {id:mark.id,type:mark.type,label:mark.label,x:mark.x,y:mark.y,
+  return {id:mark.id,type:mark.type,label:mark.label,...markFindings(mark),x:mark.x,y:mark.y,
     ...(mark.type==="point"?{}:{x2:mark.x2,y2:mark.y2}),
     author:"assistant",grounding:"unverified"};
 }
@@ -98,7 +106,7 @@ export function resolveSceneAnnotation(scene, mark) {
     throw new Error("Mountains are occluded; use a point or future polygon mask, not a misleading bbox");
   }
   const geom=mark.type==="point"?target.point:target.box;
-  return {id:mark.id,type:mark.type,label:mark.label,...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
+  return {id:mark.id,type:mark.type,label:mark.label,...markFindings(mark),...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
 }
 
 export function replayUserAnnotation(mark) {

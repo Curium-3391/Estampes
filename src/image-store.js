@@ -15,6 +15,7 @@ const FETCH_TIMEOUT_MS = 15000;
 const MAX_REDIRECTS = 3;
 const CACHE_LIMIT = 12;
 // Render free instances have 512 MB of RAM; keep cached pixels well under it.
+// Pixels are cached raw (no decode per call): a 4096×3072 photo is ~38 MB.
 const CACHE_BYTES = 160 * 1024 * 1024;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
@@ -84,11 +85,11 @@ export async function downloadImage(rawUrl, { fetchImpl = fetch, checkUrl = asse
 function prune(now = Date.now()) {
   for (const [id, entry] of cache) if (now - entry.touched > CACHE_TTL_MS) cache.delete(id);
   let bytes = 0;
-  for (const entry of cache.values()) bytes += entry.png.length;
+  for (const entry of cache.values()) bytes += entry.pixels.length;
   // Map order is least-recently used first; always keep the newest entry.
   while (cache.size > 1 && (cache.size > CACHE_LIMIT || bytes > CACHE_BYTES)) {
     const [oldest, entry] = cache.entries().next().value;
-    bytes -= entry.png.length;
+    bytes -= entry.pixels.length;
     cache.delete(oldest);
   }
 }
@@ -106,12 +107,15 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
   const working = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS })
     .rotate()
     .resize({ width: WORKING_LONG_SIDE, height: WORKING_LONG_SIDE, fit: "inside", withoutEnlargement: true })
-    .png()
+    .flatten({ background: "#ffffff" })
+    .toColourspace("srgb")
+    .raw()
     .toBuffer({ resolveWithObject: true });
   const imageId = "img:" + createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   const entry = {
     imageId,
-    png: working.data,
+    pixels: working.data,
+    channels: working.info.channels,
     width: working.info.width,
     height: working.info.height,
     original: { format: meta.format, width: meta.width, height: meta.height },
@@ -135,6 +139,10 @@ export function getImage(imageId) {
   cache.set(imageId, entry);
   return entry;
 }
+
+// A sharp pipeline over an entry's cached pixels.
+export const entrySharp = (entry) =>
+  sharp(entry.pixels, { raw: { width: entry.width, height: entry.height, channels: entry.channels } });
 
 export function clearImages() {
   cache.clear();

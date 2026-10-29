@@ -6,7 +6,7 @@ import {
 } from "../src/image-store.js";
 import { regionToPixels, processImage, overlayGrid, cellCenter } from "../src/image-ops.js";
 
-const PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff]);
 
 // 400×200 landscape: dark left half, light right half, black bar near top-left.
 async function sampleImage({ orientation } = {}) {
@@ -67,7 +67,8 @@ test("process_image crops, upscales and reports the covered source region", asyn
   const entry = await registerImage(await sampleImage(), { source: "url" });
   const whole = await processImage(entry, {});
   assert.equal(whole.width, 400, "whole-image views are never enlarged");
-  assert.ok(whole.data.subarray(0, 8).equals(PNG_MAGIC));
+  assert.equal(whole.mimeType, "image/jpeg", "colour output skips the slow PNG encode");
+  assert.ok(whole.data.subarray(0, 3).equals(JPEG_MAGIC));
   const zoom = await processImage(entry, { region: { x: 0.5, y: 0, x2: 1, y2: 0.25 }, ops: [{ op: "clahe" }, { op: "sharpen" }] });
   assert.deepEqual(zoom.region, { x: 0.5, y: 0, x2: 1, y2: 0.25 });
   assert.equal(zoom.scale, 8);
@@ -79,6 +80,7 @@ test("threshold and edges produce single-channel binary/edge maps", async () => 
   for (const ops of [[{ op: "threshold", method: "otsu" }], [{ op: "threshold", method: "adaptive" }], [{ op: "edges" }]]) {
     const out = await processImage(entry, { ops });
     assert.equal((await sharp(out.data).metadata()).channels, 1, JSON.stringify(ops));
+    assert.equal(out.mimeType, "image/png", "binary and edge maps stay lossless");
     const data = await sharp(out.data).extractChannel(0).raw().toBuffer();
     if (ops[0].op === "threshold") assert.ok([...data].every(v => v === 0 || v === 255));
   }
@@ -92,7 +94,7 @@ test("overlay_grid labels map to correct source coordinates", async () => {
   const entry = await registerImage(await sampleImage(), { source: "url" });
   const region = { x: 0.5, y: 0, x2: 1, y2: 0.5 };
   const grid = await overlayGrid(entry, { region, rows: 4, cols: 4 });
-  assert.ok(grid.data.subarray(0, 8).equals(PNG_MAGIC));
+  assert.ok(grid.data.subarray(0, 3).equals(JPEG_MAGIC));
   assert.deepEqual(grid.region, region);
   assert.deepEqual(cellCenter("A1", { rows: 4, cols: 4, region }), { x: 0.5625, y: 0.0625 });
   assert.deepEqual(cellCenter("d4", { rows: 4, cols: 4, region }), { x: 0.9375, y: 0.4375 });

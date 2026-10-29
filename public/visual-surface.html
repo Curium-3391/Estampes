@@ -27,6 +27,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #surface{display:block;width:100%;height:auto;max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
+#findings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+#findings:empty{display:none}
+#findings li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
+#findings li:hover{border-color:#8889}
+#findings .who{font-weight:700;white-space:nowrap}
+#findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
+#findings .note{overflow-wrap:anywhere}
 </style></head><body><main>
 <header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
 <p class="help">同一張圖片，同一套座標。<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>；預設顯示原圖，可直接標記、放大，或切換到 GPT 提供的處理後檢視。</p>
@@ -46,10 +53,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 <defs><marker id="gold-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#E4AE57"/></marker>
 <marker id="blue-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#579DF6"/></marker></defs>
-<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
+<ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
 <label for="intent">這次標註的目的</label>
 <select id="intent">
@@ -74,6 +82,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 const NS="http://www.w3.org/2000/svg";
 const svg=document.querySelector("#surface"),sceneEl=document.querySelector("#scene"),processedEl=document.querySelector("#processed");
 const tabNav=document.querySelector(".view-tabs");
+const freshEl=document.querySelector("#fresh-annotations"),findingsEl=document.querySelector("#findings");
+// Marks already sent to GPT: the next send labels them context, not focus.
+const sentIds=new Set();
 const aiEl=document.querySelector("#assistant-annotations"),userEl=document.querySelector("#user-annotations"),previewEl=document.querySelector("#preview");
 const hit=document.querySelector("#hit"), status=document.querySelector("#status"),send=document.querySelector("#send"),counter=document.querySelector("#counter");
 const intentSelect=document.querySelector("#intent"),noteInput=document.querySelector("#note"),quoteInput=document.querySelector("#quote");
@@ -179,9 +190,10 @@ function renderMarks(layer,items,color,author){
      node("path",{d,fill:"none",stroke:color,"stroke-width":3*k,"stroke-linejoin":"round","stroke-linecap":"round"},layer);
      if(a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*k,fill:color,stroke:"#fff","stroke-width":1.5*k},layer);
    }
-   // Distinguish a guessed model coordinate from a known scene landmark.
-   const uncertain=author==="AI" && a.grounding!=="scene-anchor";
-   const label=String((uncertain?"? ":"")+(a.label||author)).slice(0,64);
+   // Distinguish a guessed model coordinate from a known scene landmark;
+   // GPT may claim it inspected the pixels (✓), which is still its own claim.
+   const uncertain=author==="AI" && a.grounding!=="scene-anchor" && a.status!=="inspected";
+   const label=String((a.status==="inspected"?"✓ ":uncertain?"? ":"")+(a.label||author)).slice(0,64);
    const lx=a.type==="polyline"?px(a.points[0].x):x,ly=a.type==="polyline"?py(a.points[0].y):y;
    const labelNode=node("text",{x:clamp(lx+9*k,5*k,VW-100*k),y:clamp(ly-12*k,14*k,VH-14*k),fill:color,"font-size":15*k,"font-weight":700,stroke:"#17212A","stroke-width":.8*k,"paint-order":"stroke"},layer);
    labelNode.textContent=label;
@@ -192,6 +204,20 @@ const markOptions=()=>[
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
 ];
+const STATUS_TEXT={inspected:"GPT 表示已看過像素",uncertain:"GPT 不確定"};
+function renderFindings(){
+ findingsEl.replaceChildren();
+ for(const item of markOptions()){
+   const m=item.mark;if(!m.note&&!m.status)continue;
+   const li=document.createElement("li");li.dataset.key=item.key;
+   const who=document.createElement("span");who.className="who";who.style.color=item.author==="AI"?"#C98A2E":"#3C7FE0";
+   who.textContent=m.label||(item.author==="AI"?"GPT":"YOU");li.append(who);
+   if(m.note){const t=document.createElement("span");t.className="note";t.textContent=m.note;li.append(t);}
+   if(STATUS_TEXT[m.status]){const b=document.createElement("span");b.className="badge";b.textContent=STATUS_TEXT[m.status];li.append(b);}
+   findingsEl.append(li);
+ }
+}
+findingsEl.addEventListener("click",e=>{const li=e.target.closest("li");if(!li)return;selectedFocusId=li.dataset.key;viewMode="zoom";render()});
 function refreshFocus(){
  const marks=markOptions(),previous=selectedFocusId;focusChoice.replaceChildren();
  for(const item of marks){
@@ -226,6 +252,7 @@ function renderView(){
  }
  for(const b of tabs)b.setAttribute("aria-pressed",String(b.dataset.view===viewMode));
  aiEl.style.display=hideMarks?"none":"";
+ freshEl.style.display=hideMarks?"none":"";
  userEl.style.display=hideMarks?"none":"";
  previewEl.style.display=hideMarks?"none":"";
  hit.style.pointerEvents=hideMarks?"none":"auto";
@@ -253,9 +280,14 @@ function render(){
    }
  }else sceneEl.innerHTML=SCENES[selectedScene];
  renderMarks(aiEl,assistantMarks,"#E4AE57","AI");
- renderMarks(userEl,[...priorUserMarks,...userMarks],"#579DF6","YOU");
- counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;
- send.disabled=!ready||userMarks.length===0;
+ renderMarks(userEl,[...priorUserMarks,...userMarks.filter(m=>sentIds.has(m.id))],"#579DF6","YOU");
+ userEl.style.opacity=".55";
+ // New (unsent) marks drawn at full strength in their own layer.
+ renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
+ const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
+ counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
+ send.disabled=!ready||fresh===0;
+ renderFindings();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -363,10 +395,12 @@ window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 send.addEventListener("click",async()=>{
- if(!ready||!userMarks.length)return;
+ const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
+ if(!ready||!freshIds.length)return;
  send.disabled=true;
  const marks=userMarks.map(({id,type,x,y,x2,y2,points,smooth,closed,label})=>({
    id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,
+   role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"
  }));
  const intent=intentSelect.value||"point-out";
@@ -411,8 +445,9 @@ send.addEventListener("click",async()=>{
      role:"user",content:[{type:"text",text:chatMessage}]
    });
    if(response?.isError)throw Error("Host rejected message");
+   for(const id of freshIds)sentIds.add(id);
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
-     (imageId?"請確認 GPT 是否用 process_image 查看你標的位置。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
+     (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
  }catch(err){
    status.textContent=(validated?"座標驗證成功；":"座標驗證失敗："+reason+"；")+
      "聊天傳送失敗："+String(err.message||err);
