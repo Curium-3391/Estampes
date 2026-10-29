@@ -25,6 +25,14 @@ test("semantic target must exist in selected scene",()=>{
   assert.throws(()=>resolveSceneAnnotation("shapes",{id:"a",type:"arrow",targetId:"circle"}));
   assert.throws(()=>resolveSceneAnnotation("landscape",{id:"a",type:"rect",targetId:"mountain-right"}),/occluded/);
 });
+test("previous human marks cannot be silently converted into AI marks",()=>{
+  assert.throws(()=>resolveSceneAnnotation("landscape",{
+    id:"user-1",type:"point",x:0.2,y:0.4,label:"YOU 1"
+  }),/priorUserAnnotations/);
+  assert.throws(()=>resolveSceneAnnotation("landscape",{
+    id:"another",type:"point",x:0.2,y:0.4,label:"YOU 2"
+  }),/priorUserAnnotations/);
+});
 test("free coordinates are retained but never called semantically grounded",()=>{
   const a=resolveSceneAnnotation("landscape",{id:"free",type:"point",x:0.82,y:0.49,label:"mountain"});
   assert.equal(a.x,0.82);
