@@ -14,14 +14,36 @@ import { valueToX } from "./src/geometry.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.3.2";
+const BUILD_VERSION = "m0.4.0";
+const VISUAL_URI = "ui://estampes/visual-surface-v040.html";
 const html = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
   "utf8"
 );
 
+
+const visualHtml = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "public/visual-surface.html"),
+  "utf8"
+);
+const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
+const Point01 = z.number().finite().min(0).max(1);
+const VisualAnnotationSchema = z.object({
+  id: z.string().min(1).max(64),
+  type: z.enum(["point", "rect", "arrow"]),
+  x: Point01, y: Point01,
+  x2: Point01.optional(), y2: Point01.optional(),
+  label: z.string().max(64).optional(),
+}).superRefine((annotation,ctx)=>{
+  if(annotation.type!=="point" &&
+     (annotation.x2===undefined || annotation.y2===undefined)){
+    ctx.addIssue({code:"custom",message:"Rectangle and arrow require x2/y2"});
+  }
+});
+const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
+
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.3.2" });
+  const server = new McpServer({ name: "estampes", version: "0.4.0" });
 
   registerAppResource(
     server,
@@ -119,6 +141,81 @@ function makeServer() {
     })
   );
 
+
+  // M0.4: an overlay engine for several built-in sample scenes.
+  // Does not claim to access images already rendered by ChatGPT search.
+  registerAppResource(
+    server,
+    "Estampes visual surface",
+    VISUAL_URI,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: VISUAL_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
+    })
+  );
+
+  registerAppTool(
+    server,
+    "present_visual",
+    {
+      title: "Present a shared visual canvas",
+      description:
+        "Display a generic in-chat 2D canvas where the AI can mark points, rectangles, and arrows and the user can freely mark and send their own positions. Uses a built-in illustration: landscape (house/tree/sun/mountains), shapes (circle/square/triangle), or formula (E=mc²). All coordinates are normalized [0,1] from the image top-left. This does not import ChatGPT's searched images.",
+      inputSchema: z.object({
+        scene: SceneSchema,
+        annotations: VisualAnnotationsSchema.max(12).default([]),
+      }),
+      outputSchema: z.object({
+        kind: z.literal("estampes.visual_surface"),
+        scene: SceneSchema,
+        annotations: VisualAnnotationsSchema,
+        coordinateSystem: z.literal("normalized-top-left"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { resourceUri: VISUAL_URI } },
+    },
+    async ({ scene, annotations }) => ({
+      content: [{
+        type:"text",
+        text:"Estampes shared visual surface: "+scene+"; AI annotations: "+JSON.stringify(annotations)+
+          ". The user can now click, drag a rectangle, or draw an arrow on this image and send coordinates back.",
+      }],
+      structuredContent:{
+        kind:"estampes.visual_surface",scene,annotations,
+        coordinateSystem:"normalized-top-left",
+      },
+    })
+  );
+
+  // Private tool, not a widget: returns validated user marks.
+  registerAppTool(
+    server,
+    "validate_visual_annotations",
+    {
+      title:"Validate user visual annotations",
+      description:"Validate the user's 2D normalized image annotations.",
+      inputSchema:z.object({
+        scene:SceneSchema,
+        annotations:VisualAnnotationsSchema,
+      }),
+      outputSchema:z.object({
+        kind:z.literal("estampes.validated_annotations"),
+        scene:SceneSchema,
+        count:z.number().int(),
+        annotations:VisualAnnotationsSchema,
+      }),
+      annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
+      _meta:{ui:{visibility:["app"]}},
+    },
+    async ({scene,annotations})=>({
+      content:[{type:"text",text:"Validated "+annotations.length+" visual annotations on "+scene+"."}],
+      structuredContent:{
+        kind:"estampes.validated_annotations",scene,
+        count:annotations.length,annotations,
+      },
+    })
+  );
+
   return server;
 }
 
@@ -141,6 +238,9 @@ const httpServer = createHttpServer((req, res) => {
       version: BUILD_VERSION,
       uiResourceUri: WIDGET,
       selectionTool: "record_number_line_selection",
+      visualResourceUri: VISUAL_URI,
+      visualTool: "present_visual",
+      visualValidationTool: "validate_visual_annotations",
     }));
     return;
   }
