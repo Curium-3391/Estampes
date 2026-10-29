@@ -34,8 +34,8 @@ test("marks persist with stable ids: add, edit, comment, remove", async () => {
   assert.equal(user.author, "user");
   assert.equal(user.role, undefined, "submission role is not stored");
   assert.equal(user.note, "CXD2500AQ");
-  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "user-ab-1", type: "point", x: 0, y: 0 }], resolve }), /drawn by the user/);
-  assert.throws(() => applyCanvasChanges(entry, { findings: [{ id: "nope", note: "x" }], resolve }), /No mark nope/);
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "user-ab-1", type: "point", x: 0, y: 0 }], resolve }), /annotations\[0\] \(mark "user-ab-1"\): field id is a mark the user drew/);
+  assert.throws(() => applyCanvasChanges(entry, { findings: [{ id: "nope", note: "x" }], resolve }), /findings\[0\] \(mark "nope"\): no such mark/);
   applyCanvasChanges(entry, { remove: ["chip"], resolve });
   assert.deepEqual(canvasMarks(entry).map(m => m.id), ["user-ab-1"]);
   applyCanvasChanges(entry, { reset: true, resolve });
@@ -91,4 +91,69 @@ test("each send and each GPT drawing call becomes one layer", async () => {
   assert.deepEqual(canvasLayers(entry).map(l => l.id), ["L2", "L3", "L4"]);
   applyCanvasChanges(entry, { reset: true, annotations: [box("z", 0.1)], resolve });
   assert.deepEqual(canvasLayers(entry).map(l => [l.id, l.name]), [["L1", "GPT · 第1次"]]);
+});
+
+// Live trial 2026-10-29 (img:298756bcc232f6bd): after the user sent three
+// arrows, every present_visual call failed with "User-authored mark must be
+// passed via priorUserAnnotations" because GPT labelled its own trace
+// "YOU 3 → C105 上端"; the label check rejected any label starting "YOU ".
+test("GPT can add a trace about user marks after several rounds; nothing is lost", async () => {
+  const entry = await photo();
+  // Round 1: user box + point, GPT pin-1 arrow and trace, findings on the box.
+  storeUserMarks(entry, [
+    { id: "user-1-1", type: "rect", x: 0.1, y: 0.1, x2: 0.3, y2: 0.3, label: "YOU 1" },
+    { id: "user-1-2", type: "point", x: 0.5, y: 0.5, label: "YOU 2" },
+  ]);
+  applyCanvasChanges(entry, { annotations: [
+    { id: "pin1", type: "arrow", x: 0.6, y: 0.6, x2: 0.5, y2: 0.5, label: "pin 1" },
+    { id: "trace1", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.2, y: 0.25 }] },
+  ], findings: [{ id: "user-1-1", note: "IC", status: "inspected" }], resolve });
+  // Round 2: user adds three arrows (the widget re-sends old marks as context).
+  const arrows = [
+    { id: "user-8347-1", type: "arrow", x: 0.37933, y: 0.1538, x2: 0.43128, y2: 0.11185, label: "YOU 3" },
+    { id: "user-8347-2", type: "arrow", x: 0.39665, y: 0.18408, x2: 0.46416, y2: 0.16131, label: "YOU 4" },
+    { id: "user-8347-3", type: "arrow", x: 0.58415, y: 0.12634, x2: 0.52657, y2: 0.14652, label: "YOU 5" },
+  ];
+  storeUserMarks(entry, [
+    { id: "user-1-1", type: "rect", x: 0.1, y: 0.1, x2: 0.3, y2: 0.3, label: "YOU 1", role: "context" },
+    { id: "user-1-2", type: "point", x: 0.5, y: 0.5, label: "YOU 2", role: "context" },
+    ...arrows.map(a => ({ ...a, role: "focus" })),
+  ]);
+  const before = JSON.stringify(canvasMarks(entry));
+  // A failing call (bad finding id) changes nothing, not even its valid parts.
+  assert.throws(() => applyCanvasChanges(entry, {
+    remove: ["pin1"], annotations: [{ id: "t", type: "point", x: 0.5, y: 0.5 }], findings: [{ id: "user-9", note: "x" }], resolve,
+  }), /findings\[0\] \(mark "user-9"\)/);
+  assert.equal(JSON.stringify(canvasMarks(entry)), before);
+  // Round 2 answer: red trace labelled after the user's arrow, findings on the
+  // arrows, and the arrows replayed by id (no duplicates).
+  const changed = applyCanvasChanges(entry, {
+    annotations: [{ id: "trace-3-c105", type: "polyline", color: "red", size: "fine", label: "YOU 3 → C105 上端",
+      note: "可見銅箔通往 C105 上端。", status: "inspected",
+      points: [{ x: 0.43157, y: 0.11168 }, { x: 0.43288, y: 0.12449 }, { x: 0.45982, y: 0.15929 }] }],
+    findings: arrows.map((a, i) => ({ id: a.id, note: i < 2 ? "相連" : "未相連", status: "inspected" })),
+    priorUser: arrows.map(a => ({ ...a, author: "user", grounding: "replayed-unverified" })),
+    resolve,
+  });
+  assert.deepEqual(changed, ["trace-3-c105", ...arrows.map(a => a.id)]);
+  // Reopening the canvas: 8 marks, each with its author, user geometry intact.
+  const marks = Object.fromEntries(canvasMarks(entry).map(m => [m.id, m]));
+  assert.equal(Object.keys(marks).length, 8);
+  assert.deepEqual(Object.entries(marks).filter(([, m]) => m.author === "user").map(([id]) => id).sort(),
+    ["user-1-1", "user-1-2", ...arrows.map(a => a.id)].sort());
+  assert.equal(marks["trace-3-c105"].author, "assistant");
+  assert.equal(marks["trace-3-c105"].color, "red");
+  for (const a of arrows) {
+    const m = marks[a.id];
+    assert.deepEqual([m.x, m.y, m.x2, m.y2, m.label, m.grounding], [a.x, a.y, a.x2, a.y2, a.label, "user-pointer"]);
+    assert.equal(m.status, "inspected");
+  }
+  assert.equal(marks["user-1-1"].note, "IC");
+  // Provenance still protected: user ids and bare user labels are refused.
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "user-8347-1", type: "point", x: 0.1, y: 0.1 }], resolve }),
+    /annotations\[0\] \(mark "user-8347-1"\): field id is a mark the user drew/);
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "user-new", type: "point", x: 0.1, y: 0.1 }], resolve }),
+    /field id uses the user-mark prefix/);
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "fake", type: "point", x: 0.1, y: 0.1, label: "YOU 6" }], resolve }),
+    /field label "YOU 6" is the user-mark label form/);
 });

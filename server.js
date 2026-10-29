@@ -18,7 +18,7 @@ import {
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
-import { applyCanvasChanges, canvasMarks, canvasLayers, storeUserMarks, importMarks } from "./src/canvas-state.js";
+import { applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks } from "./src/canvas-state.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
@@ -129,7 +129,7 @@ const ChatFileSchema = z.object({
   file_name: z.string().optional(),
 }).strict();
 
-async function importMarksFile(entry, file) {
+async function readMarksFile(entry, file) {
   const data = parseMarksFile(await downloadImage(file.download_url));
   if (data.width > 0 && data.height > 0 && Math.abs(data.width / data.height - entry.width / entry.height) > 0.01) {
     throw new Error("These marks were drawn on a " + data.width + "x" + data.height + " image; attach that image too");
@@ -141,7 +141,7 @@ async function importMarksFile(entry, file) {
   });
   const layers = data.layers.filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author))
     .map((l) => ({ id: l.id, author: l.author, name: String(l.name ?? "").slice(0, 40) }));
-  return importMarks(entry, marks, { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation });
+  return { marks, options: { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation } };
 }
 
 async function loadImageInput({ image, imageUrl }) {
@@ -345,7 +345,7 @@ function makeServer() {
         "CANONICAL shared visual canvas the user sees in chat. Users will not name tools: when they ask to show, point out, circle, box, trace or draw on a photo, call this yourself. " +
         "Whenever YOU ask the user to point at, circle or mark something, call this in the same turn so they have a canvas to draw on (imageId re-opens it with every mark); never ask without one. Also call it when the user asks for the canvas/drawing board again. Do not call it for text-only follow-ups. " +
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
-        "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). " +
+        "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). Ids starting 'user-' and bare labels like 'YOU 3' belong to the user's marks; your own labels may refer to them, e.g. 'YOU 3 → C105'. " +
         "Marks are grouped in LAYERS the user can show or hide: each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '電源走線', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " +
         "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. " +
         "If you read positions off a process_image/overlay_grid output, pass `coordinateFrame` = that output's region (plus its width/height to give pixel coordinates); Estampes converts them. " +
@@ -422,11 +422,20 @@ function makeServer() {
           };
         }
         const entry = getImage(imageId);
-        const imported = marksFile ? await importMarksFile(entry, marksFile) : [];
-        const changed = applyCanvasChanges(entry, {
-          annotations, findings, remove, reset, layer, frame: coordinateFrame,
-          priorUser: priorUserAnnotations.map(replayUserAnnotation), resolve: resolveCoordinateAnnotation,
-        });
+        // A marks file and this call's changes land together or not at all.
+        const parsedFile = marksFile ? await readMarksFile(entry, marksFile) : null;
+        const restore = snapshotCanvas(entry);
+        let imported = [], changed;
+        try {
+          if (parsedFile) imported = importMarks(entry, parsedFile.marks, parsedFile.options);
+          changed = applyCanvasChanges(entry, {
+            annotations, findings, remove, reset, layer, frame: coordinateFrame,
+            priorUser: priorUserAnnotations.map((m, i) => {
+              try { return replayUserAnnotation(m); } catch (error) { throw new Error("present_visual priorUserAnnotations[" + i + "] (mark " + JSON.stringify(m.id) + "): " + error.message); }
+            }),
+            resolve: resolveCoordinateAnnotation,
+          });
+        } catch (error) { restore(); throw error; }
         const resolved = canvasMarks(entry), layers = canvasLayers(entry);
         const drawn = changed.filter(id => annotations.some(a => a.id === id));
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;

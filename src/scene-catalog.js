@@ -79,9 +79,17 @@ function checkAssistantMark(mark) {
   }
   // Model input must not silently convert an earlier human mark into an AI
   // mark. This rejects known Estampes user-ID/label conventions; it is not
-  // an authentication mechanism for arbitrary future annotations.
-  if(/^user[-_]/i.test(mark.id) || /^YOU(?:\s|[-_]|$)/i.test(mark.label??"")) {
-    throw new Error("User-authored mark must be passed via priorUserAnnotations");
+  // an authentication mechanism for arbitrary future annotations. Only the
+  // bare user label ("YOU 3") is reserved: a GPT label that refers to a user
+  // mark ("YOU 3 → C105") is fine, its author stays assistant.
+  if(/^user[-_]/i.test(mark.id)) {
+    throw new Error("Mark "+JSON.stringify(mark.id)+": field id uses the user-mark prefix \"user-\". "+
+      "User-authored mark must be passed via priorUserAnnotations; give your own mark another id");
+  }
+  if(/^YOU\s*[-_]?\s*\d*$/i.test(mark.label??"")) {
+    throw new Error("Mark "+JSON.stringify(mark.id)+": field label "+JSON.stringify(mark.label)+
+      " is the user-mark label form. User-authored mark must be passed via priorUserAnnotations; "+
+      "to refer to a user mark, describe it, e.g. \"YOU 3 → C105\"");
   }
 }
 

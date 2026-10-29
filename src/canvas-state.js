@@ -69,37 +69,56 @@ export function storeUserMarks(entry, marks) {
 // names it, or picks an existing GPT layer of that name); edited marks stay
 // in their layer unless `layer` is given. Returns the ids this call added
 // or changed.
-export function applyCanvasChanges(entry, { annotations = [], findings = [], remove = [], reset = false, priorUser = [], layer: layerName, frame, resolve }) {
+// A call that fails part-way must leave the canvas as it was. Marks are
+// replaced, never mutated, so a shallow copy is a full snapshot.
+export function snapshotCanvas(entry) {
+  const marks = new Map(marksOf(entry)), layers = [...layersOf(entry)];
+  return () => { entry.marks = marks; entry.layers = layers; };
+}
+
+const stageError = (stage, i, id, error) =>
+  new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + (error?.message || error));
+
+export function applyCanvasChanges(entry, changes) {
+  const restore = snapshotCanvas(entry);
+  try { return applyChanges(entry, changes); } catch (error) { restore(); throw error; }
+}
+
+function applyChanges(entry, { annotations = [], findings = [], remove = [], reset = false, priorUser = [], layer: layerName, frame, resolve }) {
   const state = marksOf(entry);
   if (reset) { state.clear(); entry.layers = []; }
-  for (const id of remove) {
-    if (!state.delete(id)) throw new Error("No mark " + id + " to remove");
-  }
+  remove.forEach((id, i) => {
+    if (!state.delete(id)) throw stageError("remove", i, id, "no such mark on this canvas");
+  });
   const changed = [];
   let replay = null, layer = null;
   for (const mark of priorUser) {
     if (!state.has(mark.id)) state.set(mark.id, { ...mark, layer: (replay ??= newLayer(entry, "user", "你 · 重播")).id });
   }
-  for (const raw of annotations) {
+  annotations.forEach((raw, i) => {
     if (state.get(raw.id)?.author === "user") {
-      throw new Error("Mark " + raw.id + " was drawn by the user; comment on it with findings instead of replacing it");
+      throw stageError("annotations", i, raw.id, "field id is a mark the user drew; comment on it with findings instead of replacing it");
     }
-    const mark = resolve(fromFrame(raw, frame));
+    let mark;
+    try { mark = resolve(fromFrame(raw, frame)); } catch (error) { throw stageError("annotations", i, raw.id, error); }
     // Re-using an id edits that mark; its old note survives unless replaced.
     const old = state.get(mark.id);
     const into = old?.layer && !layerName ? old.layer : (layer ??= layerFor(entry, "assistant", layerName)).id;
     state.set(mark.id, { ...(old ? markFindings(old) : {}), ...mark, layer: into });
     changed.push(mark.id);
-  }
-  for (const finding of findings) {
-    const mark = state.get(finding.id);
-    if (!mark) throw new Error("No mark " + finding.id + " to attach a finding to");
+  });
+  findings.forEach((finding, i) => {
+    const stored = state.get(finding.id);
+    if (!stored) throw stageError("findings", i, finding.id, "no such mark to attach a finding to");
+    // Copy: the stored object may belong to a snapshot. Only note/status
+    // change; author, geometry and layer stay as they were.
+    const mark = { ...stored };
     const update = markFindings(finding);
     if (finding.note === "") delete mark.note;
     if (finding.status !== undefined && !MARK_STATUSES.includes(finding.status)) delete mark.status;
     state.set(finding.id, { ...mark, ...update });
     changed.push(finding.id);
-  }
+  });
   return [...new Set(changed)];
 }
 
