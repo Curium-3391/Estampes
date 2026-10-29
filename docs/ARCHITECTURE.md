@@ -51,6 +51,27 @@ overlay renderer <---- user draws / selects
 - **Continuity:** Annotation references need stable IDs across turns.
 - **Accessibility:** Spatial references require equivalent text descriptions and keyboard support.
 
+## Chosen integration direction
+
+**ChatGPT plugin first.** Use an MCP server with MCP Apps UI rendered inside the ChatGPT conversation. Explore optional ChatGPT Plugin Extensions (including file viewer/editor surfaces) when they materially improve image interaction. No standalone end-user website, separate chatbot, or custom harness is planned for M0.
+
+The UI may be implemented with web technologies because MCP Apps components are hosted inside ChatGPT; this does **not** mean redirecting users to an external website.
+
+MCP tools provide data and actions; a hosted component shows the original image plus an SVG overlay and captures gestures; the MCP Apps bridge communicates back to the host.
+
+Do not assume a plugin can access images displayed by ChatGPT's built-in search or draw over native image widgets. Start with a known test asset controlled by the plugin.
+
+## M0 acceptance test
+
+1. Connect Estampes as a custom MCP plugin in ChatGPT.
+2. Render a deterministic number line in an inline MCP Apps component.
+3. Have the assistant target a known tick using structured normalized coordinates.
+4. Let the user tap a different tick and send coordinates/selection back into conversation context.
+5. Resize the component: both assistant and user marks must remain aligned.
+6. Validate the round trip in the ChatGPT host, not only a local browser mock.
+
+Next test subjects: a simple formula, then an ordinary image. PCB photos are deferred.
+
 ## MVP test
 
 Start with a local, known image. Render an overlay from JSON, resize the view, and round-trip a human-drawn annotation into the same coordinate space. Add model-produced boxes only after the geometry pipeline is reliable.
