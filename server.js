@@ -17,6 +17,7 @@ const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
 const BUILD_VERSION = "m0.4.1";
 const VISUAL_URI = "ui://estampes/visual-surface-v041.html";
+const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
 const html = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
   "utf8"
@@ -181,6 +182,17 @@ function makeServer() {
     })
   );
 
+  // Compatibility for conversations that cached the M0.4.0 resource URI.
+  registerAppResource(
+    server,
+    "Estampes visual surface (legacy)",
+    VISUAL_LEGACY_URI,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: VISUAL_LEGACY_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
+    })
+  );
+
   registerAppTool(
     server,
     "present_visual",
@@ -248,13 +260,18 @@ function makeServer() {
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,annotations})=>({
-      content:[{type:"text",text:"Validated "+annotations.length+" visual annotations on "+scene+"."}],
-      structuredContent:{
-        kind:"estampes.validated_annotations",scene,
-        count:annotations.length,annotations,
-      },
-    })
+    async ({scene,annotations})=>{
+      // Geometry check is not semantic grounding; the widget supplies these
+      // positions as user gestures, so keep author=user in tool output.
+      const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
+      return {
+        content:[{type:"text",text:"Validated "+checked.length+" user-authored coordinate annotations on "+scene+" (geometry only)."}],
+        structuredContent:{
+          kind:"estampes.validated_annotations",scene,
+          count:checked.length,annotations:checked,
+        },
+      };
+    }
   );
 
   return server;
