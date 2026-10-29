@@ -39,8 +39,9 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.4.1");
-    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v041.html");
+    assert.equal(version.version,"m0.4.2");
+    assert.equal(version.annotationProtocol,"0.2-draft");
+    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v042.html");
     assert.equal(version.visualTool,"present_visual");
     assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
@@ -72,7 +73,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Generic canvas: model annotations, app-only validation, HTML resource.
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
-    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v041.html");
+    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v042.html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
     const visual=await client.callTool({name:"present_visual",arguments:{
       scene:"shapes",annotations:[visualAnnotation]
@@ -116,6 +117,26 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.deepEqual(checked.structuredContent?.annotations?.map(m=>m.author),["user","user"]);
     assert.deepEqual(checked.structuredContent?.annotations?.map(m=>m.grounding),["user-pointer","user-pointer"]);
     assert.equal(checked.structuredContent?.annotations?.[0]?.x,0);
+    assert.equal(checked.structuredContent?.event?.schemaVersion,"0.2-draft");
+    assert.equal(checked.structuredContent?.event?.image?.intrinsicSize?.unit,"svg-user-unit");
+    assert.equal(checked.structuredContent?.event?.interaction?.replyTo?.messageId,null);
+    assert.match(checked.structuredContent?.chatMessage,/這次的目的/);
+    const contextReply=await client.callTool({name:"validate_visual_annotations",arguments:{
+      scene:"landscape",
+      annotations:[userMarks[1]],
+      intent:"correct-assistant",
+      note:"不是後面的山，是這棵樹",
+      replyQuote:"你指的是哪座山？"
+    }});
+    assert.notEqual(contextReply.isError,true);
+    const event=contextReply.structuredContent?.event;
+    assert.equal(event?.schemaVersion,"0.2-draft");
+    assert.equal(event?.interaction?.intent,"correct-assistant");
+    assert.equal(event?.interaction?.userNote,"不是後面的山，是這棵樹");
+    assert.equal(event?.interaction?.replyTo?.provenance,"user-entered");
+    assert.equal(event?.annotations?.[0]?.arrowhead,"end");
+    assert.match(contextReply.structuredContent?.chatMessage,/你指的是哪座山/);
+    assert.match(contextReply.structuredContent?.chatMessage,/箭頭尖端/);
     // Some MCP clients represent schema rejection as a tool error result,
     // others raise a protocol error. Both are valid rejections.
     let rejected=false;
@@ -128,10 +149,10 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
       rejected=true;
     }
     assert.ok(rejected,"out-of-range rectangle must be rejected");
-    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v041.html"});
-    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v041.html");
+    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v042.html"});
+    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v042.html");
     assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
-    assert.ok(visualHtml?.text?.includes("v0.4.1"));
+    assert.ok(visualHtml?.text?.includes("v0.4.2"));
     assert.ok(visualHtml?.text?.includes('name:"validate_visual_annotations"'));
     const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
