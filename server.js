@@ -203,7 +203,7 @@ function makeServer() {
       inputSchema: z.object({
         scene: SceneSchema,
         annotations: ModelAnnotationsSchema.default([]),
-        priorUserAnnotations: VisualAnnotationsSchema.default([]).describe(
+        priorUserAnnotations: z.array(VisualAnnotationSchema).max(18).default([]).describe(
           "Only marks the user actually drew and supplied earlier; replayed provenance is not authenticated."
         ),
       }),
