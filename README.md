@@ -6,7 +6,7 @@ Estampes is an experimental, open-source project exploring a simple idea: humans
 
 Inspired by Claude Debussy's *Estampes* (1903).
 
-> **Status:** M0 proof of concept. ChatGPT has successfully rendered the inline number-line widget (model → UI). The M0.3 user → server → ChatGPT round trip is implemented but **still awaiting host verification**.
+> **Status:** M0.3.2 bidirectional round trip **verified in ChatGPT on 2026-10-29**: GPT marked 2 on the number line, the user selected -4, the widget validated the coordinate (x=0), submitted a user message, and GPT correctly acknowledged -4. Remaining M0 checks include resizing, more coordinates, and repeatability.
 
 ## The problem
 
@@ -33,7 +33,7 @@ Estampes aims to remove that friction.
 
 ## Development roadmap
 
-- [ ] **M0 — ChatGPT plugin number-line PoC:** The inline widget and model-directed marker work. M0.3 adds an app-scoped selection tool, user-to-chat message attempt, and round-trip smoke tests; host confirmation and resizing checks remain.
+- [ ] **M0 — ChatGPT plugin number-line PoC:** The in-chat AI → widget → user → GPT round trip is **host-verified** (2026-10-29). Remaining: resizing, repeated interactions, and additional coordinate cases.
 - [ ] **M1 — Formula and simple-image grounding:** Test precise pointing at terms in formulas and easily identifiable objects in images, with validation and uncertainty.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
