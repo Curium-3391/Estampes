@@ -79,6 +79,13 @@ test("real photos render from widget-only _meta and processed views get their ow
   assert.match(source,/viewMode="annotated"/);
 });
 
+test("re-delivered host data does not reset the chosen tab or unsent marks",()=>{
+  // ChatGPT fires openai:set_globals on every resize; v0.5.1 snapped back
+  // to the first tab after each click.
+  assert.match(source,/if\(key===appliedKey\)return;/);
+  assert.match(source,/o\.toolOutput===seenOutput/);
+});
+
 test("provenance colors are distinct from viewer inspection marker",()=>{
   assert.match(source,/#E4AE57/);
   assert.match(source,/#579DF6/);
