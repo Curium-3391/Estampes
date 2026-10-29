@@ -27,7 +27,7 @@ figcaption{font-size:.8rem;color:GrayText;padding:8px 10px;background:Canvas}
 </head>
 <body>
 <main>
-<header><h1>Estampes · Visual Evidence</h1><small>v0.4.4 · 真實 PNG 證據</small></header>
+<header><h1>Estampes · Visual Evidence</h1><small>v0.4.5 · 真實 PNG 證據</small></header>
 <p id="details">準備接收影像資料…</p>
 <div id="viewer" hidden>
 <nav aria-label="切換影像來源">
@@ -76,15 +76,14 @@ function switchView(name){
  for(const tab of tabs)tab.setAttribute("aria-pressed",String(tab.dataset.view===name));
 }
 function showResult(input){
- const r=input?.result??input?.toolResult??input?.mcp_tool_result??input;
- const items=r?.content??r?.mcp_tool_result?.content??[];
- if(!Array.isArray(items))return false;
- const images=items.filter(v=>v?.type==="image"&&v.mimeType==="image/png"&&
-                  typeof v.data==="string"&&/^[A-Za-z0-9+/=\r\n]+$/.test(v.data) &&
-                  v.data.length<=3500000);
- if(images.length<3)return false;
- for(const [index,name] of ["original","marked","crop"].entries()){
-   sources[name]="data:image/png;base64,"+images[index].data.replace(/\s/g,"");
+ const r=input?.structuredContent??input?.result?.structuredContent??
+   input?.toolResult?.structuredContent??input?.mcp_tool_result?.structuredContent??
+   input?.toolOutput??input;
+ if(r?.kind!=="estampes.visual_evidence_view"||!r.images)return false;
+ for(const name of ["original","marked","crop"]){
+   const b64=r.images[name];
+   if(typeof b64!=="string"||b64.length>3500000||!/^[A-Za-z0-9+/=\s]+$/.test(b64))return false;
+   sources[name]="data:image/png;base64,"+b64.replace(/\s/g,"");
  }
  viewer.hidden=false;
  switchView(currentView);
@@ -94,7 +93,8 @@ function showResult(input){
 function hydrateCompat(){
  const o=window.openai;
  if(!o)return false;
- return showResult(o.toolResponseMetadata?.mcp_tool_result)||
+ return showResult(o.toolOutput)||
+        showResult(o.toolResponseMetadata?.mcp_tool_result)||
         showResult(o.toolResponseMetadata?.call_tool_result)||
         showResult(o.toolOutput);
 }
@@ -103,8 +103,8 @@ retry.addEventListener("click",async()=>{
  if(!ready||!lastInput)return;
  retry.disabled=true;status.textContent="重新取得圖片中…";
  try{
-   const result=await request("tools/call",{name:"inspect_visual",arguments:lastInput});
-   if(!showResult(result))throw Error("工具沒有回傳完整的三張 PNG");
+   const result=await request("tools/call",{name:"present_visual_evidence",arguments:lastInput});
+   if(!showResult(result))throw Error("工具沒有回傳完整的圖片資料");
  }catch(e){status.textContent="無法取得 PNG："+String(e.message||e);}
  finally{retry.disabled=false}
 });
@@ -119,7 +119,7 @@ window.addEventListener("message",event=>{
  if(msg.method==="ui/notifications/tool-input")inputReceived(msg.params);
  if(msg.method==="ui/notifications/tool-result"){
    if(!showResult(msg.params)){
-     status.textContent="工具結果已收到，但宿主未提供三個 PNG image blocks；可嘗試重新取得圖片。";
+     status.textContent="工具結果已收到，但缺少 structuredContent 圖片資料。";
    }
  }
 });
