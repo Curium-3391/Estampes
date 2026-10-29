@@ -12,14 +12,16 @@ import {
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
 
-const WIDGET = "ui://estampes/number-line.html";
+const WIDGET = "ui://estampes/number-line-v031.html";
+const LEGACY_WIDGET = "ui://estampes/number-line.html";
+const BUILD_VERSION = "m0.3.1";
 const html = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
   "utf8"
 );
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.2.0" });
+  const server = new McpServer({ name: "estampes", version: "0.3.1" });
 
   registerAppResource(
     server,
@@ -28,6 +30,18 @@ function makeServer() {
     { mimeType: RESOURCE_MIME_TYPE },
     async () => ({
       contents: [{ uri: WIDGET, mimeType: RESOURCE_MIME_TYPE, text: html }],
+    })
+  );
+
+  // Keep the old address resolvable for preexisting conversations.
+  // Newly discovered tools point only to the versioned WIDGET URI.
+  registerAppResource(
+    server,
+    "Estampes number line (legacy)",
+    LEGACY_WIDGET,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: LEGACY_WIDGET, mimeType: RESOURCE_MIME_TYPE, text: html }],
     })
   );
 
@@ -114,6 +128,20 @@ const mcpHandler = toNodeHandler(createMcpHandler(makeServer));
 const port = Number(process.env.PORT ?? 8787);
 const httpServer = createHttpServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
+
+  if (url.pathname === "/version" && req.method === "GET") {
+    res.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    });
+    res.end(JSON.stringify({
+      name: "Estampes",
+      version: BUILD_VERSION,
+      uiResourceUri: WIDGET,
+      selectionTool: "record_number_line_selection",
+    }));
+    return;
+  }
 
   if (url.pathname === "/" && req.method === "GET") {
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
