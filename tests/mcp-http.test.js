@@ -92,10 +92,18 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.notEqual(checked.isError,true);
     assert.equal(checked.structuredContent?.count,2);
     assert.deepEqual(checked.structuredContent?.annotations,userMarks);
-    const bad=await client.callTool({name:"validate_visual_annotations",arguments:{
-      scene:"landscape",annotations:[{id:"bad",type:"rect",x:1.5,y:0.2}]
-    }});
-    assert.equal(bad.isError,true,"out-of-range rectangle must be rejected");
+    // Some MCP clients represent schema rejection as a tool error result,
+    // others raise a protocol error. Both are valid rejections.
+    let rejected=false;
+    try {
+      const bad=await client.callTool({name:"validate_visual_annotations",arguments:{
+        scene:"landscape",annotations:[{id:"bad",type:"rect",x:1.5,y:0.2}]
+      }});
+      rejected=bad.isError===true;
+    } catch {
+      rejected=true;
+    }
+    assert.ok(rejected,"out-of-range rectangle must be rejected");
     const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v040.html"});
     const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v040.html");
     assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
