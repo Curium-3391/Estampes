@@ -10,9 +10,15 @@ h2{font-size:1rem;margin:0}small,.help,#status{color:GrayText}
 small{font-size:.75rem}.help{font-size:.84rem;margin:9px 0}
 .toolbar,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
 button{font:inherit;color:inherit;background:transparent;border:1px solid #8886;border-radius:9px;padding:7px 12px;cursor:pointer}
-button[aria-pressed="true"]{background:#5263b2;color:white;border-color:transparent}
-button.primary{background:#5263b2;color:white;border-color:transparent}
+button[aria-pressed="true"]{background:#356BD6;color:white;border-color:transparent}
+button.primary{background:#356BD6;color:white;border-color:transparent}
 button:disabled{opacity:.45;cursor:not-allowed}
+.view-tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px}
+#focus-choice{font:inherit;font-size:.84rem;border:1px solid #8887;color:CanvasText;background:Canvas;border-radius:8px;padding:7px}
+#edit-tools[hidden],#focus-choice[hidden]{display:none}
+#context-details{margin:12px 0;border:1px solid #8885;border-radius:10px;padding:0 12px}
+#context-details>summary{cursor:pointer;padding:10px 0;font-size:.86rem}
+#context-details .context-panel{padding:0;margin:0 0 10px;border:0}
 .context-panel{margin:12px 0;padding:12px;border:1px solid #8885;border-radius:10px;display:grid;gap:8px}
 .context-panel label{font-size:.85rem;font-weight:600}
 .context-panel select,.context-panel textarea,.context-panel input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #8887;background:Canvas;color:CanvasText;font:inherit;font-size:.89rem}
@@ -22,9 +28,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 </style></head><body><main>
-<header><h2>Estampes · Visual Surface</h2><small>v0.4.6</small></header>
-<p class="help">金色：AI 座標標註（「?」代表尚未經影像證據驗證的位置）。藍色：使用者標註（含重新載入的標記）。請直接點擊或拖曳。</p>
-<div class="toolbar" role="group" aria-label="標註工具">
+<header><h2>Estampes · Visual Surface</h2><small>v0.4.7</small></header>
+<p class="help">同一張圖片，同一套座標。<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>；可直接標記、看原圖或放大。</p>
+<nav class="view-tabs" aria-label="檢視模式">
+<button data-view="annotated" aria-pressed="true">標註與編輯</button>
+<button data-view="original" aria-pressed="false">原始圖片</button>
+<button data-view="zoom" aria-pressed="false">局部放大</button>
+<select id="focus-choice" hidden aria-label="放大哪個標註"></select>
+</nav>
+<div class="toolbar" id="edit-tools" role="group" aria-label="標註工具">
 <button data-mode="point" aria-pressed="true">點選</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
 <button data-mode="arrow" aria-pressed="false">箭頭</button>
@@ -37,10 +49,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
-<section class="context-panel" aria-label="標註上下文">
-<label for="intent">這次標註是為了什麼？（必選）</label>
-<select id="intent" required>
-<option value="">請選擇這次指認的目的</option>
+<details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
+<label for="intent">這次標註的目的</label>
+<select id="intent">
+<option value="">沿用目前對話（預設：指出位置）</option>
 <option value="point-out">只是指出「這裡」</option>
 <option value="ask-about-region">請解釋這個區域</option>
 <option value="answer-question">回答你剛剛問我的問題</option>
@@ -53,7 +65,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <label for="quote">你在回覆的那句話（選填，手動貼上）</label>
 <input id="quote" maxlength="300" placeholder="例如：你剛剛問我哪一個元件發熱？">
 <p class="hint">Estampes 不會自動讀取聊天紀錄。送出後 GPT 可呼叫 inspect_visual 取得原始圖片與局部裁切；模型是否真的看到圖片仍須確認。</p>
-</section>
+</section></details>
 <div class="actions"><span id="counter">我的標註：0</span>
 <button id="send" class="primary" disabled>把標註傳給 GPT</button></div>
 <p id="status" role="status" aria-live="polite">正在連接 ChatGPT…</p>
@@ -63,6 +75,8 @@ const svg=document.querySelector("#surface"),sceneEl=document.querySelector("#sc
 const aiEl=document.querySelector("#assistant-annotations"),userEl=document.querySelector("#user-annotations"),previewEl=document.querySelector("#preview");
 const hit=document.querySelector("#hit"), status=document.querySelector("#status"),send=document.querySelector("#send"),counter=document.querySelector("#counter");
 const intentSelect=document.querySelector("#intent"),noteInput=document.querySelector("#note"),quoteInput=document.querySelector("#quote");
+const tabs=[...document.querySelectorAll("[data-view]")],focusChoice=document.querySelector("#focus-choice"),editTools=document.querySelector("#edit-tools");
+let viewMode="annotated",selectedFocusId=null;
 const INTENT_TEXT={
  "point-out":"我想指出這個位置",
  "ask-about-region":"請解釋我標記的區域",
@@ -113,17 +127,65 @@ function renderMarks(layer,items,color,author){
    labelNode.textContent=label;
  }
 }
-function render(){sceneEl.innerHTML=SCENES[selectedScene];renderMarks(aiEl,assistantMarks,"#E4AE57","AI");renderMarks(userEl,[...priorUserMarks,...userMarks],"#579DF6","YOU");
- counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;send.disabled=!ready||userMarks.length===0||!intentSelect.value;
- document.querySelector("#caption").textContent=SCENE_NAMES[selectedScene]+" · 640×360 · 底圖與標註分離";
+const markOptions=()=>[
+ ...assistantMarks.map((mark,i)=>({key:"ai-"+i,mark,author:"AI"})),
+ ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
+ ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
+];
+function refreshFocus(){
+ const marks=markOptions(),previous=selectedFocusId;focusChoice.replaceChildren();
+ for(const item of marks){
+   const option=document.createElement("option");option.value=item.key;
+   option.textContent=item.author+" · "+(item.mark.label||item.mark.type);
+   focusChoice.append(option);
+ }
+ selectedFocusId=marks.some(m=>m.key===previous)?previous:(marks.at(-1)?.key??null);
+ if(selectedFocusId)focusChoice.value=selectedFocusId;
+ const zoomTab=tabs.find(t=>t.dataset.view==="zoom");zoomTab.disabled=!marks.length;
+ if(viewMode==="zoom"&&!marks.length)viewMode="annotated";
 }
+function cropBox(mark){
+ const x=mark.type==="arrow"?mark.x2:(mark.type==="rect"?(mark.x+mark.x2)/2:mark.x);
+ const y=mark.type==="arrow"?mark.y2:(mark.type==="rect"?(mark.y+mark.y2)/2:mark.y);
+ const width=mark.type==="rect"?Math.abs(mark.x2-mark.x)*640+60:220;
+ const height=mark.type==="rect"?Math.abs(mark.y2-mark.y)*360+34:124;
+ const scale=Math.min(1,Math.max(width/640,height/360));
+ const w=640*scale,h=360*scale;
+ return [clamp(x*640-w/2,0,640-w),clamp(y*360-h/2,0,360-h),w,h].join(" ");
+}
+function renderView(){
+ const hideMarks=viewMode!=="annotated";
+ for(const b of tabs)b.setAttribute("aria-pressed",String(b.dataset.view===viewMode));
+ aiEl.style.display=hideMarks?"none":"";
+ userEl.style.display=hideMarks?"none":"";
+ previewEl.style.display=hideMarks?"none":"";
+ hit.style.pointerEvents=hideMarks?"none":"auto";
+ editTools.hidden=hideMarks;
+ svg.style.cursor=hideMarks?"default":"crosshair";
+ const marks=markOptions();
+ focusChoice.hidden=viewMode!=="zoom"||marks.length<2;
+ const focus=marks.find(m=>m.key===selectedFocusId)?.mark;
+ svg.setAttribute("viewBox",viewMode==="zoom"&&focus?cropBox(focus):"0 0 640 360");
+ const title={annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖"}[viewMode];
+ document.querySelector("#caption").textContent=SCENE_NAMES[selectedScene]+" · "+title;
+}
+function render(){
+ sceneEl.innerHTML=SCENES[selectedScene];
+ renderMarks(aiEl,assistantMarks,"#E4AE57","AI");
+ renderMarks(userEl,[...priorUserMarks,...userMarks],"#579DF6","YOU");
+ counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;
+ send.disabled=!ready||userMarks.length===0;
+ refreshFocus();renderView();
+}
+for(const tab of tabs)tab.addEventListener("click",()=>{if(!tab.disabled){viewMode=tab.dataset.view;render()}});
+focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;renderView()});
 function applyInput(args){
  if(!args||!Object.hasOwn(SCENES,args.scene))return;
  selectedScene=args.scene;
  const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,42):[];
  assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,12);
  priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,30);
- userMarks=[];previewEl.replaceChildren();render();
+ userMarks=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
 }
 function applyResult(result){const r=result?.structuredContent;if(r?.kind==="estampes.visual_surface")applyInput(r);}
 function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;
@@ -138,12 +200,12 @@ hit.addEventListener("pointerdown",e=>{if(!ready||userMarks.length>=MAX_MARKS)re
 hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=fromPointer(e);if(p){renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");}});
 hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(p){
  let mark={...draft(start,p),id:"user-"+(++seq)};
- if(mode!=="point"&&Math.hypot(px(p.x-start.x),py(p.y-start.y))<7){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);status.textContent="已新增標註；可以繼續標記，或傳給 GPT。";}
+ if(mode!=="point"&&Math.hypot(px(p.x-start.x),py(p.y-start.y))<7){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
-document.querySelector("#undo").addEventListener("click",()=>{userMarks.pop();render()});
-document.querySelector("#clear").addEventListener("click",()=>{userMarks=[];render()});
+document.querySelector("#undo").addEventListener("click",()=>{userMarks.pop();selectedFocusId=null;render()});
+document.querySelector("#clear").addEventListener("click",()=>{userMarks=[];selectedFocusId=null;render()});
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
 function request(method,params){return new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});
  window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
@@ -155,19 +217,19 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
  if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
 });
 render();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.3"},appCapabilities:{},protocolVersion:"2026-01-26"});
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.7"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 send.addEventListener("click",async()=>{
- if(!ready||!userMarks.length||!intentSelect.value)return;
+ if(!ready||!userMarks.length)return;
  send.disabled=true;
  const marks=userMarks.map(({id,type,x,y,x2,y2,label})=>({
    id,type,x,y,...(type==="point"?{}:{x2,y2}),label,
    author:"user",grounding:"user-pointer"
  }));
- const intent=intentSelect.value;
+ const intent=intentSelect.value||"point-out";
  const note=noteInput.value.trim().slice(0,500);
  const replyQuote=quoteInput.value.trim().slice(0,300);
  let validated=false,reason="",chatMessage="";
