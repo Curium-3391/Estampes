@@ -40,6 +40,7 @@ A geometric gesture alone cannot say whether the user is asking for an explanati
   ],
   "interaction": {
     "intent": "correct-assistant",
+    "requestedAssistantAction": "reconsider-prior-identification",
     "userNote": "我指的是右邊的樹，不是後面的山。",
     "replyTo": {
       "messageId": null,
@@ -65,7 +66,7 @@ The quote and note above are **examples entered by a user**, not inferred from t
 | `compare` | Compare multiple marked objects | Compare the marked objects, not unrelated parts of the image |
 | `report-issue` | Point out a problem | Investigate the indicated region and explain uncertainty |
 
-M0.4.2 requires the user to select an intent before sending, and offers a free-text note and a separately entered quoted prior utterance. Blank optional fields stay `null`, not imaginary context.
+M0.4.2 derives `requestedAssistantAction` from the explicit selected intent. M0.4.2 requires the user to select an intent before sending, and offers a free-text note and a separately entered quoted prior utterance. Blank optional fields stay `null`, not imaginary context.
 
 ## Coordinate and image identity rules
 
