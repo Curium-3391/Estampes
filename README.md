@@ -6,7 +6,7 @@ Estampes is an experimental, open-source project exploring a simple idea: humans
 
 Inspired by Claude Debussy's *Estampes* (1903).
 
-> **Status:** Early design / proof of concept. No working ChatGPT integration is claimed yet.
+> **Status:** M0 proof of concept. ChatGPT has successfully rendered the inline number-line widget (model → UI). The M0.3 user → server → ChatGPT round trip is implemented but **still awaiting host verification**.
 
 ## The problem
 
@@ -33,7 +33,7 @@ Estampes aims to remove that friction.
 
 ## Development roadmap
 
-- [ ] **M0 — ChatGPT plugin number-line PoC:** Build an MCP tool and an in-conversation MCP Apps UI. Display a known number line, draw assistant-specified points, let the user point back, and return structured coordinates to the conversation. Verify resizing.
+- [ ] **M0 — ChatGPT plugin number-line PoC:** The inline widget and model-directed marker work. M0.3 adds an app-scoped selection tool, user-to-chat message attempt, and round-trip smoke tests; host confirmation and resizing checks remain.
 - [ ] **M1 — Formula and simple-image grounding:** Test precise pointing at terms in formulas and easily identifiable objects in images, with validation and uncertainty.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
@@ -41,7 +41,7 @@ Estampes aims to remove that friction.
 
 **Integration requirement:** Estampes is a ChatGPT-native plugin experience, not a standalone website or chatbot. Use an MCP server + MCP Apps UI inside the conversation for M0; evaluate ChatGPT Plugin Extensions for deeper native integrations.
 
-See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), and [Annotation protocol draft](docs/PROTOCOL.md).
+See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md).
 
 ## Integration caveat
 
