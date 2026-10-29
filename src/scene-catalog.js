@@ -39,7 +39,7 @@ export function resolveSceneAnnotation(scene, mark) {
   // Model input must not silently convert an earlier human mark into an AI
   // mark. This rejects known Estampes user-ID/label conventions; it is not
   // an authentication mechanism for arbitrary future annotations.
-  if(/^user[-_]/i.test(mark.id) || /^YOU(?:\\s|[-_]|$)/i.test(mark.label??"")) {
+  if(/^user[-_]/i.test(mark.id) || /^YOU(?:\s|[-_]|$)/i.test(mark.label??"")) {
     throw new Error("User-authored mark must be passed via priorUserAnnotations");
   }
   const base={id:mark.id,type:mark.type,label:mark.label};
