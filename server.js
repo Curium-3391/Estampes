@@ -11,14 +11,15 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
-import { landmarkIds, resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
+import { resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.5";
-const VISUAL_URI = "ui://estampes/visual-surface-v043.html";
+const BUILD_VERSION = "m0.4.6";
+const VISUAL_URI = "ui://estampes/visual-surface-v046.html";
+const VISUAL_V043_URI = "ui://estampes/visual-surface-v043.html";
 const EVIDENCE_URI = "ui://estampes/visual-evidence-v045.html";
 const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
 const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
@@ -38,7 +39,6 @@ const visualHtml = readFileSync(
   "utf8"
 );
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
-const LandmarkSchema = z.enum(landmarkIds);
 const Point01 = z.number().finite().min(0).max(1);
 
 // Guaranteed geometry for renderer + user validation.
@@ -50,7 +50,6 @@ const VisualAnnotationSchema = z.object({
   label: z.string().max(64).optional(),
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
-  targetId: LandmarkSchema.optional(),
 }).superRefine((a,ctx)=>{
   if(a.type!=="point" && (a.x2===undefined || a.y2===undefined)) {
     ctx.addIssue({code:"custom",message:"Rectangle and arrow require x2/y2"});
@@ -58,31 +57,25 @@ const VisualAnnotationSchema = z.object({
 });
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
-// Model-proposed annotations may name an object by targetId and omit x/y.
-// The server resolves targetId using a deterministic built-in SVG landmark
-// catalog. Without targetId, coordinates are *not semantically verified*.
+// Model-facing annotations use coordinates ONLY. Legacy semantic anchors
+// are retained in scene-catalog.js for isolated geometry unit tests, but
+// never exposed as an object-position catalog to the model.
 const ModelAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
   type: z.enum(["point", "rect", "arrow"]),
-  targetId: LandmarkSchema.optional(),
-  x: Point01.optional(), y: Point01.optional(),
+  x: Point01, y: Point01,
   x2: Point01.optional(), y2: Point01.optional(),
   label: z.string().max(64).optional(),
-  // AI mark input cannot explicitly claim to have been authored by a user.
   author: z.literal("assistant").optional(),
-}).superRefine((a,ctx)=>{
-  if(a.targetId && a.type==="arrow"){
-    ctx.addIssue({code:"custom",message:"targetId is for points/rectangles only"});
-  }
-  if(!a.targetId && (a.x===undefined||a.y===undefined||
-      (a.type!=="point"&&(a.x2===undefined||a.y2===undefined)))){
-    ctx.addIssue({code:"custom",message:"Ungrounded marks require explicit coordinates"});
+}).strict().superRefine((a,ctx)=>{
+  if(a.type!=="point"&&(a.x2===undefined||a.y2===undefined)){
+    ctx.addIssue({code:"custom",message:"Rect/arrow require x2/y2"});
   }
 });
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.5" });
+  const server = new McpServer({ name: "estampes", version: "0.4.6" });
 
   registerAppResource(
     server,
@@ -225,13 +218,21 @@ function makeServer() {
     })
   );
 
+  registerAppResource(
+    server,
+    "Estampes visual surface v0.4.3 (legacy)",
+    VISUAL_V043_URI,
+    {mimeType:RESOURCE_MIME_TYPE},
+    async()=>({contents:[{uri:VISUAL_V043_URI,mimeType:RESOURCE_MIME_TYPE,text:visualHtml}]})
+  );
+
   registerAppTool(
     server,
     "present_visual",
     {
       title: "Present a shared visual canvas",
       description:
-        "Display an in-chat 2D surface over an embedded SVG test scene. For NAMED objects always use targetId (no guessed x/y): landscape ids sun, house, house-roof, tree, mountain-left, mountain-right; shapes ids circle, square, triangle; formula ids equation, equals-sign. Example: scene=landscape, annotations=[{id:'mountain', type:'point', targetId:'mountain-right', label:'山'}]. Server resolves anchors, never trusts model coordinates when targetId is set. Legacy demo targetIds only align with fixed local SVG geometry; they do NOT prove object identity and must not be treated as visual recognition. If a user asks what a marked region contains, call inspect_visual to obtain the original and cropped PNG evidence rather than guessing from scene names or normalized positions. Free coordinates without targetId are unverified. Preserve earlier user marks in priorUserAnnotations; never reattribute them to AI. Only bundled demo scenes are supported here.",
+        "Display a shared in-chat 2D annotation canvas. Specify x/y (and x2/y2 for rect/arrow) as normalized source-image coordinates in [0,1]. No known-object IDs or built-in object-position catalog are available through this tool. For requests such as 'find the house or a specific object and point to it', first call inspect_visual to look at actual pixels, then propose coordinates based on your own visual analysis. If you cannot actually perceive image pixels, do not claim visual localization: ask the user to point or state uncertainty. For explicitly supplied user coordinates, render directly without needing vision. Estampes validates geometry, NOT semantic object identity. The blue user annotations remain independent from new AI marks; priorUserAnnotations can replay actual user marks but must not reattribute authorship.",
       inputSchema: z.object({
         scene: SceneSchema,
         annotations: ModelAnnotationsSchema.default([]),
@@ -261,8 +262,8 @@ function makeServer() {
         content: [{
           type:"text",
           text:"Estampes scene="+scene+"; geometry/provenance annotations="+JSON.stringify(resolved)+
-            ". Scene anchors are only local SVG geometric test fixtures, NOT visual recognition evidence. " +
-            "For questions about image content, the model MUST call inspect_visual for actual PNG pixels. " +
+            ". No semantic object lookup was performed. These coordinates are geometry only, NOT evidence the model visually located an object. " +
+            "For image-content questions call inspect_visual to see pixels. " +
             "Previously user-drawn marks retain author=user."
         }],
         structuredContent:{
@@ -486,6 +487,7 @@ const httpServer = createHttpServer((req, res) => {
       selectionTool: "record_number_line_selection",
       visualResourceUri: VISUAL_URI,
       visualTool: "present_visual",
+      visualGroundingMode: "coordinates-only-no-object-anchors",
       visualValidationTool: "validate_visual_annotations",
       annotationProtocol: "0.2-draft",
       visualInputTool: "inspect_visual",
