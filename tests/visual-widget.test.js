@@ -21,7 +21,7 @@ test("M0.4 separates media, AI overlays and human overlays",()=>{
   assert.match(html,/id="preview"/);
   assert.match(html,/viewBox="0 0 640 360"/);
   assert.match(html,/matrixTransform\(matrix.inverse\(\)\)/);
-  assert.match(html,/v0\.4\.2/);
+  assert.match(html,/v0\.4\.3/);
 });
 
 test("M0.4 tools and message bridge are both present",()=>{
