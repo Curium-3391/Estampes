@@ -18,9 +18,10 @@ import {
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
-import { applyCanvasChanges, canvasMarks, storeUserMarks } from "./src/canvas-state.js";
-import { renderVerification } from "./src/mark-render.js";
-import { downloadImage, registerImage, getImage } from "./src/image-store.js";
+import { applyCanvasChanges, canvasMarks, storeUserMarks, importMarks } from "./src/canvas-state.js";
+import { renderVerification, inkReport } from "./src/mark-render.js";
+import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
+import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
 import {
   processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay,
 } from "./src/image-ops.js";
@@ -31,6 +32,8 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 // it, so a release bump only touches package.json.
 const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
 const BUILD_VERSION = "m" + VERSION;
+// Public origin for download links (Render sets RENDER_EXTERNAL_URL).
+const PUBLIC_URL = (process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/+$/, "");
 const URI_TAG = "v" + VERSION.replace(/\./g, "");
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
@@ -125,6 +128,19 @@ const ChatFileSchema = z.object({
   file_name: z.string().optional(),
 }).strict();
 
+async function importMarksFile(entry, file) {
+  const data = parseMarksFile(await downloadImage(file.download_url));
+  if (data.width > 0 && data.height > 0 && Math.abs(data.width / data.height - entry.width / entry.height) > 0.01) {
+    throw new Error("These marks were drawn on a " + data.width + "x" + data.height + " image; attach that image too");
+  }
+  const marks = data.marks.map((m) => {
+    const parsed = VisualAnnotationSchema.safeParse(m);
+    if (!parsed.success) throw new Error("Invalid mark in marks file: " + (m?.id ?? "?"));
+    return { ...parsed.data, author: m.author === "user" ? "user" : "assistant" };
+  });
+  return importMarks(entry, marks, { replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation });
+}
+
 async function loadImageInput({ image, imageUrl }) {
   const bytes = await downloadImage(image ? image.download_url : imageUrl);
   return registerImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
@@ -157,6 +173,35 @@ const CheckSummarySchema = z.object({
   numbers: z.array(z.object({ n: z.number().int(), id: z.string(), label: z.string().optional() })),
 });
 const checkSummary = ({ layout, region, numbers }) => ({ layout, region, numbers });
+
+// What the model reads about the canvas: ids, kinds and rounded boxes, no
+// polyline vertices. Full geometry goes to the widget in _meta only, so a
+// long session does not re-send every point on every call.
+const r3 = (v) => Math.round(v * 1000) / 1000;
+function compactMark(m) {
+  return {
+    id: m.id, type: m.type, author: m.author, ...(m.label ? { label: m.label } : {}),
+    box: m.type === "point" ? [r3(m.x), r3(m.y)] : [r3(m.x), r3(m.y), r3(m.x2), r3(m.y2)],
+    ...(m.type === "polyline" ? { vertices: m.points.length } : {}),
+    ...(m.note ? { note: m.note } : {}), ...(m.status ? { status: m.status } : {}),
+    ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
+  };
+}
+const exportLinks = (imageId) => PUBLIC_URL ? {
+  image: PUBLIC_URL + "/export/" + imageId.slice(4) + "/image.jpg",
+  marks: PUBLIC_URL + "/export/" + imageId.slice(4) + "/marks.svg",
+} : undefined;
+
+// Render logs show what each call costs: text the model reads, images the
+// model sees, and bytes only the widget gets.
+function logSizes(tool, result) {
+  const images = (result.content ?? []).filter((b) => b.type === "image");
+  const text = JSON.stringify((result.content ?? []).filter((b) => b.type !== "image")).length +
+    JSON.stringify(result.structuredContent ?? {}).length;
+  console.log("[size] " + tool + " modelText=" + text + "B modelImages=" + images.length + "x" +
+    images.reduce((n, b) => n + b.data.length, 0) + "B widgetOnly=" + JSON.stringify(result._meta ?? {}).length + "B");
+  return result;
+}
 
 function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION });
@@ -293,14 +338,17 @@ function makeServer() {
       title: "Present a shared visual canvas",
       description:
         "CANONICAL shared visual canvas the user sees in chat. Users will not name tools: when they ask to show, point out, circle, box, trace or draw on a photo, call this yourself. " +
+        "Whenever YOU ask the user to point at, circle or mark something, call this in the same turn so they have a canvas to draw on (imageId re-opens it with every mark); never ask without one. Also call it when the user asks for the canvas/drawing board again. Do not call it for text-only follow-ups. " +
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
         "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). " +
         "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. " +
         "If you read positions off a process_image/overlay_grid output, pass `coordinateFrame` = that output's region (plus its width/height to give pixel coordinates); Estampes converts them. " +
         "The result includes a VERIFICATION image: the same crop of the real photo without and with your marks (numbered). Check that the marks sit on the right pixels before telling the user it is done; fix with the same id if not. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
-        "Marks may set color, size and pen (pen or translucent highlighter). " +
-        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as PCB traces, wires, freehand sketches or loose circles around a part; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
+        "Choose color, size and pen YOURSELF; never ask the user. pen = precise points, outlines and paths; highlighter = translucent band to cover an area or follow a feature without hiding it. Sizes fine < thin < medium (default) < thick: a line must be narrower than the thing it follows (a fine trace, a pen stroke, a crack), thick only for large regions. " +
+        "The result lists each changed mark's ink width in image pixels with warnings, and the verification image draws ink at its real width: if ink hides its target or is too faint, redraw the same id with another size or pen. " +
+        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as traces, wires, roads, outlines, handwriting strokes or loose circles; follow only what is visible in zoomed process_image output, and say where a path is hidden. " +
+        "`marksFile`: an Estampes marks SVG the user exported earlier and attached again; its marks are restored onto this image. The result has download links (`exports`) for the image and a layered marks SVG; give them when the user wants to save or export. " +
         "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
@@ -309,6 +357,7 @@ function makeServer() {
         imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
         imageId: ImageIdSchema.optional(),
         scene: SceneSchema.optional().describe("Bundled demo scene; use only when there is no real image"),
+        marksFile: ChatFileSchema.optional().describe("Estampes marks SVG (exported earlier) attached by the user; restores its marks"),
         annotations: ModelAnnotationsSchema.default([]),
         views: z.array(ViewSchema).max(3).default([]).describe("Optional processed views shown as extra tabs; the original stays the default view"),
         priorUserAnnotations: z.array(VisualAnnotationSchema).max(18).default([]).describe(
@@ -331,14 +380,16 @@ function makeServer() {
         width: z.number().optional(),
         height: z.number().optional(),
         views: z.array(z.object({ label: z.string(), region: RegionSchema })).optional(),
-        annotations: VisualAnnotationsSchema,
+        annotations: VisualAnnotationsSchema.optional(),
+        marks: z.array(z.record(z.string(), z.unknown())).optional(),
         check: CheckSummarySchema.optional(),
+        exports: z.object({ image: z.string(), marks: z.string() }).optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-      _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image"] },
+      _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile"] },
     },
-    async ({ image, imageUrl, imageId, scene, annotations, views, priorUserAnnotations, findings, remove, reset, coordinateFrame, verify }) => {
+    async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, coordinateFrame, verify }) => {
       try {
         if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
           throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
@@ -346,7 +397,7 @@ function makeServer() {
         if (image || imageUrl) imageId = (await loadImageInput({ image, imageUrl })).imageId;
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
         if (scene) {
-          if (coordinateFrame || findings.length || remove.length) throw new Error("coordinateFrame, findings and remove need a real photo");
+          if (coordinateFrame || findings.length || remove.length || marksFile) throw new Error("coordinateFrame, findings, remove and marksFile need a real photo");
           const resolved = [...annotations.map(a => resolveSceneAnnotation(scene, a)), ...priorUserAnnotations.map(replayUserAnnotation)];
           return {
             content: [{
@@ -363,6 +414,7 @@ function makeServer() {
           };
         }
         const entry = getImage(imageId);
+        const imported = marksFile ? await importMarksFile(entry, marksFile) : [];
         const changed = applyCanvasChanges(entry, {
           annotations, findings, remove, reset, frame: coordinateFrame,
           priorUser: priorUserAnnotations.map(replayUserAnnotation), resolve: resolveCoordinateAnnotation,
@@ -370,6 +422,8 @@ function makeServer() {
         const resolved = canvasMarks(entry);
         const drawn = changed.filter(id => annotations.some(a => a.id === id));
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
+        const ink = inkReport(resolved.filter(m => drawn.includes(m.id)), entry);
+        const exports = exportLinks(imageId);
         const shown = await displayImage(entry);
         const rendered = [];
         for (const view of views) {
@@ -380,13 +434,15 @@ function makeServer() {
         // result's _meta (see load_visual_canvas).
         entry.lastViews = rendered;
         if (check) entry.lastCheck = check;
-        return {
+        return logSizes("present_visual", {
           content: [{
             type: "text",
-            text: "Showing " + imageId + " to the user (original by default" +
+            text: "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
               (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
-              resolved.length + " marks (ids persist; edit by re-using an id): " + JSON.stringify(resolved) +
+              resolved.length + " marks (ids persist; edit by re-using an id; boxes rounded): " + JSON.stringify(resolved.map(compactMark)) +
+              (imported.length ? ". Restored from marks file: " + imported.join(", ") : "") +
               (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
+              (ink.length ? ". Ink in image px: " + ink.map(i => i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
               (check ? ". The next image is a VERIFICATION crop of region " + JSON.stringify(check.region) + ", " +
                 (check.layout === "side-by-side" ? "left" : "top") + " = original pixels, " +
                 (check.layout === "side-by-side" ? "right" : "bottom") + " = with marks numbered " +
@@ -396,15 +452,17 @@ function makeServer() {
           structuredContent: {
             kind: "estampes.visual_surface", imageId, width: entry.width, height: entry.height,
             views: rendered.map(({ label, region }) => ({ label, region })),
-            annotations: resolved, coordinateSystem: "normalized-top-left",
+            marks: resolved.map(compactMark), coordinateSystem: "normalized-top-left",
             ...(check ? { check: checkSummary(check) } : {}),
+            ...(exports ? { exports } : {}),
           },
           // Pixels go to the widget only; the model already has them from load_image.
           _meta: {
             "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
             "estampes/views": rendered,
+            "estampes/annotations": resolved,
           },
-        };
+        });
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
       }
@@ -443,10 +501,10 @@ function makeServer() {
               views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
               ...(check ? { check: checkSummary(check) } : {}),
             };
-        return {
+        return logSizes("load_visual_canvas", {
           content: [{ type: "text", text: "Canvas data for " + imageId + " sent to the widget." }],
-          structuredContent: { kind: "estampes.visual_canvas", imageId, part, ...body },
-        };
+          structuredContent: { kind: "estampes.visual_canvas", imageId, part, ...body, ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}) },
+        });
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
       }
@@ -881,6 +939,34 @@ const httpServer = createHttpServer((req, res) => {
       imageTools: ["load_image", "process_image", "overlay_grid"],
       imageInput: ["openai-file-param", "https-url"],
     }));
+    return;
+  }
+
+  // Downloads for the canvas: the working image (EXIF-oriented, long side
+  // <= 4096, the frame every coordinate refers to) and a layered marks SVG.
+  // No access key: the id is a content hash, unguessable without the image.
+  const exportMatch = /^\/export\/([0-9a-f]{16})\/(image\.jpg|marks\.svg)$/.exec(url.pathname);
+  if (exportMatch && req.method === "GET") {
+    const imageId = "img:" + exportMatch[1];
+    let entry;
+    try { entry = getImage(imageId); } catch {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Image expired (kept about an hour). Show it again in ChatGPT, then export.");
+      return;
+    }
+    const svg = exportMatch[2] === "marks.svg";
+    Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
+      .then((body) => {
+        res.writeHead(200, {
+          "content-type": svg ? "image/svg+xml; charset=utf-8" : "image/jpeg",
+          "content-disposition": "attachment; filename=\"estampes-" + exportMatch[1] + (svg ? "-marks.svg" : ".jpg") + "\"",
+          "x-content-type-options": "nosniff",
+          "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+          "cache-control": "no-store",
+        });
+        res.end(body);
+      })
+      .catch((error) => { res.writeHead(500); res.end(String(error?.message || error)); });
     return;
   }
 

@@ -128,7 +128,13 @@ test("undo and redo step through marks, including a clear",()=>{
 
 test("missing pixels are reloaded and the verification image has its own tab",()=>{
   assert.match(source,/name:"load_visual_canvas",arguments:\{imageId:id\}/);
-  assert.match(source,/if\(!photo\)syncCanvas\(\)/);
+  assert.match(source,/if\(!photo\|\|\(!full&&!r\.annotations\)\)syncCanvas\(!!photo\)/);
+  // Full geometry comes from widget-only _meta; the model gets a compact list.
+  assert.match(source,/meta\["estampes\/annotations"\]/);
+  assert.match(html,/id="pip"/);
+  assert.match(source,/requestDisplayMode\(\{mode\}\)/);
+  assert.match(html,/id="export-marks"/);
+  assert.match(html,/data-size="fine"/);
   assert.match(html,/data-view="check"[^>]*hidden/);
   assert.match(source,/part:"check"/);
 });

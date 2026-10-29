@@ -89,7 +89,9 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
     assert.match(visualTool.description,/Users will not name tools/);
-    assert.deepEqual(visualTool._meta?.["openai/fileParams"],["image"]);
+    assert.deepEqual(visualTool._meta?.["openai/fileParams"],["image","marksFile"]);
+    assert.match(visualTool.description,/never ask without one/);
+    assert.match(visualTool.description,/Choose color, size and pen YOURSELF/);
     assert.match(visualTool.description,/Do NOT also call present_visual_evidence/);
     assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-"+TAG+".html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};

@@ -63,7 +63,7 @@ export function markFindings(mark) {
 // and author field still do. A highlighter is wide and translucent so the
 // picture stays visible underneath.
 export const MARK_COLORS = Object.freeze(["gold","blue","red","green","yellow","magenta","cyan","white","black"]);
-export const MARK_SIZES = Object.freeze(["thin","medium","thick"]);
+export const MARK_SIZES = Object.freeze(["fine","thin","medium","thick"]);
 export const MARK_PENS = Object.freeze(["pen","highlighter"]);
 export function markStyle(mark) {
   return {
