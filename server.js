@@ -15,6 +15,8 @@ import { valueToX } from "./src/geometry.js";
 import { resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
+import { downloadImage, registerImage, getImage } from "./src/image-store.js";
+import { processImage, overlayGrid, previewImage, cellCenter, rowLabel } from "./src/image-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 // package.json is the single source of truth for the release version.
@@ -30,10 +32,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -448,6 +450,163 @@ function makeServer() {
     }
   );
 
+  // ---- M0.5 real-image preprocessing -------------------------------------
+  // Images come from ChatGPT's native file handling (openai/fileParams) or a
+  // public URL; there is no Estampes upload UI. Outputs are image blocks for
+  // the model plus coordinates normalized to the full oriented source image.
+  const RegionSchema = z.object({
+    x: Point01, y: Point01, x2: Point01, y2: Point01,
+  }).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
+  const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/).describe("imageId returned by load_image");
+  const OpSchema = z.discriminatedUnion("op", [
+    z.object({ op: z.literal("grayscale") }),
+    z.object({ op: z.literal("normalize") }).describe("Stretch contrast to the full range"),
+    z.object({ op: z.literal("clahe"), tile: z.number().int().min(8).max(256).optional(),
+      maxSlope: z.number().min(1).max(10).optional() }).describe("Local adaptive contrast; good for blurry scans, glare, dark PCB photos"),
+    z.object({ op: z.literal("contrast"), factor: z.number().min(0.2).max(4).optional() }),
+    z.object({ op: z.literal("brightness"), factor: z.number().min(0.2).max(4).optional() }),
+    z.object({ op: z.literal("sharpen"), sigma: z.number().min(0.3).max(5).optional() }),
+    z.object({ op: z.literal("denoise"), size: z.union([z.literal(3), z.literal(5), z.literal(7)]).optional() }).describe("Median filter"),
+    z.object({ op: z.literal("threshold"), method: z.enum(["adaptive", "otsu", "fixed"]).optional(),
+      value: z.number().int().min(0).max(255).optional(),
+      blockSize: z.number().int().min(3).max(201).optional(),
+      offset: z.number().min(-50).max(50).optional() }).describe("Black/white; adaptive suits handwriting, book pages and uneven light"),
+    z.object({ op: z.literal("invert") }),
+    z.object({ op: z.literal("edges") }).describe("Sobel edge magnitude; good for traces and line art"),
+  ]);
+  const imageBlock = (out) => ({ type: "image", data: out.data.toString("base64"), mimeType: out.mimeType });
+  const fail = (error) => ({ isError: true, content: [{ type: "text", text: "Estampes: " + String(error?.message || error) }] });
+
+  server.registerTool(
+    "load_image",
+    {
+      title: "Load a real image for Estampes",
+      description:
+        "Load a photo, scan or picture so Estampes can preprocess it. Pass `image` for a file the user attached or photographed in this ChatGPT conversation, OR `imageUrl` for a public https image you found. Returns an imageId plus a preview image. Use the imageId with process_image (enhance, threshold, edges, zoom into a region) and overlay_grid (labelled grid for precise locating). Estampes never identifies content; you do, from the returned pixels.",
+      inputSchema: z.object({
+        image: z.object({
+          download_url: z.string(),
+          file_id: z.string(),
+          mime_type: z.string().optional(),
+          file_name: z.string().optional(),
+        }).strict().optional().describe("Image file from the conversation"),
+        imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
+      }),
+      outputSchema: z.object({
+        kind: z.literal("estampes.image"),
+        imageId: z.string(),
+        width: z.number(), height: z.number(),
+        original: z.object({ format: z.string().optional(), width: z.number().optional(), height: z.number().optional() }),
+        source: z.enum(["chat-file", "url"]),
+        coordinateSystem: z.literal("normalized-top-left"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["image"] },
+    },
+    async ({ image, imageUrl }) => {
+      try {
+        if (!image === !imageUrl) throw new Error("Provide exactly one of image or imageUrl");
+        const bytes = await downloadImage(image ? image.download_url : imageUrl);
+        const entry = await registerImage(bytes, {
+          source: image ? "chat-file" : "url",
+          fileName: image?.file_name ?? null,
+        });
+        const preview = await previewImage(entry);
+        return {
+          content: [
+            { type: "text", text: "Loaded " + entry.imageId + " (" + entry.width + "x" + entry.height +
+              " after orientation). The next block is a preview. Coordinates for every Estampes tool are normalized to this full image, top-left origin." },
+            imageBlock(preview),
+          ],
+          structuredContent: {
+            kind: "estampes.image", imageId: entry.imageId, width: entry.width, height: entry.height,
+            original: entry.original, source: entry.source, coordinateSystem: "normalized-top-left",
+          },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "process_image",
+    {
+      title: "Preprocess an image region",
+      description:
+        "Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region` (zoomed up to 8x), then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for PCB traces. The result covers `region` in source coordinates: a point (u,v) in the output maps to x = region.x + u*(region.x2-region.x), y likewise. Output is for your analysis; the user sees the original unless you choose to show this.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        region: RegionSchema.optional(),
+        ops: z.array(OpSchema).max(8).default([]),
+      }),
+      outputSchema: z.object({
+        kind: z.literal("estampes.processed_image"),
+        imageId: z.string(),
+        region: z.object({ x: z.number(), y: z.number(), x2: z.number(), y2: z.number() }),
+        ops: z.array(z.record(z.string(), z.unknown())),
+        output: z.object({ width: z.number(), height: z.number(), mimeType: z.string(), scale: z.number() }),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, region, ops }) => {
+      try {
+        const out = await processImage(getImage(imageId), { region, ops });
+        return {
+          content: [
+            { type: "text", text: "Processed " + imageId + " region " + JSON.stringify(out.region) +
+              " with " + (ops.map(o => o.op).join(" > ") || "no ops") + ". The next block is the result." },
+            imageBlock(out),
+          ],
+          structuredContent: {
+            kind: "estampes.processed_image", imageId, region: out.region, ops,
+            output: { width: out.width, height: out.height, mimeType: out.mimeType, scale: out.scale },
+          },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "overlay_grid",
+    {
+      title: "Overlay a labelled grid",
+      description:
+        "Draw a labelled grid (rows A,B,C..., columns 1,2,3...) over a loaded image or a region of it, so you can name where something is ('it is in C7') instead of guessing decimals. structuredContent.cellCenters gives each cell's centre in source coordinates; use those values as present_visual x/y. For finer positioning call again with region set to the chosen cell or neighbourhood.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        region: RegionSchema.optional(),
+        rows: z.number().int().min(2).max(12).default(8),
+        cols: z.number().int().min(2).max(12).default(8),
+      }),
+      outputSchema: z.object({
+        kind: z.literal("estampes.grid"),
+        imageId: z.string(),
+        region: z.object({ x: z.number(), y: z.number(), x2: z.number(), y2: z.number() }),
+        rows: z.number(), cols: z.number(),
+        cellCenters: z.record(z.string(), z.object({ x: z.number(), y: z.number() })),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, region, rows, cols }) => {
+      try {
+        const out = await overlayGrid(getImage(imageId), { region, rows, cols });
+        const cellCenters = {};
+        for (let r = 0; r < rows; r++) for (let c = 1; c <= cols; c++) {
+          const label = rowLabel(r) + c;
+          const p = cellCenter(label, { rows, cols, region: out.region });
+          cellCenters[label] = { x: Number(p.x.toFixed(4)), y: Number(p.y.toFixed(4)) };
+        }
+        return {
+          content: [
+            { type: "text", text: "Grid " + rows + "x" + cols + " over " + imageId + " region " + JSON.stringify(out.region) +
+              ". Rows are letters from the top, columns numbers from the left. The next block is the gridded image." },
+            imageBlock(out),
+          ],
+          structuredContent: { kind: "estampes.grid", imageId, region: out.region, rows, cols, cellCenters },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
   return server;
 }
 
@@ -530,6 +689,8 @@ const httpServer = createHttpServer((req, res) => {
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
       accessKeyRequired: Boolean(ACCESS_KEY),
+      imageTools: ["load_image", "process_image", "overlay_grid"],
+      imageInput: ["openai-file-param", "https-url"],
     }));
     return;
   }

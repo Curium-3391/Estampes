@@ -1,0 +1,200 @@
+// M0.5: pixel preprocessing for real images. Estampes only transforms pixels
+// and keeps coordinates honest; recognizing what is in the picture stays the
+// model's job. Every output reports the source region it covers, in
+// coordinates normalized to the full oriented source image.
+import sharp from "sharp";
+import { labelSvg, labelWidth, GLYPH_HEIGHT } from "./pixel-font.js";
+
+export const OUTPUT_LONG_SIDE = 1600;
+export const MAX_UPSCALE = 8;
+export const OP_NAMES = Object.freeze([
+  "grayscale", "normalize", "clahe", "contrast", "brightness", "sharpen",
+  "denoise", "threshold", "invert", "edges",
+]);
+
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+// Normalized region → integer source pixels (at least 1×1, inside the image).
+export function regionToPixels(region, width, height) {
+  const r = region ?? { x: 0, y: 0, x2: 1, y2: 1 };
+  const x0 = clamp(Math.min(r.x, r.x2), 0, 1), x1 = clamp(Math.max(r.x, r.x2), 0, 1);
+  const y0 = clamp(Math.min(r.y, r.y2), 0, 1), y1 = clamp(Math.max(r.y, r.y2), 0, 1);
+  const left = clamp(Math.floor(x0 * width), 0, width - 1);
+  const top = clamp(Math.floor(y0 * height), 0, height - 1);
+  const right = clamp(Math.ceil(x1 * width), left + 1, width);
+  const bottom = clamp(Math.ceil(y1 * height), top + 1, height);
+  return { left, top, width: right - left, height: bottom - top };
+}
+
+// The region actually covered after pixel rounding, normalized again.
+const pixelsToRegion = (px, width, height) => ({
+  x: px.left / width, y: px.top / height,
+  x2: (px.left + px.width) / width, y2: (px.top + px.height) / height,
+});
+
+const rawImage = async (pipeline) => {
+  const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height, channels: info.channels };
+};
+const fromRaw = (img) => sharp(img.data, { raw: { width: img.width, height: img.height, channels: img.channels } });
+const toGray = async (img) => img.channels === 1 ? img : rawImage(fromRaw(img).greyscale().extractChannel(0));
+
+function otsu(gray) {
+  const hist = new Array(256).fill(0);
+  for (const v of gray) hist[v]++;
+  const total = gray.length;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, weightB = 0, best = 0, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    weightB += hist[t];
+    if (!weightB) continue;
+    const weightF = total - weightB;
+    if (!weightF) break;
+    sumB += t * hist[t];
+    const meanB = sumB / weightB, meanF = (sum - sumB) / weightF;
+    const between = weightB * weightF * (meanB - meanF) ** 2;
+    if (between > best) { best = between; threshold = t; }
+  }
+  return threshold;
+}
+
+async function threshold(img, { method = "adaptive", value = 128, blockSize, offset = 15 }) {
+  const gray = await toGray(img);
+  const out = Buffer.alloc(gray.data.length);
+  if (method === "adaptive") {
+    // Local mean via Gaussian blur; handles uneven lighting on pages and boards.
+    // Default window scales with the image so thick strokes are not hollowed out.
+    const block = blockSize ?? Math.max(15, Math.round(Math.max(gray.width, gray.height) / 30));
+    const local = await rawImage(fromRaw(gray).blur(Math.max(0.5, block / 6)));
+    for (let i = 0; i < out.length; i++) out[i] = gray.data[i] > local.data[i] - offset ? 255 : 0;
+  } else {
+    const t = method === "otsu" ? otsu(gray.data) : value;
+    for (let i = 0; i < out.length; i++) out[i] = gray.data[i] > t ? 255 : 0;
+  }
+  return { ...gray, data: out };
+}
+
+async function edges(img) {
+  const { data, width, height } = await toGray(img);
+  const mag = new Float32Array(width * height);
+  let max = 1;
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = y * width + x;
+      const gx = -data[i - width - 1] - 2 * data[i - 1] - data[i + width - 1] +
+        data[i - width + 1] + 2 * data[i + 1] + data[i + width + 1];
+      const gy = -data[i - width - 1] - 2 * data[i - width] - data[i - width + 1] +
+        data[i + width - 1] + 2 * data[i + width] + data[i + width + 1];
+      mag[i] = Math.hypot(gx, gy);
+      if (mag[i] > max) max = mag[i];
+    }
+  }
+  const out = Buffer.alloc(width * height);
+  for (let i = 0; i < out.length; i++) out[i] = Math.round((mag[i] / max) * 255);
+  return { data: out, width, height, channels: 1 };
+}
+
+async function applyOp(img, step) {
+  switch (step.op) {
+    case "grayscale": return toGray(img);
+    case "normalize": return rawImage(fromRaw(img).normalise());
+    case "clahe": return rawImage(fromRaw(img).clahe({ width: step.tile ?? 48, height: step.tile ?? 48, maxSlope: step.maxSlope ?? 3 }));
+    case "contrast": { const f = step.factor ?? 1.5; return rawImage(fromRaw(img).linear(f, 128 * (1 - f))); }
+    case "brightness": return rawImage(fromRaw(img).linear(step.factor ?? 1.3, 0));
+    case "sharpen": return rawImage(fromRaw(img).sharpen({ sigma: step.sigma ?? 1.2 }));
+    case "denoise": return rawImage(fromRaw(img).median(step.size ?? 3));
+    case "threshold": return threshold(img, step);
+    case "invert": return rawImage(fromRaw(img).negate({ alpha: false }));
+    case "edges": return edges(img);
+    default: throw new Error("Unknown operation " + step.op);
+  }
+}
+
+async function encode(img) {
+  // Single-channel results stay greyscale PNGs (smaller, and honest about content).
+  const base = () => img.channels === 1 ? fromRaw(img).toColourspace("b-w") : fromRaw(img);
+  const png = await base().png({ compressionLevel: 9 }).toBuffer();
+  if (png.length <= 1_500_000) return { data: png, mimeType: "image/png" };
+  return { data: await base().jpeg({ quality: 88 }).toBuffer(), mimeType: "image/jpeg" };
+}
+
+// Crop to `region`, scale to fit the output size (enlarging small crops up to
+// MAX_UPSCALE×), then run `ops` in order.
+async function prepare(entry, region) {
+  const px = regionToPixels(region, entry.width, entry.height);
+  // Zoomed regions may be enlarged; a whole-image view is only ever reduced.
+  const scale = Math.min(region ? MAX_UPSCALE : 1, OUTPUT_LONG_SIDE / Math.max(px.width, px.height));
+  const width = Math.max(1, Math.round(px.width * scale));
+  const height = Math.max(1, Math.round(px.height * scale));
+  const img = await rawImage(sharp(entry.png).extract(px).flatten({ background: "#ffffff" })
+    .resize({ width, height, kernel: "lanczos3" }));
+  return { img, px, scale };
+}
+
+export async function processImage(entry, { region, ops = [] }) {
+  const { img: start, px, scale } = await prepare(entry, region);
+  let img = start;
+  for (const step of ops) img = await applyOp(img, step);
+  const encoded = await encode(img);
+  return {
+    ...encoded,
+    width: img.width, height: img.height,
+    region: pixelsToRegion(px, entry.width, entry.height),
+    scale,
+  };
+}
+
+export const rowLabel = (index) => String.fromCharCode(65 + index);
+
+// Cell label "C7" → normalized centre point in the full source image.
+export function cellCenter(label, { rows, cols, region }) {
+  const match = /^([A-Z])(\d{1,2})$/.exec(String(label).trim().toUpperCase());
+  if (!match) throw new Error("Cell labels look like C7 (row letter, column number)");
+  const row = match[1].charCodeAt(0) - 65, col = Number(match[2]) - 1;
+  if (row < 0 || row >= rows || col < 0 || col >= cols) throw new Error("Cell " + label + " is outside the grid");
+  return {
+    x: region.x + ((col + 0.5) / cols) * (region.x2 - region.x),
+    y: region.y + ((row + 0.5) / rows) * (region.y2 - region.y),
+  };
+}
+
+export async function overlayGrid(entry, { region, rows = 8, cols = 8 }) {
+  const { img, px, scale } = await prepare(entry, region);
+  const { width, height } = img;
+  const lines = [];
+  for (let c = 1; c < cols; c++) {
+    const x = (c / cols) * width;
+    lines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${height}"/>`);
+  }
+  for (let r = 1; r < rows; r++) {
+    const y = (r / rows) * height;
+    lines.push(`<line x1="0" y1="${y}" x2="${width}" y2="${y}"/>`);
+  }
+  // Glyph pixel size: as large as fits a cell's corner, at least 1.
+  const cellW = width / cols, cellH = height / rows;
+  const px1 = Math.max(1, Math.floor(Math.min(cellW / (labelWidth(rowLabel(rows - 1) + cols) + 4), cellH / (GLYPH_HEIGHT + 4)) * 0.6));
+  const labels = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      labels.push(labelSvg(rowLabel(r) + (c + 1), c * cellW + 2, r * cellH + 2, px1));
+    }
+  }
+  // Dark line on a white halo stays visible on both light and dark images.
+  const stroke = Math.max(1, Math.round(Math.max(width, height) / 800));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" shape-rendering="crispEdges">` +
+    `<g stroke="white" stroke-width="${stroke * 3}" opacity=".85">${lines.join("")}</g>` +
+    `<g stroke="#111" stroke-width="${stroke}">${lines.join("")}</g>${labels.join("")}</svg>`;
+  const composed = await rawImage(fromRaw(img).composite([{ input: Buffer.from(svg) }]));
+  const encoded = await encode(composed);
+  return {
+    ...encoded,
+    width, height,
+    region: pixelsToRegion(px, entry.width, entry.height),
+    scale, rows, cols,
+  };
+}
+
+export async function previewImage(entry) {
+  return processImage(entry, { ops: [] });
+}
