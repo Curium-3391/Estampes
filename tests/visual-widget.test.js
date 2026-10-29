@@ -21,7 +21,7 @@ test("M0.4 separates media, AI overlays and human overlays",()=>{
   assert.match(html,/id="preview"/);
   assert.match(html,/viewBox="0 0 640 360"/);
   assert.match(html,/matrixTransform\(matrix.inverse\(\)\)/);
-  assert.match(html,/v0\.4\.6/);
+  assert.match(html,/v0\.4\.7/);
 });
 
 test("M0.4 tools and message bridge are both present",()=>{
@@ -36,10 +36,21 @@ test("M0.4 tools and message bridge are both present",()=>{
   assert.match(html,/id="intent"/);
   assert.match(html,/id="note"/);
   assert.match(html,/id="quote"/);
+  assert.match(html,/id="context-details"/);
+  assert.match(html,/data-view="annotated"/);
+  assert.match(html,/data-view="original"/);
+  assert.match(html,/data-view="zoom"/);
+  assert.match(html,/focusChoice/);
+  assert.match(js,/function cropBox\(mark\)/);
+  assert.match(js,/svg.setAttribute\("viewBox"/);
+  assert.match(js,/aiEl.style.display=hideMarks/);
+  assert.match(js,/userEl.style.display=hideMarks/);
   assert.match(html,/name:"validate_visual_annotations"/);
   assert.match(html,/intent,note,replyQuote/);
   assert.match(html,/r\?\.event\?\.schemaVersion!=="0\.2-draft"/);
-  assert.match(html,/!intentSelect\.value/);
+  // Intent is optional, so the user can point first without filling a form.
+  assert.match(html,/const intent=intentSelect.value\|\|"point-out"/);
+  assert.doesNotMatch(html,/!intentSelect\.value/);
   assert.match(html,/沒有前文的精確引述/);
   assert.match(html,/箭頭尖端/);
 });
