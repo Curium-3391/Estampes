@@ -213,8 +213,15 @@ function renderViewTabs(){
  if(viewMode.startsWith("view-")&&!views[Number(viewMode.slice(5))])viewMode="annotated";
 }
 focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;renderView()});
+// Hosts re-deliver the same tool data (ChatGPT fires openai:set_globals on
+// every resize, e.g. after a tab click changes the height). Only genuinely
+// new data may reset the view and the user's unsent marks.
+let appliedKey=null;
 function applyInput(args){
  if(!args)return;
+ const key=JSON.stringify([args.imageId,args.scene,args.width,args.height,args.annotations]);
+ if(key===appliedKey)return;
+ appliedKey=key;
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
    if(args.imageId!==imageId){photo=null;views=[];renderViewTabs();}
    imageId=args.imageId;
@@ -237,10 +244,11 @@ function applyResult(result){
  const meta=result?._meta??window.openai?.toolResponseMetadata??{};
  if(imageId){
    photo=dataUrl(meta["estampes/image"])??photo;
-   const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:[];
-   views=incoming.map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
+   const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
+   const next=(incoming??[]).map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
-   renderViewTabs();
+   const sig=list=>JSON.stringify(list.map(v=>[v.label,v.region,v.href.length]));
+   if(incoming&&sig(next)!==sig(views)){views=next;renderViewTabs();}
    if(!photo)status.textContent="照片資料沒有送到畫面；請 GPT 重新呼叫 present_visual。";
  }
  render();
@@ -275,7 +283,11 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
 });
 render();
 // Hosts that set window.openai globals before (or instead of) notifications.
-const fromGlobals=()=>{const o=window.openai;if(o?.toolOutput)applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
+let seenOutput=null,seenMeta=null;
+const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput)return;
+ if(o.toolOutput===seenOutput&&o.toolResponseMetadata===seenMeta)return;
+ seenOutput=o.toolOutput;seenMeta=o.toolResponseMetadata;
+ applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
 window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
