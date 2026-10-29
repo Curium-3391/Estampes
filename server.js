@@ -21,7 +21,8 @@ const BUILD_VERSION = "m0.4.7";
 const VISUAL_URI = "ui://estampes/visual-surface-v047.html";
 const VISUAL_V046_URI = "ui://estampes/visual-surface-v046.html";
 const VISUAL_V043_URI = "ui://estampes/visual-surface-v043.html";
-const EVIDENCE_URI = "ui://estampes/visual-evidence-v045.html";
+const EVIDENCE_URI = "ui://estampes/visual-evidence-v047.html";
+const EVIDENCE_V045_URI = "ui://estampes/visual-evidence-v045.html";
 const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
 const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
 const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
@@ -336,6 +337,14 @@ function makeServer() {
     async () => ({
       contents:[{uri:EVIDENCE_URI,mimeType:RESOURCE_MIME_TYPE,text:evidenceHtml}]
     })
+  );
+
+  registerAppResource(
+    server,
+    "Estampes visual evidence v0.4.5 (legacy)",
+    EVIDENCE_V045_URI,
+    {mimeType:RESOURCE_MIME_TYPE},
+    async()=>({contents:[{uri:EVIDENCE_V045_URI,mimeType:RESOURCE_MIME_TYPE,text:evidenceHtml}]})
   );
 
   // Public model tool provides BOTH the MCP image blocks for model vision
