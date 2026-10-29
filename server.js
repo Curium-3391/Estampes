@@ -313,8 +313,7 @@ function makeServer() {
   // Public model tool, separate from the ChatGPT embedded UI.
   // Returns real PNG image bytes in the MCP content array, not object names.
   // Some hosts do not forward these blocks to their vision model.
-  registerAppTool(
-    server,
+  server.registerTool(
     "inspect_visual",
     {
       title:"Inspect actual source pixels and annotated region",
