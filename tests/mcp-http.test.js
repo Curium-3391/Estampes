@@ -54,7 +54,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
       name:"record_number_line_selection",
       arguments:{value:-2}
     });
-    assert.equal(selection.isError,undefined);
+    assert.notEqual(selection.isError,true);
     assert.equal(selection.structuredContent?.kind,"estampes.user_selection");
     assert.equal(selection.structuredContent?.value,-2);
     assert.equal(selection.structuredContent?.x,0.25);
