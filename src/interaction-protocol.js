@@ -19,6 +19,14 @@ export const SCENE_META = Object.freeze({
   shapes: Object.freeze({id:"demo:shapes",revision:"svg-v1",width:640,height:360}),
   formula: Object.freeze({id:"demo:formula",revision:"svg-v1",width:640,height:360}),
 });
+export const INTENT_ACTIONS = Object.freeze({
+  "point-out": "acknowledge-the-pointed-referent",
+  "ask-about-region": "explain-selected-region",
+  "answer-question": "treat-selection-as-answer-to-prior-question",
+  "correct-assistant": "reconsider-prior-identification",
+  "compare": "compare-marked-referents",
+  "report-issue": "investigate-marked-problem",
+});
 const textValue=(value,max)=>String(value??"").trim().slice(0,max);
 const in01=(n)=>typeof n==="number"&&Number.isFinite(n)&&n>=0&&n<=1;
 
@@ -67,6 +75,7 @@ export function buildAnnotationEvent({scene,annotations,intent="point-out",note=
     annotations:marks,
     interaction:{
       intent,
+      requestedAssistantAction: INTENT_ACTIONS[intent],
       userNote:cleanNote||null,
       replyTo:{
         messageId:null,
@@ -85,6 +94,7 @@ export function formatAnnotationChatMessage(event) {
   const lines=[
     "我透過 Estampes 在同一張畫布上做了視覺指認。",
     "這次的目的："+(INTENT_LABELS[interaction.intent]||"指出位置")+"。",
+    "希望你做的事："+interaction.requestedAssistantAction+"。",
   ];
   if(interaction.userNote)lines.push("我的補充說明（使用者親自輸入）："+interaction.userNote);
   if(interaction.replyTo?.quote) {
