@@ -17,8 +17,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 </style></head><body><main>
-<header><h2>Estampes · Visual Surface</h2><small>v0.4.0</small></header>
-<p class="help">金色：AI 標註。藍色：你的標註。選擇工具後直接在畫布上點擊或拖曳。</p>
+<header><h2>Estampes · Visual Surface</h2><small>v0.4.1</small></header>
+<p class="help">金色：AI 標註。藍色：使用者標註（含重新載入的歷史標記）。選擇工具後直接點擊或拖曳。</p>
 <div class="toolbar" role="group" aria-label="標註工具">
 <button data-mode="point" aria-pressed="true">點選</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
@@ -58,7 +58,7 @@ const SCENES={
  <path d="M90 231H550" stroke="#D3CEC5" stroke-width="2"/><text x="320" y="278" text-anchor="middle" font-size="20" fill="#76818B">Example formula surface</text>`
 };
 const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公式"};
-const MAX_MARKS=30;let selectedScene="landscape",assistantMarks=[],userMarks=[],mode="point",ready=false,start=null,seq=0,rpcId=0;
+const MAX_MARKS=30;let selectedScene="landscape",assistantMarks=[],priorUserMarks=[],userMarks=[],mode="point",ready=false,start=null,seq=0,rpcId=0;
 const pending=new Map();
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const node=(tag,attributes,parent)=>{const el=document.createElementNS(NS,tag);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));parent.append(el);return el};
@@ -80,14 +80,16 @@ function renderMarks(layer,items,color,author){
    labelNode.textContent=label;
  }
 }
-function render(){sceneEl.innerHTML=SCENES[selectedScene];renderMarks(aiEl,assistantMarks,"#E4AE57","AI");renderMarks(userEl,userMarks,"#579DF6","YOU");
- counter.textContent="我的標註："+userMarks.length;send.disabled=!ready||userMarks.length===0;
+function render(){sceneEl.innerHTML=SCENES[selectedScene];renderMarks(aiEl,assistantMarks,"#E4AE57","AI");renderMarks(userEl,[...priorUserMarks,...userMarks],"#579DF6","YOU");
+ counter.textContent="本次新增："+userMarks.length+" · 已重現使用者標註："+priorUserMarks.length;send.disabled=!ready||userMarks.length===0;
  document.querySelector("#caption").textContent=SCENE_NAMES[selectedScene]+" · 640×360 · 底圖與標註分離";
 }
 function applyInput(args){
  if(!args||!Object.hasOwn(SCENES,args.scene))return;
  selectedScene=args.scene;
- assistantMarks=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,12):[];
+ const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,42):[];
+ assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,12);
+ priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,30);
  userMarks=[];previewEl.replaceChildren();render();
 }
 function applyResult(result){const r=result?.structuredContent;if(r?.kind==="estampes.visual_surface")applyInput(r);}
@@ -119,12 +121,12 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
  if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
 });
 render();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.1"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 send.addEventListener("click",async()=>{
  if(!ready||!userMarks.length)return;
- send.disabled=true;const marks=userMarks.map(({id,type,x,y,x2,y2,label})=>({id,type,x,y,...(type==="point"?{}:{x2,y2}),label}));
+ send.disabled=true;const marks=userMarks.map(({id,type,x,y,x2,y2,label})=>({id,type,x,y,...(type==="point"?{}:{x2,y2}),label,author:"user",grounding:"user-pointer"}));
  let validated=false,reason="";
  try{status.textContent="正在驗證 "+marks.length+" 個標註…";
  const result=await request("tools/call",{name:"validate_visual_annotations",arguments:{scene:selectedScene,annotations:marks}});
@@ -135,7 +137,7 @@ send.addEventListener("click",async()=>{
  }catch(err){reason=String(err.message||err)}
  try{
  status.textContent=(validated?"座標驗證完成。":"驗證工具無法回應。")+" 正在送入 ChatGPT…";
- const message="我在 Estampes 視覺畫布（scene="+selectedScene+"）上標記了 "+marks.length+" 個位置。這是正規化座標（以圖片左上角為原點，x/y 均為 0..1）："+JSON.stringify(marks)+"。請根據這些標註與底圖解釋我指的是哪裡。";
+ const message="我在 Estampes 視覺畫布（scene="+selectedScene+"，640x360）上標記了 "+marks.length+" 個位置。以左上角為原點，0..1 正規化座標："+JSON.stringify(marks)+"。這些 author=user 的標註由使用者繪製；下次呼叫 present_visual 時，若需重現，請放入 priorUserAnnotations，不要改成 AI 的 annotations。若要標示內建場景中的山、樹、太陽等已知物件，請使用 targetId，由 Server 精確定位，不要猜測座標。";
  const response=await request("ui/message",{role:"user",content:[{type:"text",text:message}]});
  if(response?.isError)throw Error("Host rejected message");
  status.textContent=(validated?"座標驗證成功；":"驗證失敗："+reason+"；")+"訊息已交聊天宿主，請確認 GPT 的新回覆。";
