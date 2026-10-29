@@ -41,7 +41,7 @@ test("unified canvas contains all views without a second tool call",()=>{
 test("context is optional; drawing and submission require no menu completion",()=>{
   assert.match(html,/<details id="context-details">/);
   assert.match(source,/const intent=intentSelect\.value\|\|"point-out"/);
-  assert.match(source,/send\.disabled=!ready\|\|fresh===0/);
+  assert.match(source,/send\.disabled=!ready\|\|\(fresh===0&&!unsentReviews\.length\)/);
   assert.doesNotMatch(source,/!intentSelect\.value/);
 });
 
@@ -137,8 +137,8 @@ test("a late tool input never replaces the applied result",()=>{
 });
 
 test("missing pixels are reloaded and the verification image has its own tab",()=>{
-  assert.match(source,/name:"load_visual_canvas",arguments:\{imageId:id\}/);
-  assert.match(source,/if\(!photo\|\|\(!full&&!r\.annotations\)\)syncCanvas\(!!photo\)/);
+  assert.match(source,/name:"load_visual_canvas",arguments:\{imageId:id,/);
+  assert.match(source,/if\(!photo\|\|\(pair&&!pair\.photo\)\|\|\(!full&&!r\.annotations\)\)syncCanvas\(/);
   // Full geometry comes from widget-only _meta; the model gets a compact list.
   assert.match(source,/meta\["estampes\/annotations"\]/);
   assert.doesNotMatch(html,/id="pip"/);
@@ -190,5 +190,5 @@ test("layers can be hidden without losing marks; unsent marks always show",()=>{
   assert.match(source,/renderMarks\(freshEl,userMarks\.filter\(m=>!sentIds\.has\(m\.id\)\),/);
   assert.match(source,/\]\.filter\(item=>shown\(item\.mark\)\)/);
   assert.match(source,/setWidgetState/);
-  assert.match(source,/if\(freshIds\.includes\(m\.id\)\)m\.layer=layer\.id/);
+  assert.match(source,/if\(freshIds\.includes\(m\.id\)&&\(!pair\|\|\(m\.side\?\?"left"\)===side\)\)m\.layer=layer\.id/);
 });

@@ -18,7 +18,10 @@ import {
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
-import { applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks } from "./src/canvas-state.js";
+import {
+  applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
+  applyPairChanges, pairLinks, reviewLink, LINK_CONFIDENCE, LINK_REVIEW,
+} from "./src/canvas-state.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
@@ -42,10 +45,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -88,6 +91,7 @@ const VisualAnnotationSchema = z.object({
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
   layer: z.string().max(12).optional(),
+  side: z.enum(["left", "right"]).optional().describe("Paired view only: which image the mark is on"),
 }).superRefine(checkGeometry);
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
@@ -112,8 +116,17 @@ const ModelAnnotationSchema = z.object({
   size: z.enum(MARK_SIZES).optional().describe("Line thickness; default medium"),
   pen: z.enum(MARK_PENS).optional().describe("highlighter = wide translucent stroke that keeps the picture visible; use it to shade an area rather than draw a precise line"),
   author: z.literal("assistant").optional(),
+  side: z.enum(["left", "right"]).optional().describe("Paired view only: the image this mark is on (default left); coordinates are normalized to that image"),
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
+const LinkSchema = z.object({
+  id: z.string().min(1).max(64).describe("Stable link id; re-using it edits the link"),
+  left: z.string().min(1).max(64).describe("Id of the mark on the LEFT image"),
+  right: z.string().min(1).max(64).describe("Id of the mark on the RIGHT image"),
+  label: z.string().max(64).optional().describe("What both marks are, e.g. 'C105' or 'VCC net'"),
+  note: z.string().max(200).optional().describe("Why they match, e.g. 'same footprint, pin 1 to R12'"),
+  confidence: z.enum(LINK_CONFIDENCE).optional().describe("How sure you are they are the same thing; low asks the user to confirm"),
+}).strict();
 const FindingSchema = z.object({
   id: z.string().min(1).max(64),
   note: z.string().max(200).optional().describe("Empty string clears the note"),
@@ -183,14 +196,26 @@ const checkSummary = ({ layout, region, numbers }) => ({ layout, region, numbers
 const r3 = (v) => Math.round(v * 1000) / 1000;
 function compactMark(m) {
   return {
-    id: m.id, type: m.type, author: m.author, ...(m.layer ? { layer: m.layer } : {}), ...(m.label ? { label: m.label } : {}),
+    id: m.id, type: m.type, author: m.author, ...(m.side ? { side: m.side } : {}), ...(m.layer ? { layer: m.layer } : {}), ...(m.label ? { label: m.label } : {}),
     box: m.type === "point" ? [r3(m.x), r3(m.y)] : [r3(m.x), r3(m.y), r3(m.x2), r3(m.y2)],
     ...(m.type === "polyline" ? { vertices: m.points.length } : {}),
     ...(m.note ? { note: m.note } : {}), ...(m.status ? { status: m.status } : {}),
     ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
   };
 }
-const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int() });
+const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
+  side: z.enum(["left", "right"]).optional() });
+const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
+  ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}) });
+const REVIEW_TEXT = { confirmed: "USER CONFIRMED", rejected: "USER REJECTED (do not rely on it)" };
+// One line per link so the model can reason from its own earlier matches
+// without looking at the images again.
+const linkTable = (links, marksById) => links.map((l) => {
+  const name = (id) => id + (marksById.get(id)?.label ? " " + JSON.stringify(marksById.get(id).label) : "");
+  return l.id + (l.label ? " " + JSON.stringify(l.label) : "") + ": left " + name(l.left) + " <-> right " + name(l.right) +
+    " [" + l.confidence + (l.review ? ", " + REVIEW_TEXT[l.review] : l.confidence === "low" ? ", awaiting user review" : "") + "]" +
+    (l.note ? " — " + l.note : "");
+}).join("\n");
 const layerText = (layers) => layers.map((l) => l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count + ")").join("; ");
 const exportLinks = (imageId) => PUBLIC_URL ? {
   image: PUBLIC_URL + "/export/" + imageId.slice(4) + "/image.jpg",
@@ -206,6 +231,65 @@ function logSizes(tool, result, { appOnly = false } = {}) {
   console.log("[size] " + tool + (appOnly ? " appOnly(widget-called)=" : " modelText=") + text + "B modelImages=" + images.length + "x" +
     images.reduce((n, b) => n + b.data.length, 0) + "B widgetOnly=" + JSON.stringify(result._meta ?? {}).length + "B");
   return result;
+}
+
+// Both images of a paired view with their marks tagged by side.
+const pairMarks = (left, right) => [
+  ...canvasMarks(left).map((m) => ({ ...m, side: "left" })),
+  ...canvasMarks(right).map((m) => ({ ...m, side: "right" })),
+];
+const pairLayers = (left, right) => [
+  ...canvasLayers(left).map((l) => ({ ...l, side: "left" })),
+  ...canvasLayers(right).map((l) => ({ ...l, side: "right" })),
+];
+const pixelsBlock = (out) => ({ type: "image", data: out.data.toString("base64"), mimeType: out.mimeType });
+
+async function presentPair({ left, right, annotations, findings, remove, reset, layer, coordinateFrame, priorUserAnnotations, links, removeLinks, verify }) {
+  const changed = applyPairChanges(left, right, {
+    annotations, findings, remove, reset, layer, frame: coordinateFrame, links, removeLinks,
+    priorUser: priorUserAnnotations.map((m, i) => {
+      try { return { ...replayUserAnnotation(m), side: m.side ?? "left" }; }
+      catch (error) { throw new Error("present_visual priorUserAnnotations[" + i + "] (mark " + JSON.stringify(m.id) + "): " + error.message); }
+    }),
+    resolve: resolveCoordinateAnnotation,
+  });
+  const marks = pairMarks(left, right), byId = new Map(marks.map((m) => [m.id, m]));
+  const linkList = pairLinks(left, right), layers = pairLayers(left, right);
+  const sides = { left, right }, checks = [], ink = [];
+  for (const side of ["left", "right"]) {
+    const entry = sides[side], own = canvasMarks(entry);
+    const drawn = changed.filter((id) => annotations.some((a) => a.id === id && (a.side ?? "left") === side));
+    if (verify && drawn.length) checks.push({ side, check: await renderVerification(entry, own, drawn) });
+    ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, side })));
+  }
+  const pending = linkList.filter((l) => l.confidence === "low" && !l.review);
+  const [shownLeft, shownRight] = [await displayImage(left), await displayImage(right)];
+  const text = "Paired view: LEFT " + left.imageId + " (" + left.width + "x" + left.height + " px), RIGHT " + right.imageId +
+    " (" + right.width + "x" + right.height + " px), side by side, not overlaid. Coordinates are normalized to each mark's own image. " +
+    marks.length + " marks (side, id, rounded box): " + JSON.stringify(marks.map(compactMark)) +
+    (layers.length ? ". Layers: " + layers.map((l) => l.side + ":" + l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count + ")").join("; ") : "") +
+    ". LINKS (" + linkList.length + ", your record of which left and right marks are the same thing):\n" + (linkTable(linkList, byId) || "(none yet)") +
+    (pending.length ? "\n" + pending.length + " low-confidence link(s) await the user's review in the canvas; do not treat them as facts yet." : "") +
+    (changed.length ? "\nChanged this call: " + changed.join(", ") : "") +
+    (ink.length ? ". Ink in image px: " + ink.map((i) => i.side + ":" + i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
+    checks.map(({ side, check }) => ". VERIFICATION image for the " + side.toUpperCase() + " image follows: crop " + JSON.stringify(check.region) + ", " +
+      (check.layout === "side-by-side" ? "left half" : "top") + " = original pixels, other half = with marks numbered " +
+      check.numbers.map((n) => n.n + "=" + n.id).join(", ") + "; check each mark sits on its target and fix it (same id) if not").join("");
+  return logSizes("present_visual", {
+    content: [{ type: "text", text }, ...checks.map(({ check }) => pixelsBlock(check))],
+    structuredContent: {
+      kind: "estampes.visual_surface", imageId: left.imageId, width: left.width, height: left.height, views: [],
+      pair: { imageId: right.imageId, width: right.width, height: right.height, ...(exportLinks(right.imageId) ? { exports: exportLinks(right.imageId) } : {}) },
+      marks: marks.map(compactMark), layers, links: linkList.map(compactLink), coordinateSystem: "normalized-top-left",
+      ...(exportLinks(left.imageId) ? { exports: exportLinks(left.imageId) } : {}),
+    },
+    _meta: {
+      "estampes/image": { mimeType: shownLeft.mimeType, data: shownLeft.data.toString("base64"), width: shownLeft.width, height: shownLeft.height },
+      "estampes/pairImage": { mimeType: shownRight.mimeType, data: shownRight.data.toString("base64"), width: shownRight.width, height: shownRight.height },
+      "estampes/views": [],
+      "estampes/annotations": marks,
+    },
+  });
 }
 
 function makeServer() {
@@ -355,6 +439,7 @@ function makeServer() {
         "The result lists each changed mark's ink width in image pixels with warnings, and the verification image draws ink at its real width: if ink hides its target or is too faint, redraw the same id with another size or pen. " +
         "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as traces, wires, roads, outlines, handwriting strokes or loose circles; follow only what is visible in zoomed process_image output, and say where a path is hidden. " +
         "`marksFile`: an Estampes marks SVG the user exported earlier and attached again; its marks are restored onto this image. The result has download links (`exports`) for the image and a layered marks SVG; give them when the user wants to save or export. " +
+        "PAIRED VIEW: to compare two DIFFERENT images side by side (a schematic and a board photo, a map and an aerial photo, a drawing and the object), pass the second as `pairImage`/`pairImageUrl`/`pairImageId`: it shows on the RIGHT, the first image on the LEFT. The images are never overlaid. Each annotation takes `side` (left|right, default left) with coordinates normalized to that image; ids are unique across both. `links` records that a left mark and a right mark are the same thing (same part, net, pin, building...), with your `confidence`; low-confidence links are shown to the user to confirm or reject. Every result lists all links as a table: use it to remember and reason about earlier matches, and trust USER CONFIRMED / USER REJECTED over your own guess. " +
         "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
@@ -371,13 +456,19 @@ function makeServer() {
         ),
         findings: z.array(FindingSchema).max(30).default([]).describe("Attach your note/status to existing marks by id, e.g. the user's box"),
         remove: z.array(z.string().max(64)).max(30).default([]).describe("Ids of marks to delete"),
-        reset: z.boolean().default(false).describe("Start from an empty canvas for this photo"),
+        reset: z.boolean().default(false).describe("Start from an empty canvas for this photo (both images and their links in a paired view)"),
+        pairImage: ChatFileSchema.optional().describe("Second image file shown on the RIGHT for a paired view"),
+        pairImageUrl: z.string().url().max(2048).optional().describe("Public https URL of the right-hand image"),
+        pairImageId: ImageIdSchema.optional().describe("imageId of the right-hand image"),
+        links: z.array(LinkSchema).max(30).default([]).describe("Paired view: left mark <-> right mark correspondences"),
+        removeLinks: z.array(z.string().max(64)).max(30).default([]).describe("Paired view: link ids to delete"),
         layer: z.string().trim().min(1).max(40).optional().describe("Name of the layer for this call's new marks; an existing name of yours adds to that layer, and edited marks move into it"),
         coordinateFrame: z.object({
           region: RegionSchema,
           width: z.number().int().positive().optional(),
           height: z.number().int().positive().optional(),
-        }).optional().describe("Coordinates in `annotations` are relative to this region (0..1), or pixels of a width×height output of it"),
+          side: z.enum(["left", "right"]).optional().describe("Paired view: the image the region belongs to (default left)"),
+        }).optional().describe("Coordinates in `annotations` (of that side) are relative to this region (0..1), or pixels of a width×height output of it"),
         verify: z.boolean().default(true).describe("Return the verification image of changed marks"),
       }),
       outputSchema: z.object({
@@ -392,17 +483,33 @@ function makeServer() {
         layers: z.array(LayerSchema).optional(),
         check: CheckSummarySchema.optional(),
         exports: z.object({ image: z.string(), marks: z.string() }).optional(),
+        pair: z.object({ imageId: z.string(), width: z.number(), height: z.number(),
+          exports: z.object({ image: z.string(), marks: z.string() }).optional() }).optional(),
+        links: z.array(z.record(z.string(), z.unknown())).optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-      _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile"] },
+      _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile", "pairImage"] },
     },
-    async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify }) => {
+    async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify,
+      pairImage, pairImageUrl, pairImageId, links, removeLinks }) => {
       try {
         if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
           throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
         }
+        const paired = [pairImage, pairImageUrl, pairImageId].filter(Boolean).length;
+        if (paired > 1) throw new Error("Provide at most one of pairImage, pairImageUrl or pairImageId");
+        if (!paired && (links.length || removeLinks.length || annotations.some(a => a.side === "right") || coordinateFrame?.side === "right")) {
+          throw new Error("links, removeLinks and side:'right' need a paired view (pairImage, pairImageUrl or pairImageId)");
+        }
+        if (paired && (scene || views.length || marksFile)) throw new Error("A paired view needs two real images and does not take scene, views or marksFile");
         if (image || imageUrl) imageId = (await loadImageInput({ image, imageUrl })).imageId;
+        if (paired) {
+          if (pairImage || pairImageUrl) pairImageId = (await loadImageInput({ image: pairImage, imageUrl: pairImageUrl })).imageId;
+          if (pairImageId === imageId) throw new Error("The paired image is the same as the left image; pass a different picture");
+          return await presentPair({ left: getImage(imageId), right: getImage(pairImageId), annotations, findings, remove, reset, layer,
+            coordinateFrame, priorUserAnnotations, links, removeLinks, verify });
+        }
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
         if (scene) {
           if (coordinateFrame || findings.length || remove.length || marksFile) throw new Error("coordinateFrame, findings, remove and marksFile need a real photo");
@@ -500,13 +607,28 @@ function makeServer() {
       inputSchema: z.object({
         imageId: ImageIdSchema,
         part: z.enum(["canvas", "check"]).default("canvas"),
+        pairImageId: ImageIdSchema.optional(),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, part }) => {
+    async ({ imageId, part, pairImageId }) => {
       try {
         const entry = getImage(imageId);
+        if (pairImageId && part === "canvas") {
+          const right = getImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
+          return logSizes("load_visual_canvas", {
+            content: [{ type: "text", text: "Paired canvas data for " + imageId + " + " + pairImageId + " sent to the widget." }],
+            structuredContent: {
+              kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
+              image: { mimeType: own.mimeType, data: own.data.toString("base64") },
+              pair: { imageId: pairImageId, width: right.width, height: right.height, image: { mimeType: shown.mimeType, data: shown.data.toString("base64") },
+                ...(exportLinks(pairImageId) ? { exports: exportLinks(pairImageId) } : {}) },
+              annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: pairLinks(entry, right).map(compactLink), views: [],
+              ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}),
+            },
+          }, { appOnly: true });
+        }
         const check = entry.lastCheck;
         const pixels = (out) => ({ mimeType: out.mimeType, data: Buffer.isBuffer(out.data) ? out.data.toString("base64") : out.data });
         // App-only: the model never sees this result, so pixels may sit in
@@ -569,6 +691,7 @@ function makeServer() {
       inputSchema:z.object({
         scene:SceneSchema.optional(),
         imageId:ImageIdSchema.optional(),
+        pairImageId:ImageIdSchema.optional(),
         annotations:VisualAnnotationsSchema,
         intent:z.enum(INTENTS).default("point-out"),
         note:z.string().max(500).default(""),
@@ -581,13 +704,14 @@ function makeServer() {
         count:z.number().int(),
         annotations:VisualAnnotationsSchema,
         layer:z.object({id:z.string(),name:z.string()}).optional(),
+        pairLayer:z.object({id:z.string(),name:z.string()}).optional(),
         event:z.record(z.string(),z.unknown()),
         chatMessage:z.string(),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,imageId,annotations,intent,note,replyQuote})=>{
+    async ({scene,imageId,pairImageId,annotations,intent,note,replyQuote})=>{
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
       try {
@@ -595,17 +719,28 @@ function makeServer() {
         let image;
         let entry;
         if(imageId){entry=getImage(imageId);image={imageId,width:entry.width,height:entry.height};}
+        if(pairImageId&&!entry) throw new Error("pairImageId needs imageId");
+        const right=pairImageId?getImage(pairImageId):null;
+        if(!right&&annotations.some(a=>a.side==="right")) throw new Error("side:'right' needs pairImageId");
         const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
-        const event=buildAnnotationEvent({scene,image,annotations:checked,intent,note,replyQuote});
+        const pairImage=right?{imageId:pairImageId,width:right.width,height:right.height}:undefined;
+        const event=buildAnnotationEvent({scene,image,pairImage,annotations:checked,intent,note,replyQuote});
         const chatMessage=formatAnnotationChatMessage(event);
+        let layer=null,pairLayer=null;
+        if(right){
+          // Paired view: each mark belongs to its own image.
+          const sideOf=a=>a.side==="right"?"right":"left";
+          layer=storeUserMarks(entry,checked.filter(a=>sideOf(a)==="left").map(({side,...a})=>a));
+          pairLayer=storeUserMarks(right,checked.filter(a=>sideOf(a)==="right").map(({side,...a})=>a));
         // Submitted marks join the photo's canvas so GPT need not replay them.
-        const layer=entry?storeUserMarks(entry,checked):null;
+        }else if(entry)layer=storeUserMarks(entry,checked);
         return {
           content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
           structuredContent:{
             kind:"estampes.validated_annotations",...(scene?{scene}:{imageId}),
             count:checked.length,annotations:checked,event,chatMessage,
             ...(layer?{layer:{id:layer.id,name:layer.name}}:{}),
+            ...(pairLayer?{pairLayer:{id:pairLayer.id,name:pairLayer.name}}:{}),
           },
         };
       } catch(error) {
@@ -614,6 +749,37 @@ function makeServer() {
     }
   );
 
+
+  // Private tool for the canvas widget: the user confirms or rejects one of
+  // GPT's links in a paired view. The verdict is stored with the link, so
+  // GPT's next link table shows it.
+  registerAppTool(
+    server,
+    "review_visual_link",
+    {
+      title: "Review a link between paired images",
+      description: "Record the user's verdict on a link in an Estampes paired view.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        pairImageId: ImageIdSchema,
+        linkId: z.string().min(1).max(64),
+        review: z.enum(LINK_REVIEW),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, pairImageId, linkId, review }) => {
+      try {
+        const link = reviewLink(getImage(imageId), getImage(pairImageId), linkId, review);
+        return {
+          content: [{ type: "text", text: "Link " + linkId + " marked " + review + " by the user." }],
+          structuredContent: { kind: "estampes.link_review", imageId, pairImageId, link: compactLink(link) },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
 
   // Image analysis and user-facing UI have separate contracts. This resource
   // is retained only for explicit standalone viewer compatibility.
