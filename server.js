@@ -11,11 +11,12 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
+import { landmarkIds, resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.0";
-const VISUAL_URI = "ui://estampes/visual-surface-v040.html";
+const BUILD_VERSION = "m0.4.1";
+const VISUAL_URI = "ui://estampes/visual-surface-v041.html";
 const html = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
   "utf8"
@@ -27,23 +28,49 @@ const visualHtml = readFileSync(
   "utf8"
 );
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
+const LandmarkSchema = z.enum(landmarkIds);
 const Point01 = z.number().finite().min(0).max(1);
+
+// Guaranteed geometry for renderer + user validation.
 const VisualAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
   type: z.enum(["point", "rect", "arrow"]),
   x: Point01, y: Point01,
   x2: Point01.optional(), y2: Point01.optional(),
   label: z.string().max(64).optional(),
-}).superRefine((annotation,ctx)=>{
-  if(annotation.type!=="point" &&
-     (annotation.x2===undefined || annotation.y2===undefined)){
+  author: z.enum(["user", "assistant"]).optional(),
+  grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
+  targetId: LandmarkSchema.optional(),
+}).superRefine((a,ctx)=>{
+  if(a.type!=="point" && (a.x2===undefined || a.y2===undefined)) {
     ctx.addIssue({code:"custom",message:"Rectangle and arrow require x2/y2"});
   }
 });
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
+// Model-proposed annotations may name an object by targetId and omit x/y.
+// The server resolves targetId using a deterministic built-in SVG landmark
+// catalog. Without targetId, coordinates are *not semantically verified*.
+const ModelAnnotationSchema = z.object({
+  id: z.string().min(1).max(64),
+  type: z.enum(["point", "rect", "arrow"]),
+  targetId: LandmarkSchema.optional(),
+  x: Point01.optional(), y: Point01.optional(),
+  x2: Point01.optional(), y2: Point01.optional(),
+  label: z.string().max(64).optional(),
+}).superRefine((a,ctx)=>{
+  if(a.targetId && a.type==="arrow"){
+    ctx.addIssue({code:"custom",message:"targetId is for points/rectangles only"});
+  }
+  if(!a.targetId && (a.x===undefined||a.y===undefined||
+      (a.type!=="point"&&(a.x2===undefined||a.y2===undefined)))){
+    ctx.addIssue({code:"custom",message:"Ungrounded marks require explicit coordinates"});
+  }
+});
+const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
+
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.0" });
+  const server = new McpServer({ name: "estampes", version: "0.4.1" });
 
   registerAppResource(
     server,
@@ -160,10 +187,13 @@ function makeServer() {
     {
       title: "Present a shared visual canvas",
       description:
-        "Display a generic in-chat 2D canvas where the AI can mark points, rectangles, and arrows and the user can freely mark and send their own positions. Uses a built-in illustration: landscape (house/tree/sun/mountains), shapes (circle/square/triangle), or formula (E=mc²). All coordinates are normalized [0,1] from the image top-left. This does not import ChatGPT's searched images.",
+        "Display an in-chat 2D surface over an embedded SVG test scene. For NAMED objects always use targetId (no guessed x/y): landscape ids sun, house, house-roof, tree, mountain-left, mountain-right; shapes ids circle, square, triangle; formula ids equation, equals-sign. Example: scene=landscape, annotations=[{id:'mountain', type:'point', targetId:'mountain-right', label:'山'}]. Server resolves anchors, never trusts model coordinates when targetId is set. Free coordinates without targetId are allowed but UNVERIFIED. To redraw previously user-drawn annotations, pass them in priorUserAnnotations; never copy them into annotations (reserved for new AI marks). This is an SVG sample, NOT native ChatGPT image-search access.",
       inputSchema: z.object({
         scene: SceneSchema,
-        annotations: VisualAnnotationsSchema.max(12).default([]),
+        annotations: ModelAnnotationsSchema.default([]),
+        priorUserAnnotations: VisualAnnotationsSchema.default([]).describe(
+          "Only marks the user actually drew and supplied earlier; replayed provenance is not authenticated."
+        ),
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.visual_surface"),
@@ -174,17 +204,28 @@ function makeServer() {
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { resourceUri: VISUAL_URI } },
     },
-    async ({ scene, annotations }) => ({
-      content: [{
-        type:"text",
-        text:"Estampes shared visual surface: "+scene+"; AI annotations: "+JSON.stringify(annotations)+
-          ". The user can now click, drag a rectangle, or draw an arrow on this image and send coordinates back.",
-      }],
-      structuredContent:{
-        kind:"estampes.visual_surface",scene,annotations,
-        coordinateSystem:"normalized-top-left",
-      },
-    })
+    async ({ scene, annotations, priorUserAnnotations }) => {
+      let resolved;
+      try {
+        const ai=annotations.map(a=>resolveSceneAnnotation(scene,a));
+        const user=priorUserAnnotations.map(replayUserAnnotation);
+        resolved=[...ai,...user];
+      } catch(error) {
+        return {isError:true,content:[{type:"text",text:String(error.message||error)}]};
+      }
+      return {
+        content: [{
+          type:"text",
+          text:"Estampes scene="+scene+"; grounded/user-tagged annotations="+JSON.stringify(resolved)+
+            ". A scene-anchor is deterministic SVG geometry; a free-coordinate annotation is NOT semantically grounded. " +
+            "Previously human-drawn marks retain author=user. New user gestures can be sent from the widget."
+        }],
+        structuredContent:{
+          kind:"estampes.visual_surface",scene,annotations:resolved,
+          coordinateSystem:"normalized-top-left",
+        },
+      };
+    }
   );
 
   // Private tool, not a widget: returns validated user marks.
