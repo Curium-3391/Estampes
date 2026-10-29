@@ -128,6 +128,11 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.ok(privateTool,"validation tool missing");
     assert.deepEqual(privateTool._meta?.ui?.visibility,["app"]);
     assert.equal(privateTool._meta?.ui?.resourceUri,undefined);
+    // The widget reloads pixels itself when the host drops a large result.
+    const loader=tools.tools.find(t=>t.name==="load_visual_canvas");
+    assert.deepEqual(loader?._meta?.ui?.visibility,["app"]);
+    const missing=await client.callTool({name:"load_visual_canvas",arguments:{imageId:"img:0000000000000000"}});
+    assert.equal(missing.isError,true);
     const userMarks=[{id:"user-1",type:"point",x:0,y:1,label:"Edge"},
       {id:"user-2",type:"arrow",x:0.1,y:0.3,x2:0.9,y2:0.8,label:"Direction"}];
     const checked=await client.callTool({name:"validate_visual_annotations",arguments:{

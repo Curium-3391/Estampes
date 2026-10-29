@@ -27,6 +27,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #surface{display:block;width:100%;height:auto;max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
+#check-view{margin:0}#check-view img{display:block;max-width:100%;max-height:640px;margin:auto;border:1px solid #8886;border-radius:10px}
+#check-view figcaption{font-size:.85rem;margin-top:6px}
 #findings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 #findings:empty{display:none}
 #findings li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
@@ -46,6 +48,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button data-view="annotated" aria-pressed="true">標註與編輯</button>
 <button data-view="original" aria-pressed="false">原始圖片</button>
 <button data-view="zoom" aria-pressed="false">局部放大</button>
+<button data-view="check" aria-pressed="false" hidden title="GPT 畫完後自己檢查用的圖">GPT 驗收圖</button>
 <select id="focus-choice" hidden aria-label="放大哪個標註"></select>
 </nav>
 <div class="toolbar" id="edit-tools" role="group" aria-label="標註工具">
@@ -53,7 +56,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button data-mode="rect" aria-pressed="false">框選</button>
 <button data-mode="arrow" aria-pressed="false">箭頭</button>
 <button data-mode="polyline" aria-pressed="false" title="按住拖曳自由畫；滑鼠、繪圖板、Apple Pencil、S Pen 都可以">手繪</button>
-<button id="undo">復原</button><button id="clear">清除我的標註</button>
+<button id="undo" title="Ctrl+Z">上一步</button><button id="redo" title="Ctrl+Shift+Z / Ctrl+Y">下一步</button><button id="clear">清除我的標註</button>
 </div>
 <div id="style-tools" role="group" aria-label="畫筆樣式">
 <button class="swatch" data-color="blue" aria-pressed="true" aria-label="藍" style="background:#579DF6"></button>
@@ -77,6 +80,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
+<figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
 <ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
@@ -111,6 +115,8 @@ const hit=document.querySelector("#hit"), status=document.querySelector("#status
 const intentSelect=document.querySelector("#intent"),noteInput=document.querySelector("#note"),quoteInput=document.querySelector("#quote");
 let tabs=[...document.querySelectorAll("[data-view]")];const focusChoice=document.querySelector("#focus-choice"),editTools=document.querySelector("#edit-tools");
 let viewMode="annotated",selectedFocusId=null;
+const checkView=document.querySelector("#check-view"),checkImg=document.querySelector("#check-img"),checkCaption=document.querySelector("#check-caption");
+const checkTab=document.querySelector('[data-view="check"]'),undoBtn=document.querySelector("#undo"),redoBtn=document.querySelector("#redo");
 const INTENT_TEXT={
  "point-out":"我想指出這個位置",
  "ask-about-region":"請解釋我標記的區域",
@@ -139,7 +145,7 @@ const SCENES={
 const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公式"};
 // Canvas units: 640×360 for demo scenes; real photos use width 1000 and
 // their own aspect ratio, so normalized coordinates map without distortion.
-let VW=640,VH=360,imageId=null,photo=null,views=[];
+let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
 const IMAGE_ID=/^img:[0-9a-f]{16}$/;
 const K=()=>VW/640;
 const MAX_MARKS=30;let selectedScene="landscape",assistantMarks=[],priorUserMarks=[],userMarks=[],mode="point",ready=false,start=null,seq=0,rpcId=0;
@@ -283,6 +289,9 @@ function cropBox(mark){
  return [clamp(x*VW-w/2,0,VW-w),clamp(y*VH-h/2,0,VH-h),w,h].join(" ");
 }
 function renderView(){
+ const checking=viewMode==="check";
+ svg.style.display=checking?"none":"";checkView.hidden=!checking;
+ if(checking)renderCheck();
  const hideMarks=viewMode!=="annotated";
  const processed=viewMode.startsWith("view-")?views[Number(viewMode.slice(5))]:null;
  processedEl.replaceChildren();
@@ -306,7 +315,7 @@ function renderView(){
  svg.setAttribute("viewBox",processed?[r.x*VW,r.y*VH,(r.x2-r.x)*VW,(r.y2-r.y)*VH].join(" "):
    viewMode==="zoom"&&focus?cropBox(focus):"0 0 "+VW+" "+VH);
  const title=processed?processed.label+" · 處理後檢視（不含標註）":
-   {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖"}[viewMode];
+   {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
  document.querySelector("#caption").textContent=(imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
 }
 function render(){
@@ -328,6 +337,7 @@ function render(){
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
  send.disabled=!ready||fresh===0;
+ undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
  renderFindings();
  refreshFocus();renderView();
 }
@@ -357,16 +367,18 @@ function applyInput(args){
  }else if(Object.hasOwn(SCENES,args.scene)){
    selectedScene=args.scene;imageId=null;photo=null;views=[];renderViewTabs();VW=640;VH=360;
  }else return;
- const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,42):[];
- assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,12);
+ const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,60):[];
+ assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,30);
  priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,30);
- userMarks=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
+ userMarks=[];past=[];future=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
+ // The result normally brings the pixels; if it never does, fetch them.
+ if(imageId)setTimeout(()=>{if(imageId&&!photo)syncCanvas()},6000);
 }
 const inRegion=r=>r&&[r.x,r.y,r.x2,r.y2].every(v=>typeof v==="number"&&v>=0&&v<=1)&&r.x2>r.x&&r.y2>r.y;
 const dataUrl=img=>img&&/^image\/(png|jpeg)$/.test(img.mimeType)&&typeof img.data==="string"?"data:"+img.mimeType+";base64,"+img.data:null;
 function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
- applyInput(r);
+ gotResult=true;applyInput(r);
  // Pixels travel in widget-only _meta; ChatGPT also exposes it on window.openai.
  const meta=result?._meta??window.openai?.toolResponseMetadata??{};
  if(imageId){
@@ -376,9 +388,65 @@ function applyResult(result){
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
    const sig=list=>JSON.stringify(list.map(v=>[v.label,v.region,v.href.length]));
    if(incoming&&sig(next)!==sig(views)){views=next;renderViewTabs();}
-   if(!photo)status.textContent="照片資料沒有送到畫面；請 GPT 重新呼叫 present_visual。";
+   setCheck(r.check??null);
+   if(!photo)syncCanvas();
  }
  render();
+}
+// ChatGPT can drop a large result's _meta. The server keeps the photo, all
+// marks, the last processed views and the last verification image, so the
+// widget asks for them itself (app-only tool, invisible to the model).
+let syncing=false,gotResult=false;
+async function syncCanvas(){
+ if(!ready||!imageId||photo||syncing)return;
+ syncing=true;const id=imageId;
+ status.textContent="照片沒有隨結果送到，正在重新載入…";
+ try{
+   const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:id}});
+   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   const r=result?.structuredContent;
+   if(r?.kind!=="estampes.visual_canvas"||r.imageId!==id)throw Error("Unexpected response");
+   if(id!==imageId)return;
+   photo=dataUrl(r.image);
+   if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
+   const marks=Array.isArray(r.annotations)?r.annotations.filter(valid).slice(0,60):[];
+   const mine=new Set(userMarks.map(m=>m.id));
+   assistantMarks=marks.filter(a=>a.author!=="user").slice(0,30);
+   priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,30);
+   views=(Array.isArray(r.views)?r.views:[]).map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
+     .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
+   renderViewTabs();setCheck(r.check??null);
+   status.textContent=photo?"已重新載入照片與標記。":"照片資料無法載入。";
+ }catch(err){
+   status.textContent="照片載入失敗："+String(err.message||err)+"。伺服器只保留照片約一小時，過期請重新上傳。";
+ }finally{syncing=false;render()}
+}
+// The verification image GPT checked its marks against, fetched on demand.
+function setCheck(next){
+ if(JSON.stringify(next)===JSON.stringify(check))return;
+ check=next;checkImage=null;checkTab.hidden=!check;
+ if(!check&&viewMode==="check")viewMode="annotated";
+}
+let loadingCheck=false;
+async function loadCheck(){
+ if(loadingCheck||!imageId||!ready)return;
+ loadingCheck=true;
+ try{
+   const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId,part:"check"}});
+   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   checkImage=dataUrl(result?.structuredContent?.check?.image);
+   if(!checkImage)throw Error("沒有驗收圖");
+   render();
+ }catch(err){checkCaption.textContent="驗收圖載入失敗："+String(err.message||err)}
+ finally{loadingCheck=false}
+}
+function renderCheck(){
+ if(!check){checkCaption.textContent="這次 GPT 沒有新畫的標記，所以沒有驗收圖。";return}
+ if(!checkImage){checkImg.removeAttribute("src");checkCaption.textContent="正在載入驗收圖…";loadCheck();return}
+ checkImg.src=checkImage;
+ const [a,b]=check.layout==="side-by-side"?["左","右"]:["上","下"];
+ checkCaption.textContent="GPT 畫完後用這張圖檢查自己的標記："+a+"邊是原圖，"+b+"邊是同一區域加上編號標記。編號："+
+   check.numbers.map(n=>n.n+"＝"+(n.label||n.id)).join("、")+"。";
 }
 function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;
  const matrix=svg.getScreenCTM();if(!matrix)return null;
@@ -424,12 +492,22 @@ hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
    :{...draft(start,p),id:ID_PREFIX+(++seq)};
- if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
+ if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
-document.querySelector("#undo").addEventListener("click",()=>{userMarks.pop();selectedFocusId=null;render()});
-document.querySelector("#clear").addEventListener("click",()=>{userMarks=[];selectedFocusId=null;render()});
+// Undo/redo over this canvas's marks since the last send.
+let past=[],future=[];
+function commitMarks(next){past.push(userMarks);if(past.length>60)past.shift();future=[];userMarks=next;}
+function undo(){if(!past.length)return;future.push(userMarks);userMarks=past.pop();selectedFocusId=null;render();}
+function redo(){if(!future.length)return;past.push(userMarks);userMarks=future.pop();selectedFocusId=null;render();}
+undoBtn.addEventListener("click",undo);redoBtn.addEventListener("click",redo);
+document.querySelector("#clear").addEventListener("click",()=>{if(userMarks.length){commitMarks([]);selectedFocusId=null;render()}});
+document.addEventListener("keydown",e=>{
+ if(!(e.ctrlKey||e.metaKey)||e.target.closest?.("input,textarea,select"))return;
+ const k=e.key.toLowerCase();
+ if(k==="z"){e.preventDefault();e.shiftKey?redo():undo();}else if(k==="y"){e.preventDefault();redo();}
+});
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
 function request(method,params){return new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});
  window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
@@ -443,13 +521,14 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
 render();
 // Hosts that set window.openai globals before (or instead of) notifications.
 let seenOutput=null,seenMeta=null;
-const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput)return;
+const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput){if(o?.toolInput)applyInput(o.toolInput);return;}
  if(o.toolOutput===seenOutput&&o.toolResponseMetadata===seenMeta)return;
  seenOutput=o.toolOutput;seenMeta=o.toolResponseMetadata;
  applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
 window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
- notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
+ notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";
+ if(imageId&&!photo&&gotResult)syncCanvas();}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
@@ -505,6 +584,7 @@ send.addEventListener("click",async()=>{
    });
    if(response?.isError)throw Error("Host rejected message");
    for(const id of freshIds)sentIds.add(id);
+   past=[];future=[];
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
      (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
  }catch(err){

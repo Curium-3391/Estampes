@@ -39,10 +39,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -149,6 +149,14 @@ const OpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("invert") }),
   z.object({ op: z.literal("edges") }).describe("Sobel edge magnitude; good for traces and line art"),
 ]);
+
+// What the widget needs to explain the verification image to the user.
+const CheckSummarySchema = z.object({
+  layout: z.enum(["side-by-side", "stacked"]),
+  region: RegionSchema,
+  numbers: z.array(z.object({ n: z.number().int(), id: z.string(), label: z.string().optional() })),
+});
+const checkSummary = ({ layout, region, numbers }) => ({ layout, region, numbers });
 
 function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION });
@@ -324,6 +332,7 @@ function makeServer() {
         height: z.number().optional(),
         views: z.array(z.object({ label: z.string(), region: RegionSchema })).optional(),
         annotations: VisualAnnotationsSchema,
+        check: CheckSummarySchema.optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
@@ -367,6 +376,10 @@ function makeServer() {
           const out = await compactForDisplay(await processImage(entry, { region: view.region, ops: view.ops }));
           rendered.push({ label: view.label, mimeType: out.mimeType, data: out.data.toString("base64"), region: out.region });
         }
+        // Kept so the widget can fetch them again if the host drops this
+        // result's _meta (see load_visual_canvas).
+        entry.lastViews = rendered;
+        if (check) entry.lastCheck = check;
         return {
           content: [{
             type: "text",
@@ -378,18 +391,61 @@ function makeServer() {
                 (check.layout === "side-by-side" ? "left" : "top") + " = original pixels, " +
                 (check.layout === "side-by-side" ? "right" : "bottom") + " = with marks numbered " +
                 check.numbers.map(n => n.n + "=" + n.id).join(", ") +
-                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done." : ""),
+                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done. The user can open the same image in the canvas tab 「GPT 驗收圖」." : ""),
           }, ...(check ? [imageBlock(check)] : [])],
           structuredContent: {
             kind: "estampes.visual_surface", imageId, width: entry.width, height: entry.height,
             views: rendered.map(({ label, region }) => ({ label, region })),
             annotations: resolved, coordinateSystem: "normalized-top-left",
+            ...(check ? { check: checkSummary(check) } : {}),
           },
           // Pixels go to the widget only; the model already has them from load_image.
           _meta: {
             "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
             "estampes/views": rendered,
           },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: re-sends a photo's pixels, marks,
+  // last processed views and last verification image. The widget calls it
+  // when a present_visual result arrives without pixels (the host can drop
+  // large results) or when the user opens the verification tab.
+  registerAppTool(
+    server,
+    "load_visual_canvas",
+    {
+      title: "Load visual canvas",
+      description: "Reload a photo canvas for the Estampes widget.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        part: z.enum(["canvas", "check"]).default("canvas"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, part }) => {
+      try {
+        const entry = getImage(imageId);
+        const check = entry.lastCheck;
+        const pixels = (out) => ({ mimeType: out.mimeType, data: Buffer.isBuffer(out.data) ? out.data.toString("base64") : out.data });
+        // App-only: the model never sees this result, so pixels may sit in
+        // structuredContent, which every host passes to the widget.
+        const body = part === "check"
+          ? { check: check ? { ...checkSummary(check), image: pixels(check) } : null }
+          : {
+              width: entry.width, height: entry.height, annotations: canvasMarks(entry),
+              image: pixels(await displayImage(entry)),
+              views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
+              ...(check ? { check: checkSummary(check) } : {}),
+            };
+        return {
+          content: [{ type: "text", text: "Canvas data for " + imageId + " sent to the widget." }],
+          structuredContent: { kind: "estampes.visual_canvas", imageId, part, ...body },
         };
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };

@@ -111,6 +111,28 @@ test("users pick colour, size and a translucent highlighter",()=>{
   assert.match(source,/\.\.\.styleFields\(\)/);
 });
 
+test("undo and redo step through marks, including a clear",()=>{
+  const start=source.indexOf("let past=[],future=[];"),stop=source.indexOf("undoBtn.addEventListener",start);
+  assert.ok(start>=0&&stop>start);
+  const h=new Function("let userMarks=[],selectedFocusId=null;const render=()=>{};\n"+source.slice(start,stop)+
+    "\nreturn {commitMarks,undo,redo,get marks(){return userMarks}};")();
+  h.commitMarks([...h.marks,"a"]);h.commitMarks([...h.marks,"b"]);h.commitMarks([]);
+  assert.deepEqual(h.marks,[]);
+  h.undo();assert.deepEqual(h.marks,["a","b"]);
+  h.undo();assert.deepEqual(h.marks,["a"]);
+  h.redo();assert.deepEqual(h.marks,["a","b"]);
+  h.commitMarks([...h.marks,"c"]);h.redo();assert.deepEqual(h.marks,["a","b","c"]);
+  assert.match(html,/id="redo"/);
+  assert.match(source,/k==="z"/);
+});
+
+test("missing pixels are reloaded and the verification image has its own tab",()=>{
+  assert.match(source,/name:"load_visual_canvas",arguments:\{imageId:id\}/);
+  assert.match(source,/if\(!photo\)syncCanvas\(\)/);
+  assert.match(html,/data-view="check"[^>]*hidden/);
+  assert.match(source,/part:"check"/);
+});
+
 test("provenance colors are distinct from viewer inspection marker",()=>{
   assert.match(source,/#E4AE57/);
   assert.match(source,/#579DF6/);
