@@ -80,3 +80,31 @@ test("widget shows links with numbers, asks the user to review low-confidence on
   assert.match(source, /pairImageId:pair\.imageId/);
   assert.match(source, /if\(pair\)mark=toView\(toSide\(\{\.\.\.mark,side:sideAt\(start\)\}\)\)/);
 });
+
+test("one call cannot add the same id to both images", async () => {
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  assert.throws(() => applyPairChanges(left, right, { annotations: [box("a", "left"), box("a", "right")], resolve }),
+    /annotations\[0\] \(mark "a"\): field id is also used on the right image in this call/);
+  assert.equal(canvasMarks(left).length + canvasMarks(right).length, 0);
+  assert.throws(() => applyPairChanges(left, right, { annotations: [box("user-9x", "left")].map(a => ({ ...a, id: "b" })),
+    priorUser: [{ id: "b", side: "right", type: "point", x: 0.5, y: 0.5, author: "user" }], resolve }), /also used on the right image/);
+});
+
+test("a user send on a paired view tells GPT which image each mark is on", async () => {
+  const { buildAnnotationEvent, formatAnnotationChatMessage } = await import("../src/interaction-protocol.js");
+  const event = buildAnnotationEvent({
+    image: { imageId: "img:aaaaaaaaaaaaaaaa", width: 1600, height: 1000 },
+    pairImage: { imageId: "img:bbbbbbbbbbbbbbbb", width: 3000, height: 4000 },
+    annotations: [{ id: "user-1", type: "point", x: 0.2, y: 0.3, label: "YOU 1" }, { id: "user-2", type: "point", x: 0.5, y: 0.5, label: "YOU 2", side: "right" }],
+  });
+  assert.deepEqual(event.annotations.map(a => a.side), ["left", "right"]);
+  assert.equal(event.pair.right.id, "img:bbbbbbbbbbbbbbbb");
+  const text = formatAnnotationChatMessage(event);
+  // The serialized event carries side and pair, and inspection uses each side's image.
+  const json = JSON.parse(text.split("\n").find(l => l.startsWith("{")));
+  assert.equal(json.annotations[1].side, "right");
+  assert.ok(json.pair);
+  assert.match(text, /每個標記用它 side 對應的 imageId（left=img:aaaaaaaaaaaaaaaa，right=img:bbbbbbbbbbbbbbbb）/);
+  assert.match(text, /pairImageId=img:bbbbbbbbbbbbbbbb/);
+  assert.doesNotMatch(text, /請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId=/);
+});

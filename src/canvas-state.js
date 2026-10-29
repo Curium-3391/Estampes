@@ -187,8 +187,16 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
     const split = { left: { annotations: [], findings: [], remove: [], priorUser: [] }, right: { annotations: [], findings: [], remove: [], priorUser: [] } };
     if (reset) store.clear();
     const sideOf = (id) => marksOf(left).has(id) ? "left" : marksOf(right).has(id) ? "right" : null;
+    // Ids must be unique across the pair: against what each image already
+    // holds and against what this call adds or replays on the other side.
+    const incoming = { left: new Set(), right: new Set() };
+    for (const a of annotations) incoming[a.side ?? "left"].add(a.id);
+    for (const m of priorUser) incoming[m.side ?? "left"].add(m.id);
     annotations.forEach((a, i) => {
-      const side = a.side ?? "left";
+      const side = a.side ?? "left", otherSide = side === "left" ? "right" : "left";
+      if (incoming[otherSide].has(a.id)) {
+        throw sideError("annotations", i, a.id, "field id is also used on the " + otherSide + " image in this call; ids must be unique across the pair");
+      }
       if (!reset && marksOf(other[side]).has(a.id)) {
         throw sideError("annotations", i, a.id, "field id is already a mark on the " + (side === "left" ? "right" : "left") + " image; ids must be unique across the pair");
       }

@@ -723,16 +723,13 @@ function makeServer() {
         const right=pairImageId?getImage(pairImageId):null;
         if(!right&&annotations.some(a=>a.side==="right")) throw new Error("side:'right' needs pairImageId");
         const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
-        const event=buildAnnotationEvent({scene,image,annotations:checked,intent,note,replyQuote});
-        let chatMessage=formatAnnotationChatMessage(event);
+        const pairImage=right?{imageId:pairImageId,width:right.width,height:right.height}:undefined;
+        const event=buildAnnotationEvent({scene,image,pairImage,annotations:checked,intent,note,replyQuote});
+        const chatMessage=formatAnnotationChatMessage(event);
         let layer=null,pairLayer=null;
         if(right){
           // Paired view: each mark belongs to its own image.
           const sideOf=a=>a.side==="right"?"right":"left";
-          event.annotations.forEach((m,i)=>{m.side=sideOf(checked[i]);});
-          event.pair={left:imageId,right:pairImageId};
-          const names=side=>checked.filter(a=>sideOf(a)===side).map(a=>a.label||a.id).join("、")||"無";
-          chatMessage+="\n這是左右對照畫布：左圖 imageId="+imageId+"（"+names("left")+"），右圖 imageId="+pairImageId+"（"+names("right")+"）。座標以各自的圖為準，用 present_visual 的 imageId + pairImageId 回到同一個對照畫布。";
           layer=storeUserMarks(entry,checked.filter(a=>sideOf(a)==="left").map(({side,...a})=>a));
           pairLayer=storeUserMarks(right,checked.filter(a=>sideOf(a)==="right").map(({side,...a})=>a));
         // Submitted marks join the photo's canvas so GPT need not replay them.
