@@ -22,7 +22,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 </style></head><body><main>
-<header><h2>Estampes · Visual Surface</h2><small>v0.4.2</small></header>
+<header><h2>Estampes · Visual Surface</h2><small>v0.4.3</small></header>
 <p class="help">金色：AI 標註（「?」代表未驗證的猜測位置）。藍色：使用者標註（含重新載入的標記）。請直接點擊或拖曳。</p>
 <div class="toolbar" role="group" aria-label="標註工具">
 <button data-mode="point" aria-pressed="true">點選</button>
@@ -52,7 +52,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <textarea id="note" maxlength="500" placeholder="例如：我指的是這棵樹，不是後面的山。或：為什麼這個地方接錯了？"></textarea>
 <label for="quote">你在回覆的那句話（選填，手動貼上）</label>
 <input id="quote" maxlength="300" placeholder="例如：你剛剛問我哪一個元件發熱？">
-<p class="hint">Estampes 不會自動讀取聊天紀錄。只有你明確填寫的內容，才會作為前文引用送出。</p>
+<p class="hint">Estampes 不會自動讀取聊天紀錄。送出後 GPT 可呼叫 inspect_visual 取得原始圖片與局部裁切；模型是否真的看到圖片仍須確認。</p>
 </section>
 <div class="actions"><span id="counter">我的標註：0</span>
 <button id="send" class="primary" disabled>把標註傳給 GPT</button></div>
@@ -155,7 +155,7 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
  if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
 });
 render();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.1"},appCapabilities:{},protocolVersion:"2026-01-26"});
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.3"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
@@ -209,7 +209,7 @@ send.addEventListener("click",async()=>{
    });
    if(response?.isError)throw Error("Host rejected message");
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
-     "請確認 ChatGPT 是否真的出現新訊息並回覆。";
+     "請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。";
  }catch(err){
    status.textContent=(validated?"座標驗證成功；":"座標驗證失敗："+reason+"；")+
      "聊天傳送失敗："+String(err.message||err);
