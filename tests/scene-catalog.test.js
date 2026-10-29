@@ -23,6 +23,7 @@ test("sun landmark matches source SVG geometry",()=>{
 test("semantic target must exist in selected scene",()=>{
   assert.throws(()=>resolveSceneAnnotation("formula",{id:"a",type:"point",targetId:"tree"}));
   assert.throws(()=>resolveSceneAnnotation("shapes",{id:"a",type:"arrow",targetId:"circle"}));
+  assert.throws(()=>resolveSceneAnnotation("landscape",{id:"a",type:"rect",targetId:"mountain-right"}),/occluded/);
 });
 test("free coordinates are retained but never called semantically grounded",()=>{
   const a=resolveSceneAnnotation("landscape",{id:"free",type:"point",x:0.82,y:0.49,label:"mountain"});
