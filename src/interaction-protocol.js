@@ -126,7 +126,7 @@ export function formatAnnotationChatMessage(event) {
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
       JSON.stringify(event),
       "請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId="+event.image.id+"，region 取標註周圍（框就用框本身再稍微放大；點或箭頭尖端取周圍約 0.1 的範圍），必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
-      "回答後請用 present_visual（imageId 同上）把我的標記放進 priorUserAnnotations，附上你的 note（例如讀到的型號）與 status，讓答案留在畫布上的那個標記旁。不要對我提工具名稱。",
+      "我的標記已存進這張照片的畫布（id 如上）。回答後請用 present_visual（imageId 同上）的 findings 把 note（例如讀到的型號）與 status 掛到我的標記 id 上，不要重畫我的標記。不要對我提工具名稱。",
       "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
     ]:[
       "底圖為內建 SVG 示範場景，尺寸是 SVG 座標單位而非照片像素解析度。所有標註使用原圖左上角為原點的正規化座標。",

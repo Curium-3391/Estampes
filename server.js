@@ -18,6 +18,8 @@ import {
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
+import { applyCanvasChanges, canvasMarks, storeUserMarks } from "./src/canvas-state.js";
+import { renderVerification } from "./src/mark-render.js";
 import { downloadImage, registerImage, getImage } from "./src/image-store.js";
 import {
   processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay,
@@ -88,12 +90,15 @@ const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 // Model-facing annotations use coordinates ONLY. Legacy semantic anchors
 // are retained in scene-catalog.js for isolated geometry unit tests, but
 // never exposed as an object-position catalog to the model.
+// Model coordinates may be crop pixels when coordinateFrame is given; they
+// are converted and then checked against 0..1 of the full image.
+const ModelCoord = z.number().finite().min(0).max(100000);
 const ModelAnnotationSchema = z.object({
-  id: z.string().min(1).max(64),
+  id: z.string().min(1).max(64).describe("Stable id; re-using an id edits that mark"),
   type: z.enum(MARK_TYPES),
-  x: Point01.optional(), y: Point01.optional(),
-  x2: Point01.optional(), y2: Point01.optional(),
-  points: PolylinePointsSchema.optional().describe("polyline only: ordered vertices, e.g. along a PCB trace or a freehand sketch"),
+  x: ModelCoord.optional(), y: ModelCoord.optional(),
+  x2: ModelCoord.optional(), y2: ModelCoord.optional(),
+  points: z.array(z.object({ x: ModelCoord, y: ModelCoord })).min(2).max(MAX_POLYLINE_POINTS).optional().describe("polyline only: ordered vertices, e.g. along a PCB trace or a freehand sketch"),
   smooth: z.boolean().optional().describe("polyline only: draw a smooth curve through the points (freehand look)"),
   closed: z.boolean().optional().describe("polyline only: join the last point to the first, e.g. to circle a part"),
   label: z.string().max(64).optional(),
@@ -105,6 +110,11 @@ const ModelAnnotationSchema = z.object({
   author: z.literal("assistant").optional(),
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
+const FindingSchema = z.object({
+  id: z.string().min(1).max(64),
+  note: z.string().max(200).optional().describe("Empty string clears the note"),
+  status: z.enum(MARK_STATUSES).optional(),
+}).strict();
 
 // M0.5 real-image schemas, shared by the image tools and present_visual.
 // ChatGPT file param shape: only download_url and file_id are guaranteed.
@@ -276,7 +286,10 @@ function makeServer() {
       description:
         "CANONICAL shared visual canvas the user sees in chat. Users will not name tools: when they ask to show, point out, circle, box, trace or draw on a photo, call this yourself. " +
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
-        "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. To answer about a user's mark, pass it back in priorUserAnnotations with your note. " +
+        "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). " +
+        "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. " +
+        "If you read positions off a process_image/overlay_grid output, pass `coordinateFrame` = that output's region (plus its width/height to give pixel coordinates); Estampes converts them. " +
+        "The result includes a VERIFICATION image: the same crop of the real photo without and with your marks (numbered). Check that the marks sit on the right pixels before telling the user it is done; fix with the same id if not. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
         "Marks may set color, size and pen (pen or translucent highlighter). " +
         "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as PCB traces, wires, freehand sketches or loose circles around a part; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
@@ -291,8 +304,17 @@ function makeServer() {
         annotations: ModelAnnotationsSchema.default([]),
         views: z.array(ViewSchema).max(3).default([]).describe("Optional processed views shown as extra tabs; the original stays the default view"),
         priorUserAnnotations: z.array(VisualAnnotationSchema).max(18).default([]).describe(
-          "Only marks the user actually drew and supplied earlier; replayed provenance is not authenticated."
+          "Rarely needed for photos (marks persist). Only marks the user actually drew; replayed provenance is not authenticated."
         ),
+        findings: z.array(FindingSchema).max(30).default([]).describe("Attach your note/status to existing marks by id, e.g. the user's box"),
+        remove: z.array(z.string().max(64)).max(30).default([]).describe("Ids of marks to delete"),
+        reset: z.boolean().default(false).describe("Start from an empty canvas for this photo"),
+        coordinateFrame: z.object({
+          region: RegionSchema,
+          width: z.number().int().positive().optional(),
+          height: z.number().int().positive().optional(),
+        }).optional().describe("Coordinates in `annotations` are relative to this region (0..1), or pixels of a width×height output of it"),
+        verify: z.boolean().default(true).describe("Return the verification image of changed marks"),
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.visual_surface"),
@@ -307,16 +329,16 @@ function makeServer() {
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image"] },
     },
-    async ({ image, imageUrl, imageId, scene, annotations, views, priorUserAnnotations }) => {
+    async ({ image, imageUrl, imageId, scene, annotations, views, priorUserAnnotations, findings, remove, reset, coordinateFrame, verify }) => {
       try {
         if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
           throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
         }
         if (image || imageUrl) imageId = (await loadImageInput({ image, imageUrl })).imageId;
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
-        const ai = annotations.map(a => imageId ? resolveCoordinateAnnotation(a) : resolveSceneAnnotation(scene, a));
-        const resolved = [...ai, ...priorUserAnnotations.map(replayUserAnnotation)];
         if (scene) {
+          if (coordinateFrame || findings.length || remove.length) throw new Error("coordinateFrame, findings and remove need a real photo");
+          const resolved = [...annotations.map(a => resolveSceneAnnotation(scene, a)), ...priorUserAnnotations.map(replayUserAnnotation)];
           return {
             content: [{
               type:"text",
@@ -332,6 +354,13 @@ function makeServer() {
           };
         }
         const entry = getImage(imageId);
+        const changed = applyCanvasChanges(entry, {
+          annotations, findings, remove, reset, frame: coordinateFrame,
+          priorUser: priorUserAnnotations.map(replayUserAnnotation), resolve: resolveCoordinateAnnotation,
+        });
+        const resolved = canvasMarks(entry);
+        const drawn = changed.filter(id => annotations.some(a => a.id === id));
+        const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
         const shown = await displayImage(entry);
         const rendered = [];
         for (const view of views) {
@@ -342,10 +371,15 @@ function makeServer() {
           content: [{
             type: "text",
             text: "Showing " + imageId + " to the user (original by default" +
-              (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + ") with " +
-              resolved.length + " marks: " + JSON.stringify(resolved) +
-              ". Marks are geometry only; the user can draw and send marks back.",
-          }],
+              (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
+              resolved.length + " marks (ids persist; edit by re-using an id): " + JSON.stringify(resolved) +
+              (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
+              (check ? ". The next image is a VERIFICATION crop of region " + JSON.stringify(check.region) + ", " +
+                (check.layout === "side-by-side" ? "left" : "top") + " = original pixels, " +
+                (check.layout === "side-by-side" ? "right" : "bottom") + " = with marks numbered " +
+                check.numbers.map(n => n.n + "=" + n.id).join(", ") +
+                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done." : ""),
+          }, ...(check ? [imageBlock(check)] : [])],
           structuredContent: {
             kind: "estampes.visual_surface", imageId, width: entry.width, height: entry.height,
             views: rendered.map(({ label, region }) => ({ label, region })),
@@ -396,10 +430,13 @@ function makeServer() {
       try {
         if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
         let image;
-        if(imageId){const entry=getImage(imageId);image={imageId,width:entry.width,height:entry.height};}
+        let entry;
+        if(imageId){entry=getImage(imageId);image={imageId,width:entry.width,height:entry.height};}
         const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
         const event=buildAnnotationEvent({scene,image,annotations:checked,intent,note,replyQuote});
         const chatMessage=formatAnnotationChatMessage(event);
+        // Submitted marks join the photo's canvas so GPT need not replay them.
+        if(entry)storeUserMarks(entry,checked);
         return {
           content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
           structuredContent:{
@@ -647,7 +684,9 @@ function makeServer() {
         return {
           content: [
             { type: "text", text: "Processed " + imageId + " region " + JSON.stringify(out.region) +
-              " with " + (ops.map(o => o.op).join(" > ") || "no ops") + ". The next block is the result." },
+              " with " + (ops.map(o => o.op).join(" > ") || "no ops") + ". The next block is the result, " + out.width + "x" + out.height +
+              " px. To mark something you see in it, call present_visual with coordinateFrame {region: " + JSON.stringify(out.region) +
+              ", width: " + out.width + ", height: " + out.height + "} and pixel coordinates from this image." },
             imageBlock(out),
           ],
           structuredContent: {
