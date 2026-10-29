@@ -42,10 +42,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -194,11 +194,11 @@ const exportLinks = (imageId) => PUBLIC_URL ? {
 
 // Render logs show what each call costs: text the model reads, images the
 // model sees, and bytes only the widget gets.
-function logSizes(tool, result) {
+function logSizes(tool, result, { appOnly = false } = {}) {
   const images = (result.content ?? []).filter((b) => b.type === "image");
   const text = JSON.stringify((result.content ?? []).filter((b) => b.type !== "image")).length +
     JSON.stringify(result.structuredContent ?? {}).length;
-  console.log("[size] " + tool + " modelText=" + text + "B modelImages=" + images.length + "x" +
+  console.log("[size] " + tool + (appOnly ? " appOnly(widget-called)=" : " modelText=") + text + "B modelImages=" + images.length + "x" +
     images.reduce((n, b) => n + b.data.length, 0) + "B widgetOnly=" + JSON.stringify(result._meta ?? {}).length + "B");
   return result;
 }
@@ -504,7 +504,7 @@ function makeServer() {
         return logSizes("load_visual_canvas", {
           content: [{ type: "text", text: "Canvas data for " + imageId + " sent to the widget." }],
           structuredContent: { kind: "estampes.visual_canvas", imageId, part, ...body, ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}) },
-        });
+        }, { appOnly: true });
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
       }

@@ -242,7 +242,7 @@ function renderMarks(layer,items,color,author){
    }
    if(a.type==="polyline"){
      const d=pathData(a);
-     if(!hl)node("path",{d,...line,stroke:"#17212A","stroke-opacity":.55,"stroke-width":w+3*k},layer);
+     if(!hl)node("path",{d,...line,stroke:"#17212A","stroke-opacity":.55,"stroke-width":w*1.7},layer);
      node("path",{d,...line,...(hl&&a.closed?{fill:ink,"fill-opacity":.18}:{})},layer);
      if(!hl&&a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*k,fill:ink,stroke:"#fff","stroke-width":1.5*k},layer);
    }
@@ -370,10 +370,11 @@ function applyInput(args){
  if(key===appliedKey)return;
  appliedKey=key;
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
-   if(args.imageId!==imageId){photo=null;views=[];renderViewTabs();}
+   const sameImage=args.imageId===imageId;
+   if(!sameImage){photo=null;views=[];renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
-   VW=1000;VH=w>0&&h>0?Math.round(1000*h/w):750;
+   VW=1000;if(w>0&&h>0)VH=Math.round(1000*h/w);else if(!sameImage)VH=750;
  }else if(Object.hasOwn(SCENES,args.scene)){
    selectedScene=args.scene;imageId=null;photo=null;views=[];renderViewTabs();VW=640;VH=360;
  }else return;
@@ -411,8 +412,11 @@ function applyResult(result){
 // marks, the last processed views and the last verification image, so the
 // widget asks for them itself (app-only tool, invisible to the model).
 let syncing=false,gotResult=false;
+let pendingSync=null;
 async function syncCanvas(force=false){
- if(!ready||!imageId||(photo&&!force)||syncing)return;
+ // Results can arrive before the host handshake finishes; sync after it.
+ if(!ready){pendingSync=pendingSync||force;return;}
+ if(!imageId||(photo&&!force)||syncing)return;
  syncing=true;const id=imageId;
  status.textContent="照片沒有隨結果送到，正在重新載入…";
  try{
@@ -547,20 +551,22 @@ function request(method,params){return new Promise((resolve,reject)=>{const id=+
 })}
 window.addEventListener("message",event=>{if(event.source!==window.parent)return;const msg=event.data;if(msg?.jsonrpc!=="2.0")return;
  if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);return;}
- if(msg.method==="ui/notifications/tool-input")applyInput(msg.params?.arguments);
+ // Tool input only previews the call. ChatGPT can deliver it after the
+ // result (and again after a chat message); it must never replace a result.
+ if(msg.method==="ui/notifications/tool-input"&&!gotResult)applyInput(msg.params?.arguments);
  if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
 });
 render();
 // Hosts that set window.openai globals before (or instead of) notifications.
 let seenOutput=null,seenMeta=null;
-const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput){if(o?.toolInput)applyInput(o.toolInput);return;}
+const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput){if(o?.toolInput&&!gotResult)applyInput(o.toolInput);return;}
  if(o.toolOutput===seenOutput&&o.toolResponseMetadata===seenMeta)return;
  seenOutput=o.toolOutput;seenMeta=o.toolResponseMetadata;
  applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
 window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";
- if(imageId&&!photo&&gotResult)syncCanvas();}
+ if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
