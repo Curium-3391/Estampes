@@ -39,7 +39,10 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.3.2");
+    assert.equal(version.version,"m0.4.0");
+    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v040.html");
+    assert.equal(version.visualTool,"present_visual");
+    assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
     assert.equal(version.selectionTool,"record_number_line_selection");
     await client.connect(new StreamableHTTPClientTransport(new URL(base+"/mcp")));
@@ -66,6 +69,38 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(selection.structuredContent?.value,-2);
     assert.equal(selection.structuredContent?.x,0.25);
     assert.equal(selection.structuredContent?.y,0.5);
+    // Generic canvas: model annotations, app-only validation, HTML resource.
+    const visualTool=tools.tools.find(t=>t.name==="present_visual");
+    assert.ok(visualTool,"present_visual tool missing");
+    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v040.html");
+    const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
+    const visual=await client.callTool({name:"present_visual",arguments:{
+      scene:"shapes",annotations:[visualAnnotation]
+    }});
+    assert.equal(visual.structuredContent?.kind,"estampes.visual_surface");
+    assert.equal(visual.structuredContent?.scene,"shapes");
+    assert.equal(visual.structuredContent?.annotations?.[0]?.id,"a1");
+    const privateTool=tools.tools.find(t=>t.name==="validate_visual_annotations");
+    assert.ok(privateTool,"validation tool missing");
+    assert.deepEqual(privateTool._meta?.ui?.visibility,["app"]);
+    assert.equal(privateTool._meta?.ui?.resourceUri,undefined);
+    const userMarks=[{id:"user-1",type:"point",x:0,y:1,label:"Edge"},
+      {id:"user-2",type:"arrow",x:0.1,y:0.3,x2:0.9,y2:0.8,label:"Direction"}];
+    const checked=await client.callTool({name:"validate_visual_annotations",arguments:{
+      scene:"landscape",annotations:userMarks
+    }});
+    assert.notEqual(checked.isError,true);
+    assert.equal(checked.structuredContent?.count,2);
+    assert.deepEqual(checked.structuredContent?.annotations,userMarks);
+    const bad=await client.callTool({name:"validate_visual_annotations",arguments:{
+      scene:"landscape",annotations:[{id:"bad",type:"rect",x:1.5,y:0.2}]
+    }});
+    assert.equal(bad.isError,true,"out-of-range rectangle must be rejected");
+    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v040.html"});
+    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v040.html");
+    assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
+    assert.ok(visualHtml?.text?.includes("v0.4.0"));
+    assert.ok(visualHtml?.text?.includes('name:"validate_visual_annotations"'));
     const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
     assert.ok(html?.text?.includes("Estampes · M0 Number Line"));
