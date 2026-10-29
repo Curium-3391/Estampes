@@ -13,7 +13,7 @@ button.primary{background:#5865b9;color:white;border-color:transparent}
 button:disabled{opacity:.5}
 #status{min-height:1.5rem;font-size:.85rem}
 </style></head><body><main>
-<h2>Estampes · M0 Number Line <small style="font-size:.65rem;color:#8b99ab">v0.3.0</small></h2><p class="muted">金色是 AI 指向的位置。點選數線，藍色標記會記下你的選擇。</p>
+<h2>Estampes · M0 Number Line <small style="font-size:.65rem;color:#8b99ab">v0.3.1</small></h2><p class="muted">金色是 AI 指向的位置。點選數線，藍色標記會記下你的選擇。</p>
 <svg id="line" viewBox="0 0 560 140" role="img" aria-label="從負四到正四的數線，點選刻度可以指認數字">
 <line x1="35" y1="70" x2="525" y2="70" stroke="currentColor" stroke-width="2"/>
 <path d="M35 70 l10 -5v10z M525 70 l-10 -5v10z" fill="currentColor"/>
@@ -57,7 +57,7 @@ send.addEventListener("click",async()=>{
  // sending the selection directly to the conversation.
  let validationOk=false;
  let validationError="";
- status.textContent="M0.3：正在驗證選取座標…";
+ status.textContent="M0.3.1：正在驗證選取座標…";
  try {
    const result=await request("tools/call",{
      name:"record_number_line_selection",
