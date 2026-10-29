@@ -32,6 +32,11 @@ test("previous human marks cannot be silently converted into AI marks",()=>{
   assert.throws(()=>resolveSceneAnnotation("landscape",{
     id:"another",type:"point",x:0.2,y:0.4,label:"YOU 2"
   }),/priorUserAnnotations/);
+  for (const label of ["YOU 10","YOU\t3","you 4"]) {
+    assert.throws(()=>resolveSceneAnnotation("landscape",{
+      id:"legacy",type:"point",x:0.2,y:0.4,label
+    }),/priorUserAnnotations/);
+  }
 });
 test("free coordinates are retained but never called semantically grounded",()=>{
   const a=resolveSceneAnnotation("landscape",{id:"free",type:"point",x:0.82,y:0.49,label:"mountain"});
