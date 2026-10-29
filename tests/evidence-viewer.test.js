@@ -9,7 +9,7 @@ const script=html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
 test("evidence viewer inline UI is parsable and protocol-ready",()=>{
  assert.ok(script);
  assert.doesNotThrow(()=>new Script(script));
- assert.match(html,/v0\.4\.7/);
+ assert.match(html,/v__ESTAMPES_VERSION__/); // filled from package.json at serve time
  assert.match(script,/ui\/initialize/);
  assert.match(script,/ui\/notifications\/tool-result/);
  assert.match(script,/ui\/notifications\/tool-input/);

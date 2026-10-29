@@ -28,7 +28,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 </style></head><body><main>
-<header><h2>Estampes · Visual Surface</h2><small>v0.4.7</small></header>
+<header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
 <p class="help">同一張圖片，同一套座標。<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>；可直接標記、看原圖或放大。</p>
 <nav class="view-tabs" aria-label="檢視模式">
 <button data-view="annotated" aria-pressed="true">標註與編輯</button>
@@ -217,7 +217,7 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
  if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
 });
 render();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"0.4.7"},appCapabilities:{},protocolVersion:"2026-01-26"});
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";}
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
