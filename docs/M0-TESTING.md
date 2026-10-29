@@ -69,3 +69,19 @@ ChatGPT's plugin scan rejected `record_number_line_selection` with a message tha
 To verify the server deploy, visit `https://estampes-mcp.onrender.com/version` and confirm `version: m0.3.2`. Then rerun ChatGPT's MCP tool scan/Refresh. This is a targeted compatibility hypothesis: successful scanning does not yet demonstrate that the app-only tool is callable by the UI.
 
 If scan succeeds, start a new conversation and test the number-line button. If scan still fails, capture the exact scan error rather than changing further unrelated code.
+
+## Verified first end-to-end interaction — 2026-10-29
+
+**Observed in the ChatGPT web host (manual test):**
+
+1. ChatGPT called `show_number_line` and the in-chat widget marked **2**.
+2. The user selected **-4** in the same widget, producing the blue marker.
+3. The widget displayed: `座標已驗證；訊息已交給聊天宿主，請確認對話是否出現新訊息。`
+4. A new **user** chat message appeared with `"value":-4`, `"x":0`, `"y":0.5`, and `"imageId":"number-line-m0"`.
+5. ChatGPT replied: `收到了，你指認的是 −4。`
+
+**Result:** The first human ↔ AI visual pointing round trip is confirmed for this single test case. This verifies the user-to-MCP validation path and separate user-to-chat bridge, not persistence or general image grounding.
+
+**Still unverified:** multiple sequential selections, resize behavior, alternative tick values, accessibility, reconnection/reloads, and non-number-line media.
+
+The test screenshot was observed in the project discussion; no screenshot has been copied into the repository.
