@@ -126,6 +126,16 @@ test("undo and redo step through marks, including a clear",()=>{
   assert.match(source,/k==="z"/);
 });
 
+test("a late tool input never replaces the applied result",()=>{
+  // 0.5.5 live trial: ChatGPT delivered tool-input after the result (and
+  // again after a chat message), squashing the photo to 1000x750 and
+  // dropping GPT's marks until the next resize.
+  assert.match(source,/tool-input"&&!gotResult\)applyInput/);
+  assert.match(source,/o\?\.toolInput&&!gotResult/);
+  assert.match(source,/else if\(!sameImage\)VH=750/);
+  assert.match(source,/if\(!ready\)\{pendingSync=pendingSync\|\|force;return;\}/);
+});
+
 test("missing pixels are reloaded and the verification image has its own tab",()=>{
   assert.match(source,/name:"load_visual_canvas",arguments:\{imageId:id\}/);
   assert.match(source,/if\(!photo\|\|\(!full&&!r\.annotations\)\)syncCanvas\(!!photo\)/);

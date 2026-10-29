@@ -21,8 +21,8 @@ export function inkUnits(m) {
   const stroke = (hl ? 14 : 3) * K * size;
   return {
     stroke,
-    // Pen polylines get a dark 3-unit outline under the colour.
-    total: stroke + (m.type === "polyline" && !hl ? 3 * K : 0),
+    // Pen polylines get a dark outline 1.7x the line under the colour.
+    total: stroke * (m.type === "polyline" && !hl ? 1.7 : 1),
     dot: m.type === "point" ? 2 * (hl ? 18 : 8) * K * size : 0,
   };
 }
@@ -91,7 +91,7 @@ export function markSvg(m, map, toPx) {
     return `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" ${stroke}/><polygon points="${x2},${y2} ${pt(0.45)} ${pt(-0.45)}" fill="${ink}" fill-opacity="${op}"/>`;
   }
   const d = pathData(m.points.map((p) => map(p.x, p.y)), m.smooth === true, m.closed === true);
-  const outline = hl ? "" : `<path d="${d}" fill="none" stroke="#17212A" stroke-opacity="0.55" stroke-width="${w + 3 * K * toPx}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const outline = hl ? "" : `<path d="${d}" fill="none" stroke="#17212A" stroke-opacity="0.55" stroke-width="${w * 1.7}" stroke-linejoin="round" stroke-linecap="round"/>`;
   return outline + `<path d="${d}" ${hl && m.closed ? `fill="${ink}" fill-opacity="0.18"` : `fill="none"`} ${stroke}/>`;
 }
 
