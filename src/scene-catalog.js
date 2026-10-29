@@ -41,6 +41,11 @@ export function resolveSceneAnnotation(scene, mark) {
     const target=sceneLandmarks[scene][mark.targetId];
     if(!target) throw new Error("Unknown landmark "+mark.targetId+" for "+scene);
     if(mark.type==="arrow") throw new Error("Arrows need explicit start and end coordinates");
+    // Occluded mountains do not have a tight rectangular visual footprint.
+    // A coarse triangle-wide box would falsely include the foreground tree.
+    if(mark.type==="rect" && mark.targetId.startsWith("mountain-")) {
+      throw new Error("Mountains are occluded; use a point or future polygon mask, not a misleading bbox");
+    }
     const geom=mark.type==="point"?target.point:target.box;
     return {...base,...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
   }
