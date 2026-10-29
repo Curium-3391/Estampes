@@ -17,9 +17,9 @@ import { createVisualEvidence } from "./src/visual-input.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.4";
+const BUILD_VERSION = "m0.4.5";
 const VISUAL_URI = "ui://estampes/visual-surface-v043.html";
-const EVIDENCE_URI = "ui://estampes/visual-evidence-v044.html";
+const EVIDENCE_URI = "ui://estampes/visual-evidence-v045.html";
 const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
 const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
 const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
@@ -82,7 +82,7 @@ const ModelAnnotationSchema = z.object({
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.4" });
+  const server = new McpServer({ name: "estampes", version: "0.4.5" });
 
   registerAppResource(
     server,
@@ -371,7 +371,6 @@ function makeServer() {
         modelVisionStatus:z.literal("host-dependent-unverified"),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
-      _meta:{ui:{resourceUri:EVIDENCE_URI}},
     },
     async ({scene,imageId,revision,focus,padding})=>{
       try {
@@ -398,6 +397,67 @@ function makeServer() {
         };
       } catch(error) {
         return {isError:true,content:[{type:"text",text:"Estampes image processing failed: "+String(error?.message||error)}]};
+      }
+    }
+  );
+
+
+  // This UI tool is separate from inspect_visual, which provides MCP image
+  // blocks to the model but must not be expected to create a host widget.
+  registerAppTool(
+    server,
+    "present_visual_evidence",
+    {
+      title:"Show Estampes visual evidence",
+      description:
+        "Display the original picture, marked picture, and local unmarked crop in a ChatGPT inline widget. For semantic recognition use inspect_visual first, then present_visual_evidence with the same scene, imageId, revision, and focus. Built-in demo scenes only.",
+      inputSchema:z.object({
+        scene:SceneSchema,
+        imageId:z.string().min(1).max(80),
+        revision:z.literal("svg-v1"),
+        focus:z.object({
+          type:z.enum(["point","rect","arrow"]),x:Point01,y:Point01,
+          x2:Point01.optional(),y2:Point01.optional()
+        }).superRefine((a,ctx)=>{
+          if(a.type!=="point"&&(a.x2===undefined||a.y2===undefined))
+            ctx.addIssue({code:"custom",message:"Rect/arrow require x2/y2"});
+        }),
+        padding:z.number().finite().min(0.02).max(0.2).default(0.08),
+      }),
+      outputSchema:z.object({
+        kind:z.literal("estampes.visual_evidence_view"),
+        imageId:z.string(),revision:z.string(),
+        focus:z.object({
+          type:z.string(),x:z.number(),y:z.number(),
+          x2:z.number().optional(),y2:z.number().optional()
+        }),
+        crop:z.object({
+          left:z.number(),top:z.number(),width:z.number(),height:z.number(),
+          origin:z.string(),target:z.string()
+        }),
+        rendered:z.object({width:z.number(),height:z.number(),mimeType:z.literal("image/png")}),
+        images:z.object({original:z.string(),marked:z.string(),crop:z.string()}),
+      }),
+      annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
+      _meta:{ui:{resourceUri:EVIDENCE_URI},"openai/outputTemplate":EVIDENCE_URI},
+    },
+    async ({scene,imageId,revision,focus,padding})=>{
+      try{
+        const e=await createVisualEvidence({scene,imageId,revision,focus,padding});
+        return {
+          content:[{type:"text",text:"Estampes image viewer: actual PNGs are available to the inline widget. Object identification is not performed by Estampes."}],
+          structuredContent:{
+            kind:"estampes.visual_evidence_view",imageId,revision,
+            focus:e.focus,crop:e.crop,rendered:e.rendered,
+            images:{
+              original:e.images.original.toString("base64"),
+              marked:e.images.marked.toString("base64"),
+              crop:e.images.crop.toString("base64")
+            }
+          }
+        };
+      }catch(e){
+        return {isError:true,content:[{type:"text",text:"Image viewer error: "+String(e?.message||e)}]};
       }
     }
   );
@@ -429,8 +489,9 @@ const httpServer = createHttpServer((req, res) => {
       visualValidationTool: "validate_visual_annotations",
       annotationProtocol: "0.2-draft",
       visualInputTool: "inspect_visual",
+      visualDisplayTool: "present_visual_evidence",
       visualEvidenceResourceUri: EVIDENCE_URI,
-      visualEvidencePresentation: "inline-mcp-app",
+      visualEvidencePresentation: "explicit-render-tool",
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
     }));
