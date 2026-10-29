@@ -88,7 +88,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Generic canvas: model annotations, app-only validation, HTML resource.
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
-    assert.match(visualTool.description,/ONE ChatGPT widget/);
+    assert.match(visualTool.description,/REAL photo/);
     assert.match(visualTool.description,/Do NOT also call present_visual_evidence/);
     assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-"+TAG+".html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
