@@ -17,8 +17,9 @@ import { createVisualEvidence } from "./src/visual-input.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.6";
-const VISUAL_URI = "ui://estampes/visual-surface-v046.html";
+const BUILD_VERSION = "m0.4.7";
+const VISUAL_URI = "ui://estampes/visual-surface-v047.html";
+const VISUAL_V046_URI = "ui://estampes/visual-surface-v046.html";
 const VISUAL_V043_URI = "ui://estampes/visual-surface-v043.html";
 const EVIDENCE_URI = "ui://estampes/visual-evidence-v045.html";
 const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
@@ -75,7 +76,7 @@ const ModelAnnotationSchema = z.object({
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.6" });
+  const server = new McpServer({ name: "estampes", version: "0.4.7" });
 
   registerAppResource(
     server,
@@ -226,13 +227,22 @@ function makeServer() {
     async()=>({contents:[{uri:VISUAL_V043_URI,mimeType:RESOURCE_MIME_TYPE,text:visualHtml}]})
   );
 
+  // Keep the prior canvas URI alive for saved ChatGPT conversations.
+  registerAppResource(
+    server,
+    "Estampes visual surface v0.4.6 (legacy)",
+    VISUAL_V046_URI,
+    {mimeType:RESOURCE_MIME_TYPE},
+    async()=>({contents:[{uri:VISUAL_V046_URI,mimeType:RESOURCE_MIME_TYPE,text:visualHtml}]})
+  );
+
   registerAppTool(
     server,
     "present_visual",
     {
       title: "Present a shared visual canvas",
       description:
-        "Display a shared in-chat 2D annotation canvas. Specify x/y (and x2/y2 for rect/arrow) as normalized source-image coordinates in [0,1]. No known-object IDs or built-in object-position catalog are available through this tool. For requests such as 'find the house or a specific object and point to it', first call inspect_visual to look at actual pixels, then propose coordinates based on your own visual analysis. If you cannot actually perceive image pixels, do not claim visual localization: ask the user to point or state uncertainty. For explicitly supplied user coordinates, render directly without needing vision. Estampes validates geometry, NOT semantic object identity. The blue user annotations remain independent from new AI marks; priorUserAnnotations can replay actual user marks but must not reattribute authorship.",
+        "CANONICAL single shared visual canvas for annotation AND reviewing the same image: it contains three built-in views (annotated editable surface, pristine original, zoomed unmarked focus) in ONE ChatGPT widget. Do NOT also call present_visual_evidence for the same visual task; that is a legacy standalone viewer for explicit backwards-compatible use. For object localization, FIRST use inspect_visual to inspect actual image pixels, THEN choose x/y coordinates and call this present_visual once. For user-supplied coordinates, render directly. No semantic object dictionary or named target IDs; coordinates do not prove the model has recognized an object. Assistant marks are GOLD and user marks BLUE, preserving original authors. Only bundled SVG demo scenes are supported.",
       inputSchema: z.object({
         scene: SceneSchema,
         annotations: ModelAnnotationsSchema.default([]),
@@ -411,7 +421,7 @@ function makeServer() {
     {
       title:"Show Estampes visual evidence",
       description:
-        "Display the original picture, marked picture, and local unmarked crop in a ChatGPT inline widget. For semantic recognition use inspect_visual first, then present_visual_evidence with the same scene, imageId, revision, and focus. Built-in demo scenes only.",
+        "LEGACY standalone PNG evidence viewer, retained for older conversations and explicit requests for the separate 3-PNG view. Do NOT call after present_visual in the same visual task: present_visual now already includes annotation, original image and zoom in one shared canvas. For general new ChatGPT visual exchanges prefer inspect_visual (model pixels) followed by present_visual (one UI). This tool performs no object recognition.",
       inputSchema:z.object({
         scene:SceneSchema,
         imageId:z.string().min(1).max(80),
@@ -491,7 +501,10 @@ const httpServer = createHttpServer((req, res) => {
       visualValidationTool: "validate_visual_annotations",
       annotationProtocol: "0.2-draft",
       visualInputTool: "inspect_visual",
-      visualDisplayTool: "present_visual_evidence",
+      visualDisplayTool: "present_visual",
+      legacyVisualDisplayTool: "present_visual_evidence",
+      visualCanvasModes: ["annotated","original","zoom"],
+      visualCanvasPresentation: "single-shared-ui",
       visualEvidenceResourceUri: EVIDENCE_URI,
       visualEvidencePresentation: "explicit-render-tool",
       visualInputFormat: "mcp-image-content-png",
