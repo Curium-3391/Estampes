@@ -100,3 +100,15 @@ test("overlay_grid labels map to correct source coordinates", async () => {
   assert.deepEqual(cellCenter("d4", { rows: 4, cols: 4, region }), { x: 0.9375, y: 0.4375 });
   assert.throws(() => cellCenter("E1", { rows: 4, cols: 4, region }), /outside/);
 });
+
+test("zoom tiles come from native pixels and are never enlarged", async () => {
+  const { regionTile } = await import("../src/image-ops.js");
+  const { registerImage } = await import("../src/image-store.js");
+  const sharpMod = (await import("sharp")).default;
+  const entry = await registerImage(await sharpMod({ create: { width: 2000, height: 1000, channels: 3, background: "#123456" } }).png().toBuffer(), { source: "test" });
+  const small = await regionTile(entry, { x: 0.1, y: 0.1, x2: 0.2, y2: 0.2 }, 1600);
+  assert.deepEqual([small.width, small.height], [200, 100]);
+  const big = await regionTile(entry, { x: 0, y: 0, x2: 1, y2: 1 }, 800);
+  assert.deepEqual([big.width, big.height], [800, 400]);
+  assert.equal(big.mimeType, "image/jpeg");
+});
