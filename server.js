@@ -12,7 +12,9 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
-import { resolveSceneAnnotation, resolveCoordinateAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
+import {
+  resolveSceneAnnotation, resolveCoordinateAnnotation, replayUserAnnotation, MARK_TYPES, MAX_POLYLINE_POINTS,
+} from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 import { downloadImage, registerImage, getImage } from "./src/image-store.js";
@@ -34,10 +36,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -48,20 +50,30 @@ const visualHtml = loadWidget("visual-surface.html");
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
 const Point01 = z.number().finite().min(0).max(1);
 
+const PolylinePointsSchema = z.array(z.object({ x: Point01, y: Point01 }))
+  .min(2).max(MAX_POLYLINE_POINTS);
+const checkGeometry = (a, ctx) => {
+  if (a.type === "polyline") {
+    if (!a.points) ctx.addIssue({ code: "custom", message: "Polyline requires points" });
+    return;
+  }
+  if (a.x === undefined || a.y === undefined) ctx.addIssue({ code: "custom", message: "x/y are required" });
+  if (a.type !== "point" && (a.x2 === undefined || a.y2 === undefined)) {
+    ctx.addIssue({ code: "custom", message: "Rect/arrow require x2/y2" });
+  }
+};
+
 // Guaranteed geometry for renderer + user validation.
 const VisualAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
-  type: z.enum(["point", "rect", "arrow"]),
-  x: Point01, y: Point01,
+  type: z.enum(MARK_TYPES),
+  x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
+  points: PolylinePointsSchema.optional(),
   label: z.string().max(64).optional(),
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
-}).superRefine((a,ctx)=>{
-  if(a.type!=="point" && (a.x2===undefined || a.y2===undefined)) {
-    ctx.addIssue({code:"custom",message:"Rectangle and arrow require x2/y2"});
-  }
-});
+}).superRefine(checkGeometry);
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
 // Model-facing annotations use coordinates ONLY. Legacy semantic anchors
@@ -69,16 +81,13 @@ const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 // never exposed as an object-position catalog to the model.
 const ModelAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
-  type: z.enum(["point", "rect", "arrow"]),
-  x: Point01, y: Point01,
+  type: z.enum(MARK_TYPES),
+  x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
+  points: PolylinePointsSchema.optional().describe("polyline only: ordered vertices, e.g. along a PCB trace"),
   label: z.string().max(64).optional(),
   author: z.literal("assistant").optional(),
-}).strict().superRefine((a,ctx)=>{
-  if(a.type!=="point"&&(a.x2===undefined||a.y2===undefined)){
-    ctx.addIssue({code:"custom",message:"Rect/arrow require x2/y2"});
-  }
-});
+}).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 // M0.5 real-image schemas, shared by the image tools and present_visual.
@@ -239,6 +248,7 @@ function makeServer() {
       description:
         "CANONICAL shared visual canvas the user sees in chat. Pass imageId (from load_image) to show the user's REAL photo/scan, or scene for a bundled SVG demo. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
+        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 64 ordered vertices) for paths such as PCB traces or wires; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
         "Optional `views` (imageId only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. Locate things first with process_image/overlay_grid, then mark them; coordinates are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",

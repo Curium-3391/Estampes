@@ -1,6 +1,7 @@
 // Estampes Annotation/Context Protocol v0.2-draft.
 // Stable *demo* scene metadata only. Future user images need explicit
 // content identity, crop transforms and a real raster pixel resolution.
+import { MARK_TYPES, polylineWithBounds } from "./scene-catalog.js";
 export const PROTOCOL_VERSION = "0.2-draft";
 export const INTENTS = Object.freeze([
   "point-out", "ask-about-region", "answer-question", "correct-assistant",
@@ -43,10 +44,14 @@ export function buildAnnotationEvent({scene,image,annotations,intent="point-out"
   }
   const ids=new Set();
   const marks=annotations.map(raw=>{
-    if(!raw || !["point","rect","arrow"].includes(raw.type)) throw new Error("Invalid annotation type");
+    if(!raw || !MARK_TYPES.includes(raw.type)) throw new Error("Invalid annotation type");
     const id=textValue(raw.id,64);
     if(!id||ids.has(id))throw new Error("Missing or duplicate annotation ID");
     ids.add(id);
+    if(raw.type==="polyline") {
+      return {id,author:"user",type:"polyline",geometry:polylineWithBounds(raw.points),
+        label:textValue(raw.label,64),grounding:"user-pointer"};
+    }
     if(!in01(raw.x)||!in01(raw.y))throw new Error("Invalid normalized point");
     if(raw.type!=="point"&&(!in01(raw.x2)||!in01(raw.y2))) {
       throw new Error("Invalid normalized endpoint");
@@ -107,7 +112,7 @@ export function formatAnnotationChatMessage(event) {
     lines.push("沒有附上前文的精確引述；請依你在目前對話中實際可見的脈絡理解，不要捏造上一輪問題。");
   }
   lines.push(
-    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向。",
+    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向；折線是我描的路徑（例如走線），依 points 順序連接，x/y/x2/y2 是它的外框。",
     ...(event.image.kind==="raster"?[
       "底圖是使用者的實際照片（imageId="+event.image.id+"，"+event.image.intrinsicSize.width+"×"+event.image.intrinsicSize.height+" 像素，已依 EXIF 轉正）。所有標註使用原圖左上角為原點的正規化座標。",
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",

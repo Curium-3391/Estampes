@@ -31,8 +31,25 @@ export const landmarkIds = [...new Set(
   Object.values(sceneLandmarks).flatMap(scene=>Object.keys(scene))
 )].sort();
 
+export const MARK_TYPES = Object.freeze(["point","rect","arrow","polyline"]);
+export const MAX_POLYLINE_POINTS = 64;
+
+// A polyline (e.g. a PCB trace) is its vertex list; x/y/x2/y2 become its
+// bounding box so crops, zooms and process_image regions keep working.
+export function polylineWithBounds(points) {
+  if(!Array.isArray(points)||points.length<2||points.length>MAX_POLYLINE_POINTS) {
+    throw new Error("Polyline needs 2 to "+MAX_POLYLINE_POINTS+" points");
+  }
+  const clean=points.map(p=>{
+    if(!p||![p.x,p.y].every(v=>Number.isFinite(v)&&v>=0&&v<=1)) throw new Error("Invalid polyline point");
+    return {x:p.x,y:p.y};
+  });
+  const xs=clean.map(p=>p.x),ys=clean.map(p=>p.y);
+  return {points:clean,x:Math.min(...xs),y:Math.min(...ys),x2:Math.max(...xs),y2:Math.max(...ys)};
+}
+
 function checkAssistantMark(mark) {
-  if(!mark || !["point","rect","arrow"].includes(mark.type)) {
+  if(!mark || !MARK_TYPES.includes(mark.type)) {
     throw new Error("Unsupported annotation");
   }
   // Model input must not silently convert an earlier human mark into an AI
@@ -47,6 +64,10 @@ function checkAssistantMark(mark) {
 export function resolveCoordinateAnnotation(mark) {
   checkAssistantMark(mark);
   if(mark.targetId!==undefined) throw new Error("Named targets are not supported; give x/y coordinates");
+  if(mark.type==="polyline") {
+    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points),
+      author:"assistant",grounding:"unverified"};
+  }
   if(!Number.isFinite(mark.x)||!Number.isFinite(mark.y)||
      mark.x<0||mark.x>1||mark.y<0||mark.y>1) {
     throw new Error("Invalid ungrounded coordinates");
@@ -67,7 +88,7 @@ export function resolveSceneAnnotation(scene, mark) {
   if(mark.targetId===undefined) return resolveCoordinateAnnotation(mark);
   const target=sceneLandmarks[scene][mark.targetId];
   if(!target) throw new Error("Unknown landmark "+mark.targetId+" for "+scene);
-  if(mark.type==="arrow") throw new Error("Arrows need explicit start and end coordinates");
+  if(mark.type==="arrow"||mark.type==="polyline") throw new Error("Arrows and polylines need explicit coordinates");
   // Occluded mountains do not have a tight rectangular visual footprint.
   // A coarse triangle-wide box would falsely include the foreground tree.
   if(mark.type==="rect" && mark.targetId.startsWith("mountain-")) {
@@ -78,8 +99,9 @@ export function resolveSceneAnnotation(scene, mark) {
 }
 
 export function replayUserAnnotation(mark) {
-  if(!mark || !["point","rect","arrow"].includes(mark.type)) {
+  if(!mark || !MARK_TYPES.includes(mark.type)) {
     throw new Error("Invalid historical annotation");
   }
-  return {...mark,author:"user",grounding:"replayed-unverified"};
+  const geometry=mark.type==="polyline"?polylineWithBounds(mark.points):{};
+  return {...mark,...geometry,author:"user",grounding:"replayed-unverified"};
 }
