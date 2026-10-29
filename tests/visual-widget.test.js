@@ -13,8 +13,10 @@ test("M0.4 embedded canvas JavaScript parses",()=>{
 
 test("M0.4 separates media, AI overlays and human overlays",()=>{
   assert.match(html,/id="scene"/);
-  assert.match(html,/id="assistant-annotations"/);
-  assert.match(html,/id="user-annotations"/);
+  assert.match(html,/id="stored-annotations"/);
+  assert.match(html,/id="fresh-annotations"/);
+  // Stored marks keep their author colour inside each layer group.
+  assert.match(html,/renderMarks\(g,items\.filter\(m=>m\.author!=="user"\),"#E4AE57","AI"/);
   assert.match(html,/priorUserMarks/);
   assert.match(html,/a\.author==="user"/);
   assert.match(html,/author:"user",grounding:"user-pointer"/);
@@ -43,8 +45,8 @@ test("M0.4 tools and message bridge are both present",()=>{
   assert.match(html,/focusChoice/);
   assert.match(js,/function cropBox\(mark\)/);
   assert.match(js,/svg.setAttribute\("viewBox"/);
-  assert.match(js,/aiEl.style.display=hideMarks/);
-  assert.match(js,/userEl.style.display=hideMarks/);
+  assert.match(js,/storedEl.style.display=hideMarks/);
+  assert.match(js,/freshEl.style.display=hideMarks/);
   assert.match(html,/name:"validate_visual_annotations"/);
   assert.match(html,/intent,note,replyQuote/);
   assert.match(html,/r\?\.event\?\.schemaVersion!=="0\.2-draft"/);

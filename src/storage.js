@@ -55,7 +55,8 @@ export function serializeCanvas(entry) {
   for (const [rightId, store] of entry.pairLinks ?? []) if (store.size) links[rightId] = [...store.values()];
   return {
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
-    marks: canvasMarks(entry), layers: entry.layers ?? [], links, savedAt: new Date().toISOString(),
+    marks: canvasMarks(entry), layers: entry.layers ?? [], links,
+    ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}), savedAt: new Date().toISOString(),
   };
 }
 
@@ -63,6 +64,7 @@ export function restoreCanvas(entry, data) {
   if (!data || data.imageId !== entry.imageId) return entry;
   entry.marks = new Map((data.marks ?? []).filter((m) => m && typeof m.id === "string").map((m) => [m.id, m]));
   entry.layers = Array.isArray(data.layers) ? data.layers : [];
+  entry.userEdits = Array.isArray(data.userEdits) ? data.userEdits : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => hexOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   return entry;

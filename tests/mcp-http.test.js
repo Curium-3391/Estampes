@@ -138,6 +138,19 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Link verdicts come only from the user's canvas, never from the model.
     const reviewer=tools.tools.find(t=>t.name==="review_visual_link");
     assert.deepEqual(reviewer?._meta?.ui?.visibility,["app"]);
+    // Hand edits (layers, moving the user's marks) come only from the canvas.
+    const editor=tools.tools.find(t=>t.name==="edit_visual_canvas");
+    assert.deepEqual(editor?._meta?.ui?.visibility,["app"]);
+    // The protocol document is readable by the model and any MCP client.
+    const state=tools.tools.find(t=>t.name==="get_visual_state");
+    assert.ok(state&&!state._meta?.ui);
+    assert.equal((await client.callTool({name:"get_visual_state",arguments:{imageId:"img:0000000000000000"}})).isError,true);
+    const api=await fetch(base+"/api/v1/canvas/0000000000000000");
+    assert.equal(api.status,404);
+    assert.match((await api.json()).error,/load_image again/);
+    const health=await (await fetch(base+"/healthz")).json();
+    assert.equal(health.ok,true);
+    assert.equal(health.storage.enabled,false);
     assert.ok(visualTool.inputSchema.properties.links&&visualTool.inputSchema.properties.pairImageId);
     const lonely=await client.callTool({name:"present_visual",arguments:{scene:"landscape",links:[{id:"k",left:"a",right:"b"}]}});
     assert.match(lonely.content[0].text,/need a paired view/);

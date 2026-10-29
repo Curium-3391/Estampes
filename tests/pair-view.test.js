@@ -79,7 +79,7 @@ test("widget shows links with numbers, asks the user to review low-confidence on
   assert.match(source, /name:"review_visual_link"/);
   assert.match(source, /信心低 · 待你確認/);
   assert.match(source, /function reviewMessage\(list\)/);
-  assert.match(source, /if\(reviewed\.length\)chatMessage\+="\\n\\n"\+reviewMessage\(reviewed\)/);
+  assert.match(source, /if\(reviewed\.length\|\|edited\.length\)chatMessage\+="\\n\\n"\+extra\(\)/);
   assert.match(source, /pairImageId:pair\.imageId/);
   assert.match(source, /if\(pair\)mark=toView\(toSide\(\{\.\.\.mark,side:sideAt\(start\)\}\)\)/);
 });
