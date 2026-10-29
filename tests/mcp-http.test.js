@@ -39,7 +39,8 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.4.5");
+    assert.equal(version.version,"m0.4.6");
+    assert.equal(version.visualGroundingMode,"coordinates-only-no-object-anchors");
     assert.equal(version.visualDisplayTool,"present_visual_evidence");
     assert.equal(version.visualEvidencePresentation,"explicit-render-tool");
     assert.equal(version.visualEvidenceResourceUri,"ui://estampes/visual-evidence-v045.html");
@@ -48,7 +49,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(version.visualInputFormat,"mcp-image-content-png");
     assert.equal(version.visualModelVisibility,"host-dependent-unverified");
     assert.equal(version.annotationProtocol,"0.2-draft");
-    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v043.html");
+    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v046.html");
     assert.equal(version.visualTool,"present_visual");
     assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
@@ -80,7 +81,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Generic canvas: model annotations, app-only validation, HTML resource.
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
-    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v043.html");
+    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v046.html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
     const visual=await client.callTool({name:"present_visual",arguments:{
       scene:"shapes",annotations:[visualAnnotation]
@@ -88,27 +89,31 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(visual.structuredContent?.kind,"estampes.visual_surface");
     assert.equal(visual.structuredContent?.scene,"shapes");
     assert.equal(visual.structuredContent?.annotations?.[0]?.id,"a1");
-    // Grounded scene landmarks override model-guessed coordinates.
-    const grounded=await client.callTool({name:"present_visual",arguments:{
+    // No semantic object-name-to-coordinate lookup is part of public
+    // tool discovery. This prevents tests passing with a built-in answer key.
+    const toolSchema=JSON.stringify(visualTool.inputSchema);
+    assert.doesNotMatch(toolSchema,/"targetId"/);
+    assert.doesNotMatch(toolSchema,/mountain-right|house-roof/);
+    assert.doesNotMatch(visualTool.description,/landscape ids|house-roof|mountain-right/);
+
+    const proposed=await client.callTool({name:"present_visual",arguments:{
       scene:"landscape",
-      annotations:[{id:"mountain-point",type:"point",targetId:"mountain-right",
-                    x:0.82,y:0.49,label:"山"}],
+      annotations:[{id:"model-1",type:"point",x:0.82,y:0.49,label:"Unverified guess"}],
       priorUserAnnotations:[{id:"user-old",type:"point",x:0.25,y:0.5,label:"YOU 1"}]
     }});
-    assert.notEqual(grounded.isError,true);
-    const mountain=grounded.structuredContent?.annotations?.find(a=>a.id==="mountain-point");
-    assert.equal(mountain?.x,0.5625);
-    assert.ok(Math.abs(mountain?.y-130/360)<1e-9);
-    assert.equal(mountain?.targetId,"mountain-right");
-    assert.equal(mountain?.author,"assistant");
-    assert.equal(mountain?.grounding,"scene-anchor");
-    const replayed=grounded.structuredContent?.annotations?.find(a=>a.id==="user-old");
-    assert.equal(replayed?.author,"user");
-    assert.equal(replayed?.grounding,"replayed-unverified");
-    const ungrounded=await client.callTool({name:"present_visual",arguments:{
-      scene:"landscape",annotations:[{id:"free-point",type:"point",x:0.82,y:0.49,label:"山"}]
+    assert.notEqual(proposed.isError,true);
+    const aiMark=proposed.structuredContent?.annotations?.find(a=>a.id==="model-1");
+    assert.equal(aiMark?.x,0.82);
+    assert.equal(aiMark?.y,0.49);
+    assert.equal(aiMark?.grounding,"unverified");
+    assert.equal(aiMark?.author,"assistant");
+    assert.equal(proposed.structuredContent?.annotations?.find(a=>a.id==="user-old")?.author,"user");
+
+    // Attempts to select via the deprecated object dictionary should fail.
+    const leaked=await client.callTool({name:"present_visual",arguments:{
+      scene:"landscape",annotations:[{id:"bad",type:"point",targetId:"house"}]
     }});
-    assert.equal(ungrounded.structuredContent?.annotations?.[0]?.grounding,"unverified");
+    assert.equal(leaked.isError,true);
     const privateTool=tools.tools.find(t=>t.name==="validate_visual_annotations");
     assert.ok(privateTool,"validation tool missing");
     assert.deepEqual(privateTool._meta?.ui?.visibility,["app"]);
@@ -200,10 +205,10 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.match(visualEvidence.content[0]?.text,/image pixels|PNG pixels|real PNG pixels/i);
     const chatHelp=checked.structuredContent?.chatMessage??"";
     assert.match(chatHelp,/inspect_visual/);
-    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v043.html"});
-    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v043.html");
+    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v046.html"});
+    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v046.html");
     assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
-    assert.ok(visualHtml?.text?.includes("v0.4.3"));
+    assert.ok(visualHtml?.text?.includes("v0.4.6"));
     assert.ok(visualHtml?.text?.includes('name:"validate_visual_annotations"'));
     const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
