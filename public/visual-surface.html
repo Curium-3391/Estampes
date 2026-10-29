@@ -18,7 +18,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #caption{font-size:.82rem;color:GrayText}
 </style></head><body><main>
 <header><h2>Estampes · Visual Surface</h2><small>v0.4.1</small></header>
-<p class="help">金色：AI 標註。藍色：使用者標註（含重新載入的歷史標記）。選擇工具後直接點擊或拖曳。</p>
+<p class="help">金色：AI 標註（「?」代表未驗證的猜測位置）。藍色：使用者標註（含重新載入的標記）。請直接點擊或拖曳。</p>
 <div class="toolbar" role="group" aria-label="標註工具">
 <button data-mode="point" aria-pressed="true">點選</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
@@ -75,7 +75,9 @@ function renderMarks(layer,items,color,author){
    if(a.type==="point"){node("circle",{cx:x,cy:y,r:8,fill:color,stroke:"#fff","stroke-width":2},layer);}
    if(a.type==="rect"){node("rect",{x:Math.min(x,x2),y:Math.min(y,y2),width:Math.abs(x2-x),height:Math.abs(y2-y),rx:3,fill:color,"fill-opacity":.12,stroke:color,"stroke-width":3},layer);}
    if(a.type==="arrow"){node("line",{x1:x,y1:y,x2,y2,stroke:color,"stroke-width":3,"marker-end":author==="AI"?"url(#gold-head)":"url(#blue-head)"},layer);}
-   const label=String(a.label||author).slice(0,64);
+   // Distinguish a guessed model coordinate from a known scene landmark.
+   const uncertain=author==="AI" && a.grounding!=="scene-anchor";
+   const label=String((uncertain?"? ":"")+(a.label||author)).slice(0,64);
    const labelNode=node("text",{x:clamp(x+9,5,540),y:clamp(y-12,14,346),fill:color,"font-size":15,"font-weight":700,stroke:"#17212A","stroke-width":.8,"paint-order":"stroke"},layer);
    labelNode.textContent=label;
  }
