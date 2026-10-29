@@ -98,6 +98,12 @@ test("GPT notes and status appear beside their marks",()=>{
   assert.match(source,/a\.status==="inspected"\?"✓ "/);
 });
 
+test("new user marks continue numbering after re-presented ones",()=>{
+  assert.match(source,/function nextLabel\(\)/);
+  assert.match(source,/\[\.\.\.priorUserMarks,\.\.\.userMarks\]/);
+  assert.match(source,/id:ID_PREFIX\+\(\+\+seq\)/);
+});
+
 test("provenance colors are distinct from viewer inspection marker",()=>{
   assert.match(source,/#E4AE57/);
   assert.match(source,/#579DF6/);

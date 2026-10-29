@@ -344,7 +344,14 @@ function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clien
  const p=point.matrixTransform(matrix.inverse());
  return {x:round(clamp(p.x/VW,0,1)),y:round(clamp(p.y/VH,0,1))};
 }
-function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:"YOU "+(userMarks.length+1)};}
+// GPT re-presents earlier user marks (e.g. "YOU 1") in a new canvas, so new
+// marks continue the numbering and get ids that cannot collide with them.
+const ID_PREFIX="user-"+Math.random().toString(36).slice(2,6)+"-";
+function nextLabel(){
+ const used=[...priorUserMarks,...userMarks].map(m=>Number(/^YOU (\d+)$/.exec(m.label??"")?.[1]??0));
+ return "YOU "+(Math.max(0,...used)+1);
+}
+function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:nextLabel()};}
 function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
 let stroke=[];
@@ -363,8 +370,8 @@ hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=
 hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(p){
  if(mode==="polyline")stroke.push(p);
  let mark=mode==="polyline"
-   ?{...freehandMark(thin(stroke)),id:"user-"+(++seq),label:"YOU "+(userMarks.length+1)}
-   :{...draft(start,p),id:"user-"+(++seq)};
+   ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel()}
+   :{...draft(start,p),id:ID_PREFIX+(++seq)};
  if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
