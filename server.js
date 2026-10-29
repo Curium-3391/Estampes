@@ -8,7 +8,7 @@ import {registerAppTool,registerAppResource,RESOURCE_MIME_TYPE} from "@modelcont
 import {z} from "zod";
 import {valueToX} from "./src/geometry.js";
 
-const WIDGET="ui://estampes/number-line-v012.html";
+const WIDGET="ui://estampes/number-line.html";
 const html=readFileSync(join(dirname(fileURLToPath(import.meta.url)),"public/number-line.html"),"utf8");
 function makeServer(){
   const server=new McpServer({name:"estampes",version:"0.1.0"});
