@@ -181,3 +181,14 @@ test("pinch, wheel and pan never draw; labels and drawing tolerances follow the 
   assert.match(source,/name:"load_visual_region"/);
   assert.match(html,/data-mode="pan"/);
 });
+
+test("layers can be hidden without losing marks; unsent marks always show",()=>{
+  assert.match(html,/id="layers"/);
+  assert.match(source,/const shown=m=>!m\.layer\|\|!hiddenLayers\.has\(m\.layer\)/);
+  assert.match(source,/renderMarks\(aiEl,assistantMarks\.filter\(shown\)/);
+  assert.match(source,/\.filter\(shown\),"#579DF6","YOU"\)/);
+  assert.match(source,/renderMarks\(freshEl,userMarks\.filter\(m=>!sentIds\.has\(m\.id\)\),/);
+  assert.match(source,/\]\.filter\(item=>shown\(item\.mark\)\)/);
+  assert.match(source,/setWidgetState/);
+  assert.match(source,/if\(freshIds\.includes\(m\.id\)\)m\.layer=layer\.id/);
+});

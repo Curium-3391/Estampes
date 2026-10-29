@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { registerImage } from "../src/image-store.js";
-import { applyCanvasChanges, canvasMarks, importMarks } from "../src/canvas-state.js";
+import { applyCanvasChanges, canvasMarks, canvasLayers, storeUserMarks, importMarks } from "../src/canvas-state.js";
 import { exportMarksSvg, parseMarksFile } from "../src/marks-file.js";
 import { inkReport, renderVerification } from "../src/mark-render.js";
 import { resolveCoordinateAnnotation, replayUserAnnotation } from "../src/scene-catalog.js";
@@ -68,4 +68,23 @@ test("verification draws ink at its real width", async () => {
   };
   const a = await redRows(thin), b = await redRows(thick);
   assert.ok(a > 0 && b > a * 3, `fine=${a} thick=${b}`);
+});
+
+test("layers survive export and come back as their own layers", async () => {
+  const entry = await photo();
+  applyCanvasChanges(entry, { annotations: [{ id: "g", type: "point", x: .2, y: .2 }], layer: "第一輪 <檢查>", resolve: resolveCoordinateAnnotation });
+  storeUserMarks(entry, [{ id: "u", type: "point", x: .4, y: .4 }]);
+  const svg = exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry));
+  assert.match(svg, /inkscape:label="第一輪 &lt;檢查&gt;"/);
+  assert.match(svg, /inkscape:label="你 · 第1次"/);
+  assert.doesNotMatch(svg, /inkscape:label="GPT"/);
+  const parsed = parseMarksFile(Buffer.from(svg));
+  assert.deepEqual(parsed.layers.map(l => l.name), ["第一輪 <檢查>", "你 · 第1次"]);
+
+  // The target canvas already has a layer: imported ones get fresh ids.
+  const other = await photo(2000, 1001);
+  other.marks = new Map(); other.layers = [];
+  applyCanvasChanges(other, { annotations: [{ id: "x", type: "point", x: .5, y: .5 }], resolve: resolveCoordinateAnnotation });
+  importMarks(other, parsed.marks, { layers: parsed.layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation });
+  assert.deepEqual(canvasLayers(other).map(l => [l.id, l.name, l.count]), [["L1", "GPT · 第1次", 1], ["L2", "第一輪 <檢查>", 1], ["L3", "你 · 第1次", 1]]);
 });

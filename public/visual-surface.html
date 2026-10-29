@@ -39,6 +39,12 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #findings .who{font-weight:700;white-space:nowrap}
 #findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
 #findings .note{overflow-wrap:anywhere}
+#layers{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 0;font-size:.84rem}
+#layers[hidden]{display:none}#layers .title{color:GrayText;margin-right:2px}
+#layers label{display:inline-flex;gap:5px;align-items:center;padding:4px 9px;border:1px solid #8886;border-radius:9px;cursor:pointer}
+#layers label.off{opacity:.5;text-decoration:line-through}
+#layers .dot{width:9px;height:9px;border-radius:50%}#layers .count{color:GrayText;font-variant-numeric:tabular-nums}
+#layers button{padding:4px 9px;font-size:.8rem}
 #style-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:-4px 0 12px}
 #style-tools[hidden]{display:none}
 #style-tools .swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #8886}
@@ -92,6 +98,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
+<div id="layers" hidden role="group" aria-label="圖層：勾選要顯示的標記"></div>
 <ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
 <label for="intent">這次標註的目的</label>
@@ -115,7 +122,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 <div class="actions" id="extra-actions">
 <button id="fullscreen">全螢幕</button>
 <button id="export-image" hidden title="校正方向後的圖，所有座標都以它為準">下載圖片</button>
-<button id="export-marks" hidden title="分「使用者」「GPT」兩個圖層；之後上傳回對話可還原標記">下載標記 SVG</button>
+<button id="export-marks" hidden title="每個圖層各自一組，可在繪圖軟體裡開關；之後上傳回對話可還原標記與圖層">下載標記 SVG</button>
 </div>
 <p id="status" role="status" aria-live="polite">正在連接 ChatGPT…</p>
 <script type="module">
@@ -173,6 +180,47 @@ const Z=()=>cam?VW/cam.w:1;
 // One "screen unit": K at full view, smaller when zoomed, so drawing
 // thresholds and labels stay the same size on screen.
 const U=()=>K()/Z();
+// Layers: each send and each GPT drawing call is one layer of marks. The
+// viewer hides whole layers; hidden layers stay on the canvas and in GPT's
+// context. Unsent marks have no layer yet and are always shown.
+const layersEl=document.querySelector("#layers");
+let layers=[],hiddenLayers=new Set();
+const shown=m=>!m.layer||!hiddenLayers.has(m.layer);
+const LAYER_ID=/^L\d{1,6}$/;
+const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
+ .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40)})).slice(0,60);
+// Visibility is remembered per photo for this widget instance when the host
+// keeps widget state (ChatGPT); elsewhere it lasts until the widget reloads.
+const savedHidden=()=>{try{return window.openai?.widgetState?.hiddenLayers?.[imageId]??[]}catch{return []}};
+function saveHidden(){try{const st=window.openai?.widgetState??{};
+ window.openai?.setWidgetState?.({...st,hiddenLayers:{...(st.hiddenLayers??{}),[imageId]:[...hiddenLayers]}});}catch{}}
+function setLayers(list){
+ const next=cleanLayers(list);
+ if(JSON.stringify(next)===JSON.stringify(layers))return;
+ layers=next;const known=new Set(layers.map(l=>l.id));
+ hiddenLayers=new Set([...hiddenLayers,...savedHidden()].filter(id=>known.has(id)));
+}
+function renderLayers(){
+ const counts=new Map();
+ for(const m of [...assistantMarks,...priorUserMarks,...userMarks])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
+ const list=layers.filter(l=>counts.has(l.id));
+ layersEl.hidden=!imageId||!list.length;layersEl.replaceChildren();
+ if(layersEl.hidden)return;
+ const t=document.createElement("span");t.className="title";t.textContent="圖層";layersEl.append(t);
+ for(const l of list){
+   const label=document.createElement("label"),box=document.createElement("input"),dot=document.createElement("span"),
+     name=document.createElement("span"),count=document.createElement("span");
+   box.type="checkbox";box.checked=!hiddenLayers.has(l.id);box.dataset.layer=l.id;
+   label.classList.toggle("off",!box.checked);
+   dot.className="dot";dot.style.background=l.author==="user"?"#579DF6":"#E4AE57";
+   name.textContent=l.name;count.className="count";count.textContent=counts.get(l.id);
+   label.append(box,dot,name,count);layersEl.append(label);
+ }
+ if(hiddenLayers.size){const all=document.createElement("button");all.id="show-all-layers";all.textContent="全部顯示";layersEl.append(all);}
+}
+layersEl.addEventListener("change",e=>{const id=e.target?.dataset?.layer;if(!id)return;
+ e.target.checked?hiddenLayers.delete(id):hiddenLayers.add(id);saveHidden();render();});
+layersEl.addEventListener("click",e=>{if(e.target.id!=="show-all-layers")return;hiddenLayers.clear();saveHidden();render();});
 const MAX_MARKS=30;let selectedScene="landscape",assistantMarks=[],priorUserMarks=[],userMarks=[],mode="point",ready=false,start=null,seq=0,rpcId=0;
 const pending=new Map();
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
@@ -276,7 +324,7 @@ const markOptions=()=>[
  ...assistantMarks.map((mark,i)=>({key:"ai-"+i,mark,author:"AI"})),
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
-];
+].filter(item=>shown(item.mark));
 const STATUS_TEXT={inspected:"GPT 表示已看過像素",uncertain:"GPT 不確定"};
 function renderFindings(){
  findingsEl.replaceChildren();
@@ -358,8 +406,8 @@ function render(){
      t.textContent="正在載入照片…";
    }
  }else sceneEl.innerHTML=SCENES[selectedScene];
- renderMarks(aiEl,assistantMarks,"#E4AE57","AI");
- renderMarks(userEl,[...priorUserMarks,...userMarks.filter(m=>sentIds.has(m.id))],"#579DF6","YOU");
+ renderMarks(aiEl,assistantMarks.filter(shown),"#E4AE57","AI");
+ renderMarks(userEl,[...priorUserMarks,...userMarks.filter(m=>sentIds.has(m.id))].filter(shown),"#579DF6","YOU");
  userEl.style.opacity=".55";
  // New (unsent) marks drawn at full strength in their own layer.
  renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
@@ -368,7 +416,7 @@ function render(){
  send.disabled=!ready||fresh===0;
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
  exportImageBtn.hidden=!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!(imageId&&exportLinks?.marks);
- renderFindings();
+ renderLayers();renderFindings();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -391,7 +439,7 @@ function applyInput(args){
  appliedKey=key;
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
    const sameImage=args.imageId===imageId;
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    VW=1000;if(w>0&&h>0)VH=Math.round(1000*h/w);else if(!sameImage)VH=750;
@@ -416,6 +464,7 @@ function applyResult(result){
  const full=Array.isArray(meta["estampes/annotations"])?meta["estampes/annotations"]:null;
  applyInput({...r,annotations:full??r.annotations??[]});
  exportLinks=r.exports??exportLinks;
+ if(Array.isArray(r.layers))setLayers(r.layers);
  if(imageId){
    photo=dataUrl(meta["estampes/image"])??photo;
    const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
@@ -446,6 +495,7 @@ async function syncCanvas(force=false){
    if(r?.kind!=="estampes.visual_canvas"||r.imageId!==id)throw Error("Unexpected response");
    if(id!==imageId)return;
    photo=dataUrl(r.image)??photo;exportLinks=r.exports??exportLinks;
+   if(Array.isArray(r.layers))setLayers(r.layers);
    if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
    const marks=Array.isArray(r.annotations)?r.annotations.filter(valid).slice(0,60):[];
    const mine=new Set(userMarks.map(m=>m.id));
@@ -715,6 +765,12 @@ send.addEventListener("click",async()=>{
    }
    chatMessage=r.chatMessage;
    validated=true;
+   // The server put this send's new marks in one layer.
+   const layer=cleanLayers(r.layer?[{...r.layer,author:"user"}]:[])[0];
+   if(layer){
+     for(const m of userMarks)if(freshIds.includes(m.id))m.layer=layer.id;
+     if(!layers.some(l=>l.id===layer.id))layers=[...layers,layer];
+   }
  }catch(err){reason=String(err.message||err)}
  if(!validated){
    // Failure fallback: still carry user-supplied intention, image identity,
