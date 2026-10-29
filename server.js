@@ -226,7 +226,7 @@ function makeServer() {
     {
       title: "Present a shared visual canvas",
       description:
-        "Display an in-chat 2D surface over an embedded SVG test scene. For NAMED objects always use targetId (no guessed x/y): landscape ids sun, house, house-roof, tree, mountain-left, mountain-right; shapes ids circle, square, triangle; formula ids equation, equals-sign. Example: scene=landscape, annotations=[{id:'mountain', type:'point', targetId:'mountain-right', label:'山'}]. Server resolves anchors, never trusts model coordinates when targetId is set. Free coordinates without targetId are allowed but UNVERIFIED. To redraw previously user-drawn annotations, pass them in priorUserAnnotations; never copy them into annotations (reserved for new AI marks). This is an SVG sample, NOT native ChatGPT image-search access.",
+        "Display an in-chat 2D surface over an embedded SVG test scene. For NAMED objects always use targetId (no guessed x/y): landscape ids sun, house, house-roof, tree, mountain-left, mountain-right; shapes ids circle, square, triangle; formula ids equation, equals-sign. Example: scene=landscape, annotations=[{id:'mountain', type:'point', targetId:'mountain-right', label:'山'}]. Server resolves anchors, never trusts model coordinates when targetId is set. Legacy demo targetIds only align with fixed local SVG geometry; they do NOT prove object identity and must not be treated as visual recognition. If a user asks what a marked region contains, call inspect_visual to obtain the original and cropped PNG evidence rather than guessing from scene names or normalized positions. Free coordinates without targetId are unverified. Preserve earlier user marks in priorUserAnnotations; never reattribute them to AI. Only bundled demo scenes are supported here.",
       inputSchema: z.object({
         scene: SceneSchema,
         annotations: ModelAnnotationsSchema.default([]),
@@ -255,9 +255,10 @@ function makeServer() {
       return {
         content: [{
           type:"text",
-          text:"Estampes scene="+scene+"; grounded/user-tagged annotations="+JSON.stringify(resolved)+
-            ". A scene-anchor is deterministic SVG geometry; a free-coordinate annotation is NOT semantically grounded. " +
-            "Previously human-drawn marks retain author=user. New user gestures can be sent from the widget."
+          text:"Estampes scene="+scene+"; geometry/provenance annotations="+JSON.stringify(resolved)+
+            ". Scene anchors are only local SVG geometric test fixtures, NOT visual recognition evidence. " +
+            "For questions about image content, the model MUST call inspect_visual for actual PNG pixels. " +
+            "Previously user-drawn marks retain author=user."
         }],
         structuredContent:{
           kind:"estampes.visual_surface",scene,annotations:resolved,
