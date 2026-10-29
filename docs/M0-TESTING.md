@@ -22,10 +22,10 @@ The HTTP endpoint is `http://localhost:8787/mcp`. The cloud endpoint configured 
 
 ## In-Chat test
 
-1. Verify the latest Render deployment is **Live** and the build tests passed.
+1. First open the public **[deployed version endpoint](https://estampes-mcp.onrender.com/version)**. It must return `version: m0.3.1`, `uiResourceUri: ui://estampes/number-line-v031.html`, and `selectionTool: record_number_line_selection`. If not, the deployment has not caught up; don't debug ChatGPT yet. Then verify Render's latest deployment is **Live** and build tests passed.
 2. Open a **new ChatGPT conversation** with Estampes enabled.
 3. Say: `使用 Estampes 的 show_number_line 工具，標註數字 2。`
-4. Verify the widget heading shows **v0.3.0**, the yellow marker is on **2**, and the widget loads without error.
+4. Verify the widget heading shows **v0.3.1**, the yellow marker is on **2**, and the widget loads without error.
 5. Click **-2**. The blue marker should move to -2.
 6. Click **傳給 GPT**.
 7. Observe **both** the status line and the conversation. A successful two-way round trip requires ChatGPT to acknowledge **-2** from the new user message.
@@ -53,3 +53,11 @@ If `Unknown tool` appears, verify the currently deployed server includes `record
 - No guarantee that every ChatGPT host accepts `ui/message`; confirm by observing the actual conversation.
 - The tool's current coordinate `x` refers to the logical number line interval, not a screenshot pixel position.
 - The Render endpoint is unauthenticated: only use non-sensitive M0 test data.
+
+## UI caching and refresh
+
+Per the [official ChatGPT UI documentation](https://developers.openai.com/plugins/build/chatgpt-ui), MCP Apps `ui://` URI is a cache key. Versioning the URI is mandatory for template changes. M0.3.1 uses `ui://estampes/number-line-v031.html` and retains `ui://estampes/number-line.html` as a legacy alias.
+
+If `/version` reports `m0.3.1` but ChatGPT still displays `v0.1.2`, the host is using stale resource/tool metadata. Refresh the custom MCP server's actions in plugin settings where supported, then start a new conversation. Only if there is no refresh action, consider reinstalling the custom plugin to force rediscovery.
+
+`Unknown tool` with the **old** UI does not prove the new server lacks the tool. It may be an old iframe calling the current MCP server. Likewise, HTTP 200 only proves an HTTP response; the user-to-chat round trip requires the model's actual acknowledgement.
