@@ -81,13 +81,13 @@ function overlaySvg(focus) {
   const x2=(focus.x2??focus.x)*SOURCE_WIDTH, y2=(focus.y2??focus.y)*SOURCE_HEIGHT;
   let shape;
   if (focus.type === "rect") {
-    shape = `<rect x="${Math.min(x,x2)}" y="${Math.min(y,y2)}" width="${Math.abs(x2-x)}" height="${Math.abs(y2-y)}" fill="#4e9cec" fill-opacity=".08" stroke="#1761bd" stroke-width="4"/>`;
+    shape = `<rect x="${Math.min(x,x2)}" y="${Math.min(y,y2)}" width="${Math.abs(x2-x)}" height="${Math.abs(y2-y)}" fill="#4e9cec" fill-opacity=".08" stroke="#64748B" stroke-width="4"/>`;
   } else if (focus.type === "arrow") {
-    shape = `<path d="M ${x} ${y} L ${x2} ${y2}" stroke="#1761bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/><circle cx="${x2}" cy="${y2}" r="7" fill="#1761bd" stroke="white" stroke-width="2"/>`;
+    shape = `<path d="M ${x} ${y} L ${x2} ${y2}" stroke="#64748B" stroke-width="4" fill="none" marker-end="url(#arrow)"/><circle cx="${x2}" cy="${y2}" r="7" fill="#64748B" stroke="white" stroke-width="2"/>`;
   } else {
-    shape = `<circle cx="${x}" cy="${y}" r="11" fill="none" stroke="white" stroke-width="6"/><circle cx="${x}" cy="${y}" r="11" fill="none" stroke="#1761bd" stroke-width="3"/>`;
+    shape = `<circle cx="${x}" cy="${y}" r="11" fill="none" stroke="white" stroke-width="6"/><circle cx="${x}" cy="${y}" r="11" fill="none" stroke="#64748B" stroke-width="3"/>`;
   }
-  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${SOURCE_WIDTH}" height="${SOURCE_HEIGHT}" viewBox="0 0 ${SOURCE_WIDTH} ${SOURCE_HEIGHT}"><defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="9" refY="4.5" orient="auto"><path d="M0,0L9,4.5L0,9Z" fill="#1761bd"/></marker></defs>${shape}</svg>`);
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${SOURCE_WIDTH}" height="${SOURCE_HEIGHT}" viewBox="0 0 ${SOURCE_WIDTH} ${SOURCE_HEIGHT}"><defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="9" refY="4.5" orient="auto"><path d="M0,0L9,4.5L0,9Z" fill="#64748B"/></marker></defs>${shape}</svg>`);
 }
 
 export async function createVisualEvidence({scene, imageId, revision = IMAGE_REVISION, focus, padding=0.08}) {
