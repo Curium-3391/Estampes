@@ -107,7 +107,9 @@ export function formatAnnotationChatMessage(event) {
     "底圖為內建 SVG 示範場景，尺寸是 SVG 座標單位而非照片像素解析度。所有標註使用原圖左上角為原點的正規化座標。",
     "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
     JSON.stringify(event),
-    "請優先回應我所選的意圖與補充說明；若無法從可見內容確認物件或對話所指，請指出不確定之處，別把座標等同於已驗證的物件辨識。"
+    "請先使用 Estampes 的 inspect_visual 工具檢視實際底圖與我標註的局部影像，再解釋我指的東西；參數：scene="+event.image.id.replace(/^demo:/,"")+", imageId="+event.image.id+", revision="+event.image.revision+"；focus 請使用各標註的 type 與 geometry.x/y/x2/y2，必要時每個標註分別呼叫一次。",
+    "Estampes 只提供像素、裁切與位置，不會替你辨識物件。若宿主無法將工具回傳的 image blocks 提供給視覺模型，請誠實告知，而不是只靠座標或場景名稱猜物件。",
+    "請優先回應我所選的意圖與補充說明；若不能確認物件或對話所指，請指出不確定之處。"
   );
   return lines.join("\n");
 }
