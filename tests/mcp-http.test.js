@@ -39,17 +39,20 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.4.6");
+    assert.equal(version.version,"m0.4.7");
+    assert.equal(version.visualDisplayTool,"present_visual");
+    assert.equal(version.legacyVisualDisplayTool,"present_visual_evidence");
+    assert.deepEqual(version.visualCanvasModes,["annotated","original","zoom"]);
     assert.equal(version.visualGroundingMode,"coordinates-only-no-object-anchors");
-    assert.equal(version.visualDisplayTool,"present_visual_evidence");
+    assert.equal(version.visualCanvasPresentation,"single-shared-ui");
     assert.equal(version.visualEvidencePresentation,"explicit-render-tool");
-    assert.equal(version.visualEvidenceResourceUri,"ui://estampes/visual-evidence-v045.html");
+    assert.equal(version.visualEvidenceResourceUri,"ui://estampes/visual-evidence-v047.html");
     assert.equal(version.visualEvidencePresentation,"explicit-render-tool");
     assert.equal(version.visualInputTool,"inspect_visual");
     assert.equal(version.visualInputFormat,"mcp-image-content-png");
     assert.equal(version.visualModelVisibility,"host-dependent-unverified");
     assert.equal(version.annotationProtocol,"0.2-draft");
-    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v046.html");
+    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-v047.html");
     assert.equal(version.visualTool,"present_visual");
     assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
@@ -81,7 +84,9 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // Generic canvas: model annotations, app-only validation, HTML resource.
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
-    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v046.html");
+    assert.match(visualTool.description,/ONE ChatGPT widget/);
+    assert.match(visualTool.description,/Do NOT also call present_visual_evidence/);
+    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-v047.html");
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
     const visual=await client.callTool({name:"present_visual",arguments:{
       scene:"shapes",annotations:[visualAnnotation]
@@ -167,12 +172,13 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.ok(inspectTool,"inspect_visual must be model-callable");
     assert.equal(inspectTool._meta?.ui?.resourceUri,undefined);
     const renderTool=tools.tools.find(t=>t.name==="present_visual_evidence");
-    assert.ok(renderTool,"presenter must be in tool discovery");
-    assert.equal(renderTool._meta?.ui?.resourceUri,"ui://estampes/visual-evidence-v045.html");
-    const evidenceUi=await client.readResource({uri:"ui://estampes/visual-evidence-v045.html"});
-    const evidenceHtml=evidenceUi.contents.find(c=>c.uri==="ui://estampes/visual-evidence-v045.html");
+    assert.ok(renderTool,"legacy presenter must be in tool discovery");
+    assert.match(renderTool.description,/LEGACY standalone/);
+    assert.equal(renderTool._meta?.ui?.resourceUri,"ui://estampes/visual-evidence-v047.html");
+    const evidenceUi=await client.readResource({uri:"ui://estampes/visual-evidence-v047.html"});
+    const evidenceHtml=evidenceUi.contents.find(c=>c.uri==="ui://estampes/visual-evidence-v047.html");
     assert.ok(evidenceHtml?.text?.includes("Estampes · Visual Evidence"));
-    assert.ok(evidenceHtml?.text?.includes("v0.4.5"));
+    assert.ok(evidenceHtml?.text?.includes("v0.4.7"));
     assert.match(evidenceHtml.text,/ui\/notifications\/tool-result/);
     assert.match(evidenceHtml.text,/data:image\/png;base64/);
     const preview=await client.callTool({name:"present_visual_evidence",arguments:{
@@ -205,11 +211,16 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.match(visualEvidence.content[0]?.text,/image pixels|PNG pixels|real PNG pixels/i);
     const chatHelp=checked.structuredContent?.chatMessage??"";
     assert.match(chatHelp,/inspect_visual/);
-    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v046.html"});
-    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v046.html");
+    const visualResource=await client.readResource({uri:"ui://estampes/visual-surface-v047.html"});
+    const visualHtml=visualResource.contents.find(c=>c.uri==="ui://estampes/visual-surface-v047.html");
     assert.equal(visualHtml?.mimeType,"text/html;profile=mcp-app");
-    assert.ok(visualHtml?.text?.includes("v0.4.6"));
+    assert.ok(visualHtml?.text?.includes("v0.4.7"));
     assert.ok(visualHtml?.text?.includes('name:"validate_visual_annotations"'));
+    for(const mode of ["annotated","original","zoom"]) {
+      assert.match(visualHtml.text,new RegExp('data-view="'+mode+'"'));
+    }
+    assert.match(visualHtml.text,/id="focus-choice"/);
+    assert.match(visualHtml.text,/id="context-details"/);
     const resource=await client.readResource({uri:"ui://estampes/number-line-v031.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line-v031.html");
     assert.ok(html?.text?.includes("Estampes · M0 Number Line"));
