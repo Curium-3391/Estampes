@@ -141,7 +141,8 @@ test("missing pixels are reloaded and the verification image has its own tab",()
   assert.match(source,/if\(!photo\|\|\(!full&&!r\.annotations\)\)syncCanvas\(!!photo\)/);
   // Full geometry comes from widget-only _meta; the model gets a compact list.
   assert.match(source,/meta\["estampes\/annotations"\]/);
-  assert.match(html,/id="pip"/);
+  assert.doesNotMatch(html,/id="pip"/);
+  assert.match(source,/"touchmove"\][\s\S]{0,200}passive:false/);
   assert.match(source,/requestDisplayMode\(\{mode\}\)/);
   assert.match(html,/id="export-marks"/);
   assert.match(html,/data-size="fine"/);
