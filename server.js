@@ -30,7 +30,20 @@ createServer(async(req,res)=>{
   if(url.pathname==="/mcp"&&req.method==="OPTIONS"){res.writeHead(204,{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,DELETE,OPTIONS","access-control-allow-headers":"content-type,mcp-session-id,mcp-protocol-version,accept","access-control-expose-headers":"Mcp-Session-Id"}).end();return}
   if(url.pathname==="/mcp"&&["GET","POST","DELETE"].includes(req.method)){
     const began=Date.now();
-    res.once("finish",()=>console.log("[mcp] "+req.method+" status="+res.statusCode+" ms="+(Date.now()-began)));
+    // Diagnostic-only: observe method names, never record request parameters.
+    let rpcMethod="unknown", chunks="", byteCount=0;
+    req.on("data",chunk=>{
+      byteCount+=chunk.length;
+      if(byteCount<=16384) chunks+=chunk.toString("utf8");
+    });
+    req.on("end",()=>{
+      if(byteCount>16384){rpcMethod="oversized";return}
+      try{
+        const body=JSON.parse(chunks);
+        rpcMethod=Array.isArray(body) ? body.map(item=>String(item?.method??"response")).join(",") : String(body?.method??"response");
+      }catch{rpcMethod=req.method==="GET"?"get":"unparsed"}
+    });
+    res.once("finish",()=>console.log("[mcp] method="+rpcMethod+" http="+req.method+" status="+res.statusCode+" ms="+(Date.now()-began)));
     res.setHeader("access-control-allow-origin","*");res.setHeader("access-control-expose-headers","Mcp-Session-Id");
     const server=makeServer(),transport=new StreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});
     res.on("close",()=>{void transport.close();void server.close()});
