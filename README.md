@@ -33,11 +33,13 @@ Estampes aims to remove that friction.
 
 ## Development roadmap
 
-- [ ] **M0 — Grounding PoC:** Overlay point, rectangle, arrow, and path annotations onto a fixed image; test coordinate transforms and resizing.
-- [ ] **M1 — AI annotations:** Accept structured annotations from a vision-capable model; verify targets and communicate uncertainty.
-- [ ] **M2 — Human annotations:** Allow users to mark an image and return their marks as structured input for the next conversation turn.
-- [ ] **M3 — In-chat integration:** Explore MCP Apps and supported ChatGPT extension surfaces, subject to host APIs and image access limitations.
-- [ ] **M4 — Evaluation:** Measure target-finding accuracy, clarification turns, and task completion against unannotated image conversations.
+- [ ] **M0 — ChatGPT plugin number-line PoC:** Build an MCP tool and an in-conversation MCP Apps UI. Display a known number line, draw assistant-specified points, let the user point back, and return structured coordinates to the conversation. Verify resizing.
+- [ ] **M1 — Formula and simple-image grounding:** Test precise pointing at terms in formulas and easily identifiable objects in images, with validation and uncertainty.
+- [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
+- [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
+- [ ] **M4 — Complex real-world imagery and evaluation:** Progress to diagrams and PCBs only after simpler cases work; measure accuracy, clarification turns, and task completion.
+
+**Integration requirement:** Estampes is a ChatGPT-native plugin experience, not a standalone website or chatbot. Use an MCP server + MCP Apps UI inside the conversation for M0; evaluate ChatGPT Plugin Extensions for deeper native integrations.
 
 See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), and [Annotation protocol draft](docs/PROTOCOL.md).
 
