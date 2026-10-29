@@ -12,11 +12,13 @@ import {
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
 import { landmarkIds, resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
+import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.1";
-const VISUAL_URI = "ui://estampes/visual-surface-v041.html";
+const BUILD_VERSION = "m0.4.2";
+const VISUAL_URI = "ui://estampes/visual-surface-v042.html";
+const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
 const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
 const html = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
@@ -73,7 +75,7 @@ const ModelAnnotationSchema = z.object({
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.1" });
+  const server = new McpServer({ name: "estampes", version: "0.4.2" });
 
   registerAppResource(
     server,
@@ -195,6 +197,17 @@ function makeServer() {
     })
   );
 
+  // UI URI cache compatibility for the immediately previous visual widget.
+  registerAppResource(
+    server,
+    "Estampes visual surface v0.4.1 (legacy)",
+    VISUAL_PREVIOUS_URI,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents: [{ uri: VISUAL_PREVIOUS_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
+    })
+  );
+
   registerAppTool(
     server,
     "present_visual",
@@ -252,25 +265,32 @@ function makeServer() {
       inputSchema:z.object({
         scene:SceneSchema,
         annotations:VisualAnnotationsSchema,
+        intent:z.enum(INTENTS).default("point-out"),
+        note:z.string().max(500).default(""),
+        replyQuote:z.string().max(300).default(""),
       }),
       outputSchema:z.object({
         kind:z.literal("estampes.validated_annotations"),
         scene:SceneSchema,
         count:z.number().int(),
         annotations:VisualAnnotationsSchema,
+        event:z.record(z.string(),z.unknown()),
+        chatMessage:z.string(),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,annotations})=>{
-      // Geometry check is not semantic grounding; the widget supplies these
-      // positions as user gestures, so keep author=user in tool output.
+    async ({scene,annotations,intent,note,replyQuote})=>{
+      // Validation is geometric only; no image classification or host
+      // conversation access is claimed. The user supplies the intent/quote.
       const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
+      const event=buildAnnotationEvent({scene,annotations:checked,intent,note,replyQuote});
+      const chatMessage=formatAnnotationChatMessage(event);
       return {
-        content:[{type:"text",text:"Validated "+checked.length+" user-authored coordinate annotations on "+scene+" (geometry only)."}],
+        content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
         structuredContent:{
           kind:"estampes.validated_annotations",scene,
-          count:checked.length,annotations:checked,
+          count:checked.length,annotations:checked,event,chatMessage,
         },
       };
     }
@@ -301,6 +321,7 @@ const httpServer = createHttpServer((req, res) => {
       visualResourceUri: VISUAL_URI,
       visualTool: "present_visual",
       visualValidationTool: "validate_visual_annotations",
+      annotationProtocol: "0.2-draft",
     }));
     return;
   }
