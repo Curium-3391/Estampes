@@ -198,3 +198,19 @@ export async function overlayGrid(entry, { region, rows = 8, cols = 8 }) {
 export async function previewImage(entry) {
   return processImage(entry, { ops: [] });
 }
+
+// What the person sees in the present_visual canvas: the original pixels,
+// only reduced, as a compact JPEG.
+export const DISPLAY_LONG_SIDE = 1600;
+export async function displayImage(entry) {
+  const { data, info } = await sharp(entry.png).flatten({ background: "#ffffff" })
+    .resize({ width: DISPLAY_LONG_SIDE, height: DISPLAY_LONG_SIDE, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 82 }).toBuffer({ resolveWithObject: true });
+  return { data, mimeType: "image/jpeg", width: info.width, height: info.height };
+}
+
+// Keep widget payloads small: large processed views become JPEGs.
+export async function compactForDisplay(out, maxBytes = 600_000) {
+  if (out.data.length <= maxBytes) return out;
+  return { ...out, data: await sharp(out.data).jpeg({ quality: 82 }).toBuffer(), mimeType: "image/jpeg" };
+}

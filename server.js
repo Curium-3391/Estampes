@@ -12,11 +12,13 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
-import { resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
+import { resolveSceneAnnotation, resolveCoordinateAnnotation, replayUserAnnotation } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 import { downloadImage, registerImage, getImage } from "./src/image-store.js";
-import { processImage, overlayGrid, previewImage, cellCenter, rowLabel } from "./src/image-ops.js";
+import {
+  processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay,
+} from "./src/image-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 // package.json is the single source of truth for the release version.
@@ -32,10 +34,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -78,6 +80,28 @@ const ModelAnnotationSchema = z.object({
   }
 });
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
+
+// M0.5 real-image schemas, shared by the image tools and present_visual.
+const RegionSchema = z.object({
+  x: Point01, y: Point01, x2: Point01, y2: Point01,
+}).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
+const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/).describe("imageId returned by load_image");
+const OpSchema = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("grayscale") }),
+  z.object({ op: z.literal("normalize") }).describe("Stretch contrast to the full range"),
+  z.object({ op: z.literal("clahe"), tile: z.number().int().min(8).max(256).optional(),
+    maxSlope: z.number().min(1).max(10).optional() }).describe("Local adaptive contrast; good for blurry scans, glare, dark PCB photos"),
+  z.object({ op: z.literal("contrast"), factor: z.number().min(0.2).max(4).optional() }),
+  z.object({ op: z.literal("brightness"), factor: z.number().min(0.2).max(4).optional() }),
+  z.object({ op: z.literal("sharpen"), sigma: z.number().min(0.3).max(5).optional() }),
+  z.object({ op: z.literal("denoise"), size: z.union([z.literal(3), z.literal(5), z.literal(7)]).optional() }).describe("Median filter"),
+  z.object({ op: z.literal("threshold"), method: z.enum(["adaptive", "otsu", "fixed"]).optional(),
+    value: z.number().int().min(0).max(255).optional(),
+    blockSize: z.number().int().min(3).max(201).optional(),
+    offset: z.number().min(-50).max(50).optional() }).describe("Black/white; adaptive suits handwriting, book pages and uneven light"),
+  z.object({ op: z.literal("invert") }),
+  z.object({ op: z.literal("edges") }).describe("Sobel edge magnitude; good for traces and line art"),
+]);
 
 function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION });
@@ -201,51 +225,95 @@ function makeServer() {
     );
   }
 
+  const ViewSchema = z.object({
+    label: z.string().min(1).max(24).describe("Short tab name, e.g. 增強對比 or 二值化"),
+    ops: z.array(OpSchema).max(8).default([]),
+    region: RegionSchema.optional(),
+  });
+
   registerAppTool(
     server,
     "present_visual",
     {
       title: "Present a shared visual canvas",
       description:
-        "CANONICAL single shared visual canvas for annotation AND reviewing the same image: it contains three built-in views (annotated editable surface, pristine original, zoomed unmarked focus) in ONE ChatGPT widget. Do NOT also call present_visual_evidence for the same visual task; that is a legacy standalone viewer for explicit backwards-compatible use. For object localization, FIRST use inspect_visual to inspect actual image pixels, THEN choose x/y coordinates and call this present_visual once. For user-supplied coordinates, render directly. No semantic object dictionary or named target IDs; coordinates do not prove the model has recognized an object. Assistant marks are GOLD and user marks BLUE, preserving original authors. Only bundled SVG demo scenes are supported.",
+        "CANONICAL shared visual canvas the user sees in chat. Pass imageId (from load_image) to show the user's REAL photo/scan, or scene for a bundled SVG demo. " +
+        "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
+        "Optional `views` (imageId only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
+        "Coordinates are normalized to the full image, top-left origin. Locate things first with process_image/overlay_grid, then mark them; coordinates are not evidence of recognition. " +
+        "Do NOT also call present_visual_evidence for the same task.",
       inputSchema: z.object({
-        scene: SceneSchema,
+        imageId: ImageIdSchema.optional(),
+        scene: SceneSchema.optional().describe("Bundled demo scene; use only when there is no real image"),
         annotations: ModelAnnotationsSchema.default([]),
+        views: z.array(ViewSchema).max(3).default([]).describe("Optional processed views shown as extra tabs; the original stays the default view"),
         priorUserAnnotations: z.array(VisualAnnotationSchema).max(18).default([]).describe(
           "Only marks the user actually drew and supplied earlier; replayed provenance is not authenticated."
         ),
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.visual_surface"),
-        scene: SceneSchema,
+        scene: SceneSchema.optional(),
+        imageId: z.string().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+        views: z.array(z.object({ label: z.string(), region: RegionSchema })).optional(),
         annotations: VisualAnnotationsSchema,
         coordinateSystem: z.literal("normalized-top-left"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { resourceUri: VISUAL_URI } },
     },
-    async ({ scene, annotations, priorUserAnnotations }) => {
-      let resolved;
+    async ({ imageId, scene, annotations, views, priorUserAnnotations }) => {
       try {
-        const ai=annotations.map(a=>resolveSceneAnnotation(scene,a));
-        const user=priorUserAnnotations.map(replayUserAnnotation);
-        resolved=[...ai,...user];
-      } catch(error) {
-        return {isError:true,content:[{type:"text",text:String(error.message||error)}]};
+        if (!imageId === !scene) throw new Error("Provide exactly one of imageId or scene");
+        if (scene && views.length) throw new Error("views are only available for real images (imageId)");
+        const ai = annotations.map(a => imageId ? resolveCoordinateAnnotation(a) : resolveSceneAnnotation(scene, a));
+        const resolved = [...ai, ...priorUserAnnotations.map(replayUserAnnotation)];
+        if (scene) {
+          return {
+            content: [{
+              type:"text",
+              text:"Estampes scene="+scene+"; geometry/provenance annotations="+JSON.stringify(resolved)+
+                ". No semantic object lookup was performed. These coordinates are geometry only, NOT evidence the model visually located an object. " +
+                "For image-content questions call inspect_visual to see pixels. " +
+                "Previously user-drawn marks retain author=user."
+            }],
+            structuredContent:{
+              kind:"estampes.visual_surface",scene,annotations:resolved,
+              coordinateSystem:"normalized-top-left",
+            },
+          };
+        }
+        const entry = getImage(imageId);
+        const shown = await displayImage(entry);
+        const rendered = [];
+        for (const view of views) {
+          const out = await compactForDisplay(await processImage(entry, { region: view.region, ops: view.ops }));
+          rendered.push({ label: view.label, mimeType: out.mimeType, data: out.data.toString("base64"), region: out.region });
+        }
+        return {
+          content: [{
+            type: "text",
+            text: "Showing " + imageId + " to the user (original by default" +
+              (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + ") with " +
+              resolved.length + " marks: " + JSON.stringify(resolved) +
+              ". Marks are geometry only; the user can draw and send marks back.",
+          }],
+          structuredContent: {
+            kind: "estampes.visual_surface", imageId, width: entry.width, height: entry.height,
+            views: rendered.map(({ label, region }) => ({ label, region })),
+            annotations: resolved, coordinateSystem: "normalized-top-left",
+          },
+          // Pixels go to the widget only; the model already has them from load_image.
+          _meta: {
+            "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
+            "estampes/views": rendered,
+          },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
       }
-      return {
-        content: [{
-          type:"text",
-          text:"Estampes scene="+scene+"; geometry/provenance annotations="+JSON.stringify(resolved)+
-            ". No semantic object lookup was performed. These coordinates are geometry only, NOT evidence the model visually located an object. " +
-            "For image-content questions call inspect_visual to see pixels. " +
-            "Previously user-drawn marks retain author=user."
-        }],
-        structuredContent:{
-          kind:"estampes.visual_surface",scene,annotations:resolved,
-          coordinateSystem:"normalized-top-left",
-        },
-      };
     }
   );
 
@@ -257,7 +325,8 @@ function makeServer() {
       title:"Validate user visual annotations",
       description:"Validate the user's 2D normalized image annotations.",
       inputSchema:z.object({
-        scene:SceneSchema,
+        scene:SceneSchema.optional(),
+        imageId:ImageIdSchema.optional(),
         annotations:VisualAnnotationsSchema,
         intent:z.enum(INTENTS).default("point-out"),
         note:z.string().max(500).default(""),
@@ -265,7 +334,8 @@ function makeServer() {
       }),
       outputSchema:z.object({
         kind:z.literal("estampes.validated_annotations"),
-        scene:SceneSchema,
+        scene:SceneSchema.optional(),
+        imageId:z.string().optional(),
         count:z.number().int(),
         annotations:VisualAnnotationsSchema,
         event:z.record(z.string(),z.unknown()),
@@ -274,19 +344,26 @@ function makeServer() {
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,annotations,intent,note,replyQuote})=>{
+    async ({scene,imageId,annotations,intent,note,replyQuote})=>{
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
-      const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
-      const event=buildAnnotationEvent({scene,annotations:checked,intent,note,replyQuote});
-      const chatMessage=formatAnnotationChatMessage(event);
-      return {
-        content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
-        structuredContent:{
-          kind:"estampes.validated_annotations",scene,
-          count:checked.length,annotations:checked,event,chatMessage,
-        },
-      };
+      try {
+        if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
+        let image;
+        if(imageId){const entry=getImage(imageId);image={imageId,width:entry.width,height:entry.height};}
+        const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
+        const event=buildAnnotationEvent({scene,image,annotations:checked,intent,note,replyQuote});
+        const chatMessage=formatAnnotationChatMessage(event);
+        return {
+          content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
+          structuredContent:{
+            kind:"estampes.validated_annotations",...(scene?{scene}:{imageId}),
+            count:checked.length,annotations:checked,event,chatMessage,
+          },
+        };
+      } catch(error) {
+        return {isError:true,content:[{type:"text",text:String(error?.message||error)}]};
+      }
     }
   );
 
@@ -454,26 +531,6 @@ function makeServer() {
   // Images come from ChatGPT's native file handling (openai/fileParams) or a
   // public URL; there is no Estampes upload UI. Outputs are image blocks for
   // the model plus coordinates normalized to the full oriented source image.
-  const RegionSchema = z.object({
-    x: Point01, y: Point01, x2: Point01, y2: Point01,
-  }).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
-  const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/).describe("imageId returned by load_image");
-  const OpSchema = z.discriminatedUnion("op", [
-    z.object({ op: z.literal("grayscale") }),
-    z.object({ op: z.literal("normalize") }).describe("Stretch contrast to the full range"),
-    z.object({ op: z.literal("clahe"), tile: z.number().int().min(8).max(256).optional(),
-      maxSlope: z.number().min(1).max(10).optional() }).describe("Local adaptive contrast; good for blurry scans, glare, dark PCB photos"),
-    z.object({ op: z.literal("contrast"), factor: z.number().min(0.2).max(4).optional() }),
-    z.object({ op: z.literal("brightness"), factor: z.number().min(0.2).max(4).optional() }),
-    z.object({ op: z.literal("sharpen"), sigma: z.number().min(0.3).max(5).optional() }),
-    z.object({ op: z.literal("denoise"), size: z.union([z.literal(3), z.literal(5), z.literal(7)]).optional() }).describe("Median filter"),
-    z.object({ op: z.literal("threshold"), method: z.enum(["adaptive", "otsu", "fixed"]).optional(),
-      value: z.number().int().min(0).max(255).optional(),
-      blockSize: z.number().int().min(3).max(201).optional(),
-      offset: z.number().min(-50).max(50).optional() }).describe("Black/white; adaptive suits handwriting, book pages and uneven light"),
-    z.object({ op: z.literal("invert") }),
-    z.object({ op: z.literal("edges") }).describe("Sobel edge magnitude; good for traces and line art"),
-  ]);
   const imageBlock = (out) => ({ type: "image", data: out.data.toString("base64"), mimeType: out.mimeType });
   const fail = (error) => ({ isError: true, content: [{ type: "text", text: "Estampes: " + String(error?.message || error) }] });
 

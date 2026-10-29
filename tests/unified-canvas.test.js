@@ -8,10 +8,12 @@ const source=html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
 const index=source.indexOf("function cropBox(mark){");
 const end=source.indexOf("\nfunction renderView()",index);
 assert.ok(index>=0 && end>index);
-const cropBox=new Function(
-  "const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));\n"+
+// Canvas size is a parameter: 640×360 demo scenes, 1000×(aspect) photos.
+const makeCropBox=(VW,VH)=>new Function("VW","VH",
+  "const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));const K=()=>VW/640;\n"+
     source.slice(index,end)+"\nreturn cropBox;"
-)();
+)(VW,VH);
+const cropBox=makeCropBox(640,360);
 
 function assertWithinSource(mark){
   const a=cropBox(mark).split(" ").map(Number);
@@ -58,6 +60,23 @@ test("arrows zoom around the arrowhead, not the tail",()=>{
   );
   assert.ok(x>350 && y>150);
   assert.ok(x+width>=.9*640 && y+height>=.8*360);
+});
+
+test("photo canvases crop in their own aspect ratio",()=>{
+  const portrait=makeCropBox(1000,1333);
+  for(const mark of [{type:"point",x:.5,y:.6},{type:"point",x:1,y:1},{type:"rect",x:.4,y:.5,x2:.6,y2:.71}]){
+    const [x,y,w,h]=portrait(mark).split(" ").map(Number);
+    assert.ok(x>=0&&y>=0&&x+w<=1000.0001&&y+h<=1333.0001);
+    assert.ok(Math.abs(w/h-1000/1333)<1e-8);
+  }
+});
+
+test("real photos render from widget-only _meta and processed views get their own tabs",()=>{
+  assert.match(source,/meta\["estampes\/image"\]/);
+  assert.match(source,/meta\["estampes\/views"\]/);
+  assert.match(source,/toolResponseMetadata/);
+  assert.match(source,/imageId\?\{imageId\}:\{scene:selectedScene\}/);
+  assert.match(source,/viewMode="annotated"/);
 });
 
 test("provenance colors are distinct from viewer inspection marker",()=>{

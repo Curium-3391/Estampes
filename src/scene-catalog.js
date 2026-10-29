@@ -31,8 +31,7 @@ export const landmarkIds = [...new Set(
   Object.values(sceneLandmarks).flatMap(scene=>Object.keys(scene))
 )].sort();
 
-export function resolveSceneAnnotation(scene, mark) {
-  if(!sceneLandmarks[scene]) throw new Error("Unknown scene: "+scene);
+function checkAssistantMark(mark) {
   if(!mark || !["point","rect","arrow"].includes(mark.type)) {
     throw new Error("Unsupported annotation");
   }
@@ -42,19 +41,12 @@ export function resolveSceneAnnotation(scene, mark) {
   if(/^user[-_]/i.test(mark.id) || /^YOU(?:\s|[-_]|$)/i.test(mark.label??"")) {
     throw new Error("User-authored mark must be passed via priorUserAnnotations");
   }
-  const base={id:mark.id,type:mark.type,label:mark.label};
-  if(mark.targetId!==undefined) {
-    const target=sceneLandmarks[scene][mark.targetId];
-    if(!target) throw new Error("Unknown landmark "+mark.targetId+" for "+scene);
-    if(mark.type==="arrow") throw new Error("Arrows need explicit start and end coordinates");
-    // Occluded mountains do not have a tight rectangular visual footprint.
-    // A coarse triangle-wide box would falsely include the foreground tree.
-    if(mark.type==="rect" && mark.targetId.startsWith("mountain-")) {
-      throw new Error("Mountains are occluded; use a point or future polygon mask, not a misleading bbox");
-    }
-    const geom=mark.type==="point"?target.point:target.box;
-    return {...base,...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
-  }
+}
+
+// Coordinate-only assistant mark, for any image (demo scene or real photo).
+export function resolveCoordinateAnnotation(mark) {
+  checkAssistantMark(mark);
+  if(mark.targetId!==undefined) throw new Error("Named targets are not supported; give x/y coordinates");
   if(!Number.isFinite(mark.x)||!Number.isFinite(mark.y)||
      mark.x<0||mark.x>1||mark.y<0||mark.y>1) {
     throw new Error("Invalid ungrounded coordinates");
@@ -64,9 +56,25 @@ export function resolveSceneAnnotation(scene, mark) {
       mark.x2<0||mark.x2>1||mark.y2<0||mark.y2>1)) {
     throw new Error("Invalid endpoint");
   }
-  return {...base,x:mark.x,y:mark.y,
+  return {id:mark.id,type:mark.type,label:mark.label,x:mark.x,y:mark.y,
     ...(mark.type==="point"?{}:{x2:mark.x2,y2:mark.y2}),
     author:"assistant",grounding:"unverified"};
+}
+
+export function resolveSceneAnnotation(scene, mark) {
+  if(!sceneLandmarks[scene]) throw new Error("Unknown scene: "+scene);
+  checkAssistantMark(mark);
+  if(mark.targetId===undefined) return resolveCoordinateAnnotation(mark);
+  const target=sceneLandmarks[scene][mark.targetId];
+  if(!target) throw new Error("Unknown landmark "+mark.targetId+" for "+scene);
+  if(mark.type==="arrow") throw new Error("Arrows need explicit start and end coordinates");
+  // Occluded mountains do not have a tight rectangular visual footprint.
+  // A coarse triangle-wide box would falsely include the foreground tree.
+  if(mark.type==="rect" && mark.targetId.startsWith("mountain-")) {
+    throw new Error("Mountains are occluded; use a point or future polygon mask, not a misleading bbox");
+  }
+  const geom=mark.type==="point"?target.point:target.box;
+  return {id:mark.id,type:mark.type,label:mark.label,...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
 }
 
 export function replayUserAnnotation(mark) {
