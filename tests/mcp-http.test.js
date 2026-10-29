@@ -89,7 +89,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const visualTool=tools.tools.find(t=>t.name==="present_visual");
     assert.ok(visualTool,"present_visual tool missing");
     assert.match(visualTool.description,/Users will not name tools/);
-    assert.deepEqual(visualTool._meta?.["openai/fileParams"],["image","marksFile"]);
+    assert.deepEqual(visualTool._meta?.["openai/fileParams"],["image","marksFile","pairImage"]);
     assert.match(visualTool.description,/never ask without one/);
     assert.match(visualTool.description,/Choose color, size and pen YOURSELF/);
     assert.match(visualTool.description,/Do NOT also call present_visual_evidence/);
@@ -135,6 +135,12 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.deepEqual(loader?._meta?.ui?.visibility,["app"]);
     const tiles=tools.tools.find(t=>t.name==="load_visual_region");
     assert.deepEqual(tiles?._meta?.ui?.visibility,["app"]);
+    // Link verdicts come only from the user's canvas, never from the model.
+    const reviewer=tools.tools.find(t=>t.name==="review_visual_link");
+    assert.deepEqual(reviewer?._meta?.ui?.visibility,["app"]);
+    assert.ok(visualTool.inputSchema.properties.links&&visualTool.inputSchema.properties.pairImageId);
+    const lonely=await client.callTool({name:"present_visual",arguments:{scene:"landscape",links:[{id:"k",left:"a",right:"b"}]}});
+    assert.match(lonely.content[0].text,/need a paired view/);
     const missing=await client.callTool({name:"load_visual_canvas",arguments:{imageId:"img:0000000000000000"}});
     assert.equal(missing.isError,true);
     const userMarks=[{id:"user-1",type:"point",x:0,y:1,label:"Edge"},

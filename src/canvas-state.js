@@ -149,3 +149,102 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
   }
   return added;
 }
+
+// ---- Paired images ----------------------------------------------------------
+// Two different images side by side (a schematic and a board photo, a map and
+// an aerial photo, a drawing and the object). Each keeps its own marks and
+// coordinates; links say "this left mark and this right mark are the same
+// thing". Links live on the left entry, keyed by the right image, so showing
+// the same pair again brings them back. GPT gives each link a confidence;
+// the user confirms or rejects links, which GPT then reads back.
+export const LINK_CONFIDENCE = ["high", "medium", "low"];
+export const LINK_REVIEW = ["confirmed", "rejected"];
+
+const linksOf = (left, rightId) => {
+  left.pairLinks ??= new Map();
+  if (!left.pairLinks.has(rightId)) left.pairLinks.set(rightId, new Map());
+  return left.pairLinks.get(rightId);
+};
+
+export function pairLinks(left, right) {
+  const links = linksOf(left, right.imageId), l = marksOf(left), r = marksOf(right);
+  // A link whose mark was removed goes with it.
+  for (const [id, link] of links) if (!l.has(link.left) || !r.has(link.right)) links.delete(id);
+  return [...links.values()];
+}
+
+const sideError = (stage, i, id, message) =>
+  new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + message);
+
+// Apply one paired present_visual call. Annotations carry side left|right;
+// findings and remove find their mark on either image. All or nothing.
+export function applyPairChanges(left, right, { annotations = [], findings = [], remove = [], reset = false,
+  priorUser = [], layer, frame, links = [], removeLinks = [], resolve }) {
+  const restoreLeft = snapshotCanvas(left), restoreRight = snapshotCanvas(right);
+  const store = linksOf(left, right.imageId), savedLinks = new Map(store);
+  try {
+    const entries = { left, right }, other = { left: right, right: left };
+    const split = { left: { annotations: [], findings: [], remove: [], priorUser: [] }, right: { annotations: [], findings: [], remove: [], priorUser: [] } };
+    if (reset) store.clear();
+    const sideOf = (id) => marksOf(left).has(id) ? "left" : marksOf(right).has(id) ? "right" : null;
+    annotations.forEach((a, i) => {
+      const side = a.side ?? "left";
+      if (!reset && marksOf(other[side]).has(a.id)) {
+        throw sideError("annotations", i, a.id, "field id is already a mark on the " + (side === "left" ? "right" : "left") + " image; ids must be unique across the pair");
+      }
+      const { side: _s, ...mark } = a;
+      split[side].annotations.push(mark);
+    });
+    priorUser.forEach((m) => { const { side = "left", ...mark } = m; split[side].priorUser.push(mark); });
+    findings.forEach((f, i) => {
+      // A mark added in this same call counts, on whichever side it was added.
+      const added = ["left", "right"].find((s) => split[s].annotations.some((a) => a.id === f.id));
+      const side = added ?? (reset ? null : sideOf(f.id));
+      if (!side) throw sideError("findings", i, f.id, "no such mark on either image");
+      split[side].findings.push(f);
+    });
+    remove.forEach((id, i) => {
+      const side = sideOf(id);
+      if (!side) throw sideError("remove", i, id, "no such mark on either image");
+      split[side].remove.push(id);
+    });
+    const changed = [];
+    for (const side of ["left", "right"]) {
+      changed.push(...applyChanges(entries[side], {
+        ...split[side], reset, layer, resolve,
+        frame: frame && (frame.side ?? "left") === side ? frame : undefined,
+      }));
+    }
+    removeLinks.forEach((id, i) => {
+      if (!store.delete(id)) throw new Error("present_visual removeLinks[" + i + "] (link " + JSON.stringify(id) + "): no such link");
+    });
+    links.forEach((link, i) => {
+      const where = "present_visual links[" + i + "] (link " + JSON.stringify(link.id) + "): ";
+      if (!marksOf(left).has(link.left)) throw new Error(where + "field left " + JSON.stringify(link.left) + " is not a mark on the left image");
+      if (!marksOf(right).has(link.right)) throw new Error(where + "field right " + JSON.stringify(link.right) + " is not a mark on the right image");
+      const old = store.get(link.id);
+      const moved = old && (old.left !== link.left || old.right !== link.right);
+      // A user's review stays with the link unless GPT re-points it.
+      store.set(link.id, {
+        ...(old && !moved ? old : {}), ...link, author: "assistant",
+        confidence: LINK_CONFIDENCE.includes(link.confidence) ? link.confidence : old?.confidence ?? "medium",
+      });
+      if (moved) { delete store.get(link.id).review; }
+    });
+    return changed;
+  } catch (error) {
+    restoreLeft(); restoreRight();
+    left.pairLinks.set(right.imageId, savedLinks);
+    throw error;
+  }
+}
+
+// The user's verdict on one link, from the canvas.
+export function reviewLink(left, right, id, review) {
+  if (!LINK_REVIEW.includes(review)) throw new Error("review must be confirmed or rejected");
+  const store = linksOf(left, right.imageId), link = store.get(id);
+  if (!link) throw new Error("No link " + id + " between these images");
+  const next = { ...link, review };
+  store.set(id, next);
+  return next;
+}

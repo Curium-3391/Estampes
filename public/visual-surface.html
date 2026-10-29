@@ -45,6 +45,16 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #layers label.off{opacity:.5;text-decoration:line-through}
 #layers .dot{width:9px;height:9px;border-radius:50%}#layers .count{color:GrayText;font-variant-numeric:tabular-nums}
 #layers button{padding:4px 9px;font-size:.8rem}
+#links{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+#links:empty{display:none}
+#links li{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
+#links li.selected{border-color:#356BD6;box-shadow:0 0 0 1px #356BD6}
+#links li.rejected{opacity:.55}#links li.rejected .what{text-decoration:line-through}
+#links .num{display:inline-grid;place-items:center;min-width:1.6em;height:1.6em;border-radius:50%;color:#fff;font-weight:700;font-size:.8rem}
+#links .what{font-weight:700}#links .ends{color:GrayText;font-size:.8rem}#links .note{flex-basis:100%;overflow-wrap:anywhere}
+#links .chip{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;color:GrayText;white-space:nowrap}
+#links .chip.ask{border-color:#E08A1E;color:#E08A1E;font-weight:700}
+#links button{padding:3px 9px;font-size:.8rem}
 #style-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:-4px 0 12px}
 #style-tools[hidden]{display:none}
 #style-tools .swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #8886}
@@ -93,12 +103,13 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 </div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
-<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
 <div id="layers" hidden role="group" aria-label="圖層：勾選要顯示的標記"></div>
+<ol id="links" aria-label="左右兩張圖的對應連結"></ol>
 <ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
 <label for="intent">這次標註的目的</label>
@@ -172,7 +183,11 @@ const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公�
 // their own aspect ratio, so normalized coordinates map without distortion.
 let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
 const IMAGE_ID=/^img:[0-9a-f]{16}$/;
-const K=()=>VW/640;
+// Paired view: two different images side by side, each 1000 units wide,
+// so ink and labels keep the size they have on a single photo.
+let pair=null,frames=null;
+const GAP=40;
+const K=()=>(pair?1000:VW)/640;
 // User zoom: the visible part of the canvas, in canvas units (null = all).
 const MAX_ZOOM=24;
 let cam=null,detail=null;
@@ -180,13 +195,42 @@ const Z=()=>cam?VW/cam.w:1;
 // One "screen unit": K at full view, smaller when zoomed, so drawing
 // thresholds and labels stay the same size on screen.
 const U=()=>K()/Z();
+function layoutPair(wl,hl,wr,hr){
+ const hL=wl>0&&hl>0?Math.round(1000*hl/wl):750,hR=wr>0&&hr>0?Math.round(1000*hr/wr):750;
+ frames={left:{x0:0,y0:0,w:1000,h:hL},right:{x0:1000+GAP,y0:0,w:1000,h:hR}};
+ VW=2000+GAP;VH=Math.max(hL,hR);
+}
+// Marks are kept in canvas-normalized coordinates while shown; the server
+// and GPT use coordinates normalized to the mark's own image (`side`).
+function mapMark(m,f){
+ const out={...m},[x,y]=f(m.x,m.y);out.x=x;out.y=y;
+ if(m.x2!==undefined){const [x2,y2]=f(m.x2,m.y2);out.x2=x2;out.y2=y2;}
+ if(m.points)out.points=m.points.map(p=>{const [px,py]=f(p.x,p.y);return {x:px,y:py};});
+ return out;
+}
+const frameOf=m=>frames[m.side==="right"?"right":"left"];
+const toView=m=>{if(!pair)return m;const f=frameOf(m);return mapMark(m,(x,y)=>[(f.x0+x*f.w)/VW,(f.y0+y*f.h)/VH]);};
+const toSide=m=>{if(!pair)return m;const f=frameOf(m);
+ return mapMark(m,(x,y)=>[round(clamp((x*VW-f.x0)/f.w,0,1)),round(clamp((y*VH-f.y0)/f.h,0,1))]);};
+const sideAt=p=>pair&&p.x*VW>1000+GAP/2?"right":"left";
+// Layer ids are per image; the right image's get an R prefix on screen.
+const viewLayer=m=>pair&&m.side==="right"&&m.layer?{...m,layer:"R"+m.layer}:m;
+const fromServer=m=>pair?toView(viewLayer({...m,side:m.side==="right"?"right":"left"})):m;
+// Links: "this left mark and this right mark are the same thing".
+const linksEl=document.querySelector("#links"),linkEl=document.querySelector("#link-annotations");
+let links=[],selectedLink=null,unsentReviews=[];
+const LINK_COLORS=["#E4572E","#2E86AB","#3BB273","#C03AA8","#E1A100","#00A6A6","#7D5BA6","#D1495B"];
+const CONFIDENCE_TEXT={high:"信心高",medium:"信心中",low:"信心低"};
+const cleanLinks=list=>(Array.isArray(list)?list:[]).filter(l=>l&&typeof l.id==="string"&&typeof l.left==="string"&&typeof l.right==="string")
+ .map(l=>({id:l.id.slice(0,64),left:l.left,right:l.right,label:String(l.label??"").slice(0,64),note:String(l.note??"").slice(0,200),
+   confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null})).slice(0,30);
 // Layers: each send and each GPT drawing call is one layer of marks. The
 // viewer hides whole layers; hidden layers stay on the canvas and in GPT's
 // context. Unsent marks have no layer yet and are always shown.
 const layersEl=document.querySelector("#layers");
 let layers=[],hiddenLayers=new Set();
 const shown=m=>!m.layer||!hiddenLayers.has(m.layer);
-const LAYER_ID=/^L\d{1,6}$/;
+const LAYER_ID=/^R?L\d{1,6}$/;
 const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
  .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40)})).slice(0,60);
 // Visibility is remembered per photo for this widget instance when the host
@@ -195,7 +239,8 @@ const savedHidden=()=>{try{return window.openai?.widgetState?.hiddenLayers?.[ima
 function saveHidden(){try{const st=window.openai?.widgetState??{};
  window.openai?.setWidgetState?.({...st,hiddenLayers:{...(st.hiddenLayers??{}),[imageId]:[...hiddenLayers]}});}catch{}}
 function setLayers(list){
- const next=cleanLayers(list);
+ // Paired view: each image numbers its own layers.
+ const next=cleanLayers(pair?(Array.isArray(list)?list:[]).map(l=>l?.side==="right"?{...l,id:"R"+l.id,name:"右 · "+l.name}:{...l,name:"左 · "+l.name}):list);
  if(JSON.stringify(next)===JSON.stringify(layers))return;
  layers=next;const known=new Set(layers.map(l=>l.id));
  hiddenLayers=new Set([...hiddenLayers,...savedHidden()].filter(id=>known.has(id)));
@@ -320,6 +365,59 @@ function renderMarks(layer,items,color,author){
    labelNode.textContent=label;
  }
 }
+function linkAnchor(m){
+ const x=Math.min(px(m.x),px(m.x2??m.x)),y=Math.min(py(m.y),py(m.y2??m.y));
+ return {x,y};
+}
+function renderLinks(){
+ linkEl.replaceChildren();linksEl.replaceChildren();
+ if(!pair)return;
+ const all=new Map([...assistantMarks,...priorUserMarks,...userMarks].map(m=>[m.id,m]));
+ const lk=U();
+ links.forEach((l,i)=>{
+   const color=l.review==="rejected"?"#888":LINK_COLORS[i%LINK_COLORS.length],a=all.get(l.left),b=all.get(l.right);
+   const ask=!l.review&&l.confidence==="low";
+   const ends=[a,b].filter(m=>m&&shown(m)).map(linkAnchor);
+   if(l.id===selectedLink&&ends.length===2)node("line",{x1:ends[0].x,y1:ends[0].y,x2:ends[1].x,y2:ends[1].y,stroke:color,"stroke-width":2.5*lk,"stroke-dasharray":(8*lk)+" "+(6*lk)},linkEl);
+   for(const e of ends){
+     const r=(l.id===selectedLink?13:10)*lk;
+     node("circle",{cx:e.x,cy:e.y,r,fill:color,stroke:"#fff","stroke-width":2*lk,...(ask?{"stroke-dasharray":(4*lk)+" "+(3*lk)}:{})},linkEl);
+     const t=node("text",{x:e.x,y:e.y+4.5*lk,"text-anchor":"middle","font-size":12*lk,"font-weight":700,fill:"#fff"},linkEl);
+     t.textContent=String(i+1);
+   }
+   const li=document.createElement("li");li.dataset.link=l.id;
+   li.classList.toggle("selected",l.id===selectedLink);li.classList.toggle("rejected",l.review==="rejected");
+   const num=document.createElement("span");num.className="num";num.style.background=color;num.textContent=String(i+1);
+   const what=document.createElement("span");what.className="what";what.textContent=l.label||l.id;
+   const name=m=>m?(m.label||m.id):"（已刪除）";
+   const endsText=document.createElement("span");endsText.className="ends";endsText.textContent="左 "+name(a)+" ↔ 右 "+name(b);
+   const chip=document.createElement("span");chip.className="chip"+(ask?" ask":"");
+   chip.textContent=l.review==="confirmed"?"你已確認":l.review==="rejected"?"你已否決":ask?"信心低 · 待你確認":CONFIDENCE_TEXT[l.confidence];
+   li.append(num,what,endsText,chip);
+   if(!l.review){
+     for(const [verdict,text] of [["confirmed","確認"],["rejected","否決"]]){
+       const btn=document.createElement("button");btn.dataset.review=verdict;btn.textContent=text;li.append(btn);
+     }
+   }
+   if(l.note){const n=document.createElement("span");n.className="note";n.textContent=l.note;li.append(n);}
+   linksEl.append(li);
+ });
+}
+linksEl.addEventListener("click",async e=>{
+ const li=e.target.closest("li");if(!li)return;
+ const id=li.dataset.link,verdict=e.target.closest("button")?.dataset.review;
+ if(!verdict){selectedLink=selectedLink===id?null:id;render();return;}
+ if(!ready)return;
+ try{
+   const result=await request("tools/call",{name:"review_visual_link",arguments:{imageId,pairImageId:pair.imageId,linkId:id,review:verdict}});
+   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   const link=cleanLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
+   links=links.map(l=>l.id===id?link:l);
+   unsentReviews=[...unsentReviews.filter(r=>r.id!==id),link];
+   status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
+ }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
+ render();
+});
 const markOptions=()=>[
  ...assistantMarks.map((mark,i)=>({key:"ai-"+i,mark,author:"AI"})),
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
@@ -332,7 +430,7 @@ function renderFindings(){
    const m=item.mark;if(!m.note&&!m.status)continue;
    const li=document.createElement("li");li.dataset.key=item.key;
    const who=document.createElement("span");who.className="who";who.style.color=item.author==="AI"?"#C98A2E":"#3C7FE0";
-   who.textContent=m.label||(item.author==="AI"?"GPT":"YOU");li.append(who);
+   who.textContent=(pair?(m.side==="right"?"右 ":"左 "):"")+(m.label||(item.author==="AI"?"GPT":"YOU"));li.append(who);
    if(m.note){const t=document.createElement("span");t.className="note";t.textContent=m.note;li.append(t);}
    if(STATUS_TEXT[m.status]){const b=document.createElement("span");b.className="badge";b.textContent=STATUS_TEXT[m.status];li.append(b);}
    findingsEl.append(li);
@@ -392,11 +490,19 @@ function renderView(){
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?processed.label+" · 處理後檢視（不含標註）":
    {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
- document.querySelector("#caption").textContent=(imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
+ document.querySelector("#caption").textContent=(pair?"左 "+imageId+" ｜ 右 "+pair.imageId+" · 左右對照，不疊合":imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
 }
 function render(){
  hit.setAttribute("width",VW);hit.setAttribute("height",VH);
- if(imageId){
+ if(imageId&&pair){
+   sceneEl.replaceChildren();
+   for(const [side,href] of [["left",photo],["right",pair.photo]]){
+     const f=frames[side];
+     if(href)node("image",{href,x:f.x0,y:f.y0,width:f.w,height:f.h,preserveAspectRatio:"none"},sceneEl);
+     else{node("rect",{x:f.x0,y:f.y0,width:f.w,height:f.h,fill:"#8882"},sceneEl);
+       const t=node("text",{x:f.x0+f.w/2,y:f.y0+f.h/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);t.textContent="正在載入圖片…";}
+   }
+ }else if(imageId){
    sceneEl.replaceChildren();
    if(photo){node("image",{href:photo,x:0,y:0,width:VW,height:VH,preserveAspectRatio:"none"},sceneEl);
      if(detail&&cam){const r=detail.region;node("image",{href:detail.href,x:r.x*VW,y:r.y*VH,width:(r.x2-r.x)*VW,height:(r.y2-r.y)*VH,preserveAspectRatio:"none"},sceneEl);}}
@@ -413,10 +519,10 @@ function render(){
  renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
- send.disabled=!ready||fresh===0;
+ send.disabled=!ready||(fresh===0&&!unsentReviews.length);
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
- exportImageBtn.hidden=!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!(imageId&&exportLinks?.marks);
- renderLayers();renderFindings();
+ exportImageBtn.hidden=!!pair||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!pair||!(imageId&&exportLinks?.marks);
+ renderLayers();renderLinks();renderFindings();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -434,21 +540,30 @@ focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;ren
 let appliedKey=null;
 function applyInput(args){
  if(!args)return;
- const key=JSON.stringify([args.imageId,args.scene,args.width,args.height,args.annotations]);
+ const pairId=args.pair?.imageId??args.pairImageId;
+ const key=JSON.stringify([args.imageId,args.scene,args.width,args.height,pairId,args.pair?.width,args.pair?.height,args.annotations]);
  if(key===appliedKey)return;
  appliedKey=key;
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
-   const sameImage=args.imageId===imageId;
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();renderViewTabs();}
+   const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
+   const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;unsentReviews=[];renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
-   VW=1000;if(w>0&&h>0)VH=Math.round(1000*h/w);else if(!sameImage)VH=750;
+   if(pid){
+     const pw=Number(args.pair?.width),ph=Number(args.pair?.height);
+     if(!sameImage||pw>0)pair={photo:pair?.photo??null,imageId:pid,width:pw,height:ph};
+     if(!sameImage||(w>0&&pw>0))layoutPair(w,h,pair.width,pair.height);
+   }else{
+     pair=null;frames=null;
+     VW=1000;if(w>0&&h>0)VH=Math.round(1000*h/w);else if(!sameImage)VH=750;
+   }
  }else if(Object.hasOwn(SCENES,args.scene)){
    selectedScene=args.scene;imageId=null;photo=null;views=[];renderViewTabs();VW=640;VH=360;
  }else return;
- const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,60):[];
- assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,30);
- priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,30);
+ const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,120).map(fromServer):[];
+ assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,60);
+ priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,60);
  userMarks=[];past=[];future=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
  // The result normally brings the pixels; if it never does, fetch them.
  if(imageId)setTimeout(()=>{if(imageId&&!photo)syncCanvas()},6000);
@@ -465,6 +580,7 @@ function applyResult(result){
  applyInput({...r,annotations:full??r.annotations??[]});
  exportLinks=r.exports??exportLinks;
  if(Array.isArray(r.layers))setLayers(r.layers);
+ if(pair){links=cleanLinks(r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;}
  if(imageId){
    photo=dataUrl(meta["estampes/image"])??photo;
    const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
@@ -473,7 +589,7 @@ function applyResult(result){
    const sig=list=>JSON.stringify(list.map(v=>[v.label,v.region,v.href.length]));
    if(incoming&&sig(next)!==sig(views)){views=next;renderViewTabs();}
    setCheck(r.check??null);
-   if(!photo||(!full&&!r.annotations))syncCanvas(!!photo);
+   if(!photo||(pair&&!pair.photo)||(!full&&!r.annotations))syncCanvas(!!photo&&(!pair||!!pair.photo));
  }
  render();
 }
@@ -485,22 +601,26 @@ let pendingSync=null;
 async function syncCanvas(force=false){
  // Results can arrive before the host handshake finishes; sync after it.
  if(!ready){pendingSync=pendingSync||force;return;}
- if(!imageId||(photo&&!force)||syncing)return;
+ if(!imageId||(photo&&(!pair||pair.photo)&&!force)||syncing)return;
  syncing=true;const id=imageId;
  status.textContent="照片沒有隨結果送到，正在重新載入…";
  try{
-   const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:id}});
+   const pid=pair?.imageId;
+   const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:id,...(pid?{pairImageId:pid}:{})}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
    const r=result?.structuredContent;
    if(r?.kind!=="estampes.visual_canvas"||r.imageId!==id)throw Error("Unexpected response");
-   if(id!==imageId)return;
+   if(id!==imageId||pid!==pair?.imageId)return;
    photo=dataUrl(r.image)??photo;exportLinks=r.exports??exportLinks;
+   if(pid&&r.pair?.imageId===pid){
+     pair.photo=dataUrl(r.pair.image)??pair.photo;pair.width=Number(r.pair.width);pair.height=Number(r.pair.height);
+     layoutPair(Number(r.width),Number(r.height),pair.width,pair.height);links=cleanLinks(r.links);
+   }else if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
    if(Array.isArray(r.layers))setLayers(r.layers);
-   if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
-   const marks=Array.isArray(r.annotations)?r.annotations.filter(valid).slice(0,60):[];
+   const marks=Array.isArray(r.annotations)?r.annotations.filter(valid).slice(0,120).map(fromServer):[];
    const mine=new Set(userMarks.map(m=>m.id));
-   assistantMarks=marks.filter(a=>a.author!=="user").slice(0,30);
-   priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,30);
+   assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
+   priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,60);
    views=(Array.isArray(r.views)?r.views:[]).map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
    renderViewTabs();setCheck(r.check??null);
@@ -637,7 +757,7 @@ document.addEventListener("keyup",e=>{if(e.code==="Space")spaceDown=false;});
 let detailTimer=0,detailSeq=0;
 function scheduleDetail(){
  clearTimeout(detailTimer);
- if(!imageId||!photo||!cam||Z()<1.5)return;
+ if(!imageId||!photo||pair||!cam||Z()<1.5)return;
  detailTimer=setTimeout(loadDetail,250);
 }
 async function loadDetail(){
@@ -674,6 +794,8 @@ hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
    :{...draft(start,p),id:ID_PREFIX+(++seq)};
+ // Paired view: a mark belongs to the image it was started on and stays inside it.
+ if(pair)mark=toView(toSide({...mark,side:sideAt(start)}));
  if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
@@ -736,12 +858,28 @@ window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
  catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
+// The user's verdicts on GPT's links, as text GPT reads in the chat.
+function reviewMessage(list){
+ return "我在 Estampes 左右對照畫布審核了你的連結（左 "+imageId+"，右 "+pair?.imageId+"）：\n"+
+   list.map(l=>"- "+(l.label||l.id)+"（左 "+l.left+" ↔ 右 "+l.right+"）："+(l.review==="confirmed"?"確認是同一個":"否決，不是同一個")).join("\n")+
+   "\n請以我的判斷為準，之後的推理不要再依賴被否決的連結。";
+}
 send.addEventListener("click",async()=>{
  const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
- if(!ready||!freshIds.length)return;
+ const reviewed=unsentReviews;
+ if(!ready||(!freshIds.length&&!reviewed.length))return;
  send.disabled=true;
- const marks=userMarks.map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen})=>({
-   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,
+ if(!freshIds.length){
+   try{
+     const response=await request("ui/message",{role:"user",content:[{type:"text",text:reviewMessage(reviewed)}]});
+     if(response?.isError)throw Error("Host rejected message");
+     unsentReviews=unsentReviews.filter(r=>!reviewed.includes(r));
+     status.textContent="已把你對連結的判斷傳給 GPT。";
+   }catch(err){status.textContent="傳送失敗："+String(err.message||err)}
+   render();return;
+ }
+ const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen,side})=>({
+   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,...(pair?{side}:{}),
    role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"
  }));
@@ -753,7 +891,7 @@ send.addEventListener("click",async()=>{
    status.textContent="正在驗證座標並整理對話上下文…";
    const result=await request("tools/call",{
      name:"validate_visual_annotations",
-     arguments:{...(imageId?{imageId}:{scene:selectedScene}),annotations:marks,intent,note,replyQuote}
+     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),annotations:marks,intent,note,replyQuote}
    });
    if(result?.isError)throw Error("Tool rejected annotations");
    const r=result?.structuredContent;
@@ -766,9 +904,11 @@ send.addEventListener("click",async()=>{
    chatMessage=r.chatMessage;
    validated=true;
    // The server put this send's new marks in one layer.
-   const layer=cleanLayers(r.layer?[{...r.layer,author:"user"}]:[])[0];
-   if(layer){
-     for(const m of userMarks)if(freshIds.includes(m.id))m.layer=layer.id;
+   const sent=pair?[["left",r.layer,"左 · "],["right",r.pairLayer,"右 · "]]:[["left",r.layer,""]];
+   for(const [side,raw,prefix] of sent){
+     const layer=cleanLayers(raw?[{...raw,id:(side==="right"?"R":"")+raw.id,name:prefix+raw.name,author:"user"}]:[])[0];
+     if(!layer)continue;
+     for(const m of userMarks)if(freshIds.includes(m.id)&&(!pair||(m.side??"left")===side))m.layer=layer.id;
      if(!layers.some(l=>l.id===layer.id))layers=[...layers,layer];
    }
  }catch(err){reason=String(err.message||err)}
@@ -782,10 +922,12 @@ send.addEventListener("click",async()=>{
        "沒有前文的精確引述，請勿猜測。\n")+
      (imageId?"照片 imageId="+imageId+"，請用 process_image 檢視標註位置；":
        "SVG 底圖 id=demo:"+selectedScene+" revision=svg-v1 viewBox=640×360，")+
+     (pair?"右圖 imageId="+pair.imageId+"，每個標註的 side 表示在左圖或右圖；":"")+
      "原圖左上角為原點，座標為 0..1。\n"+
      "點是位置，框是範圍，箭頭尖端(x2,y2)是目標。\n"+
      "未經驗證的標註："+JSON.stringify(marks);
  }
+ if(reviewed.length)chatMessage+="\n\n"+reviewMessage(reviewed);
  try{
    status.textContent=(validated?"座標與意圖已驗證；":"驗證失敗，嘗試傳送原始資料；")+
      "訊息送往 GPT 中…";
@@ -794,6 +936,7 @@ send.addEventListener("click",async()=>{
    });
    if(response?.isError)throw Error("Host rejected message");
    for(const id of freshIds)sentIds.add(id);
+   unsentReviews=unsentReviews.filter(r=>!reviewed.includes(r));
    past=[];future=[];
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
      (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
