@@ -21,16 +21,6 @@ function makeServer(){
     annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
     _meta:{ui:{resourceUri:WIDGET}}
   },async({target})=>({content:[{type:"text",text:"Estampes number line: AI pointed to "+target+". Ask the user to tap another number in the interactive widget."}],structuredContent:{kind:"estampes.number_line",target,x:valueToX(target)}}));
-  registerAppTool(server,"record_number_line_selection",{
-    title:"Record user number-line selection",
-    description:"Record a value selected by the user inside the Estampes widget and return the normalized coordinate.",
-    inputSchema:{value:z.number().int().min(-4).max(4)},
-    annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},
-    _meta:{ui:{visibility:["app"]}}
-  },async({value})=>({
-    content:[{type:"text",text:"Estampes user selected "+value+" on the number line (normalized x="+valueToX(value)+")."}],
-    structuredContent:{kind:"estampes.user_selection",value,x:valueToX(value),y:0.5}
-  }));
   return server;
 }
 const port=Number(process.env.PORT??8787);
@@ -39,6 +29,8 @@ createServer(async(req,res)=>{
   if(url.pathname==="/"&&req.method==="GET"){res.writeHead(200,{"content-type":"text/plain"}).end("Estampes MCP M0");return}
   if(url.pathname==="/mcp"&&req.method==="OPTIONS"){res.writeHead(204,{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,DELETE,OPTIONS","access-control-allow-headers":"content-type,mcp-session-id,mcp-protocol-version,accept","access-control-expose-headers":"Mcp-Session-Id"}).end();return}
   if(url.pathname==="/mcp"&&["GET","POST","DELETE"].includes(req.method)){
+    const began=Date.now();
+    res.once("finish",()=>console.log("[mcp] "+req.method+" status="+res.statusCode+" ms="+(Date.now()-began)));
     res.setHeader("access-control-allow-origin","*");res.setHeader("access-control-expose-headers","Mcp-Session-Id");
     const server=makeServer(),transport=new StreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});
     res.on("close",()=>{void transport.close();void server.close()});
