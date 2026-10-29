@@ -62,6 +62,47 @@ function makeServer() {
     })
   );
 
+
+  // Called from the embedded widget, not from the model.
+  // Stateless on purpose for M0: validate and echo the selected value.
+  registerAppTool(
+    server,
+    "record_number_line_selection",
+    {
+      title: "Validate number-line selection",
+      description:
+        "Validate a number picked by the user in the Estampes number-line UI, and return its normalized coordinate.",
+      inputSchema: z.object({
+        value: z.number().int().min(-4).max(4),
+      }),
+      outputSchema: z.object({
+        kind: z.literal("estampes.user_selection"),
+        value: z.number().int().min(-4).max(4),
+        x: z.number(),
+        y: z.number(),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
+      _meta: { ui: { resourceUri: WIDGET, visibility: ["app"] } },
+    },
+    async ({ value }) => ({
+      content: [{
+        type: "text",
+        text: "Estampes selection validated: " + value +
+          " (normalized x=" + valueToX(value) + ").",
+      }],
+      structuredContent: {
+        kind: "estampes.user_selection",
+        value,
+        x: valueToX(value),
+        y: 0.5,
+      },
+    })
+  );
+
   return server;
 }
 
