@@ -109,6 +109,7 @@ export function formatAnnotationChatMessage(event) {
     JSON.stringify(event),
     "請先使用 Estampes 的 inspect_visual 工具檢視實際底圖與我標註的局部影像，再解釋我指的東西；參數：scene="+event.image.id.replace(/^demo:/,"")+", imageId="+event.image.id+", revision="+event.image.revision+"；focus 請使用各標註的 type 與 geometry.x/y/x2/y2，必要時每個標註分別呼叫一次。",
     "Estampes 只提供像素、裁切與位置，不會替你辨識物件。若宿主無法將工具回傳的 image blocks 提供給視覺模型，請誠實告知，而不是只靠座標或場景名稱猜物件。",
+    "若使用者要求在聊天裡看見圖片，請使用相同的 scene/imageId/revision/focus 呼叫 present_visual_evidence；inspect_visual 只提供資料，不會自動開啟圖片檢視器。",
     "請優先回應我所選的意圖與補充說明；若不能確認物件或對話所指，請指出不確定之處。"
   );
   return lines.join("\n");
