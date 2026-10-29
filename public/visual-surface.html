@@ -34,9 +34,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #findings .who{font-weight:700;white-space:nowrap}
 #findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
 #findings .note{overflow-wrap:anywhere}
+#style-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:-4px 0 12px}
+#style-tools[hidden]{display:none}
+#style-tools .swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #8886}
+#style-tools .swatch[aria-pressed="true"]{outline:3px solid #356BD6;outline-offset:2px}
+#style-tools .sep{width:1px;height:24px;background:#8886;margin:0 4px}
 </style></head><body><main>
 <header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
-<p class="help">同一張圖片，同一套座標。<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>；預設顯示原圖，可直接標記、放大，或切換到 GPT 提供的處理後檢視。</p>
+<p class="help">同一張圖片，同一套座標。標籤<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>，線條顏色可自選；預設顯示原圖，可直接標記、放大，或切換到 GPT 提供的處理後檢視。</p>
 <nav class="view-tabs" aria-label="檢視模式">
 <button data-view="annotated" aria-pressed="true">標註與編輯</button>
 <button data-view="original" aria-pressed="false">原始圖片</button>
@@ -50,9 +55,25 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button data-mode="polyline" aria-pressed="false" title="按住拖曳自由畫；滑鼠、繪圖板、Apple Pencil、S Pen 都可以">手繪</button>
 <button id="undo">復原</button><button id="clear">清除我的標註</button>
 </div>
+<div id="style-tools" role="group" aria-label="畫筆樣式">
+<button class="swatch" data-color="blue" aria-pressed="true" aria-label="藍" style="background:#579DF6"></button>
+<button class="swatch" data-color="red" aria-pressed="false" aria-label="紅" style="background:#F2545B"></button>
+<button class="swatch" data-color="green" aria-pressed="false" aria-label="綠" style="background:#3DDC84"></button>
+<button class="swatch" data-color="yellow" aria-pressed="false" aria-label="黃" style="background:#FFD23F"></button>
+<button class="swatch" data-color="magenta" aria-pressed="false" aria-label="洋紅" style="background:#E36BF0"></button>
+<button class="swatch" data-color="cyan" aria-pressed="false" aria-label="青" style="background:#3FD0E0"></button>
+<button class="swatch" data-color="white" aria-pressed="false" aria-label="白" style="background:#FFFFFF"></button>
+<button class="swatch" data-color="black" aria-pressed="false" aria-label="黑" style="background:#111111"></button>
+<span class="sep"></span>
+<button data-size="thin" aria-pressed="false">細</button>
+<button data-size="medium" aria-pressed="true">中</button>
+<button data-size="thick" aria-pressed="false">粗</button>
+<span class="sep"></span>
+<button data-pen="pen" aria-pressed="true">筆</button>
+<button data-pen="highlighter" aria-pressed="false" title="半透明，不會蓋住底下的圖">螢光筆</button>
+</div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
-<defs><marker id="gold-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#E4AE57"/></marker>
-<marker id="blue-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#579DF6"/></marker></defs>
+
 <g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
@@ -175,20 +196,40 @@ function thin(points){
  while(out.length>MAX_POINTS){tol*=1.5;out=simplify(points,tol);}
  return out;
 }
+const COLORS={gold:"#E4AE57",blue:"#579DF6",red:"#F2545B",green:"#3DDC84",yellow:"#FFD23F",magenta:"#E36BF0",cyan:"#3FD0E0",white:"#FFFFFF",black:"#111111"};
+const SIZES={thin:.6,medium:1,thick:1.8};
+// `color` is the author's colour (gold GPT / blue user); it stays on the
+// label so provenance survives when a mark picks its own stroke colour.
 function renderMarks(layer,items,color,author){
  layer.replaceChildren();
  for(const a of items){
    if(!valid(a))continue;
    const x=px(a.x),y=py(a.y),x2=px(a.x2??a.x),y2=py(a.y2??a.y);
-   const k=K();
-   if(a.type==="point"){node("circle",{cx:x,cy:y,r:8*k,fill:color,stroke:"#fff","stroke-width":2*k},layer);}
-   if(a.type==="rect"){node("rect",{x:Math.min(x,x2),y:Math.min(y,y2),width:Math.abs(x2-x),height:Math.abs(y2-y),rx:3*k,fill:color,"fill-opacity":.12,stroke:color,"stroke-width":3*k},layer);}
-   if(a.type==="arrow"){node("line",{x1:x,y1:y,x2,y2,stroke:color,"stroke-width":3*k,"marker-end":author==="AI"?"url(#gold-head)":"url(#blue-head)"},layer);}
+   const k=K(),ink=COLORS[a.color]??color,hl=a.pen==="highlighter";
+   // A highlighter is wide and translucent, with no dark outline.
+   const w=(hl?14:3)*k*(SIZES[a.size]??1),op=hl?.38:1;
+   const line={stroke:ink,"stroke-width":w,"stroke-opacity":op,"stroke-linejoin":"round","stroke-linecap":"round",fill:"none"};
+   if(a.type==="point"){
+     if(hl)node("circle",{cx:x,cy:y,r:18*k*(SIZES[a.size]??1),fill:ink,"fill-opacity":op},layer);
+     else node("circle",{cx:x,cy:y,r:8*k*(SIZES[a.size]??1),fill:ink,stroke:"#fff","stroke-width":2*k},layer);
+   }
+   if(a.type==="rect"){
+     const box={x:Math.min(x,x2),y:Math.min(y,y2),width:Math.abs(x2-x),height:Math.abs(y2-y),rx:3*k};
+     if(hl)node("rect",{...box,fill:ink,"fill-opacity":.28},layer);
+     else node("rect",{...box,fill:ink,"fill-opacity":.12,stroke:ink,"stroke-width":w},layer);
+   }
+   if(a.type==="arrow"){
+     node("line",{x1:x,y1:y,x2,y2,...line},layer);
+     // Arrowhead drawn as a triangle so it takes the mark's own colour.
+     const ang=Math.atan2(y2-y,x2-x),h=Math.max(10*k,w*2.6);
+     const pt=t=>[x2-h*Math.cos(ang+t),y2-h*Math.sin(ang+t)].join(",");
+     node("polygon",{points:[x2+","+y2,pt(.45),pt(-.45)].join(" "),fill:ink,"fill-opacity":op},layer);
+   }
    if(a.type==="polyline"){
      const d=pathData(a);
-     node("path",{d,fill:"none",stroke:"#17212A","stroke-opacity":.55,"stroke-width":6*k,"stroke-linejoin":"round","stroke-linecap":"round"},layer);
-     node("path",{d,fill:"none",stroke:color,"stroke-width":3*k,"stroke-linejoin":"round","stroke-linecap":"round"},layer);
-     if(a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*k,fill:color,stroke:"#fff","stroke-width":1.5*k},layer);
+     if(!hl)node("path",{d,...line,stroke:"#17212A","stroke-opacity":.55,"stroke-width":w+3*k},layer);
+     node("path",{d,...line,...(hl&&a.closed?{fill:ink,"fill-opacity":.18}:{})},layer);
+     if(!hl&&a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*k,fill:ink,stroke:"#fff","stroke-width":1.5*k},layer);
    }
    // Distinguish a guessed model coordinate from a known scene landmark;
    // GPT may claim it inspected the pixels (✓), which is still its own claim.
@@ -256,7 +297,7 @@ function renderView(){
  userEl.style.display=hideMarks?"none":"";
  previewEl.style.display=hideMarks?"none":"";
  hit.style.pointerEvents=hideMarks?"none":"auto";
- editTools.hidden=hideMarks;
+ editTools.hidden=hideMarks;styleTools.hidden=hideMarks;
  svg.style.cursor=hideMarks?"default":"crosshair";
  const marks=markOptions();
  focusChoice.hidden=viewMode!=="zoom"||marks.length<2;
@@ -344,7 +385,25 @@ function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clien
  const p=point.matrixTransform(matrix.inverse());
  return {x:round(clamp(p.x/VW,0,1)),y:round(clamp(p.y/VH,0,1))};
 }
-function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:"YOU "+(userMarks.length+1)};}
+// GPT re-presents earlier user marks (e.g. "YOU 1") in a new canvas, so new
+// marks continue the numbering and get ids that cannot collide with them.
+const ID_PREFIX="user-"+Math.random().toString(36).slice(2,6)+"-";
+let penStyle={color:"blue",size:"medium",pen:"pen"};
+const styleTools=document.querySelector("#style-tools");
+styleTools.addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;
+ for(const key of ["color","size","pen"])if(b.dataset[key]){
+   penStyle={...penStyle,[key]:b.dataset[key]};
+   for(const other of styleTools.querySelectorAll("[data-"+key+"]"))other.setAttribute("aria-pressed",String(other===b));
+ }
+});
+// Only non-default style is stored on the mark.
+const styleFields=()=>({...(penStyle.color!=="blue"?{color:penStyle.color}:{}),...(penStyle.size!=="medium"?{size:penStyle.size}:{}),...(penStyle.pen!=="pen"?{pen:penStyle.pen}:{})});
+function nextLabel(){
+ const used=[...priorUserMarks,...userMarks].map(m=>Number(/^YOU (\d+)$/.exec(m.label??"")?.[1]??0));
+ return "YOU "+(Math.max(0,...used)+1);
+}
+function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:nextLabel(),...styleFields()};}
 function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
 let stroke=[];
@@ -356,15 +415,15 @@ hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=
      const q=fromPointer(ev),last=stroke.at(-1);
      if(q&&Math.hypot(px(q.x-last.x),py(q.y-last.y))>=1.5*K())stroke.push(q);
    }
-   if(stroke.length>1)renderMarks(previewEl,[{...polylineMark(thin(stroke),{smooth:true}),label:""}],"#579DF6","YOU");
+   if(stroke.length>1)renderMarks(previewEl,[{...polylineMark(thin(stroke),{smooth:true}),...styleFields(),label:""}],"#579DF6","YOU");
    return;
  }
  renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");});
 hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(p){
  if(mode==="polyline")stroke.push(p);
  let mark=mode==="polyline"
-   ?{...freehandMark(thin(stroke)),id:"user-"+(++seq),label:"YOU "+(userMarks.length+1)}
-   :{...draft(start,p),id:"user-"+(++seq)};
+   ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
+   :{...draft(start,p),id:ID_PREFIX+(++seq)};
  if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*K()){status.textContent="拖曳距離太短，請重試。";}else{userMarks.push(mark);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
@@ -398,8 +457,8 @@ send.addEventListener("click",async()=>{
  const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
  if(!ready||!freshIds.length)return;
  send.disabled=true;
- const marks=userMarks.map(({id,type,x,y,x2,y2,points,smooth,closed,label})=>({
-   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,
+ const marks=userMarks.map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen})=>({
+   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,
    role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"
  }));

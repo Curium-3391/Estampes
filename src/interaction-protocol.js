@@ -1,7 +1,7 @@
 // Estampes Annotation/Context Protocol v0.2-draft.
 // Stable *demo* scene metadata only. Future user images need explicit
 // content identity, crop transforms and a real raster pixel resolution.
-import { MARK_TYPES, polylineWithBounds } from "./scene-catalog.js";
+import { MARK_TYPES, polylineWithBounds, markStyle } from "./scene-catalog.js";
 export const PROTOCOL_VERSION = "0.2-draft";
 export const INTENTS = Object.freeze([
   "point-out", "ask-about-region", "answer-question", "correct-assistant",
@@ -52,7 +52,7 @@ export function buildAnnotationEvent({scene,image,annotations,intent="point-out"
     // only as background. Missing role means focus.
     const role=raw.role==="context"?"context":"focus";
     if(raw.type==="polyline") {
-      return {id,author:"user",type:"polyline",role,geometry:polylineWithBounds(raw.points,raw),
+      return {id,author:"user",type:"polyline",role,...markStyle(raw),geometry:polylineWithBounds(raw.points,raw),
         label:textValue(raw.label,64),grounding:"user-pointer"};
     }
     if(!in01(raw.x)||!in01(raw.y))throw new Error("Invalid normalized point");
@@ -60,7 +60,7 @@ export function buildAnnotationEvent({scene,image,annotations,intent="point-out"
       throw new Error("Invalid normalized endpoint");
     }
     return {
-      id,author:"user",type:raw.type,role,
+      id,author:"user",type:raw.type,role,...markStyle(raw),
       geometry:{
         x:raw.x,y:raw.y,
         ...(raw.type==="point"?{}:{x2:raw.x2,y2:raw.y2})
@@ -120,13 +120,13 @@ export function formatAnnotationChatMessage(event) {
     lines.push("沒有附上前文的精確引述；請依你在目前對話中實際可見的脈絡理解，不要捏造上一輪問題。");
   }
   lines.push(
-    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。",
+    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。pen=highlighter 是半透明螢光筆，代表「這一片區域」而不是精確的線；color 只是我選的顏色，不代表其他意思。",
     ...(event.image.kind==="raster"?[
       "底圖是使用者的實際照片（imageId="+event.image.id+"，"+event.image.intrinsicSize.width+"×"+event.image.intrinsicSize.height+" 像素，已依 EXIF 轉正）。所有標註使用原圖左上角為原點的正規化座標。",
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
       JSON.stringify(event),
       "請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId="+event.image.id+"，region 取標註周圍（框就用框本身再稍微放大；點或箭頭尖端取周圍約 0.1 的範圍），必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
-      "回答後請用 present_visual（imageId 同上）把我的標記放進 priorUserAnnotations，附上你的 note（例如讀到的型號）與 status，讓答案留在畫布上的那個標記旁。不要對我提工具名稱。",
+      "我的標記已存進這張照片的畫布（id 如上）。回答後請用 present_visual（imageId 同上）的 findings 把 note（例如讀到的型號）與 status 掛到我的標記 id 上，不要重畫我的標記。不要對我提工具名稱。",
       "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
     ]:[
       "底圖為內建 SVG 示範場景，尺寸是 SVG 座標單位而非照片像素解析度。所有標註使用原圖左上角為原點的正規化座標。",

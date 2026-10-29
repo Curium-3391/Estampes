@@ -78,3 +78,19 @@ test("assistant findings (note, status) are kept on marks", () => {
   assert.equal(replay.note, "CXD2500AQ");
   assert.equal(replay.author, "user");
 });
+
+test("pen style (colour, size, highlighter) is kept and validated", () => {
+  const m = resolveCoordinateAnnotation({ id: "h1", type: "rect", x: 0.1, y: 0.1, x2: 0.2, y2: 0.2, color: "yellow", size: "thick", pen: "highlighter" });
+  assert.equal(m.color, "yellow");
+  assert.equal(m.size, "thick");
+  assert.equal(m.pen, "highlighter");
+  const bad = resolveCoordinateAnnotation({ id: "h2", type: "point", x: 0.1, y: 0.1, color: "#ff0000", pen: "spray" });
+  assert.equal(bad.color, undefined);
+  assert.equal(bad.pen, undefined);
+  const event = buildAnnotationEvent({
+    image: { imageId: "img:0123456789abcdef", width: 10, height: 10 },
+    annotations: [{ id: "user-1", type: "polyline", points: trace, color: "green", pen: "highlighter" }],
+  });
+  assert.equal(event.annotations[0].pen, "highlighter");
+  assert.match(formatAnnotationChatMessage(event), /螢光筆/);
+});
