@@ -23,6 +23,7 @@ test("v0.2 carries explicit user intent and optional quote without making up a m
   const event=buildAnnotationEvent({scene:"landscape",annotations:[arrow],
     intent:"correct-assistant",note:"我指的是樹，不是山。",replyQuote:"你說這是山。"});
   assert.equal(event.interaction.intent,"correct-assistant");
+  assert.equal(event.interaction.requestedAssistantAction,"reconsider-prior-identification");
   assert.equal(event.interaction.userNote,"我指的是樹，不是山。");
   assert.equal(event.interaction.replyTo.quote,"你說這是山。");
   assert.equal(event.interaction.replyTo.provenance,"user-entered");
