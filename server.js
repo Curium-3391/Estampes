@@ -24,7 +24,9 @@ import {
 } from "./src/canvas-state.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
-import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
+import { downloadImage, entrySharp } from "./src/image-store.js";
+import { config, configWarnings, log } from "./src/config.js";
+import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import {
   processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
@@ -35,8 +37,11 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 // it, so a release bump only touches package.json.
 const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
 const BUILD_VERSION = "m" + VERSION;
-// Public origin for download links (Render sets RENDER_EXTERNAL_URL).
-const PUBLIC_URL = (process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/+$/, "");
+// Public origin for download links: PUBLIC_BASE_URL (Render sets
+// RENDER_EXTERNAL_URL), else the origin the last /mcp request came in on,
+// which covers Heroku, Docker behind a tunnel and other hosts with no env.
+let seenOrigin = "";
+const publicUrl = () => config.publicUrl || seenOrigin;
 const URI_TAG = "v" + VERSION.replace(/\./g, "");
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
@@ -159,7 +164,7 @@ async function readMarksFile(entry, file) {
 
 async function loadImageInput({ image, imageUrl }) {
   const bytes = await downloadImage(image ? image.download_url : imageUrl);
-  return registerImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
+  return intakeImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
 }
 const RegionSchema = z.object({
   x: Point01, y: Point01, x2: Point01, y2: Point01,
@@ -217,9 +222,9 @@ const linkTable = (links, marksById) => links.map((l) => {
     (l.note ? " — " + l.note : "");
 }).join("\n");
 const layerText = (layers) => layers.map((l) => l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count + ")").join("; ");
-const exportLinks = (imageId) => PUBLIC_URL ? {
-  image: PUBLIC_URL + "/export/" + imageId.slice(4) + "/image.jpg",
-  marks: PUBLIC_URL + "/export/" + imageId.slice(4) + "/marks.svg",
+const exportLinks = (imageId) => publicUrl() ? {
+  image: publicUrl() + "/export/" + imageId.slice(4) + "/image.jpg",
+  marks: publicUrl() + "/export/" + imageId.slice(4) + "/marks.svg",
 } : undefined;
 
 // Render logs show what each call costs: text the model reads, images the
@@ -228,7 +233,7 @@ function logSizes(tool, result, { appOnly = false } = {}) {
   const images = (result.content ?? []).filter((b) => b.type === "image");
   const text = JSON.stringify((result.content ?? []).filter((b) => b.type !== "image")).length +
     JSON.stringify(result.structuredContent ?? {}).length;
-  console.log("[size] " + tool + (appOnly ? " appOnly(widget-called)=" : " modelText=") + text + "B modelImages=" + images.length + "x" +
+  log("info", "[size] " + tool + (appOnly ? " appOnly(widget-called)=" : " modelText=") + text + "B modelImages=" + images.length + "x" +
     images.reduce((n, b) => n + b.data.length, 0) + "B widgetOnly=" + JSON.stringify(result._meta ?? {}).length + "B");
   return result;
 }
@@ -253,6 +258,8 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
     }),
     resolve: resolveCoordinateAnnotation,
   });
+  const history = { tool: "present_visual", changed, removed: remove, ...(links.length || removeLinks.length ? { note: "links " + links.map((l) => l.id).concat(removeLinks.map((id) => "-" + id)).join(",") } : {}) };
+  await Promise.all([saveCanvas(left, history), saveCanvas(right, history)]);
   const marks = pairMarks(left, right), byId = new Map(marks.map((m) => [m.id, m]));
   const linkList = pairLinks(left, right), layers = pairLayers(left, right);
   const sides = { left, right }, checks = [], ink = [];
@@ -507,7 +514,7 @@ function makeServer() {
         if (paired) {
           if (pairImage || pairImageUrl) pairImageId = (await loadImageInput({ image: pairImage, imageUrl: pairImageUrl })).imageId;
           if (pairImageId === imageId) throw new Error("The paired image is the same as the left image; pass a different picture");
-          return await presentPair({ left: getImage(imageId), right: getImage(pairImageId), annotations, findings, remove, reset, layer,
+          return await presentPair({ left: await ensureImage(imageId), right: await ensureImage(pairImageId), annotations, findings, remove, reset, layer,
             coordinateFrame, priorUserAnnotations, links, removeLinks, verify });
         }
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
@@ -528,7 +535,7 @@ function makeServer() {
             },
           };
         }
-        const entry = getImage(imageId);
+        const entry = await ensureImage(imageId);
         // A marks file and this call's changes land together or not at all.
         const parsedFile = marksFile ? await readMarksFile(entry, marksFile) : null;
         const restore = snapshotCanvas(entry);
@@ -543,6 +550,9 @@ function makeServer() {
             resolve: resolveCoordinateAnnotation,
           });
         } catch (error) { restore(); throw error; }
+        if (imported.length || changed.length || remove.length || reset) {
+          await saveCanvas(entry, { tool: "present_visual", changed: [...imported, ...changed], removed: remove, ...(reset ? { note: "reset" } : {}) });
+        }
         const resolved = canvasMarks(entry), layers = canvasLayers(entry);
         const drawn = changed.filter(id => annotations.some(a => a.id === id));
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
@@ -614,9 +624,9 @@ function makeServer() {
     },
     async ({ imageId, part, pairImageId }) => {
       try {
-        const entry = getImage(imageId);
+        const entry = await ensureImage(imageId);
         if (pairImageId && part === "canvas") {
-          const right = getImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
+          const right = await ensureImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Paired canvas data for " + imageId + " + " + pairImageId + " sent to the widget." }],
             structuredContent: {
@@ -669,7 +679,7 @@ function makeServer() {
     },
     async ({ imageId, region, maxSide }) => {
       try {
-        const tile = await regionTile(getImage(imageId), region, maxSide);
+        const tile = await regionTile(await ensureImage(imageId), region, maxSide);
         return logSizes("load_visual_region", {
           content: [{ type: "text", text: "Detail tile for " + imageId + " sent to the widget." }],
           structuredContent: { kind: "estampes.visual_tile", imageId, region: tile.region,
@@ -718,9 +728,9 @@ function makeServer() {
         if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
         let image;
         let entry;
-        if(imageId){entry=getImage(imageId);image={imageId,width:entry.width,height:entry.height};}
+        if(imageId){entry=await ensureImage(imageId);image={imageId,width:entry.width,height:entry.height};}
         if(pairImageId&&!entry) throw new Error("pairImageId needs imageId");
-        const right=pairImageId?getImage(pairImageId):null;
+        const right=pairImageId?await ensureImage(pairImageId):null;
         if(!right&&annotations.some(a=>a.side==="right")) throw new Error("side:'right' needs pairImageId");
         const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
         const pairImage=right?{imageId:pairImageId,width:right.width,height:right.height}:undefined;
@@ -734,6 +744,9 @@ function makeServer() {
           pairLayer=storeUserMarks(right,checked.filter(a=>sideOf(a)==="right").map(({side,...a})=>a));
         // Submitted marks join the photo's canvas so GPT need not replay them.
         }else if(entry)layer=storeUserMarks(entry,checked);
+        const ids=checked.map(a=>a.id);
+        if(entry)await saveCanvas(entry,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
+        if(right)await saveCanvas(right,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
         return {
           content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
           structuredContent:{
@@ -770,7 +783,9 @@ function makeServer() {
     },
     async ({ imageId, pairImageId, linkId, review }) => {
       try {
-        const link = reviewLink(getImage(imageId), getImage(pairImageId), linkId, review);
+        const left = await ensureImage(imageId);
+        const link = reviewLink(left, await ensureImage(pairImageId), linkId, review);
+        await saveCanvas(left, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
         return {
           content: [{ type: "text", text: "Link " + linkId + " marked " + review + " by the user." }],
           structuredContent: { kind: "estampes.link_review", imageId, pairImageId, link: compactLink(link) },
@@ -1010,7 +1025,7 @@ function makeServer() {
     },
     async ({ imageId, region, ops }) => {
       try {
-        const out = await processImage(getImage(imageId), { region, ops });
+        const out = await processImage(await ensureImage(imageId), { region, ops });
         return {
           content: [
             { type: "text", text: "Processed " + imageId + " region " + JSON.stringify(out.region) +
@@ -1051,7 +1066,7 @@ function makeServer() {
     },
     async ({ imageId, region, rows, cols }) => {
       try {
-        const out = await overlayGrid(getImage(imageId), { region, rows, cols });
+        const out = await overlayGrid(await ensureImage(imageId), { region, rows, cols });
         const cellCenters = {};
         for (let r = 0; r < rows; r++) for (let c = 1; c <= cols; c++) {
           const label = rowLabel(r) + c;
@@ -1078,16 +1093,16 @@ function makeServer() {
 // MCP transport can parse it.
 const mcpHandler = toNodeHandler(createMcpHandler(makeServer));
 
-const port = Number(process.env.PORT ?? 8787);
+const port = config.port;
 
 // Optional shared secret. When ESTAMPES_ACCESS_KEY is set, /mcp requires it as
 // "?key=..." in the connector URL (ChatGPT's "No authentication" mode can still
 // carry it) or as "Authorization: Bearer ...". Unset keeps the open M0 setup.
-const ACCESS_KEY = process.env.ESTAMPES_ACCESS_KEY ?? "";
+const ACCESS_KEY = config.accessKey;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
-const CORS_ORIGINS = (process.env.ESTAMPES_CORS_ORIGINS ?? "*").split(",").map(s => s.trim()).filter(Boolean);
-const RATE_LIMIT = Number(process.env.ESTAMPES_RATE_LIMIT_PER_MIN ?? 120);
+const CORS_ORIGINS = config.corsOrigins;
+const RATE_LIMIT = config.rateLimitPerMin;
 const hits = new Map();
 
 function corsOrigin(req) {
@@ -1164,14 +1179,9 @@ const httpServer = createHttpServer((req, res) => {
   const exportMatch = /^\/export\/([0-9a-f]{16})\/(image\.jpg|marks\.svg)$/.exec(url.pathname);
   if (exportMatch && req.method === "GET") {
     const imageId = "img:" + exportMatch[1];
-    let entry;
-    try { entry = getImage(imageId); } catch {
-      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("Image expired (kept about an hour). Show it again in ChatGPT, then export.");
-      return;
-    }
     const svg = exportMatch[2] === "marks.svg";
-    Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
+    ensureImage(imageId).then((entry) => {
+      Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
       .then((body) => {
         res.writeHead(200, {
           "content-type": svg ? "image/svg+xml; charset=utf-8" : "image/jpeg",
@@ -1183,6 +1193,21 @@ const httpServer = createHttpServer((req, res) => {
         res.end(body);
       })
       .catch((error) => { res.writeHead(500); res.end(String(error?.message || error)); });
+    }, () => {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Image expired from this server" + (config.storageDir ? "" : " (memory only)") + ". Show it again in ChatGPT, then export.");
+    });
+    return;
+  }
+
+  // For Docker/compose health checks and uptime monitors: 200 while the
+  // server answers and, when storage is on, the storage folder is writable.
+  if (url.pathname === "/healthz" && req.method === "GET") {
+    storageHealth().then((storage) => {
+      const ok = !storage.enabled || storage.writable;
+      res.writeHead(ok ? 200 : 503, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ ok, version: BUILD_VERSION, uptimeSeconds: Math.round(process.uptime()), storage }));
+    });
     return;
   }
 
@@ -1223,13 +1248,17 @@ const httpServer = createHttpServer((req, res) => {
       res.end("Too many requests");
       return;
     }
+    if (!config.publicUrl && req.headers.host) {
+      const proto = String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() || "http";
+      const host = String(req.headers["x-forwarded-host"] ?? req.headers.host).split(",")[0].trim();
+      if (/^[a-z0-9.:[\]-]+$/i.test(host) && /^https?$/.test(proto)) seenOrigin = proto + "://" + host;
+    }
     const start = Date.now();
     res.once("finish", () => {
-      console.log("[mcp] " + req.method + " status=" + res.statusCode +
-        " ms=" + (Date.now() - start));
+      log("info", "[mcp] " + req.method + " status=" + res.statusCode + " ms=" + (Date.now() - start));
     });
     Promise.resolve(mcpHandler(req, res)).catch((error) => {
-      console.error("[mcp] handler error:", error);
+      log("error", "[mcp] handler error", { error: String(error?.stack || error) });
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "text/plain" });
         res.end("Internal MCP error");
@@ -1242,6 +1271,40 @@ const httpServer = createHttpServer((req, res) => {
   res.end("Not found");
 });
 
-httpServer.listen(port, "0.0.0.0", () => {
-  console.log("Estampes MCP server at http://localhost:" + port + "/mcp");
+// Checked at most every 30 s so a health probe never hammers the disk.
+let lastHealth = null;
+async function storageHealth() {
+  if (lastHealth && Date.now() - lastHealth.at < 30000) return lastHealth.value;
+  let value;
+  try { value = { ...(await checkStorage()), writable: true }; }
+  catch (error) { value = { enabled: true, writable: false, error: String(error?.message || error) }; }
+  if (!config.storageDir) value = { enabled: false };
+  lastHealth = { at: Date.now(), value };
+  return value;
+}
+
+for (const warning of configWarnings()) log("warn", "[config] " + warning);
+const storage = await storageHealth();
+if (storage.enabled && !storage.writable) log("error", "[storage] not writable; marks will only live in memory", { dir: config.storageDir, error: storage.error });
+if (storage.enabled) {
+  sweepStorage().catch(() => {});
+  setInterval(() => sweepStorage().catch(() => {}), 6 * 3600 * 1000).unref();
+}
+
+httpServer.listen(port, config.host, () => {
+  log("info", "Estampes " + VERSION + " MCP server at http://localhost:" + port + "/mcp", {
+    storage: config.storageDir || "memory-only", accessKey: ACCESS_KEY ? "required" : "off",
+    maxImageMB: config.maxImageBytes / 1048576, publicUrl: config.publicUrl || "from-request",
+  });
 });
+
+// docker stop / Heroku dyno restart send SIGTERM: finish pending writes first.
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, () => {
+    log("info", "[shutdown] " + signal);
+    httpServer.close();
+    const force = setTimeout(() => process.exit(0), 8000);
+    force.unref();
+    flushStorage().finally(() => process.exit(0));
+  });
+}

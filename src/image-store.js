@@ -2,22 +2,26 @@
 // ({download_url, file_id, ...} via _meta["openai/fileParams"]) or as a
 // public https URL the model found. Both are fetched server-side, normalized
 // (EXIF orientation applied, long side capped) and kept in a small in-memory
-// cache keyed by a content hash. Nothing is written to disk or logged.
+// cache keyed by a content hash. Nothing is logged; with
+// ESTAMPES_STORAGE_DIR set, src/storage.js also keeps the source bytes and
+// canvas on disk so an image survives eviction and restarts.
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import sharp from "sharp";
+import { config } from "./config.js";
 
-export const MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024;
-export const MAX_INPUT_PIXELS = 50_000_000;
-export const WORKING_LONG_SIDE = 4096;
+export const MAX_DOWNLOAD_BYTES = config.maxImageBytes;
+export const MAX_INPUT_PIXELS = config.maxInputPixels;
+export const WORKING_LONG_SIDE = config.workingLongSide;
 const FETCH_TIMEOUT_MS = 15000;
 const MAX_REDIRECTS = 3;
-const CACHE_LIMIT = 12;
-// Render free instances have 512 MB of RAM; keep cached pixels well under it.
-// Pixels are cached raw (no decode per call): a 4096×3072 photo is ~38 MB.
-const CACHE_BYTES = 160 * 1024 * 1024;
-const CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_LIMIT = config.cacheImages;
+// Render free instances have 512 MB of RAM; the default keeps cached pixels
+// well under it. Pixels are cached raw: a 4096×3072 photo is ~38 MB.
+const CACHE_BYTES = config.cacheBytes;
+const CACHE_TTL_MS = config.cacheTtlMs;
+const MB = Math.round(MAX_DOWNLOAD_BYTES / 1024 / 1024) + " MB";
 
 const cache = new Map();
 
@@ -52,12 +56,12 @@ export async function assertPublicHttpsUrl(raw) {
 
 async function readLimited(response) {
   const declared = Number(response.headers.get("content-length") ?? 0);
-  if (declared > MAX_DOWNLOAD_BYTES) throw new Error("Image is larger than 20 MB");
+  if (declared > MAX_DOWNLOAD_BYTES) throw new Error("Image is larger than " + MB);
   const chunks = [];
   let total = 0;
   for await (const chunk of response.body) {
     total += chunk.length;
-    if (total > MAX_DOWNLOAD_BYTES) throw new Error("Image is larger than 20 MB");
+    if (total > MAX_DOWNLOAD_BYTES) throw new Error("Image is larger than " + MB);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
@@ -97,12 +101,17 @@ function prune(now = Date.now()) {
 // Decode with sharp (which also rejects non-images), apply EXIF orientation
 // and cap the working size. Coordinates are always normalized to this
 // oriented image, so the cap never changes what a coordinate means.
+export const imageIdOf = (bytes) => "img:" + createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+
+// The same bytes again return the cached entry, so its marks survive.
 export async function registerImage(bytes, { source, fileName = null } = {}) {
+  const imageId = imageIdOf(bytes);
+  if (cache.has(imageId)) return getImage(imageId);
   let meta;
   try {
     meta = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
   } catch {
-    throw new Error("The file is not a supported image (or exceeds 50 megapixels)");
+    throw new Error("The file is not a supported image (or exceeds " + MAX_INPUT_PIXELS / 1e6 + " megapixels)");
   }
   const working = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS })
     .rotate()
@@ -111,7 +120,6 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
     .toColourspace("srgb")
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const imageId = "img:" + createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   const entry = {
     imageId,
     pixels: working.data,
@@ -123,7 +131,6 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
     fileName,
     touched: Date.now(),
   };
-  cache.delete(imageId);
   cache.set(imageId, entry);
   prune();
   return entry;
@@ -132,7 +139,8 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
 export function getImage(imageId) {
   const entry = cache.get(imageId);
   if (!entry) {
-    throw new Error("Unknown or expired imageId " + imageId + "; call load_image again (images are kept about an hour)");
+    throw new Error("Unknown or expired imageId " + imageId + "; call load_image again (images are kept in memory about " +
+      Math.round(CACHE_TTL_MS / 60000) + " min" + (config.storageDir ? " and on disk until removed" : "") + ")");
   }
   entry.touched = Date.now();
   cache.delete(imageId);
@@ -143,6 +151,8 @@ export function getImage(imageId) {
 // A sharp pipeline over an entry's cached pixels.
 export const entrySharp = (entry) =>
   sharp(entry.pixels, { raw: { width: entry.width, height: entry.height, channels: entry.channels } });
+
+export const hasImage = (imageId) => cache.has(imageId);
 
 export function clearImages() {
   cache.clear();

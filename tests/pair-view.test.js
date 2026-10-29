@@ -1,8 +1,11 @@
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import sharp from "sharp";
-import { registerImage } from "../src/image-store.js";
+import { registerImage, clearImages } from "../src/image-store.js";
+
+// Same bytes return the same cached canvas; each test starts clean.
+beforeEach(() => clearImages());
 import { applyPairChanges, pairLinks, reviewLink, canvasMarks, storeUserMarks } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
 
