@@ -17,8 +17,9 @@ import { createVisualEvidence } from "./src/visual-input.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.3";
+const BUILD_VERSION = "m0.4.4";
 const VISUAL_URI = "ui://estampes/visual-surface-v043.html";
+const EVIDENCE_URI = "ui://estampes/visual-evidence-v044.html";
 const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
 const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
 const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
@@ -28,6 +29,10 @@ const html = readFileSync(
 );
 
 
+const evidenceHtml = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "public/visual-evidence.html"),
+  "utf8"
+);
 const visualHtml = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/visual-surface.html"),
   "utf8"
@@ -77,7 +82,7 @@ const ModelAnnotationSchema = z.object({
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.3" });
+  const server = new McpServer({ name: "estampes", version: "0.4.4" });
 
   registerAppResource(
     server,
@@ -310,7 +315,20 @@ function makeServer() {
   );
 
 
-  // Public model tool, separate from the ChatGPT embedded UI.
+  // The inspector remains a standard MCP data tool; attaching a UI resource
+  // renders the SAME tool's PNG evidence in the ChatGPT conversation.
+  registerAppResource(
+    server,
+    "Estampes visual evidence preview",
+    EVIDENCE_URI,
+    { mimeType: RESOURCE_MIME_TYPE },
+    async () => ({
+      contents:[{uri:EVIDENCE_URI,mimeType:RESOURCE_MIME_TYPE,text:evidenceHtml}]
+    })
+  );
+
+  // Public model tool provides BOTH the MCP image blocks for model vision
+  // and an inline UI resource for human-visible preview.
   // Returns real PNG image bytes in the MCP content array, not object names.
   // Some hosts do not forward these blocks to their vision model.
   server.registerTool(
@@ -353,6 +371,7 @@ function makeServer() {
         modelVisionStatus:z.literal("host-dependent-unverified"),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
+      _meta:{ui:{resourceUri:EVIDENCE_URI}},
     },
     async ({scene,imageId,revision,focus,padding})=>{
       try {
@@ -410,6 +429,8 @@ const httpServer = createHttpServer((req, res) => {
       visualValidationTool: "validate_visual_annotations",
       annotationProtocol: "0.2-draft",
       visualInputTool: "inspect_visual",
+      visualEvidenceResourceUri: EVIDENCE_URI,
+      visualEvidencePresentation: "inline-mcp-app",
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
     }));

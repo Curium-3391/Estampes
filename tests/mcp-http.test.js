@@ -39,7 +39,9 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const versionResponse=await fetch(base+"/version",{cache:"no-store"});
     assert.equal(versionResponse.status,200);
     const version=await versionResponse.json();
-    assert.equal(version.version,"m0.4.3");
+    assert.equal(version.version,"m0.4.4");
+    assert.equal(version.visualEvidenceResourceUri,"ui://estampes/visual-evidence-v044.html");
+    assert.equal(version.visualEvidencePresentation,"inline-mcp-app");
     assert.equal(version.visualInputTool,"inspect_visual");
     assert.equal(version.visualInputFormat,"mcp-image-content-png");
     assert.equal(version.visualModelVisibility,"host-dependent-unverified");
@@ -156,7 +158,13 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     // actual PNG images, not merely structured coordinate JSON.
     const inspectTool=tools.tools.find(t=>t.name==="inspect_visual");
     assert.ok(inspectTool,"inspect_visual must be model-callable");
-    assert.equal(inspectTool._meta?.ui?.visibility,undefined);
+    assert.equal(inspectTool._meta?.ui?.resourceUri,"ui://estampes/visual-evidence-v044.html");
+    const evidenceUi=await client.readResource({uri:"ui://estampes/visual-evidence-v044.html"});
+    const evidenceHtml=evidenceUi.contents.find(c=>c.uri==="ui://estampes/visual-evidence-v044.html");
+    assert.ok(evidenceHtml?.text?.includes("Estampes · Visual Evidence"));
+    assert.ok(evidenceHtml?.text?.includes("v0.4.4"));
+    assert.match(evidenceHtml.text,/ui\/notifications\/tool-result/);
+    assert.match(evidenceHtml.text,/data:image\/png;base64/);
     const visualEvidence=await client.callTool({name:"inspect_visual",arguments:{
       scene:"landscape",imageId:"demo:landscape",revision:"svg-v1",
       focus:{type:"rect",x:0.1,y:0.42,x2:0.4,y2:0.92}
