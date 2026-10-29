@@ -43,7 +43,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(version.visualDisplayTool,"present_visual_evidence");
     assert.equal(version.visualEvidencePresentation,"explicit-render-tool");
     assert.equal(version.visualEvidenceResourceUri,"ui://estampes/visual-evidence-v045.html");
-    assert.equal(version.visualEvidencePresentation,"inline-mcp-app");
+    assert.equal(version.visualEvidencePresentation,"explicit-render-tool");
     assert.equal(version.visualInputTool,"inspect_visual");
     assert.equal(version.visualInputFormat,"mcp-image-content-png");
     assert.equal(version.visualModelVisibility,"host-dependent-unverified");
