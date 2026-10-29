@@ -6,7 +6,7 @@ Estampes is an experimental, open-source project exploring a simple idea: humans
 
 Inspired by Claude Debussy's *Estampes* (1903).
 
-> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.5 visual evidence viewer has been verified in ChatGPT by the project tester on 2026-10-29**: the blue-marked full image, unmarked original, and enlarged unmarked crop all appeared and switched correctly in the native chat widget. `inspect_visual` remains a separate model-facing PNG tool; full model-vision visibility is not established by this viewer test. General-purpose image grounding and arbitrary image imports remain unsolved.
+> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.5 visual evidence viewer was verified in ChatGPT on 2026-10-29. M0.4.7 is a new single-widget UI candidate (CI verified, live host testing pending)**: annotation/editing, original and local zoom now live in a single canvas; the separate PNG viewer is retained only for legacy/explicit use. `inspect_visual` remains a separate model-facing PNG tool; full model-vision visibility is not established by this viewer test. General-purpose image grounding and arbitrary image imports remain unsolved.
 
 ## The problem
 
@@ -40,6 +40,7 @@ Estampes aims to remove that friction.
 - [ ] **M0.4.3 — Visual Input Bridge:** `inspect_visual` returns real PNG pixels and source-coordinate metadata from demo artwork, separating Estampes geometry from GPT object interpretation. Live model vision visibility not yet verified.
 - [x] **M0.4.5 — Inline visual evidence viewer:** Dedicated `present_visual_evidence` renderer shows three real PNG views (marked full image, pristine full image, enlarged pristine crop) inside ChatGPT. Confirmed by user screenshots on 2026-10-29 for `demo:landscape`, point `(0.82, 0.49)`. This validates the **human-visible render path**, not general model perception.
 - [ ] **M0.4.6 — Evidence-first model annotation:** Removed object-name/scene-anchor lookup from the model-facing `present_visual` schema. AI must supply coordinates rather than ask the plugin for `house`/other labeled positions. CI checks this; blind image grounding is still unverified. See [M0.4.6 grounding evaluation](docs/M0-4-6.md).
+- [ ] **M0.4.7 — Unified shared canvas:** Combined the original image, annotation editor and local zoom in one SVG surface; optional collapsed context, author-specific palette, no routine duplicate viewer. CI passed; ChatGPT one-widget acceptance pending. See [M0.4.7](docs/M0-4-7.md).
 - [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
