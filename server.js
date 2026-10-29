@@ -14,14 +14,14 @@ import { valueToX } from "./src/geometry.js";
 
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.3.1";
+const BUILD_VERSION = "m0.3.2";
 const html = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
   "utf8"
 );
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.3.1" });
+  const server = new McpServer({ name: "estampes", version: "0.3.2" });
 
   registerAppResource(
     server,
@@ -100,7 +100,9 @@ function makeServer() {
         destructiveHint: false,
         openWorldHint: false,
       },
-      _meta: { ui: { resourceUri: WIDGET, visibility: ["app"] } },
+      // App-only actions must not advertise a widget of their own to ChatGPT.
+      // The UI is rendered exclusively by show_number_line.
+      _meta: { ui: { visibility: ["app"] } },
     },
     async ({ value }) => ({
       content: [{
