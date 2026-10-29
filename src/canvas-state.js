@@ -63,3 +63,21 @@ export function applyCanvasChanges(entry, { annotations = [], findings = [], rem
   }
   return [...new Set(changed)];
 }
+
+// Marks restored from an exported file. User marks keep their author but
+// are marked as replayed; GPT marks are re-validated. Existing marks win
+// for user ids; GPT ids are overwritten by the file. Returns the ids added.
+export function importMarks(entry, marks, { replayUser, resolve }) {
+  const state = marksOf(entry), added = [];
+  for (const mark of marks) {
+    if (mark.author === "user") {
+      if (state.has(mark.id)) continue;
+      state.set(mark.id, replayUser(mark));
+    } else {
+      if (state.get(mark.id)?.author === "user") continue;
+      state.set(mark.id, resolve(mark));
+    }
+    added.push(mark.id);
+  }
+  return added;
+}

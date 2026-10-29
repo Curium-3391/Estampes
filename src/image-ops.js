@@ -252,19 +252,26 @@ export async function previewImage(entry) {
 
 // What the person sees in the present_visual canvas: the original pixels,
 // only reduced, as a compact JPEG.
-export const DISPLAY_LONG_SIDE = 1600;
+export const DISPLAY_LONG_SIDE = 1400;
 export async function displayImage(entry) {
   // Cached on the entry: present_visual is often called again for one photo.
   entry.display ??= entrySharp(entry)
     .resize({ width: DISPLAY_LONG_SIDE, height: DISPLAY_LONG_SIDE, fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 82 }).toBuffer({ resolveWithObject: true })
+    .jpeg({ quality: 78 }).toBuffer({ resolveWithObject: true })
     .then(({ data, info }) => ({ data, mimeType: "image/jpeg", width: info.width, height: info.height }))
     .catch((error) => { entry.display = undefined; throw error; });
   return entry.display;
 }
 
-// Keep widget payloads small: large processed views become JPEGs.
-export async function compactForDisplay(out, maxBytes = 600_000) {
+// Keep widget payloads small: ChatGPT drops the widget's data when a tool
+// result gets too big, so large processed views become modest JPEGs.
+export const VIEW_LONG_SIDE = 1200;
+export async function compactForDisplay(out, maxBytes = 220_000) {
   if (out.data.length <= maxBytes) return out;
-  return { ...out, data: await sharp(out.data).jpeg({ quality: 82 }).toBuffer(), mimeType: "image/jpeg" };
+  const shrink = (quality) => sharp(out.data)
+    .resize({ width: VIEW_LONG_SIDE, height: VIEW_LONG_SIDE, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality }).toBuffer();
+  let data = await shrink(78);
+  if (data.length > maxBytes) data = await shrink(62);
+  return { ...out, data, mimeType: "image/jpeg" };
 }
