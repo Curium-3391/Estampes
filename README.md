@@ -6,7 +6,7 @@ Estampes is an experimental, open-source project exploring a simple idea: humans
 
 Inspired by Claude Debussy's *Estampes* (1903).
 
-> **Status:** M0.3.2 bidirectional round trip **verified in ChatGPT on 2026-10-29**: GPT marked 2 on the number line, the user selected -4, the widget validated the coordinate (x=0), submitted a user message, and GPT correctly acknowledged -4. Remaining M0 checks include resizing, more coordinates, and repeatability.
+> **Status:** M0.3.2 bidirectional number-line round trip **verified in ChatGPT on 2026-10-29**. **M0.4 generic 2D visual surface is implemented but awaits ChatGPT end-to-end verification.**
 
 ## The problem
 
@@ -34,14 +34,15 @@ Estampes aims to remove that friction.
 ## Development roadmap
 
 - [ ] **M0 — ChatGPT plugin number-line PoC:** The in-chat AI → widget → user → GPT round trip is **host-verified** (2026-10-29). Remaining: resizing, repeated interactions, and additional coordinate cases.
-- [ ] **M1 — Formula and simple-image grounding:** Test precise pointing at terms in formulas and easily identifiable objects in images, with validation and uncertainty.
+- [ ] **M0.4 — Generic 2D visual surface:** New `present_visual` tool provides built-in landscape, shapes, and formula scenes with assistant point/rect/arrow overlays. Users can place multiple free-position marks and send them back to ChatGPT. Host verification pending.
+- [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
 - [ ] **M4 — Complex real-world imagery and evaluation:** Progress to diagrams and PCBs only after simpler cases work; measure accuracy, clarification turns, and task completion.
 
 **Integration requirement:** Estampes is a ChatGPT-native plugin experience, not a standalone website or chatbot. Use an MCP server + MCP Apps UI inside the conversation for M0; evaluate ChatGPT Plugin Extensions for deeper native integrations.
 
-See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md).
+See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md), and [M0.4 visual surface guide](docs/M0-4.md).
 
 ## Integration caveat
 
