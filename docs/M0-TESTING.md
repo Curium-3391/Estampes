@@ -1,10 +1,16 @@
-# M0 — ChatGPT inline number-line smoke test
+# Estampes M0.3 — ChatGPT native round-trip test
 
-## Requirements
+## Scope
 
-Node.js 20+ and a public HTTPS endpoint for ChatGPT to contact the MCP server. You do not need a separate end-user drawing website; the widget is served as an MCP Apps resource **inside ChatGPT**.
+This milestone uses an in-chat MCP Apps UI—not a separate whiteboard or website.
 
-## Run
+- Model → UI: `show_number_line({target: 2})` renders a number line from -4 to 4.
+- User → Server: Clicking -2 and pressing **傳給 GPT** calls the app-only `record_number_line_selection({value:-2})` tool.
+- User → Chat: The widget independently sends a `ui/message` request containing the user's selection, with normalized `x=0.25`.
+
+The server's record tool is **stateless**; it validates and echoes the coordinate. A successful tool call by itself **does not** mean the model has received a new chat message.
+
+## Development
 
 ```sh
 npm install
@@ -12,25 +18,38 @@ npm test
 npm start
 ```
 
-The server listens at `http://localhost:8787/mcp`. Use a tunnel or deployment to give ChatGPT an HTTPS address. For example: `ngrok http 8787` (run on the same machine as the server).
+The HTTP endpoint is `http://localhost:8787/mcp`. The cloud endpoint configured in ChatGPT is `https://estampes-mcp.onrender.com/mcp`.
 
-## Connect to ChatGPT
+## In-Chat test
 
-In ChatGPT, go to Plugins → Add custom MCP server, provide your public `https://<host>/mcp` URL, and install the private plugin. Open a conversation, choose `@Estampes`, and say:
+1. Verify the latest Render deployment is **Live** and the build tests passed.
+2. Open a **new ChatGPT conversation** with Estampes enabled.
+3. Say: `使用 Estampes 的 show_number_line 工具，標註數字 2。`
+4. Verify the widget heading shows **v0.3.0**, the yellow marker is on **2**, and the widget loads without error.
+5. Click **-2**. The blue marker should move to -2.
+6. Click **傳給 GPT**.
+7. Observe **both** the status line and the conversation. A successful two-way round trip requires ChatGPT to acknowledge **-2** from the new user message.
 
-> Show the Estampes number line and point to 2.
+## Diagnostics
 
-The widget should show the assistant's golden mark at 2. Tap -1, then press **傳給 GPT**. Check that a user-role message containing `value:-1` and `x:0.375` appears in the conversation, and that ChatGPT responds. The bridge includes a visible error if message sending fails; some host versions may require an explicit composer send.
+| Status line | Meaning |
+|---|---|
+| `座標已驗證；訊息已交給聊天宿主…` | App→MCP echo succeeded; host accepted the chat request. Confirm that the model actually responds. |
+| `工具驗證失敗…訊息已交給聊天宿主…` | App→MCP tool failed but chat bridge may still work. |
+| `座標驗證成功；聊天橋接失敗…` | The tool is working, but `ui/message` failed. |
+| Both paths failed | The widget shows the value/x so it can be typed into the chat manually. |
 
-## Acceptance criteria
+If `Unknown tool` appears, verify the currently deployed server includes `record_number_line_selection` and that ChatGPT fetched the updated tool metadata. Do not assume a successful Render deploy forces ChatGPT to refresh its cached UI.
 
-- Tool discovery and `show_number_line` invocation
-- Inline widget rendering, not an external page
-- Assistant's target matches the tick
-- User selection matches the tick and normalizes to original number-line coordinates
-- Screen resizing leaves markers on their ticks
-- User selection reaches the chat context (not just local widget state)
+## Automated checks
 
-## Limitations
+- `tests/geometry.test.js`: numeric coordinate conversion.
+- `tests/mcp-http.test.js`: discovery, both tool calls, UI resource.
+- `tests/widget-contract.test.js`: widget script syntax and independent tool/chat paths.
 
-This is a **source scaffold** and has not yet been verified end-to-end in a connected ChatGPT client. The current tool controls its own number-line image; it cannot annotate an arbitrary image already shown by native ChatGPT search. No production deployment, persistence, or authentication is included.
+## Limits
+
+- No image search integration, persistence, authentication, or multi-user state.
+- No guarantee that every ChatGPT host accepts `ui/message`; confirm by observing the actual conversation.
+- The tool's current coordinate `x` refers to the logical number line interval, not a screenshot pixel position.
+- The Render endpoint is unauthenticated: only use non-sensitive M0 test data.
