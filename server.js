@@ -1,4 +1,5 @@
 import { createServer as createHttpServer } from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,31 +16,31 @@ import { resolveSceneAnnotation, replayUserAnnotation } from "./src/scene-catalo
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 
+const ROOT = dirname(fileURLToPath(import.meta.url));
+// package.json is the single source of truth for the release version.
+// Widget HTML uses __ESTAMPES_VERSION__ and versioned ui:// URIs derive from
+// it, so a release bump only touches package.json.
+const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
+const BUILD_VERSION = "m" + VERSION;
+const URI_TAG = "v" + VERSION.replace(/\./g, "");
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const BUILD_VERSION = "m0.4.7";
-const VISUAL_URI = "ui://estampes/visual-surface-v047.html";
-const VISUAL_V046_URI = "ui://estampes/visual-surface-v046.html";
-const VISUAL_V043_URI = "ui://estampes/visual-surface-v043.html";
-const EVIDENCE_URI = "ui://estampes/visual-evidence-v047.html";
-const EVIDENCE_V045_URI = "ui://estampes/visual-evidence-v045.html";
-const VISUAL_V042_URI = "ui://estampes/visual-surface-v042.html";
-const VISUAL_PREVIOUS_URI = "ui://estampes/visual-surface-v041.html";
-const VISUAL_LEGACY_URI = "ui://estampes/visual-surface-v040.html";
-const html = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "public/number-line.html"),
-  "utf8"
-);
-
-
-const evidenceHtml = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "public/visual-evidence.html"),
-  "utf8"
-);
-const visualHtml = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "public/visual-surface.html"),
-  "utf8"
-);
+const VISUAL_URI = "ui://estampes/visual-surface-" + URI_TAG + ".html";
+const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
+// Older URIs stay resolvable for saved ChatGPT conversations. They serve the
+// current HTML on purpose: the host caches templates by URI, so a stale URI
+// must still get a working widget, not a 404.
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047"]
+  .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
+  .filter(uri => uri !== VISUAL_URI);
+const LEGACY_EVIDENCE_URIS = ["v045","v047"]
+  .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
+  .filter(uri => uri !== EVIDENCE_URI);
+const loadWidget = (file) =>
+  readFileSync(join(ROOT, "public", file), "utf8").replaceAll("__ESTAMPES_VERSION__", VERSION);
+const html = loadWidget("number-line.html");
+const evidenceHtml = loadWidget("visual-evidence.html");
+const visualHtml = loadWidget("visual-surface.html");
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
 const Point01 = z.number().finite().min(0).max(1);
 
@@ -77,7 +78,7 @@ const ModelAnnotationSchema = z.object({
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: "0.4.7" });
+  const server = new McpServer({ name: "estampes", version: VERSION });
 
   registerAppResource(
     server,
@@ -188,54 +189,15 @@ function makeServer() {
     })
   );
 
-  // Compatibility for conversations that cached the M0.4.0 resource URI.
-  registerAppResource(
-    server,
-    "Estampes visual surface (legacy)",
-    VISUAL_LEGACY_URI,
-    { mimeType: RESOURCE_MIME_TYPE },
-    async () => ({
-      contents: [{ uri: VISUAL_LEGACY_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
-    })
-  );
-
-  // UI URI cache compatibility for the immediately previous visual widget.
-  registerAppResource(
-    server,
-    "Estampes visual surface v0.4.1 (legacy)",
-    VISUAL_PREVIOUS_URI,
-    { mimeType: RESOURCE_MIME_TYPE },
-    async () => ({
-      contents: [{ uri: VISUAL_PREVIOUS_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
-    })
-  );
-
-  registerAppResource(
-    server,
-    "Estampes visual surface v0.4.2 (legacy)",
-    VISUAL_V042_URI,
-    { mimeType: RESOURCE_MIME_TYPE },
-    async () => ({
-      contents: [{ uri: VISUAL_V042_URI, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }],
-    })
-  );
-
-  registerAppResource(
-    server,
-    "Estampes visual surface v0.4.3 (legacy)",
-    VISUAL_V043_URI,
-    {mimeType:RESOURCE_MIME_TYPE},
-    async()=>({contents:[{uri:VISUAL_V043_URI,mimeType:RESOURCE_MIME_TYPE,text:visualHtml}]})
-  );
-
-  // Keep the prior canvas URI alive for saved ChatGPT conversations.
-  registerAppResource(
-    server,
-    "Estampes visual surface v0.4.6 (legacy)",
-    VISUAL_V046_URI,
-    {mimeType:RESOURCE_MIME_TYPE},
-    async()=>({contents:[{uri:VISUAL_V046_URI,mimeType:RESOURCE_MIME_TYPE,text:visualHtml}]})
-  );
+  for (const uri of LEGACY_VISUAL_URIS) {
+    registerAppResource(
+      server,
+      "Estampes visual surface (legacy " + uri.match(/v\d+/)[0] + ")",
+      uri,
+      { mimeType: RESOURCE_MIME_TYPE },
+      async () => ({ contents: [{ uri, mimeType: RESOURCE_MIME_TYPE, text: visualHtml }] })
+    );
+  }
 
   registerAppTool(
     server,
@@ -339,13 +301,15 @@ function makeServer() {
     })
   );
 
-  registerAppResource(
-    server,
-    "Estampes visual evidence v0.4.5 (legacy)",
-    EVIDENCE_V045_URI,
-    {mimeType:RESOURCE_MIME_TYPE},
-    async()=>({contents:[{uri:EVIDENCE_V045_URI,mimeType:RESOURCE_MIME_TYPE,text:evidenceHtml}]})
-  );
+  for (const uri of LEGACY_EVIDENCE_URIS) {
+    registerAppResource(
+      server,
+      "Estampes visual evidence (legacy " + uri.match(/v\d+/)[0] + ")",
+      uri,
+      { mimeType: RESOURCE_MIME_TYPE },
+      async () => ({ contents: [{ uri, mimeType: RESOURCE_MIME_TYPE, text: evidenceHtml }] })
+    );
+  }
 
   // Model pixel-inspection tool: image blocks are for GPT, no UI attached.
   // Returns real PNG image bytes in the MCP content array, not object names.
@@ -455,7 +419,6 @@ function makeServer() {
           origin:z.string(),target:z.string()
         }),
         rendered:z.object({width:z.number(),height:z.number(),mimeType:z.literal("image/png")}),
-        images:z.object({original:z.string(),marked:z.string(),crop:z.string()}),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{resourceUri:EVIDENCE_URI},"openai/outputTemplate":EVIDENCE_URI},
@@ -468,7 +431,11 @@ function makeServer() {
           structuredContent:{
             kind:"estampes.visual_evidence_view",imageId,revision,
             focus:e.focus,crop:e.crop,rendered:e.rendered,
-            images:{
+          },
+          // Widget-only payload. structuredContent is also read by the model,
+          // so ~100 KB of base64 there would only burn its context window.
+          _meta:{
+            "estampes/images":{
               original:e.images.original.toString("base64"),
               marked:e.images.marked.toString("base64"),
               crop:e.images.crop.toString("base64")
@@ -490,6 +457,51 @@ function makeServer() {
 const mcpHandler = toNodeHandler(createMcpHandler(makeServer));
 
 const port = Number(process.env.PORT ?? 8787);
+
+// Optional shared secret. When ESTAMPES_ACCESS_KEY is set, /mcp requires it as
+// "?key=..." in the connector URL (ChatGPT's "No authentication" mode can still
+// carry it) or as "Authorization: Bearer ...". Unset keeps the open M0 setup.
+const ACCESS_KEY = process.env.ESTAMPES_ACCESS_KEY ?? "";
+// "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
+// calls /mcp server-to-server and does not need CORS at all.
+const CORS_ORIGINS = (process.env.ESTAMPES_CORS_ORIGINS ?? "*").split(",").map(s => s.trim()).filter(Boolean);
+const RATE_LIMIT = Number(process.env.ESTAMPES_RATE_LIMIT_PER_MIN ?? 120);
+const hits = new Map();
+
+function corsOrigin(req) {
+  if (CORS_ORIGINS.includes("*")) return "*";
+  const origin = req.headers.origin;
+  return origin && CORS_ORIGINS.includes(origin) ? origin : null;
+}
+
+function sameSecret(given) {
+  const a = Buffer.from(String(given ?? "")), b = Buffer.from(ACCESS_KEY);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function authorized(req, url) {
+  if (!ACCESS_KEY) return true;
+  const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "")?.[1];
+  return sameSecret(url.searchParams.get("key")) || sameSecret(bearer);
+}
+
+// Fixed one-minute window per client IP; Render puts the client first in
+// x-forwarded-for. In-memory is enough for a single free-tier instance.
+function rateLimited(req) {
+  if (!(RATE_LIMIT > 0)) return false;
+  const ip = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() ||
+    req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  let entry = hits.get(ip);
+  if (!entry || now - entry.start >= 60000) {
+    entry = { start: now, count: 0 };
+    hits.set(ip, entry);
+    if (hits.size > 10000) {
+      for (const [key, value] of hits) if (now - value.start >= 60000) hits.delete(key);
+    }
+  }
+  return ++entry.count > RATE_LIMIT;
+}
 const httpServer = createHttpServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
 
@@ -517,6 +529,7 @@ const httpServer = createHttpServer((req, res) => {
       visualEvidencePresentation: "explicit-render-tool",
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
+      accessKeyRequired: Boolean(ACCESS_KEY),
     }));
     return;
   }
@@ -528,20 +541,36 @@ const httpServer = createHttpServer((req, res) => {
   }
 
   if (url.pathname === "/mcp" && req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "access-control-allow-origin": "*",
+    const origin = corsOrigin(req);
+    res.writeHead(204, origin ? {
+      "access-control-allow-origin": origin,
       "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
       "access-control-allow-headers":
-        "content-type, accept, mcp-session-id, mcp-protocol-version",
+        "content-type, accept, authorization, mcp-session-id, mcp-protocol-version",
       "access-control-expose-headers": "Mcp-Session-Id",
-    });
+      ...(origin === "*" ? {} : { vary: "Origin" }),
+    } : {});
     res.end();
     return;
   }
 
   if (url.pathname === "/mcp" && ["GET", "POST", "DELETE"].includes(req.method)) {
-    res.setHeader("access-control-allow-origin", "*");
-    res.setHeader("access-control-expose-headers", "Mcp-Session-Id");
+    const origin = corsOrigin(req);
+    if (origin) {
+      res.setHeader("access-control-allow-origin", origin);
+      res.setHeader("access-control-expose-headers", "Mcp-Session-Id");
+      if (origin !== "*") res.setHeader("vary", "Origin");
+    }
+    if (!authorized(req, url)) {
+      res.writeHead(401, { "content-type": "text/plain", "www-authenticate": "Bearer" });
+      res.end("Missing or invalid Estampes access key");
+      return;
+    }
+    if (rateLimited(req)) {
+      res.writeHead(429, { "content-type": "text/plain", "retry-after": "60" });
+      res.end("Too many requests");
+      return;
+    }
     const start = Date.now();
     res.once("finish", () => {
       console.log("[mcp] " + req.method + " status=" + res.statusCode +

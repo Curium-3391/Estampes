@@ -27,7 +27,7 @@ figcaption{font-size:.8rem;color:GrayText;padding:8px 10px;background:Canvas}
 </head>
 <body>
 <main>
-<header><h1>Estampes · Visual Evidence</h1><small>v0.4.7 · 舊版獨立 PNG 檢視器</small></header>
+<header><h1>Estampes · Visual Evidence</h1><small>v__ESTAMPES_VERSION__ · 舊版獨立 PNG 檢視器</small></header>
 <p id="details">準備接收影像資料…</p>
 <div id="viewer" hidden>
 <nav aria-label="切換影像來源">
@@ -44,7 +44,7 @@ const resultImage=document.querySelector("#image"),status=document.querySelector
 const caption=document.querySelector("#caption"),details=document.querySelector("#details");
 const viewer=document.querySelector("#viewer"),retry=document.querySelector("#retry");
 const tabs=Array.from(document.querySelectorAll("[data-view]"));
-const titleMap={marked:"藍色標記全圖",original:"原始完整圖片",crop:"局部放大（無標記）"};
+const titleMap={marked:"中性焦點全圖",original:"原始完整圖片",crop:"局部放大（無標記）"};
 const sources={original:"",marked:"",crop:""};
 let currentView="marked",lastInput=null,pending=new Map(),seq=0,ready=false;
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
@@ -75,13 +75,19 @@ function switchView(name){
  caption.textContent=titleMap[name]+" · 圖片像素由 Estampes 工具回傳";
  for(const tab of tabs)tab.setAttribute("aria-pressed",String(tab.dataset.view===name));
 }
-function showResult(input){
+// Images travel in the tool result's _meta (widget-only); structuredContent
+// keeps just the small metadata the model may read. r.images is accepted for
+// results cached from servers before 0.4.8.
+function showResult(input,meta){
  const r=input?.structuredContent??input?.result?.structuredContent??
    input?.toolResult?.structuredContent??input?.mcp_tool_result?.structuredContent??
    input?.toolOutput??input;
- if(r?.kind!=="estampes.visual_evidence_view"||!r.images)return false;
+ if(r?.kind!=="estampes.visual_evidence_view")return false;
+ const m=meta??input?._meta??input?.result?._meta??input?.toolResult?._meta??input?.mcp_tool_result?._meta;
+ const images=m?.["estampes/images"]??r.images;
+ if(!images)return false;
  for(const name of ["original","marked","crop"]){
-   const b64=r.images[name];
+   const b64=images[name];
    if(typeof b64!=="string"||b64.length>3500000||!/^[A-Za-z0-9+/=\s]+$/.test(b64))return false;
    sources[name]="data:image/png;base64,"+b64.replace(/\s/g,"");
  }
@@ -93,10 +99,9 @@ function showResult(input){
 function hydrateCompat(){
  const o=window.openai;
  if(!o)return false;
- return showResult(o.toolOutput)||
+ return showResult(o.toolOutput,o.toolResponseMetadata)||
         showResult(o.toolResponseMetadata?.mcp_tool_result)||
-        showResult(o.toolResponseMetadata?.call_tool_result)||
-        showResult(o.toolOutput);
+        showResult(o.toolResponseMetadata?.call_tool_result);
 }
 for(const tab of tabs)tab.addEventListener("click",()=>switchView(tab.dataset.view));
 retry.addEventListener("click",async()=>{
@@ -119,14 +124,14 @@ window.addEventListener("message",event=>{
  if(msg.method==="ui/notifications/tool-input")inputReceived(msg.params);
  if(msg.method==="ui/notifications/tool-result"){
    if(!showResult(msg.params)){
-     status.textContent="工具結果已收到，但缺少 structuredContent 圖片資料。";
+     status.textContent="工具結果已收到，但缺少圖片資料。";
    }
  }
 });
 (async()=>{
  try{
    await request("ui/initialize",{
-     appInfo:{name:"estampes-evidence-viewer",version:"0.4.4"},
+     appInfo:{name:"estampes-evidence-viewer",version:"__ESTAMPES_VERSION__"},
      appCapabilities:{},protocolVersion:"2026-01-26"
    });
    notify("ui/notifications/initialized",{});

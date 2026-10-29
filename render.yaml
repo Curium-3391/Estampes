@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     branch: main
-    buildCommand: npm install --no-audit --no-fund && npm test
+    buildCommand: npm ci --no-audit --no-fund && npm test
     startCommand: npm start
     healthCheckPath: /
     envVars:
@@ -12,3 +12,6 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22"
+      # Optional: set in the Render dashboard to require ?key=... on /mcp.
+      - key: ESTAMPES_ACCESS_KEY
+        sync: false
