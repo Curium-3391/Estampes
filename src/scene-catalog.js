@@ -59,6 +59,20 @@ export function markFindings(mark) {
   return {...(note?{note}:{}),...(MARK_STATUSES.includes(mark.status)?{status:mark.status}:{})};
 }
 
+// Drawing style. Colour no longer tells who drew a mark; the label colour
+// and author field still do. A highlighter is wide and translucent so the
+// picture stays visible underneath.
+export const MARK_COLORS = Object.freeze(["gold","blue","red","green","yellow","magenta","cyan","white","black"]);
+export const MARK_SIZES = Object.freeze(["thin","medium","thick"]);
+export const MARK_PENS = Object.freeze(["pen","highlighter"]);
+export function markStyle(mark) {
+  return {
+    ...(MARK_COLORS.includes(mark.color)?{color:mark.color}:{}),
+    ...(MARK_SIZES.includes(mark.size)?{size:mark.size}:{}),
+    ...(MARK_PENS.includes(mark.pen)?{pen:mark.pen}:{}),
+  };
+}
+
 function checkAssistantMark(mark) {
   if(!mark || !MARK_TYPES.includes(mark.type)) {
     throw new Error("Unsupported annotation");
@@ -76,7 +90,7 @@ export function resolveCoordinateAnnotation(mark) {
   checkAssistantMark(mark);
   if(mark.targetId!==undefined) throw new Error("Named targets are not supported; give x/y coordinates");
   if(mark.type==="polyline") {
-    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points,mark),...markFindings(mark),
+    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points,mark),...markFindings(mark),...markStyle(mark),
       author:"assistant",grounding:"unverified"};
   }
   if(!Number.isFinite(mark.x)||!Number.isFinite(mark.y)||
@@ -88,7 +102,7 @@ export function resolveCoordinateAnnotation(mark) {
       mark.x2<0||mark.x2>1||mark.y2<0||mark.y2>1)) {
     throw new Error("Invalid endpoint");
   }
-  return {id:mark.id,type:mark.type,label:mark.label,...markFindings(mark),x:mark.x,y:mark.y,
+  return {id:mark.id,type:mark.type,label:mark.label,...markFindings(mark),...markStyle(mark),x:mark.x,y:mark.y,
     ...(mark.type==="point"?{}:{x2:mark.x2,y2:mark.y2}),
     author:"assistant",grounding:"unverified"};
 }
@@ -106,7 +120,7 @@ export function resolveSceneAnnotation(scene, mark) {
     throw new Error("Mountains are occluded; use a point or future polygon mask, not a misleading bbox");
   }
   const geom=mark.type==="point"?target.point:target.box;
-  return {id:mark.id,type:mark.type,label:mark.label,...markFindings(mark),...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
+  return {id:mark.id,type:mark.type,label:mark.label,...markFindings(mark),...markStyle(mark),...geom,targetId:mark.targetId,author:"assistant",grounding:"scene-anchor"};
 }
 
 export function replayUserAnnotation(mark) {

@@ -14,6 +14,7 @@ import { z } from "zod";
 import { valueToX } from "./src/geometry.js";
 import {
   resolveSceneAnnotation, resolveCoordinateAnnotation, replayUserAnnotation, MARK_TYPES, MAX_POLYLINE_POINTS, MARK_STATUSES,
+  MARK_COLORS, MARK_SIZES, MARK_PENS,
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
@@ -76,6 +77,9 @@ const VisualAnnotationSchema = z.object({
   note: z.string().max(200).optional().describe("Assistant's finding about this mark, shown beside it (e.g. the chip's part number)"),
   status: z.enum(MARK_STATUSES).optional().describe("inspected = you looked at the pixels (process_image); uncertain = not confirmed"),
   role: z.enum(["focus", "context"]).optional(),
+  color: z.enum(MARK_COLORS).optional(),
+  size: z.enum(MARK_SIZES).optional(),
+  pen: z.enum(MARK_PENS).optional(),
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
 }).superRefine(checkGeometry);
@@ -95,6 +99,9 @@ const ModelAnnotationSchema = z.object({
   label: z.string().max(64).optional(),
   note: z.string().max(200).optional().describe("Your finding about this mark, shown beside it, e.g. 'SONY CXD2500AQ, CD DSP'"),
   status: z.enum(MARK_STATUSES).optional().describe("inspected only if you actually looked at these pixels (e.g. via process_image); otherwise uncertain or omit"),
+  color: z.enum(MARK_COLORS).optional().describe("Default gold. Use different colours to tell several traces or groups apart"),
+  size: z.enum(MARK_SIZES).optional().describe("Line thickness; default medium"),
+  pen: z.enum(MARK_PENS).optional().describe("highlighter = wide translucent stroke that keeps the picture visible; use it to shade an area rather than draw a precise line"),
   author: z.literal("assistant").optional(),
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
@@ -271,6 +278,7 @@ function makeServer() {
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
         "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. To answer about a user's mark, pass it back in priorUserAnnotations with your note. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
+        "Marks may set color, size and pen (pen or translucent highlighter). " +
         "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as PCB traces, wires, freehand sketches or loose circles around a part; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
         "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +

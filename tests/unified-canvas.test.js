@@ -104,6 +104,13 @@ test("new user marks continue numbering after re-presented ones",()=>{
   assert.match(source,/id:ID_PREFIX\+\(\+\+seq\)/);
 });
 
+test("users pick colour, size and a translucent highlighter",()=>{
+  for(const c of ["blue","red","green","yellow","magenta","cyan","white","black"])assert.match(html,new RegExp('data-color="'+c+'"'));
+  assert.match(html,/data-pen="highlighter"/);
+  assert.match(source,/op=hl\?\.38:1/);
+  assert.match(source,/\.\.\.styleFields\(\)/);
+});
+
 test("provenance colors are distinct from viewer inspection marker",()=>{
   assert.match(source,/#E4AE57/);
   assert.match(source,/#579DF6/);
