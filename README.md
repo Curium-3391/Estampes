@@ -6,7 +6,7 @@ Estampes is an experimental, open-source project exploring a simple idea: humans
 
 Inspired by Claude Debussy's *Estampes* (1903).
 
-> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.2 adds explicit annotation intent, a user note and optional manually provided conversation quote, via Protocol v0.2 draft; this is awaiting host verification.** General-purpose image grounding remains unsolved.
+> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.3 adds a model-callable visual pixel evidence tool (`inspect_visual`) that returns actual PNG images of the original demo scene, blue-marked source, and unmarked crop. This is implemented but requires Render and ChatGPT vision-bridge verification.** General-purpose image grounding remains unsolved.
 
 ## The problem
 
@@ -37,6 +37,7 @@ Estampes aims to remove that friction.
 - [x] **M0.4 — Generic 2D visual surface:** In-chat point/rectangle and user-to-GPT transmission have been observed working on the landscape demo. This does **not** establish semantic accuracy or reliable author preservation.
 - [ ] **M0.4.1 — Grounding and provenance correction:** Server resolves named demo objects from explicit scene landmarks; user marks have a separate replay channel and unverified AI coordinates are marked as such. Awaiting host verification.
 - [ ] **M0.4.2 — Annotation/context protocol:** Explicit intent selector, optional user note and manually supplied quote, canonical v0.2 event and context-aware GPT message. Implemented; live host verification pending.
+- [ ] **M0.4.3 — Visual Input Bridge:** `inspect_visual` returns real PNG pixels and source-coordinate metadata from demo artwork, separating Estampes geometry from GPT object interpretation. Live model vision visibility not yet verified.
 - [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
@@ -44,7 +45,7 @@ Estampes aims to remove that friction.
 
 **Integration requirement:** Estampes is a ChatGPT-native plugin experience, not a standalone website or chatbot. Use an MCP server + MCP Apps UI inside the conversation for M0; evaluate ChatGPT Plugin Extensions for deeper native integrations.
 
-See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md), and [M0.4 visual surface guide](docs/M0-4.md), [M0.4.1 grounding correction](docs/M0-4-1.md), [Protocol v0.2 draft](docs/PROTOCOL-V0.2.md), and [M0.4.2 testing](docs/M0-4-2.md).
+See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md), and [M0.4 visual surface guide](docs/M0-4.md), [M0.4.1 grounding correction](docs/M0-4-1.md), [Protocol v0.2 draft](docs/PROTOCOL-V0.2.md), and [M0.4.2 testing](docs/M0-4-2.md), and [M0.4.3 visual input bridge](docs/M0-4-3.md).
 
 ## Integration caveat
 
