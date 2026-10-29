@@ -1,6 +1,6 @@
-# Annotation protocol — early draft
+# Annotation protocol — legacy v0.1 sketch
 
-This is a **design sketch**, not a stable public specification.
+This is the historical **v0.1 design sketch**. For the current explicit user intent and conversation-context event, see **[Annotation / Context Protocol v0.2 draft](PROTOCOL-V0.2.md)**. Neither is a stable public specification.
 
 ## Coordinates
 
