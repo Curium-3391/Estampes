@@ -24,7 +24,10 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
   let output="";
   processHandle.stderr.on("data",buf=>{output+=buf.toString()});
   processHandle.stdout.on("data",buf=>{output+=buf.toString()});
-  const client=new Client({name:"estampes-smoke-test",version:"0.1.0"});
+  const client=new Client(
+    {name:"estampes-smoke-test",version:"0.1.0"},
+    {versionNegotiation:{mode:"auto"}}
+  );
   try {
     let healthy=false;
     for(let i=0;i<80;i++){
