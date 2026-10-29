@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { registerImage } from "../src/image-store.js";
-import { applyCanvasChanges, canvasMarks, storeUserMarks, fromFrame } from "../src/canvas-state.js";
+import { applyCanvasChanges, canvasMarks, canvasLayers, storeUserMarks, fromFrame } from "../src/canvas-state.js";
 import { renderVerification, marksRegion } from "../src/mark-render.js";
 import { resolveCoordinateAnnotation } from "../src/scene-catalog.js";
 
@@ -67,4 +67,28 @@ test("verification image shows the crop with and without the marks", async () =>
   assert.equal(redLeft, 0);
   assert.ok(redRight > 0);
   assert.deepEqual(marksRegion([{ x: 0.5, y: 0.5 }]), { x: 0.46, y: 0.46, x2: 0.54, y2: 0.54 });
+});
+
+test("each send and each GPT drawing call becomes one layer", async () => {
+  const entry = await photo();
+  const box = (id, x) => ({ id, type: "rect", x, y: 0.1, x2: x + 0.1, y2: 0.2 });
+  applyCanvasChanges(entry, { annotations: [box("a", 0.1), box("b", 0.3)], resolve });
+  const first = storeUserMarks(entry, [{ id: "u1", type: "point", x: 0.5, y: 0.5 }]);
+  // A later send re-sends u1 as context: it keeps its layer, only u2 is new.
+  const second = storeUserMarks(entry, [{ id: "u1", type: "point", x: 0.5, y: 0.5, role: "context" }, { id: "u2", type: "point", x: 0.6, y: 0.5 }]);
+  assert.equal(storeUserMarks(entry, [{ id: "u2", type: "point", x: 0.6, y: 0.5 }]), null);
+  applyCanvasChanges(entry, { annotations: [box("c", 0.5)], layer: "電源", resolve });
+  // Editing keeps a mark's layer; naming an existing layer adds to it.
+  applyCanvasChanges(entry, { annotations: [box("a", 0.12)], resolve });
+  applyCanvasChanges(entry, { annotations: [box("d", 0.7)], layer: "電源", resolve });
+  const byId = Object.fromEntries(canvasMarks(entry).map(m => [m.id, m.layer]));
+  assert.deepEqual(byId, { a: "L1", b: "L1", u1: first.id, u2: second.id, c: "L4", d: "L4" });
+  assert.deepEqual(canvasLayers(entry).map(l => [l.id, l.author, l.name, l.count]), [
+    ["L1", "assistant", "GPT · 第1次", 2], ["L2", "user", "你 · 第1次", 1], ["L3", "user", "你 · 第2次", 1], ["L4", "assistant", "電源", 2],
+  ]);
+  // Moving a mark out empties its layer, which then drops from the list.
+  applyCanvasChanges(entry, { annotations: [box("a", 0.1), box("b", 0.3)], layer: "電源", resolve });
+  assert.deepEqual(canvasLayers(entry).map(l => l.id), ["L2", "L3", "L4"]);
+  applyCanvasChanges(entry, { reset: true, annotations: [box("z", 0.1)], resolve });
+  assert.deepEqual(canvasLayers(entry).map(l => [l.id, l.name]), [["L1", "GPT · 第1次"]]);
 });

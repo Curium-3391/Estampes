@@ -18,7 +18,7 @@ import {
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
 import { createVisualEvidence } from "./src/visual-input.js";
-import { applyCanvasChanges, canvasMarks, storeUserMarks, importMarks } from "./src/canvas-state.js";
+import { applyCanvasChanges, canvasMarks, canvasLayers, storeUserMarks, importMarks } from "./src/canvas-state.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
@@ -42,10 +42,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -87,6 +87,7 @@ const VisualAnnotationSchema = z.object({
   pen: z.enum(MARK_PENS).optional(),
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
+  layer: z.string().max(12).optional(),
 }).superRefine(checkGeometry);
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
@@ -138,7 +139,9 @@ async function importMarksFile(entry, file) {
     if (!parsed.success) throw new Error("Invalid mark in marks file: " + (m?.id ?? "?"));
     return { ...parsed.data, author: m.author === "user" ? "user" : "assistant" };
   });
-  return importMarks(entry, marks, { replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation });
+  const layers = data.layers.filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author))
+    .map((l) => ({ id: l.id, author: l.author, name: String(l.name ?? "").slice(0, 40) }));
+  return importMarks(entry, marks, { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation });
 }
 
 async function loadImageInput({ image, imageUrl }) {
@@ -180,13 +183,15 @@ const checkSummary = ({ layout, region, numbers }) => ({ layout, region, numbers
 const r3 = (v) => Math.round(v * 1000) / 1000;
 function compactMark(m) {
   return {
-    id: m.id, type: m.type, author: m.author, ...(m.label ? { label: m.label } : {}),
+    id: m.id, type: m.type, author: m.author, ...(m.layer ? { layer: m.layer } : {}), ...(m.label ? { label: m.label } : {}),
     box: m.type === "point" ? [r3(m.x), r3(m.y)] : [r3(m.x), r3(m.y), r3(m.x2), r3(m.y2)],
     ...(m.type === "polyline" ? { vertices: m.points.length } : {}),
     ...(m.note ? { note: m.note } : {}), ...(m.status ? { status: m.status } : {}),
     ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
   };
 }
+const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int() });
+const layerText = (layers) => layers.map((l) => l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count + ")").join("; ");
 const exportLinks = (imageId) => PUBLIC_URL ? {
   image: PUBLIC_URL + "/export/" + imageId.slice(4) + "/image.jpg",
   marks: PUBLIC_URL + "/export/" + imageId.slice(4) + "/marks.svg",
@@ -341,6 +346,7 @@ function makeServer() {
         "Whenever YOU ask the user to point at, circle or mark something, call this in the same turn so they have a canvas to draw on (imageId re-opens it with every mark); never ask without one. Also call it when the user asks for the canvas/drawing board again. Do not call it for text-only follow-ups. " +
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
         "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). " +
+        "Marks are grouped in LAYERS the user can show or hide: each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '電源走線', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " +
         "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. " +
         "If you read positions off a process_image/overlay_grid output, pass `coordinateFrame` = that output's region (plus its width/height to give pixel coordinates); Estampes converts them. " +
         "The result includes a VERIFICATION image: the same crop of the real photo without and with your marks (numbered). Check that the marks sit on the right pixels before telling the user it is done; fix with the same id if not. " +
@@ -366,6 +372,7 @@ function makeServer() {
         findings: z.array(FindingSchema).max(30).default([]).describe("Attach your note/status to existing marks by id, e.g. the user's box"),
         remove: z.array(z.string().max(64)).max(30).default([]).describe("Ids of marks to delete"),
         reset: z.boolean().default(false).describe("Start from an empty canvas for this photo"),
+        layer: z.string().trim().min(1).max(40).optional().describe("Name of the layer for this call's new marks; an existing name of yours adds to that layer, and edited marks move into it"),
         coordinateFrame: z.object({
           region: RegionSchema,
           width: z.number().int().positive().optional(),
@@ -382,6 +389,7 @@ function makeServer() {
         views: z.array(z.object({ label: z.string(), region: RegionSchema })).optional(),
         annotations: VisualAnnotationsSchema.optional(),
         marks: z.array(z.record(z.string(), z.unknown())).optional(),
+        layers: z.array(LayerSchema).optional(),
         check: CheckSummarySchema.optional(),
         exports: z.object({ image: z.string(), marks: z.string() }).optional(),
         coordinateSystem: z.literal("normalized-top-left"),
@@ -389,7 +397,7 @@ function makeServer() {
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile"] },
     },
-    async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, coordinateFrame, verify }) => {
+    async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify }) => {
       try {
         if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
           throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
@@ -416,10 +424,10 @@ function makeServer() {
         const entry = getImage(imageId);
         const imported = marksFile ? await importMarksFile(entry, marksFile) : [];
         const changed = applyCanvasChanges(entry, {
-          annotations, findings, remove, reset, frame: coordinateFrame,
+          annotations, findings, remove, reset, layer, frame: coordinateFrame,
           priorUser: priorUserAnnotations.map(replayUserAnnotation), resolve: resolveCoordinateAnnotation,
         });
-        const resolved = canvasMarks(entry);
+        const resolved = canvasMarks(entry), layers = canvasLayers(entry);
         const drawn = changed.filter(id => annotations.some(a => a.id === id));
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
         const ink = inkReport(resolved.filter(m => drawn.includes(m.id)), entry);
@@ -440,6 +448,7 @@ function makeServer() {
             text: "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
               (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
               resolved.length + " marks (ids persist; edit by re-using an id; boxes rounded): " + JSON.stringify(resolved.map(compactMark)) +
+              (layers.length ? ". Layers (the user can hide any): " + layerText(layers) : "") +
               (imported.length ? ". Restored from marks file: " + imported.join(", ") : "") +
               (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
               (ink.length ? ". Ink in image px: " + ink.map(i => i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
@@ -452,7 +461,7 @@ function makeServer() {
           structuredContent: {
             kind: "estampes.visual_surface", imageId, width: entry.width, height: entry.height,
             views: rendered.map(({ label, region }) => ({ label, region })),
-            marks: resolved.map(compactMark), coordinateSystem: "normalized-top-left",
+            marks: resolved.map(compactMark), layers, coordinateSystem: "normalized-top-left",
             ...(check ? { check: checkSummary(check) } : {}),
             ...(exports ? { exports } : {}),
           },
@@ -496,7 +505,7 @@ function makeServer() {
         const body = part === "check"
           ? { check: check ? { ...checkSummary(check), image: pixels(check) } : null }
           : {
-              width: entry.width, height: entry.height, annotations: canvasMarks(entry),
+              width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
               image: pixels(await displayImage(entry)),
               views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
               ...(check ? { check: checkSummary(check) } : {}),
@@ -562,6 +571,7 @@ function makeServer() {
         imageId:z.string().optional(),
         count:z.number().int(),
         annotations:VisualAnnotationsSchema,
+        layer:z.object({id:z.string(),name:z.string()}).optional(),
         event:z.record(z.string(),z.unknown()),
         chatMessage:z.string(),
       }),
@@ -580,12 +590,13 @@ function makeServer() {
         const event=buildAnnotationEvent({scene,image,annotations:checked,intent,note,replyQuote});
         const chatMessage=formatAnnotationChatMessage(event);
         // Submitted marks join the photo's canvas so GPT need not replay them.
-        if(entry)storeUserMarks(entry,checked);
+        const layer=entry?storeUserMarks(entry,checked):null;
         return {
           content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
           structuredContent:{
             kind:"estampes.validated_annotations",...(scene?{scene}:{imageId}),
             count:checked.length,annotations:checked,event,chatMessage,
+            ...(layer?{layer:{id:layer.id,name:layer.name}}:{}),
           },
         };
       } catch(error) {
@@ -985,7 +996,7 @@ const httpServer = createHttpServer((req, res) => {
       return;
     }
     const svg = exportMatch[2] === "marks.svg";
-    Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
+    Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
       .then((body) => {
         res.writeHead(200, {
           "content-type": svg ? "image/svg+xml; charset=utf-8" : "image/jpeg",
