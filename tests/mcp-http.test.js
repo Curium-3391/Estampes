@@ -45,10 +45,27 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     const result=await client.callTool({name:"show_number_line",arguments:{target:2}});
     assert.equal(result.structuredContent?.target,2);
     assert.equal(result.structuredContent?.x,0.75);
+    // M0.3: the previously missing app-scoped tool must be present and callable.
+    const selectionTool=tools.tools.find(t=>t.name==="record_number_line_selection");
+    assert.ok(selectionTool,"UI selection tool missing from MCP discovery");
+    assert.equal(selectionTool._meta?.ui?.resourceUri,"ui://estampes/number-line.html");
+    assert.deepEqual(selectionTool._meta?.ui?.visibility,["app"]);
+    const selection=await client.callTool({
+      name:"record_number_line_selection",
+      arguments:{value:-2}
+    });
+    assert.equal(selection.isError,undefined);
+    assert.equal(selection.structuredContent?.kind,"estampes.user_selection");
+    assert.equal(selection.structuredContent?.value,-2);
+    assert.equal(selection.structuredContent?.x,0.25);
+    assert.equal(selection.structuredContent?.y,0.5);
     const resource=await client.readResource({uri:"ui://estampes/number-line.html"});
     const html=resource.contents.find(c=>c.uri==="ui://estampes/number-line.html");
     assert.ok(html?.text?.includes("Estampes · M0 Number Line"));
     assert.equal(html.mimeType,"text/html;profile=mcp-app");
+    assert.ok(html.text.includes("v0.3.0"),"UI resource is stale");
+    assert.ok(html.text.includes('name:"record_number_line_selection"'));
+    assert.ok(html.text.includes('request("ui/message"'));
   } finally {
     await client.close().catch(()=>{});
     processHandle.kill("SIGTERM");
