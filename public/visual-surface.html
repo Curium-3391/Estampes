@@ -113,7 +113,6 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 <div class="actions"><span id="counter">我的標註：0</span>
 <button id="send" class="primary" disabled>把標註傳給 GPT</button></div>
 <div class="actions" id="extra-actions">
-<button id="pip" title="畫布固定在畫面上，聊天時不用往上找">固定畫布</button>
 <button id="fullscreen">全螢幕</button>
 <button id="export-image" hidden title="校正方向後的圖，所有座標都以它為準">下載圖片</button>
 <button id="export-marks" hidden title="分「使用者」「GPT」兩個圖層；之後上傳回對話可還原標記">下載標記 SVG</button>
@@ -341,7 +340,7 @@ function renderView(){
  const r=processed?.region;
  svg.setAttribute("viewBox",processed?[r.x*VW,r.y*VH,(r.x2-r.x)*VW,(r.y2-r.y)*VH].join(" "):
    viewMode==="zoom"&&focus?cropBox(focus):zoomable()&&cam?[cam.x,cam.y,cam.w,cam.h].join(" "):"0 0 "+VW+" "+VH);
- zoomTools.hidden=!zoomable();zoomLevel.textContent=Math.round(Z()*100)+"%";
+ zoomTools.hidden=!zoomable();zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?" · 原始解析度":"");
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?processed.label+" · 處理後檢視（不含標註）":
    {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
@@ -543,6 +542,9 @@ svg.addEventListener("wheel",e=>{
 },{passive:false});
 let gestureScale=1;
 svg.addEventListener("gesturestart",e=>{e.preventDefault();gestureScale=1;});
+// iOS and some app web views ignore touch-action inside iframes; stop the
+// page (and the chat around the widget) from scrolling under a finger.
+for(const type of ["touchstart","touchmove"])svg.addEventListener(type,e=>{if(zoomable()&&(viewMode==="annotated"||cam||e.touches.length>1))e.preventDefault();},{passive:false});
 svg.addEventListener("gesturechange",e=>{e.preventDefault();if(!zoomable())return;zoomAt(e.scale/gestureScale,canvasPoint(e));gestureScale=e.scale;});
 const pointers=new Map();
 let pinch=null,panning=null,gestureLock=false,spaceDown=false;
@@ -648,7 +650,6 @@ async function displayMode(mode){
    else await request("ui/request-display-mode",{mode});
  }catch(err){status.textContent="這個 ChatGPT 版本不支援切換顯示方式："+String(err.message||err)}
 }
-document.querySelector("#pip").addEventListener("click",()=>displayMode("pip"));
 document.querySelector("#fullscreen").addEventListener("click",()=>displayMode("fullscreen"));
 document.querySelector("#clear").addEventListener("click",()=>{if(userMarks.length){commitMarks([]);selectedFocusId=null;render()}});
 document.addEventListener("keydown",e=>{
