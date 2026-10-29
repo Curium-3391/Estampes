@@ -32,11 +32,13 @@ export const landmarkIds = [...new Set(
 )].sort();
 
 export const MARK_TYPES = Object.freeze(["point","rect","arrow","polyline"]);
-export const MAX_POLYLINE_POINTS = 64;
+export const MAX_POLYLINE_POINTS = 128;
 
-// A polyline (e.g. a PCB trace) is its vertex list; x/y/x2/y2 become its
-// bounding box so crops, zooms and process_image regions keep working.
-export function polylineWithBounds(points) {
+// A polyline (e.g. a PCB trace or a freehand stroke) is its vertex list;
+// x/y/x2/y2 become its bounding box so crops, zooms and process_image
+// regions keep working. `smooth` draws a curve through the vertices and
+// `closed` joins the last vertex back to the first (e.g. circling a part).
+export function polylineWithBounds(points, { smooth, closed } = {}) {
   if(!Array.isArray(points)||points.length<2||points.length>MAX_POLYLINE_POINTS) {
     throw new Error("Polyline needs 2 to "+MAX_POLYLINE_POINTS+" points");
   }
@@ -45,7 +47,8 @@ export function polylineWithBounds(points) {
     return {x:p.x,y:p.y};
   });
   const xs=clean.map(p=>p.x),ys=clean.map(p=>p.y);
-  return {points:clean,x:Math.min(...xs),y:Math.min(...ys),x2:Math.max(...xs),y2:Math.max(...ys)};
+  return {points:clean,x:Math.min(...xs),y:Math.min(...ys),x2:Math.max(...xs),y2:Math.max(...ys),
+    ...(smooth===true?{smooth:true}:{}),...(closed===true?{closed:true}:{})};
 }
 
 function checkAssistantMark(mark) {
@@ -65,7 +68,7 @@ export function resolveCoordinateAnnotation(mark) {
   checkAssistantMark(mark);
   if(mark.targetId!==undefined) throw new Error("Named targets are not supported; give x/y coordinates");
   if(mark.type==="polyline") {
-    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points),
+    return {id:mark.id,type:"polyline",label:mark.label,...polylineWithBounds(mark.points,mark),
       author:"assistant",grounding:"unverified"};
   }
   if(!Number.isFinite(mark.x)||!Number.isFinite(mark.y)||
@@ -102,6 +105,6 @@ export function replayUserAnnotation(mark) {
   if(!mark || !MARK_TYPES.includes(mark.type)) {
     throw new Error("Invalid historical annotation");
   }
-  const geometry=mark.type==="polyline"?polylineWithBounds(mark.points):{};
+  const geometry=mark.type==="polyline"?polylineWithBounds(mark.points,mark):{};
   return {...mark,...geometry,author:"user",grounding:"replayed-unverified"};
 }

@@ -70,6 +70,8 @@ const VisualAnnotationSchema = z.object({
   x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
   points: PolylinePointsSchema.optional(),
+  smooth: z.boolean().optional(),
+  closed: z.boolean().optional(),
   label: z.string().max(64).optional(),
   author: z.enum(["user", "assistant"]).optional(),
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
@@ -84,7 +86,9 @@ const ModelAnnotationSchema = z.object({
   type: z.enum(MARK_TYPES),
   x: Point01.optional(), y: Point01.optional(),
   x2: Point01.optional(), y2: Point01.optional(),
-  points: PolylinePointsSchema.optional().describe("polyline only: ordered vertices, e.g. along a PCB trace"),
+  points: PolylinePointsSchema.optional().describe("polyline only: ordered vertices, e.g. along a PCB trace or a freehand sketch"),
+  smooth: z.boolean().optional().describe("polyline only: draw a smooth curve through the points (freehand look)"),
+  closed: z.boolean().optional().describe("polyline only: join the last point to the first, e.g. to circle a part"),
   label: z.string().max(64).optional(),
   author: z.literal("assistant").optional(),
 }).strict().superRefine(checkGeometry);
@@ -248,7 +252,7 @@ function makeServer() {
       description:
         "CANONICAL shared visual canvas the user sees in chat. Pass imageId (from load_image) to show the user's REAL photo/scan, or scene for a bundled SVG demo. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
-        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 64 ordered vertices) for paths such as PCB traces or wires; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
+        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as PCB traces, wires, freehand sketches or loose circles around a part; follow only what is visible in zoomed process_image output, and say where a path is hidden (under parts, other layers). " +
         "Optional `views` (imageId only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. Locate things first with process_image/overlay_grid, then mark them; coordinates are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
