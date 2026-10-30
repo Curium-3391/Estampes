@@ -58,6 +58,29 @@ const Capability = z.object({
   async: z.boolean().optional(),
 }).strict();
 
+// estampes.panel/1: a panel a module offers inside the Visual Surface. It is
+// data only; `kind` names a renderer that ships with Estampes (the host
+// draws every panel itself), so a manifest can never bring HTML, scripts or
+// CSS. An unknown kind is accepted and shown as an inert placeholder.
+export const PANEL_SCHEMA = "estampes.panel/1";
+export const PANEL_KINDS = ["canvas", "graph", "calculator", "property-inspector", "data-table", "log", "form"];
+const Size = z.object({ width: z.number().int().min(120).max(2000), height: z.number().int().min(120).max(2000) }).strict();
+const Panel = z.object({
+  schema: z.literal(PANEL_SCHEMA),
+  id: z.string().regex(/^[a-z][a-z0-9-]{0,30}$/),
+  title: Text(60), titleI18n: I18n(60).optional(),
+  kind: z.string().regex(/^[a-z][a-z0-9-]{0,30}$/),
+  uiSchemaVersion: z.literal(1),
+  defaultBinding: z.enum(["surface.canvas", "surface.casNotebook", "none"]).default("none"),
+  preferredSize: Size.optional(), minSize: Size.optional(),
+  maxInstances: z.number().int().min(1).max(8).default(1),
+  resizable: z.boolean().default(true), dockable: z.boolean().default(true),
+  // Capabilities this panel may trigger; each call is still checked against
+  // the module's grants, so opening a panel never grants anything.
+  capabilityBindings: z.array(z.string().regex(CAPABILITY_ID)).max(32).default([]),
+  permissions: z.array(z.enum(PERMISSION_NAMES)).max(12).default([]),
+}).strict();
+
 export const ManifestSchema = z.object({
   schema: z.literal(MODULE_SCHEMA),
   id: z.string().regex(MODULE_ID, "reverse-DNS id such as org.example.graph"),
@@ -89,6 +112,7 @@ export const ManifestSchema = z.object({
   secrets: z.array(z.object({ name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/), label: Text(60), description: Text(200).optional() }).strict()).max(4).optional(),
   dependencies: z.array(z.object({ id: z.string().regex(MODULE_ID), version: z.string().max(120) }).strict()).max(8).optional(),
   capabilities: z.array(Capability).min(1).max(32),
+  panels: z.array(Panel).max(8).optional(),
 }).strict();
 
 export class ManifestError extends Error {}
@@ -139,6 +163,15 @@ export function validateManifest(raw, { coreVersion } = {}) {
       throw new ManifestError(where + (c.operations ? ": operations are only for the declarative runtime" : ": the declarative runtime needs operations"));
     }
     if (c.operations && JSON.stringify(c.operations).length > 64 * 1024) throw new ManifestError(where + ".operations: larger than 64 KB");
+  });
+  const panelIds = new Set();
+  (m.panels ?? []).forEach((pn, i) => {
+    const where = "manifest.panels[" + i + "] (" + pn.id + ")";
+    if (panelIds.has(pn.id)) throw new ManifestError(where + ": duplicate id");
+    panelIds.add(pn.id);
+    for (const b of pn.capabilityBindings) if (!ids.has(b)) throw new ManifestError(where + ".capabilityBindings: no capability " + b);
+    const extra = pn.permissions.filter((x) => !m.permissions.includes(x));
+    if (extra.length) throw new ManifestError(where + ".permissions: " + extra.join(", ") + " not in the module's permissions");
   });
   if (m.network && !m.permissions.includes("network.request.approved")) throw new ManifestError("manifest.network: needs the network.request.approved permission");
   if (m.permissions.includes("network.request.approved") && !m.network) throw new ManifestError("manifest.permissions: network.request.approved needs manifest.network (hosts and data flow)");

@@ -530,5 +530,42 @@
         }
       ]
     }
+  ],
+  "panels": [
+    {
+      "schema": "estampes.panel/1",
+      "id": "calculator",
+      "title": "Scientific CAS",
+      "titleI18n": {
+        "zh-TW": "科學計算機"
+      },
+      "kind": "calculator",
+      "uiSchemaVersion": 1,
+      "defaultBinding": "surface.casNotebook",
+      "preferredSize": {
+        "width": 440,
+        "height": 560
+      },
+      "minSize": {
+        "width": 240,
+        "height": 220
+      },
+      "maxInstances": 2,
+      "resizable": true,
+      "dockable": true,
+      "capabilityBindings": [
+        "calculate",
+        "define",
+        "get_notebook",
+        "recompute",
+        "plot_result"
+      ],
+      "permissions": [
+        "cas.compute",
+        "canvas.read",
+        "canvas.write",
+        "workspace.write"
+      ]
+    }
   ]
 }

@@ -26,6 +26,7 @@ export function catalogEntry(mod, lang = "zh-TW") {
     permissions: m.permissions.map(describePermission), risk: riskOf(m.permissions),
     ...(m.network ? { network: m.network } : {}),
     capabilities: m.capabilities.map((c) => ({ id: c.id, title: localized(c, "title", lang) ?? c.id, description: c.description, target: c.target })),
+    ...(m.panels?.length ? { panels: m.panels.map((p) => ({ id: p.id, title: localized(p, "title", lang), kind: p.kind, maxInstances: p.maxInstances })) } : {}),
     ...(mod.package ? { package: { sha256: mod.package.sha256, keyId: mod.package.keyId, installedAt: mod.package.installedAt } } : {}),
     ...(mod.record.previous?.length ? { rollbackTo: mod.record.previous.at(-1).version } : {}),
   };

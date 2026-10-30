@@ -14,6 +14,7 @@ export const manifest = JSON.parse(readFileSync(new URL("./manifest.json", impor
 
 // server.js (or a test) supplies { client, notebooks } once at start-up.
 let deps = { client: null, notebooks: null };
+export const notebookStore = () => deps.notebooks;
 export const configure = (next) => { deps = { ...deps, ...next }; };
 export const casStatus = async () => {
   if (!deps.client) return { available: false, reason: "no calculator service is configured (ESTAMPES_CAS_SOCKET)" };
