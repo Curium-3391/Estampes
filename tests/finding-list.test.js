@@ -6,10 +6,13 @@ import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 
-const browser = process.env.CHROMIUM_BIN || "chromium";
-const available = spawnSync(browser, ["--version"], { encoding: "utf8" }).status === 0;
+// GitHub's Ubuntu runners include Chrome; their chromium command may be a
+// snap launcher that reports a version but cannot launch a headless browser.
+const browser = (process.env.CHROMIUM_BIN ? [process.env.CHROMIUM_BIN] : ["google-chrome", "chromium"])
+  .find(candidate => spawnSync(candidate, ["--version"], { encoding: "utf8", timeout: 5000 }).status === 0);
+const available = !!browser;
 
-test("finding groups: compact rows, detail drilldown, canvas selection and review drafts", { skip: !available && "Chromium unavailable", timeout: 30000 }, async () => {
+test("finding groups: compact rows, detail drilldown, canvas selection and review drafts", { skip: !available && "Chromium unavailable", timeout: 45000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "estampes-findings-"));
   try {
     const html = readFileSync(new URL("../public/visual-surface.html", import.meta.url), "utf8");
@@ -96,7 +99,9 @@ try{
     let socket;
     try {
       const port = await new Promise((resolve,reject)=>{
-        let log="";const timer=setTimeout(()=>reject(Error("Browser startup timed out")),10000);
+        let log="";const timer=setTimeout(()=>reject(Error("Browser startup timed out: "+log.slice(-4000))),20000);
+        child.once("error",error=>{clearTimeout(timer);reject(error);});
+        child.once("exit",code=>{clearTimeout(timer);reject(Error("Browser exited before startup ("+code+"): "+log.slice(-4000)));});
         child.stderr.on("data",chunk=>{log+=chunk;const match=log.match(/DevTools listening on ws:\/\/127.0.0.1:(\d+)/);if(match){clearTimeout(timer);resolve(match[1]);}});
       });
       const target=await (await fetch("http://127.0.0.1:"+port+"/json/new?"+encodeURIComponent("http://127.0.0.1:"+server.address().port),{method:"PUT"})).json();
@@ -112,7 +117,7 @@ try{
         await new Promise(resolve=>setTimeout(resolve,50));
       }
       assert.equal(outcome,"passed");
-    } finally {server.close();socket?.close();child.kill();await new Promise(resolve=>child.once("exit",resolve));}
+    } finally {server.close();socket?.close();if(child.exitCode===null){child.kill();await new Promise(resolve=>child.once("exit",resolve));}}
 
   } finally { rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
 });
