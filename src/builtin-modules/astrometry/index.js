@@ -2,6 +2,7 @@
 // Core's egress service (host allow-list, no redirects, secrets substituted by
 // the server), so the module only describes which requests to make.
 import { readFileSync } from "node:fs";
+import { skyMapOperations } from "./skymap.js";
 
 export const manifest = JSON.parse(readFileSync(new URL("./manifest.json", import.meta.url), "utf8"));
 
@@ -73,7 +74,29 @@ export function pickMarks(annotations, { width, height, limit }) {
 
 const num = (v, digits) => (typeof v === "number" && Number.isFinite(v) ? Number(v.toFixed(digits)) : undefined);
 
+const pad = (n, w = 2) => String(n).padStart(w, "0");
+export function hms(raDeg) {
+  const total = ((raDeg % 360) + 360) % 360 / 15, h = Math.floor(total), m = Math.floor((total - h) * 60), sec = ((total - h) * 60 - m) * 60;
+  return pad(h) + "h " + pad(m) + "m " + pad(sec.toFixed(2), 5) + "s";
+}
+export function dms(decDeg) {
+  const a = Math.abs(decDeg), d = Math.floor(a), m = Math.floor((a - d) * 60), sec = ((a - d) * 60 - m) * 60;
+  return (decDeg < 0 ? "-" : "+") + pad(d) + "° " + pad(m) + "' " + pad(sec.toFixed(1), 4) + '"';
+}
+const text = (v, n) => (typeof v === "string" ? v.slice(0, n) : undefined);
+
+// The sky map needs no network: it draws a field given by its centre and size.
+function skyPosition(params, ctx) {
+  const { width, height } = ctx.canvas;
+  const { operations, wraps } = skyMapOperations({ raDeg: params.raDeg, decDeg: params.decDeg, widthDeg: params.fieldWidthDeg ?? 5, heightDeg: params.fieldHeightDeg ?? params.fieldWidthDeg ?? 5,
+    rotationDeg: params.rotationDeg ?? 0, title: params.title }, { width, height });
+  return { operations, method: "Hammer all-sky projection of the solved field",
+    summary: "sky map of RA " + params.raDeg + "°, Dec " + params.decDeg + "°" + (wraps ? " (the field crosses the map edge at RA 180°, so only its centre is shown)" : ""),
+    data: { footprint: wraps ? "centre only" : "outline" } };
+}
+
 export async function run(capability, params, ctx) {
+  if (capability === "sky_position") return skyPosition(params, ctx);
   if (capability !== "solve_field") throw new Error("unknown capability " + capability);
   if (!ctx.http) throw new Error("this module needs network and secret permissions");
   if (!ctx.readSource) throw new Error("this module needs permission to read the image");
@@ -110,6 +133,9 @@ export async function run(capability, params, ctx) {
   ctx.progress?.("reading the solution");
   const cal = await get(ctx, "/api/jobs/" + jobId + "/calibration/");
   const ann = await get(ctx, "/api/jobs/" + jobId + "/annotations/");
+  // Constellation tags and the objects Astrometry.net lists for the field; optional, never fails the solve.
+  let info = {};
+  try { info = await get(ctx, "/api/jobs/" + jobId + "/info/"); } catch { /* the calibration alone is enough */ }
 
   const { width, height } = ctx.canvas;
   const operations = [];
@@ -119,12 +145,35 @@ export async function run(capability, params, ctx) {
     operations.push({ op: "object.create", type: "shape", props: { kind: "text", x: Math.min(0.97, x + r + 0.004), y, text: name, size: 12, style: { color: "cyan" } } });
     objects.push({ name, type: a.type ?? undefined, x: Math.round(a.pixelx), y: Math.round(a.pixely) });
   }
+  const fieldWidthDeg = num((cal.pixscale * width) / 3600, 4), fieldHeightDeg = num((cal.pixscale * height) / 3600, 4);
+  const tags = (Array.isArray(info.tags) ? info.tags : []).filter((t) => typeof t === "string").map((t) => t.slice(0, 80)).slice(0, 20);
+  const inField = (Array.isArray(info.objects_in_field) ? info.objects_in_field : []).filter((t) => typeof t === "string").map((t) => t.slice(0, 60)).slice(0, 30);
+  const links = {
+    result: "https://nova.astrometry.net/status/" + up.subid,
+    wcs: "https://nova.astrometry.net/wcs_file/" + jobId,
+    newImage: "https://nova.astrometry.net/new_fits_file/" + jobId,
+    correspondences: "https://nova.astrometry.net/corr_file/" + jobId,
+    legacySurveys: "https://www.legacysurvey.org/viewer?ra=" + num(cal.ra, 5) + "&dec=" + num(cal.dec, 5) + "&zoom=" + Math.max(1, Math.min(16, Math.round(Math.log2(360 / Math.max(fieldWidthDeg ?? 1, 0.01))))),
+  };
   const data = {
     solved: true, submission: up.subid, job: jobId,
-    raDeg: num(cal.ra, 5), decDeg: num(cal.dec, 5), arcsecPerPixel: num(cal.pixscale, 4), rotationDeg: num(cal.orientation, 3),
-    radiusDeg: num(cal.radius, 4), parity: cal.parity, fieldWidthDeg: num((cal.pixscale * width) / 3600, 4), fieldHeightDeg: num((cal.pixscale * height) / 3600, 4),
-    objects, link: "https://nova.astrometry.net/status/" + up.subid,
+    raDeg: num(cal.ra, 5), decDeg: num(cal.dec, 5), raHms: hms(cal.ra), decDms: dms(cal.dec), arcsecPerPixel: num(cal.pixscale, 4), rotationDeg: num(cal.orientation, 3),
+    radiusDeg: num(cal.radius, 4), parity: cal.parity, fieldWidthDeg, fieldHeightDeg,
+    ...(tags.length ? { tags } : {}), ...(inField.length ? { objectsInField: inField } : {}), objects, links, link: links.result,
   };
+  // The fact sheet shown beside the canvas, like the Calibration block on the Astrometry.net result page.
+  const rows = [
+    { label: "中心 (RA, Dec)", value: "(" + data.raDeg + ", " + data.decDeg + ")" },
+    { label: "中心 RA (時分秒)", value: data.raHms }, { label: "中心 Dec (度分秒)", value: data.decDms },
+    { label: "視野大小", value: fieldWidthDeg + " × " + fieldHeightDeg + " °" }, { label: "半徑", value: data.radiusDeg + " °" },
+    { label: "像素比例", value: data.arcsecPerPixel + " arcsec/pixel" },
+    { label: "方向（可能不準）", value: "上方朝向東偏北 " + data.rotationDeg + "°" },
+    ...(tags.length ? [{ label: "星座與標籤", value: tags.join("；").slice(0, 240) }] : []),
+    ...(inField.length ? [{ label: "視野內天體", value: inField.slice(0, 12).join("、").slice(0, 240) }] : []),
+    { label: "Astrometry.net 結果頁", value: "開啟", href: links.result }, { label: "WCS 檔", value: "wcs.fits", href: links.wcs },
+    { label: "Legacy Surveys 星空瀏覽", value: "瀏覽天空", href: links.legacySurveys },
+  ];
+  operations.push({ op: "object.create", type: "info-card", props: { title: "星圖解算結果（Astrometry.net）", shown: params.showCard !== false, rows } });
   return { operations, data, method: "Astrometry.net plate solving",
     summary: "solved: RA " + data.raDeg + "°, Dec " + data.decDeg + "°, " + data.arcsecPerPixel + " arcsec/px, rotation " + data.rotationDeg + "°; marked " + objects.length + " named objects" };
 }

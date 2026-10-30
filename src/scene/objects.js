@@ -84,6 +84,22 @@ export const OBJECT_TYPES = {
     dependsOn: (props) => (props.space === "frame" && props.frame ? [props.frame] : []),
   },
 };
+// A fact sheet kept with the canvas: a title and rows of label, value and an
+// optional https link (for example a plate-solving result). It is not drawn on
+// the picture; the widget lists it with the canvas objects and the model reads
+// its rows.
+OBJECT_TYPES["info-card"] = {
+  description: "A fact sheet (title and label/value rows with optional https links) shown beside the canvas, not drawn on the picture.",
+  props: z.object({
+    title: z.string().max(80),
+    shown: z.boolean().optional().describe("false keeps the card folded away until the user brings it back (default true)"),
+    rows: z.array(z.object({
+      label: z.string().max(40), value: z.string().max(240),
+      href: z.string().max(300).regex(/^https:\/\/[A-Za-z0-9.-]+(?::443)?(?:[\/?#][^\s"'<>]*)?$/).optional(),
+    }).strict()).min(1).max(24),
+  }).strict(),
+  defaults: {},
+};
 export const OBJECT_TYPE_NAMES = Object.keys(OBJECT_TYPES);
 
 export function validateProps(type, props, where = "props") {
@@ -354,6 +370,7 @@ export function renderObject(obj, { lookup, aspect = 0.625 }) {
   const axes = needsFrame ? lookup(obj.props.frame) : null;
   if (needsFrame && axes?.type !== "axes-2d") return { primitives: [], info: { note: "frame " + obj.props.frame + " is not an axes-2d object on this canvas" } };
   try {
+    if (obj.type === "info-card") return { primitives: [], info: {} };
     if (obj.type === "axes-2d") return { primitives: renderAxes(obj, aspect), info: {} };
     if (obj.type === "function-plot") return renderFunction(obj, axes);
     if (obj.type === "image") return { primitives: [{ k: "image", ...obj.props.region, href: obj.props.png }], info: {} };
