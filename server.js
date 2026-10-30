@@ -35,6 +35,7 @@ import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLIN
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
 import { measureQuality, clippingMap } from "./src/image/quality.js";
+import { runEngine, listEngines } from "./src/image/engines.js";
 import { pdfAvailable, renderPdfPage, pdfInfo, isPdf, MAX_DPI } from "./src/image/pdf.js";
 import { calibrate, measure, toSpacePixels, spaceToNormalized, defaultSigma, UNITS } from "./src/image/measure.js";
 import {
@@ -64,10 +65,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -1698,6 +1699,40 @@ function makeServer() {
   );
 
   server.registerTool(
+    "detect_features",
+    {
+      title: "Detect structure with an analysis engine",
+      description:
+        "Run an analysis engine on an image or region and get structured detections in normalized image coordinates: `components` (connected dark/light regions as boxes), `blobs` (point-like sources: stars, solder joints, particles, with centroid, flux and FWHM), `lines` (straight segments), `circles` (rings, holes, dials), `ocr` (words with boxes; optional install). Each detection has geometry, attributes and, where meaningful, a confidence, plus a ready `mark` you can pass to present_visual once you have checked it against the image. Detections are candidates: they say where pixels have a shape, not what the thing is (two lines are not a verified wire; recognised text is not a verified part number). Nothing is drawn on the canvas. Call with `engine` omitted to list engines and whether each is available. Results state the analysis resolution; use sampling native for small features.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema.optional(),
+        engine: z.enum(["components", "blobs", "lines", "circles", "ocr"]).optional(),
+        region: RegionSchema.optional(),
+        sampling: SamplingSchema.optional(),
+        params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}).describe("Engine parameters, see the engine list"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, engine, region, sampling, params }) => {
+      try {
+        if (!engine) {
+          const engines = await listEngines();
+          return { content: [{ type: "text", text: "Engines: " + engines.map((e) => e.id + (e.ok ? "" : " (unavailable)")).join(", ") + ". " + JSON.stringify(engines) }],
+            structuredContent: { kind: "estampes.engines", engines } };
+        }
+        if (!imageId) throw new Error("imageId is required with engine");
+        const res = await runEngine(await ensureImage(imageId), engine, { region, sampling, params });
+        const n = res.detections.length;
+        const text = engine + " " + res.status + (res.reasons?.length ? " (" + res.reasons.join("; ") + ")" : "") + ": " + n + " detection" + (n === 1 ? "" : "s") +
+          (res.analysis ? " at " + res.analysis.space + " resolution " + res.analysis.width + "x" + res.analysis.height : "") +
+          (res.warnings?.length ? ". Notes: " + res.warnings.join("; ") : "") + ". Candidates only; check them against the image before marking. " +
+          JSON.stringify(res.detections.slice(0, 12)) + (n > 12 ? " ... (all in structuredContent)" : "");
+        return { content: [{ type: "text", text }], structuredContent: { kind: "estampes.detections", ...res } };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
     "overlay_grid",
     {
       title: "Overlay a labelled grid",
@@ -1842,7 +1877,7 @@ const httpServer = createHttpServer((req, res) => {
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
       accessKeyRequired: Boolean(ACCESS_KEY),
-      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view", "register_images", "compare_images", "assess_image", "calibrate_scale", "measure_image", "render_pdf_page"],
+      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view", "register_images", "compare_images", "assess_image", "calibrate_scale", "measure_image", "render_pdf_page", "detect_features"],
       imageApi: VIEW_API,
       imageInput: ["openai-file-param", "https-url"],
       visualProtocol: VISUAL_PROTOCOL,
