@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.9.0 (the contract, the built-in Graph module and the Store). Installing packages and isolated runtimes are planned in phases and marked below.
+Status: this page describes what is implemented in 0.10.0 (the contract, the built-in Graph module and the Store). Installing packages and isolated runtimes are planned in phases and marked below.
 
 ## How it fits together
 
@@ -25,7 +25,7 @@ Estampes's own format (not an MCP standard). Validated strictly: unknown fields,
 | Field | Meaning |
 | --- | --- |
 | `id` | Reverse-DNS name such as `org.estampes.graph`. A name, not proof that the publisher owns the domain. |
-| `version`, `coreCompatibility` | Module version; range of Estampes versions it works with (for example `>=0.9.0 <1.0.0`). |
+| `version`, `coreCompatibility` | Module version; range of Estampes versions it works with (for example `>=0.10.0 <1.0.0`). |
 | `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), later `wasm`. |
 | `permissions` | What it may do, granted when enabled (below). |
 | `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, examples. |

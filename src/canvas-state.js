@@ -2,6 +2,7 @@
 // stable id, so a later present_visual call adds to, edits or removes marks
 // instead of the model re-sending everything. State lasts as long as the
 // cached image (about an hour, in memory only).
+import { mapMark } from "./image/transform.js";
 import { markFindings, MARK_STATUSES } from "./scene-catalog.js";
 import {
   assessmentInput, markRegion, findRejection, bringsNewEvidence, rejectionOf, addRejection, dropRejections,
@@ -63,8 +64,11 @@ export function canvasLayers(entry) {
 
 // Coordinates read off a process_image/overlay_grid output → full image.
 // With width/height they are pixels of that output; without, 0..1 of region.
+// With `matrix` (a derived view's derivedToNormalized, see src/image/view.js)
+// any crop, scale, rotation or perspective warp is undone exactly.
 export function fromFrame(mark, frame) {
   if (!frame) return mark;
+  if (frame.matrix) return mapMark(mark, frame.matrix);
   const { region, width, height } = frame;
   const sx = width ? 1 / width : 1, sy = height ? 1 / height : 1;
   const mapX = (v) => v === undefined ? v : region.x + v * sx * (region.x2 - region.x);

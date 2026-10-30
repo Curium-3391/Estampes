@@ -4,7 +4,7 @@
 // coordinates normalized to the full oriented source image.
 import sharp from "sharp";
 import { labelSvg, labelWidth, GLYPH_HEIGHT } from "./pixel-font.js";
-import { entrySharp } from "./image-store.js";
+import { entrySharp, MAX_INPUT_PIXELS } from "./image-store.js";
 
 export const OUTPUT_LONG_SIDE = 1600;
 export const MAX_UPSCALE = 8;
@@ -20,25 +20,26 @@ export function regionToPixels(region, width, height) {
   const r = region ?? { x: 0, y: 0, x2: 1, y2: 1 };
   const x0 = clamp(Math.min(r.x, r.x2), 0, 1), x1 = clamp(Math.max(r.x, r.x2), 0, 1);
   const y0 = clamp(Math.min(r.y, r.y2), 0, 1), y1 = clamp(Math.max(r.y, r.y2), 0, 1);
-  const left = clamp(Math.floor(x0 * width), 0, width - 1);
-  const top = clamp(Math.floor(y0 * height), 0, height - 1);
-  const right = clamp(Math.ceil(x1 * width), left + 1, width);
-  const bottom = clamp(Math.ceil(y1 * height), top + 1, height);
+  // The epsilon keeps 0.55 * 3000 = 1650.0000000000002 from taking a pixel more.
+  const left = clamp(Math.floor(x0 * width + 1e-9), 0, width - 1);
+  const top = clamp(Math.floor(y0 * height + 1e-9), 0, height - 1);
+  const right = clamp(Math.ceil(x1 * width - 1e-9), left + 1, width);
+  const bottom = clamp(Math.ceil(y1 * height - 1e-9), top + 1, height);
   return { left, top, width: right - left, height: bottom - top };
 }
 
 // The region actually covered after pixel rounding, normalized again.
-const pixelsToRegion = (px, width, height) => ({
+export const pixelsToRegion = (px, width, height) => ({
   x: px.left / width, y: px.top / height,
   x2: (px.left + px.width) / width, y2: (px.top + px.height) / height,
 });
 
-const rawImage = async (pipeline) => {
+export const rawImage = async (pipeline) => {
   const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
   return { data, width: info.width, height: info.height, channels: info.channels };
 };
-const fromRaw = (img) => sharp(img.data, { raw: { width: img.width, height: img.height, channels: img.channels } });
-const toGray = async (img) => img.channels === 1 ? img : rawImage(fromRaw(img).greyscale().extractChannel(0));
+export const fromRaw = (img) => sharp(img.data, { raw: { width: img.width, height: img.height, channels: img.channels } });
+export const toGray = async (img) => img.channels === 1 ? img : rawImage(fromRaw(img).greyscale().extractChannel(0));
 
 function otsu(gray) {
   const hist = new Array(256).fill(0);
@@ -144,7 +145,7 @@ async function edges(img) {
   return { data: out, width, height, channels: 1 };
 }
 
-async function applyOp(img, step) {
+export async function applyOp(img, step) {
   switch (step.op) {
     case "grayscale": return toGray(img);
     case "normalize": return rawImage(fromRaw(img).normalise());
@@ -277,13 +278,31 @@ export async function compactForDisplay(out, maxBytes = 220_000) {
 }
 
 // A sharper tile of the photo for the canvas when the user zooms in: the
-// region at native resolution (never enlarged), long side <= maxSide.
+// region at native resolution (never enlarged), long side <= maxSide. When
+// the source file is larger than the working copy, the tile is cut from the
+// source itself (RFC PRE-04), so zooming past 4096 px shows real pixels.
+const tileCache = new Map();
+const TILE_CACHE = 24;
 export async function regionTile(entry, region, maxSide = 1600) {
   const px = regionToPixels(region, entry.width, entry.height);
   const side = Math.min(2048, Math.max(256, Math.round(maxSide)));
-  const { data, info } = await entrySharp(entry).extract(px)
+  const src = entry.sourceInfo;
+  const useSource = Boolean(entry.sourceBytes && src && src.width > entry.width * 1.05 &&
+    Math.max(px.width, px.height) < side);
+  const box = useSource ? regionToPixels(region, src.width, src.height) : px;
+  const key = entry.imageId + ":" + (useSource ? "s" : "w") + ":" + [box.left, box.top, box.width, box.height, side].join(",");
+  const hit = tileCache.get(key);
+  if (hit) { tileCache.delete(key); tileCache.set(key, hit); return hit; }
+  const base = useSource
+    ? sharp(entry.sourceBytes, { limitInputPixels: MAX_INPUT_PIXELS }).rotate().extract(box).flatten({ background: "#ffffff" }).toColourspace("srgb")
+    : entrySharp(entry).extract(px);
+  const { data, info } = await base
     .resize({ width: side, height: side, fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
-  return { data, mimeType: "image/jpeg", width: info.width, height: info.height,
-    region: pixelsToRegion(px, entry.width, entry.height) };
+  const tile = { data, mimeType: "image/jpeg", width: info.width, height: info.height,
+    region: useSource ? pixelsToRegion(box, src.width, src.height) : pixelsToRegion(px, entry.width, entry.height),
+    native: useSource, sourcePixels: { width: box.width, height: box.height } };
+  tileCache.set(key, tile);
+  while (tileCache.size > TILE_CACHE) tileCache.delete(tileCache.keys().next().value);
+  return tile;
 }

@@ -4,6 +4,8 @@
 //   images/<hash>/canvas.json  marks, layers, links and rejected claims (rewritten atomically)
 //   images/<hash>/marks.svg    the same canvas as a layered SVG
 //   images/<hash>/history.jsonl one line per change: when, which tool, ids
+//   images/<hash>/derived.json  recipes of processed views (no pixels; each
+//                               one renders again from source + recipe)
 // Memory stays the working copy; disk is what lets an image come back after
 // the cache evicts it or the container restarts. Without a storage dir every
 // function here is a no-op and Estampes behaves as before.
@@ -94,12 +96,14 @@ export async function intakeImage(bytes, options) {
   const dir = folder(entry.imageId);
   const saved = await readJson(join(dir, "canvas.json"));
   if (saved) restoreCanvas(entry, saved);
+  restoreDerived(entry, await readJson(join(dir, "derived.json")));
   await queued(entry.imageId, async () => {
     await mkdir(dir, { recursive: true });
     if (!(await readJson(join(dir, "meta.json")))) {
       await atomicWrite(join(dir, "source"), bytes);
       await atomicWrite(join(dir, "meta.json"), JSON.stringify({
-        imageId: entry.imageId, source: entry.source, fileName: entry.fileName, original: entry.original,
+        imageId: entry.imageId, sourceAssetId: entry.sourceAssetId, source: entry.source, fileName: entry.fileName,
+        original: entry.original, sourceInfo: entry.sourceInfo, ...(entry.page ? { page: entry.page } : {}),
         working: { width: entry.width, height: entry.height }, storedAt: new Date().toISOString(),
       }, null, 2));
     }
@@ -116,6 +120,8 @@ export async function ensureImage(imageId) {
   try { bytes = await readFile(join(dir, "source")); } catch { return getImage(imageId); }
   const entry = await registerImage(bytes, { source: meta?.source ?? "storage", fileName: meta?.fileName ?? null });
   restoreCanvas(entry, await readJson(join(dir, "canvas.json")));
+  restoreDerived(entry, await readJson(join(dir, "derived.json")));
+  if (meta?.page && !entry.page) entry.page = meta.page;
   log("info", "[storage] restored", { imageId, marks: entry.marks?.size ?? 0 });
   return entry;
 }
@@ -134,6 +140,23 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
     await atomicWrite(join(dir, "marks.svg"), svg);
     await appendFile(join(dir, "history.jsonl"), line);
   }).catch((error) => log("error", "[storage] save failed", { imageId: entry.imageId, error: String(error?.message || error) }));
+}
+
+function restoreDerived(entry, data) {
+  if (!Array.isArray(data?.views)) return;
+  entry.derivedViews = new Map(data.views.filter((v) => /^dv:[0-9a-f]{16}$/.test(v?.derivedViewId) && v.imageId === entry.imageId)
+    .map((v) => [v.derivedViewId, v]));
+}
+
+// Processed-view recipes, rewritten whole (they are small and bounded).
+export function saveDerived(entry) {
+  if (!root || !entry.derivedViews?.size) return Promise.resolve();
+  const dir = folder(entry.imageId);
+  const body = JSON.stringify({ version: 1, imageId: entry.imageId, views: [...entry.derivedViews.values()] });
+  return queued(entry.imageId, async () => {
+    await mkdir(dir, { recursive: true });
+    await atomicWrite(join(dir, "derived.json"), body);
+  }).catch((error) => log("error", "[storage] derived save failed", { imageId: entry.imageId, error: String(error?.message || error) }));
 }
 
 export async function readHistory(imageId, limit = 50) {

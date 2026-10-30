@@ -10,7 +10,7 @@
   "license": "MPL-2.0",
   "source": "https://github.com/Curium-3391/Estampes/tree/main/src/builtin-modules/graph",
   "category": "math",
-  "coreCompatibility": ">=0.9.0 <1.0.0",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
   "runtime": { "kind": "builtin", "entry": "graph" },
   "permissions": ["canvas.read", "canvas.write", "workspace.write"],
   "capabilities": [

@@ -16,7 +16,7 @@ import { canvasObjects } from "../src/scene/scene-ops.js";
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const base = () => ({
   schema: "estampes.module/1", id: "org.example.demo", name: "Demo", description: "d", version: "1.0.0",
-  publisher: { name: "Me" }, license: "MPL-2.0", coreCompatibility: ">=0.9.0 <1.0.0",
+  publisher: { name: "Me" }, license: "MPL-2.0", coreCompatibility: ">=0.10.0 <1.0.0",
   runtime: { kind: "declarative", entry: "ops" }, permissions: ["canvas.write"],
   capabilities: [{ id: "dot", description: "a dot", target: "canvas",
     inputSchema: { type: "object", additionalProperties: false, required: ["x"], properties: { x: { type: "number" } } },
@@ -24,7 +24,7 @@ const base = () => ({
 });
 
 test("manifest: the bundled Graph manifest is valid for this core", () => {
-  assert.equal(validateManifest(graph, { coreVersion: "0.9.0" }).id, "org.estampes.graph");
+  assert.equal(validateManifest(graph, { coreVersion: "0.10.0" }).id, "org.estampes.graph");
   assert.throws(() => validateManifest(graph, { coreVersion: "1.2.0" }), /needs Estampes/);
 });
 
@@ -60,8 +60,8 @@ test("json schema subset: validates, fills defaults, rejects regex bombs and unb
 });
 
 test("semver ranges", () => {
-  assert.ok(satisfies("0.9.0", ">=0.9.0 <1.0.0"));
-  assert.ok(!satisfies("1.0.0", ">=0.9.0 <1.0.0"));
+  assert.ok(satisfies("0.10.0", ">=0.10.0 <1.0.0"));
+  assert.ok(!satisfies("1.0.0", ">=0.10.0 <1.0.0"));
   assert.ok(satisfies("0.9.4", "^0.9.0"));
   assert.ok(!satisfies("0.10.0", "^0.9.0"));
   assert.ok(satisfies("2.1.0", "~2.1.0 || >=3.0.0"));
@@ -74,7 +74,7 @@ test("declarative templates fill only declared placeholders", () => {
 
 async function host(extra = {}) {
   const dir = await mkdtemp(join(tmpdir(), "estampes-mod-"));
-  const h = await createModuleHost({ storageDir: dir, coreVersion: "0.9.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} }, ...extra });
+  const h = await createModuleHost({ storageDir: dir, coreVersion: "0.10.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} }, ...extra });
   return { h, dir };
 }
 const enable = async (h, id = "org.estampes.graph") => {
@@ -105,7 +105,7 @@ test("lifecycle: state survives a restart; disabling stops execution but keeps t
   const run = await h.router.execute({ module: "org.estampes.graph", capability: "plot_function", params: { expression: "sin(x)" } });
   assert.equal(run.createdCanvas, true);
   assert.equal(canvasObjects(run.entry).length, 2);
-  const again = await createModuleHost({ storageDir: dir, coreVersion: "0.9.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
+  const again = await createModuleHost({ storageDir: dir, coreVersion: "0.10.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
   assert.equal(again.registry.get("org.estampes.graph").record.state, "enabled");
   const plan = await h.lifecycle.prepare("disable", "org.estampes.graph");
   await h.lifecycle.commit(plan.planId, { consent: plan.consent });
