@@ -2,12 +2,14 @@
 // Stable *demo* scene metadata only. Future user images need explicit
 // content identity, crop transforms and a real raster pixel resolution.
 import { MARK_TYPES, polylineWithBounds, markStyle } from "./scene-catalog.js";
+import { gestureGroups } from "./gesture-groups.js";
 export const PROTOCOL_VERSION = "0.2-draft";
 export const INTENTS = Object.freeze([
-  "point-out", "ask-about-region", "answer-question", "correct-assistant",
+  "free-annotate", "point-out", "ask-about-region", "answer-question", "correct-assistant",
   "compare", "report-issue"
 ]);
 export const INTENT_LABELS = Object.freeze({
+  "free-annotate": "自由標註（意思以我的補充說明和畫面為準）",
   "point-out": "我想指出這個位置",
   "ask-about-region": "請解釋我標記的區域",
   "answer-question": "我正在回答你先前的問題",
@@ -21,6 +23,7 @@ export const SCENE_META = Object.freeze({
   formula: Object.freeze({id:"demo:formula",revision:"svg-v1",width:640,height:360}),
 });
 export const INTENT_ACTIONS = Object.freeze({
+  "free-annotate": "interpret-annotation",
   "point-out": "acknowledge-the-pointed-referent",
   "ask-about-region": "explain-selected-region",
   "answer-question": "treat-selection-as-answer-to-prior-question",
@@ -28,14 +31,43 @@ export const INTENT_ACTIONS = Object.freeze({
   "compare": "compare-marked-referents",
   "report-issue": "investigate-marked-problem",
 });
+// A mark's type is what was drawn, never what it means. Only the explicit
+// point-out mode says an arrowhead is the referent; otherwise an arrow may
+// be a pointer, a direction, a flow or a movement, and the user's note,
+// the image and the conversation decide.
+export const ARROW_HINTS = Object.freeze(["unspecified", "point-to-target"]);
+export const arrowHintFor = (intent) => intent === "point-out" ? "point-to-target" : "unspecified";
+const HEADINGS = ["right", "up-right", "up", "up-left", "left", "down-left", "down", "down-right"];
+const HEADINGS_ZH = { right: "由左往右", "up-right": "往右上", up: "由下往上", "up-left": "往左上",
+  left: "由右往左", "down-left": "往左下", down: "由上往下", "down-right": "往右下" };
+// Direction in image pixels (normalized coordinates stretch with the aspect
+// ratio). angleDeg: 0 = right, 90 = up, counter-clockwise.
+export function arrowDirection(g, width, height) {
+  const dx = (g.x2 - g.x) * width, dy = (g.y - g.y2) * height;
+  const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  return { heading: HEADINGS[Math.round(angle / 45) % 8], angleDeg: Math.round(angle),
+    lengthPx: Math.round(Math.hypot(dx, dy)), provenance: "computed-from-geometry" };
+}
 const textValue=(value,max)=>String(value??"").trim().slice(0,max);
+// Low-level drawing facts from the widget: order within this send, time
+// relative to the first stroke of the send (no clock time), input device.
+const msValue=(n)=>Number.isInteger(n)&&n>=0&&n<=36e5?n:undefined;
+function strokeFacts(raw){
+  const facts={
+    order:Number.isInteger(raw.strokeOrder)&&raw.strokeOrder>0?raw.strokeOrder:undefined,
+    relativeStartMs:msValue(raw.relativeStartMs),relativeEndMs:msValue(raw.relativeEndMs),
+    pointerType:["mouse","pen","touch"].includes(raw.pointerType)?raw.pointerType:undefined,
+  };
+  for(const k of Object.keys(facts))if(facts[k]===undefined)delete facts[k];
+  return Object.keys(facts).length?{stroke:facts}:{};
+}
 const in01=(n)=>typeof n==="number"&&Number.isFinite(n)&&n>=0&&n<=1;
 
 // `image` describes a real photo loaded with load_image:
 // {imageId, width, height}. Otherwise `scene` names a bundled demo SVG.
 // `pairImage` (same shape as `image`) makes it a paired view: each mark's
 // `side` says which of the two images its coordinates belong to.
-export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="point-out",note="",replyQuote=""}) {
+export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="free-annotate",note="",replyQuote="",gestureDecisions=[]}) {
   if(pairImage&&!image) throw new Error("A paired view needs two photos");
   const metadata=image
     ? {id:image.imageId,revision:"raster-v1",width:image.width,height:image.height,kind:"raster"}
@@ -57,24 +89,33 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
     const side=pairImage?{side:raw.side==="right"?"right":"left"}:{};
     if(raw.type==="polyline") {
       return {id,author:"user",type:"polyline",role,...side,...markStyle(raw),geometry:polylineWithBounds(raw.points,raw),
-        label:textValue(raw.label,64),grounding:"user-pointer"};
+        ...strokeFacts(raw),label:textValue(raw.label,64),grounding:"user-pointer"};
     }
     if(!in01(raw.x)||!in01(raw.y))throw new Error("Invalid normalized point");
     if(raw.type!=="point"&&(!in01(raw.x2)||!in01(raw.y2))) {
       throw new Error("Invalid normalized endpoint");
     }
+    const geometry={x:raw.x,y:raw.y,...(raw.type==="point"?{}:{x2:raw.x2,y2:raw.y2})};
+    const dims=side.side==="right"?pairImage:{width:metadata.width,height:metadata.height};
     return {
       id,author:"user",type:raw.type,role,...side,...markStyle(raw),
-      geometry:{
-        x:raw.x,y:raw.y,
-        ...(raw.type==="point"?{}:{x2:raw.x2,y2:raw.y2})
-      },
-      ...(raw.type==="arrow"?{arrowhead:"end"}:{}),
+      geometry,
+      ...(raw.type==="arrow"?{arrowhead:"end",semanticHint:arrowHintFor(intent),
+        direction:arrowDirection(geometry,dims.width,dims.height)}:{}),
+      ...strokeFacts(raw),
       label:textValue(raw.label,64),
       grounding:"user-pointer",
     };
   });
   if(!marks.some(m=>m.role==="focus"))for(const m of marks)m.role="focus";
+  // Candidate groups per image, on the raw normalized marks. Only groups
+  // that touch this send's focus marks are reported.
+  const focusIds=new Set(marks.filter(m=>m.role==="focus").map(m=>m.id));
+  const sides=pairImage?[["left",image],["right",pairImage]]:[[null,{width:metadata.width,height:metadata.height}]];
+  const groups=sides.flatMap(([which,dims])=>{
+    const own=annotations.filter(a=>!which||(a.side==="right"?"right":"left")===which);
+    return gestureGroups(own,dims,gestureDecisions).map(g=>which?{...g,side:which}:g);
+  }).filter(g=>g.memberIds.some(id=>focusIds.has(id)));
   const cleanNote=textValue(note,500),cleanQuote=textValue(replyQuote,300);
   return {
     schemaVersion:PROTOCOL_VERSION,
@@ -94,6 +135,7 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
       right:{id:pairImage.imageId,width:pairImage.width,height:pairImage.height},
     }}:{}),
     annotations:marks,
+    ...(groups.length?{gestureGroups:groups}:{}),
     interaction:{
       intent,
       requestedAssistantAction: INTENT_ACTIONS[intent],
@@ -103,10 +145,41 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
         quote:cleanQuote||null,
         provenance:cleanQuote?"user-entered":"unavailable"
       },
-      arrowMeaning:"arrowhead-is-target",
+      // Kept for older readers; per-arrow semanticHint is the real field.
+      arrowMeaning:intent==="point-out"?"arrowhead-is-target":"unspecified",
+      semanticsPolicy:"geometry-is-not-intent",
       contextAvailability:"host-conversation-not-readable-by-widget"
     }
   };
+}
+
+function arrowLines(event) {
+  const arrows=event.annotations.filter(m=>m.type==="arrow"&&m.role!=="context");
+  if(!arrows.length)return [];
+  const dir=arrows.map(m=>(m.label||m.id)+(m.direction?"："+(HEADINGS_ZH[m.direction.heading]||m.direction.heading)+"（"+m.direction.angleDeg+"°）":"")).join("、");
+  if(event.interaction.intent==="point-out")return [
+    "箭頭："+dir+"。這次我選了「只是指出這裡」，所以箭頭尖端（x2,y2）是我指的對象，起點（x,y）表示從哪個方向指過去（semanticHint=point-to-target）。但如果我的補充說明表達了別的意思（例如方向、流向、移動），以我的文字為準，並告訴我兩者不一致。"
+  ];
+  return [
+    "箭頭："+dir+"。每支箭頭都保留起點（x,y）、尖端（x2,y2）與方向；semanticHint=unspecified，表示我沒有說它是「指向某個東西」還是「表示方向、流向、移動或關係」。",
+    "請依我的補充說明判斷：如果我說的是方向、流向、走向或移動，就把箭頭當成方向（起點到尖端），先討論這個方向的說法，尖端位置只用來判斷我大概在講哪一區；如果我問「指到的是什麼」，才以尖端位置為準。沒有文字又看不出來時，簡短列出可能的解讀，必要時只問一次，不要假設只有一種意思。",
+  ];
+}
+
+const MEANING_ZH={"direction-arrow":"一支方向箭頭","connected-path":"一條分段畫的連續路徑","unknown":"同一個手勢（意思不明）"};
+const CONFIRM_ZH={"unconfirmed":"系統依幾何推測，我沒有確認","user-confirmed":"我確認過是同一個手勢","user-rejected":"我說過它們不是同一個手勢，請分開看"};
+function gestureLines(event){
+  const groups=event.gestureGroups??[];
+  if(!groups.length)return [];
+  const name=new Map(event.annotations.map(m=>[m.id,m.label||m.id]));
+  const HEAD={right:"往右",["up-right"]:"往右上",up:"往上",["up-left"]:"往左上",left:"往左",["down-left"]:"往左下",down:"往下",["down-right"]:"往右下"};
+  return [
+    "下面幾筆可能屬於同一個手勢（gestureGroups）。每一筆仍是獨立的標註；分組只是候選，provenance=system-inferred 是 Estampes 依筆畫相接位置"+"與繪製時間推測的，不代表我的意思：",
+    ...groups.map(g=>"- "+g.id+"："+g.memberIds.map(id=>name.get(id)??id).join(" + ")+" → 可能是"+(MEANING_ZH[g.proposedMeaning]??g.proposedMeaning)+
+      (g.arrow?"（"+(HEAD[g.arrow.direction.heading]??g.arrow.direction.heading)+"，尖端約在 x="+g.arrow.tip.x+", y="+g.arrow.tip.y+"）":"")+
+      "；"+(CONFIRM_ZH[g.confirmation]??g.confirmation)+(g.evidence?.length?"；線索："+g.evidence.join("、"):"")+"。"),
+    "未確認的分組請當成可能性考慮，不要說成我確定的意思，也不要把每一筆都當成各自獨立的問題；只有在「是不是同一個手勢」會明顯改變答案時，才問我一次。",
+  ];
 }
 
 export function formatAnnotationChatMessage(event) {
@@ -128,7 +201,10 @@ export function formatAnnotationChatMessage(event) {
     lines.push("沒有附上前文的精確引述；請依你在目前對話中實際可見的脈絡理解，不要捏造上一輪問題。");
   }
   lines.push(
-    "點代表位置；框代表範圍；箭頭的終點（箭頭尖端）才是我指的對象，起點只表示指向方向；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。pen=highlighter 是半透明螢光筆，代表「這一片區域」而不是精確的線；color 只是我選的顏色，不代表其他意思。",
+    "標註的 type 只描述我畫了什麼形狀，不代表我的意思；意思請綜合我的補充說明、這次的目的、畫面和對話判斷，不要讓形狀蓋過我寫的文字。",
+    ...arrowLines(event),
+    ...gestureLines(event),
+    "點代表位置；框代表範圍；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。pen=highlighter 是半透明螢光筆，代表「這一片區域」而不是精確的線；color 只是我選的顏色，不代表其他意思。",
     ...(event.pair?[
       "底圖是左右對照畫布，兩張不同的照片並排、不疊合：左圖 imageId="+event.pair.left.id+"（"+event.pair.left.width+"×"+event.pair.left.height+"），右圖 imageId="+event.pair.right.id+"（"+event.pair.right.width+"×"+event.pair.right.height+"）。每個標註的 side（left／right）表示它在哪張圖上，座標以那張圖的左上角為原點正規化。",
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
@@ -140,7 +216,7 @@ export function formatAnnotationChatMessage(event) {
       "底圖是使用者的實際照片（imageId="+event.image.id+"，"+event.image.intrinsicSize.width+"×"+event.image.intrinsicSize.height+" 像素，已依 EXIF 轉正）。所有標註使用原圖左上角為原點的正規化座標。",
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
       JSON.stringify(event),
-      "請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId="+event.image.id+"，region 取標註周圍（框就用框本身再稍微放大；點或箭頭尖端取周圍約 0.1 的範圍），必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
+      "請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId="+event.image.id+"，region 取標註周圍（框就用框本身再稍微放大；點取周圍約 0.1 的範圍；箭頭若是指向就取尖端周圍，若表示方向就涵蓋整支箭頭），必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
       "我的標記已存進這張照片的畫布（id 如上）。回答後請用 present_visual（imageId 同上）的 findings 把 note（例如讀到的型號）與 status 掛到我的標記 id 上，不要重畫我的標記。不要對我提工具名稱。",
       "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
     ]:[

@@ -62,6 +62,12 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #links .chip.ask,#findings .badge.ask{border-color:#E08A1E;color:#E08A1E;font-weight:700}
 #links button,#findings button{padding:3px 9px;font-size:.8rem}
 #links .chip.tool,#findings .badge.tool{border-color:#3BB273;color:#2E9A5E}
+#gestures{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}#gestures:empty{display:none}
+#gestures li{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:7px 10px;border:1px dashed #3BB27399;border-radius:9px;cursor:pointer;font-size:.86rem}
+#gestures li.selected{border-style:solid;border-color:#2E9A5E}#gestures li.rejected{opacity:.55}#gestures li.rejected .what{text-decoration:line-through}
+#gestures .what{font-weight:700}#gestures .ends{color:GrayText;font-size:.8rem}
+#gestures .chip{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;color:GrayText;white-space:nowrap}#gestures .chip.ask{border-color:#E08A1E;color:#E08A1E;font-weight:700}
+#gestures button{padding:3px 9px;font-size:.8rem}
 .evidence{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px}
 .evidence button{font-size:.76rem;padding:2px 8px;border-radius:7px;text-align:left;max-width:100%;overflow-wrap:anywhere}
 .evidence button.on{border-color:#E4572E;box-shadow:0 0 0 1px #E4572E}
@@ -116,7 +122,7 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 </div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
-<g id="scene"></g><g id="processed"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="selection-outline"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="gesture-outline"></g><g id="selection-outline"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
@@ -125,11 +131,12 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 <div id="layers" hidden role="group" aria-label="圖層：顯示、改名、排序、透明度、鎖定"></div>
 <ol id="links" aria-label="左右兩張圖的對應連結"></ol>
 <ol id="findings" aria-label="GPT 對各標記的說明"></ol>
+<ol id="gestures" aria-label="可能屬於同一個手勢的筆畫"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
 <label for="intent">這次標註的目的</label>
 <select id="intent">
-<option value="">沿用目前對話（預設：指出位置）</option>
-<option value="point-out">只是指出「這裡」</option>
+<option value="">自由標註（預設：意思看我的補充說明）</option>
+<option value="point-out">只是指出「這裡」（箭頭尖端＝我指的東西）</option>
 <option value="ask-about-region">請解釋這個區域</option>
 <option value="answer-question">回答你剛剛問我的問題</option>
 <option value="correct-assistant">更正你之前指錯的位置</option>
@@ -137,7 +144,7 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 <option value="report-issue">指出這裡有問題</option>
 </select>
 <label for="note">補充一句話（選填，但建議寫）</label>
-<textarea id="note" maxlength="500" placeholder="例如：我指的是這棵樹，不是後面的山。或：為什麼這個地方接錯了？"></textarea>
+<textarea id="note" maxlength="500" placeholder="例如：我指的是這棵樹，不是後面的山。或：我覺得水是往這個方向流的。"></textarea>
 <label for="quote">你在回覆的那句話（選填，手動貼上）</label>
 <input id="quote" maxlength="300" placeholder="例如：你剛剛問我哪一個元件發熱？">
 <p class="hint">Estampes 不會自動讀取聊天紀錄。送出後 GPT 可呼叫 inspect_visual 取得原始圖片與局部裁切；模型是否真的看到圖片仍須確認。</p>
@@ -168,6 +175,7 @@ const exportImageBtn=document.querySelector("#export-image"),exportMarksBtn=docu
 let exportLinks=null;
 const zoomTools=document.querySelector("#zoom-tools"),zoomLevel=document.querySelector("#zoom-level");
 const INTENT_TEXT={
+ "free-annotate":"自由標註（意思以我的補充說明和畫面為準）",
  "point-out":"我想指出這個位置",
  "ask-about-region":"請解釋我標記的區域",
  "answer-question":"我正在回答你先前的問題",
@@ -651,6 +659,84 @@ findingsEl.addEventListener("click",async e=>{
  }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
  render();
 });
+// ---- Gesture groups ----------------------------------------------------------
+// Several strokes may be one gesture (a shaft plus a head). The server
+// proposes candidates from geometry; the strokes themselves are never
+// merged. The user confirms or rejects a candidate, or groups and ungroups
+// marks by hand; GPT is told which groups are only system guesses.
+let gestures=[],gestureDecisions=[],selectedGesture=null,groupingFrom=null;
+const gesturesEl=document.querySelector("#gestures"),gestureOutlineEl=document.querySelector("#gesture-outline");
+const gkey=ids=>[...new Set(ids)].sort().join("+");
+const MEANING_TEXT={"direction-arrow":"可能是一支方向箭頭","connected-path":"可能是一條分段畫的路徑","unknown":"可能是同一個手勢"};
+const HEAD_TEXT={right:"往右","up-right":"往右上",up:"往上","up-left":"往左上",left:"往左","down-left":"往左下",down:"往下","down-right":"往右下"};
+const CONFIRM_TEXT={unconfirmed:"系統推測 · 待你確認","user-confirmed":"你確認是同一個手勢","user-rejected":"你說不是"};
+function setGestures(list,{merge=false}={}){
+ const before=merge?gestures:[];
+ // Verdicts given in this widget win until the server echoes them.
+ const mine=new Map(gestureDecisions.map(d=>[gkey(d.memberIds),d.verdict]));
+ gestures=(Array.isArray(list)?list:[]).filter(g=>g&&Array.isArray(g.memberIds)&&g.memberIds.length>=2&&g.memberIds.length<=8&&g.memberIds.every(id=>typeof id==="string")).slice(0,30)
+   .map(g=>{const key=gkey(g.memberIds);return {key,memberIds:key.split("+"),
+     proposedMeaning:MEANING_TEXT[g.proposedMeaning]?g.proposedMeaning:"unknown",
+     provenance:g.provenance==="user-created"?"user-created":"system-inferred",
+     confirmation:mine.get(key)??(CONFIRM_TEXT[g.confirmation]?g.confirmation:"unconfirmed"),
+     heading:HEAD_TEXT[g.arrow?.direction?.heading]?g.arrow.direction.heading:null,side:g.side==="right"?"right":"left"};});
+ // A send only reports groups touching its new marks; keep the others.
+ const fresh=new Set(gestures.flatMap(g=>g.memberIds));
+ gestures=[...before.filter(g=>!g.memberIds.some(id=>fresh.has(id))),...gestures];
+}
+// A group disappears as soon as one of its strokes is gone.
+const liveGestures=()=>gestures.filter(g=>g.memberIds.every(id=>findMark(id)));
+function renderGestures(){
+ gesturesEl.replaceChildren();gestureOutlineEl.replaceChildren();
+ for(const g of liveGestures()){
+   const ms=g.memberIds.map(findMark),own=g.provenance==="user-created";
+   const li=el("li",{className:(g.key===selectedGesture?"selected":"")+(g.confirmation==="user-rejected"?" rejected":"")});
+   li.dataset.gesture=g.key;
+   li.append(el("span",{className:"what",textContent:(pair?(g.side==="right"?"右 ":"左 "):"")+ms.map(m=>m.label||m.id).join(" + ")}),
+     el("span",{className:"ends",textContent:MEANING_TEXT[g.proposedMeaning]+(g.heading?"（"+HEAD_TEXT[g.heading]+"）":"")}),
+     el("span",{className:"chip"+(g.confirmation==="unconfirmed"?" ask":""),textContent:own?"你組合的":CONFIRM_TEXT[g.confirmation]}));
+   if(g.confirmation==="unconfirmed")li.append(el("button",{textContent:"是同一個手勢",dataset:{gv:"user-confirmed"}}),el("button",{textContent:"不是",dataset:{gv:"user-rejected"}}));
+   else li.append(el("button",{textContent:own?"拆開":"撤回我的判斷",dataset:{gv:"unreviewed"}}));
+   gesturesEl.append(li);
+   if(g.key===selectedGesture&&viewMode==="annotated"&&ms.every(shown)){
+     const bs=ms.map(bounds),pad=12*U();
+     const x=Math.min(...bs.map(b=>b.x))-pad,y=Math.min(...bs.map(b=>b.y))-pad;
+     node("rect",{x,y,width:Math.max(...bs.map(b=>b.x2))+pad-x,height:Math.max(...bs.map(b=>b.y2))+pad-y,fill:"none",stroke:"#2E9A5E","stroke-width":2*U(),"stroke-dasharray":(3*U())+" "+(4*U()),rx:6*U()},gestureOutlineEl);
+   }
+ }
+}
+async function decideGesture(memberIds,verdict){
+ const key=gkey(memberIds),ids=key.split("+"),known=gestures.find(g=>g.key===key);
+ gestureDecisions=[...gestureDecisions.filter(d=>gkey(d.memberIds)!==key),...(verdict==="unreviewed"?[]:[{memberIds:ids,verdict}])].slice(-30);
+ if(known)gestures=known.provenance==="user-created"&&verdict==="unreviewed"?gestures.filter(g=>g!==known):
+   gestures.map(g=>g===known?{...g,confirmation:verdict==="unreviewed"?"unconfirmed":verdict}:g);
+ else if(verdict==="user-confirmed")gestures=[...gestures,{key,memberIds:ids,proposedMeaning:"unknown",provenance:"user-created",confirmation:"user-confirmed",heading:null,side:findMark(ids[0])?.side==="right"?"right":"left"}];
+ const side=(known??gestures.find(g=>g.key===key))?.side;
+ unsentReviews=[...unsentReviews.filter(r=>r.key!=="gesture:"+key),{key:"gesture:"+key,kind:"gesture",labels:ids.map(id=>findMark(id)?.label||id),verdict,made:!known||known.provenance==="user-created",side}];
+ status.textContent="已記錄；按「把標註傳給 GPT」讓 GPT 知道。";
+ if(imageId&&ready){
+   try{
+     const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict}});
+     if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   }catch(err){status.textContent="已記在畫布上，但存到伺服器失敗："+String(err.message||err)}
+ }
+ render();
+}
+gesturesEl.addEventListener("click",e=>{
+ const li=e.target.closest("li");if(!li)return;
+ const verdict=e.target.closest("button")?.dataset.gv;
+ if(!verdict){selectedGesture=selectedGesture===li.dataset.gesture?null:li.dataset.gesture;render();return;}
+ decideGesture(li.dataset.gesture.split("+"),verdict);
+});
+// Hand grouping: "組成手勢" on a selected mark, then tap another of yours.
+function finishGrouping(m){
+ const from=findMark(groupingFrom);groupingFrom=null;
+ if(!from||!m||!isUser(m)||m.id===from.id||(pair&&(m.side??"left")!==(from.side??"left"))){status.textContent="沒有組合；請點同一張圖上另一筆你的標記。";render();return;}
+ const old=liveGestures().find(g=>g.memberIds.includes(from.id)&&g.confirmation==="user-confirmed");
+ const ids=[...new Set([...(old?.memberIds??[from.id]),m.id])].slice(0,8);
+ if(old&&old.provenance==="user-created")decideGesture(old.memberIds,"unreviewed");
+ selected=m.id;decideGesture(ids,"user-confirmed");
+}
 function refreshFocus(){
  const marks=markOptions(),previous=selectedFocusId;focusChoice.replaceChildren();
  for(const item of marks){
@@ -732,7 +818,7 @@ function render(){
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
  exportImageBtn.hidden=!!pair||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!pair||!(imageId&&exportLinks?.marks);
- renderLayers();renderLinks();renderFindings();renderEvidenceBox();
+ renderLayers();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -757,7 +843,7 @@ function applyInput(args){
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    if(pid){
@@ -827,6 +913,7 @@ async function syncCanvas(force=false){
      layoutPair(Number(r.width),Number(r.height),pair.width,pair.height);links=cleanLinks(r.links);
    }else if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
    if(Array.isArray(r.layers))setLayers(r.layers);
+   if(Array.isArray(r.gestureGroups))setGestures(r.gestureGroups);
    const marks=Array.isArray(r.annotations)?r.annotations.filter(valid).slice(0,120).map(fromServer):[];
    const mine=new Set(userMarks.map(m=>m.id));
    assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
@@ -1102,12 +1189,19 @@ function renderSelection(){
    selectionEl.append(input,el("span",{className:"meta",textContent:"拖曳移動 · 方向鍵微調 · 畫筆按鈕改樣式"}));
  }
  if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 GPT 的標記",dataset:{act:"delete"}}));
+ if(mine){
+   const inGroup=liveGestures().find(g=>g.memberIds.includes(m.id)&&g.confirmation==="user-confirmed");
+   selectionEl.append(el("button",{textContent:groupingFrom===m.id?"取消組合":"和另一筆組成手勢",dataset:{act:"group"},title:"這幾筆是同一個手勢（例如箭桿＋箭頭）；筆畫本身不會被合併"}));
+   if(inGroup)selectionEl.append(el("button",{textContent:"拆開手勢",dataset:{act:"ungroup"}}));
+ }
  selectionEl.append(el("button",{textContent:"取消選取",dataset:{act:"deselect"}}));
  if(m.note)selectionEl.append(el("span",{className:"note",textContent:"GPT："+m.note}));
 }
 selectionEl.addEventListener("click",e=>{
  const act=e.target.closest("button")?.dataset.act;
  if(act==="delete")deleteMark(findMark(selected));
+ if(act==="group"){groupingFrom=groupingFrom===selected?null:selected;status.textContent=groupingFrom?"再點另一筆你的標記，把它們當成同一個手勢。":"已取消組合。";render();}
+ if(act==="ungroup"){const g=liveGestures().find(g=>g.memberIds.includes(selected)&&g.confirmation==="user-confirmed");if(g)decideGesture(g.memberIds,g.provenance==="user-created"?"unreviewed":"user-rejected");}
  if(act==="deselect"){selected=null;render();}
 });
 function nudgeSelected(dx,dy){
@@ -1127,7 +1221,9 @@ document.addEventListener("keydown",e=>{
 hit.addEventListener("pointerdown",e=>{
  if(mode!=="select"||!ready&&imageId)return;
  const p=fromPointer(e);if(!p)return;
- const m=pickMark(p);selected=m?.id??null;
+ const m=pickMark(p);
+ if(groupingFrom){finishGrouping(m);return;}
+ selected=m?.id??null;
  if(canEdit(m)){dragMove={start:p,before:m,moved:false};hit.setPointerCapture(e.pointerId);}
  status.textContent=m?"已選取「"+(m.label||m.id)+"」。":"這裡沒有標記；點在線條或框上就能選取。";
  render();
@@ -1144,7 +1240,16 @@ function endDrag(){
 }
 hit.addEventListener("pointerup",endDrag);
 hit.addEventListener("pointercancel",()=>{if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}});
-hit.addEventListener("pointerdown",e=>{if(mode==="select"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];hit.setPointerCapture(e.pointerId);});
+// Drawing facts for gesture grouping: order and time relative to the first
+// stroke since the last send (no clock time), and the input device.
+let batchStart=null,strokeStart=0,strokePointer="",strokeCount=0;
+function strokeFacts(){
+ const now=performance.now(),ms=t=>Math.min(36e5,Math.max(0,Math.round(t-batchStart)));
+ return {strokeOrder:++strokeCount,relativeStartMs:ms(strokeStart),relativeEndMs:ms(now),
+   ...(["mouse","pen","touch"].includes(strokePointer)?{pointerType:strokePointer}:{})};
+}
+hit.addEventListener("pointerdown",e=>{if(mode==="select"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];
+ strokeStart=performance.now();batchStart??=strokeStart;strokePointer=e.pointerType;hit.setPointerCapture(e.pointerId);});
 hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select")return;const p=fromPointer(e);if(!p)return;
  if(mode==="polyline"){
    // Pens and tablets report more samples than pointermove fires; use them all.
@@ -1161,6 +1266,7 @@ hit.addEventListener("pointerup",e=>{if(!start||mode==="select")return;const p=f
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
    :{...draft(start,p),id:ID_PREFIX+(++seq)};
+ Object.assign(mark,strokeFacts());
  // Paired view: a mark belongs to the image it was started on and stays inside it.
  if(pair)mark=toView(toSide({...mark,side:sideAt(start)}));
  if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
@@ -1228,8 +1334,14 @@ window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
 // The user's verdicts on GPT's links, as text GPT reads in the chat.
 const VERDICT_ZH={link:{confirmed:"確認是同一個",rejected:"否決，不是同一個",unreviewed:"撤回我先前的判斷"},
  note:{confirmed:"確認你的說明正確",rejected:"否決你的說明",unreviewed:"撤回我先前的判斷"}};
+const GESTURE_ZH={"user-confirmed":"是同一個手勢","user-rejected":"不是同一個手勢，請分開看","unreviewed":"撤回我先前的判斷"};
 function reviewMessage(list){
- return "我在 Estampes 畫布上審核了你的說法（"+imageId+(pair?" ＋ 右 "+pair.imageId:"")+"）：\n"+
+ const gestureList=list.filter(r=>r.kind==="gesture");list=list.filter(r=>r.kind!=="gesture");
+ const gesture=gestureList.length?"我在 Estampes 畫布上說明了哪些筆畫屬於同一個手勢（筆畫本身沒有被合併或修改）：\n"+
+   gestureList.map(r=>"- "+(pair?(r.side==="right"?"右圖 ":"左圖 "):"")+r.labels.join(" + ")+"："+
+     (r.made&&r.verdict==="user-confirmed"?"我把它們組成同一個手勢":r.made&&r.verdict==="unreviewed"?"我把它們拆開了，請分開看":GESTURE_ZH[r.verdict])).join("\n"):"";
+ if(!list.length)return gesture;
+ return (gesture?gesture+"\n\n":"")+"我在 Estampes 畫布上審核了你的說法（"+imageId+(pair?" ＋ 右 "+pair.imageId:"")+"）：\n"+
    list.map(r=>"- "+(r.kind==="link"?"連結 "+(r.label||r.id)+"（左 "+r.left+" ↔ 右 "+r.right+"）":
      (pair?(r.side==="right"?"右圖 ":"左圖 "):"")+"標記 "+(r.label||r.id)+" 的說明「"+r.note+"」")+"："+VERDICT_ZH[r.kind][r.verdict]+
      (r.verdict==="rejected"&&(r.reason||r.reviewReason)?"，理由："+(r.reason||r.reviewReason):"")).join("\n")+
@@ -1266,12 +1378,13 @@ send.addEventListener("click",async()=>{
    }catch(err){status.textContent="傳送失敗："+String(err.message||err)}
    render();return;
  }
- const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen,side})=>({
+ const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen,side,strokeOrder,relativeStartMs,relativeEndMs,pointerType})=>({
    id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,...(pair?{side}:{}),
+   strokeOrder,relativeStartMs,relativeEndMs,pointerType,
    role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"
  }));
- const intent=intentSelect.value||"point-out";
+ const intent=intentSelect.value||"free-annotate";
  const note=noteInput.value.trim().slice(0,500);
  const replyQuote=quoteInput.value.trim().slice(0,300);
  let validated=false,reason="",chatMessage="";
@@ -1279,7 +1392,8 @@ send.addEventListener("click",async()=>{
    status.textContent="正在驗證座標並整理對話上下文…";
    const result=await request("tools/call",{
      name:"validate_visual_annotations",
-     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),annotations:marks,intent,note,replyQuote}
+     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),annotations:marks,intent,note,replyQuote,
+       gestureDecisions:gestureDecisions.filter(d=>d.memberIds.every(id=>marks.some(m=>m.id===id)))}
    });
    if(result?.isError)throw Error("Tool rejected annotations");
    const r=result?.structuredContent;
@@ -1291,6 +1405,7 @@ send.addEventListener("click",async()=>{
    }
    chatMessage=r.chatMessage;
    validated=true;
+   setGestures(r.event.gestureGroups,{merge:true});
    // The server put this send's new marks in one layer.
    const sent=pair?[["left",r.layer],["right",r.pairLayer]]:[["left",r.layer]];
    for(const [side,raw] of sent){
@@ -1312,7 +1427,7 @@ send.addEventListener("click",async()=>{
        "SVG 底圖 id=demo:"+selectedScene+" revision=svg-v1 viewBox=640×360，")+
      (pair?"右圖 imageId="+pair.imageId+"，每個標註的 side 表示在左圖或右圖；":"")+
      "原圖左上角為原點，座標為 0..1。\n"+
-     "點是位置，框是範圍，箭頭尖端(x2,y2)是目標。\n"+
+     (intent==="point-out"?"點是位置，框是範圍，箭頭尖端(x2,y2)是我指的對象。\n":"點是位置，框是範圍；箭頭保留起點(x,y)到尖端(x2,y2)的方向，它是指向還是表示方向／流向，請看我的補充說明。\n")+
      "未經驗證的標註："+JSON.stringify(marks);
  }
  if(reviewed.length||edited.length)chatMessage+="\n\n"+extra();
@@ -1325,6 +1440,7 @@ send.addEventListener("click",async()=>{
    if(response?.isError)throw Error("Host rejected message");
    for(const id of freshIds)sentIds.add(id);
    clearExtra();
+   batchStart=null;strokeCount=0;
    past=[];future=[];
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
      (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");

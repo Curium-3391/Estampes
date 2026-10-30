@@ -57,7 +57,7 @@ function makeFork(base, setId, data) {
   const fork = Object.create(base);
   Object.assign(fork, {
     setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
-    pairLinks: new Map(), objects: undefined, lastViews: undefined, lastCheck: undefined, derivedFrom: undefined,
+    pairLinks: new Map(), gestureDecisions: [], objects: undefined, lastViews: undefined, lastCheck: undefined, derivedFrom: undefined,
   });
   if (data) restoreCanvas(fork, data);
   return fork;
@@ -95,6 +95,7 @@ function copySet(entry) {
   fork.marks = new Map(canvasMarks(entry).map((m) => [m.id, { ...clone(m), derivedFrom: { set: from, mark: m.id } }]));
   fork.layers = clone(entry.layers ?? []);
   fork.rejections = clone(entry.rejections ?? []);
+  fork.gestureDecisions = clone(entry.gestureDecisions ?? []);
   if (entry.objects !== undefined) fork.objects = clone(entry.objects);
   fork.derivedFrom = { set: from, at: now() };
   forks.set(fork.setKey, fork);

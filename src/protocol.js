@@ -10,6 +10,7 @@
 // rejected. See docs/PROTOCOL-V2.md; version 1 documents are still read.
 import { canvasMarks, canvasLayers, pairLinks } from "./canvas-state.js";
 import { verificationOf } from "./assessment.js";
+import { gestureGroups } from "./gesture-groups.js";
 
 export const VISUAL_PROTOCOL = "estampes.visual/2";
 export const READABLE_PROTOCOLS = ["estampes.visual/1", VISUAL_PROTOCOL];
@@ -27,6 +28,11 @@ const claimFields = (c) => ({
   previouslyRejected: c.previouslyRejected,
 });
 
+const strokeOf = (m) => {
+  const s = defined({ order: m.strokeOrder, relativeStartMs: m.relativeStartMs, relativeEndMs: m.relativeEndMs, pointerType: m.pointerType });
+  return Object.keys(s).length ? s : undefined;
+};
+
 export function protocolMark(m, image) {
   const style = defined({ color: m.color, size: m.size, pen: m.pen });
   // A note is a claim: its confidence, evidence and the user's verdict travel with it.
@@ -39,6 +45,7 @@ export function protocolMark(m, image) {
     // user pointed; unverified = a model's coordinates; replayed-unverified =
     // re-sent without proof; scene-anchor = a known demo landmark).
     provenance: defined({ author: m.author, grounding: m.grounding, editedByUser: m.edited ? true : undefined }),
+    stroke: strokeOf(m),
   });
 }
 
@@ -63,10 +70,13 @@ export function canvasDocument(left, right = null, { history } = {}) {
     label: l.label, note: l.note, ...claimFields(l), review: l.review, author: l.author,
   })) : [];
   const rejections = sides.flatMap(([, entry]) => entry.rejections ?? []);
+  // Candidate stroke groups: hypotheses, never part of the marks themselves.
+  const groups = sides.flatMap(([, entry]) => gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions)
+    .map((g) => ({ ...g, image: entry.imageId })));
   return defined({
     protocol: VISUAL_PROTOCOL, coordinateSystem: COORDINATES,
     images: sides.map(([role, entry]) => imageInfo(entry, role)),
-    layers, marks, links, rejections: listOrNone(rejections), history,
+    layers, marks, links, gestureGroups: listOrNone(groups), rejections: listOrNone(rejections), history,
   });
 }
 

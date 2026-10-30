@@ -40,7 +40,7 @@ test("unified canvas contains all views without a second tool call",()=>{
 
 test("context is optional; drawing and submission require no menu completion",()=>{
   assert.match(html,/<details id="context-details">/);
-  assert.match(source,/const intent=intentSelect\.value\|\|"point-out"/);
+  assert.match(source,/const intent=intentSelect\.value\|\|"free-annotate"/);
   assert.match(source,/send\.disabled=!ready\|\|\(fresh===0&&!unsentReviews\.length&&!unsentEdits\.length\)/);
   assert.doesNotMatch(source,/!intentSelect\.value/);
 });

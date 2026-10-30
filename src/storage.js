@@ -68,7 +68,8 @@ export function serializeCanvas(entry) {
     // Objects other modules keep with a canvas pass through unchanged.
     ...(entry.objects !== undefined ? { objects: entry.objects } : {}),
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
-    ...(entry.rejections?.length ? { rejections: entry.rejections } : {}), savedAt: new Date().toISOString(),
+    ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
+    ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}), savedAt: new Date().toISOString(),
   };
 }
 
@@ -78,6 +79,8 @@ export function restoreCanvas(entry, data) {
   entry.layers = Array.isArray(data.layers) ? data.layers : [];
   entry.userEdits = Array.isArray(data.userEdits) ? data.userEdits : [];
   entry.rejections = Array.isArray(data.rejections) ? data.rejections.filter((r) => r && typeof r.kind === "string" && r.from) : [];
+  entry.gestureDecisions = Array.isArray(data.gestureDecisions)
+    ? data.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string") : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => setKeyOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   if (data.objects !== undefined) entry.objects = data.objects;

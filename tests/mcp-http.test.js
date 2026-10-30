@@ -186,7 +186,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(event?.interaction?.replyTo?.provenance,"user-entered");
     assert.equal(event?.annotations?.[0]?.arrowhead,"end");
     assert.match(contextReply.structuredContent?.chatMessage,/你指的是哪座山/);
-    assert.match(contextReply.structuredContent?.chatMessage,/箭頭尖端/);
+    assert.match(contextReply.structuredContent?.chatMessage,/尖端（x2,y2）/);
     // Some MCP clients represent schema rejection as a tool error result,
     // others raise a protocol error. Both are valid rejections.
     let rejected=false;

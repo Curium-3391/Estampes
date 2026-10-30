@@ -31,7 +31,7 @@ test("v0.2 carries explicit user intent and optional quote without making up a m
   const message=formatAnnotationChatMessage(event);
   assert.match(message,/我要更正你先前的指認/);
   assert.match(message,/使用者親自輸入/);
-  assert.match(message,/箭頭尖端/);
+  assert.match(message,/semanticHint=unspecified/);
   assert.match(message,/svg-user-unit/);
   assert.match(message,/"schemaVersion":"0.2-draft"/);
 });
@@ -56,7 +56,7 @@ test("invalid coordinates, unknown intent or duplicate IDs are rejected",()=>{
 });
 
 test("all intents supported and text limits enforced",()=>{
-  assert.equal(INTENTS.length,6);
+  assert.equal(INTENTS.length,7);
   assert.deepEqual(Object.keys(SCENE_META),["landscape","shapes","formula"]);
   for(const intent of INTENTS) {
     const event=buildAnnotationEvent({scene:"landscape",annotations:[arrow],
@@ -65,4 +65,57 @@ test("all intents supported and text limits enforced",()=>{
     assert.equal(event.interaction.userNote.length,500);
     assert.equal(event.interaction.replyTo.quote.length,300);
   }
+});
+
+// EST-SEM-01: an arrow's type is geometry; only point-out makes the head the referent.
+const leftArrow={id:"user-1v5g-1",type:"arrow",x:0.50371,y:0.28759,x2:0.38220,y2:0.28804,label:"YOU 1"};
+const photo={imageId:"img-test",width:1536,height:432};
+
+test("free annotation is the default and leaves arrow meaning unspecified",()=>{
+  const event=buildAnnotationEvent({image:photo,annotations:[leftArrow],note:"我覺得電流是往這個方向走的"});
+  assert.equal(INTENTS[0],"free-annotate");
+  assert.equal(event.interaction.intent,"free-annotate");
+  assert.equal(event.interaction.requestedAssistantAction,"interpret-annotation");
+  assert.equal(event.interaction.arrowMeaning,"unspecified");
+  assert.equal(event.interaction.semanticsPolicy,"geometry-is-not-intent");
+  const a=event.annotations[0];
+  assert.equal(a.semanticHint,"unspecified");
+  assert.deepEqual(a.geometry,{x:0.50371,y:0.28759,x2:0.38220,y2:0.28804});
+  assert.equal(a.direction.heading,"left");
+  assert.equal(a.direction.provenance,"computed-from-geometry");
+  const message=formatAnnotationChatMessage(event);
+  assert.match(message,/由右往左/);
+  assert.match(message,/semanticHint=unspecified/);
+  assert.match(message,/方向、流向/);
+  assert.doesNotMatch(message,/才是我指的對象/);
+  assert.match(message,/我覺得電流是往這個方向走的/);
+});
+
+test("only an explicit point-out makes the arrowhead the target, and the note can still override",()=>{
+  const event=buildAnnotationEvent({image:photo,annotations:[leftArrow],intent:"point-out",note:"箭頭指到的元件是什麼？"});
+  assert.equal(event.interaction.arrowMeaning,"arrowhead-is-target");
+  assert.equal(event.annotations[0].semanticHint,"point-to-target");
+  const message=formatAnnotationChatMessage(event);
+  assert.match(message,/箭頭尖端（x2,y2）是我指的對象/);
+  assert.match(message,/以我的文字為準/);
+  for(const intent of INTENTS.filter(i=>i!=="point-out")){
+    const e=buildAnnotationEvent({image:photo,annotations:[leftArrow],intent});
+    assert.equal(e.annotations[0].semanticHint,"unspecified",intent);
+  }
+});
+
+test("arrow direction uses image pixels, not stretched normalized units",()=>{
+  // Equal normalized dx and dy on a wide image is mostly horizontal in pixels.
+  const diag={id:"d",type:"arrow",x:0.2,y:0.8,x2:0.4,y2:0.6};
+  const event=buildAnnotationEvent({image:photo,annotations:[diag]});
+  assert.equal(event.annotations[0].direction.heading,"right");
+  const square=buildAnnotationEvent({image:{imageId:"sq",width:500,height:500},annotations:[diag]});
+  assert.equal(square.annotations[0].direction.heading,"up-right");
+  assert.equal(square.annotations[0].direction.angleDeg,45);
+});
+
+test("without a note the message asks for several readings instead of assuming one",()=>{
+  const message=formatAnnotationChatMessage(buildAnnotationEvent({image:photo,annotations:[leftArrow]}));
+  assert.match(message,/列出可能的解讀/);
+  assert.match(message,/只問一次/);
 });
