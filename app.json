@@ -2,23 +2,48 @@
   "name": "Estampes",
   "description": "MCP server for ChatGPT: you and GPT point at, draw on and link the same images.",
   "repository": "https://github.com/Curium-3391/Estampes",
-  "keywords": ["mcp", "chatgpt", "image-annotation", "node"],
+  "keywords": [
+    "mcp",
+    "chatgpt",
+    "image-annotation",
+    "node"
+  ],
   "stack": "heroku-24",
-  "buildpacks": [{ "url": "heroku/nodejs" }],
-  "formation": { "web": { "quantity": 1 } },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1
+    }
+  },
   "env": {
-    "NODE_ENV": { "value": "production" },
+    "NODE_ENV": {
+      "value": "production"
+    },
     "ESTAMPES_ACCESS_KEY": {
-      "description": "Optional shared secret. If set, connect ChatGPT to https://<app>.herokuapp.com/mcp?key=<this value>. Leave empty for an open server.",
+      "description": "Shared secret, generated for you. Connect ChatGPT to https://<app>.herokuapp.com/mcp?key=<this value> (see Settings → Config Vars). Clear it only for an open test server.",
+      "generator": "secret",
       "required": false
     },
     "PUBLIC_BASE_URL": {
       "description": "Optional. Public https address of this app, used for download links. Empty = taken from incoming requests.",
       "required": false
     },
-    "ESTAMPES_MAX_IMAGE_MB": { "description": "Largest image accepted, in MB.", "value": "20" },
-    "ESTAMPES_CACHE_MB": { "description": "Memory for decoded images. Keep well under the dyno's RAM (512 MB on Eco/Basic).", "value": "160" },
-    "ESTAMPES_LOG_FORMAT": { "description": "text or json", "value": "text" }
+    "ESTAMPES_MAX_IMAGE_MB": {
+      "description": "Largest image accepted, in MB.",
+      "value": "20"
+    },
+    "ESTAMPES_CACHE_MB": {
+      "description": "Memory for decoded images. Keep well under the dyno's RAM (512 MB on Eco/Basic).",
+      "value": "160"
+    },
+    "ESTAMPES_LOG_FORMAT": {
+      "description": "text or json",
+      "value": "text"
+    }
   },
   "success_url": "/healthz"
 }

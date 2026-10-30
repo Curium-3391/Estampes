@@ -14,9 +14,12 @@ RUN npm ci --omit=dev --no-audit --no-fund \
  && node -e "require('sharp'); console.log('sharp', require('sharp/package.json').version, process.arch)"
 
 FROM ${BASE_IMAGE}
+# Self-hosted servers are never open by accident: without
+# ESTAMPES_ACCESS_KEY a key is generated into /data on first start.
 ENV NODE_ENV=production \
     PORT=8787 \
-    ESTAMPES_STORAGE_DIR=/data
+    ESTAMPES_STORAGE_DIR=/data \
+    ESTAMPES_REQUIRE_KEY=1
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json server.js ./
