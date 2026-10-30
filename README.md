@@ -52,6 +52,7 @@ npm start          # http://localhost:8787/mcp
 | [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
 | [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
+| [Modules](docs/MODULES.md) | The module system, the Store and the Graph module |
 | [Visual protocol 2](docs/PROTOCOL-V2.md) | `estampes.visual/2`, the host-neutral JSON document for a whole canvas, with evidence and verification for every claim |
 | [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
 | [Architecture](docs/ARCHITECTURE.md) | How the server, canvas widget and GPT fit together |

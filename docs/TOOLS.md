@@ -12,6 +12,11 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `process_image` | Return a processed view of an image or a region of it (zoom up to 8x). Operations, applied in order (max 8): `grayscale`, `normalize`, `clahe`, `contrast`, `brightness`, `sharpen`, `denoise`, `threshold` (adaptive, Otsu, fixed), `invert`, `edges`. |
 | `overlay_grid` | Draw a labelled grid (rows A, B, C… × columns 1, 2, 3…, 2–12 each) over an image or region and return each cell's centre in source coordinates. |
 
+| `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
+| `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
+| `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. |
+| `prepare_module_change` | Prepare enabling, disabling or (later) installing a module. Changes nothing: the user approves it in the Store. |
+
 Mark types: `point`, `rect`, `arrow` (when GPT draws one, the head is the target) and `polyline` (up to 128 vertices, optionally `smooth` or `closed`). Coordinates are normalized to the full image with the origin at the top left; `coordinateFrame` lets GPT pass coordinates read off a processed crop and have Estampes convert them. Colour, size and pen (pen or translucent highlighter) are chosen by GPT.
 
 ## Tools only the canvas widget calls
@@ -27,6 +32,9 @@ These are hidden from the model (`visibility: ["app"]`).
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
+| `store_get_catalog`, `store_get_detail`, `store_get_activity` | Read the module catalog, one module's details and the recent module activity for the Store widget. |
+| `store_get_plan`, `store_commit_plan` | Prepare a change from a Store button, and apply it after the user confirms. Committing needs the plan's consent token, which only the widget receives. |
+| `edit_scene_object` | Applies your own edit to a module's object from the canvas (for example a new formula for a plot), or deletes it. No module code runs. |
 | `record_number_line_selection` | Validates a selection in the number-line demo. |
 
 ## What your marks mean
