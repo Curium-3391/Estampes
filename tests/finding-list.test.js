@@ -1,15 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 
-const browser = process.env.CHROMIUM_BIN || "chromium";
-const available = spawnSync(browser, ["--version"], { encoding: "utf8" }).status === 0;
+// GitHub's Ubuntu runners include Chrome; their chromium command may be a
+// snap launcher that reports a version but cannot launch a headless browser.
+const browser = (process.env.CHROMIUM_BIN ? [process.env.CHROMIUM_BIN] : ["google-chrome", "chromium"])
+  .find(candidate => spawnSync(candidate, ["--version"], { encoding: "utf8", timeout: 5000 }).status === 0);
+const available = !!browser;
 
-test("finding groups: compact rows, detail drilldown, canvas selection and review drafts", { skip: !available && "Chromium unavailable", timeout: 30000 }, async () => {
+test("finding groups: compact rows, detail drilldown, canvas selection and review drafts", { skip: !available && "Chromium unavailable", timeout: 45000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "estampes-findings-"));
   try {
     const html = readFileSync(new URL("../public/visual-surface.html", import.meta.url), "utf8");
@@ -34,11 +38,12 @@ try{
  };
  resetFindings();render();
  check(findingsEl.querySelectorAll(".finding-group").length===1,"one layer group");
- check(!findingsEl.querySelector("details").open,"collapsed by default");
- check(findingsEl.textContent.includes("22 段 · 22 待確認"),"pending count");
- check(findingsEl.getBoundingClientRect().height<65,"collapsed group is one line");
+ check(!layersEl.querySelector("#layer-manager").open,"collapsed by default");
+ check(findingsEl.textContent.includes("22 項 · 22 待確認"),"pending count");
+ check(layersEl.getBoundingClientRect().height<65,"collapsed manager is one line");
  check(!findingsEl.querySelector(".finding-detail"),"details are not rendered initially");
- findingsEl.querySelector("summary").click();await tick();
+ layersEl.querySelector("summary").click();await tick();
+ findingsEl.querySelector("[data-act=evidence]").click();await tick();
  check(findingsEl.querySelectorAll(".finding-row").length===22,"22 compact rows");
  check([...findingsEl.querySelectorAll(".finding-row")].every(r=>r.getBoundingClientRect().height<50),"each row stays compact");
  findingRowFor("trace-0").click();
@@ -61,17 +66,28 @@ try{
  const screen=point.matrixTransform(svg.getScreenCTM());
  for(const type of ["pointerdown","pointerup"])hit.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:1,clientX:screen.x,clientY:screen.y}));
  await tick();
- check(openFinding==="trace-2"&&findingsEl.querySelector("details").open,"canvas click opens matching detail");
+ check(openFinding==="trace-2"&&layersEl.querySelector("#layer-manager").open&&!findingsEl.querySelector(".layer-evidence").hidden,"canvas click opens matching detail");
  // Return to first row; draft persists even after another mark and canvas clicks.
  findingRowFor("trace-0").click();findingRowFor("trace-0").click();
  check(findingsEl.querySelector("input.reason").value==="線路在此中斷","draft survives changing selection");
  findingsEl.querySelector('[data-review="rejected"]').click();await tick();
  check(reviewCall.markId==="trace-0"&&reviewCall.reason==="線路在此中斷","review keeps mark identity and reason");
- check(findingsEl.textContent.includes("22 段 · 21 待確認"),"pending count updates after review");
+ check(findingsEl.textContent.includes("22 項 · 21 待確認"),"pending count updates after review");
  check(findingRowFor("trace-0").textContent.includes("你已否決"),"row reflects verdict");
  check(openFinding==="trace-0","review does not close detail");
- hiddenLayers.add("L1");render();check(!findingsEl.children.length,"hidden layers omitted");
- hiddenLayers.clear();resetFindings();render();check(!findingsEl.querySelector("details").open,"new canvas resets expansion");
+ hiddenLayers.add("L1");render();check(!findingsEl.querySelector(".finding-row"),"hidden layer evidence omitted");
+ check(findingsEl.querySelector("[data-act=toggle]"),"hidden layer controls remain accessible");
+ hiddenLayers.clear();resetFindings();render();check(!layersEl.querySelector("#layer-manager").open,"new canvas resets expansion");
+ // Evidence recency does not mutate ink or layer stacking.
+ const beforeIds=assistantMarks.map(m=>m.id).join(","),beforeLayers=layers.map(l=>l.id).join(",");
+ assistantMarks[3].findingUpdatedAt=100;assistantMarks[7].findingUpdatedAt=200;
+ layersExpanded=true;findingGroupsOpen.add("L1");render();
+ check(findingsEl.querySelector(".finding-row").dataset.mark==="trace-7","newest evidence first");
+ check(assistantMarks.map(m=>m.id).join(",")===beforeIds&&layers.map(l=>l.id).join(",")===beforeLayers,"evidence sorting leaves stacking intact");
+ for(const act of ["toggle","rename","opacity","lock","up","down"])check(findingsEl.querySelector("[data-act="+act+"]"),"original layer control: "+act);
+ const expandedBefore=findingGroupsOpen.has("L1");
+ findingsEl.querySelector("[data-act=toggle]").click();await tick();
+ check(hiddenLayers.has("L1")&&findingGroupsOpen.has("L1")===expandedBefore,"visibility control does not toggle evidence");
  document.body.dataset.findingTest="passed";
 }catch(error){document.body.dataset.findingTest="failed: "+error.stack;}
 })();
@@ -80,11 +96,13 @@ try{
     writeFileSync(page, html.replace("<head>","<head><script>window.addEventListener('error',e=>document.body.dataset.findingTest='error: '+e.message)</script>").replace("</script></main>", probe + "\n</script></main>"));
     const server=createServer((req,res)=>{res.setHeader("content-type","text/html; charset=utf-8");res.end(readFileSync(page));});
     await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-    const child = spawn(browser, ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir="+join(dir,"profile"), "about:blank"], { stdio: ["ignore","ignore","pipe"] });
+    const child = spawn(browser, ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir="+join(dir,"profile"), "about:blank"], { detached: process.platform !== "win32", stdio: ["ignore","ignore","pipe"] });
     let socket;
     try {
       const port = await new Promise((resolve,reject)=>{
-        let log="";const timer=setTimeout(()=>reject(Error("Browser startup timed out")),10000);
+        let log="";const timer=setTimeout(()=>reject(Error("Browser startup timed out: "+log.slice(-4000))),20000);
+        child.once("error",error=>{clearTimeout(timer);reject(error);});
+        child.once("exit",code=>{clearTimeout(timer);reject(Error("Browser exited before startup ("+code+"): "+log.slice(-4000)));});
         child.stderr.on("data",chunk=>{log+=chunk;const match=log.match(/DevTools listening on ws:\/\/127.0.0.1:(\d+)/);if(match){clearTimeout(timer);resolve(match[1]);}});
       });
       const target=await (await fetch("http://127.0.0.1:"+port+"/json/new?"+encodeURIComponent("http://127.0.0.1:"+server.address().port),{method:"PUT"})).json();
@@ -100,7 +118,22 @@ try{
         await new Promise(resolve=>setTimeout(resolve,50));
       }
       assert.equal(outcome,"passed");
-    } finally {server.close();socket?.close();child.kill();await new Promise(resolve=>child.once("exit",resolve));}
+    } finally {
+      server.close();
+      // Let Chrome flush and close its profile before removing the directory.
+      if(socket?.readyState===WebSocket.OPEN){
+        socket.send(JSON.stringify({id:999999,method:"Browser.close"}));
+        await new Promise(resolve=>setTimeout(resolve,500));
+      }
+      socket?.close();
+      // Chrome launchers can exit before their subprocesses. Terminate this
+      // test's process group so profile writers cannot outlive teardown.
+      if(child.pid){
+        try{process.platform!=="win32"?process.kill(-child.pid,"SIGTERM"):child.kill();}
+        catch(error){if(error.code!=="ESRCH")throw error;}
+      }
+      if(child.exitCode===null&&child.signalCode===null)await new Promise(resolve=>child.once("exit",resolve));
+    }
 
-  } finally { rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
+  } finally { await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 });
