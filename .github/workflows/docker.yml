@@ -30,6 +30,29 @@ jobs:
           key=$(docker compose exec -T estampes cat /data/access-key)
           test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8787/api/v1/canvas/0123456789abcdef?key=$key")" = 404
           ! docker compose exec -T estampes touch /app/probe
+          # The SymPy calculator: healthy, no network, no published port,
+          # reachable only through the socket, and it really computes.
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' estampes-cas)
+            [ "$status" = healthy ] && break; sleep 2
+          done
+          test "$(docker inspect -f '{{.State.Health.Status}}' estampes-cas)" = healthy
+          test "$(docker inspect -f '{{.HostConfig.NetworkMode}}' estampes-cas)" = none
+          test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' estampes-cas | grep -v '^{}$')"
+          test "$(docker compose exec -T cas id -u)" != 0
+          curl -fsS http://127.0.0.1:8787/healthz | grep -q '"available":true'
+          docker compose exec -T estampes node -e "
+            import('/app/src/cas/client.js').then(async ({ createCasClient }) => {
+              const c = createCasClient({ socketPath: '/run/estampes-cas/cas.sock' });
+              const r = await c.compute({ operation: 'differentiate', input: { text: 'sin(x^2)' }, params: { variable: 'x' } });
+              if (r.exact.plain !== '2*x*cos(x^2)') throw new Error(r.exact.plain);
+              const bad = await c.compute({ operation: 'evaluate', input: { text: 'exec(1)' } }).then(() => 'ran', (e) => e.code);
+              if (bad !== 'syntax') throw new Error('injection not refused: ' + bad);
+            }).catch((e) => { console.error(e); process.exit(1); });"
+          # Stop the calculator: Core stays healthy and reports it.
+          docker compose stop cas
+          curl -fsS http://127.0.0.1:8787/healthz | grep -q '"available":false'
+          docker compose start cas
           # The tunnel profile's compose file is valid (no network use here).
           docker compose --profile tunnel config --services | grep -qx tunnel
       - name: Logs

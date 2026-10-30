@@ -31,7 +31,7 @@ COPY scripts ./scripts
 COPY public ./public
 # Run as the image's unprivileged "node" user (uid 1000). /data is created
 # here so a new named volume starts owned by that user.
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data /run/estampes-cas && chown node:node /data /run/estampes-cas
 USER node
 VOLUME ["/data"]
 EXPOSE 8787

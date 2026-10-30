@@ -21,6 +21,8 @@ services:
       ESTAMPES_REQUIRE_KEY: "1"
       # Read the quick tunnel's address when the "tunnel" profile runs.
       ESTAMPES_TUNNEL_METRICS: http://tunnel:20241
+      # The SymPy calculator service (below) shares this one socket volume.
+      ESTAMPES_CAS_SOCKET: /run/estampes-cas/cas.sock
     ports:
       # Only this machine can reach the server by default; put a reverse
       # proxy or tunnel with https in front. ESTAMPES_BIND=0.0.0.0 in .env
@@ -28,6 +30,7 @@ services:
       - "${ESTAMPES_BIND:-127.0.0.1}:${ESTAMPES_HOST_PORT:-8787}:8787"
     volumes:
       - estampes-data:/data
+      - cas-run:/run/estampes-cas
     # Least privilege: nothing but /data (and a small /tmp) is writable, no
     # Linux capabilities, no privilege escalation, bounded processes.
     read_only: true
@@ -50,6 +53,38 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # The scientific calculator (SymPy). No network, no data volume, nothing
+  # writable but a small /tmp: its only way in or out is the Unix socket on
+  # the cas-run volume, which only Estampes (uid 1000) may open. If it is
+  # stopped, plotting and annotation keep working; only calculations fail.
+  cas:
+    build: ./cas-service
+    image: estampes-cas:local
+    container_name: estampes-cas
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    volumes:
+      - cas-run:/run/estampes-cas
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 2g
+    cpus: 2
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
   # Optional: a temporary public https address with no account and no
   # router setup.  docker compose --profile tunnel up -d
   # then read the ChatGPT connector URL with:
@@ -71,3 +106,4 @@ services:
 
 volumes:
   estampes-data:
+  cas-run:

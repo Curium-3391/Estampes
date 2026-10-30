@@ -27,7 +27,7 @@ before(async () => {
   for (let i = 0; i < 100; i++) { try { await access(sock); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
   nbDir = join(dir, "nb");
   configure({ client: createCasClient({ socketPath: sock }), notebooks: createNotebooks({ dir: nbDir }) });
-  h = await createModuleHost({ storageDir: dir, coreVersion: "0.15.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
+  h = await createModuleHost({ storageDir: dir, coreVersion: "0.16.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
 });
 after(() => { proc?.kill("SIGKILL"); });
 
@@ -127,7 +127,7 @@ test("cas: with no calculator service the module reports it and Core keeps worki
   configure({ client: createCasClient({ socketPath: join(tmpdir(), "no-such-estampes.sock") }) });
   try {
     const dir2 = await mkdtemp(join(tmpdir(), "estampes-cas2-"));
-    const h2 = await createModuleHost({ storageDir: dir2, coreVersion: "0.15.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
+    const h2 = await createModuleHost({ storageDir: dir2, coreVersion: "0.16.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
     const plan = await h2.lifecycle.prepare("enable", CAS);
     await h2.lifecycle.commit(plan.planId, { consent: plan.consent });
     configure({ notebooks: createNotebooks({ dir: "" }) });
