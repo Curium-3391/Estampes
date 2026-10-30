@@ -323,6 +323,8 @@ test("WebAssembly packages with imports, no memory maximum or too much memory ar
   const withTable = (section) => { const b = Buffer.from(wasmBytes), at = b.indexOf(Buffer.from("050401010410", "hex")); return Buffer.concat([b.subarray(0, at), Buffer.from(section, "hex"), b.subarray(at)]); };
   assert.throws(() => check(wasmManifest, withTable("040601700080897a")), /table may hold at most/); // min 2,000,000, no maximum
   check(wasmManifest, withTable("04050170010a0a")); // min 10, max 10
+  // typed reference (0x63 + heap type) in the first table would shift the limits parser: refused outright
+  assert.throws(() => check(wasmManifest, withTable("0410" + "02" + "63" + "01" + "01" + "0a" + "80897a" + "70" + "01" + "80897a" + "80897a")), /unsupported table type|not valid/);
   // flags 0: no maximum declared (keep the section length by padding with a custom-free rewrite)
   assert.throws(() => check(wasmManifest, patch("050401010410", "050301000400".slice(0, 12))), /maximum|malformed|not valid/);
   assert.throws(() => check(wasmManifest, Buffer.from("not wasm")), /not a WebAssembly file/);

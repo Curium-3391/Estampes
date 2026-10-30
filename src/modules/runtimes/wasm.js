@@ -44,8 +44,7 @@ export function declaredSizes(bytes) {
   const tables = [];
   const limits = (p) => {
     const flags = bytes[p++];
-    if (flags & 0x02) throw new WasmError("shared memory or tables are not allowed");
-    if (flags & 0x04) throw new WasmError("64-bit memory or tables are not allowed");
+    if (flags !== 0 && flags !== 1) throw new WasmError("shared, 64-bit or otherwise extended memory or tables are not allowed");
     let min, max = null; [min, p] = leb(bytes, p);
     if (flags & 0x01) [max, p] = leb(bytes, p);
     return [{ min, max }, p];
@@ -59,7 +58,8 @@ export function declaredSizes(bytes) {
       let count, p = at; [count, p] = leb(bytes, p);
       if (count > 16) throw new WasmError("too many " + (id === 4 ? "tables" : "memories"));
       for (let i = 0; i < count; i++) {
-        if (id === 4) p++; // element type
+        // Only the one-byte reference types; anything else cannot be sized here.
+        if (id === 4 && bytes[p++] !== 0x70 && bytes[p - 1] !== 0x6f) throw new WasmError("unsupported table type");
         let l; [l, p] = limits(p);
         if (id === 4) tables.push(l); else memory = memory ? (() => { throw new WasmError("the module must declare exactly one memory"); })() : l;
       }
