@@ -69,6 +69,29 @@ test("workspaces over MCP: preview, commit, retry, read back, undo", { timeout: 
     assert.equal(stale.isError, true);
     await call("undo_workspace_change", { workspaceId: ws, undoToken: edited.structuredContent.undoToken });
     assert.equal((await call("get_workspace_state", { workspace: ws })).structuredContent.items.length, 3);
+    // Show the workspace: marks on each item, a cross-item link, a user send, a review.
+    const shown = await call("present_visual", { workspaceId: ws, verify: false,
+      annotations: [{ ...box("n1"), item: "wi-2" }, { ...box("n1", undefined, 0.5), item: "wi-3" }],
+      findings: [{ id: "pcb", note: "電源區" }],
+      links: [{ id: "k1", fromItem: "wi-2", from: "n1", toItem: "wi-3", to: "n1", confidence: "low" }] });
+    assert.equal(shown.structuredContent.workspace.items.length, 3);
+    assert.equal(shown.structuredContent.marks.length, 6, "two images may both have a mark n1");
+    assert.equal(shown._meta["estampes/items"].length, 3);
+    assert.equal(shown._meta["estampes/links"].length, 1);
+    assert.match(shown.content[0].text, /LINKS \(1\)/);
+    const ambiguous = await client.callTool({ name: "present_visual", arguments: { workspaceId: ws, verify: false, findings: [{ id: "n1", note: "x" }] } });
+    assert.equal(ambiguous.isError, true);
+    assert.match(ambiguous.content[0].text, /exists on items wi-2, wi-3; give `item`/);
+    const sent = await call("validate_visual_annotations", { imageId: a, workspaceId: ws, annotations: [{ id: "user-w1", type: "point", x: 0.5, y: 0.5, item: "wi-3" }] });
+    assert.equal(sent.structuredContent.itemLayers[0].item, "wi-3");
+    assert.match(sent.structuredContent.chatMessage, new RegExp(ws + ".*wi-3 = imageId " + b2));
+    const edit = await call("edit_visual_canvas", { imageId: a, workspaceId: ws, marks: [{ id: "user-w1", item: "wi-3", x: 0.6, y: 0.6 }] });
+    assert.equal(edit.structuredContent.edits[0].kind, "move-mark");
+    const rev = await call("review_visual_link", { imageId: a, workspaceId: ws, fromItem: "wi-2", toItem: "wi-3", linkId: "k1", review: "confirmed" });
+    assert.equal(rev.structuredContent.link.review, "confirmed");
+    const rest = await call("load_visual_canvas", { imageId: a, workspaceId: ws });
+    assert.equal(rest.structuredContent.annotations.length, 7);
+
     const legacy = await call("get_workspace_state", { workspace: b1 + "+" + b2 });
     assert.deepEqual(legacy.structuredContent.legacy, { imageId: b1, pairImageId: b2 });
   } finally {

@@ -20,7 +20,7 @@ import { GESTURE_VERDICTS, gestureGroups, recordGestureDecision } from "./src/ge
 import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
-  applyPairChanges, pairLinks, reviewLink, reviewFinding, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
+  applyPairChanges, pairLinks, reviewLink, reviewFinding, applyWorkspaceChanges, workspaceLinks, reviewWorkspaceLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
 } from "./src/canvas-state.js";
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
@@ -31,7 +31,7 @@ import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import {
-  WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument,
+  WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
 import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import {
@@ -84,6 +84,7 @@ const checkGeometry = (a, ctx) => {
   }
 };
 
+const WorkspaceItemId = z.string().regex(/^wi-\d{1,4}$/);
 // Guaranteed geometry for renderer + user validation.
 const VisualAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
@@ -109,6 +110,7 @@ const VisualAnnotationSchema = z.object({
   relativeStartMs: z.number().int().min(0).max(36e5).optional(),
   relativeEndMs: z.number().int().min(0).max(36e5).optional(),
   pointerType: z.enum(["mouse", "pen", "touch"]).optional(),
+  item: WorkspaceItemId.optional().describe("Workspace only: which item the mark is on"),
 }).superRefine(checkGeometry);
 const GestureDecisionSchema = z.object({
   memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
@@ -122,6 +124,7 @@ const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 const EvidenceSchema = z.object({
   kind: z.enum(EVIDENCE_KINDS.filter((k) => k !== "tool-result")).describe("text = words/numbers read there; position = where it sits relative to other things; shape = outline, size, colour; context = what surrounds it"),
   side: z.enum(["left", "right"]).optional().describe("Paired view: the image this evidence is on (default left)"),
+  item: WorkspaceItemId.optional().describe("Workspace: the item this evidence is on (default the claim's own item)"),
   region: z.array(z.number().min(0).max(1)).length(4).optional().describe("[x, y, x2, y2] normalized to the FULL image (not coordinateFrame) where the clue is, so the user can zoom in and check it"),
   says: z.string().min(1).max(160).describe("What you see there, e.g. 'silkscreen reads IC502'"),
 }).strict();
@@ -153,6 +156,7 @@ const ModelAnnotationSchema = z.object({
   pen: z.enum(MARK_PENS).optional().describe("highlighter = wide translucent stroke that keeps the picture visible; use it to shade an area rather than draw a precise line"),
   author: z.literal("assistant").optional(),
   side: z.enum(["left", "right"]).optional().describe("Paired view only: the image this mark is on (default left); coordinates are normalized to that image"),
+  item: WorkspaceItemId.optional().describe("Workspace only: the item (image) this mark is on (default the first); coordinates are normalized to that image"),
   ...ClaimFields,
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
@@ -165,8 +169,17 @@ const LinkSchema = z.object({
   confidence: z.enum(LINK_CONFIDENCE).optional().describe("How sure you are they are the same thing. Every unverified link goes to the user's review; confidence only orders it"),
   evidence: ClaimFields.evidence, ambiguities: ClaimFields.ambiguities,
 }).strict();
+// A link inside a workspace: a mark on one item and a mark on another.
+const WorkspaceLinkSchema = z.object({
+  id: z.string().min(1).max(64).describe("Stable link id; re-using it (with the same two items) edits the link"),
+  fromItem: WorkspaceItemId, from: z.string().min(1).max(64).describe("Mark id on fromItem"),
+  toItem: WorkspaceItemId, to: z.string().min(1).max(64).describe("Mark id on toItem"),
+  label: LinkSchema.shape.label, note: LinkSchema.shape.note, confidence: LinkSchema.shape.confidence,
+  evidence: ClaimFields.evidence, ambiguities: ClaimFields.ambiguities,
+}).strict();
 const FindingSchema = z.object({
   id: z.string().min(1).max(64),
+  item: WorkspaceItemId.optional().describe("Workspace: the item the mark is on, when the id is used on several"),
   note: z.string().max(200).optional().describe("Empty string clears the note"),
   status: z.enum(MARK_STATUSES).optional(),
   ...ClaimFields,
@@ -254,7 +267,7 @@ function compactMark(m) {
   };
 }
 const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
-  locked: z.boolean().optional(), opacity: z.number().optional(), side: z.enum(["left", "right"]).optional() });
+  locked: z.boolean().optional(), opacity: z.number().optional(), side: z.string().regex(/^(left|right|wi-\d{1,4})$/).optional() });
 const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
   ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}), claim: claimSummary(l) });
 // The widget also gets each piece of evidence, to show where it is.
@@ -383,6 +396,83 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
       "estampes/views": [],
       "estampes/annotations": marks,
     },
+  });
+}
+
+// ---- Workspace view: N images, each with its own marks --------------------
+// The widget gets every item's placement; pixels go in _meta when they are
+// small enough, else the widget fetches each image with load_visual_canvas.
+const WS_PIXEL_BUDGET = 1_400_000;
+const wsMarks = (items) => items.flatMap(({ id, entry }) => canvasMarks(entry).map((m) => ({ ...m, side: id })));
+const wsLayers = (items) => items.flatMap(({ id, entry }) => canvasLayers(entry).map((l) => ({ ...l, side: id })));
+const wsItemInfo = ({ item, entry }) => ({ id: item.id, imageId: entry.imageId, set: item.set, width: entry.width, height: entry.height,
+  placement: item.placement, ...(item.label ? { label: item.label } : {}), ...(entry.setId ? { copy: true } : {}) });
+const wsLinkTable = (links, items) => links.map((l) => {
+  const label = (item, id) => { const m = items.find((x) => x.id === item) && canvasMarks(items.find((x) => x.id === item).entry).find((x) => x.id === id); return item + ":" + id + (m?.label ? " " + JSON.stringify(m.label) : ""); };
+  return l.id + (l.label ? " " + JSON.stringify(l.label) : "") + ": " + label(l.fromItem, l.from) + " <-> " + label(l.toItem, l.to) + " [" + claimTag(l) + "]" + (l.note ? " — " + l.note : "");
+}).join("\n");
+const wsWidgetLink = (l) => ({ ...widgetLink({ ...l, left: l.from, right: l.to }), fromItem: l.fromItem, toItem: l.toItem });
+async function wsPixels(items) {
+  const out = [];
+  let total = 0;
+  for (const { id, entry } of items) {
+    const shown = await displayImage(entry);
+    total += shown.data.length;
+    out.push({ id, mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height });
+  }
+  return total <= WS_PIXEL_BUDGET ? out : [];
+}
+
+async function presentWorkspace(workspaceId, { annotations, findings, remove, reset, layer, coordinateFrame, links, removeLinks, verify }) {
+  const { doc } = await resolveRef(workspaceId);
+  const items = await workspaceItems(doc);
+  if (!items.length) throw new Error("Workspace " + workspaceId + " has no images; add some with edit_workspace");
+  if (links.some((l) => l.left !== undefined)) throw new Error("In a workspace a link is { id, fromItem, from, toItem, to }");
+  if (annotations.some((a) => a.side) || coordinateFrame?.side) throw new Error("In a workspace use `item` (wi-…), not `side`");
+  const refused = [];
+  // remove entries may be "wi-2:g1" to name the item.
+  const removeList = remove.map((r) => { const m = /^(wi-\d{1,4}):(.+)$/.exec(r); return m && items.some((it) => it.id === m[1]) ? { item: m[1], id: m[2] } : r; });
+  const changed = applyWorkspaceChanges(items, {
+    annotations, findings, remove: removeList, reset, layer, frame: coordinateFrame, links, removeLinks, resolve: resolveCoordinateAnnotation, refused,
+  });
+  const touched = new Set(changed.map((c) => c.item));
+  if (reset || remove.length || links.length || removeLinks.length) items.forEach((it) => touched.add(it.id));
+  const history = { tool: "present_visual", changed: changed.map((c) => c.id), removed: remove, note: "workspace " + workspaceId };
+  const edits = items.flatMap(({ id, entry }) => takeUserEdits(entry).map((e) => ({ ...e, side: id })));
+  await Promise.all(items.filter((it) => touched.has(it.id) || edits.some((e) => e.side === it.id)).map((it) => saveCanvas(it.entry, history)));
+  const marks = wsMarks(items), layerList = wsLayers(items), linkList = workspaceLinks(items);
+  const checks = [], ink = [];
+  for (const { id, entry } of items) {
+    const drawn = changed.filter((c) => c.item === id && annotations.some((a) => a.id === c.id && (a.item ?? items[0].id) === id)).map((c) => c.id);
+    if (!drawn.length) continue;
+    const own = canvasMarks(entry);
+    if (verify) checks.push({ item: id, check: await renderVerification(entry, own, drawn) });
+    ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, item: id })));
+  }
+  const pending = linkList.filter(needsReview);
+  const info = items.map(wsItemInfo);
+  const text = "Workspace " + workspaceId + " " + JSON.stringify(doc.name) + " revision " + doc.revision + ": " + items.length + " images side by side, never overlaid: " +
+    info.map((i) => i.id + " = " + i.imageId + (i.copy ? " (a copy of its canvas)" : "") + " " + i.width + "x" + i.height + (i.label ? " " + JSON.stringify(i.label) : "")).join("; ") +
+    ". Each mark belongs to one item (`item`, here as side) and its coordinates are normalized to THAT image. " + marks.length + " marks: " + JSON.stringify(marks.map(compactMark)) +
+    (layerList.length ? ". Layers: " + layerText(layerList) : "") + userEditsText(edits) +
+    ". LINKS (" + linkList.length + "):\n" + (wsLinkTable(linkList, items) || "(none yet)") +
+    (pending.length ? "\n" + pending.length + " link(s) are UNVERIFIED and wait for the user's review in the canvas; treat them as candidates." : "") +
+    refusedText(refused) + rejectionsText(items.map((it) => it.entry)) +
+    (changed.length ? "\nChanged this call: " + changed.map((c) => c.item + ":" + c.id).join(", ") : "") +
+    (ink.length ? ". Ink in image px: " + ink.map((i) => i.item + ":" + i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
+    checks.map(({ item, check }) => ". VERIFICATION image for item " + item + " follows: crop " + JSON.stringify(check.region) + ", " +
+      (check.layout === "side-by-side" ? "left half" : "top") + " = original pixels, other half = with marks numbered " +
+      check.numbers.map((n) => n.n + "=" + n.id).join(", ") + "; check each mark sits on its target and fix it (same id and item) if not").join("");
+  const first = items[0].entry;
+  return logSizes("present_visual", {
+    content: [{ type: "text", text }, ...checks.map(({ check }) => pixelsBlock(check))],
+    structuredContent: {
+      kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: first.imageId, width: first.width, height: first.height, views: [],
+      workspace: { id: workspaceId, name: doc.name, revision: doc.revision, items: info },
+      marks: marks.map(compactMark), layers: layerList, links: linkList.map((l) => ({ ...compactLink({ ...l, left: l.from, right: l.to }), fromItem: l.fromItem, toItem: l.toItem })),
+      coordinateSystem: "normalized-top-left",
+    },
+    _meta: { "estampes/links": linkList.map(wsWidgetLink), "estampes/items": await wsPixels(items), "estampes/views": [], "estampes/annotations": marks },
   });
 }
 
@@ -535,6 +625,7 @@ function makeServer() {
         "`marksFile`: an Estampes marks SVG the user exported earlier and attached again; its marks are restored onto this image. The result has download links (`exports`) for the image and a layered marks SVG; give them when the user wants to save or export. " +
         "PAIRED VIEW: to compare two DIFFERENT images side by side (a schematic and a board photo, a map and an aerial photo, a drawing and the object), pass the second as `pairImage`/`pairImageUrl`/`pairImageId`: it shows on the RIGHT, the first image on the LEFT. The images are never overlaid. Each annotation takes `side` (left|right, default left) with coordinates normalized to that image; ids are unique across both. `links` records that a left mark and a right mark are the same thing (same part, net, pin, building...), with your `confidence`. Every result lists all links as a table: use it to remember and reason about earlier matches, and trust USER CONFIRMED / USER REJECTED over your own guess. " +
         "CLAIMS AND EVIDENCE: a note on a mark and a link are claims. Give `evidence` for them: each item says what you see (`says`), what kind of clue it is, and the `region` (full-image 0..1, `side` in a paired view) where the user can zoom in to check it; list what is unresolved in `ambiguities`. Your evidence is recorded as your own observation: a claim stays UNVERIFIED until the user confirms it in the canvas or a tool's evidence backs it, whatever your confidence, so call such claims candidates, not facts. A claim the user REJECTED is remembered for that place even if its marks are deleted; repeating it without new evidence is refused. " +
+        "WORKSPACE: for THREE OR MORE images, or to combine canvases, use create_workspace / merge_workspaces and then pass `workspaceId` here: every image keeps its own marks; each annotation, finding and evidence names its `item` (wi-1, wi-2…, default the first) with coordinates normalized to that image, links are { id, fromItem, from, toItem, to }, and remove entries may be 'wi-2:markId'. Never stitch images into one picture to show them together. " +
         "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
@@ -555,14 +646,16 @@ function makeServer() {
         pairImage: ChatFileSchema.optional().describe("Second image file shown on the RIGHT for a paired view"),
         pairImageUrl: z.string().url().max(2048).optional().describe("Public https URL of the right-hand image"),
         pairImageId: ImageIdSchema.optional().describe("imageId of the right-hand image"),
-        links: z.array(LinkSchema).max(30).default([]).describe("Paired view: left mark <-> right mark correspondences"),
-        removeLinks: z.array(z.string().max(64)).max(30).default([]).describe("Paired view: link ids to delete"),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Show a WORKSPACE (several images, see create_workspace); annotations, findings and links then name their `item`"),
+        links: z.array(z.union([LinkSchema, WorkspaceLinkSchema])).max(30).default([]).describe("Paired view: { id, left, right }; workspace: { id, fromItem, from, toItem, to }"),
+        removeLinks: z.array(z.string().max(64)).max(30).default([]).describe("Link ids to delete"),
         layer: z.string().trim().min(1).max(40).optional().describe("Name of the layer for this call's new marks; an existing name of yours adds to that layer, and edited marks move into it"),
         coordinateFrame: z.object({
           region: RegionSchema,
           width: z.number().int().positive().optional(),
           height: z.number().int().positive().optional(),
           side: z.enum(["left", "right"]).optional().describe("Paired view: the image the region belongs to (default left)"),
+          item: WorkspaceItemId.optional().describe("Workspace: the item the region belongs to (default the first)"),
         }).optional().describe("Coordinates in `annotations` (of that side) are relative to this region (0..1), or pixels of a width×height output of it"),
         verify: z.boolean().default(true).describe("Return the verification image of changed marks"),
       }),
@@ -581,6 +674,7 @@ function makeServer() {
         exports: z.object({ image: z.string(), marks: z.string() }).optional(),
         pair: z.object({ imageId: z.string(), width: z.number(), height: z.number(),
           exports: z.object({ image: z.string(), marks: z.string() }).optional() }).optional(),
+        workspace: z.object({ id: z.string(), name: z.string(), revision: z.number(), items: z.array(z.record(z.string(), z.unknown())) }).optional(),
         links: z.array(z.record(z.string(), z.unknown())).optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
@@ -588,10 +682,19 @@ function makeServer() {
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile", "pairImage"] },
     },
     async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify,
-      pairImage, pairImageUrl, pairImageId, links, removeLinks }) => {
+      pairImage, pairImageUrl, pairImageId, links, removeLinks, workspaceId }) => {
       try {
-        if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
-          throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
+        if ([image, imageUrl, imageId, scene, workspaceId].filter(Boolean).length !== 1) {
+          throw new Error("Provide exactly one of image, imageUrl, imageId, workspaceId or scene");
+        }
+        if (workspaceId) {
+          if (pairImage || pairImageUrl || pairImageId || views.length || marksFile || priorUserAnnotations.length) {
+            throw new Error("A workspace view does not take pairImage, views, marksFile or priorUserAnnotations (add images with edit_workspace)");
+          }
+          return await presentWorkspace(workspaceId, { annotations, findings, remove, reset, layer, coordinateFrame, links, removeLinks, verify });
+        }
+        if (links.some((l) => l.fromItem !== undefined) || annotations.some((a) => a.item) || findings.some((f) => f.item) || coordinateFrame?.item) {
+          throw new Error("item, fromItem and toItem are for a workspace view (workspaceId)");
         }
         const paired = [pairImage, pairImageUrl, pairImageId].filter(Boolean).length;
         if (paired > 1) throw new Error("Provide at most one of pairImage, pairImageUrl or pairImageId");
@@ -709,15 +812,36 @@ function makeServer() {
       description: "Reload a photo canvas for the Estampes widget.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
-        part: z.enum(["canvas", "check"]).default("canvas"),
+        part: z.enum(["canvas", "check", "image"]).default("canvas"),
         pairImageId: ImageIdSchema.optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Reload a whole workspace (imageId = its first image)"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, part, pairImageId }) => {
+    async ({ imageId, part, pairImageId, workspaceId }) => {
       try {
+        if (workspaceId && part === "canvas") {
+          const { doc } = await resolveRef(workspaceId);
+          const items = await workspaceItems(doc);
+          return logSizes("load_visual_canvas", {
+            content: [{ type: "text", text: "Workspace data for " + workspaceId + " sent to the widget." }],
+            structuredContent: {
+              kind: "estampes.visual_canvas", imageId: items[0]?.entry.imageId ?? imageId, part, workspaceId,
+              workspace: { id: workspaceId, name: doc.name, revision: doc.revision, items: items.map(wsItemInfo) },
+              annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink), views: [],
+            },
+          }, { appOnly: true });
+        }
         const entry = await ensureImage(imageId);
+        if (part === "image") {
+          const shown = await displayImage(entry);
+          return logSizes("load_visual_canvas", {
+            content: [{ type: "text", text: "Image " + imageId + " sent to the widget." }],
+            structuredContent: { kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
+              image: { mimeType: shown.mimeType, data: shown.data.toString("base64") } },
+          }, { appOnly: true });
+        }
         if (pairImageId && part === "canvas") {
           const right = await ensureImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
           return logSizes("load_visual_canvas", {
@@ -1032,6 +1156,7 @@ function makeServer() {
         scene:SceneSchema.optional(),
         imageId:ImageIdSchema.optional(),
         pairImageId:ImageIdSchema.optional(),
+        workspaceId:z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
         annotations:VisualAnnotationsSchema,
         intent:z.enum(INTENTS).default("free-annotate"),
         note:z.string().max(500).default(""),
@@ -1046,16 +1171,40 @@ function makeServer() {
         annotations:VisualAnnotationsSchema,
         layer:z.object({id:z.string(),name:z.string()}).optional(),
         pairLayer:z.object({id:z.string(),name:z.string()}).optional(),
+        itemLayers:z.array(z.object({item:z.string(),id:z.string(),name:z.string()})).optional(),
         event:z.record(z.string(),z.unknown()),
         chatMessage:z.string(),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,imageId,pairImageId,annotations,intent,note,replyQuote,gestureDecisions})=>{
+    async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions})=>{
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
       try {
+        if(workspaceId){
+          // Workspace view: each mark joins the canvas of its own item.
+          const {doc}=await resolveRef(workspaceId),items=await workspaceItems(doc);
+          if(!items.length)throw new Error("This workspace has no images");
+          const itemOf=a=>items.find(it=>it.id===a.item)??items[0];
+          const checked=annotations.map(({side:_s,...a})=>({...a,item:itemOf(a).id,author:"user",grounding:"user-pointer"}));
+          const workspace={id:workspaceId,items:items.map(it=>({id:it.id,imageId:it.entry.imageId,width:it.entry.width,height:it.entry.height,label:it.item.label}))};
+          const first=items[0].entry;
+          const decisions=[...items.flatMap(it=>it.entry.gestureDecisions??[]),...gestureDecisions];
+          const event=buildAnnotationEvent({image:{imageId:first.imageId,width:first.width,height:first.height},workspace,annotations:checked,intent,note,replyQuote,gestureDecisions:decisions});
+          const itemLayers=[];
+          for(const it of items){
+            const own=checked.filter(a=>a.item===it.id).map(({item:_i,...a})=>a);
+            if(!own.length)continue;
+            const layer=storeUserMarks(it.entry,own);
+            if(layer)itemLayers.push({item:it.id,id:layer.id,name:layer.name});
+            await saveCanvas(it.entry,{tool:"validate_visual_annotations",author:"user",changed:own.map(a=>a.id),note:intent});
+          }
+          return {
+            content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations in workspace "+workspaceId+"; explicit interaction intent="+intent+" (geometry only)."}],
+            structuredContent:{kind:"estampes.validated_annotations",imageId:first.imageId,count:checked.length,annotations:checked,event,chatMessage:formatAnnotationChatMessage(event),itemLayers},
+          };
+        }
         if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
         let image;
         let entry;
@@ -1107,7 +1256,9 @@ function makeServer() {
       description: "Record the user's verdict on a link in an Estampes paired view.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
-        pairImageId: ImageIdSchema,
+        pairImageId: ImageIdSchema.optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
+        fromItem: WorkspaceItemId.optional(), toItem: WorkspaceItemId.optional(),
         linkId: z.string().min(1).max(64),
         review: z.enum([...LINK_REVIEW, "unreviewed"]),
         reason: z.string().max(200).optional(),
@@ -1115,8 +1266,19 @@ function makeServer() {
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, linkId, review, reason }) => {
+    async ({ imageId, pairImageId, workspaceId, fromItem, toItem, linkId, review, reason }) => {
       try {
+        if (workspaceId) {
+          const items = await workspaceItems((await resolveRef(workspaceId)).doc);
+          const { owner, link } = reviewWorkspaceLink(items, { fromItem, toItem, id: linkId }, review, reason);
+          await saveCanvas(owner.entry, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
+          const shown = workspaceLinks(items).find((l) => l.id === linkId && [l.fromItem, l.toItem].includes(fromItem) && [l.fromItem, l.toItem].includes(toItem));
+          return {
+            content: [{ type: "text", text: "Link " + linkId + " marked " + review + " by the user." }],
+            structuredContent: { kind: "estampes.link_review", imageId, workspaceId, link: wsWidgetLink(shown ?? { ...link, fromItem, toItem, from: link.left, to: link.right }) },
+          };
+        }
+        if (!pairImageId) throw new Error("pairImageId or workspaceId is required");
         const left = await ensureImage(imageId);
         const link = reviewLink(left, await ensureImage(pairImageId), linkId, review, reason);
         await saveCanvas(left, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
@@ -1144,13 +1306,19 @@ function makeServer() {
         markId: z.string().min(1).max(64),
         review: z.enum([...LINK_REVIEW, "unreviewed"]),
         reason: z.string().max(200).optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional(), item: WorkspaceItemId.optional(),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, markId, review, reason }) => {
+    async ({ imageId, markId, review, reason, workspaceId, item }) => {
       try {
-        const entry = await ensureImage(imageId);
+        let entry;
+        if (workspaceId) {
+          const items = await workspaceItems((await resolveRef(workspaceId)).doc);
+          entry = items.find((it) => it.id === item)?.entry;
+          if (!entry) throw new Error("No item " + item + " in " + workspaceId);
+        } else entry = await ensureImage(imageId);
         const mark = reviewFinding(entry, markId, review, reason);
         await saveCanvas(entry, { tool: "review_visual_finding", author: "user", changed: [markId], note: review });
         return {
@@ -1176,13 +1344,19 @@ function makeServer() {
         imageId: ImageIdSchema.describe("The image the strokes are on (the right image's id for the right of a paired view)"),
         memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
         verdict: z.enum([...GESTURE_VERDICTS, "unreviewed"]),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Workspace view: the strokes are on the canvas of this workspace's `item`"),
+        item: WorkspaceItemId.optional(),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, memberIds, verdict }) => {
+    async ({ imageId, memberIds, verdict, workspaceId, item }) => {
       try {
-        const entry = await ensureImage(imageId);
+        let entry;
+        if (workspaceId) {
+          entry = (await workspaceItems((await resolveRef(workspaceId)).doc)).find((it) => it.id === item)?.entry;
+          if (!entry) throw new Error("No item " + item + " in " + workspaceId);
+        } else entry = await ensureImage(imageId);
         recordGestureDecision(entry, memberIds, verdict);
         await saveCanvas(entry, { tool: "review_gesture_group", author: "user", changed: memberIds, note: verdict });
         return {
@@ -1201,7 +1375,7 @@ function makeServer() {
   // turn can be moved, restyled or relabelled; any unlocked mark can be
   // deleted. GPT is told about these edits on its next present_visual call.
   const EditMarkSchema = z.object({
-    id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(),
+    id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
     points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
     label: z.string().max(64).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
@@ -1216,26 +1390,54 @@ function makeServer() {
       inputSchema: z.object({
         imageId: ImageIdSchema,
         pairImageId: ImageIdSchema.optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Edits in a workspace view: entries name their `item`"),
         layers: z.array(z.object({
-          id: z.string().regex(/^L\d{1,6}$/), side: z.enum(["left", "right"]).optional(),
+          id: z.string().regex(/^L\d{1,6}$/), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
           name: z.string().max(LAYER_NAME_MAX).optional(), locked: z.boolean().optional(), opacity: z.number().min(0).max(1).optional(),
         }).strict()).max(60).default([]),
-        order: z.object({ left: LayerIds.optional(), right: LayerIds.optional() }).strict().optional().describe("Layer ids bottom to top"),
+        order: z.record(z.string().regex(/^(left|right|wi-\d{1,4})$/), LayerIds).optional().describe("Layer ids bottom to top, per image (left/right, or workspace item id)"),
         marks: z.array(EditMarkSchema).max(30).default([]),
-        remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional() }).strict()).max(30).default([]),
+        remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional() }).strict()).max(30).default([]),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, layers, order, marks, remove }) => {
+    async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove }) => {
       try {
+        const resolveUser = (m) => {
+          const { side: _s, item: _i, ...rest } = m;
+          return replayUserAnnotation(VisualAnnotationSchema.parse(rest));
+        };
+        if (workspaceId) {
+          // Workspace: the same edits, per item, all or nothing.
+          const items = await workspaceItems((await resolveRef(workspaceId)).doc);
+          const known = new Set(items.map((it) => it.id));
+          for (const x of [...layers, ...marks, ...remove]) if (x.item && !known.has(x.item)) throw new Error("No item " + x.item + " in " + workspaceId);
+          for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
+          const first = items[0].id, of = (x) => x.item ?? first;
+          const undo = [], all = [];
+          try {
+            for (const it of items) {
+              const pick = {
+                layers: layers.filter((l) => of(l) === it.id).map(({ side: _s, item: _i, ...l }) => l), order: order?.[it.id],
+                marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
+              };
+              if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
+              const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
+              undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
+              all.push({ it, edits: editCanvas(it.entry, pick) });
+            }
+          } catch (error) { undo.forEach((u) => u()); throw error; }
+          for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
+          const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
+          return {
+            content: [{ type: "text", text: "Applied " + edits.length + " user edit(s) in workspace " + workspaceId + "." }],
+            structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits, annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) },
+          };
+        }
         const left = await ensureImage(imageId), right = pairImageId ? await ensureImage(pairImageId) : null;
         if (!right && [...layers, ...marks, ...remove].some((x) => x.side === "right")) throw new Error("side:'right' needs pairImageId");
         if (!right && order?.right) throw new Error("order.right needs pairImageId");
-        const resolveUser = (m) => {
-          const { side: _s, ...rest } = m;
-          return replayUserAnnotation(VisualAnnotationSchema.parse(rest));
-        };
         const pick = (side) => ({
           layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
           order: order?.[side],

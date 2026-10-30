@@ -67,7 +67,9 @@ const in01=(n)=>typeof n==="number"&&Number.isFinite(n)&&n>=0&&n<=1;
 // {imageId, width, height}. Otherwise `scene` names a bundled demo SVG.
 // `pairImage` (same shape as `image`) makes it a paired view: each mark's
 // `side` says which of the two images its coordinates belong to.
-export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="free-annotate",note="",replyQuote="",gestureDecisions=[]}) {
+// `workspace` ({id, items:[{id, imageId, width, height, label?}]}) makes it a
+// workspace view: each mark's `item` names the image it is on.
+export function buildAnnotationEvent({scene,image,pairImage,workspace,annotations,intent="free-annotate",note="",replyQuote="",gestureDecisions=[]}) {
   if(pairImage&&!image) throw new Error("A paired view needs two photos");
   const metadata=image
     ? {id:image.imageId,revision:"raster-v1",width:image.width,height:image.height,kind:"raster"}
@@ -86,7 +88,8 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
     // focus = what this submission is about; context = earlier marks kept
     // only as background. Missing role means focus.
     const role=raw.role==="context"?"context":"focus";
-    const side=pairImage?{side:raw.side==="right"?"right":"left"}:{};
+    const side=workspace?{item:workspace.items.some(it=>it.id===raw.item)?raw.item:workspace.items[0].id}
+      :pairImage?{side:raw.side==="right"?"right":"left"}:{};
     if(raw.type==="polyline") {
       return {id,author:"user",type:"polyline",role,...side,...markStyle(raw),geometry:polylineWithBounds(raw.points,raw),
         ...strokeFacts(raw),label:textValue(raw.label,64),grounding:"user-pointer"};
@@ -134,6 +137,7 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
       left:{id:image.imageId,width:image.width,height:image.height},
       right:{id:pairImage.imageId,width:pairImage.width,height:pairImage.height},
     }}:{}),
+    ...(workspace?{workspace:{id:workspace.id,items:workspace.items.map(it=>({id:it.id,imageId:it.imageId,width:it.width,height:it.height,...(it.label?{label:it.label}:{})}))}}:{}),
     annotations:marks,
     ...(groups.length?{gestureGroups:groups}:{}),
     interaction:{
@@ -205,7 +209,15 @@ export function formatAnnotationChatMessage(event) {
     ...arrowLines(event),
     ...gestureLines(event),
     "點代表位置；框代表範圍；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。pen=highlighter 是半透明螢光筆，代表「這一片區域」而不是精確的線；color 只是我選的顏色，不代表其他意思。",
-    ...(event.pair?[
+    ...(event.workspace?[
+      "底圖是一個工作區（workspaceId="+event.workspace.id+"），裡面有 "+event.workspace.items.length+" 張不同的圖片並排、不疊合："+
+        event.workspace.items.map(it=>it.id+" = imageId "+it.imageId+"（"+it.width+"×"+it.height+(it.label?"，"+it.label:"")+"）").join("；")+"。每個標註的 item 表示它在哪張圖上，座標以那張圖的左上角為原點正規化。",
+      "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
+      JSON.stringify(event),
+      "請先用 Estampes 的 process_image 檢視 focus 標記的位置：每個標記用它 item 對應的 imageId，region 取標註周圍，必要時加 clahe、sharpen 等處理，再解釋我指的東西。",
+      "我的標記已存進這個工作區各自的圖片。回答後請用 present_visual（workspaceId="+event.workspace.id+"）的 findings（附 item）把 note 與 status 掛到我的標記 id 上，需要時用 links（fromItem/from、toItem/to）記錄不同圖上哪兩個標記是同一個東西，不要重畫我的標記。不要對我提工具名稱。",
+      "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
+    ]:event.pair?[
       "底圖是左右對照畫布，兩張不同的照片並排、不疊合：左圖 imageId="+event.pair.left.id+"（"+event.pair.left.width+"×"+event.pair.left.height+"），右圖 imageId="+event.pair.right.id+"（"+event.pair.right.width+"×"+event.pair.right.height+"）。每個標註的 side（left／right）表示它在哪張圖上，座標以那張圖的左上角為原點正規化。",
       "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
       JSON.stringify(event),

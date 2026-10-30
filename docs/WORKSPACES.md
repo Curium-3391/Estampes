@@ -38,6 +38,17 @@ Merging the same thing twice adds nothing: an item whose set the target already 
 
 PDF pages: an image made from a PDF page can carry `page` (`documentSha256`, `pageIndex`, `pageCount`, `pageLabel`, `dpi`, `rotation`, `cropBox`), set by the image intake. If two different renders of the same page end up in one workspace, the preview warns that their marks are not shared.
 
+## Showing and drawing in a workspace
+
+`present_visual { workspaceId }` shows a workspace in the canvas widget: all images side by side at their placement (rotated items are drawn turned), each with its own marks, layers, links and claims. Everything `present_visual` does for one image works per item:
+
+- `annotations`, `findings` and `evidence` take `item` (default: the first item); coordinates are normalized to that item's image. In a paired view the same field is `side`.
+- `links` are `{ id, fromItem, from, toItem, to, … }`; `removeLinks` takes link ids; `remove` entries may be `"wi-2:markId"`; `coordinateFrame` takes `item`. If a mark id exists on several items, tools ask for `item` instead of guessing.
+- The user draws on whichever image is under the pointer; a mark stays inside the image it was started on. Select, move, restyle, delete, layers (each image has its own, listed by image name), link and claim review, gesture groups and the chat messages to GPT all name the item.
+- The widget needs no layout from the model: the server sends each item's placement, and pixels in `_meta` (or the widget fetches each image itself when the host drops them). If two images both have a mark with the same id, the widget shows it as `wi-2:id` and sends the real id.
+
+The app-only tools take `workspaceId` and `item`/`fromItem`/`toItem` in the same way (`validate_visual_annotations`, `edit_visual_canvas`, `review_visual_link`, `review_visual_finding`, `review_gesture_group`, `load_visual_canvas`).
+
 ## Preview, commit, retry, undo
 
 `merge_workspaces` and `split_workspace` only **preview** by default. The preview (`estampes.workspace_preview`) lists every image that would be added with its mark, user-mark and layer counts, what is skipped and why, the resulting totals, how many links come along, whether edits will be shared, and warnings. It returns a `previewId`.
