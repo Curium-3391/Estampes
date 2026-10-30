@@ -46,7 +46,9 @@ try {
     const bundle = { schema: "estampes.package/1", manifest: JSON.parse(await readFile(manifestPath, "utf8")), files: {} };
     for (const [name, path] of Object.entries(files)) {
       const bytes = await readFile(path);
-      const text = bytes.every((b) => b === 9 || b === 10 || b === 13 || (b >= 32 && b < 127) || b >= 128);
+      // Text only when decoding and re-encoding gives back the same bytes.
+      const decoded = bytes.toString("utf8");
+      const text = Buffer.from(decoded, "utf8").equals(bytes) && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(decoded);
       bundle.files[name] = text ? { encoding: "utf8", content: bytes.toString("utf8") } : { encoding: "base64", content: bytes.toString("base64") };
     }
     const signed = flag("key") ? signBundle(bundle, await readFile(flag("key"), "utf8"), flag("key-id") ?? die("--key-id is needed with --key")) : bundle;
