@@ -129,7 +129,10 @@ export function registerModuleTools(server, deps) {
           ...(entry ? { _meta: (await canvasPayload(entry))._meta } : {}) };
       }
       if (!entry) {
-        return { content: [{ type: "text", text: module + " " + capability + ": " + (run.summary ?? "done") + (run.data !== undefined ? " " + JSON.stringify(run.data) : "") }],
+        const panels = host.registry.get(module)?.manifest.panels ?? [];
+        const hint = panels.length ? " This result is not on a canvas, so the user sees nothing yet. To show it, call manage_surface_panels (action open, module " + module + ", panel " + panels[0].id +
+          (run.data?.notebookId ? ", notebook " + run.data.notebookId : "") + ") with the imageId of the canvas they are looking at; omit imageId for a blank canvas." : "";
+        return { content: [{ type: "text", text: module + " " + capability + ": " + (run.summary ?? "done") + (run.data !== undefined ? " " + JSON.stringify(run.data) : "") + hint }],
           structuredContent: { kind: "estampes.module_result", module, capability, ...(run.data !== undefined ? { data: run.data } : {}) } };
       }
       const objects = renderedObjects(entry).map(compactObject);

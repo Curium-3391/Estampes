@@ -6,6 +6,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - Calculator panel: **停止** cancels a running calculation or recompute. `calculate` and `recompute` accept a `job` id; new widget-only tool `surface_cas_cancel`. A cancelled calculation leaves no cell and no error behind; the service remembers a cancel that arrives before the job starts.
 
+## 0.19.2 — Open the calculator from the model
+
+- `manage_surface_panels` now shows the Visual Surface. It had no widget, so a model that ran `org.estampes.cas` through `execute_module` left the user with the sample landscape and no calculator. Give it an `imageId` to open the calculator beside that canvas; with none, the calculator opens alone. `notebook` attaches the calculation the model already made. `execute_module` results that are not on a canvas now tell the model to call it.
+- Fix: the widget's `define` call was refused (`by` was not in the schema); definitions typed in the panel now work.
+- Tests: `tests/surface-open.test.js`.
+
 ## Unreleased
 
 - Browser test `tests/layers-e2e.test.js` (shared helper `tests/helpers/widget-host.js`): a base image, an image laid over it, a Graph curve and marks are all layers; fading one to 50% and moving it down are saved on the server. No product change: layers, opacity, order and `add_image_layer` already shipped.

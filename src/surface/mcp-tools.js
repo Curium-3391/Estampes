@@ -133,24 +133,45 @@ export function registerSurfaceTools(server, deps) {
     } catch (error) { return fail(error); }
   });
 
-  server.registerTool("manage_surface_panels", {
+  // Opens a panel and shows the user the surface. With an imageId the widget
+  // opens on that canvas (a photo or an earlier canvas); with neither imageId
+  // nor workspaceId a new blank canvas is made so a calculator can be shown
+  // without any picture. `notebook` attaches a calculation the model already
+  // made (execute_module org.estampes.cas) to the new calculator panel.
+  registerAppTool(server, "manage_surface_panels", {
     title: "Open or close a panel on the user's surface",
-    description: "Open or close a panel (for example the scientific calculator) on the user's Visual Surface. This changes what the user sees, so use it only when they asked for it or it is clearly needed. Opening never enables a module: if the module is disabled, ask the user to enable it in the Store (open_module_store). Closing keeps the panel's data.",
+    description: "Open or close a panel (for example the scientific calculator) on the user's Visual Surface and show it. Use it when the user asks to open the calculator, or to show the calculator beside a canvas: pass the imageId of the canvas they are looking at (omit it to start a blank canvas). " +
+      "After running org.estampes.cas through execute_module, pass that result's notebookId as `notebook` so the user sees the same cells. Opening never enables a module: if it is disabled the user enables it in the Store first. Panels: get_surface_state lists what is available.",
     inputSchema: z.object({
       ...Where, action: z.enum(["open", "close"]),
       module: z.string().max(100).optional().describe("open: module id, e.g. org.estampes.cas"),
       panel: z.string().max(40).optional().describe("open: panel id from get_surface_state.available, e.g. calculator"),
       panelId: z.string().max(40).optional().describe("close: instance id such as p:calculator1"),
+      notebook: z.string().regex(/^nb:[0-9a-f]{12}$/).optional().describe("open calculator: show this existing notebook instead of a new one"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  }, async ({ imageId, workspaceId, action, module, panel, panelId }) => {
+    _meta: { ui: { resourceUri: deps.visualUri } },
+  }, async ({ imageId, workspaceId, action, module, panel, panelId, notebook }) => {
     try {
-      if (imageId) await ensureImage(imageId);
-      const op = action === "open" ? { op: "open-panel", module, panel } : { op: "close-panel", panelId };
       if (action === "open" && (!module || !panel)) throw new SurfaceError("open needs module and panel");
       if (action === "close" && !panelId) throw new SurfaceError("close needs panelId");
-      const view = await service.apply(keyOf({ imageId, workspaceId }), { ops: [op] });
-      return { content: [{ type: "text", text: (action === "open" ? "Opened " : "Closed ") + "panel. " + text(view) + ". The widget shows it after it refreshes." }], structuredContent: { kind: "estampes.surface_state", surfaceId: view.surfaceId, revision: view.revision, panels: view.panels } };
+      let entry = null, made = false;
+      if (imageId) entry = await ensureImage(imageId);
+      else if (!workspaceId) { entry = await host.canvases.create({}); await host.canvases.save(entry, { tool: "manage_surface_panels", author: "module", changed: [] }); made = true; }
+      const op = action === "open" ? { op: "open-panel", module, panel, ...(notebook ? { notebook } : {}) } : { op: "close-panel", panelId };
+      let view = await service.apply(keyOf({ imageId: entry?.imageId, workspaceId }), { ops: [op] });
+      // No canvas was asked for: nothing is shown behind the new panel. The
+      // panel fills the workbench (the blank canvas stays one click away).
+      if (made && action === "open") {
+        const mine = view.panels.filter((p) => p.open && p.module === module && p.panel === panel).at(-1);
+        if (mine) view = await service.apply(keyOf({ imageId: entry.imageId }), { ops: ["desktop", "tablet", "mobile"].flatMap((profile) => [
+          { op: "layout", profile, layout: { op: "focus", panelId: mine.panelId } }, { op: "layout", profile, layout: { op: "maximize", panelId: mine.panelId } }]) });
+      }
+      const base = { content: [{ type: "text", text: (action === "open" ? "Opened " : "Closed ") + "panel" + (made ? " on a new blank canvas " + entry.imageId : "") + ". " + text(view) + "." + (entry ? " The user sees it on canvas " + entry.imageId + "." : " Use present_visual with the workspaceId to show the workspace.") }],
+        structuredContent: { kind: "estampes.surface_state", surfaceId: view.surfaceId, revision: view.revision, panels: view.panels.map((p) => ({ panelId: p.panelId, kind: p.kind, open: p.open, notebook: p.notebook })), ...(entry ? { imageId: entry.imageId } : {}) } };
+      if (!entry || !deps.canvasPayload) return base;
+      const payload = await deps.canvasPayload(entry);
+      return { content: base.content, structuredContent: { ...payload.structuredContent, surface: base.structuredContent }, _meta: payload._meta };
     } catch (error) { return fail(error); }
   });
 }

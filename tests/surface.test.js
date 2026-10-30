@@ -166,7 +166,7 @@ test("surface over MCP: panels, calculator, plot, layouts per profile, restart",
     const reopen = await call(s.client, "manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" });
     const nbs = (await call(s.client, "get_surface_state", { imageId })).structuredContent.notebooks;
     assert.equal(Object.values(nbs)[0].cells[0].result.plain, "2*x*cos(x^2)");
-    assert.equal(reopen.structuredContent.panels.find((p) => p.panelId === calc.panelId).open, true);
+    assert.equal(reopen.structuredContent.surface.panels.find((p) => p.panelId === calc.panelId).open, true);
 
     // A disabled module cannot be used from a panel.
     const dis = await call(s.client, "prepare_module_change", { action: "disable", module: "org.estampes.cas" });
