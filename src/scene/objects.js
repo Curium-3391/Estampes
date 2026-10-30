@@ -32,6 +32,11 @@ const Text = z.string().max(80);
 export const SPACES = ["canvas", "frame"];
 
 export const OBJECT_TYPES = {
+  image: {
+    description: "An independent raster layer with preserved PNG transparency.",
+    props: z.object({ png: z.string().max(12000000).regex(/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=]+$/), region: Region, source: z.string().max(100).optional() }).strict(),
+    defaults: {},
+  },
   "axes-2d": {
     description: "Cartesian axes with grid, ticks and labels. Function plots and frame-space shapes are drawn through it.",
     props: z.object({
@@ -351,6 +356,7 @@ export function renderObject(obj, { lookup, aspect = 0.625 }) {
   try {
     if (obj.type === "axes-2d") return { primitives: renderAxes(obj, aspect), info: {} };
     if (obj.type === "function-plot") return renderFunction(obj, axes);
+    if (obj.type === "image") return { primitives: [{ k: "image", ...obj.props.region, href: obj.props.png }], info: {} };
     if (obj.type === "shape") return { primitives: renderShape(obj, axes, aspect), info: {} };
   } catch (error) {
     return { primitives: [], info: { note: String(error?.message || error) } };
@@ -365,6 +371,7 @@ const BASELINE = { hanging: "hanging", middle: "central", auto: "auto" };
 export function primitivesSvg(prims, W, H) {
   const u = W / 1000, X = (x) => Math.round(x * W * 10) / 10, Y = (y) => Math.round(y * H * 10) / 10;
   return prims.map((p) => {
+    if (p.k === "image" && /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=]+$/.test(p.href)) return `<image x="${X(p.x)}" y="${Y(p.y)}" width="${X(p.x2-p.x)}" height="${Y(p.y2-p.y)}" preserveAspectRatio="none" href="${p.href}"/>`;
     if (p.k === "path") {
       const d = "M" + p.pts.map(([x, y]) => X(x) + " " + Y(y)).join("L") + (p.closed ? "Z" : "");
       return `<path d="${d}" fill="${p.fill ? xml(p.fill) : "none"}"${p.fill ? ' fill-opacity="0.25"' : ""} stroke="${xml(p.stroke)}" stroke-width="${Math.round(p.width * u * 10) / 10}"` +

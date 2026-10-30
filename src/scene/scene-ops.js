@@ -9,7 +9,7 @@ import { OBJECT_TYPES, OBJECT_TYPE_NAMES, validateProps, renderObject } from "./
 import { moduleLayer } from "../canvas-state.js";
 
 export const SCENE_OPS_PROTOCOL = "estampes.scene-ops/1";
-export const OP_KINDS = ["object.create", "object.update", "object.delete", "object.publish"];
+export const OP_KINDS = ["object.create", "object.update", "object.delete", "object.publish", "object.restore"];
 export const VISIBILITY = ["public", "scratch"];
 export const MAX_OPS = 64, MAX_OBJECTS = 200, MAX_POINTS_PER_CANVAS = 60000;
 
@@ -31,6 +31,7 @@ const OpSchema = z.discriminatedUnion("op", [
   }).strict(),
   z.object({ op: z.literal("object.delete"), id: IdOrRef, cascade: z.boolean().optional() }).strict(),
   z.object({ op: z.literal("object.publish"), id: IdOrRef }).strict(),
+  z.object({ op: z.literal("object.restore") }).strict(),
 ]);
 export const OperationsSchema = z.array(OpSchema).max(MAX_OPS);
 
@@ -82,8 +83,8 @@ export function applySceneOps(entry, operations, source, { expectedRevision, vis
       "); read it again and retry", { code: "conflict" });
   }
   const map = objectsOf(entry);
-  const saved = { objects: new Map(map), layers: (entry.layers ?? []).map((l) => ({ ...l })), seq: entry.objectSeq, rev: entry.sceneRevision };
-  const restore = () => { entry.objects = saved.objects; entry.layers = saved.layers; entry.objectSeq = saved.seq; entry.sceneRevision = saved.rev; };
+  const saved = { objects: new Map(map), layers: (entry.layers ?? []).map((l) => ({ ...l })), seq: entry.objectSeq, rev: entry.sceneRevision, deleted: entry.deletedObjectBatches };
+  const restore = () => { entry.objects = saved.objects; entry.layers = saved.layers; entry.objectSeq = saved.seq; entry.sceneRevision = saved.rev; entry.deletedObjectBatches = saved.deleted; };
   const refs = new Map(), result = { created: [], updated: [], deleted: [], published: [], refs: {} };
   let intoLayer = null;
   const resolveId = (id, i) => {
@@ -169,12 +170,31 @@ export function applySceneOps(entry, operations, source, { expectedRevision, vis
         for (const d of dependents) { mayTouch(d, i, "delete"); map.delete(d.id); result.deleted.push(d.id); }
         map.delete(id);
         result.deleted.push(id);
+      } else if (op.op === "object.restore") {
+        if (source.author !== "user") throw new SceneOpsError("only the user can restore deleted objects", { code: "forbidden" });
+        const batch = entry.deletedObjectBatches?.at(-1);
+        if (!batch?.length) throw new SceneOpsError("no deleted objects to restore");
+        if (map.size + batch.length > MAX_OBJECTS) throw new SceneOpsError("too many objects to restore", { code: "limit" });
+        for (const obj of batch) {
+          if (map.has(obj.id)) throw new SceneOpsError("object id already exists: " + obj.id);
+          mayTouch(obj, i, "restore");
+          map.set(obj.id, { ...obj, props: validateProps(obj.type, obj.props), revision: obj.revision + 1 });
+          result.created.push(obj.id);
+        }
+        for (const obj of batch) checkRefs(obj.type, obj.props, i);
+        const ordered = [...map].sort((a, b) => +a[0].slice(1) - +b[0].slice(1));
+        map.clear(); for (const [id, obj] of ordered) map.set(id, obj);
+        entry.deletedObjectBatches = entry.deletedObjectBatches.slice(0, -1);
       } else if (op.op === "object.publish") {
         const id = resolveId(op.id, i), old = map.get(id);
         mayTouch(old, i, "publish");
         if (old.visibility !== "public") { map.set(id, { ...old, visibility: "public", revision: old.revision + 1 }); result.published.push(id); }
       }
     });
+    if (result.deleted.length) {
+      const batch = [...saved.objects.values()].filter(obj => result.deleted.includes(obj.id));
+      if (batch.length) entry.deletedObjectBatches = [...(entry.deletedObjectBatches ?? []), batch].slice(-10);
+    }
     entry.sceneRevision = sceneRevision(entry) + 1;
     const rendered = renderedObjects(entry);
     const points = rendered.reduce((n, r) => n + r.primitives.reduce((m, p) => m + (p.pts?.length ?? 1), 0), 0);
@@ -193,7 +213,7 @@ export function applySceneOps(entry, operations, source, { expectedRevision, vis
 // ---- Views of the objects ---------------------------------------------------
 // The props worth telling the model, without long point lists.
 function compactProps(o) {
-  const { points, ...rest } = o.props;
+  const { points, png, ...rest } = o.props;
   return points ? { ...rest, points: points.length + " points" } : rest;
 }
 export function compactObject(r) {
@@ -209,8 +229,9 @@ export function compactObject(r) {
 // What the canvas widget draws: public objects only. Scratch objects are
 // the model's working notes; they are not shown or exported until published.
 const EDITABLE = {
-  "function-plot": (p) => ({ expression: p.expression, domain: p.domain ?? null }),
-  "axes-2d": (p) => ({ xRange: p.xRange, yRange: p.yRange }),
+  image: p => ({ region: p.region }),
+  "function-plot": (p) => ({ expression: p.expression, domain: p.domain ?? null, labelMode: p.labelMode ?? (p.label === undefined ? "auto" : "custom"), label: p.label ?? "" }),
+  "axes-2d": (p) => ({ xRange: p.xRange, yRange: p.yRange, title: p.title ?? "" }),
 };
 export function widgetObjects(entry) {
   return renderedObjects(entry).filter((r) => r.object.visibility === "public").map((r) => ({

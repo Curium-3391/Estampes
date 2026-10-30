@@ -217,7 +217,7 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
 // and deleting marks (the user owns the canvas, so GPT's marks too). GPT
 // learns about them from `userEdits` on its next call. All or nothing.
 export const LAYER_NAME_MAX = 40;
-const opacityOf = (v) => Math.round(Math.min(1, Math.max(0.1, v)) * 20) / 20;
+const opacityOf = (v) => Math.round(Math.min(1, Math.max(0, v)) * 20) / 20;
 
 export function editCanvas(entry, { layers = [], order, marks = [], remove = [], resolveUser }) {
   const restore = snapshotCanvas(entry), state = marksOf(entry), edits = [];

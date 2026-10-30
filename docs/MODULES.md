@@ -151,3 +151,9 @@ Each phase is its own change and keeps the rules above.
 2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
 3. An isolated WebAssembly runtime with time, memory and output limits (0.13.0).
 4. Author tools (0.14.0) and the controlled network path for adapters (0.15.0). Still to come: image upload, long-running jobs, and the OCR and plate-solving modules themselves (plate solving needs the administrator's Astrometry.net API key).
+
+## Direct Canvas editing and deletion recovery
+
+The object panel exposes function label modes (`auto` follows the expression, `custom` preserves the supplied label), custom label text, and the axes title as separate fields. Existing titles are user-supplied text and do not automatically change when a function changes.
+
+The widget can restore the last deletion with `edit_scene_object {imageId, restore:true}`. Up to ten deletion batches are saved with the canvas; deleting axes and their dependent objects forms one batch. Restoration preserves object IDs, frame references and creation order, validates props and capacity, and refuses locked layers or ID conflicts atomically. It uses Core only and works with Graph disabled. The recovery button remains visible after the last object is deleted, and recovery history survives storage reload. Deletions predating this history cannot be reconstructed by this mechanism.
