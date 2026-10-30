@@ -70,4 +70,4 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 
 ## License
 
-No license has been chosen yet. Until one is committed, please do not assume redistribution rights for the source code.
+[Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.

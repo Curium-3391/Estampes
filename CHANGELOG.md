@@ -2,6 +2,10 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
+## Unreleased
+
+- Licensed under the Mozilla Public License 2.0 (`LICENSE`, `package.json`).
+
 ## 0.7.2 — Temporary public address
 
 - `docker compose --profile tunnel up -d` opens a Cloudflare quick tunnel and logs the ChatGPT connector URL. No account and no router changes; the address changes on every restart.
