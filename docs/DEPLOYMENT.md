@@ -106,7 +106,9 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_MAX_IMAGE_MB` | `20` | Largest download or upload accepted. |
 | `ESTAMPES_MAX_IMAGE_MEGAPIXELS` | `50` | Largest decoded image. |
 | `ESTAMPES_WORKING_LONG_SIDE` | `4096` | Long side of the working copy all coordinates refer to. Changing it does not move existing marks (they are normalized). |
-| `ESTAMPES_CACHE_MB` / `ESTAMPES_CACHE_IMAGES` / `ESTAMPES_CACHE_TTL_MINUTES` | `160` / `12` / `60` | In-memory cache of decoded images. |
+| `ESTAMPES_MAX_ANALYSIS_MEGAPIXELS` | `16` | Largest crop processed at working or native resolution; bigger crops are reduced and the result says so. |
+| `ESTAMPES_DERIVED_VIEWS_PER_IMAGE` | `200` | Processed-view recipes remembered per image (`get_derived_view`). |
+| `ESTAMPES_CACHE_MB` / `ESTAMPES_CACHE_IMAGES` / `ESTAMPES_CACHE_TTL_MINUTES` | `160` / `12` / `60` | In-memory cache of decoded images (working pixels plus the source file kept for native crops). |
 | `ESTAMPES_RATE_LIMIT_PER_MIN` | `120` | Requests per minute per client IP on `/mcp`; `0` disables. |
 | `ESTAMPES_CORS_ORIGINS` | `*` | Browser origins allowed by CORS (only browser tools such as MCP Inspector need it). |
 | `ESTAMPES_LOG_FORMAT` | `text` | `json` for one JSON object per log line. |
