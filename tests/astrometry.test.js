@@ -27,6 +27,7 @@ function fakeSite({ jobStatus = ["solving", "success"], annotations } = {}) {
     if (req.path === "/api/submissions/4242") return ok({ jobs: polls++ < 1 ? [null] : [777] });
     if (req.path === "/api/jobs/777") return ok({ status: jobStatus.shift() ?? jobStatus.at(-1) ?? "success" });
     if (req.path === "/api/jobs/777/calibration/") return ok({ ra: 83.822, dec: -5.391, pixscale: 12.5, orientation: 33.2, radius: 2.1, parity: 1 });
+    if (req.path === "/api/jobs/777/info/") return ok({ tags: ["The constellation Aquila (Aql)", "The constellation Scutum (Sct)"], objects_in_field: ["M11", "Altair"] });
     if (req.path === "/api/jobs/777/annotations/") return ok({ annotations: annotations ?? [
       { type: "ngc", names: ["M42", "NGC 1976"], pixelx: 800, pixely: 500, radius: 30 },
       { type: "star", names: ["Alnitak"], pixelx: 200, pixely: 100, radius: 0 },
@@ -66,9 +67,17 @@ test("plate solving runs as a background job and marks the named objects", async
   assert.equal(job.data.raDeg, 83.822);
   assert.equal(job.data.arcsecPerPixel, 12.5);
   assert.deepEqual(job.data.objects.map((o) => o.name), ["M42", "Alnitak"]);
-  // two objects on the picture, each a circle plus a label
-  assert.equal(canvasObjects(entry).length, 4);
-  assert.equal(job.created.length, 4);
+  // two objects on the picture, each a circle plus a label, and one fact sheet
+  assert.equal(canvasObjects(entry).length, 5);
+  assert.equal(job.created.length, 5);
+  const card = canvasObjects(entry).find((o) => o.type === "info-card");
+  const row = (label) => card.props.rows.find((r) => r.label.startsWith(label));
+  assert.match(row("中心 RA").value, /^05h 35m 17\.\d+s$/);
+  assert.match(row("星座").value, /Aquila.*Scutum/);
+  assert.match(row("Legacy").href, /^https:\/\/www\.legacysurvey\.org\/viewer\?ra=83\.822&dec=-5\.391&zoom=\d+$/);
+  assert.equal(row("WCS").href, "https://nova.astrometry.net/wcs_file/777");
+  assert.deepEqual(job.data.tags, ["The constellation Aquila (Aql)", "The constellation Scutum (Sct)"]);
+  assert.match(job.data.links.result, /status\/4242$/);
 
   // The key never leaves through the module: it reached only the login request body.
   const login = site.seen.find((r) => r.path === "/api/login");
@@ -180,4 +189,26 @@ test("marks: bright named stars come first and overlapping labels are skipped", 
   const marks = pickMarks(ann, { width: 2000, height: 1000, limit: 3 });
   assert.deepEqual(marks.map((m) => m.name), ["Altair", "Vega", "M27"]);
   assert.deepEqual(pickMarks(ann, { width: 2000, height: 1000, limit: 10 }).map((m) => m.name), ["Altair", "Vega", "M27", "18 Cyg"]);
+});
+
+test("the sky map draws the solved field with no network", async () => {
+  const site = fakeSite();
+  const { h } = await boot(site.transport);
+  const out = await h.router.execute({ module: ID, capability: "sky_position", newCanvas: { background: "paper" },
+    params: { raDeg: 286.76, decDeg: 12.42, fieldWidthDeg: 98.4, fieldHeightDeg: 67.9, rotationDeg: 71.3 } });
+  assert.equal(site.seen.length, 0);
+  assert.ok(out.createdCanvas && out.scene.created.length >= 20);
+  const objs = canvasObjects(out.entry);
+  assert.ok(objs.some((o) => o.props.kind === "polygon"), "the field outline");
+  for (const o of objs.filter((o) => o.props.points)) assert.ok(o.props.points.every(([x, y]) => x >= 0 && x <= 1 && y >= 0 && y <= 1));
+  await assert.rejects(h.router.execute({ module: ID, capability: "sky_position", params: { raDeg: 400, decDeg: 0 } }), /raDeg/);
+});
+
+test("sky geometry: Hammer centre, RA grows to the left, field outline stays near its centre", async () => {
+  const { hammer, fieldOutline } = await import("../src/builtin-modules/astrometry/skymap.js");
+  assert.ok(Math.abs(hammer(0, 0).X) < 1e-9 && Math.abs(hammer(0, 0).Y) < 1e-9);
+  assert.ok(hammer(60, 0).X < 0 && hammer(300, 0).X > 0);
+  for (const p of fieldOutline({ raDeg: 100, decDeg: 20, widthDeg: 6, heightDeg: 4, rotationDeg: 30 })) {
+    assert.ok(Math.abs(p.ra - 100) < 5 && Math.abs(p.dec - 20) < 5);
+  }
 });

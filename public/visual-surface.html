@@ -1036,6 +1036,9 @@ const HEX=/^#[0-9a-fA-F]{6}$/,num=v=>typeof v==="number"&&Number.isFinite(v);
 const cleanObjects=list=>(Array.isArray(list)?list:[]).filter(o=>o&&/^o\d{1,6}$/.test(o.id)&&Array.isArray(o.primitives)).slice(0,200)
  .map(o=>({id:o.id,type:String(o.type??"").slice(0,24),layer:typeof o.layer==="string"?o.layer:null,label:String(o.label??"").slice(0,64),
    module:typeof o.module==="string"?o.module.slice(0,100):null,locked:o.locked===true,editable:o.editable&&typeof o.editable==="object"?o.editable:null,
+   card:o.card&&typeof o.card==="object"&&Array.isArray(o.card.rows)?{title:String(o.card.title??"").slice(0,80),shown:o.card.shown!==false,
+     rows:o.card.rows.slice(0,24).filter(r=>r&&typeof r==="object").map(r=>({label:String(r.label??"").slice(0,40),value:String(r.value??"").slice(0,240),
+       href:/^https:\/\//.test(String(r.href??""))?String(r.href).slice(0,300):""}))}:null,
    primitives:o.primitives.slice(0,4000)}));
 function setObjects(list){objects=pair?[]:cleanObjects(list);}
 function renderObjects(){
@@ -1079,8 +1082,63 @@ function restackLayers(){
  }
 }
 
-const OBJECT_KIND={image:"圖片","function-plot":"函數","axes-2d":"座標軸",shape:"圖形"};
+const OBJECT_KIND={"info-card":"資訊卡",image:"圖片","function-plot":"函數","axes-2d":"座標軸",shape:"圖形"};
 const pair2=v=>Array.isArray(v)&&v.length===2&&v.every(num)?v:null;
+// Fact sheets (info-card objects) are grouped by module. Each card folds open
+// and closed, starts folded, and can be hidden; hidden cards are listed at the
+// bottom so the user can bring any of them back. The choice is only kept in this
+// browser (when it allows storage); it never changes the canvas.
+const HIDDEN_KEY="estampes.hiddenCards",SHOWN_KEY="estampes.shownCards";
+const readSet=name=>{try{return new Set(JSON.parse(localStorage.getItem(name)||"[]"))}catch{return new Set()}};
+const writeSet=(name,set)=>{try{localStorage.setItem(name,JSON.stringify([...set].slice(-200)))}catch{}};
+// Kept in memory first (storage can be blocked in the sandbox), then saved when the browser allows it.
+const cardPrefs={hid:readSet(HIDDEN_KEY),show:readSet(SHOWN_KEY)};
+// A card the module (or GPT, through the capability's showCard) marked hidden stays out of the way until
+// the user brings it back; the user can also hide any card. The user's choice always wins.
+const cardKeys=o=>imageId+":"+o.id;
+function cardHidden(o){
+ const userHid=cardPrefs.hid,userShow=cardPrefs.show,k=cardKeys(o);
+ return userHid.has(k)||(o.card.shown===false&&!userShow.has(k));
+}
+function renderCards(){
+ const cards=objects.filter(o=>o.card);
+ if(!cards.length)return;
+ const flip=(o,hide)=>{
+   const hid=cardPrefs.hid,show=cardPrefs.show,k=cardKeys(o);
+   if(hide){hid.add(k);show.delete(k);}else{hid.delete(k);show.add(k);}
+   writeSet(HIDDEN_KEY,hid);writeSet(SHOWN_KEY,show);renderObjectsPanel();
+ };
+ const shown=cards.filter(o=>!cardHidden(o)),away=cards.filter(cardHidden);
+ const byModule=new Map();
+ for(const o of shown)byModule.set(o.module||"core",[...(byModule.get(o.module||"core")||[]),o]);
+ for(const [module,list] of byModule){
+   const group=el("div",{className:"obj",style:"display:block"});
+   group.append(el("div",{className:"kind",textContent:module+" · "+list.length+" 張資訊卡"}));
+   for(const o of list){
+     const card=el("details",{style:"margin-top:4px"});
+     const hide=el("button",{textContent:"隱藏",title:"收起這張卡片，之後可從下方叫回來",style:"margin-left:8px"});
+     hide.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();flip(o,true);});
+     card.append(el("summary",{},el("strong",{textContent:o.card.title||o.id}),hide));
+     for(const r of o.card.rows){
+       const line=el("div",{style:"display:flex;gap:8px;flex-wrap:wrap;margin-top:3px"});
+       line.append(el("span",{className:"kind",textContent:r.label,style:"min-width:9em"}));
+       line.append(r.href?el("a",{href:r.href,textContent:r.value,target:"_blank",rel:"noopener noreferrer"}):el("span",{textContent:r.value}));
+       card.append(line);
+     }
+     group.append(card);
+   }
+   objectsPanel.append(group);
+ }
+ if(away.length){
+   const box=el("details",{className:"obj",style:"display:block"});
+   box.append(el("summary",{textContent:"已隱藏的資訊卡（"+away.length+"）"}));
+   for(const o of away){
+     const show=el("button",{textContent:"顯示：「"+(o.card.title||o.id)+"」· "+(o.module||"core"),style:"display:block;margin-top:4px"});
+     show.addEventListener("click",()=>flip(o,false));box.append(show);
+   }
+   objectsPanel.append(box);
+ }
+}
 function renderObjectsPanel(){
  const editable=objects.filter(o=>o.editable);
  objectsPanel.hidden=!imageId||!!pair||!!ws;objectsPanel.replaceChildren();
@@ -1096,6 +1154,7 @@ function renderObjectsPanel(){
    }catch(error){status.textContent=error.message;add.disabled=false;}
  });objectsPanel.append(sourceInput,add);
  if(canRestoreObjects){const undo=el("button",{textContent:"復原上次刪除的物件",disabled:!ready||!!editingObject});undo.addEventListener("click",()=>editObject(null,{restore:true}));objectsPanel.append(undo);}
+ renderCards();
  for(const o of editable){
    const row=el("div",{className:"obj",dataset:{object:o.id}});
    row.append(el("strong",{textContent:o.id}),el("span",{className:"kind",textContent:OBJECT_KIND[o.type]??o.type}));

@@ -237,6 +237,7 @@ export function widgetObjects(entry) {
   return renderedObjects(entry).filter((r) => r.object.visibility === "public").map((r) => ({
     id: r.object.id, type: r.object.type, layer: r.object.layer, ...(r.object.label ? { label: r.object.label } : {}),
     module: r.object.provenance?.module ?? null, primitives: r.primitives,
+    ...(r.object.type === "info-card" ? { card: r.object.props } : {}),
     ...(EDITABLE[r.object.type] ? { editable: EDITABLE[r.object.type](r.object.props) } : {}),
     locked: !!(r.object.layer && layerById(entry, r.object.layer)?.locked),
   }));

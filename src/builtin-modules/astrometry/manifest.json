@@ -26,7 +26,8 @@
     "canvas.write",
     "asset.read.selected",
     "network.request.approved",
-    "module.secrets"
+    "module.secrets",
+    "workspace.write"
   ],
   "network": {
     "allow": [
@@ -95,6 +96,10 @@
             "minimum": 0,
             "maximum": 30,
             "description": "Most named objects to mark (default 20)"
+          },
+          "showCard": {
+            "type": "boolean",
+            "description": "Show the result fact sheet (centre, size, scale, links) open to the user (default true). false keeps it folded away; the user can bring it back from the canvas panel. Use false when the user only wants the marks."
           }
         }
       },
@@ -108,6 +113,76 @@
           "params": {
             "scaleLowArcsecPerPixel": 60,
             "scaleHighArcsecPerPixel": 200
+          }
+        }
+      ]
+    },
+    {
+      "id": "sky_position",
+      "title": "Show the field on an all-sky map",
+      "titleI18n": {
+        "zh-TW": "畫出視野在全天的位置"
+      },
+      "description": "Draw an all-sky map (RA/Dec grid) with the solved field outlined, from the centre and size a solve returned. Needs no network. Without a canvas a new blank canvas is made. The outline is approximate: it ignores lens distortion and image flipping.",
+      "target": "canvas-or-new",
+      "permissions": [
+        "canvas.write",
+        "workspace.write"
+      ],
+      "async": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "raDeg",
+          "decDeg"
+        ],
+        "properties": {
+          "raDeg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "Field centre RA in degrees (raDeg from solve_field)"
+          },
+          "decDeg": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Field centre Dec in degrees"
+          },
+          "fieldWidthDeg": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 180,
+            "description": "Field width in degrees (default 5)"
+          },
+          "fieldHeightDeg": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 180,
+            "description": "Field height in degrees (default the width)"
+          },
+          "rotationDeg": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360,
+            "description": "Up is this many degrees east of north (rotationDeg from solve_field)"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 80
+          }
+        }
+      },
+      "examples": [
+        {
+          "description": "a wide field in Aquila",
+          "params": {
+            "raDeg": 286.76,
+            "decDeg": 12.42,
+            "fieldWidthDeg": 98.4,
+            "fieldHeightDeg": 67.9,
+            "rotationDeg": 71.3
           }
         }
       ]
