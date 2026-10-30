@@ -62,3 +62,21 @@ test("the user moves and restyles an earlier mark, deletes GPT's, and cannot mov
   assert.throws(() => editCanvas(entry, { order: ["L1", "L1"], resolveUser }), /repeated/);
   assert.equal(snap(entry), before);
 });
+
+test("finding recency follows changed evidence without changing layer or ink order", async () => {
+  const entry = await photo();
+  applyCanvasChanges(entry, { annotations: [box("a", .1), box("b", .5)], layer: "走線", resolve });
+  applyCanvasChanges(entry, { findings: [{ id: "a", note: "路徑 A" }, { id: "b", note: "路徑 B" }], resolve });
+  const before = canvasMarks(entry), first = before.find(m=>m.id==="a").findingUpdatedAt;
+  assert.ok(before.find(m=>m.id==="b").findingUpdatedAt > first);
+  applyCanvasChanges(entry, { findings: [{ id: "a", note: "路徑 A" }], resolve });
+  assert.equal(canvasMarks(entry).find(m=>m.id==="a").findingUpdatedAt, first, "unchanged claims do not jump to the top");
+  applyCanvasChanges(entry, { findings: [{ id: "a", note: "路徑 A", evidence: [{ says: "新增觀察", region: [.1,.2,.2,.4] }] }], resolve });
+  const after = canvasMarks(entry);
+  assert.ok(after.find(m=>m.id==="a").findingUpdatedAt > after.find(m=>m.id==="b").findingUpdatedAt);
+  assert.deepEqual(after.map(m=>[m.id,m.layer,m.x]), before.map(m=>[m.id,m.layer,m.x]));
+  const { serializeCanvas, restoreCanvas } = await import("../src/storage.js");
+  const copy = { imageId: entry.imageId, marks: new Map(), layers: [] };
+  restoreCanvas(copy, JSON.parse(JSON.stringify(serializeCanvas(entry))));
+  assert.equal(canvasMarks(copy).find(m=>m.id==="a").findingUpdatedAt, after.find(m=>m.id==="a").findingUpdatedAt);
+});

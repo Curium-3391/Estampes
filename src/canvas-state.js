@@ -117,7 +117,7 @@ const CLAIM_FIELDS = ["confidence", "evidence", "ambiguities", "review", "review
 export const claimOf = (m) => Object.fromEntries(CLAIM_FIELDS.filter((k) => m?.[k] !== undefined).map((k) => [k, m[k]]));
 const withoutClaim = (m) => { const c = { ...m }; for (const k of CLAIM_FIELDS) delete c[k]; return c; };
 
-function settleClaim(entry, old, mark, raw, { images, refused = [], where }) {
+function settleClaimData(entry, old, mark, raw, { images, refused = [], where }) {
   const assess = assessmentInput(raw, { observer: "model", images: images ?? { left: entry.imageId }, where: where + ".evidence" });
   const base = withoutClaim(mark);
   if (!base.note) return base;
@@ -133,6 +133,19 @@ function settleClaim(entry, old, mark, raw, { images, refused = [], where }) {
     return base;
   }
   return { ...base, ...assess, ...(rejection ? { previouslyRejected: { at: rejection.at, ...(rejection.reason ? { reason: rejection.reason } : {}) } } : {}) };
+}
+
+// Persist evidence recency separately from the drawing order and user review.
+function settleClaim(entry, old, mark, raw, options) {
+  const next = settleClaimData(entry, old, mark, raw, options);
+  const signature = (m) => JSON.stringify([m?.note, m?.status, m?.confidence, m?.evidence, m?.ambiguities]);
+  if (!next.note && !next.status) { delete next.findingUpdatedAt; return next; }
+  if (signature(next) === signature(old)) {
+    if (old?.findingUpdatedAt !== undefined) next.findingUpdatedAt = old.findingUpdatedAt;
+  } else {
+    next.findingUpdatedAt = Math.max(Date.now(), ...[...marksOf(entry).values()].map(m => (m.findingUpdatedAt ?? 0) + 1));
+  }
+  return next;
 }
 
 const stageError = (stage, i, id, error) =>

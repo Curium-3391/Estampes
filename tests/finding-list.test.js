@@ -34,11 +34,12 @@ try{
  };
  resetFindings();render();
  check(findingsEl.querySelectorAll(".finding-group").length===1,"one layer group");
- check(!findingsEl.querySelector("details").open,"collapsed by default");
- check(findingsEl.textContent.includes("22 段 · 22 待確認"),"pending count");
- check(findingsEl.getBoundingClientRect().height<65,"collapsed group is one line");
+ check(!layersEl.querySelector("#layer-manager").open,"collapsed by default");
+ check(findingsEl.textContent.includes("22 項 · 22 待確認"),"pending count");
+ check(layersEl.getBoundingClientRect().height<65,"collapsed manager is one line");
  check(!findingsEl.querySelector(".finding-detail"),"details are not rendered initially");
- findingsEl.querySelector("summary").click();await tick();
+ layersEl.querySelector("summary").click();await tick();
+ findingsEl.querySelector("[data-act=evidence]").click();await tick();
  check(findingsEl.querySelectorAll(".finding-row").length===22,"22 compact rows");
  check([...findingsEl.querySelectorAll(".finding-row")].every(r=>r.getBoundingClientRect().height<50),"each row stays compact");
  findingRowFor("trace-0").click();
@@ -61,17 +62,28 @@ try{
  const screen=point.matrixTransform(svg.getScreenCTM());
  for(const type of ["pointerdown","pointerup"])hit.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:1,clientX:screen.x,clientY:screen.y}));
  await tick();
- check(openFinding==="trace-2"&&findingsEl.querySelector("details").open,"canvas click opens matching detail");
+ check(openFinding==="trace-2"&&layersEl.querySelector("#layer-manager").open&&!findingsEl.querySelector(".layer-evidence").hidden,"canvas click opens matching detail");
  // Return to first row; draft persists even after another mark and canvas clicks.
  findingRowFor("trace-0").click();findingRowFor("trace-0").click();
  check(findingsEl.querySelector("input.reason").value==="線路在此中斷","draft survives changing selection");
  findingsEl.querySelector('[data-review="rejected"]').click();await tick();
  check(reviewCall.markId==="trace-0"&&reviewCall.reason==="線路在此中斷","review keeps mark identity and reason");
- check(findingsEl.textContent.includes("22 段 · 21 待確認"),"pending count updates after review");
+ check(findingsEl.textContent.includes("22 項 · 21 待確認"),"pending count updates after review");
  check(findingRowFor("trace-0").textContent.includes("你已否決"),"row reflects verdict");
  check(openFinding==="trace-0","review does not close detail");
- hiddenLayers.add("L1");render();check(!findingsEl.children.length,"hidden layers omitted");
- hiddenLayers.clear();resetFindings();render();check(!findingsEl.querySelector("details").open,"new canvas resets expansion");
+ hiddenLayers.add("L1");render();check(!findingsEl.querySelector(".finding-row"),"hidden layer evidence omitted");
+ check(findingsEl.querySelector("[data-act=toggle]"),"hidden layer controls remain accessible");
+ hiddenLayers.clear();resetFindings();render();check(!layersEl.querySelector("#layer-manager").open,"new canvas resets expansion");
+ // Evidence recency does not mutate ink or layer stacking.
+ const beforeIds=assistantMarks.map(m=>m.id).join(","),beforeLayers=layers.map(l=>l.id).join(",");
+ assistantMarks[3].findingUpdatedAt=100;assistantMarks[7].findingUpdatedAt=200;
+ layersExpanded=true;findingGroupsOpen.add("L1");render();
+ check(findingsEl.querySelector(".finding-row").dataset.mark==="trace-7","newest evidence first");
+ check(assistantMarks.map(m=>m.id).join(",")===beforeIds&&layers.map(l=>l.id).join(",")===beforeLayers,"evidence sorting leaves stacking intact");
+ for(const act of ["toggle","rename","opacity","lock","up","down"])check(findingsEl.querySelector("[data-act="+act+"]"),"original layer control: "+act);
+ const expandedBefore=findingGroupsOpen.has("L1");
+ findingsEl.querySelector("[data-act=toggle]").click();await tick();
+ check(hiddenLayers.has("L1")&&findingGroupsOpen.has("L1")===expandedBefore,"visibility control does not toggle evidence");
  document.body.dataset.findingTest="passed";
 }catch(error){document.body.dataset.findingTest="failed: "+error.stack;}
 })();

@@ -43,6 +43,9 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #findings .finding-row .who{overflow:hidden;text-overflow:ellipsis;min-width:0}
 #findings .finding-row[aria-current=true]{background:#356BD61A;box-shadow:inset 3px 0 #356BD6}
 #findings .finding-row:focus-visible,#findings summary:focus-visible{outline:2px solid #356BD6;outline-offset:-2px}
+#findings .layer-evidence[hidden]{display:none}
+#layers>details>summary{cursor:pointer;padding:8px 10px;border:1px solid #8885;border-radius:9px;font-weight:600}
+#layers .layer-evidence-button{border:0;padding:0;text-align:left;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit;color:inherit}
 #findings .finding-detail{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 8px;padding:8px 10px}
 #findings .finding-detail>.note{flex-basis:100%}
 #findings .finding-detail .reason{min-width:0;max-width:100%;flex:1 1 12em}
@@ -417,15 +420,15 @@ function setLayers(list){
  hiddenLayers=new Set([...hiddenLayers,...savedHidden()].filter(id=>known.has(id)));
 }
 const el=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="dataset")Object.assign(e.dataset,v);else if(k in e)e[k]=v;else e.setAttribute(k,v);}e.append(...kids);return e;};
+let layerRows=new Map(),layersExpanded=false;
 function renderLayers(){
  const counts=new Map();
  for(const m of [...assistantMarks,...priorUserMarks,...userMarks,...objects])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
  const list=layers.filter(l=>counts.has(l.id));
- layersEl.hidden=!imageId||!list.length;layersEl.replaceChildren();
+ layerRows=new Map();
+ layersEl.hidden=!imageId||!list.length;
  if(layersEl.hidden)return;
- const head=el("div",{className:"head"},el("span",{textContent:"圖層（上面的蓋住下面的）"}));
- if(hiddenLayers.size)head.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
- layersEl.append(head);
+
  // Top of the list = drawn last = on top.
  const shownOrder=[...list].reverse();
  shownOrder.forEach((l,i)=>{
@@ -435,7 +438,7 @@ function renderLayers(){
    if(renamingLayer===l.id){
      const input=el("input",{value:l.name,maxLength:40,"aria-label":"圖層名稱",dataset:{layer:l.id,act:"name"}});
      name.append(input);requestAnimationFrame(()=>{input.focus();input.select();});
-   }else name.append(sideName(l.id)+l.name);
+   }else name.append(el("button",{type:"button",className:"layer-evidence-button",textContent:(findingGroupsOpen.has(l.id)?"▾ ":"▸ ")+sideName(l.id)+l.name,"aria-expanded":String(findingGroupsOpen.has(l.id)),dataset:{layer:l.id,act:"evidence"}}));
    const op=Math.round((l.opacity??1)*100);
    const same=shownOrder.filter(o=>serverLayer(o.id).side===serverLayer(l.id).side),pos=same.indexOf(l);
    row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),name,
@@ -446,7 +449,7 @@ function renderLayers(){
      el("button",{textContent:l.locked?"🔒 已鎖":"🔓",title:l.locked?"解鎖：允許你和 GPT 修改這層":"鎖定：你和 GPT 都不能移動、改樣式或刪除這層的標記","aria-pressed":String(!!l.locked),disabled:!ready,dataset:{layer:l.id,act:"lock"}}),
      el("button",{textContent:"↑",title:"往上一層",disabled:!ready||pos<=0,dataset:{layer:l.id,act:"up"}}),
      el("button",{textContent:"↓",title:"往下一層",disabled:!ready||pos>=same.length-1,dataset:{layer:l.id,act:"down"}}));
-   layersEl.append(row);
+   layerRows.set(l.id,row);
  });
 }
 // Layer settings and edits of earlier marks go to the server (app-only
@@ -519,6 +522,7 @@ layersEl.addEventListener("click",e=>{
  if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();render();return;}
  const b=e.target.closest("button[data-act]");if(!b)return;
  const id=b.dataset.layer,l=layerOf(id);if(!l)return;
+ if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
  const {side,id:raw}=serverLayer(id);
  if(b.dataset.act==="rename"){renamingLayer=id;renderLayers();}
  if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 GPT 都不能再改這層的標記。");
@@ -713,11 +717,11 @@ const findingReasons=new Map();
 const findingKey=item=>item.mark.id||item.key;
 const findingGroup=m=>m.layer||"unlayered:"+(m.side??"left")+":"+(m.author??"assistant");
 const hasFinding=m=>!!m&&(!!m.note||!!m.status);
-function resetFindings(){findingGroupsOpen.clear();focusedFinding=null;openFinding=null;findingReasons.clear();}
+function resetFindings(){layersExpanded=false;findingGroupsOpen.clear();focusedFinding=null;openFinding=null;findingReasons.clear();}
 function findingRowFor(id){return [...findingsEl.querySelectorAll(".finding-row")].find(row=>row.dataset.mark===id);}
 function focusFinding(item,{details=false,locate=true}={}){
  const m=item.mark,id=findingKey(item);
- findingGroupsOpen.add(findingGroup(m));focusedFinding=id;selected=m.id;
+ layersExpanded=true;findingGroupsOpen.add(findingGroup(m));focusedFinding=id;selected=m.id;
  openFinding=details?id:null;
  selectedEvidence=null;viewMode="annotated";
  if(locate){const [x,y,w]=cropBox(m).split(" ").map(Number);setCam({x,y,w});}
@@ -735,20 +739,28 @@ function renderFindings(){
  const caret=wasReason?[active.selectionStart,active.selectionEnd]:null;
  findingsEl.replaceChildren();
  const groups=new Map();
+ for(const key of layerRows.keys())groups.set(key,[]);
  for(const item of markOptions()){
    if(!hasFinding(item.mark))continue;
    const key=findingGroup(item.mark);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);
  }
  const order=new Map(layers.map((l,i)=>[l.id,i]));
- for(const [key,items] of [...groups].sort((a,b)=>(order.get(a[0])??-1)-(order.get(b[0])??-1))){
-   const group=el("li",{className:"finding-group"}),details=el("details",{open:findingGroupsOpen.has(key)});
+ const manager=el("details",{id:"layer-manager",open:layersExpanded});
+ manager.append(el("summary",{title:"圖層由上到下疊放；每層證據依最新更新排序",textContent:"圖層與證據 · "+layerRows.size+" 層 · "+[...groups.values()].flat().filter(({mark})=>mark.note&&stateOf(mark)==="unverified").length+" 待確認"}));
+ manager.addEventListener("toggle",()=>{if(manager.isConnected)layersExpanded=manager.open;});
+ if(hiddenLayers.size)manager.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
+ for(const [key,items] of [...groups].sort((a,b)=>(order.get(b[0])??-1)-(order.get(a[0])??-1))){
+   // Evidence order is independent from layer/ink stacking. Legacy entries
+   // without timestamps retain reverse insertion order as a stable fallback.
+   const newest=[...items].reverse().sort((a,b)=>(b.mark.findingUpdatedAt??0)-(a.mark.findingUpdatedAt??0));
+   const group=el("li",{className:"finding-group"});
    const pending=items.filter(({mark:m})=>m.note&&stateOf(m)==="unverified").length;
-   const m=items[0].mark,layer=layerOf(m.layer);
-   const name=sideTag(m.side)+(layer?.name||(m.author==="user"?"使用者標記（未分層）":"GPT 標記（未分層）"));
-   details.append(el("summary",{textContent:name+" · "+items.length+(items.every(({mark})=>mark.type==="polyline")?" 段 · ":" 項 · ")+pending+" 待確認"}));
-   details.addEventListener("toggle",()=>{if(!details.isConnected)return;details.open?findingGroupsOpen.add(key):findingGroupsOpen.delete(key);});
+   const header=layerRows.get(key)||el("button",{type:"button",textContent:"未分層證據",onclick:()=>{findingGroupsOpen.has(key)?findingGroupsOpen.delete(key):findingGroupsOpen.add(key);render();}});
+   header.append(el("span",{className:"badge",textContent:items.length+" 項 · "+pending+" 待確認"}));
+   group.append(header);
+   const details=el("div",{className:"layer-evidence",hidden:!findingGroupsOpen.has(key)});
    const list=el("ol",{className:"finding-list"});
-   for(const item of items){
+   for(const item of newest){
      const m=item.mark,id=findingKey(item),expanded=openFinding===id;
      const li=el("li",{className:"finding-item",dataset:{key:item.key,mark:id}});
      const row=el("button",{type:"button",className:"finding-row",dataset:{mark:id},
@@ -774,8 +786,11 @@ function renderFindings(){
      }
      list.append(li);
    }
+   if(!items.length)details.append(el("p",{className:"help",textContent:"這個圖層還沒有證據或待審說明。"}));
    details.append(list);group.append(details);findingsEl.append(group);
  }
+ manager.append(findingsEl);layersEl.replaceChildren(manager);
+ layersEl.hidden=!groups.size;
  if(activeId&&(wasReason||wasRow)){
    const row=findingRowFor(activeId),target=wasReason?row?.parentElement.querySelector("input.reason"):row;
    target?.focus({preventScroll:true});if(target&&caret)target.setSelectionRange(...caret);
@@ -1498,7 +1513,6 @@ function renderSelection(){
    if(inGroup)selectionEl.append(el("button",{textContent:"拆開手勢",dataset:{act:"ungroup"}}));
  }
  selectionEl.append(el("button",{textContent:"取消選取",dataset:{act:"deselect"}}));
- if(m.note)selectionEl.append(el("span",{className:"note",textContent:"GPT："+m.note}));
 }
 selectionEl.addEventListener("click",e=>{
  const act=e.target.closest("button")?.dataset.act;
