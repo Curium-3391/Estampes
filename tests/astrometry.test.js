@@ -146,3 +146,23 @@ test("the module cannot run unless the user granted its permissions", async () =
   const entry = await createBlankCanvas({});
   await assert.rejects(start(h, entry), /Only the user can enable/);
 });
+
+test("job tools return the canvas payload, so the widget shows the photo and not its sample", async () => {
+  const { registerModuleTools } = await import("../src/modules/mcp-tools.js");
+  const { h, entry } = await boot(fakeSite().transport);
+  const tools = new Map();
+  const server = { registerTool: (name, spec, handler) => tools.set(name, { spec, handler }), registerResource() {} };
+  registerModuleTools(server, { host: h, storeUri: "ui://s", storeHtml: "", visualUri: "ui://v", logSizes: (_n, r) => r,
+    canvasPayload: async (e) => ({ structuredContent: { kind: "estampes.visual_surface", imageId: e.imageId }, _meta: { "estampes/image": "px" } }),
+    ensureImage: async () => entry, saveCanvas: async () => {}, canvasLayers: () => [] });
+  const started = await tools.get("execute_module").handler({ module: ID, capability: "solve_field", params: {}, canvas: entry.imageId, visibility: "public", preview: true });
+  assert.equal(started.structuredContent.kind, "estampes.module_job");
+  assert.equal(started.structuredContent.imageId, entry.imageId);
+  assert.equal(started._meta["estampes/image"], "px");
+  const id = started.structuredContent.job.id;
+  const checked = await tools.get("get_module_job").handler({ job: id, waitSeconds: 5 });
+  assert.equal(checked.structuredContent.job.status, "done");
+  assert.equal(checked.structuredContent.imageId, entry.imageId);
+  assert.ok(checked._meta["estampes/image"]);
+  assert.equal(tools.get("get_module_job").spec._meta.ui.resourceUri, "ui://v");
+});

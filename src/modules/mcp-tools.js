@@ -125,7 +125,8 @@ export function registerModuleTools(server, deps) {
       if (run.job) {
         return { content: [{ type: "text", text: module + " " + capability + " is running in the background as " + run.job.id + (entry ? " on canvas " + entry.imageId : "") +
           ". It can take minutes. Call get_module_job with this id (waitSeconds up to 25) until its status is done or failed; the result lands on the canvas when it is done. Tell the user it is running." }],
-          structuredContent: { kind: "estampes.module_job", job: run.job } };
+          structuredContent: entry ? { ...(await canvasPayload(entry)).structuredContent, kind: "estampes.module_job", job: run.job } : { kind: "estampes.module_job", job: run.job },
+          ...(entry ? { _meta: (await canvasPayload(entry))._meta } : {}) };
       }
       if (!entry) {
         return { content: [{ type: "text", text: module + " " + capability + ": " + (run.summary ?? "done") + (run.data !== undefined ? " " + JSON.stringify(run.data) : "") }],
@@ -149,11 +150,12 @@ export function registerModuleTools(server, deps) {
     } catch (error) { return fail(error); }
   });
 
-  server.registerTool("get_module_job", {
+  registerAppTool(server, "get_module_job", {
     title: "Check a module's background job",
     description: "Return the status of a background job started by execute_module (running, done, failed or interrupted), with its progress, result summary and the objects it created. waitSeconds (up to 25) waits for it to finish before answering. Read-only.",
     inputSchema: z.object({ job: z.string().regex(JOB_ID).describe("job id from execute_module, e.g. job_1a2b3c4d5e6f"), waitSeconds: z.number().min(0).max(25).default(0) }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: { ui: { resourceUri: visualUri } },
   }, async ({ job: id, waitSeconds }) => {
     try {
       const job = await host.jobs.wait(id, waitSeconds * 1000);
@@ -162,6 +164,12 @@ export function registerModuleTools(server, deps) {
         (job.status === "running" ? (job.progress ? " (" + job.progress + ")" : "") + ". Check again shortly." : "") +
         (job.summary ? ". " + job.summary : "") + (job.data !== undefined ? ". Data: " + JSON.stringify(job.data).slice(0, 4000) : "") +
         (job.created?.length ? ". Created " + job.created.join(", ") + " on canvas " + job.canvas : "") + (job.error ? ". " + job.error : "");
+      // A job on a canvas shows that canvas (the widget opens with every app tool, and would otherwise show its sample picture).
+      if (job.canvas) {
+        const entry = await host.canvases.ensure(job.canvas);
+        const payload = await canvasPayload(entry);
+        return { content: [{ type: "text", text }], structuredContent: { ...payload.structuredContent, kind: "estampes.module_job", job }, _meta: payload._meta };
+      }
       return { content: [{ type: "text", text }], structuredContent: { kind: "estampes.module_job", job } };
     } catch (error) { return fail(error); }
   });
