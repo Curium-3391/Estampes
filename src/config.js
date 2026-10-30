@@ -21,7 +21,14 @@ export const config = Object.freeze({
   host: str("HOST", "0.0.0.0") || "0.0.0.0",
   // Origin used in download links; empty = taken from the incoming request.
   publicUrl: (str("PUBLIC_BASE_URL") || str("RENDER_EXTERNAL_URL")).replace(/\/+$/, ""),
-  accessKey: process.env.ESTAMPES_ACCESS_KEY ?? "",
+  accessKey: (process.env.ESTAMPES_ACCESS_KEY ?? "").trim(),
+  // Docker sets this: without an access key, generate and keep one rather
+  // than start an open server. ESTAMPES_ALLOW_OPEN=1 opts out.
+  requireKey: str("ESTAMPES_REQUIRE_KEY") === "1",
+  allowOpen: str("ESTAMPES_ALLOW_OPEN") === "1",
+  // Proxies of yours in front of Estampes whose X-Forwarded-* headers can be
+  // trusted. Render and Heroku always add one.
+  trustProxy: num("ESTAMPES_TRUST_PROXY", process.env.RENDER || process.env.DYNO ? 1 : 0, { max: 10 }),
   corsOrigins: str("ESTAMPES_CORS_ORIGINS", "*").split(",").map((s) => s.trim()).filter(Boolean),
   rateLimitPerMin: num("ESTAMPES_RATE_LIMIT_PER_MIN", 120),
   // Empty = memory only (the old behaviour). Docker sets /data.

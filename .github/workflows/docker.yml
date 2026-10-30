@@ -25,6 +25,11 @@ jobs:
           docker compose ps
           curl -fsS http://127.0.0.1:8787/healthz
           test "$(docker compose exec -T estampes id -u)" != 0
+          # Secure defaults: closed without the generated key, open with it.
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8787/mcp)" = 401
+          key=$(docker compose exec -T estampes cat /data/access-key)
+          test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8787/api/v1/canvas/0123456789abcdef?key=$key")" = 404
+          ! docker compose exec -T estampes touch /app/probe
       - name: Logs
         if: always()
         run: docker compose logs

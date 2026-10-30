@@ -17,10 +17,24 @@ services:
       # in .env to publish on another host port.
       PORT: "8787"
       ESTAMPES_STORAGE_DIR: /data
+      ESTAMPES_REQUIRE_KEY: "1"
     ports:
-      - "${ESTAMPES_HOST_PORT:-8787}:8787"
+      # Only this machine can reach the server by default; put a reverse
+      # proxy or tunnel with https in front. ESTAMPES_BIND=0.0.0.0 in .env
+      # opens it to the network.
+      - "${ESTAMPES_BIND:-127.0.0.1}:${ESTAMPES_HOST_PORT:-8787}:8787"
     volumes:
       - estampes-data:/data
+    # Least privilege: nothing but /data (and a small /tmp) is writable, no
+    # Linux capabilities, no privilege escalation, bounded processes.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 30s

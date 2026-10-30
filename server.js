@@ -1,5 +1,4 @@
 import { createServer as createHttpServer } from "node:http";
-import { timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +26,7 @@ import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, entrySharp } from "./src/image-store.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
+import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import {
   processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
@@ -51,10 +51,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -236,9 +236,12 @@ const EDIT_TEXT = {
 const userEditsText = (edits) => edits.length
   ? ". USER EDITS since your last look (trust these over your memory): " + edits.map((e) => (e.side ? e.side + " image: " : "") + (EDIT_TEXT[e.kind]?.(e) ?? e.kind)).join("; ")
   : "";
+// With an access key the links are signed, so an image hash alone is not
+// enough to download a picture.
+const exportLink = (hex, file) => publicUrl() + "/export/" + hex + "/" + file + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, hex, file) : "");
 const exportLinks = (imageId) => publicUrl() ? {
-  image: publicUrl() + "/export/" + imageId.slice(4) + "/image.jpg",
-  marks: publicUrl() + "/export/" + imageId.slice(4) + "/marks.svg",
+  image: exportLink(imageId.slice(4), "image.jpg"),
+  marks: exportLink(imageId.slice(4), "marks.svg"),
 } : undefined;
 
 // Render logs show what each call costs: text the model reads, images the
@@ -1214,10 +1217,12 @@ const mcpHandler = toNodeHandler(createMcpHandler(makeServer));
 
 const port = config.port;
 
-// Optional shared secret. When ESTAMPES_ACCESS_KEY is set, /mcp requires it as
-// "?key=..." in the connector URL (ChatGPT's "No authentication" mode can still
-// carry it) or as "Authorization: Bearer ...". Unset keeps the open M0 setup.
-const ACCESS_KEY = config.accessKey;
+// Shared secret. When there is one, /mcp and /api require it as "?key=..."
+// in the connector URL (ChatGPT's "No authentication" mode can still carry
+// it) or as "Authorization: Bearer ...". It comes from ESTAMPES_ACCESS_KEY,
+// or, with ESTAMPES_REQUIRE_KEY=1 (Docker), from the storage folder, where
+// it is generated on first start. Set before the server listens.
+let ACCESS_KEY = "";
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -1230,23 +1235,17 @@ function corsOrigin(req) {
   return origin && CORS_ORIGINS.includes(origin) ? origin : null;
 }
 
-function sameSecret(given) {
-  const a = Buffer.from(String(given ?? "")), b = Buffer.from(ACCESS_KEY);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 function authorized(req, url) {
   if (!ACCESS_KEY) return true;
   const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "")?.[1];
-  return sameSecret(url.searchParams.get("key")) || sameSecret(bearer);
+  return sameSecret(url.searchParams.get("key"), ACCESS_KEY) || sameSecret(bearer, ACCESS_KEY);
 }
 
-// Fixed one-minute window per client IP; Render puts the client first in
-// x-forwarded-for. In-memory is enough for a single free-tier instance.
+// Fixed one-minute window per client IP (see clientIp for when
+// X-Forwarded-For counts). In-memory is enough for a single instance.
 function rateLimited(req) {
   if (!(RATE_LIMIT > 0)) return false;
-  const ip = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() ||
-    req.socket.remoteAddress || "unknown";
+  const ip = clientIp(req, config.trustProxy);
   const now = Date.now();
   let entry = hits.get(ip);
   if (!entry || now - entry.start >= 60000) {
@@ -1303,6 +1302,11 @@ const httpServer = createHttpServer((req, res) => {
   if (exportMatch && req.method === "GET") {
     const imageId = "img:" + exportMatch[1];
     const svg = exportMatch[2] === "marks.svg";
+    if (!exportAllowed(ACCESS_KEY, exportMatch[1], exportMatch[2], url.searchParams.get("sig"))) {
+      res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+      res.end("This download link is not signed for this server. Ask for the canvas again to get a fresh link.");
+      return;
+    }
     ensureImage(imageId).then((entry) => {
       Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
       .then((body) => {
@@ -1390,8 +1394,10 @@ const httpServer = createHttpServer((req, res) => {
       return;
     }
     if (!config.publicUrl && req.headers.host) {
-      const proto = String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() || "http";
-      const host = String(req.headers["x-forwarded-host"] ?? req.headers.host).split(",")[0].trim();
+      // Forwarded headers only from a trusted proxy.
+      const fwd = (name) => config.trustProxy > 0 ? String(req.headers[name] ?? "").split(",")[0].trim() : "";
+      const proto = fwd("x-forwarded-proto") || "http";
+      const host = fwd("x-forwarded-host") || String(req.headers.host).trim();
       if (/^[a-z0-9.:[\]-]+$/i.test(host) && /^https?$/.test(proto)) seenOrigin = proto + "://" + host;
     }
     const start = Date.now();
@@ -1426,6 +1432,19 @@ async function storageHealth() {
 
 for (const warning of configWarnings()) log("warn", "[config] " + warning);
 const storage = await storageHealth();
+const keyInfo = await resolveAccessKey({ configured: config.accessKey, require: config.requireKey, allowOpen: config.allowOpen,
+  storageDir: storage.enabled && storage.writable ? config.storageDir : "" });
+ACCESS_KEY = keyInfo.key;
+// The key is printed once, when it is made; afterwards only where it lives.
+if (keyInfo.source === "generated" || keyInfo.source === "memory") {
+  log("warn", "[auth] generated an access key. Connect ChatGPT to https://<your host>/mcp?key=" + keyInfo.key +
+    (keyInfo.path ? " (saved in " + keyInfo.path + "; read it again with: docker compose exec estampes cat " + keyInfo.path + ")" : " (not saved: no storage; it changes on restart)"));
+} else if (keyInfo.source === "file") {
+  log("info", "[auth] access key loaded from " + keyInfo.path + " (docker compose exec estampes cat " + keyInfo.path + ")");
+} else if (keyInfo.source === "open") {
+  log(config.requireKey ? "warn" : "info", "[auth] no access key: anyone who can reach /mcp can use this server" +
+    (config.requireKey ? " (ESTAMPES_ALLOW_OPEN=1)" : ""));
+}
 if (storage.enabled && !storage.writable) log("error", "[storage] not writable; marks will only live in memory", { dir: config.storageDir, error: storage.error });
 if (storage.enabled) {
   sweepStorage().catch(() => {});
@@ -1434,7 +1453,7 @@ if (storage.enabled) {
 
 httpServer.listen(port, config.host, () => {
   log("info", "Estampes " + VERSION + " MCP server at http://localhost:" + port + "/mcp", {
-    storage: config.storageDir || "memory-only", accessKey: ACCESS_KEY ? "required" : "off",
+    storage: config.storageDir || "memory-only", accessKey: ACCESS_KEY ? "required (" + keyInfo.source + ")" : "off", trustProxy: config.trustProxy,
     maxImageMB: config.maxImageBytes / 1048576, publicUrl: config.publicUrl || "from-request",
   });
 });

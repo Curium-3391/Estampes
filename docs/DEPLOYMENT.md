@@ -20,11 +20,13 @@ docker compose up -d
 ```
 
 - The image is built locally for your machine's CPU. `docker compose ps` shows `healthy` once `/healthz` answers.
+- **Access key.** If `.env` has no `ESTAMPES_ACCESS_KEY`, the first start generates one, saves it as `/data/access-key` (mode 600) and prints the connector URL once in the log. Read it again with `docker compose exec estampes cat /data/access-key`; connect ChatGPT to `https://<your host>/mcp?key=<key>`. Delete the file and restart to rotate it. `ESTAMPES_ALLOW_OPEN=1` runs without a key (closed networks only).
+- **Only this machine by default.** compose publishes on `127.0.0.1:8787`. Put a reverse proxy or tunnel with https in front (it runs on the same machine), or set `ESTAMPES_BIND=0.0.0.0` to open the port to the network. Behind a proxy, set `ESTAMPES_TRUST_PROXY=1` (one proxy) so rate limiting sees real client addresses.
 - Logs: `docker compose logs -f`. Set `ESTAMPES_LOG_FORMAT=json` for one JSON object per line. Docker keeps 3 × 10 MB of logs.
 - Update: `git pull && docker compose up -d --build`. The data volume is kept.
 - Stop: `docker compose down`. **`docker compose down -v` deletes all stored images and marks.**
 - Backup: the volume `estampes_estampes-data` holds everything, e.g. `docker run --rm -v estampes_estampes-data:/data -v "$PWD":/backup busybox tar czf /backup/estampes.tgz /data`.
-- The container runs as the unprivileged `node` user (uid 1000) and restarts on failure (`restart: unless-stopped`).
+- The container runs as the unprivileged `node` user (uid 1000) with a read-only filesystem except `/data` and a 64 MB `/tmp`, no Linux capabilities, `no-new-privileges` and at most 256 processes, and restarts on failure (`restart: unless-stopped`).
 - Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` (`latest` from `main`, `X.Y.Z` from `vX.Y.Z` tags). To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:latest`. A new GHCR package is private until its visibility is changed in the package settings.
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
 
@@ -46,7 +48,7 @@ Memory stays the working copy (`ESTAMPES_CACHE_*`). When the cache drops an imag
 
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/Curium-3391/Estampes)
 
-`app.json` and `Procfile` describe the app: Node 22 (`engines`), the Node.js buildpack, `/healthz` as the success page. Fill `ESTAMPES_ACCESS_KEY` to protect the server, then connect ChatGPT to `https://<app>.herokuapp.com/mcp?key=<key>`.
+`app.json` and `Procfile` describe the app: Node 22 (`engines`), the Node.js buildpack, `/healthz` as the success page. Heroku generates `ESTAMPES_ACCESS_KEY` for you; find it under Settings → Config Vars and connect ChatGPT to `https://<app>.herokuapp.com/mcp?key=<key>`.
 
 - The Deploy button only works while the GitHub repository is **public**. For a private repository, create the app in the Heroku dashboard and connect it to GitHub (Deploy → GitHub), or `git push heroku main` from a clone.
 - Heroku's filesystem is reset on every restart (at least daily), so marks last only as long as the dyno. Use Docker for lasting data.
@@ -83,7 +85,11 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_HOST_PORT` | `8787` | Docker only: host port that compose publishes. |
 | `HOST` | `0.0.0.0` | Listening address. |
 | `PUBLIC_BASE_URL` | from request | Public https origin used in download links. |
-| `ESTAMPES_ACCESS_KEY` | unset | When set, `/mcp` and `/api/v1/*` require `?key=` or `Authorization: Bearer <key>`. `/`, `/version`, `/healthz` stay public. |
+| `ESTAMPES_ACCESS_KEY` | unset (Docker: generated) | When there is a key, `/mcp` and `/api/v1/*` require `?key=` or `Authorization: Bearer <key>`, and download links are signed. `/`, `/version`, `/healthz` stay public. |
+| `ESTAMPES_REQUIRE_KEY` | `0` (Docker: `1`) | With no `ESTAMPES_ACCESS_KEY`, generate one into the storage folder instead of running open. |
+| `ESTAMPES_ALLOW_OPEN` | `0` | `1` = run without any key even when one is required. |
+| `ESTAMPES_BIND` | `127.0.0.1` | Docker only: address compose publishes on. |
+| `ESTAMPES_TRUST_PROXY` | `0` (Render/Heroku: `1`) | Number of your proxies in front; only then are `X-Forwarded-For/-Proto/-Host` trusted. |
 | `ESTAMPES_STORAGE_DIR` | unset (memory only) | Folder for images, canvases, SVGs and history. Docker: `/data`. |
 | `ESTAMPES_STORAGE_RETENTION_DAYS` | `0` | Delete stored images untouched for this many days; 0 keeps everything. |
 | `ESTAMPES_MAX_IMAGE_MB` | `20` | Largest download or upload accepted. |
@@ -111,7 +117,8 @@ Invalid values fall back to the default and are reported in the log at startup.
 
 - Render free services sleep when idle; the first request after a pause can take tens of seconds.
 - The access key is a shared secret in a URL, not per-user auth. Anyone with the connector URL can call the server. Add OAuth before any public distribution.
-- `/export/<hash>/…` download links need no key: the hash is derived from the image content.
+- `/export/<hash>/…` download links carry a signature (`?sig=`) derived from the access key; without a key they are open and protected only by the image hash.
+- CORS stays `*` by default so browser tools work; every `/mcp` call still needs the key.
 - The rate limiter is in memory and per instance; it resets on restart.
 - One process per storage folder: two containers must not share a volume.
 - If the host cannot show a widget, inspect tool discovery, MCP responses, the `ui://` resource, and the MCP Apps bridge handshake.
