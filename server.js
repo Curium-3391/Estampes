@@ -46,6 +46,7 @@ import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 import { createModuleHost } from "./src/modules/index.js";
+import { resolveAdminKey } from "./src/modules/admin.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
@@ -71,10 +72,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -2548,8 +2549,11 @@ const storage = await storageHealth();
 const keyInfo = await resolveAccessKey({ configured: config.accessKey, require: config.requireKey, allowOpen: config.allowOpen,
   storageDir: storage.enabled && storage.writable ? config.storageDir : "" });
 ACCESS_KEY = keyInfo.key;
+const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
+const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
+if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in ChatGPT; approve a plan with: node scripts/estampes-module.js approve <planId>");
 moduleHost = await createModuleHost({
-  storageDir: storage.enabled && storage.writable ? config.storageDir : "", coreVersion: VERSION,
+  storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas },
 });
 // The key is printed once, when it is made; afterwards only where it lives.

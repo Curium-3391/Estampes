@@ -1,0 +1,120 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.example.callout",
+  "name": "Callout",
+  "nameI18n": {
+    "zh-TW": "標示框"
+  },
+  "description": "Put a labelled box on the canvas. A code-free example of a declarative module.",
+  "version": "1.0.0",
+  "publisher": {
+    "name": "Example Publisher"
+  },
+  "license": "MPL-2.0",
+  "category": "diagram",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
+  "runtime": {
+    "kind": "declarative",
+    "entry": "operations"
+  },
+  "permissions": [
+    "canvas.write"
+  ],
+  "capabilities": [
+    {
+      "id": "add_callout",
+      "title": "Add a callout",
+      "description": "Draw a rectangle from (x, y) to (x2, y2) with a text label at its top left corner. Coordinates are normalized to the canvas (0..1, top-left origin).",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x",
+          "y",
+          "x2",
+          "y2",
+          "text"
+        ],
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "x2": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y2": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "examples": [
+        {
+          "description": "a label box near the top left",
+          "params": {
+            "x": 0.1,
+            "y": 0.1,
+            "x2": 0.4,
+            "y2": 0.2,
+            "text": "Check here"
+          }
+        }
+      ],
+      "operations": [
+        {
+          "op": "object.create",
+          "type": "shape",
+          "props": {
+            "kind": "rect",
+            "x": {
+              "$param": "x"
+            },
+            "y": {
+              "$param": "y"
+            },
+            "x2": {
+              "$param": "x2"
+            },
+            "y2": {
+              "$param": "y2"
+            },
+            "style": {
+              "color": "gold"
+            }
+          }
+        },
+        {
+          "op": "object.create",
+          "type": "shape",
+          "props": {
+            "kind": "text",
+            "x": {
+              "$param": "x"
+            },
+            "y": {
+              "$param": "y"
+            },
+            "text": {
+              "$param": "text"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

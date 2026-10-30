@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.10.0 (the contract, the built-in Graph module and the Store). Installing packages and isolated runtimes are planned in phases and marked below.
+Status: this page describes what is implemented in 0.12.0 (the contract, the built-in Graph module, the Store and managed packages). Isolated runtimes and adapters are planned and marked below.
 
 ## How it fits together
 
@@ -68,11 +68,49 @@ Expressions: `x`, numbers, `+ - * / ^`, implicit multiplication (`2x`, `3(x+1)`,
 
 With `ESTAMPES_STORAGE_DIR`, module data lives in `<storage>/modules/`: `registry.json` (state and grants) and `audit.jsonl` (plans, approvals, refusals, runs and failures; secrets never appear). Without storage, state lives in memory and modules start disabled again after a restart. Objects are part of each canvas's `canvas.json`, so they survive a restart even if a module is later disabled; disabling stops new runs but does not delete anything.
 
+## Installing packages
+
+A package is a single JSON file, `estampes.package/1`: the manifest, a map of data files and an ed25519 signature over the sha256 digest of the manifest and files. It is built to be safe to verify: no archive to unpack, no paths that can leave the folder, no URLs to fetch. Only the administrator can put one on the server.
+
+```
+# author
+node scripts/estampes-module.js keygen mykey
+node scripts/estampes-module.js pack module.json --out my.estpkg.json --key mykey.private.pem --key-id mykey
+# administrator, on the server (inside Docker: docker compose exec estampes ...)
+node scripts/estampes-module.js trust mykey mykey.public.pem "My Name" org.example
+node scripts/estampes-module.js copy my.estpkg.json      # into <storage>/modules/inbox/
+node scripts/estampes-module.js verify my.estpkg.json
+```
+
+Then open the Store: the package appears under installable packages. Press install, confirm, and approve it on the server with `node scripts/estampes-module.js approve <planId>` (the Store shows the exact command). Installing does not enable: enabling is a second plan that shows the permissions.
+
+| Action | Needs |
+| --- | --- |
+| install, update, purge | your confirmation **and** administrator approval from the server |
+| enable, disable, rollback, uninstall | your confirmation (enabling high-risk permissions also needs administrator approval) |
+
+What the server checks before a version becomes active: size (2 MB) and safe file paths; the manifest and `coreCompatibility`; a runtime this server has (`declarative`; `builtin` is refused for packages and built-in ids cannot be replaced); the digest; a signature by a key listed in `<storage>/modules/trusted-keys.json` whose `scopes` cover the module id (keys only publish under their own prefixes); then the module's examples run through the same checks as `execute_module` on a throwaway canvas. A failure at any step leaves the old version active.
+
+Layout under `<storage>/modules/`:
+
+```
+inbox/*.estpkg.json                     what the administrator offers
+packages/<id>/<version>/package.json    verified, never modified (read-only)
+lock.json                               active digest per module and the history
+trusted-keys.json                       who may publish which ids
+approvals/<planId>.json                 single-use administrator approvals
+registry.json, audit.jsonl              state, grants, audit log
+```
+
+Rollback restores a kept version byte for byte and checks it against `lock.json`; if a stored file was changed on disk, the module is marked failed at startup instead of running. Uninstall leaves canvas objects in place and keeps stored versions; purge deletes the stored versions.
+
+Declarative modules (code-free): each capability lists scene operations with `{"$param": "name"}` placeholders (optionally `"default"`), filled from the validated input. See `examples/modules/callout`.
+
 ## Roadmap
 
 Each phase is its own change and keeps the rules above.
 
-1. Contract, scene objects, Graph and the Store (this release).
-2. Managed packages: a trusted registry, hashes and signatures, a version lock file, transactional install, rollback and administrator approval separate from the connector key. No arbitrary npm packages, no shell, no access to the Docker socket.
+1. Contract, scene objects, Graph and the Store (0.10.0).
+2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
 3. An isolated WASM runtime with CPU, memory, output and time limits.
 4. Adapters for external engines and services (OCR, plate solving), and an author SDK.
