@@ -1,6 +1,6 @@
 # Visual Surface, panels and layouts
 
-A **Surface** is the one place where the photo / Graph canvas and module panels (today: the scientific calculator) are shown together. Modules extend one shared visual state; they are not separate apps. This page describes the server side (`estampes.surface/1`, `estampes.panel/1`); the widget that draws it is described in [Workbench](WORKBENCH.md) once it ships.
+A **Surface** is the one place where the photo / Graph canvas and module panels (today: the scientific calculator) are shown together. Modules extend one shared visual state; they are not separate apps. This page describes `estampes.surface/1` and `estampes.panel/1`..
 
 Both formats are Estampes's own, not part of MCP.
 
