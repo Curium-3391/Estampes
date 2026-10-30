@@ -40,6 +40,8 @@ export const config = Object.freeze({
   cacheBytes: num("ESTAMPES_CACHE_MB", 160, { min: 16, max: 65536 }) * 1024 * 1024,
   cacheImages: num("ESTAMPES_CACHE_IMAGES", 12, { min: 1, max: 1000 }),
   cacheTtlMs: num("ESTAMPES_CACHE_TTL_MINUTES", 60, { min: 1, max: 525600 }) * 60 * 1000,
+  // cloudflared metrics address of the optional quick tunnel (compose sets it).
+  tunnelMetrics: str("ESTAMPES_TUNNEL_METRICS"),
   logFormat: str("ESTAMPES_LOG_FORMAT", "text") === "json" ? "json" : "text",
 });
 

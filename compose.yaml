@@ -1,4 +1,5 @@
-# docker compose up -d
+# docker compose up -d                      (this machine only)
+# docker compose --profile tunnel up -d     (plus a temporary public https address)
 # Settings come from .env (copy .env.example). Data lives in the named
 # volume "estampes-data" and survives `docker compose down` and updates;
 # only `docker compose down -v` deletes it.
@@ -18,6 +19,8 @@ services:
       PORT: "8787"
       ESTAMPES_STORAGE_DIR: /data
       ESTAMPES_REQUIRE_KEY: "1"
+      # Read the quick tunnel's address when the "tunnel" profile runs.
+      ESTAMPES_TUNNEL_METRICS: http://tunnel:20241
     ports:
       # Only this machine can reach the server by default; put a reverse
       # proxy or tunnel with https in front. ESTAMPES_BIND=0.0.0.0 in .env
@@ -46,6 +49,25 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # Optional: a temporary public https address with no account and no
+  # router setup.  docker compose --profile tunnel up -d
+  # then read the ChatGPT connector URL with:
+  #   docker compose logs estampes | grep tunnel
+  # The address changes whenever this container restarts; for lasting use
+  # put your own domain or a named tunnel in front instead.
+  tunnel:
+    image: cloudflare/cloudflared:2025.10.0
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:20241 --url http://estampes:8787
+    depends_on:
+      - estampes
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   estampes-data:

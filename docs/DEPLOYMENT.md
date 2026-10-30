@@ -8,7 +8,7 @@ Estampes is one Node 22 process. ChatGPT (or any MCP client) connects to `https:
 | Data survives restarts | yes (volume `/data`) | no (dyno disk is wiped) | no (free plan) |
 | CPU | amd64, arm64 (Raspberry Pi 4/5 64-bit, ARM NAS, Apple Silicon) | amd64 | amd64 |
 
-ChatGPT needs a **public https** address. A home server needs a reverse proxy with TLS (Caddy, Traefik, nginx, a NAS's built-in proxy) or a tunnel (Cloudflare Tunnel, Tailscale Funnel) in front of port 8787.
+Each person runs their own server for themselves; nothing is shared or centrally managed. ChatGPT needs a **public https** address to reach it. The quickest way is the built-in temporary tunnel below; for lasting use put a reverse proxy with TLS (Caddy, Traefik, nginx, a NAS's built-in proxy) or a named tunnel (Cloudflare Tunnel, Tailscale Funnel) in front of port 8787.
 
 ## Docker
 
@@ -18,6 +18,17 @@ cd Estampes
 cp .env.example .env
 docker compose up -d
 ```
+
+### Quick public address (temporary tunnel)
+
+```sh
+docker compose --profile tunnel up -d
+docker compose logs estampes | grep tunnel
+```
+
+The second command prints the ChatGPT connector URL, e.g. `https://calm-words-here.trycloudflare.com/mcp?key=…`; paste it into ChatGPT as a custom MCP server (No authentication). It uses a Cloudflare quick tunnel: no account, no router or firewall changes, nothing listening on your network. The address changes every time the `tunnel` container restarts (then update the connector in ChatGPT), Cloudflare gives it no uptime guarantee, and the log line contains your key, so keep the log to yourself. Stop it with `docker compose --profile tunnel down`.
+
+### Details
 
 - The image is built locally for your machine's CPU. `docker compose ps` shows `healthy` once `/healthz` answers.
 - **Access key.** If `.env` has no `ESTAMPES_ACCESS_KEY`, the first start generates one, saves it as `/data/access-key` (mode 600) and prints the connector URL once in the log. Read it again with `docker compose exec estampes cat /data/access-key`; connect ChatGPT to `https://<your host>/mcp?key=<key>`. Delete the file and restart to rotate it. `ESTAMPES_ALLOW_OPEN=1` runs without a key (closed networks only).
