@@ -2,6 +2,18 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
+
+## Unreleased
+
+- Docs: README, the Chinese guide, ARCHITECTURE, TOOLS, DEPLOYMENT and VISION brought up to date (all docs indexed, modules, calculator container, surface tools, `ESTAMPES_ADMIN_KEY`, `ESTAMPES_MODULE_ALLOW_UNSIGNED`).
+- **Capability profile.** Besides its input schema, a capability can describe when to use it and when not to, input limits, cost (latency, resources, billing), data flow, how far to trust the result and how to check it, and what to do when it fails. The model reads it through `get_module_capabilities` and the Store shows it; network capabilities must declare what they send, and the text may be translated (`profileI18n`) but not the cost or data flow. Filled in for Graph, plate solving and the example OCR adapter.
+- **Info cards.** A new scene object `info-card` (title, label/value rows, optional https links) shown beside the canvas, not on the picture. The widget groups cards by module; each folds open and closed, starts folded, can be hidden by the module (`shown: false`) or the user, and hidden cards are listed so they can be brought back.
+- Plate solving adds hms/dms, field size, constellation tags, objects in the field, result and Legacy Surveys links to its result and an info card (`showCard`), and a new `sky_position` capability draws an all-sky map with the solved field outlined. It asks for `workspace.write` (it can make a new canvas), so an already enabled install must be approved again for that capability.
+- Plate solving marks the brightest named stars first (for example Altair, Deneb, Vega), then deep-sky objects, and skips labels that would overlap one already drawn.
+- Browser test `tests/layers-e2e.test.js` (shared helper `tests/helpers/widget-host.js`): a base image, an image laid over it, a Graph curve and marks are all layers; fading one to 50% and moving it down are saved on the server. No product change: layers, opacity, order and `add_image_layer` already shipped.
+- Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
+- Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
+
 ## 0.19.5 — Several calculator windows
 
 - A surface can hold up to four calculator windows, each with its own notebook (`maxInstances` 4); extra windows are titled 科學計算機 2, 3, 4 and close independently without losing data.
@@ -14,10 +26,6 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - `import_workspace_bundle` rebuilds them from known fields under new ids and never overwrites. Calculator results come in **stale** (a file cannot prove SymPy computed them) with their Graph links marked stale; press 重算 or 更新所有連結. Links are remapped to the imported images. Limits: 20 notebooks, 200 cells each, bounded sizes.
 - Tests: `tests/bundle-extras.test.js`.
 
-## 0.19.1 — Stop a calculation
-
-- Calculator panel: **停止** cancels a running calculation or recompute. `calculate` and `recompute` accept a `job` id; new widget-only tool `surface_cas_cancel`. A cancelled calculation leaves no cell and no error behind; the service remembers a cancel that arrives before the job starts.
-
 ## 0.19.3 — Links follow their cells
 
 - Plots made from calculator cells can be refreshed: **更新所有連結** recomputes stale cells and redraws their Graph plots (`refresh_links`, widget only). Turn on **自動更新 Graph** (`set_options autoRefresh`) and a changed definition or assumption does it for you. A link remembers its plot domain; a plot you deleted is reported, not recreated; a cell that cannot be recomputed keeps its stale links.
@@ -29,16 +37,9 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Fix: the widget's `define` call was refused (`by` was not in the schema); definitions typed in the panel now work.
 - Tests: `tests/surface-open.test.js`.
 
-## Unreleased
+## 0.19.1 — Stop a calculation
 
-- Docs: README, the Chinese guide, ARCHITECTURE, TOOLS, DEPLOYMENT and VISION brought up to date (all docs indexed, modules, calculator container, surface tools, `ESTAMPES_ADMIN_KEY`, `ESTAMPES_MODULE_ALLOW_UNSIGNED`).
-- **Capability profile.** Besides its input schema, a capability can describe when to use it and when not to, input limits, cost (latency, resources, billing), data flow, how far to trust the result and how to check it, and what to do when it fails. The model reads it through `get_module_capabilities` and the Store shows it; network capabilities must declare what they send, and the text may be translated (`profileI18n`) but not the cost or data flow. Filled in for Graph, plate solving and the example OCR adapter.
-- **Info cards.** A new scene object `info-card` (title, label/value rows, optional https links) shown beside the canvas, not on the picture. The widget groups cards by module; each folds open and closed, starts folded, can be hidden by the module (`shown: false`) or the user, and hidden cards are listed so they can be brought back.
-- Plate solving adds hms/dms, field size, constellation tags, objects in the field, result and Legacy Surveys links to its result and an info card (`showCard`), and a new `sky_position` capability draws an all-sky map with the solved field outlined. It asks for `workspace.write` (it can make a new canvas), so an already enabled install must be approved again for that capability.
-- Plate solving marks the brightest named stars first (for example Altair, Deneb, Vega), then deep-sky objects, and skips labels that would overlap one already drawn.
-- Browser test `tests/layers-e2e.test.js` (shared helper `tests/helpers/widget-host.js`): a base image, an image laid over it, a Graph curve and marks are all layers; fading one to 50% and moving it down are saved on the server. No product change: layers, opacity, order and `add_image_layer` already shipped.
-- Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
-- Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
+- Calculator panel: **停止** cancels a running calculation or recompute. `calculate` and `recompute` accept a `job` id; new widget-only tool `surface_cas_cancel`. A cancelled calculation leaves no cell and no error behind; the service remembers a cancel that arrives before the job starts.
 
 ## 0.19.0 — Workbench UI
 
@@ -90,6 +91,16 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - `scripts/estampes-module.js` also makes keys, packs and verifies packages, trusts publisher keys for module id prefixes, and lists the inbox. Example: `examples/modules/callout`.
 - Declarative modules (scene-operation templates with `$param` placeholders, no code) can be installed.
 
+## 0.11.0 — Analysis engines, workspaces and bundles
+
+- `detect_features`: analysis engines (`components`, `blobs`, `lines`, `circles`, optional `ocr` when tesseract.js is installed) return structured candidate detections with geometry, attributes and a ready mark; engines never write to the canvas. `docs/IMAGE-CAPABILITIES.md` maps every item of the image-preprocessing catalogue to done, plugin, external or later. See [Analysis engines](docs/IMAGE-PIPELINE.md).
+- Workspaces ([docs/WORKSPACES.md](docs/WORKSPACES.md)): any number of images in one place, each with its own marks, layers and coordinates. New tools `create_workspace`, `edit_workspace`, `merge_workspaces`, `split_workspace`, `undo_workspace_change` and `get_workspace_state`, and `GET /api/v1/workspaces/<hex>`.
+- Merge, split, move, copy and link are non-destructive: they change which canvases a workspace shows, never flatten images, and never delete an image or a mark. Linked marks are shared with the original canvas; copies remember their source. Each change previews first, is checked against the revision it was planned on, can be retried with an idempotency key, is read back and verified against the plan, and can be undone.
+- `present_visual { workspaceId }` shows a workspace in the canvas: three or more images side by side (placement and 90° rotation respected), each with its own marks, layers, links and claims; the user can draw, select, move, edit layers and review claims on every image.
+- A single canvas or a paired view can be read, merged or split as a workspace without converting it.
+- `.estampes` bundles: `export_workspace_bundle` and `import_workspace_bundle` carry a workspace to another server or device as one ZIP (images, marks, layers, claims and links as editable data, with checksums). Import validates everything, never overwrites an existing canvas, is idempotent, and verifies the result against the bundle's totals. `GET /export/ws/<hex>/workspace.estampes` is signed like the other exports.
+- Paired-view links are now stored per annotation set, so they also show in workspaces (existing stored links are read unchanged).
+
 ## 0.10.1 — PDF pages
 
 - `render_pdf_page`: render one physical PDF page at 36–600 dpi as an ordinary image, with the printed page label, optional embedded text boxes (no OCR needed), and storage of the PDF so a page can be rendered again by hash. Optional: needs `pdfjs-dist` and `@napi-rs/canvas` (`--build-arg ESTAMPES_WITH_PDF=1` for Docker); without them the tool reports it is unavailable. See [PDF pages](docs/IMAGE-PIPELINE.md#pdf-pages).
@@ -111,17 +122,6 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - `assess_image` (sharpness, noise, contrast, clipping, colour cast, tilt) and `calibrate_scale` / `measure_image` (distance, path, area, angle with uncertainty).
 - Fix: one-channel images stay one channel through normalize, contrast, brightness, sharpen, denoise and invert, and the adaptive threshold reads its local mean from the right buffer. Recipe ids of processed views that used these operators change.
 
-- Workspaces ([docs/WORKSPACES.md](docs/WORKSPACES.md)): any number of images in one place, each with its own marks, layers and coordinates. New tools `create_workspace`, `edit_workspace`, `merge_workspaces`, `split_workspace`, `undo_workspace_change` and `get_workspace_state`, and `GET /api/v1/workspaces/<hex>`.
-- Merge, split, move, copy and link are non-destructive: they change which canvases a workspace shows, never flatten images, and never delete an image or a mark. Linked marks are shared with the original canvas; copies remember their source. Each change previews first, is checked against the revision it was planned on, can be retried with an idempotency key, is read back and verified against the plan, and can be undone.
-- `present_visual { workspaceId }` shows a workspace in the canvas: three or more images side by side (placement and 90° rotation respected), each with its own marks, layers, links and claims; the user can draw, select, move, edit layers and review claims on every image.
-- A single canvas or a paired view can be read, merged or split as a workspace without converting it.
-- `.estampes` bundles: `export_workspace_bundle` and `import_workspace_bundle` carry a workspace to another server or device as one ZIP (images, marks, layers, claims and links as editable data, with checksums). Import validates everything, never overwrites an existing canvas, is idempotent, and verifies the result against the bundle's totals. `GET /export/ws/<hex>/workspace.estampes` is signed like the other exports.
-- Paired-view links are now stored per annotation set, so they also show in workspaces (existing stored links are read unchanged).
-- Arrows no longer mean "the head is the target" by default. The canvas's default purpose is now free annotation: each arrow is sent with `semanticHint: "unspecified"` and its direction (heading and angle in image pixels), and GPT reads the meaning from your note, so "I think the current flows this way" is discussed as a direction. Only the 「只是指出這裡」 purpose makes the head the referent, and a note that says otherwise still wins. See [What your marks mean](docs/TOOLS.md#what-your-marks-mean).
-- Strokes that belong together are recognised without being merged. Each stroke you draw records its order, time since the first stroke of the send and input device; Estampes proposes candidate gesture groups (for example a freehand arrow drawn as a shaft plus a head, with its direction) and labels them as unconfirmed guesses for GPT. Below the canvas you can confirm or reject a candidate, or group and ungroup strokes yourself (`review_gesture_group`); verdicts are saved with the canvas, and `get_visual_state` includes `gestureGroups`.
-- New docs: `docs/USAGE.md`, `docs/TOOLS.md`; `docs/ARCHITECTURE.md` rewritten to describe the current system.
-- Licensed under the Mozilla Public License 2.0 (`LICENSE`, `package.json`).
-
 ## 0.9.0 — Image pipeline: source, derived views and coordinates
 
 - `process_image` takes `sampling` (`preview` = unchanged default, `working`, `native` = pixels cut from the original file beyond the 4096 px working copy) and `output` (size; PNG, lossless WebP or JPEG). Ops run at the analysis resolution and the result is resized only for delivery; enlarging is opt-in and flagged as interpolation.
@@ -137,6 +137,10 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Every unverified claim waits for you, not just low-confidence links. Each piece of evidence zooms to its region. GPT's notes on marks can be confirmed or rejected too (`review_visual_finding`), with an optional reason, and withdrawn.
 - Rejected claims are remembered apart from their marks, so they survive deleting, redrawing and reset. GPT repeating one at the same place without a new kind of evidence is refused and told why.
 - `estampes.visual/2` ([Visual protocol 2](docs/PROTOCOL-V2.md)); version 1 documents are still read.
+- Arrows no longer mean "the head is the target" by default. The canvas's default purpose is now free annotation: each arrow is sent with `semanticHint: "unspecified"` and its direction (heading and angle in image pixels), and GPT reads the meaning from your note, so "I think the current flows this way" is discussed as a direction. Only the 「只是指出這裡」 purpose makes the head the referent, and a note that says otherwise still wins. See [What your marks mean](docs/TOOLS.md#what-your-marks-mean).
+- Strokes that belong together are recognised without being merged. Each stroke you draw records its order, time since the first stroke of the send and input device; Estampes proposes candidate gesture groups (for example a freehand arrow drawn as a shaft plus a head, with its direction) and labels them as unconfirmed guesses for GPT. Below the canvas you can confirm or reject a candidate, or group and ungroup strokes yourself (`review_gesture_group`); verdicts are saved with the canvas, and `get_visual_state` includes `gestureGroups`.
+- New docs: `docs/USAGE.md`, `docs/TOOLS.md`; `docs/ARCHITECTURE.md` rewritten to describe the current system.
+- Licensed under the Mozilla Public License 2.0 (`LICENSE`, `package.json`).
 
 ## 0.7.2 — Temporary public address
 
