@@ -50,6 +50,27 @@ async function waitFor(ctx, poll) {
   }
 }
 
+// Which annotations to draw: bright named stars first, then deep-sky objects,
+// then the rest; a label that would sit on one already drawn is skipped, so
+// a crowded field shows fewer, readable marks instead of a pile of text.
+const rank = (a) => (a.type === "bright_star" ? 0 : /^(ngc|ic|messier)/i.test(String(a.type ?? "")) ? 1 : 2);
+export function pickMarks(annotations, { width, height, limit }) {
+  const usable = annotations.filter((a) => Array.isArray(a.names) && a.names.length && Number.isFinite(a.pixelx) && Number.isFinite(a.pixely)
+    && a.pixelx >= 0 && a.pixelx <= width && a.pixely >= 0 && a.pixely <= height);
+  const order = usable.map((a, i) => ({ a, i })).sort((p, q) => rank(p.a) - rank(q.a) || p.i - q.i);
+  const taken = [], picked = [];
+  for (const { a } of order) {
+    if (picked.length >= limit) break;
+    const name = String(a.names[0]).slice(0, 60);
+    const rpx = Math.max(8, Number(a.radius) || 0);
+    const box = { x0: a.pixelx - rpx, x1: a.pixelx + rpx + 6 + name.length * 7, y0: a.pixely - Math.max(rpx, 8), y1: a.pixely + Math.max(rpx, 8) };
+    if (taken.some((t) => box.x0 < t.x1 && box.x1 > t.x0 && box.y0 < t.y1 && box.y1 > t.y0)) continue;
+    taken.push(box);
+    picked.push({ a, name, x: a.pixelx / width, y: a.pixely / height, r: Math.min(0.08, rpx / width) });
+  }
+  return picked;
+}
+
 const num = (v, digits) => (typeof v === "number" && Number.isFinite(v) ? Number(v.toFixed(digits)) : undefined);
 
 export async function run(capability, params, ctx) {
@@ -91,14 +112,9 @@ export async function run(capability, params, ctx) {
   const ann = await get(ctx, "/api/jobs/" + jobId + "/annotations/");
 
   const { width, height } = ctx.canvas;
-  const limit = params.maxMarks ?? 20;
-  const named = (ann.annotations ?? []).filter((a) => Array.isArray(a.names) && a.names.length && Number.isFinite(a.pixelx) && Number.isFinite(a.pixely)
-    && a.pixelx >= 0 && a.pixelx <= width && a.pixely >= 0 && a.pixely <= height).slice(0, limit);
   const operations = [];
   const objects = [];
-  for (const a of named) {
-    const name = String(a.names[0]).slice(0, 60);
-    const x = a.pixelx / width, y = a.pixely / height, r = Math.min(0.08, Math.max(8, Number(a.radius) || 0) / width);
+  for (const { a, name, x, y, r } of pickMarks(ann.annotations ?? [], { width, height, limit: params.maxMarks ?? 20 })) {
     operations.push({ op: "object.create", type: "shape", props: { kind: "circle", x, y, r, style: { color: "cyan", width: 1.5 } } });
     operations.push({ op: "object.create", type: "shape", props: { kind: "text", x: Math.min(0.97, x + r + 0.004), y, text: name, size: 12, style: { color: "cyan" } } });
     objects.push({ name, type: a.type ?? undefined, x: Math.round(a.pixelx), y: Math.round(a.pixely) });

@@ -8,6 +8,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Plate solving marks the brightest named stars first (for example Altair, Deneb, Vega), then deep-sky objects, and skips labels that would overlap one already drawn.
 - Browser test `tests/layers-e2e.test.js` (shared helper `tests/helpers/widget-host.js`): a base image, an image laid over it, a Graph curve and marks are all layers; fading one to 50% and moving it down are saved on the server. No product change: layers, opacity, order and `add_image_layer` already shipped.
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 - Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.

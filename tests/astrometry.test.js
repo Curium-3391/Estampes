@@ -166,3 +166,18 @@ test("job tools return the canvas payload, so the widget shows the photo and not
   assert.ok(checked._meta["estampes/image"]);
   assert.equal(tools.get("get_module_job").spec._meta.ui.resourceUri, "ui://v");
 });
+
+test("marks: bright named stars come first and overlapping labels are skipped", async () => {
+  const { pickMarks } = await import("../src/builtin-modules/astrometry/index.js");
+  const ann = [
+    { type: "hd", names: ["18 Cyg"], pixelx: 300, pixely: 300, radius: 0 },
+    { type: "hd", names: ["19 Cyg"], pixelx: 305, pixely: 304, radius: 0 },
+    { type: "ngc", names: ["M27"], pixelx: 900, pixely: 600, radius: 40 },
+    { type: "bright_star", names: ["Altair"], pixelx: 1000, pixely: 400, radius: 0 },
+    { type: "bright_star", names: ["Deneb"], pixelx: 1004, pixely: 402, radius: 0 },
+    { type: "bright_star", names: ["Vega"], pixelx: 100, pixely: 100, radius: 0 },
+  ];
+  const marks = pickMarks(ann, { width: 2000, height: 1000, limit: 3 });
+  assert.deepEqual(marks.map((m) => m.name), ["Altair", "Vega", "M27"]);
+  assert.deepEqual(pickMarks(ann, { width: 2000, height: 1000, limit: 10 }).map((m) => m.name), ["Altair", "Vega", "M27", "18 Cyg"]);
+});
