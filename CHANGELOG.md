@@ -6,13 +6,17 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 
+## 0.13.0 — WebAssembly runtime
+
+- **Isolated WebAssembly modules.** A signed package can carry one `.wasm` file (`estampes.wasm/1`). It must import nothing, so it has no clock, files, network or host functions. Each call runs in its own child process with a time limit (the process is killed), a memory limit (the binary must declare a maximum within `limits.memoryMb`, checked before it ever runs) and an output limit; results go through the usual scene-operation checks. See [Modules](docs/MODULES.md#webassembly-modules) and `examples/modules/wasm-hello`.
+
 ## 0.12.0 — Managed module packages
 
 - **Install modules from signed packages.** A package is one JSON file (`estampes.package/1`: manifest, data files, ed25519 signature) that the administrator places in `<storage>/modules/inbox/`. There is no archive format, no download from URLs and no npm, so nothing to unzip or fetch. Installing checks size and path limits, the manifest, the Estampes version and runtime, the sha256 digest, and a signature by a trusted key whose scope covers the module id (`trusted-keys.json`); unsigned packages need `ESTAMPES_MODULE_ALLOW_UNSIGNED=1` and are always high risk.
 - **Transactional lifecycle:** install, update, rollback, uninstall and purge. Verified bytes go to an immutable store (`packages/<id>/<version>/`), the module's own examples run as a self-test on a throwaway canvas, and only then is the version activated and recorded in `lock.json`. Every version is kept, rollback restores the exact earlier bytes (also restoring its permissions) and is checked against the lock, and a package whose stored files no longer match is refused at startup. An update that asks for more permissions shows the difference first and never inherits them silently.
 - **Separate administrator approval.** Installs, updates and purges need the administrator on the server, not just the user's click: `node scripts/estampes-module.js approve <planId>` proves knowledge of `<storage>/admin-key`, which is separate from the connector key and never passes through the chat. The approval is a single-use file that is consumed on first use, whether or not it is valid.
 - `scripts/estampes-module.js` also makes keys, packs and verifies packages, trusts publisher keys for module id prefixes, and lists the inbox. Example: `examples/modules/callout`.
-- Declarative modules (scene-operation templates with `$param` placeholders, no code) can be installed; WASM modules are refused until their isolated runtime exists.
+- Declarative modules (scene-operation templates with `$param` placeholders, no code) can be installed.
 
 ## 0.10.1 — PDF pages
 

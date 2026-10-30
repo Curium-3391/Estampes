@@ -8,6 +8,7 @@ import { createLifecycle } from "./lifecycle.js";
 import { createRouter } from "./router.js";
 import { builtinRuntime } from "./runtimes/builtin.js";
 import { declarativeRuntime } from "./runtimes/declarative.js";
+import { wasmRuntime } from "./runtimes/wasm.js";
 import { createPackages, ensureDirs } from "./packages.js";
 import { createAdmin } from "./admin.js";
 import * as graph from "../builtin-modules/graph/index.js";
@@ -22,7 +23,7 @@ export async function createModuleHost({ storageDir = "", coreVersion, canvases,
   const audit = createAudit(dir);
   const registry = createRegistry({ dir, coreVersion, builtins });
   await registry.load();
-  const runtimes = { builtin: builtinRuntime, declarative: declarativeRuntime, ...extraRuntimes };
+  const runtimes = { builtin: builtinRuntime, declarative: declarativeRuntime, wasm: wasmRuntime, ...extraRuntimes };
   const admin = createAdmin({ storageDir, key: adminKey, audit });
   let packages = null;
   const host = { dir, audit, registry, runtimes, coreVersion, admin };

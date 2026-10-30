@@ -1,0 +1,111 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.example.wasmhello",
+  "name": "WebAssembly hello",
+  "description": "Example of an isolated WebAssembly module: writes a text label on the canvas.",
+  "version": "1.0.0",
+  "publisher": {
+    "name": "Example Publisher"
+  },
+  "license": "MPL-2.0",
+  "category": "diagram",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
+  "runtime": {
+    "kind": "wasm",
+    "entry": "hello.wasm",
+    "abi": "estampes.wasm/1"
+  },
+  "permissions": [
+    "canvas.write"
+  ],
+  "limits": {
+    "timeMs": 500,
+    "memoryMb": 16,
+    "outputKb": 64
+  },
+  "capabilities": [
+    {
+      "id": "hello",
+      "title": "Say hello",
+      "description": "Put a text label on the canvas.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    {
+      "id": "spin",
+      "title": "Loop forever (limit test)",
+      "description": "Runs until the time limit stops it. For tests. Needs go=true, so the install self-test skips it.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "go"
+        ],
+        "properties": {
+          "go": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "id": "grow",
+      "title": "Grow memory (limit test)",
+      "description": "Asks for as much memory as it can get. For tests. Needs go=true, so the install self-test skips it.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "go"
+        ],
+        "properties": {
+          "go": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "id": "trap",
+      "title": "Trap (limit test)",
+      "description": "Fails on purpose. For tests. Needs go=true, so the install self-test skips it.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "go"
+        ],
+        "properties": {
+          "go": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "id": "huge",
+      "title": "Oversized output (limit test)",
+      "description": "Returns more than the output limit. For tests. Needs go=true, so the install self-test skips it.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "go"
+        ],
+        "properties": {
+          "go": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  ]
+}

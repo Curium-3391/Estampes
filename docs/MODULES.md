@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.12.0 (the contract, the built-in Graph module, the Store and managed packages). Isolated runtimes and adapters are planned and marked below.
+Status: this page describes what is implemented in 0.13.0 (the contract, the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
 
 ## How it fits together
 
@@ -26,7 +26,7 @@ Estampes's own format (not an MCP standard). Validated strictly: unknown fields,
 | --- | --- |
 | `id` | Reverse-DNS name such as `org.estampes.graph`. A name, not proof that the publisher owns the domain. |
 | `version`, `coreCompatibility` | Module version; range of Estampes versions it works with (for example `>=0.10.0 <1.0.0`). |
-| `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), later `wasm`. |
+| `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), `wasm` (a WebAssembly file inside a signed package). |
 | `permissions` | What it may do, granted when enabled (below). |
 | `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, examples. |
 | `network`, `secrets` | Reserved for adapters: hosts it may call with a description of what data leaves, and named secrets the administrator provides. |
@@ -106,11 +106,21 @@ Rollback restores a kept version byte for byte and checks it against `lock.json`
 
 Declarative modules (code-free): each capability lists scene operations with `{"$param": "name"}` placeholders (optionally `"default"`), filled from the validated input. See `examples/modules/callout`.
 
+## WebAssembly modules
+
+A module that needs real code ships one `.wasm` file in its signed package (`runtime: {kind: "wasm", entry: "file.wasm", abi: "estampes.wasm/1"}`). It runs in its own child process, created for the call and killed afterwards, so nothing carries over between calls and an engine crash (for example an allocation failure) cannot take the server down. The module can import nothing: no clock, files, network or host functions, only the bytes it is handed. Limits come from the manifest `limits`:
+
+- `timeMs` (default 2000): the worker is terminated when it runs out.
+- `memoryMb` (default 16): the module's binary must declare a memory maximum no larger than this (and tables of at most 10,000 entries with a declared maximum); a package that declares more, none or shared memory is refused at verification, before anything runs.
+- `outputKb` (default 256): a longer reply is refused.
+
+ABI: export `memory`, `alloc(len) -> ptr` and `handle(ptr, len) -> ptr`. The host writes a JSON request `{capability, params, module, canvas}` at the pointer `alloc` returned; `handle` returns a pointer to a 4-byte little-endian length followed by a JSON reply `{operations, summary, data, method}`. The reply goes through the same scene-operation checks as any other module. A capability whose input has required fields and no `examples` is skipped by the install self-test. Example with a C source and build line: `examples/modules/wasm-hello`.
+
 ## Roadmap
 
 Each phase is its own change and keeps the rules above.
 
 1. Contract, scene objects, Graph and the Store (0.10.0).
 2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
-3. An isolated WASM runtime with CPU, memory, output and time limits.
+3. An isolated WebAssembly runtime with time, memory and output limits (0.13.0).
 4. Adapters for external engines and services (OCR, plate solving), and an author SDK.
