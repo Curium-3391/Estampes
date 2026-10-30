@@ -7,4 +7,8 @@ export const builtinRuntime = {
     const { entry, ...context } = ctx;
     return mod.runtime.run(capability, params, { ...context, ...(entry ? { image: entry } : {}) });
   },
+  // Optional: a built-in may record what the Core did with its output.
+  async after(mod, capability, params, ctx, outcome) {
+    return mod.runtime.after?.(capability, params, ctx, outcome);
+  },
 };

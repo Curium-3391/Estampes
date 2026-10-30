@@ -14,8 +14,9 @@ import { createEgress, createSecrets } from "./egress.js";
 import { createPackages, ensureDirs } from "./packages.js";
 import { createAdmin } from "./admin.js";
 import * as graph from "../builtin-modules/graph/index.js";
+import * as cas from "../builtin-modules/cas/index.js";
 
-export const BUILTIN_MODULES = [graph];
+export const BUILTIN_MODULES = [graph, cas];
 
 // canvases: { ensure(imageId), create(options), save(entry, history) }
 // adminKey: from admin.js; without it (and without storage) changes that

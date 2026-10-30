@@ -112,6 +112,10 @@ export function createRouter({ registry, audit, canvases, runtimes }) {
         await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
           note: manifest.id + "/" + capId });
       }
+      if (runtime.after) {
+        try { await runtime.after(mod, capId, input, ctx, { output, scene, entry }); }
+        catch (error) { audit.record({ kind: "run.after-failed", module: manifest.id, capability: capId, error: String(error?.message || error).slice(0, 300) }); }
+      }
       const ms = Date.now() - started;
       audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,
         created: scene.created.length, updated: scene.updated.length, deleted: scene.deleted.length, ms });

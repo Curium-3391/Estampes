@@ -22,7 +22,7 @@ export function createRegistry({ dir = "", coreVersion, builtins = [] } = {}) {
   for (const b of builtins) {
     const manifest = validateManifest(b.manifest, { coreVersion });
     if (manifest.runtime.kind !== "builtin") throw new Error(manifest.id + ": built-in modules use runtime builtin");
-    catalog.set(manifest.id, { manifest, runtime: { kind: "builtin", run: b.run }, source: "builtin" });
+    catalog.set(manifest.id, { manifest, runtime: { kind: "builtin", run: b.run, ...(b.after ? { after: b.after } : {}) }, source: "builtin" });
   }
   const file = dir ? join(dir, "registry.json") : null;
   let saving = Promise.resolve();

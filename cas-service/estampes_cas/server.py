@@ -86,6 +86,13 @@ class Service:
         if method == "health":
             return {"engine": {"name": "SymPy", "version": ops.VERSION}, "operations": list(ops.OPERATIONS), "running": len(self.running),
                     "limits": {"timeoutMs": LIMITS.timeout_ms, "maxExprChars": LIMITS.max_expr_chars, "maxMatrix": LIMITS.max_matrix, "maxPrecision": LIMITS.max_precision}}
+        if method == "parse":
+            from .latex_in import latex_to_text
+            from .parser import parse
+            p = req.get("params") or {}
+            src = latex_to_text(p["latex"]) if isinstance(p.get("latex"), str) else p.get("text")
+            ast = parse(src)
+            return {"ast": ast, "text": src}
         if method == "cancel":
             target = str((req.get("params") or {}).get("target", ""))[:64]
             pid = self.running.get(target)
