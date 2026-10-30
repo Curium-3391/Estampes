@@ -1,76 +1,81 @@
 # Estampes
 
-**A shared visual language for humans and AI.**
+**人與 AI 在同一張圖上指著說話。**
 
-Estampes is an experimental, open-source project exploring a simple idea: humans and AI should be able to **point at the same image** while talking, without leaving their conversation.
+> *English summary:* Estampes is an open-source ChatGPT plugin (an MCP server with MCP Apps widgets) that lets you and the model point at the same image inside the conversation. The model draws boxes, arrows, paths and notes over your original picture; you draw back on the same canvas and send it. Works with any image: photos, scans, handwriting, book pages, diagrams, maps. Each user runs their own instance (Docker, amd64/arm64). Docs are in Traditional Chinese.
 
-Inspired by Claude Debussy's *Estampes* (1903).
+名稱取自德布西的鋼琴曲集《版畫》（*Estampes*, 1903）。
 
-> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.5 visual evidence viewer was verified in ChatGPT on 2026-10-29. M0.4.7 is a new single-widget UI candidate (CI verified, live host testing pending)**: annotation/editing, original and local zoom now live in a single canvas; the separate PNG viewer is retained only for legacy/explicit use. `inspect_visual` remains a separate model-facing PNG tool; full model-vision visibility is not established by this viewer test. General-purpose image grounding and arbitrary image imports remain unsolved.
+## 能做什麼
 
-## The problem
+討論圖片時，常常要截圖、另外開編輯器畫圈、再重新上傳，然後來回問「是哪一個？」。Estampes 把這些步驟放回對話裡：
 
-Multimodal assistants can often discuss images, but a basic exchange about a specific component still involves screenshots, drawing circles in a separate editor, reuploading, and multiple rounds of "which one?" clarification.
+- **GPT 指給你看**：在原圖上畫框、箭頭、折線、手繪線和文字標記，每個標記可以附備註和狀態。
+- **你指給 GPT 看**：在同一張畫布上用筆、螢光筆、框、箭頭標出位置，寫一句話，按送出。
+- **不改動原圖**：標記是獨立的圖層，可以顯示、隱藏、改名、排序、調透明度、鎖定。
+- **看清楚細節**：畫布內可以縮放和平移，放大時載入原始解析度；GPT 可以對局部做對比增強、銳化、降噪、二值化、邊緣偵測或加上座標格線再判讀。
+- **兩張圖並排**：左右對照兩張不同的圖（例如圖紙與實物、修改前與修改後），GPT 記錄兩邊對應的位置與信心程度，由你確認或否決。
+- **跨回合、跨對話**：標記、圖層、變更歷史都存在你自己的伺服器上，可以匯出成圖片和分層 SVG（可用 Inkscape 開啟），或匯出 JSON 之後再載入。
 
-Estampes aims to remove that friction.
+圖片來源只用 ChatGPT 原生的方式：在對話中上傳、拍照，或由 GPT 提供公開網址。Estampes 負責像素處理和座標，**辨識和判斷仍然是 GPT 做的**，不確定的位置會標示出來。
 
-## Desired experience
+## 快速開始
 
-- **AI → human:** The assistant identifies and points to relevant objects using arrows, boxes, highlights, labels, or paths over an original image.
-- **Human → AI:** The user draws or selects a region on the same image, then asks a question about it.
-- **Shared context:** Both parties can refer to the same image and annotation IDs across turns.
-- **Native-feeling interaction:** Annotation should happen inside the chat experience, not in a separate website or image editor.
-- **Preserve the source:** Annotations are independent overlays, not destructive edits to the image.
-
-## Design principles
-
-1. **Conversation first.** Estampes is not another chatbot or a general-purpose whiteboard.
-2. **Grounded, not guessed.** Uncertain locations must be distinguishable from confirmed ones.
-3. **Source-preserving.** Keep image identity, dimensions, and annotation geometry explicit.
-4. **Bidirectional by design.** Both human and assistant annotations matter.
-5. **Portable.** Prefer model-agnostic annotation formats and lightweight integrations.
-6. **Low-friction.** No extra app or context switch in the intended end-user workflow.
-
-## Run your own server
+每個人自己架一台。最簡單的方式是 Docker（amd64、arm64 都可以，包括 Raspberry Pi、NAS、迷你電腦）：
 
 ```sh
 git clone https://github.com/Curium-3391/Estampes.git
 cd Estampes
 cp .env.example .env
 docker compose up -d
+docker compose exec estampes cat /data/access-key   # 第一次啟動自動產生的金鑰
 ```
 
-Each person runs their own copy. For a temporary public https address ChatGPT can reach, use `docker compose --profile tunnel up -d` and read the connector URL with `docker compose logs estampes | grep tunnel`. Runs on amd64 and arm64 (Raspberry Pi, NAS, mini PC); images, marks, layers, SVGs and history are kept in a Docker volume. Heroku (Deploy button) and Render (`render.yaml`) also work. See [Deployment](docs/DEPLOYMENT.md). Everything on a canvas can be read as one host-neutral JSON document; see [Visual protocol 1](docs/PROTOCOL-V1.md).
+ChatGPT 需要一個公開的 https 網址才連得到。想先試用，可以開內建的臨時通道（Cloudflare quick tunnel，不需要帳號，也不用改路由器設定），第二行指令會印出完整的連接網址：
 
-## Development roadmap
+```sh
+docker compose --profile tunnel up -d
+docker compose logs estampes | grep tunnel
+```
 
-- [ ] **M0 — ChatGPT plugin number-line PoC:** The in-chat AI → widget → user → GPT round trip is **host-verified** (2026-10-29). Remaining: resizing, repeated interactions, and additional coordinate cases.
-- [x] **M0.4 — Generic 2D visual surface:** In-chat point/rectangle and user-to-GPT transmission have been observed working on the landscape demo. This does **not** establish semantic accuracy or reliable author preservation.
-- [ ] **M0.4.1 — Grounding and provenance correction:** Server resolves named demo objects from explicit scene landmarks; user marks have a separate replay channel and unverified AI coordinates are marked as such. Awaiting host verification.
-- [ ] **M0.4.2 — Annotation/context protocol:** Explicit intent selector, optional user note and manually supplied quote, canonical v0.2 event and context-aware GPT message. Implemented; live host verification pending.
-- [ ] **M0.4.3 — Visual Input Bridge:** `inspect_visual` returns real PNG pixels and source-coordinate metadata from demo artwork, separating Estampes geometry from GPT object interpretation. Live model vision visibility not yet verified.
-- [x] **M0.4.5 — Inline visual evidence viewer:** Dedicated `present_visual_evidence` renderer shows three real PNG views (marked full image, pristine full image, enlarged pristine crop) inside ChatGPT. Confirmed by user screenshots on 2026-10-29 for `demo:landscape`, point `(0.82, 0.49)`. This validates the **human-visible render path**, not general model perception.
-- [ ] **M0.4.6 — Evidence-first model annotation:** Removed object-name/scene-anchor lookup from the model-facing `present_visual` schema. AI must supply coordinates rather than ask the plugin for `house`/other labeled positions. CI checks this; blind image grounding is still unverified. See [M0.4.6 grounding evaluation](docs/M0-4-6.md).
-- [ ] **M0.4.7 — Unified shared canvas:** Combined the original image, annotation editor and local zoom in one SVG surface; optional collapsed context, author-specific palette, no routine duplicate viewer. CI passed; ChatGPT one-widget acceptance pending. See [M0.4.7](docs/M0-4-7.md).
-- [x] **M0.4.8 — Deployment hardening:** Optional access key, rate limit, CORS allowlist, committed lockfile, single version source, and widget-only image payload for the legacy viewer. Host-verified in ChatGPT on 2026-10-29, together with the M0.4.7 single-canvas flow. See [M0.4.8](docs/M0-4-8.md) and [Deployment](docs/DEPLOYMENT.md).
-- [ ] **M0.5 — Real-image preprocessing:** `load_image` (ChatGPT file params or public https URL), `process_image` (CLAHE, sharpen, denoise, adaptive/Otsu threshold, edges, zoomed regions) and `overlay_grid` (labelled grid with source-coordinate cell centres). M0.5.1: `present_visual` shows the real photo (original by default, optional processed tabs) and takes the user's marks back. 0.5.3–0.5.5: polylines and freehand drawing, pens and highlighter, verification image, crop coordinates, persistent marks with notes, undo/redo, pixel reload. 0.5.7–0.5.9: zoom and pan in the canvas, layers you can show or hide. 0.6.0: paired view, two different images side by side with links between their marks that GPT records and the user reviews. 0.7.0: layers you can rename, reorder, fade and lock; select one mark to move, restyle or delete it, including marks from earlier turns; disk storage; Docker, Heroku; `estampes.visual/1` protocol. Upload path and canvas verified live. See [M0.5](docs/M0-5.md).
-- [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
-- [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
-- [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
-- [ ] **M4 — Complex real-world imagery and evaluation:** Progress to diagrams and PCBs only after simpler cases work; measure accuracy, clarification turns, and task completion.
+臨時通道每次重啟網址都會變。長期使用請改用反向代理或具名通道。在 ChatGPT 網頁版 Plugins → **Add custom MCP server** 填入：
 
-**Integration requirement:** Estampes is a ChatGPT-native plugin experience, not a standalone website or chatbot. Use an MCP server + MCP Apps UI inside the conversation for M0; evaluate ChatGPT Plugin Extensions for deeper native integrations.
+```
+https://<你的網址>/mcp?key=<金鑰>
+```
 
-See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md), and [M0.4 visual surface guide](docs/M0-4.md), [M0.4.1 grounding correction](docs/M0-4-1.md), [Protocol v0.2 draft](docs/PROTOCOL-V0.2.md), and [M0.4.2 testing](docs/M0-4-2.md), and [M0.4.3 visual input bridge](docs/M0-4-3.md).
+驗證方式選 **No authentication**（金鑰已經在網址裡）。這行網址含有金鑰，請不要給別人看。完整步驟、Heroku 與 Render、所有環境變數見 [部署](docs/DEPLOYMENT.md)。
 
-## Integration caveat
+本機開發（Node 22）：
 
-Current client/plugin APIs may not expose images already displayed by the chat host, nor permit adding layers directly over native image components. In-chat custom UI is a possible intermediate step; transparent access to host-rendered images is a longer-term goal, **not** a capability we assume exists.
+```sh
+npm ci
+npm test
+npm start          # http://localhost:8787/mcp
+```
 
-## Contributing
+## 文件
 
-Ideas, technical feedback, reproducible test cases, and accessibility suggestions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+| 文件 | 內容 |
+| --- | --- |
+| [部署](docs/DEPLOYMENT.md) | Docker、Heroku、Render、連接 ChatGPT、環境變數、儲存內容 |
+| [視覺協定 1](docs/PROTOCOL-V1.md) | `estampes.visual/1`：描述整張畫布的 JSON 格式，不綁定 ChatGPT |
+| [願景](docs/VISION.md) | 想解決的問題、使用情境、非目標 |
+| [架構](docs/ARCHITECTURE.md) | 系統分層（改寫中） |
+| [變更紀錄](CHANGELOG.md) | 各版本的變更 |
+| [開發歷程](docs/history/README.md) | 早期里程碑筆記與舊版協定草稿 |
+| [貢獻](CONTRIBUTING.md) | 歡迎哪些貢獻 |
 
-## License
+## 目前狀態與限制
 
-A license has not yet been selected and committed. Until then, please do not assume redistribution rights for the source code.
+目前版本見 [`package.json`](package.json) 或伺服器的 `/version`。
+
+- 上傳、畫布、標記、圖層、縮放、並排比對都已在 ChatGPT（網頁與手機）實測過。
+- GPT 對圖片內容的辨識準確度沒有保證，Estampes 不替模型判斷「這是什麼」。
+- ChatGPT 外掛 API 不允許直接在 ChatGPT 自己顯示的圖片（例如搜尋結果的圖）上疊圖層，所以圖片要經由 Estampes 的畫布顯示。
+- 存取金鑰是放在網址裡的共用密碼，不是個人帳號驗證；不要把連接網址分享給別人。
+- 只支援自架，沒有官方代管的服務。
+
+## 授權
+
+尚未選定授權條款。在授權條款提交之前，請不要假設擁有重新散布原始碼的權利。
