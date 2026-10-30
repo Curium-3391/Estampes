@@ -34,8 +34,18 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #check-view figcaption{font-size:.85rem;margin-top:6px}
 #findings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 #findings:empty{display:none}
-#findings li{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
-#findings li:hover{border-color:#8889}
+#findings li{list-style:none;font-size:.86rem;min-width:0}
+#findings .finding-group{border:1px solid #8885;border-radius:9px;overflow:hidden}
+#findings summary{cursor:pointer;padding:8px 10px;font-weight:600;overflow-wrap:anywhere}
+#findings .finding-list{list-style:none;margin:0;padding:0 6px 6px}
+#findings .finding-item{border-top:1px solid #8883}
+#findings .finding-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;width:100%;border:0;border-radius:5px;background:transparent;color:inherit;text-align:left;min-height:34px}
+#findings .finding-row .who{overflow:hidden;text-overflow:ellipsis;min-width:0}
+#findings .finding-row[aria-current=true]{background:#356BD61A;box-shadow:inset 3px 0 #356BD6}
+#findings .finding-row:focus-visible,#findings summary:focus-visible{outline:2px solid #356BD6;outline-offset:-2px}
+#findings .finding-detail{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 8px;padding:8px 10px}
+#findings .finding-detail>.note{flex-basis:100%}
+#findings .finding-detail .reason{min-width:0;max-width:100%;flex:1 1 12em}
 #findings .who{font-weight:700;white-space:nowrap}
 #findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
 #findings .note{overflow-wrap:anywhere}
@@ -697,30 +707,94 @@ const markOptions=()=>[
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
 ].filter(item=>shown(item.mark));
 const STATUS_TEXT={inspected:"GPT 表示已看過像素",uncertain:"GPT 不確定"};
+// Expansion is keyed by stable mark/layer identity, never array positions.
+let findingGroupsOpen=new Set(),focusedFinding=null,openFinding=null;
+const findingReasons=new Map();
+const findingKey=item=>item.mark.id||item.key;
+const findingGroup=m=>m.layer||"unlayered:"+(m.side??"left")+":"+(m.author??"assistant");
+const hasFinding=m=>!!m&&(!!m.note||!!m.status);
+function resetFindings(){findingGroupsOpen.clear();focusedFinding=null;openFinding=null;findingReasons.clear();}
+function findingRowFor(id){return [...findingsEl.querySelectorAll(".finding-row")].find(row=>row.dataset.mark===id);}
+function focusFinding(item,{details=false,locate=true}={}){
+ const m=item.mark,id=findingKey(item);
+ findingGroupsOpen.add(findingGroup(m));focusedFinding=id;selected=m.id;
+ openFinding=details?id:null;
+ selectedEvidence=null;viewMode="annotated";
+ if(locate){const [x,y,w]=cropBox(m).split(" ").map(Number);setCam({x,y,w});}
+ render();
+}
+function revealFinding(m){
+ const item=markOptions().find(o=>o.mark.id===m?.id&&hasFinding(o.mark));if(!item)return;
+ focusFinding(item,{details:true,locate:false});
+ requestAnimationFrame(()=>findingRowFor(findingKey(item))?.scrollIntoView({block:"nearest",behavior:"smooth"}));
+}
 function renderFindings(){
+ // Preserve focus and partially typed rejection reasons across canvas redraws.
+ const active=document.activeElement,activeItem=active?.closest?.(".finding-item"),activeId=activeItem?.dataset.mark;
+ const wasReason=active?.matches?.("input.reason"),wasRow=active?.matches?.(".finding-row");
+ const caret=wasReason?[active.selectionStart,active.selectionEnd]:null;
  findingsEl.replaceChildren();
+ const groups=new Map();
  for(const item of markOptions()){
-   const m=item.mark;if(!m.note&&!m.status)continue;
-   const li=document.createElement("li");li.dataset.key=item.key;
-   const who=document.createElement("span");who.className="who";who.style.color=item.author==="AI"?"#C98A2E":"#3C7FE0";
-   who.textContent=sideTag(m.side)+(m.label||(item.author==="AI"?"GPT":"YOU"));li.append(who);
-   if(m.note){const t=document.createElement("span");t.className="note";t.textContent=m.note;li.append(t);}
-   if(STATUS_TEXT[m.status]){const b=document.createElement("span");b.className="badge";b.textContent=STATUS_TEXT[m.status];li.append(b);}
-   if(m.note&&item.mark.id){
-     li.append(claimChip(m,"badge"));
-     if(m.previouslyRejected)li.append(el("span",{className:"badge",textContent:"曾被你否決，GPT 附了新證據"}));
-     reviewControls(li,m);
-     const ev=evidenceRow("mark:"+m.id,m);if(ev)li.append(ev);
+   if(!hasFinding(item.mark))continue;
+   const key=findingGroup(item.mark);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);
+ }
+ const order=new Map(layers.map((l,i)=>[l.id,i]));
+ for(const [key,items] of [...groups].sort((a,b)=>(order.get(a[0])??-1)-(order.get(b[0])??-1))){
+   const group=el("li",{className:"finding-group"}),details=el("details",{open:findingGroupsOpen.has(key)});
+   const pending=items.filter(({mark:m})=>m.note&&stateOf(m)==="unverified").length;
+   const m=items[0].mark,layer=layerOf(m.layer);
+   const name=sideTag(m.side)+(layer?.name||(m.author==="user"?"使用者標記（未分層）":"GPT 標記（未分層）"));
+   details.append(el("summary",{textContent:name+" · "+items.length+(items.every(({mark})=>mark.type==="polyline")?" 段 · ":" 項 · ")+pending+" 待確認"}));
+   details.addEventListener("toggle",()=>{if(!details.isConnected)return;details.open?findingGroupsOpen.add(key):findingGroupsOpen.delete(key);});
+   const list=el("ol",{className:"finding-list"});
+   for(const item of items){
+     const m=item.mark,id=findingKey(item),expanded=openFinding===id;
+     const li=el("li",{className:"finding-item",dataset:{key:item.key,mark:id}});
+     const row=el("button",{type:"button",className:"finding-row",dataset:{mark:id},
+       "aria-expanded":String(expanded),"aria-current":String(focusedFinding===id),
+       title:"點一下定位並高亮，再點展開詳情"});
+     row.append(el("span",{className:"who",style:"color:"+(item.author==="AI"?"#C98A2E":"#3C7FE0"),textContent:m.label||m.id||(item.author==="AI"?"GPT":"YOU")}),
+       el("span",{className:"badge",textContent:CONFIDENCE_TEXT[m.confidence]||"未提供信心"}),
+       el("span",{className:"badge"+(m.note&&stateOf(m)==="unverified"?" ask":""),textContent:m.note?(STATE_ZH[stateOf(m)]||"待確認"):"無待審說明"}));
+     li.append(row);
+     if(expanded){
+       const detail=el("div",{className:"finding-detail"});
+       if(m.note)detail.append(el("span",{className:"note",textContent:m.note}));
+       if(STATUS_TEXT[m.status])detail.append(el("span",{className:"badge",textContent:STATUS_TEXT[m.status]}));
+       if(m.note&&m.id){
+         detail.append(claimChip(m,"badge"));
+         if(m.previouslyRejected)detail.append(el("span",{className:"badge",textContent:"曾被你否決，GPT 附了新證據"}));
+         reviewControls(detail,m);
+         const reason=detail.querySelector("input.reason");
+         if(reason){reason.value=findingReasons.get(id)||"";reason.setAttribute("aria-label","否決理由（選填）");}
+         const ev=evidenceRow("mark:"+m.id,m);if(ev)detail.append(ev);
+       }
+       li.append(detail);
+     }
+     list.append(li);
    }
-   findingsEl.append(li);
+   details.append(list);group.append(details);findingsEl.append(group);
+ }
+ if(activeId&&(wasReason||wasRow)){
+   const row=findingRowFor(activeId),target=wasReason?row?.parentElement.querySelector("input.reason"):row;
+   target?.focus({preventScroll:true});if(target&&caret)target.setSelectionRange(...caret);
  }
 }
+findingsEl.addEventListener("input",e=>{
+ if(e.target.matches("input.reason"))findingReasons.set(e.target.closest(".finding-item").dataset.mark,e.target.value);
+});
 const markById=id=>[...assistantMarks,...priorUserMarks,...userMarks].find(m=>m.id===id);
 findingsEl.addEventListener("click",async e=>{
- const li=e.target.closest("li");if(!li||e.target.closest("input"))return;
+ const li=e.target.closest(".finding-item");if(!li||e.target.closest("input"))return;
  if(evidenceClick(e,owner=>markById(owner.slice(5))))return;
  const verdict=e.target.closest("button")?.dataset.review;
- if(!verdict){selectedFocusId=li.dataset.key;viewMode="zoom";render();return;}
+ if(!verdict){
+   if(!e.target.closest(".finding-row"))return;
+   const item=markOptions().find(o=>findingKey(o)===li.dataset.mark);if(!item)return;
+   const id=findingKey(item),details=focusedFinding===id&&openFinding!==id;
+   focusFinding(item,{details});findingRowFor(id)?.focus({preventScroll:true});return;
+ }
  const m=markOptions().find(o=>o.key===li.dataset.key)?.mark;if(!m||!ready)return;
  const reason=verdict==="rejected"?li.querySelector("input.reason")?.value.trim().slice(0,200):"";
  try{
@@ -729,7 +803,8 @@ findingsEl.addEventListener("click",async e=>{
    const result=await request("tools/call",{name:"review_visual_finding",arguments:{imageId:onImage,...where,markId:rawOf(m),review:verdict,...(reason?{reason}:{})}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
    const back=result?.structuredContent?.mark;if(!back||back.id!==rawOf(m))throw Error("Unexpected response");
-   delete m.review;delete m.reviewReason;
+   delete m.review;delete m.reviewReason;delete m.verification;
+   findingReasons.delete(m.id);
    if(back.review)m.review=back.review;if(back.reviewReason)m.reviewReason=back.reviewReason;
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:rawOf(m),label:m.label,note:m.note,side:m.side,verdict,reason}];
    status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
@@ -1017,7 +1092,7 @@ function applyInput(args){
  appliedKey=key;
  if(wsArg){
    const items=cleanItems(wsArg.items),same=ws?.id===wsArg.id;
-   if(!same){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;renderViewTabs();}
+   if(!same){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();renderViewTabs();}
    const old=new Map((ws?.items??[]).map(it=>[it.imageId,it.photo]));
    pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||"工作區",revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
    imageId=items[0].imageId;layoutWorkspace(ws.items);
@@ -1025,7 +1100,7 @@ function applyInput(args){
    if(ws){ws=null;frames=null;photo=null;}
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;objects=[];renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;objects=[];renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    if(pid){
@@ -1305,7 +1380,7 @@ async function loadDetail(){
 // deleted; GPT's marks can be deleted. Locked layers refuse all of that.
 // Unsent marks change locally (with undo); sent ones go to the server.
 const selectionEl=document.querySelector("#selection");
-let selected=null,dragMove=null,nudge=null;
+let selected=null,dragMove=null,nudge=null,findingPointer=null;
 const allMarks=()=>[...assistantMarks,...priorUserMarks,...userMarks];
 const findMark=id=>allMarks().find(m=>m.id===id);
 const isFresh=m=>!!m&&userMarks.some(u=>u.id===m.id)&&!sentIds.has(m.id);
@@ -1399,6 +1474,10 @@ function renderSelection(){
  const m=selected?findMark(selected):null;
  if(!m||!shown(m)&&!isFresh(m)){selectionEl.hidden=true;selectionEl.replaceChildren();return;}
  const b=bounds(m),pad=8*U();
+ if(m.type==="polyline"||m.type==="arrow"){
+   const points=m.type==="polyline"?m.points:[{x:m.x,y:m.y},{x:m.x2,y:m.y2}];
+   node("path",{d:"M"+points.map(p=>px(p.x)+" "+py(p.y)).join("L")+(m.closed?"Z":""),fill:"none",stroke:"#356BD6","stroke-opacity":.45,"stroke-width":9*U(),"stroke-linecap":"round","stroke-linejoin":"round"},outlineEl);
+ }
  node("rect",{x:b.x-pad,y:b.y-pad,width:b.x2-b.x+2*pad,height:b.y2-b.y+2*pad,fill:"none",stroke:"#356BD6","stroke-width":2*U(),"stroke-dasharray":(6*U())+" "+(4*U()),rx:4*U()},outlineEl);
  // Keep the label field alive while the user is typing in it.
  if(selectionEl.contains(document.activeElement)&&selectionEl.dataset.mark===m.id)return;
@@ -1436,7 +1515,7 @@ function nudgeSelected(dx,dy){
  nudge.timer=setTimeout(()=>{const {before}=nudge;nudge=null;const after=findMark(before.id);if(after)updateMark(before,after,"已微調位置。");},500);
 }
 document.addEventListener("keydown",e=>{
- if(!selected||e.target.closest?.("input,textarea,select")||viewMode!=="annotated")return;
+ if(!selected||e.target.closest?.("input,textarea,select,button,summary")||viewMode!=="annotated")return;
  if(e.key==="Escape"){selected=null;render();return;}
  if(e.key==="Delete"||e.key==="Backspace"){e.preventDefault();deleteMark(findMark(selected));return;}
  const step=(e.shiftKey?10:1)*U()/VW,arrows={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step*VW/VH],ArrowDown:[0,step*VW/VH]};
@@ -1447,23 +1526,26 @@ hit.addEventListener("pointerdown",e=>{
  const p=fromPointer(e);if(!p)return;
  const m=pickMark(p);
  if(groupingFrom){finishGrouping(m);return;}
- selected=m?.id??null;
+ selected=m?.id??null;findingPointer=m?{id:m.id,start:p}:null;
  if(canEdit(m)){dragMove={start:p,before:m,moved:false};hit.setPointerCapture(e.pointerId);}
  status.textContent=m?"已選取「"+(m.label||m.id)+"」。":"這裡沒有標記；點在線條或框上就能選取。";
  render();
 });
 hit.addEventListener("pointermove",e=>{
+ if(findingPointer){const p=fromPointer(e);if(p&&Math.hypot((p.x-findingPointer.start.x)*VW,(p.y-findingPointer.start.y)*VH)>3*U())findingPointer=null;}
  if(!dragMove)return;const p=fromPointer(e);if(!p)return;
  const dx=p.x-dragMove.start.x,dy=p.y-dragMove.start.y;
  if(!dragMove.moved&&Math.hypot(dx*VW,dy*VH)<3*U())return;
  dragMove.moved=true;replaceLocal(shifted(dragMove.before,dx,dy));scheduleRender();
 });
 function endDrag(){
+ const clicked=findingPointer;findingPointer=null;
+ if(clicked)revealFinding(findMark(clicked.id));
  if(!dragMove)return;const {before,moved}=dragMove;dragMove=null;
  const after=findMark(before.id);if(moved&&after)updateMark(before,after,"已移動標記。");
 }
 hit.addEventListener("pointerup",endDrag);
-hit.addEventListener("pointercancel",()=>{if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}});
+hit.addEventListener("pointercancel",()=>{findingPointer=null;if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}});
 // Drawing facts for gesture grouping: order and time relative to the first
 // stroke since the last send (no clock time), and the input device.
 let batchStart=null,strokeStart=0,strokePointer="",strokeCount=0;
