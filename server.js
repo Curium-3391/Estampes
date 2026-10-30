@@ -27,6 +27,7 @@ import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, entrySharp } from "./src/image-store.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
+import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import {
@@ -42,8 +43,8 @@ const BUILD_VERSION = "m" + VERSION;
 // Public origin for download links: PUBLIC_BASE_URL (Render sets
 // RENDER_EXTERNAL_URL), else the origin the last /mcp request came in on,
 // which covers Heroku, Docker behind a tunnel and other hosts with no env.
-let seenOrigin = "";
-const publicUrl = () => config.publicUrl || seenOrigin;
+let seenOrigin = "", tunnelOrigin = "";
+const publicUrl = () => config.publicUrl || tunnelOrigin || seenOrigin;
 const URI_TAG = "v" + VERSION.replace(/\./g, "");
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
@@ -52,10 +53,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -1542,6 +1543,16 @@ if (storage.enabled && !storage.writable) log("error", "[storage] not writable; 
 if (storage.enabled) {
   sweepStorage().catch(() => {});
   setInterval(() => sweepStorage().catch(() => {}), 6 * 3600 * 1000).unref();
+}
+
+// The quick tunnel's address, once cloudflared has one. The owner's own log
+// is where the full connector URL (with the key) is meant to be read.
+if (config.tunnelMetrics) {
+  watchQuickTunnel(config.tunnelMetrics, (origin) => {
+    tunnelOrigin = origin;
+    log("warn", "[tunnel] public address " + origin + ". ChatGPT connector URL: " + origin + "/mcp" + (ACCESS_KEY ? "?key=" + ACCESS_KEY : "") +
+      " (temporary: it changes when the tunnel restarts)");
+  });
 }
 
 httpServer.listen(port, config.host, () => {

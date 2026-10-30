@@ -1,76 +1,75 @@
 # Estampes
 
-**A shared visual language for humans and AI.**
+**Point at the same image, together with AI, without leaving the conversation.**
 
-Estampes is an experimental, open-source project exploring a simple idea: humans and AI should be able to **point at the same image** while talking, without leaving their conversation.
+[繁體中文說明](docs/zh-TW/README.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
-Inspired by Claude Debussy's *Estampes* (1903).
+Estampes is an open-source ChatGPT plugin: an MCP server with MCP Apps widgets that shows your picture as a shared canvas inside the chat. GPT draws on the original image, you draw back on the same canvas, and both sides refer to the same marks across turns. It works with any image (photos, scans, handwriting, book pages, diagrams, maps, drawings), and **each person runs their own server**.
 
-> **Status:** M0.3.2 number-line and M0.4 generic 2D visual annotation have both been observed working in ChatGPT (2026-10-29). **M0.4.5 visual evidence viewer was verified in ChatGPT on 2026-10-29. M0.4.7 is a new single-widget UI candidate (CI verified, live host testing pending)**: annotation/editing, original and local zoom now live in a single canvas; the separate PNG viewer is retained only for legacy/explicit use. `inspect_visual` remains a separate model-facing PNG tool; full model-vision visibility is not established by this viewer test. General-purpose image grounding and arbitrary image imports remain unsolved.
+Named after Claude Debussy's *Estampes* (1903).
 
-## The problem
+## What it does
 
-Multimodal assistants can often discuss images, but a basic exchange about a specific component still involves screenshots, drawing circles in a separate editor, reuploading, and multiple rounds of "which one?" clarification.
+Talking about a specific spot in a picture usually means screenshots, circling things in another editor, re-uploading and several rounds of "which one?". Estampes keeps that in the conversation:
 
-Estampes aims to remove that friction.
+- **GPT points for you:** boxes, arrows, polylines, freehand lines and labels over the original image, each with an optional note and status.
+- **You point back:** pens, highlighter, boxes and arrows on the same canvas, plus one sentence, then send.
+- **The source stays untouched:** marks live in layers you can show, hide, rename, reorder, fade and lock.
+- **See the details:** zoom and pan inside the canvas with native-resolution tiles; GPT can enhance contrast, sharpen, denoise, threshold, find edges or overlay a coordinate grid on a region before reading it.
+- **Two images side by side:** compare two different pictures (a drawing and the real object, before and after); GPT records which marks correspond and how sure it is, and you confirm or reject each link.
+- **Across turns and chats:** marks, layers and change history are stored on your own server and export as an image, a layered SVG (opens in Inkscape) or an `estampes.visual/2` JSON document you can load again.
 
-## Desired experience
+Images come in only through ChatGPT itself: uploaded or photographed in the chat, or a public URL GPT supplies. Estampes handles pixels and coordinates; **recognition is still GPT's job**, and uncertain locations are shown as such.
 
-- **AI → human:** The assistant identifies and points to relevant objects using arrows, boxes, highlights, labels, or paths over an original image.
-- **Human → AI:** The user draws or selects a region on the same image, then asks a question about it.
-- **Shared context:** Both parties can refer to the same image and annotation IDs across turns.
-- **Native-feeling interaction:** Annotation should happen inside the chat experience, not in a separate website or image editor.
-- **Preserve the source:** Annotations are independent overlays, not destructive edits to the image.
+## Quick start
 
-## Design principles
-
-1. **Conversation first.** Estampes is not another chatbot or a general-purpose whiteboard.
-2. **Grounded, not guessed.** Uncertain locations must be distinguishable from confirmed ones.
-3. **Source-preserving.** Keep image identity, dimensions, and annotation geometry explicit.
-4. **Bidirectional by design.** Both human and assistant annotations matter.
-5. **Portable.** Prefer model-agnostic annotation formats and lightweight integrations.
-6. **Low-friction.** No extra app or context switch in the intended end-user workflow.
-
-## Run your own server
+Docker on amd64 or arm64 (Raspberry Pi, NAS, mini PC):
 
 ```sh
 git clone https://github.com/Curium-3391/Estampes.git
 cd Estampes
 cp .env.example .env
-docker compose up -d
+docker compose --profile tunnel up -d
+docker compose logs estampes | grep tunnel
 ```
 
-Runs on amd64 and arm64 (Raspberry Pi, NAS, mini PC); images, marks, layers, SVGs and history are kept in a Docker volume. Heroku (Deploy button) and Render (`render.yaml`) also work. See [Deployment](docs/DEPLOYMENT.md). Everything on a canvas can be read as one host-neutral JSON document; see [Visual protocol 2](docs/PROTOCOL-V2.md).
+The last command prints the connector URL, `https://….trycloudflare.com/mcp?key=…`. In ChatGPT web open Plugins → **Add custom MCP server**, paste it and choose **No authentication**. The URL contains your key, so keep it to yourself.
 
-## Development roadmap
+The temporary tunnel gets a new address on every restart. For lasting use, put a reverse proxy or a named tunnel in front of `docker compose up -d`; see [Deployment](docs/DEPLOYMENT.md), which also covers Heroku, Render and every setting.
 
-- [ ] **M0 — ChatGPT plugin number-line PoC:** The in-chat AI → widget → user → GPT round trip is **host-verified** (2026-10-29). Remaining: resizing, repeated interactions, and additional coordinate cases.
-- [x] **M0.4 — Generic 2D visual surface:** In-chat point/rectangle and user-to-GPT transmission have been observed working on the landscape demo. This does **not** establish semantic accuracy or reliable author preservation.
-- [ ] **M0.4.1 — Grounding and provenance correction:** Server resolves named demo objects from explicit scene landmarks; user marks have a separate replay channel and unverified AI coordinates are marked as such. Awaiting host verification.
-- [ ] **M0.4.2 — Annotation/context protocol:** Explicit intent selector, optional user note and manually supplied quote, canonical v0.2 event and context-aware GPT message. Implemented; live host verification pending.
-- [ ] **M0.4.3 — Visual Input Bridge:** `inspect_visual` returns real PNG pixels and source-coordinate metadata from demo artwork, separating Estampes geometry from GPT object interpretation. Live model vision visibility not yet verified.
-- [x] **M0.4.5 — Inline visual evidence viewer:** Dedicated `present_visual_evidence` renderer shows three real PNG views (marked full image, pristine full image, enlarged pristine crop) inside ChatGPT. Confirmed by user screenshots on 2026-10-29 for `demo:landscape`, point `(0.82, 0.49)`. This validates the **human-visible render path**, not general model perception.
-- [ ] **M0.4.6 — Evidence-first model annotation:** Removed object-name/scene-anchor lookup from the model-facing `present_visual` schema. AI must supply coordinates rather than ask the plugin for `house`/other labeled positions. CI checks this; blind image grounding is still unverified. See [M0.4.6 grounding evaluation](docs/M0-4-6.md).
-- [ ] **M0.4.7 — Unified shared canvas:** Combined the original image, annotation editor and local zoom in one SVG surface; optional collapsed context, author-specific palette, no routine duplicate viewer. CI passed; ChatGPT one-widget acceptance pending. See [M0.4.7](docs/M0-4-7.md).
-- [x] **M0.4.8 — Deployment hardening:** Optional access key, rate limit, CORS allowlist, committed lockfile, single version source, and widget-only image payload for the legacy viewer. Host-verified in ChatGPT on 2026-10-29, together with the M0.4.7 single-canvas flow. See [M0.4.8](docs/M0-4-8.md) and [Deployment](docs/DEPLOYMENT.md).
-- [ ] **M0.5 — Real-image preprocessing:** `load_image` (ChatGPT file params or public https URL), `process_image` (CLAHE, sharpen, denoise, adaptive/Otsu threshold, edges, zoomed regions) and `overlay_grid` (labelled grid with source-coordinate cell centres). M0.5.1: `present_visual` shows the real photo (original by default, optional processed tabs) and takes the user's marks back. 0.5.3–0.5.5: polylines and freehand drawing, pens and highlighter, verification image, crop coordinates, persistent marks with notes, undo/redo, pixel reload. 0.5.7–0.5.9: zoom and pan in the canvas, layers you can show or hide. 0.6.0: paired view, two different images side by side with links between their marks that GPT records and the user reviews. 0.7.0: layers you can rename, reorder, fade and lock; select one mark to move, restyle or delete it, including marks from earlier turns; disk storage; Docker, Heroku; `estampes.visual/1` protocol. 0.8.0: every note and link GPT makes is a claim with its own confidence, evidence (where on which image, zoomable) and verification state; only the user or a tool verifies it, and a claim the user rejects is remembered so GPT cannot repeat it without new evidence (`estampes.visual/2`). Upload path and canvas verified live. See [M0.5](docs/M0-5.md).
-- [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
-- [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
-- [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.
-- [ ] **M4 — Complex real-world imagery and evaluation:** Progress to diagrams and PCBs only after simpler cases work; measure accuracy, clarification turns, and task completion.
+Local development (Node 22):
 
-**Integration requirement:** Estampes is a ChatGPT-native plugin experience, not a standalone website or chatbot. Use an MCP server + MCP Apps UI inside the conversation for M0; evaluate ChatGPT Plugin Extensions for deeper native integrations.
+```sh
+npm ci
+npm test
+npm start          # http://localhost:8787/mcp
+```
 
-See [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Annotation protocol draft](docs/PROTOCOL.md), and [M0.3 testing guide](docs/M0-TESTING.md), and [M0.4 visual surface guide](docs/M0-4.md), [M0.4.1 grounding correction](docs/M0-4-1.md), [Protocol v0.2 draft](docs/PROTOCOL-V0.2.md), and [M0.4.2 testing](docs/M0-4-2.md), and [M0.4.3 visual input bridge](docs/M0-4-3.md).
+## Documentation
 
-## Integration caveat
+| Document | Contents |
+| --- | --- |
+| [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
+| [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
+| [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
+| [Visual protocol 2](docs/PROTOCOL-V2.md) | `estampes.visual/2`, the host-neutral JSON document for a whole canvas, with evidence and verification for every claim |
+| [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
+| [Architecture](docs/ARCHITECTURE.md) | How the server, canvas widget and GPT fit together |
+| [Changelog](CHANGELOG.md) | Changes per version |
+| [History](docs/history/README.md) | Early milestone notes and old protocol drafts |
+| [繁體中文說明](docs/zh-TW/README.md) | Overview and quick start in Traditional Chinese |
+| [Contributing](CONTRIBUTING.md) | Contributions that help most |
 
-Current client/plugin APIs may not expose images already displayed by the chat host, nor permit adding layers directly over native image components. In-chat custom UI is a possible intermediate step; transparent access to host-rendered images is a longer-term goal, **not** a capability we assume exists.
+## Status and limits
 
-## Contributing
+The current version is in [`package.json`](package.json) and at `/version` on your server.
 
-Ideas, technical feedback, reproducible test cases, and accessibility suggestions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+- Upload, canvas, marks, layers, zoom and the paired view have been tested live in ChatGPT on web and mobile.
+- How well GPT recognises what is in an image is not guaranteed; Estampes does not decide what something is.
+- Plugins cannot draw over images ChatGPT itself shows (such as image search results), so images are shown in the Estampes canvas instead.
+- The access key is a shared secret in the URL, not per-user sign-in. Do not share your connector URL.
+- Self-hosting only; there is no hosted service.
 
 ## License
 
-A license has not yet been selected and committed. Until then, please do not assume redistribution rights for the source code.
+[Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.

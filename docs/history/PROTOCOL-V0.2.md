@@ -131,4 +131,4 @@ Snapping must be **suggestive and reversible**, with source geometry preserved a
 - This is not ChatGPT-native image access, persisted conversation linkage, authenticated author identity, image segmentation, or general-purpose VLM grounding.
 - Server validates syntax and image-domain geometry. **It does not prove that a described object matches a coordinate.**
 - Limit note to 500 characters, optional quote to 300 characters, and mark count to 30.
-- Follow the existing [legacy v0.1 sketch](PROTOCOL.md) and [M0.4.1 geometry correction](M0-4-1.md) for historical decisions.
+- Follow the existing [legacy v0.1 sketch](PROTOCOL-V0.1.md) and [M0.4.1 geometry correction](M0-4-1.md) for historical decisions.

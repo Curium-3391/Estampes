@@ -1,77 +1,68 @@
-# Architecture (working proposal)
+# Architecture
 
-> This document describes a proposed system, not an implemented integration.
+Estampes is one Node 22 process. ChatGPT (or any MCP client) talks to it at `/mcp`; ChatGPT renders the canvas as an MCP Apps widget inside the conversation. This page describes what exists today. For the reasons behind the design, see [Vision](VISION.md); for older experiments, see [history](history/README.md).
 
-## Layers
+## Who does what
 
-1. **Host chat / vision model:** Understand user intent, select suitable imagery, reason about targets.
-2. **Grounding adapter:** Convert intended targets to image-space locations; verify and carry uncertainty.
-3. **Annotation protocol:** Transport image references and geometric objects across boundaries.
-4. **Renderer:** Draw non-destructive vector overlays over the correct image revision.
-5. **Interaction bridge:** Capture user gestures, preserve coordinates, and send the annotated reference back into the conversation.
+| Part | Responsibility | Not its job |
+| --- | --- | --- |
+| **GPT** | Understand the request, look at pixels, decide what is where, choose marks, pens and layer names | Storing anything between turns |
+| **Estampes server** | Load and normalize images, process pixels, keep marks, layers and links per image, validate geometry, render the verification crop, store and export | Recognizing what is in an image |
+| **Canvas widget** | Show the original image with marks, let the user draw, select, zoom, hide layers and review links, send marks back | Deciding what a mark means |
+| **User** | Point, confirm or reject GPT's links, lock layers | |
 
-## Candidate technology
-
-- **MCP tools:** Provide stable operations for annotation validation, rendering, and state.
-- **MCP Apps UI:** Candidate way to render interactive content inside supported hosts.
-- **Skill/instructions:** Optional guide for when a model should annotate and how to verify targets.
-- **Custom harness:** Not necessary for a first proof of concept.
-
-MCP alone does **not** guarantee access to images shown by a host's built-in image search, nor modification of native image widgets. Treat host image access and UI embedding as separate capabilities to confirm.
+Estampes never claims to know what an object is. A mark records geometry, who made it, an optional note and a status (for example `inspected` only after GPT looked at those pixels).
 
 ## Data flow
 
-```text
-user question / image
-        |
-        v
-chat model + image selection
-        |
-        v
-target grounding + verification
-        |
-        v
-annotation document (image ID + geometry)
-        |
-        v
-overlay renderer <---- user draws / selects
-        |                   |
-        +---- shared context+
-                 |
-                 v
-          next conversation turn
+```
+user ──attaches image──▶ ChatGPT ──load_image / present_visual (file param or URL)──▶ server
+                                                                                    │ fetch, normalize, hash
+GPT ◀── structured result + verification image ◀───────────────────────────────────┘
+ │
+ └─ present_visual (marks, layer, links) ─▶ server ─▶ widget (inline in chat)
+                                                        │ user draws, edits, zooms
+GPT ◀── chat message with the user's marks ◀── widget ◀─┘
+          (validate_visual_annotations, edit_visual_canvas, load_visual_region… app-only tools)
 ```
 
-## Technical risks
+The widget calls the server's app-only tools directly (they are hidden from the model) and sends a chat message so GPT sees the user's marks in the next turn. See [Tools](TOOLS.md).
 
-- **Grounding precision:** Dense PCBs or similar-looking objects create false confidence.
-- **Image identity:** The client may show a resized, cropped, or transformed rendition.
-- **Host boundaries:** Third-party UI may not receive native image bytes or URLs.
-- **Security/privacy:** External image URLs may be private, short-lived, or unsafe to fetch.
-- **Continuity:** Annotation references need stable IDs across turns.
-- **Accessibility:** Spatial references require equivalent text descriptions and keyboard support.
+## Server
 
-## Chosen integration direction
+`server.js` registers the MCP tools, the widget resources and the HTTP routes. Logic lives in `src/`:
 
-**ChatGPT plugin first.** Use an MCP server with MCP Apps UI rendered inside the ChatGPT conversation. Explore optional ChatGPT Plugin Extensions (including file viewer/editor surfaces) when they materially improve image interaction. No standalone end-user website, separate chatbot, or custom harness is planned for M0.
+| Module | Role |
+| --- | --- |
+| `image-store.js` | Image intake (ChatGPT file param or public https URL), EXIF orientation, size limits, content-hash identity, in-memory cache |
+| `image-ops.js` | Pixel operations for `process_image` and `overlay_grid` (CLAHE, sharpen, denoise, threshold, edges, crop and zoom, grid) |
+| `canvas-state.js` | Per-image marks, layers (order, lock, opacity), paired-view links, user edits |
+| `mark-render.js`, `pixel-font.js` | Verification crops drawn with the marks at real ink width |
+| `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/2` document ([Visual protocol 2](PROTOCOL-V2.md)) |
+| `storage.js` | Optional disk storage ([Deployment](DEPLOYMENT.md#what-is-stored)) |
+| `security.js`, `config.js` | Access key, signed export links, environment settings |
+| `tunnel.js` | Reads the temporary Cloudflare tunnel address for the docker compose `tunnel` profile |
+| `visual-input.js`, `scene-catalog.js`, `interaction-protocol.js` | Bundled SVG demo scenes and the older v0.2 event format; kept for legacy tools and tests |
 
-The UI may be implemented with web technologies because MCP Apps components are hosted inside ChatGPT; this does **not** mean redirecting users to an external website.
+### Image identity and coordinates
 
-MCP tools provide data and actions; a hosted component shows the original image plus an SVG overlay and captures gestures; the MCP Apps bridge communicates back to the host.
+An image's id is derived from its content hash, so the same file attached in another chat maps to the same canvas. Every coordinate is **normalized to its own image with the origin at the top left**, independent of screen size, zoom or the working-copy resolution. Operations that return a crop report the region they cover so GPT can convert back (`coordinateFrame`).
 
-Do not assume a plugin can access images displayed by ChatGPT's built-in search or draw over native image widgets. Start with a known test asset controlled by the plugin.
+### State and persistence
 
-## M0 acceptance test
+Memory is the working copy: decoded images and canvases are cached (`ESTAMPES_CACHE_*`, about an hour by default). With `ESTAMPES_STORAGE_DIR` set, every change is also written to `images/<hash>/` (source, `canvas.json`, `marks.svg`, `history.jsonl`), and an evicted or restarted image is reloaded from there on demand. Two processes must not share one storage folder.
 
-1. Connect Estampes as a custom MCP plugin in ChatGPT.
-2. Render a deterministic number line in an inline MCP Apps component.
-3. Have the assistant target a known tick using structured normalized coordinates.
-4. Let the user tap a different tick and send coordinates/selection back into conversation context.
-5. Resize the component: both assistant and user marks must remain aligned.
-6. Validate the round trip in the ChatGPT host, not only a local browser mock.
+### Security model
 
-Next test subjects: a simple formula, then an ordinary image. PCB photos are deferred.
+Self-hosted, one owner per instance. A shared access key (`?key=` or Bearer) gates `/mcp` and `/api/v1/*`; export links are signed; `X-Forwarded-*` headers are trusted only with `ESTAMPES_TRUST_PROXY`; remote image fetches are limited to public addresses with size, time and pixel caps; the Docker image runs unprivileged with a read-only filesystem. The key is a bearer secret in a URL, not per-user authentication. See [Deployment](DEPLOYMENT.md#caveats).
 
-## MVP test
+## Widget
 
-Start with a local, known image. Render an overlay from JSON, resize the view, and round-trip a human-drawn annotation into the same coordinate space. Add model-produced boxes only after the geometry pipeline is reliable.
+`public/visual-surface.html` is a single self-contained page (no build step) served as an MCP Apps resource whose `ui://` URI contains the package version, so a release invalidates ChatGPT's cached copy. It draws the image and marks as SVG, supports zoom and pan with native-resolution tiles, drawing and selecting, undo/redo, layers, processed-image tabs and the paired view, and talks to the host through the MCP Apps bridge. `number-line.html` and `visual-evidence.html` are the demo and legacy widgets.
+
+## Constraints that shaped the design
+
+- Plugins cannot draw over images ChatGPT itself displays, so images are shown in Estampes's own canvas.
+- Images enter only through ChatGPT's native paths (attached or photographed file, or a public URL), so there is no custom upload UI.
+- The host may deliver tool input after the tool result, resize the widget at any time, and drop large payloads; the widget and server keep payloads small and can reload an image by id.
+- Every feature stays generic: nothing in the tools or widget is specific to one kind of image.
