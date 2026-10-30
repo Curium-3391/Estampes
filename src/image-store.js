@@ -108,7 +108,7 @@ export const sha256Of = (bytes) => createHash("sha256").update(bytes).digest("he
 export const imageIdOf = (bytes) => "img:" + sha256Of(bytes).slice(0, 16);
 
 // The same bytes again return the cached entry, so its marks survive.
-export async function registerImage(bytes, { source, fileName = null } = {}) {
+export async function registerImage(bytes, { source, fileName = null, page = null } = {}) {
   const imageId = imageIdOf(bytes);
   if (cache.has(imageId)) return getImage(imageId);
   let meta;
@@ -139,6 +139,8 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
     original: { format: meta.format, width: meta.width, height: meta.height },
     source,
     fileName,
+    // Set when the image is a rendered PDF page (src/image/pdf.js).
+    ...(page ? { page } : {}),
     touched: Date.now(),
   };
   cache.set(imageId, entry);
