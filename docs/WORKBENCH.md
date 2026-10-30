@@ -18,6 +18,10 @@ Choose an operation (evaluate, simplify, expand, factor, differentiate, integrat
 
 Each history cell shows the input, the exact result typeset as MathML (from the LaTeX SymPy produced), the plain text form, an approximate value when there is one, warnings and its status (exact, approximate, complex, conditional, partial, undefined). Actions: **畫在 Graph** (only exact/approximate real single-variable results), **重算**, **修改**, copy LaTeX, copy text. A Graph object made from a cell is linked to it; changing a definition or assumption marks affected cells and links **stale** until recomputed. Variables, functions and assumptions live in the panel's "變數、函數與假設" section.
 
+## Keeping Graph in step
+
+A cell's **畫在 Graph** plot is linked to it. When a definition or assumption changes, the cell and its link become stale. **更新所有連結** (shown when any link is not fresh) recomputes the stale cells and redraws their plots with the saved domain. With **自動更新 Graph** on (a per-notebook setting, off by default) the panel does this after every definition, assumption or recompute. A deleted plot is reported in the panel and not recreated.
+
 ## Safety
 
 - The widget builds everything with `createElement`/`textContent`; server, module or user text never reaches `innerHTML`. The browser test feeds `<img onerror=...>` as an expression and checks nothing runs.
@@ -33,5 +37,5 @@ Each history cell shows the input, the exact result typeset as MathML (from the 
 ## Limits
 
 - The Graph panel and the photo canvas share one viewport; a second independent Graph viewport is not implemented.
-- Links refresh only when you press 重算 or 更新 Graph 圖形 (no auto-refresh policy yet). Editing a plot directly does not mark its link stale.
+- Editing a plot directly does not mark its link stale; only upstream calculator changes do. Auto-refresh runs for changes made in the panel, not for definitions the model makes through `execute_module`.
 - `.estampes` export of notebooks and surfaces is not implemented.

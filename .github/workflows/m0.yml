@@ -34,7 +34,7 @@ jobs:
       # Browser test of the workbench: real server, real SymPy, real widget,
       # driven by the runner's Chrome. (A live ChatGPT host is not covered.)
       - run: npm install --no-save --no-audit --no-fund playwright-core
-      - run: node --test tests/workbench-e2e.test.js tests/layers-e2e.test.js tests/surface-open.test.js
+      - run: node --test tests/workbench-e2e.test.js tests/layers-e2e.test.js tests/surface-open.test.js tests/surface-refresh.test.js
         env:
           CHROME_BIN: /usr/bin/google-chrome
           ESTAMPES_E2E_SHOTS: ${{ runner.temp }}/workbench-shots

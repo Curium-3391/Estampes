@@ -360,6 +360,13 @@
             "type": "string",
             "maxLength": 64,
             "description": "Repeat the same key to get the same result instead of a second calculation"
+          },
+          "by": {
+            "type": "string",
+            "enum": [
+              "user",
+              "model"
+            ]
           }
         }
       },
@@ -541,6 +548,41 @@
           }
         }
       ]
+    },
+    {
+      "id": "set_options",
+      "title": "Notebook options",
+      "titleI18n": {
+        "zh-TW": "筆記本選項"
+      },
+      "target": "none",
+      "permissions": [
+        "cas.compute"
+      ],
+      "description": "Change notebook options. autoRefresh: when on, the user's calculator panel recomputes stale cells and redraws their linked Graph plots after a definition changes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notebook"
+        ],
+        "properties": {
+          "notebook": {
+            "type": "string",
+            "pattern": "^nb:[0-9a-f]{12}$",
+            "maxLength": 16
+          },
+          "autoRefresh": {
+            "type": "boolean"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000,
+            "description": "Notebook revision you read; a newer notebook is refused"
+          }
+        }
+      }
     }
   ],
   "panels": [

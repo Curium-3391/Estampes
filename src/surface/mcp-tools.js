@@ -8,12 +8,15 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { widgetObjects, sceneRevision } from "../scene/scene-ops.js";
 import { cellSummary } from "../cas/notebooks.js";
 import { SurfaceError } from "./store.js";
+import { refreshLinks } from "./refresh.js";
 
 const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/);
 const WorkspaceIdSchema = z.string().regex(/^ws:[0-9a-f]{16}$/);
 const Where = { imageId: ImageIdSchema.optional(), workspaceId: WorkspaceIdSchema.optional() };
 const CAS = "org.estampes.cas";
-const CAS_CAPABILITIES = ["calculate", "define", "get_notebook", "recompute", "plot_result"];
+const CAS_CAPABILITIES = ["calculate", "define", "get_notebook", "recompute", "plot_result", "set_options", "refresh_links"];
+// Capabilities after which a notebook with autoRefresh redraws its linked plots.
+const AUTO_REFRESH_AFTER = new Set(["calculate", "define", "recompute"]);
 
 const keyOf = ({ imageId, workspaceId }) => {
   if (!imageId && !workspaceId) throw new SurfaceError("give imageId or workspaceId");
@@ -84,16 +87,29 @@ export function registerSurfaceTools(server, deps) {
     try {
       const needsCanvas = capability === "plot_result";
       if (needsCanvas && !imageId) throw new SurfaceError("plot_result needs the canvas (imageId)");
-      const out = await host.router.execute({
-        module: CAS, capability, params: capability === "calculate" || capability === "define" ? { by: "user", ...params } : params,
-        ...(needsCanvas ? { canvas: imageId, ...(expectedSceneRevision !== undefined ? { expectedRevision: expectedSceneRevision } : {}) } : {}),
-      });
-      const changed = out.scene.created.length || out.scene.updated.length;
+      let out = null, refreshed = null;
+      if (capability !== "refresh_links") {
+        out = await host.router.execute({
+          module: CAS, capability, params: capability === "calculate" || capability === "define" ? { by: "user", ...params } : params,
+          ...(needsCanvas ? { canvas: imageId, ...(expectedSceneRevision !== undefined ? { expectedRevision: expectedSceneRevision } : {}) } : {}),
+        });
+      }
+      const notebookId = params.notebook ?? out?.data?.notebookId;
+      if (imageId && notebookId && (capability === "refresh_links" || AUTO_REFRESH_AFTER.has(capability))) {
+        const store = deps.notebooks();
+        if (store && (capability === "refresh_links" || (await store.get(notebookId)).autoRefresh)) {
+          refreshed = await refreshLinks({ host, notebooks: store, notebookId, imageId });
+        }
+      }
+      const entry = refreshed?.entry ?? out?.entry;
+      const changed = refreshed?.updated.length || out?.scene.created.length || out?.scene.updated.length;
+      const summary = out?.summary ?? (refreshed ? "Graph links refreshed" : capability + " done");
       return {
-        content: [{ type: "text", text: out.summary ?? capability + " done" }],
+        content: [{ type: "text", text: summary + (refreshed ? " (updated " + refreshed.updated.length + " plot(s)" + (refreshed.failed.length ? ", " + refreshed.failed.length + " could not be updated" : "") + ")" : "") }],
         structuredContent: {
-          kind: "estampes.surface_cas", capability, summary: out.summary, data: out.data,
-          ...(changed && out.entry ? { objects: widgetObjects(out.entry), sceneRevision: sceneRevision(out.entry), created: out.scene.created, updated: out.scene.updated } : {}),
+          kind: "estampes.surface_cas", capability, summary, data: out?.data ?? {},
+          ...(refreshed ? { refresh: { recomputed: refreshed.recomputed, updated: refreshed.updated, failed: refreshed.failed } } : {}),
+          ...(changed && entry ? { objects: widgetObjects(entry), sceneRevision: sceneRevision(entry), created: out?.scene.created ?? [], updated: out?.scene.updated ?? [] } : {}),
         },
       };
     } catch (error) { return fail(error); }

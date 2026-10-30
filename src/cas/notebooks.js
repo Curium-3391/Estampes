@@ -90,7 +90,7 @@ export function createNotebooks({ dir = "" } = {}) {
       return {
         notebookId: nb.id, revision: nb.revision, title: nb.title, angle: nb.angle, precision: nb.precision,
         definitions: Object.entries(nb.definitions).map(([name, d]) => ({ name, params: d.params, text: d.text })),
-        assumptions: nb.assumptions,
+        assumptions: nb.assumptions, autoRefresh: !!nb.autoRefresh,
         cellCount: nb.cells.length, truncated: nb.cells.length > shown.length,
         cells: shown.map((c) => cellSummary(c, full)),
       };

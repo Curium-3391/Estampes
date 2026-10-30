@@ -153,7 +153,7 @@ test("bridge: only real single-variable results become Graph expressions", () =>
 test("cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged", { skip }, async () => {
   const nb = (await call("calculate", { operation: "evaluate", text: "2+2" })).data;
   const job = "a1b2c3d4e5f60718";
-  const slow = call("calculate", { operation: "integrate", text: "exp(-x^2)*ln(x)", variable: "x", notebook: nb.notebookId, job });
+  const slow = call("calculate", { operation: "integrate", text: "sin(x)^7*exp(x)*ln(x)/(x^2+1)", variable: "x", notebook: nb.notebookId, job });
   await new Promise((r) => setTimeout(r, 400));
   const client = createCasClient({ socketPath: sock });
   assert.equal((await client.cancel(job)).cancelled, true);
