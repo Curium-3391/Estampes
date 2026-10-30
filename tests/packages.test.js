@@ -256,3 +256,20 @@ test("a failed rollback leaves the running version, lock and record unchanged", 
   const lock = JSON.parse(await readFile(join(s.mods, "lock.json"), "utf8"));
   assert.equal(lock.modules["org.example.callout"].active.version, "1.1.0");
 });
+
+test("updating a failed package keeps a coherent rollback target", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  let h = await s.boot();
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await s.put("callout-2", sign(v("1.1.0")));
+  await s.commit(h, "update", "org.example.callout", {}, { approve: true });
+  const file = join(s.mods, "packages", "org.example.callout", "1.1.0", "package.json");
+  const bundle = JSON.parse(await readFile(file, "utf8")); bundle.manifest.description = "evil";
+  const { chmod } = await import("node:fs/promises"); await chmod(file, 0o644); await writeFile(file, JSON.stringify(bundle));
+  h = await s.boot();
+  await s.put("callout-3", sign(v("1.2.0")));
+  await s.commit(h, "update", "org.example.callout", { version: "1.2.0" }, { approve: true });
+  const rb = await s.commit(h, "rollback", "org.example.callout");
+  assert.equal(rb.done.result.version, "1.0.0");
+});

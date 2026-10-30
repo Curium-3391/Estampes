@@ -236,7 +236,6 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
 
   async function activate(v, { previous, state, granted }) {
     const id = v.manifest.id, now = new Date().toISOString();
-    registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: now }));
     const locked = await lock.read();
     const prior = locked.modules[id];
     const priorLock = structuredClone(locked), priorRecord = registry.records().get(id);
@@ -244,6 +243,9 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
       history: [...(prior?.history ?? []), ...(prior?.active ? [prior.active] : [])].slice(-10) };
     try {
       await lock.write(locked);
+      // Catalog and record change in the same tick so nothing runs the new
+      // manifest under the old grants (or the reverse) while the file saves.
+      registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: now }));
       await registry.setRecord(id, { source: "package", state, version: v.manifest.version, granted, previous });
     } catch (error) {
       await lock.write(priorLock).catch(() => {});
@@ -320,7 +322,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         catch (error) { audit.record({ kind: "package.rejected", module: id, reason: String(error?.message || error).slice(0, 200) }); throw error; }
         const wasEnabled = mod.record.state === "enabled";
         try {
-          await activate(v, { previous: [...(mod.record.previous ?? []), { version: mod.record.version, sha256: before.package?.sha256 }].slice(-10),
+          await activate(v, { previous: [...(mod.record.previous ?? []), { version: before.manifest.version, sha256: before.package?.sha256 }].slice(-10),
             state: wasEnabled ? "enabled" : mod.record.state === "failed" ? "installed" : mod.record.state, granted: wasEnabled ? v.manifest.permissions : [] });
         } catch (error) { await restoreActive(id, mod.record); throw error; }
         audit.record({ kind: "package.activated", module: id, toVersion: version, fromVersion: mod.record.version });
