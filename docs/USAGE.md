@@ -16,6 +16,8 @@ Pick a pen, highlighter, box or arrow, draw on the image, optionally write a sho
 - **Undo / redo** works on your own drawing before you send.
 - **Select** lets you move, restyle or delete a single mark, including marks from earlier turns.
 - Your marks stay on the canvas across turns; GPT will not redraw them, it attaches notes to them instead.
+- **An arrow means what you say it means.** By default GPT reads it from your note: "the water flows this way" is a direction, "what is this pointing at?" is a pointer. Choose 「只是指出這裡」 under the purpose menu when the arrowhead should always mark the target.
+- **Several strokes, one gesture.** If you draw an arrow as a shaft and then a head, Estampes notices that the strokes meet and tells GPT they may be one gesture, as an unconfirmed guess. The candidate appears below the canvas: press 「是同一個手勢」 or 「不是」. To group strokes yourself, select one, press 「和另一筆組成手勢」 and tap the other; 「拆開手勢」 undoes it. Your strokes are never merged or changed.
 
 ## Zoom and pan
 

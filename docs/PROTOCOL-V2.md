@@ -62,7 +62,7 @@ Every coordinate is a number from 0 to 1 relative to the mark's **own** image, o
 | --- | --- |
 | `point` | `x, y` |
 | `rect` | `x, y, x2, y2` (two opposite corners) |
-| `arrow` | `x, y` tail → `x2, y2` head (the target) |
+| `arrow` | `x, y` tail → `x2, y2` head. The type is geometry only: whether the head is a target or the arrow shows a direction is up to the author (see [TOOLS](TOOLS.md#what-your-marks-mean)). |
 | `polyline` | `points` (2–128 ordered vertices), optional `smooth` (curve through the points), `closed` (loop), and `bbox [x, y, x2, y2]` |
 
 - `style`: `color` (gold, blue, red, green, yellow, magenta, cyan, white, black), `size` (fine, thin, medium, thick), `pen` (pen, highlighter). Absent = author default.
@@ -73,6 +73,19 @@ Every coordinate is a number from 0 to 1 relative to the mark's **own** image, o
   - `replayed-unverified` — re-sent without proof of who drew it;
   - `scene-anchor` — a known landmark of a bundled demo scene.
 - `provenance.editedByUser`: the user moved or reshaped the mark after it was first sent.
+- `stroke` (user marks drawn on the canvas, optional): `order` within the submission, `relativeStartMs` / `relativeEndMs` from the first stroke of that submission (no clock time), `pointerType` (`mouse`, `pen`, `touch`).
+
+## Gesture groups
+
+`gestureGroups` lists sets of user marks that may form one gesture, such as a freehand arrow drawn as a shaft plus a head. They are hypotheses about the marks, never part of them: no mark is merged, retyped or edited.
+
+- `id`, `image`, `memberIds` (2–8 marks on that image).
+- `proposedMeaning`: `direction-arrow`, `connected-path` (pieces joined end to end) or `unknown`. With `direction-arrow`, `arrow` gives the `shaft` mark, the `tip` and the `direction` (`heading`, `angleDeg`).
+- `provenance`: `system-inferred` (Estampes, from where strokes meet in image pixels and how quickly they followed each other) or `user-created`.
+- `confirmation`: `unconfirmed`, `user-confirmed` or `user-rejected`. Only the user sets the last two.
+- `evidence`: `near-coincident-junction`, `endpoint-touches-stroke`, `arrowhead-like-geometry`, `drawn-in-quick-succession`.
+
+Groups are recomputed from the current marks, so a group disappears when one of its marks is deleted. Strokes that only cross in their middles are not grouped. Only the user's verdicts are stored (`gestureDecisions` in `canvas.json`).
 
 ## Layers
 
@@ -128,4 +141,5 @@ A new claim **repeats** a rejection when it is on the same images and each end's
 
 - Claims (notes and links) gained `confidence` (notes), `evidence`, `ambiguities`, `verification` and `previouslyRejected`.
 - New top-level `rejections`.
+- Optional `gestureGroups` and per-mark `stroke` (added later in version 2; readers that ignore them lose nothing).
 - Readers of version 1 documents keep working: every version 1 field is still there. Estampes still accepts version 1 documents as marks files.
