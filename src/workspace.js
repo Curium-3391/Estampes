@@ -351,7 +351,7 @@ async function planTransfer({ source, target, items, mode = "link", removeFromSo
     const it = src.doc.items.find((x) => x.id === id || x.asset === id || x.set === id);
     if (!it) throw new Error("items: " + JSON.stringify(id) + " is not an item of " + src.ref + " (items: " + src.doc.items.map((x) => x.id).join(", ") + ")");
     return it;
-  }) : src.doc.items;
+  }).filter((it, i, all) => all.indexOf(it) === i) : src.doc.items;
   const targetItems = tgt ? tgt.doc.items : [];
   const targetEntries = await Promise.all(targetItems.map((it) => ensureSet(it.set)));
   const add = [], skipped = [], warnings = [];
@@ -412,12 +412,24 @@ async function planTransfer({ source, target, items, mode = "link", removeFromSo
   return { plan, src, tgt, pick, add, name };
 }
 
-const previewIdOf = (args, plan) => "p-" + createHash("sha256").update(JSON.stringify([args, plan.source.revision, plan.target.revision ?? null])).digest("hex").slice(0, 12);
+// The fingerprint covers the workspaces' revisions and the marks, layers and
+// links of every canvas involved, so a preview is refused if any of them changed.
+async function stateOf({ src, tgt }) {
+  const sets = [...new Set([...src.doc.items, ...(tgt ? tgt.doc.items : [])].map((it) => it.set))];
+  const parts = [];
+  for (const key of sets) {
+    const e = await ensureSet(key);
+    parts.push([key, canvasMarks(e), e.layers ?? [], [...(e.pairLinks ?? [])].map(([k, m]) => [k, [...m.values()]])]);
+  }
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 12);
+}
+const previewIdOf = (args, plan, state) => "p-" + createHash("sha256").update(JSON.stringify([args, plan.source.revision, plan.target.revision ?? null, state])).digest("hex").slice(0, 12);
 
 export function previewTransfer(args) {
   return serial(async () => {
-    const { plan } = await planTransfer(args);
-    const previewId = previewIdOf(args, plan);
+    const planned = await planTransfer(args);
+    const { plan } = planned;
+    const previewId = previewIdOf(args, plan, await stateOf(planned));
     previews.set(previewId, { args, at: Date.now() });
     for (const [id, p] of previews) if (Date.now() - p.at > PREVIEW_TTL) previews.delete(id);
     return { previewId, plan };
@@ -431,9 +443,14 @@ export function commitTransfer({ previewId, key, ...direct }) {
     const saved = previewId ? previews.get(previewId) : null;
     if (previewId && !saved) throw new Error("Unknown or expired previewId " + previewId + "; preview again");
     const args = saved ? saved.args : direct;
+    // A retry with a key already used returns that result, even though the
+    // commit itself made the preview stale.
+    const earlyDocs = (await Promise.all([args.source, args.target].filter((r) => r && r !== "new").map((r) => resolveRef(r).then((x) => x.doc, () => null)))).filter(Boolean);
+    const early = await seenKey(earlyDocs, key);
+    if (early) return repeat(early);
     const planned = await planTransfer(args);
     const { plan, src, tgt, pick, add } = planned;
-    if (saved && previewIdOf(args, plan) !== previewId) throw new Error("The source or target changed since the preview; preview again");
+    if (saved && previewIdOf(args, plan, await stateOf(planned)) !== previewId) throw new Error("The source or target changed since the preview; preview again");
     const docs = [src.legacy ? null : src.doc, tgt && !tgt.legacy ? tgt.doc : null].filter(Boolean);
     const prior = await seenKey(docs, key);
     if (prior) return repeat(prior);
@@ -527,6 +544,9 @@ export function undoChange(workspaceId, token) {
       const d = current.get(id);
       if (!d) continue;
       const keep = { undo: (d.undo ?? []).filter((u) => u.token !== token), keys: d.keys ?? [], revision: d.revision };
+      // Undoing restores the state an earlier change left behind, so that
+      // change's record now expects the new revision.
+      if (was) for (const u of keep.undo) for (const a of u.after) if (a.id === d.id && a.revision === was.revision) a.revision = d.revision + 1;
       if (was) { for (const k of Object.keys(d)) delete d[k]; Object.assign(d, clone(was), keep); }
       else { d.archived = true; Object.assign(d, keep); }
       after.push(d);

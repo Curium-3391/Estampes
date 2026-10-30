@@ -461,9 +461,10 @@ function applyServerCanvas(annotations,layerList,linkList){
  if(Array.isArray(layerList)){layers=[];setLayers(layerList);}
  const marks=fromServerList(annotations);
  const byId=new Map(marks.map(m=>[m.id,m])),mine=new Set(userMarks.map(m=>m.id));
- assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
+ const cap=ws?200:60;
+ assistantMarks=marks.filter(a=>a.author!=="user").slice(0,cap);
  userMarks=userMarks.filter(m=>!sentIds.has(m.id)||byId.has(m.id)).map(m=>sentIds.has(m.id)?{...byId.get(m.id)}:m);
- priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,60);
+ priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,cap);
  if(frames&&Array.isArray(linkList))links=viewLinks(linkList);
  if(selected&&!allMarks().some(m=>m.id===selected))selected=null;
 }

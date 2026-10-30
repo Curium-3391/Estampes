@@ -501,6 +501,14 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
   if (!items.length) throw new Error("Workspace " + workspaceId + " has no images; add some with edit_workspace");
   if (links.some((l) => l.left !== undefined)) throw new Error("In a workspace a link is { id, fromItem, from, toItem, to }");
   if (annotations.some((a) => a.side) || coordinateFrame?.side) throw new Error("In a workspace use `item` (wi-…), not `side`");
+  // A processed view of one of the items becomes that view's exact matrix.
+  if (coordinateFrame?.derivedViewId) {
+    const target = items.find((it) => it.id === (coordinateFrame.item ?? items[0].id));
+    if (!target) throw new Error("coordinateFrame.item " + coordinateFrame.item + " is not an item of " + workspaceId);
+    const record = findView(target.entry, coordinateFrame.derivedViewId);
+    if (!record) throw new Error("coordinateFrame.derivedViewId " + coordinateFrame.derivedViewId + " is not a processed view of " + target.id + "; call process_image on that image first");
+    coordinateFrame = { ...frameFromView(record, coordinateFrame.units), item: target.id };
+  }
   const refused = [];
   // remove entries may be "wi-2:g1" to name the item.
   const removeList = remove.map((r) => { const m = /^(wi-\d{1,4}):(.+)$/.exec(r); return m && items.some((it) => it.id === m[1]) ? { item: m[1], id: m[2] } : r; });
@@ -2288,10 +2296,10 @@ const httpServer = createHttpServer((req, res) => {
       });
       res.end(built.buffer);
     };
-    // Built fresh so the file matches the workspace now; the cached one is the fallback.
+    // The file the tool described; after a restart it is built again from the stored workspace.
+    const cached = bundleCache.get(bundleMatch[1]);
+    if (cached) { send(cached); return; }
     exportBundle("ws:" + bundleMatch[1], { version: VERSION }).then(send, (error) => {
-      const cached = bundleCache.get(bundleMatch[1]);
-      if (cached) return send(cached);
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Workspace not found on this server: " + String(error?.message || error));
     });

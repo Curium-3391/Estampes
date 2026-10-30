@@ -112,7 +112,9 @@ test("move then undo: items return, nothing is deleted (PORT-05, PORT-17)", asyn
   assert.equal(canvasMarks(a).length, 25, "detaching keeps the canvas");
   await undoChange(merged.workspaceId, detached.undoToken);
   assert.equal((await getWorkspace(merged.workspaceId)).items.length, 3);
-  await assert.rejects(undoChange(merged.workspaceId, merged.undoToken), /changed again after this/);
+  // The detach is undone, so the earlier merge is the latest change again and can be undone too.
+  await undoChange(merged.workspaceId, merged.undoToken);
+  await assert.rejects(getWorkspace(merged.workspaceId), /removed by an undo/);
   const fresh = await createWorkspace({ items: [{ asset: a.imageId }] });
   await undoChange(fresh.workspace.id, fresh.undoToken);
   await assert.rejects(getWorkspace(fresh.workspace.id), /removed by an undo/);
@@ -160,4 +162,29 @@ test("workspaces, copies and links survive a restart with storage (PORT-12)", as
   const back = await ensureSet(copy.item.set);
   assert.equal(canvasMarks(back).find((m) => m.id === "pcb-source").note, "副本");
   assert.equal(back.derivedFrom.set, b1.imageId);
+});
+
+test("review fixes: retry after a stale preview, annotation changes stale a preview, successive undo, duplicate picks", async () => {
+  const { a, b1, b2 } = await threeImageFixture(registerImage);
+  const first = await commitTransfer({ source: b1.imageId, target: a.imageId, mode: "link" });
+  const ws = first.workspaceId;
+  // Merge into the existing workspace, retry with the same key after the commit made the preview stale.
+  const prev = await previewTransfer({ source: b2.imageId, target: ws, mode: "link" });
+  const one = await commitTransfer({ previewId: prev.previewId, key: "k-stale" });
+  const again = await commitTransfer({ previewId: prev.previewId, key: "k-stale" });
+  assert.equal(again.repeated, true);
+  assert.equal(again.workspaceId, one.workspaceId);
+  // Annotation edits after a preview make it stale.
+  const p2 = await previewTransfer({ source: a.imageId, target: "new", mode: "copy" });
+  const items = await workspaceItems(await getWorkspace(ws));
+  applyWorkspaceChanges(items, { annotations: [{ id: "late", type: "point", x: 0.5, y: 0.5 }], resolve });
+  await assert.rejects(commitTransfer({ previewId: p2.previewId }), /changed since the preview/);
+  // Undo two successive changes in order.
+  const e1 = await editWorkspace(ws, { arrange: [{ item: "wi-1", label: "one" }] });
+  const e2 = await editWorkspace(ws, { arrange: [{ item: "wi-1", label: "two" }] });
+  await undoChange(ws, e2.undoToken);
+  await undoChange(ws, e1.undoToken);
+  // Duplicate identifiers for one item add it once.
+  const dup = await previewTransfer({ source: b1.imageId + "+" + b2.imageId, target: "new", items: ["wi-1", b1.imageId], mode: "link" });
+  assert.equal(dup.plan.add.length, 1);
 });
