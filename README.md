@@ -1,52 +1,43 @@
 # Estampes
 
-**人與 AI 在同一張圖上指著說話。**
+**Point at the same image, together with AI, without leaving the conversation.**
 
-> *English summary:* Estampes is an open-source ChatGPT plugin (an MCP server with MCP Apps widgets) that lets you and the model point at the same image inside the conversation. The model draws boxes, arrows, paths and notes over your original picture; you draw back on the same canvas and send it. Works with any image: photos, scans, handwriting, book pages, diagrams, maps. Each user runs their own instance (Docker, amd64/arm64). Docs are in Traditional Chinese.
+[繁體中文說明](docs/zh-TW/README.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
-名稱取自德布西的鋼琴曲集《版畫》（*Estampes*, 1903）。
+Estampes is an open-source ChatGPT plugin: an MCP server with MCP Apps widgets that shows your picture as a shared canvas inside the chat. GPT draws on the original image, you draw back on the same canvas, and both sides refer to the same marks across turns. It works with any image (photos, scans, handwriting, book pages, diagrams, maps, drawings), and **each person runs their own server**.
 
-## 能做什麼
+Named after Claude Debussy's *Estampes* (1903).
 
-討論圖片時，常常要截圖、另外開編輯器畫圈、再重新上傳，然後來回問「是哪一個？」。Estampes 把這些步驟放回對話裡：
+## What it does
 
-- **GPT 指給你看**：在原圖上畫框、箭頭、折線、手繪線和文字標記，每個標記可以附備註和狀態。
-- **你指給 GPT 看**：在同一張畫布上用筆、螢光筆、框、箭頭標出位置，寫一句話，按送出。
-- **不改動原圖**：標記是獨立的圖層，可以顯示、隱藏、改名、排序、調透明度、鎖定。
-- **看清楚細節**：畫布內可以縮放和平移，放大時載入原始解析度；GPT 可以對局部做對比增強、銳化、降噪、二值化、邊緣偵測或加上座標格線再判讀。
-- **兩張圖並排**：左右對照兩張不同的圖（例如圖紙與實物、修改前與修改後），GPT 記錄兩邊對應的位置與信心程度，由你確認或否決。
-- **跨回合、跨對話**：標記、圖層、變更歷史都存在你自己的伺服器上，可以匯出成圖片和分層 SVG（可用 Inkscape 開啟），或匯出 JSON 之後再載入。
+Talking about a specific spot in a picture usually means screenshots, circling things in another editor, re-uploading and several rounds of "which one?". Estampes keeps that in the conversation:
 
-圖片來源只用 ChatGPT 原生的方式：在對話中上傳、拍照，或由 GPT 提供公開網址。Estampes 負責像素處理和座標，**辨識和判斷仍然是 GPT 做的**，不確定的位置會標示出來。
+- **GPT points for you:** boxes, arrows, polylines, freehand lines and labels over the original image, each with an optional note and status.
+- **You point back:** pens, highlighter, boxes and arrows on the same canvas, plus one sentence, then send.
+- **The source stays untouched:** marks live in layers you can show, hide, rename, reorder, fade and lock.
+- **See the details:** zoom and pan inside the canvas with native-resolution tiles; GPT can enhance contrast, sharpen, denoise, threshold, find edges or overlay a coordinate grid on a region before reading it.
+- **Two images side by side:** compare two different pictures (a drawing and the real object, before and after); GPT records which marks correspond and how sure it is, and you confirm or reject each link.
+- **Across turns and chats:** marks, layers and change history are stored on your own server and export as an image, a layered SVG (opens in Inkscape) or an `estampes.visual/1` JSON document you can load again.
 
-## 快速開始
+Images come in only through ChatGPT itself: uploaded or photographed in the chat, or a public URL GPT supplies. Estampes handles pixels and coordinates; **recognition is still GPT's job**, and uncertain locations are shown as such.
 
-每個人自己架一台。最簡單的方式是 Docker（amd64、arm64 都可以，包括 Raspberry Pi、NAS、迷你電腦）：
+## Quick start
+
+Docker on amd64 or arm64 (Raspberry Pi, NAS, mini PC):
 
 ```sh
 git clone https://github.com/Curium-3391/Estampes.git
 cd Estampes
 cp .env.example .env
-docker compose up -d
-docker compose exec estampes cat /data/access-key   # 第一次啟動自動產生的金鑰
-```
-
-ChatGPT 需要一個公開的 https 網址才連得到。想先試用，可以開內建的臨時通道（Cloudflare quick tunnel，不需要帳號，也不用改路由器設定），第二行指令會印出完整的連接網址：
-
-```sh
 docker compose --profile tunnel up -d
 docker compose logs estampes | grep tunnel
 ```
 
-臨時通道每次重啟網址都會變。長期使用請改用反向代理或具名通道。在 ChatGPT 網頁版 Plugins → **Add custom MCP server** 填入：
+The last command prints the connector URL, `https://….trycloudflare.com/mcp?key=…`. In ChatGPT web open Plugins → **Add custom MCP server**, paste it and choose **No authentication**. The URL contains your key, so keep it to yourself.
 
-```
-https://<你的網址>/mcp?key=<金鑰>
-```
+The temporary tunnel gets a new address on every restart. For lasting use, put a reverse proxy or a named tunnel in front of `docker compose up -d`; see [Deployment](docs/DEPLOYMENT.md), which also covers Heroku, Render and every setting.
 
-驗證方式選 **No authentication**（金鑰已經在網址裡）。這行網址含有金鑰，請不要給別人看。完整步驟、Heroku 與 Render、所有環境變數見 [部署](docs/DEPLOYMENT.md)。
-
-本機開發（Node 22）：
+Local development (Node 22):
 
 ```sh
 npm ci
@@ -54,28 +45,29 @@ npm test
 npm start          # http://localhost:8787/mcp
 ```
 
-## 文件
+## Documentation
 
-| 文件 | 內容 |
+| Document | Contents |
 | --- | --- |
-| [部署](docs/DEPLOYMENT.md) | Docker、Heroku、Render、連接 ChatGPT、環境變數、儲存內容 |
-| [視覺協定 1](docs/PROTOCOL-V1.md) | `estampes.visual/1`：描述整張畫布的 JSON 格式，不綁定 ChatGPT |
-| [願景](docs/VISION.md) | 想解決的問題、使用情境、非目標 |
-| [架構](docs/ARCHITECTURE.md) | 系統分層（改寫中） |
-| [變更紀錄](CHANGELOG.md) | 各版本的變更 |
-| [開發歷程](docs/history/README.md) | 早期里程碑筆記與舊版協定草稿 |
-| [貢獻](CONTRIBUTING.md) | 歡迎哪些貢獻 |
+| [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
+| [Visual protocol 1](docs/PROTOCOL-V1.md) | `estampes.visual/1`, the host-neutral JSON document for a whole canvas |
+| [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
+| [Architecture](docs/ARCHITECTURE.md) | System layers (being rewritten) |
+| [Changelog](CHANGELOG.md) | Changes per version |
+| [History](docs/history/README.md) | Early milestone notes and old protocol drafts |
+| [繁體中文說明](docs/zh-TW/README.md) | Overview and quick start in Traditional Chinese |
+| [Contributing](CONTRIBUTING.md) | Contributions that help most |
 
-## 目前狀態與限制
+## Status and limits
 
-目前版本見 [`package.json`](package.json) 或伺服器的 `/version`。
+The current version is in [`package.json`](package.json) and at `/version` on your server.
 
-- 上傳、畫布、標記、圖層、縮放、並排比對都已在 ChatGPT（網頁與手機）實測過。
-- GPT 對圖片內容的辨識準確度沒有保證，Estampes 不替模型判斷「這是什麼」。
-- ChatGPT 外掛 API 不允許直接在 ChatGPT 自己顯示的圖片（例如搜尋結果的圖）上疊圖層，所以圖片要經由 Estampes 的畫布顯示。
-- 存取金鑰是放在網址裡的共用密碼，不是個人帳號驗證；不要把連接網址分享給別人。
-- 只支援自架，沒有官方代管的服務。
+- Upload, canvas, marks, layers, zoom and the paired view have been tested live in ChatGPT on web and mobile.
+- How well GPT recognises what is in an image is not guaranteed; Estampes does not decide what something is.
+- Plugins cannot draw over images ChatGPT itself shows (such as image search results), so images are shown in the Estampes canvas instead.
+- The access key is a shared secret in the URL, not per-user sign-in. Do not share your connector URL.
+- Self-hosting only; there is no hosted service.
 
-## 授權
+## License
 
-尚未選定授權條款。在授權條款提交之前，請不要假設擁有重新散布原始碼的權利。
+No license has been chosen yet. Until one is committed, please do not assume redistribution rights for the source code.

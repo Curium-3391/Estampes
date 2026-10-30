@@ -1,20 +1,20 @@
-# 開發歷程文件
+# Development history
 
-這個資料夾收的是開發過程中的里程碑筆記和舊版協定草稿，保留原文，作為設計決策的紀錄。內容反映的是**當時**的狀態，其中有些功能已經移除或改名（例如 `targetId` 場景錨點、舊的 `/version` 檢查方式），請不要當成目前的使用說明。
+Milestone notes and old protocol drafts written during development, kept as they were as a record of design decisions. They describe the state **at the time**; some features they mention have since been removed or renamed (for example the `targetId` scene anchors and the old `/version` checks), so do not read them as current instructions.
 
-目前的文件請看 [README](../../README.md)、[部署](../DEPLOYMENT.md)、[視覺協定 1](../PROTOCOL-V1.md)；各版本的變更請看 [CHANGELOG](../../CHANGELOG.md)。
+For current documentation see the [README](../../README.md), [Deployment](../DEPLOYMENT.md) and [Visual protocol 1](../PROTOCOL-V1.md); for changes per version see the [Changelog](../../CHANGELOG.md).
 
-| 文件 | 內容 |
+| Document | Contents |
 | --- | --- |
-| [M0-TESTING.md](M0-TESTING.md) | M0.3 數線：ChatGPT 內的雙向往返測試 |
-| [M0-4.md](M0-4.md) | M0.4 通用 2D 視覺畫布（內建 SVG 示範場景） |
-| [M0-4-1.md](M0-4-1.md) | M0.4.1 定位與作者歸屬修正 |
-| [M0-4-2.md](M0-4-2.md) | M0.4.2 標記附帶意圖、備註與引用 |
-| [M0-4-3.md](M0-4-3.md) | M0.4.3 `inspect_visual`：給模型看真實像素 |
-| [M0-4-4.md](M0-4-4.md) | M0.4.4 把模型看到的證據顯示給使用者 |
-| [M0-4-6.md](M0-4-6.md) | M0.4.6 移除場景錨點答案表 |
-| [M0-4-7.md](M0-4-7.md) | M0.4.7 單一共用畫布 |
-| [M0-4-8.md](M0-4-8.md) | M0.4.8 部署強化 |
-| [M0-5.md](M0-5.md) | M0.5～0.7.0 真實圖片、前處理工具與畫布功能 |
-| [PROTOCOL-V0.1.md](PROTOCOL-V0.1.md) | 標註協定 v0.1 草稿 |
-| [PROTOCOL-V0.2.md](PROTOCOL-V0.2.md) | 標註／情境協定 v0.2 草稿 |
+| [M0-TESTING.md](M0-TESTING.md) | M0.3 number line: round trip inside ChatGPT |
+| [M0-4.md](M0-4.md) | M0.4 generic 2D visual surface (built-in SVG demo scenes) |
+| [M0-4-1.md](M0-4-1.md) | M0.4.1 grounding and authorship correction |
+| [M0-4-2.md](M0-4-2.md) | M0.4.2 marks with intent, note and quote |
+| [M0-4-3.md](M0-4-3.md) | M0.4.3 `inspect_visual`: real pixels for the model |
+| [M0-4-4.md](M0-4-4.md) | M0.4.4 showing the model's evidence to the user |
+| [M0-4-6.md](M0-4-6.md) | M0.4.6 removing the scene-anchor answer key |
+| [M0-4-7.md](M0-4-7.md) | M0.4.7 one shared canvas |
+| [M0-4-8.md](M0-4-8.md) | M0.4.8 deployment hardening |
+| [M0-5.md](M0-5.md) | M0.5 to 0.7.0 real images, preprocessing tools and canvas features |
+| [PROTOCOL-V0.1.md](PROTOCOL-V0.1.md) | Annotation protocol v0.1 sketch |
+| [PROTOCOL-V0.2.md](PROTOCOL-V0.2.md) | Annotation/context protocol v0.2 draft |
