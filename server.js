@@ -842,7 +842,7 @@ function makeServer() {
         imageId:ImageIdSchema.optional(),
         pairImageId:ImageIdSchema.optional(),
         annotations:VisualAnnotationsSchema,
-        intent:z.enum(INTENTS).default("point-out"),
+        intent:z.enum(INTENTS).default("free-annotate"),
         note:z.string().max(500).default(""),
         replyQuote:z.string().max(300).default(""),
       }),
@@ -1072,7 +1072,7 @@ function makeServer() {
     {
       title:"Inspect actual source pixels and annotated region",
       description:
-        "Retrieve PIXEL IMAGES for a user-marked location on an Estampes demo SVG. Call this when asked what a marked object is, rather than inferring objects from coordinates or scene names. Pass imageId='demo:'+scene, revision='svg-v1', and focus={type:'point'|'rect'|'arrow',x,y[,x2,y2]} copied from the user's Estampes annotation; for arrows the head x2/y2 is the referent. Returns original PNG, full PNG with focus overlay, and locally cropped magnified PNG. These are image content blocks plus geometry metadata; if your host does not expose image pixels to vision, explicitly state that and do not guess the object's identity. This M0.4.3 tool supports ONLY bundled SVG demo images, not arbitrary user uploads or ChatGPT image search.",
+        "Retrieve PIXEL IMAGES for a user-marked location on an Estampes demo SVG. Call this when asked what a marked object is, rather than inferring objects from coordinates or scene names. Pass imageId='demo:'+scene, revision='svg-v1', and focus={type:'point'|'rect'|'arrow',x,y[,x2,y2]} copied from the user's Estampes annotation; for arrows the crop centres on the head x2/y2; when the user's arrow shows a direction rather than a target, pass a rect covering the whole arrow instead. Returns original PNG, full PNG with focus overlay, and locally cropped magnified PNG. These are image content blocks plus geometry metadata; if your host does not expose image pixels to vision, explicitly state that and do not guess the object's identity. This M0.4.3 tool supports ONLY bundled SVG demo images, not arbitrary user uploads or ChatGPT image search.",
       inputSchema:z.object({
         scene:SceneSchema,
         imageId:z.string().min(1).max(80),
