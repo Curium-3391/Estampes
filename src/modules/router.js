@@ -37,8 +37,12 @@ function canvasContext(entry, moduleId, granted) {
 }
 
 // canvases: { ensure(imageId), create(options), save(entry, history) }
-export function createRouter({ registry, audit, canvases, runtimes }) {
+// jobs: from jobs.js. egress / readSource are optional host services handed to
+// built-in modules (never to other runtimes) when their grant allows.
+export function createRouter({ registry, audit, canvases, runtimes, jobs = null, egress = null, readSource = null }) {
+  const DEFAULT_JOB_MS = 10 * 60 * 1000;
   return {
+    jobs,
     async execute({ module: moduleId, capability: capId, params = {}, canvas: imageId, newCanvas, expectedRevision, visibility = "public", layer }) {
       const started = Date.now();
       const mod = registry.get(moduleId);
@@ -85,37 +89,65 @@ export function createRouter({ registry, audit, canvases, runtimes }) {
         canvas: entry ? canvasContext(entry, manifest.id, granted) : null,
         entry: granted.includes("asset.read.selected") ? entry : null,
       };
-      let output;
-      try {
-        const raw = await runtime.run(mod, capId, input, ctx);
-        const parsed = OutputSchema.safeParse(raw ?? {});
-        if (!parsed.success) throw new ModuleError("module output is not valid: " + parsed.error.issues[0].message + " at " + parsed.error.issues[0].path.join("."), "output");
-        output = parsed.data;
-      } catch (error) {
-        audit.record({ kind: "run.failed", module: manifest.id, capability: capId, canvas: entry?.imageId, ms: Date.now() - started, error: String(error?.message || error).slice(0, 300) });
-        throw error instanceof ModuleError ? error : new ModuleError(manifest.id + " " + capId + " failed: " + (error?.message || error), "run");
+      const builtin = mod.runtime.kind === "builtin";
+      if (builtin && granted.includes("network.request.approved") && egress) {
+        ctx.http = (request) => egress.call({ manifest, granted, request, limits: ctx.limits, capability: capId });
       }
+      if (builtin && granted.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
 
-      let scene = { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen };
-      if (output.operations.length) {
-        if (!entry) throw new ModuleError(capId + " returned scene operations but has no canvas", "output");
+      // Runs the capability and lands its result on the canvas. A background
+      // job calls it without a revision check: it was started on purpose and
+      // may finish long after the canvas moved on.
+      const stop = { cancelled: false };
+      const work = async (checkRevision, jobId) => {
+        let output;
         try {
-          scene = applySceneOps(entry, output.operations, {
-            author: "module", module: manifest.id, moduleVersion: manifest.version, capability: capId, method: output.method,
-            layerName: localized(manifest, "name"),
-          }, { expectedRevision: seen, visibility, layer });
+          const raw = await runtime.run(mod, capId, input, jobId ? { ...ctx, progress: (note) => jobs.progress(jobId, note), cancelled: () => stop.cancelled } : ctx);
+          const parsed = OutputSchema.safeParse(raw ?? {});
+          if (!parsed.success) throw new ModuleError("module output is not valid: " + parsed.error.issues[0].message + " at " + parsed.error.issues[0].path.join("."), "output");
+          output = parsed.data;
         } catch (error) {
-          audit.record({ kind: "run.rejected", module: manifest.id, capability: capId, canvas: entry.imageId, error: String(error?.message || error).slice(0, 300) });
-          if (error instanceof SceneOpsError) throw new ModuleError("the module's result was refused: " + error.message, error.code === "conflict" ? "conflict" : "output");
-          throw error;
+          audit.record({ kind: "run.failed", module: manifest.id, capability: capId, canvas: entry?.imageId, ms: Date.now() - started, error: String(error?.message || error).slice(0, 300) });
+          throw error instanceof ModuleError ? error : new ModuleError(manifest.id + " " + capId + " failed: " + (error?.message || error), "run");
         }
-        await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
-          note: manifest.id + "/" + capId });
-      }
-      const ms = Date.now() - started;
-      audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,
-        created: scene.created.length, updated: scene.updated.length, deleted: scene.deleted.length, ms });
-      return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ms };
+
+        if (stop.cancelled) throw new ModuleError("stopped before its result was applied", "timeout");
+        let scene = { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen };
+        if (output.operations.length) {
+          if (!entry) throw new ModuleError(capId + " returned scene operations but has no canvas", "output");
+          try {
+            scene = applySceneOps(entry, output.operations, {
+              author: "module", module: manifest.id, moduleVersion: manifest.version, capability: capId, method: output.method,
+              layerName: localized(manifest, "name"),
+            }, { expectedRevision: checkRevision ? seen : undefined, visibility, layer });
+          } catch (error) {
+            audit.record({ kind: "run.rejected", module: manifest.id, capability: capId, canvas: entry.imageId, error: String(error?.message || error).slice(0, 300) });
+            if (error instanceof SceneOpsError) throw new ModuleError("the module's result was refused: " + error.message, error.code === "conflict" ? "conflict" : "output");
+            throw error;
+          }
+          await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
+            note: manifest.id + "/" + capId });
+        }
+        const ms = Date.now() - started;
+        audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,
+          created: scene.created.length, updated: scene.updated.length, deleted: scene.deleted.length, ms, ...(jobId ? { job: jobId } : {}) });
+        return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ms };
+      };
+
+      if (!cap.async) return work(true, null);
+      if (!jobs) throw new ModuleError(capId + " runs as a background job, which this server cannot keep", "runtime");
+      const job = jobs.create({ module: manifest.id, capability: capId, canvas: entry?.imageId });
+      const limitMs = manifest.limits?.jobMs ?? DEFAULT_JOB_MS;
+      let timer;
+      const timeout = new Promise((_, reject) => { timer = setTimeout(() => { stop.cancelled = true; reject(new ModuleError("it took longer than " + Math.round(limitMs / 1000) + " s and was stopped", "timeout")); }, limitMs); });
+      Promise.race([work(false, job.id), timeout]).then((r) => {
+        jobs.finish(job.id, { status: "done", ...(r.summary ? { summary: r.summary } : {}), ...(r.data !== undefined ? { data: r.data } : {}),
+          created: r.scene.created, updated: r.scene.updated, revision: r.scene.revision });
+      }, (error) => {
+        jobs.finish(job.id, { status: "failed", error: String(error?.message || error).slice(0, 300) });
+      }).finally(() => clearTimeout(timer));
+      return { module: manifest, capability: cap, entry, createdCanvas, scene: { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen },
+        job, ms: Date.now() - started };
     },
   };
 }

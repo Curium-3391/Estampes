@@ -6,6 +6,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 
+## 0.16.0 — Plate solving and background jobs
+
+- **Background jobs.** A capability can be marked `async`: it returns a job id at once and runs in the background (`limits.jobMs`, default 10 minutes). The new fixed tool `get_module_job` shows its status and result, optionally waiting up to 25 seconds. Jobs survive in `<storage>/modules/jobs.json`; one interrupted by a restart is shown as such. A stopped job never applies a late result.
+- **Plate solving** (`org.estampes.astrometry`, built in): uploads the chosen image to Astrometry.net with the administrator's API key, waits for the solution, marks the named objects on the canvas and reports the field's centre, scale and rotation. Setup in [docs/MODULES.md](docs/MODULES.md#plate-solving-orgestampesastrometry).
+- Egress requests can now carry a form, a multipart body with the image's bytes (needs `asset.read.selected`) and `${secret:name}` tokens; the request limit is 25 MB.
+
 ## 0.15.0 — Controlled network access for modules
 
 - **`http` modules** describe a request to an approved external service and how to turn its JSON reply into scene operations; they contain no code. All requests go through one egress service: only hosts listed in the manifest, https on 443, public addresses only (loopback, private, link-local and metadata ranges refused, connection pinned to the checked address), no redirects, fixed headers, time and size limits, and an audit record of every request (never its content). Enabling such a module needs administrator approval.
