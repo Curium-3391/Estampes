@@ -160,7 +160,7 @@ test("zoom keeps the point under the pointer and clamps to the photo",()=>{
   const start=source.indexOf("function setCam(next){"),stop=source.indexOf("const camCentre",start);
   assert.ok(start>=0&&stop>start);
   const z=new Function("let cam=null;const VW=1000,VH=1333,MAX_ZOOM=24;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));"+
-    "const applyViewBox=()=>{},scheduleRender=()=>{},scheduleDetail=()=>{};const svg={getScreenCTM:()=>({a:1})};\n"+
+    "const applyViewBox=()=>{},cameraMoved=()=>{},scheduleRender=()=>{},scheduleDetail=()=>{};const svg={getScreenCTM:()=>({a:1})};\n"+
     source.slice(start,stop)+"\nreturn {zoomAt,panBy,setCam,get cam(){return cam}};")();
   z.zoomAt(4,{x:500,y:600});
   assert.equal(z.cam.w,250);

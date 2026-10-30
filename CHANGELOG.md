@@ -14,6 +14,11 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 - Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
 
+## 0.19.8 — Smoother zoom and pan
+
+- Zooming or panning a photo used to rebuild the whole scene on every frame: the photo was re-created (and its data URL decoded again) and every mark, layer list and panel was redrawn, dozens of times a second. Now the camera only moves the viewBox; the photo element is reused, and the full render runs at most every 140 ms while the camera moves (marks keep their on-screen size), plus once when it stops. A 40-event wheel burst went from 80 scene rebuilds to none.
+- Tests: `tests/zoom-perf.test.js` (browser).
+
 ## 0.19.7 — Auto-refresh follows every change
 
 - Auto-refresh used to run only for changes made in the calculator panel and only for the canvas on screen. Now the same follow-up runs for **any** change: the model's `execute_module` calls (`define`, `calculate`, `recompute`) report "Auto-refresh: recomputed N cell(s), redrew M plot(s)", and plots on **every** canvas a notebook is linked to are redrawn (before, a cell that turned fresh left its plots on other canvases stale for good).
