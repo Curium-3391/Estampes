@@ -30,11 +30,12 @@ import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
-import { intakeImage, ensureImage, saveCanvas, saveDerived, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { intakeImage, ensureImage, saveCanvas, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
 import { measureQuality, clippingMap } from "./src/image/quality.js";
+import { pdfAvailable, renderPdfPage, pdfInfo, isPdf, MAX_DPI } from "./src/image/pdf.js";
 import { calibrate, measure, toSpacePixels, spaceToNormalized, defaultSigma, UNITS } from "./src/image/measure.js";
 import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
@@ -59,10 +60,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -1630,6 +1631,58 @@ function makeServer() {
   );
 
   server.registerTool(
+    "render_pdf_page",
+    {
+      title: "Render a PDF page as an image",
+      description:
+        "Render one PHYSICAL page of a PDF at a chosen DPI so it can be shown, processed and annotated like any image (the result is an imageId; use it with process_image, present_visual, ...). Pass the PDF as `pdf` (file from the conversation) or `pdfUrl`, or `documentSha256` of one given earlier (kept when the server has storage). `pageIndex` is 0-based physical position (the fifth page is 4); printed page numbers can differ, so the result lists `pageLabel` when the PDF defines it. Omit pageIndex to get only the page count and labels. `text: true` also returns the embedded text layer with boxes (normalized to the page image) so you can read text without OCR; scanned pages have none. The image covers the page's visible box with rotation applied, so normalized coordinates are the same at every DPI. Needs the optional PDF support to be installed on the server.",
+      inputSchema: z.object({
+        pdf: ChatFileSchema.optional().describe("PDF file from the conversation"),
+        pdfUrl: z.string().url().max(2048).optional().describe("Public https URL of a PDF"),
+        documentSha256: z.string().regex(/^[0-9a-f]{64}$/).optional().describe("A PDF given to this server before"),
+        pageIndex: z.number().int().min(0).max(4999).optional().describe("0-based physical page; omit for document info only"),
+        dpi: z.number().int().min(36).max(MAX_DPI).default(150),
+        text: z.boolean().default(false),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["pdf"] },
+    },
+    async ({ pdf, pdfUrl, documentSha256, pageIndex, dpi, text }) => {
+      try {
+        if ([pdf, pdfUrl, documentSha256].filter(Boolean).length !== 1) throw new Error("Provide exactly one of pdf, pdfUrl or documentSha256");
+        const avail = await pdfAvailable();
+        if (!avail.ok) throw new Error(avail.reason + ". Ask the server owner to enable it (docs/IMAGE-PIPELINE.md#pdf-pages)");
+        let bytes;
+        if (documentSha256) {
+          bytes = await loadDocument(documentSha256);
+          if (!bytes) throw new Error("No stored PDF " + documentSha256 + (config.storageDir ? "" : " (the server has no storage)") + "; send the file again");
+        } else bytes = await downloadImage(pdf ? pdf.download_url : pdfUrl);
+        if (!isPdf(bytes)) throw new Error("That file is not a PDF");
+        if (pageIndex === undefined) {
+          const info = await pdfInfo(bytes);
+          await saveDocument(bytes, info.documentSha256);
+          return { content: [{ type: "text", text: "PDF " + info.documentSha256.slice(0, 12) + ": " + info.pageCount + " pages (physical, 0-based index). Call again with pageIndex." }],
+            structuredContent: { kind: "estampes.pdf_info", ...info } };
+        }
+        const { png, info, boxes } = await renderPdfPage(bytes, { pageIndex, dpi, text });
+        await saveDocument(bytes, info.documentSha256);
+        const entry = await intakeImage(png, { source: "pdf-page", fileName: "page-" + (pageIndex + 1) + ".png", page: info });
+        const shown = boxes ? boxes.slice(0, 400) : null;
+        return {
+          content: [
+            { type: "text", text: "Rendered physical page " + (pageIndex + 1) + " of " + info.pageCount + (info.pageLabel ? " (printed label " + JSON.stringify(info.pageLabel) + ")" : "") + " at " + dpi + " dpi as " + entry.imageId + " (" + entry.width + "x" + entry.height + "). " +
+              (boxes ? (boxes.length ? boxes.length + " text boxes" + (boxes.length > 400 ? " (first 400 returned)" : "") + " in structuredContent.textBoxes; positions are approximate for rotated text. " : "No text layer on this page (scanned?); read it from the image. ") : "") +
+              "Marks use normalized coordinates, identical at any dpi. The next block is the page." },
+            imageBlock(await previewImage(entry)),
+          ],
+          structuredContent: { kind: "estampes.pdf_page", imageId: entry.imageId, sourceAssetId: entry.sourceAssetId, width: entry.width, height: entry.height, page: info,
+            ...(shown ? { textBoxes: shown, textBoxesTruncated: boxes.length > shown.length } : {}) },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
     "overlay_grid",
     {
       title: "Overlay a labelled grid",
@@ -1749,7 +1802,7 @@ const httpServer = createHttpServer((req, res) => {
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
       accessKeyRequired: Boolean(ACCESS_KEY),
-      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view", "register_images", "compare_images", "assess_image", "calibrate_scale", "measure_image"],
+      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view", "register_images", "compare_images", "assess_image", "calibrate_scale", "measure_image", "render_pdf_page"],
       imageApi: VIEW_API,
       imageInput: ["openai-file-param", "https-url"],
       visualProtocol: VISUAL_PROTOCOL,

@@ -135,3 +135,13 @@ A rectangle read off a rotated or warped view is not a rectangle on the image an
 `assess_image` measures sharpness (Laplacian variance), noise (Immerkaer sigma), contrast and 1–99% range, clipped highlights and crushed shadows per channel, colour cast, a luminance histogram and the dominant line tilt, with plain advice. Values depend on the analysis resolution (stated in the result). Optional clipping map.
 
 `calibrate_scale` fixes a known length between two points in one measurement space, the source image or one derived view, and stores it with the image. `measure_image` returns distance, path length, area or angle with an uncertainty from point precision and the scale; without a calibration the unit is `px`. Measure on a perspective-rectified view of a flat surface, where distances are uniform; on a tilted photo the tool warns.
+
+## PDF pages
+
+`render_pdf_page` turns one physical PDF page into an ordinary image (an `imageId`), so everything above, marks and exports included, works on it. PDF support is optional so the core stays small: it needs `pdfjs-dist` and `@napi-rs/canvas`. Install them with `npm i --no-save pdfjs-dist @napi-rs/canvas`, or build the Docker image with `--build-arg ESTAMPES_WITH_PDF=1` (adds about 60 MB, amd64 and arm64). Without them the tool says it is unavailable and nothing else changes.
+
+- `pageIndex` is the 0-based physical position (the fifth page is 4). `pageLabel` carries the printed label when the PDF defines page labels. Omit `pageIndex` for page count and labels only.
+- The image covers the page's visible box with its rotation applied, at `dpi` 36–600 (limited by `ESTAMPES_MAX_IMAGE_MEGAPIXELS`). Normalized coordinates are the same at every DPI, so a layout read at 150 dpi lines up with a 600 dpi render of the same page. Each render is a separate image (its own `imageId`); re-marking at a higher DPI is a copy of normalized coordinates.
+- `text: true` returns the embedded text layer with boxes normalized to the page image, so text can be read without OCR. Scanned pages have no text layer. Box positions are approximate for rotated text.
+- The page is described in `entry.page` and in `images/<hash>/meta.json`: `documentSha256`, `pageIndex`, `pageCount`, `pageLabel`, `dpi`, `rotation`, `cropBox`, `widthPt`, `heightPt`, `renderer`. With storage, the PDF is kept under `documents/<sha256>/source.pdf` and later calls can pass `documentSha256` instead of the file.
+- PDFs are untrusted: no scripts run, and size, page count and pixel limits apply.
