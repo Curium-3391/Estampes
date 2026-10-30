@@ -9,8 +9,11 @@ ARG BASE_IMAGE=node:22-bookworm-slim
 
 FROM ${BASE_IMAGE} AS deps
 WORKDIR /app
+# Optional PDF page rendering (adds roughly 60 MB): docker build --build-arg ESTAMPES_WITH_PDF=1
+ARG ESTAMPES_WITH_PDF=0
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund \
+ && if [ "$ESTAMPES_WITH_PDF" = "1" ]; then npm install --no-save --omit=dev --no-audit --no-fund pdfjs-dist@4.10.38 @napi-rs/canvas; fi \
  && node -e "require('sharp'); console.log('sharp', require('sharp/package.json').version, process.arch)"
 
 FROM ${BASE_IMAGE}

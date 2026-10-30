@@ -16,6 +16,7 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `compare_images` | Overlay, difference, checkerboard or match lines of a registration, with overlap, SSIM and PSNR. |
 | `assess_image` | Sharpness, noise, contrast, clipping, colour cast, histogram, line tilt, with advice; optional clipping map. |
 | `calibrate_scale`, `measure_image` | Set a known length in the image or a processed view, then measure distance, path, area or angle with uncertainty. |
+| `render_pdf_page` | Render one physical PDF page at 36–600 dpi as an image (optional server support), with page label, embedded text boxes and stored-document reuse. See [PDF pages](IMAGE-PIPELINE.md#pdf-pages). |
 | `overlay_grid` | Draw a labelled grid (rows A, B, C… × columns 1, 2, 3…, 2–12 each) over an image or region and return each cell's centre in source coordinates. |
 | `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
 | `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |

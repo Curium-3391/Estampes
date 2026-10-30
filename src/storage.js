@@ -163,6 +163,21 @@ export function saveDerived(entry) {
   }).catch((error) => log("error", "[storage] derived save failed", { imageId: entry.imageId, error: String(error?.message || error) }));
 }
 
+// PDFs the user gave us, kept (with storage) so a page can be rendered
+// again at another DPI without sending the file again.
+const pdfPath = (sha) => join(root, "documents", sha, "source.pdf");
+export async function saveDocument(bytes, sha) {
+  if (!root || !/^[0-9a-f]{64}$/.test(sha)) return;
+  try {
+    await mkdir(join(root, "documents", sha), { recursive: true });
+    await atomicWrite(pdfPath(sha), bytes);
+  } catch (error) { log("error", "[storage] document save failed", { sha, error: String(error?.message || error) }); }
+}
+export async function loadDocument(sha) {
+  if (!root || !/^[0-9a-f]{64}$/.test(sha)) return null;
+  try { return await readFile(pdfPath(sha)); } catch { return null; }
+}
+
 export async function readHistory(imageId, limit = 50) {
   if (!root || !hexOk(imageId)) return [];
   try {
