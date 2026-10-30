@@ -20,16 +20,20 @@ import { GESTURE_VERDICTS, gestureGroups, recordGestureDecision } from "./src/ge
 import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
-  applyPairChanges, pairLinks, reviewLink, reviewFinding, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
+  applyPairChanges, pairLinks, reviewLink, reviewFinding, applyWorkspaceChanges, workspaceLinks, reviewWorkspaceLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
 } from "./src/canvas-state.js";
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, entrySharp } from "./src/image-store.js";
+import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
+import {
+  WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
+} from "./src/workspace.js";
 import { intakeImage, ensureImage, saveCanvas, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
@@ -49,6 +53,8 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 // package.json is the single source of truth for the release version.
 // Widget HTML uses __ESTAMPES_VERSION__ and versioned ui:// URIs derive from
 // it, so a release bump only touches package.json.
+// The last few bundles built, so a link still downloads if the workspace later fails to rebuild.
+const bundleCache = { map: new Map(), set(k, v) { this.map.delete(k); this.map.set(k, v); if (this.map.size > 4) this.map.delete(this.map.keys().next().value); }, get(k) { return this.map.get(k); } };
 const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
 const BUILD_VERSION = "m" + VERSION;
 // Public origin for download links: PUBLIC_BASE_URL (Render sets
@@ -93,6 +99,7 @@ const checkGeometry = (a, ctx) => {
   }
 };
 
+const WorkspaceItemId = z.string().regex(/^wi-\d{1,4}$/);
 // Guaranteed geometry for renderer + user validation.
 const VisualAnnotationSchema = z.object({
   id: z.string().min(1).max(64),
@@ -118,6 +125,7 @@ const VisualAnnotationSchema = z.object({
   relativeStartMs: z.number().int().min(0).max(36e5).optional(),
   relativeEndMs: z.number().int().min(0).max(36e5).optional(),
   pointerType: z.enum(["mouse", "pen", "touch"]).optional(),
+  item: WorkspaceItemId.optional().describe("Workspace only: which item the mark is on"),
 }).superRefine(checkGeometry);
 const GestureDecisionSchema = z.object({
   memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
@@ -131,6 +139,7 @@ const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 const EvidenceSchema = z.object({
   kind: z.enum(EVIDENCE_KINDS.filter((k) => k !== "tool-result")).describe("text = words/numbers read there; position = where it sits relative to other things; shape = outline, size, colour; context = what surrounds it"),
   side: z.enum(["left", "right"]).optional().describe("Paired view: the image this evidence is on (default left)"),
+  item: WorkspaceItemId.optional().describe("Workspace: the item this evidence is on (default the claim's own item)"),
   region: z.array(z.number().min(0).max(1)).length(4).optional().describe("[x, y, x2, y2] normalized to the FULL image (not coordinateFrame) where the clue is, so the user can zoom in and check it"),
   says: z.string().min(1).max(160).describe("What you see there, e.g. 'silkscreen reads IC502'"),
 }).strict();
@@ -162,6 +171,7 @@ const ModelAnnotationSchema = z.object({
   pen: z.enum(MARK_PENS).optional().describe("highlighter = wide translucent stroke that keeps the picture visible; use it to shade an area rather than draw a precise line"),
   author: z.literal("assistant").optional(),
   side: z.enum(["left", "right"]).optional().describe("Paired view only: the image this mark is on (default left); coordinates are normalized to that image"),
+  item: WorkspaceItemId.optional().describe("Workspace only: the item (image) this mark is on (default the first); coordinates are normalized to that image"),
   ...ClaimFields,
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
@@ -174,8 +184,17 @@ const LinkSchema = z.object({
   confidence: z.enum(LINK_CONFIDENCE).optional().describe("How sure you are they are the same thing. Every unverified link goes to the user's review; confidence only orders it"),
   evidence: ClaimFields.evidence, ambiguities: ClaimFields.ambiguities,
 }).strict();
+// A link inside a workspace: a mark on one item and a mark on another.
+const WorkspaceLinkSchema = z.object({
+  id: z.string().min(1).max(64).describe("Stable link id; re-using it (with the same two items) edits the link"),
+  fromItem: WorkspaceItemId, from: z.string().min(1).max(64).describe("Mark id on fromItem"),
+  toItem: WorkspaceItemId, to: z.string().min(1).max(64).describe("Mark id on toItem"),
+  label: LinkSchema.shape.label, note: LinkSchema.shape.note, confidence: LinkSchema.shape.confidence,
+  evidence: ClaimFields.evidence, ambiguities: ClaimFields.ambiguities,
+}).strict();
 const FindingSchema = z.object({
   id: z.string().min(1).max(64),
+  item: WorkspaceItemId.optional().describe("Workspace: the item the mark is on, when the id is used on several"),
   note: z.string().max(200).optional().describe("Empty string clears the note"),
   status: z.enum(MARK_STATUSES).optional(),
   ...ClaimFields,
@@ -314,7 +333,7 @@ function compactMark(m) {
   };
 }
 const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
-  locked: z.boolean().optional(), opacity: z.number().optional(), side: z.enum(["left", "right"]).optional() });
+  locked: z.boolean().optional(), opacity: z.number().optional(), side: z.string().regex(/^(left|right|wi-\d{1,4})$/).optional() });
 const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
   ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}), claim: claimSummary(l) });
 // The widget also gets each piece of evidence, to show where it is.
@@ -450,6 +469,91 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
       "estampes/views": [],
       "estampes/annotations": marks,
     },
+  });
+}
+
+// ---- Workspace view: N images, each with its own marks --------------------
+// The widget gets every item's placement; pixels go in _meta when they are
+// small enough, else the widget fetches each image with load_visual_canvas.
+const WS_PIXEL_BUDGET = 1_400_000;
+const wsMarks = (items) => items.flatMap(({ id, entry }) => canvasMarks(entry).map((m) => ({ ...m, side: id })));
+const wsLayers = (items) => items.flatMap(({ id, entry }) => canvasLayers(entry).map((l) => ({ ...l, side: id })));
+const wsItemInfo = ({ item, entry }) => ({ id: item.id, imageId: entry.imageId, set: item.set, width: entry.width, height: entry.height,
+  placement: item.placement, ...(item.label ? { label: item.label } : {}), ...(entry.setId ? { copy: true } : {}) });
+const wsLinkTable = (links, items) => links.map((l) => {
+  const label = (item, id) => { const m = items.find((x) => x.id === item) && canvasMarks(items.find((x) => x.id === item).entry).find((x) => x.id === id); return item + ":" + id + (m?.label ? " " + JSON.stringify(m.label) : ""); };
+  return l.id + (l.label ? " " + JSON.stringify(l.label) : "") + ": " + label(l.fromItem, l.from) + " <-> " + label(l.toItem, l.to) + " [" + claimTag(l) + "]" + (l.note ? " — " + l.note : "");
+}).join("\n");
+const wsWidgetLink = (l) => ({ ...widgetLink({ ...l, left: l.from, right: l.to }), fromItem: l.fromItem, toItem: l.toItem });
+async function wsPixels(items) {
+  const out = [];
+  let total = 0;
+  for (const { id, entry } of items) {
+    const shown = await displayImage(entry);
+    total += shown.data.length;
+    out.push({ id, mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height });
+  }
+  return total <= WS_PIXEL_BUDGET ? out : [];
+}
+
+async function presentWorkspace(workspaceId, { annotations, findings, remove, reset, layer, coordinateFrame, links, removeLinks, verify }) {
+  const { doc } = await resolveRef(workspaceId);
+  const items = await workspaceItems(doc);
+  if (!items.length) throw new Error("Workspace " + workspaceId + " has no images; add some with edit_workspace");
+  if (links.some((l) => l.left !== undefined)) throw new Error("In a workspace a link is { id, fromItem, from, toItem, to }");
+  if (annotations.some((a) => a.side) || coordinateFrame?.side) throw new Error("In a workspace use `item` (wi-…), not `side`");
+  // A processed view of one of the items becomes that view's exact matrix.
+  if (coordinateFrame?.derivedViewId) {
+    const target = items.find((it) => it.id === (coordinateFrame.item ?? items[0].id));
+    if (!target) throw new Error("coordinateFrame.item " + coordinateFrame.item + " is not an item of " + workspaceId);
+    const record = findView(target.entry, coordinateFrame.derivedViewId);
+    if (!record) throw new Error("coordinateFrame.derivedViewId " + coordinateFrame.derivedViewId + " is not a processed view of " + target.id + "; call process_image on that image first");
+    coordinateFrame = { ...frameFromView(record, coordinateFrame.units), item: target.id };
+  }
+  const refused = [];
+  // remove entries may be "wi-2:g1" to name the item.
+  const removeList = remove.map((r) => { const m = /^(wi-\d{1,4}):(.+)$/.exec(r); return m && items.some((it) => it.id === m[1]) ? { item: m[1], id: m[2] } : r; });
+  const changed = applyWorkspaceChanges(items, {
+    annotations, findings, remove: removeList, reset, layer, frame: coordinateFrame, links, removeLinks, resolve: resolveCoordinateAnnotation, refused,
+  });
+  const touched = new Set(changed.map((c) => c.item));
+  if (reset || remove.length || links.length || removeLinks.length) items.forEach((it) => touched.add(it.id));
+  const history = { tool: "present_visual", changed: changed.map((c) => c.id), removed: remove, note: "workspace " + workspaceId };
+  const edits = items.flatMap(({ id, entry }) => takeUserEdits(entry).map((e) => ({ ...e, side: id })));
+  await Promise.all(items.filter((it) => touched.has(it.id) || edits.some((e) => e.side === it.id)).map((it) => saveCanvas(it.entry, history)));
+  const marks = wsMarks(items), layerList = wsLayers(items), linkList = workspaceLinks(items);
+  const checks = [], ink = [];
+  for (const { id, entry } of items) {
+    const drawn = changed.filter((c) => c.item === id && annotations.some((a) => a.id === c.id && (a.item ?? items[0].id) === id)).map((c) => c.id);
+    if (!drawn.length) continue;
+    const own = canvasMarks(entry);
+    if (verify) checks.push({ item: id, check: await renderVerification(entry, own, drawn) });
+    ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, item: id })));
+  }
+  const pending = linkList.filter(needsReview);
+  const info = items.map(wsItemInfo);
+  const text = "Workspace " + workspaceId + " " + JSON.stringify(doc.name) + " revision " + doc.revision + ": " + items.length + " images side by side, never overlaid: " +
+    info.map((i) => i.id + " = " + i.imageId + (i.copy ? " (a copy of its canvas)" : "") + " " + i.width + "x" + i.height + (i.label ? " " + JSON.stringify(i.label) : "")).join("; ") +
+    ". Each mark belongs to one item (`item`, here as side) and its coordinates are normalized to THAT image. " + marks.length + " marks: " + JSON.stringify(marks.map(compactMark)) +
+    (layerList.length ? ". Layers: " + layerText(layerList) : "") + userEditsText(edits) +
+    ". LINKS (" + linkList.length + "):\n" + (wsLinkTable(linkList, items) || "(none yet)") +
+    (pending.length ? "\n" + pending.length + " link(s) are UNVERIFIED and wait for the user's review in the canvas; treat them as candidates." : "") +
+    refusedText(refused) + rejectionsText(items.map((it) => it.entry)) +
+    (changed.length ? "\nChanged this call: " + changed.map((c) => c.item + ":" + c.id).join(", ") : "") +
+    (ink.length ? ". Ink in image px: " + ink.map((i) => i.item + ":" + i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
+    checks.map(({ item, check }) => ". VERIFICATION image for item " + item + " follows: crop " + JSON.stringify(check.region) + ", " +
+      (check.layout === "side-by-side" ? "left half" : "top") + " = original pixels, other half = with marks numbered " +
+      check.numbers.map((n) => n.n + "=" + n.id).join(", ") + "; check each mark sits on its target and fix it (same id and item) if not").join("");
+  const first = items[0].entry;
+  return logSizes("present_visual", {
+    content: [{ type: "text", text }, ...checks.map(({ check }) => pixelsBlock(check))],
+    structuredContent: {
+      kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: first.imageId, width: first.width, height: first.height, views: [],
+      workspace: { id: workspaceId, name: doc.name, revision: doc.revision, items: info },
+      marks: marks.map(compactMark), layers: layerList, links: linkList.map((l) => ({ ...compactLink({ ...l, left: l.from, right: l.to }), fromItem: l.fromItem, toItem: l.toItem })),
+      coordinateSystem: "normalized-top-left",
+    },
+    _meta: { "estampes/links": linkList.map(wsWidgetLink), "estampes/items": await wsPixels(items), "estampes/views": [], "estampes/annotations": marks },
   });
 }
 
@@ -604,6 +708,7 @@ function makeServer() {
         "`marksFile`: an Estampes marks SVG the user exported earlier and attached again; its marks are restored onto this image. The result has download links (`exports`) for the image and a layered marks SVG; give them when the user wants to save or export. " +
         "PAIRED VIEW: to compare two DIFFERENT images side by side (a schematic and a board photo, a map and an aerial photo, a drawing and the object), pass the second as `pairImage`/`pairImageUrl`/`pairImageId`: it shows on the RIGHT, the first image on the LEFT. The images are never overlaid. Each annotation takes `side` (left|right, default left) with coordinates normalized to that image; ids are unique across both. `links` records that a left mark and a right mark are the same thing (same part, net, pin, building...), with your `confidence`. Every result lists all links as a table: use it to remember and reason about earlier matches, and trust USER CONFIRMED / USER REJECTED over your own guess. " +
         "CLAIMS AND EVIDENCE: a note on a mark and a link are claims. Give `evidence` for them: each item says what you see (`says`), what kind of clue it is, and the `region` (full-image 0..1, `side` in a paired view) where the user can zoom in to check it; list what is unresolved in `ambiguities`. Your evidence is recorded as your own observation: a claim stays UNVERIFIED until the user confirms it in the canvas or a tool's evidence backs it, whatever your confidence, so call such claims candidates, not facts. A claim the user REJECTED is remembered for that place even if its marks are deleted; repeating it without new evidence is refused. " +
+        "WORKSPACE: for THREE OR MORE images, or to combine canvases, use create_workspace / merge_workspaces and then pass `workspaceId` here: every image keeps its own marks; each annotation, finding and evidence names its `item` (wi-1, wi-2…, default the first) with coordinates normalized to that image, links are { id, fromItem, from, toItem, to }, and remove entries may be 'wi-2:markId'. Never stitch images into one picture to show them together. " +
         "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
@@ -624,8 +729,9 @@ function makeServer() {
         pairImage: ChatFileSchema.optional().describe("Second image file shown on the RIGHT for a paired view"),
         pairImageUrl: z.string().url().max(2048).optional().describe("Public https URL of the right-hand image"),
         pairImageId: ImageIdSchema.optional().describe("imageId of the right-hand image"),
-        links: z.array(LinkSchema).max(30).default([]).describe("Paired view: left mark <-> right mark correspondences"),
-        removeLinks: z.array(z.string().max(64)).max(30).default([]).describe("Paired view: link ids to delete"),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Show a WORKSPACE (several images, see create_workspace); annotations, findings and links then name their `item`"),
+        links: z.array(z.union([LinkSchema, WorkspaceLinkSchema])).max(30).default([]).describe("Paired view: { id, left, right }; workspace: { id, fromItem, from, toItem, to }"),
+        removeLinks: z.array(z.string().max(64)).max(30).default([]).describe("Link ids to delete"),
         layer: z.string().trim().min(1).max(40).optional().describe("Name of the layer for this call's new marks; an existing name of yours adds to that layer, and edited marks move into it"),
         coordinateFrame: z.object({
           derivedViewId: DerivedViewIdSchema.optional().describe("The process_image result you read the coordinates from; exact for any crop or zoom"),
@@ -634,6 +740,7 @@ function makeServer() {
           width: z.number().int().positive().optional(),
           height: z.number().int().positive().optional(),
           side: z.enum(["left", "right"]).optional().describe("Paired view: the image the region belongs to (default left)"),
+          item: WorkspaceItemId.optional().describe("Workspace: the item the region belongs to (default the first)"),
         }).refine((f) => Boolean(f.derivedViewId) !== Boolean(f.region), { message: "coordinateFrame needs exactly one of derivedViewId or region" })
           .optional().describe("Coordinates in `annotations` (of that side) are in a processed output: give its derivedViewId, or (older form) its region with 0..1 coordinates or pixels of a width×height output of it"),
         verify: z.boolean().default(true).describe("Return the verification image of changed marks"),
@@ -653,6 +760,7 @@ function makeServer() {
         exports: z.object({ image: z.string(), marks: z.string() }).optional(),
         pair: z.object({ imageId: z.string(), width: z.number(), height: z.number(),
           exports: z.object({ image: z.string(), marks: z.string() }).optional() }).optional(),
+        workspace: z.object({ id: z.string(), name: z.string(), revision: z.number(), items: z.array(z.record(z.string(), z.unknown())) }).optional(),
         links: z.array(z.record(z.string(), z.unknown())).optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
@@ -660,10 +768,19 @@ function makeServer() {
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile", "pairImage"] },
     },
     async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify,
-      pairImage, pairImageUrl, pairImageId, links, removeLinks }) => {
+      pairImage, pairImageUrl, pairImageId, links, removeLinks, workspaceId }) => {
       try {
-        if ([image, imageUrl, imageId, scene].filter(Boolean).length !== 1) {
-          throw new Error("Provide exactly one of image, imageUrl, imageId or scene");
+        if ([image, imageUrl, imageId, scene, workspaceId].filter(Boolean).length !== 1) {
+          throw new Error("Provide exactly one of image, imageUrl, imageId, workspaceId or scene");
+        }
+        if (workspaceId) {
+          if (pairImage || pairImageUrl || pairImageId || views.length || marksFile || priorUserAnnotations.length) {
+            throw new Error("A workspace view does not take pairImage, views, marksFile or priorUserAnnotations (add images with edit_workspace)");
+          }
+          return await presentWorkspace(workspaceId, { annotations, findings, remove, reset, layer, coordinateFrame, links, removeLinks, verify });
+        }
+        if (links.some((l) => l.fromItem !== undefined) || annotations.some((a) => a.item) || findings.some((f) => f.item) || coordinateFrame?.item) {
+          throw new Error("item, fromItem and toItem are for a workspace view (workspaceId)");
         }
         const paired = [pairImage, pairImageUrl, pairImageId].filter(Boolean).length;
         if (paired > 1) throw new Error("Provide at most one of pairImage, pairImageUrl or pairImageId");
@@ -785,15 +902,36 @@ function makeServer() {
       description: "Reload a photo canvas for the Estampes widget.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
-        part: z.enum(["canvas", "check"]).default("canvas"),
+        part: z.enum(["canvas", "check", "image"]).default("canvas"),
         pairImageId: ImageIdSchema.optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Reload a whole workspace (imageId = its first image)"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, part, pairImageId }) => {
+    async ({ imageId, part, pairImageId, workspaceId }) => {
       try {
+        if (workspaceId && part === "canvas") {
+          const { doc } = await resolveRef(workspaceId);
+          const items = await workspaceItems(doc);
+          return logSizes("load_visual_canvas", {
+            content: [{ type: "text", text: "Workspace data for " + workspaceId + " sent to the widget." }],
+            structuredContent: {
+              kind: "estampes.visual_canvas", imageId: items[0]?.entry.imageId ?? imageId, part, workspaceId,
+              workspace: { id: workspaceId, name: doc.name, revision: doc.revision, items: items.map(wsItemInfo) },
+              annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink), views: [],
+            },
+          }, { appOnly: true });
+        }
         const entry = await ensureImage(imageId);
+        if (part === "image") {
+          const shown = await displayImage(entry);
+          return logSizes("load_visual_canvas", {
+            content: [{ type: "text", text: "Image " + imageId + " sent to the widget." }],
+            structuredContent: { kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
+              image: { mimeType: shown.mimeType, data: shown.data.toString("base64") } },
+          }, { appOnly: true });
+        }
         if (pairImageId && part === "canvas") {
           const right = await ensureImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
           return logSizes("load_visual_canvas", {
@@ -863,6 +1001,267 @@ function makeServer() {
     }
   );
 
+  // ---- Workspaces: several images, merge, split, move, copy, link ----------
+  // See src/workspace.js. These tools change which canvases a workspace
+  // shows; marks are drawn with present_visual as before.
+  const WorkspaceRef = z.string().trim().min(4).max(80)
+    .describe("ws:<id> for a workspace; an imageId for a single canvas; imageId+pairImageId (joined with +) for a paired view");
+  const CanvasKey = z.string().regex(/^img:[0-9a-f]{16}(#c[0-9a-f]{8,16})?$/).describe("An image's own canvas (its imageId) or a copy (imageId#c<hex>)");
+  const IdempotencyKey = z.string().trim().min(1).max(80).optional()
+    .describe("Any unique string for this change; repeating a call with the same key (e.g. after a timeout) returns the first result instead of applying it twice");
+  const itemsText = (doc, check) => doc.items.map((it) => {
+    const c = check.items.find((x) => x.id === it.id) ?? {};
+    return it.id + " " + it.asset + (it.set !== it.asset ? " (copy " + it.set.split("#")[1] + ")" : "") + (it.label ? " " + JSON.stringify(it.label) : "") +
+      ": " + (c.ok === false ? "UNAVAILABLE" : c.marks + " marks (" + c.userMarks + " the user's), " + c.layers + " layers");
+  }).join("; ");
+  const wsText = (head, r) => head + " " + r.workspace.id + " " + JSON.stringify(r.workspace.name) + " revision " + r.workspace.revision + ": " +
+    r.check.totals.items + " images, " + r.check.totals.marks + " marks, " + r.check.totals.layerInstances + " layers, " + r.check.totals.links + " links. Items: " +
+    itemsText(r.workspace, r.check) + (r.check.problems.length ? ". PROBLEMS: " + r.check.problems.join("; ") : "") +
+    (r.skipped?.length ? ". Skipped: " + r.skipped.map((x) => (x.item ?? x.set) + " (" + x.reason + ")").join("; ") : "") +
+    (r.undoToken ? ". undoToken " + r.undoToken : "") + (r.repeated ? ". (Same idempotency key as an earlier call: nothing was applied again.)" : "") +
+    ". Show it with present_visual {workspaceId}.";
+  const wsStructured = (r) => ({ kind: "estampes.workspace_change", protocol: WORKSPACE_PROTOCOL, workspaceId: r.workspace.id, revision: r.workspace.revision,
+    items: r.workspace.items, check: r.check, ...(r.undoToken ? { undoToken: r.undoToken } : {}), ...(r.skipped ? { skipped: r.skipped } : {}),
+    ...(r.repeated ? { repeated: true } : {}) });
+  const ImageList = {
+    images: z.array(ChatFileSchema).max(MAX_ITEMS).default([]).describe("Image files from the conversation, in order"),
+    imageUrls: z.array(z.string().url().max(2048)).max(MAX_ITEMS).default([]).describe("Public https image URLs"),
+    canvases: z.array(CanvasKey).max(MAX_ITEMS).default([]).describe("Images already in Estampes (imageId), or copies of canvases; their marks come along (linked)"),
+    labels: z.array(z.string().max(40)).max(MAX_ITEMS).default([]).describe("Optional short names, in the order images, imageUrls, canvases"),
+  };
+  const loadList = async ({ images, imageUrls, canvases, labels }) => {
+    const keys = [];
+    for (const image of images) keys.push((await loadImageInput({ image })).imageId);
+    for (const imageUrl of imageUrls) keys.push((await loadImageInput({ imageUrl })).imageId);
+    keys.push(...canvases);
+    return keys.map((set, i) => ({ set, ...(labels[i] ? { label: labels[i] } : {}) }));
+  };
+
+  server.registerTool(
+    "create_workspace",
+    {
+      title: "Create a workspace with several images",
+      description: "Create an Estampes WORKSPACE: any number of images (up to " + MAX_ITEMS + ") in one canvas, each keeping its own marks, layers and coordinates. Use it when the user wants three or more images together, or wants to combine canvases. Images can be new files, URLs, or images already in Estampes (`canvases`: their existing marks come along and stay editable; edits show in both places). `from` adds every image of existing workspaces or canvases (imageId, or imageId+pairImageId for a paired view). Never combine images by stitching them into one picture: that loses the marks. Show the result with present_visual {workspaceId}.",
+      inputSchema: z.object({
+        name: z.string().max(60).optional(),
+        ...ImageList,
+        from: z.array(WorkspaceRef).max(8).default([]).describe("Workspaces or canvases whose images (with their marks) to include, linked"),
+        idempotencyKey: IdempotencyKey,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["images"] },
+    },
+    async ({ name, images, imageUrls, canvases, labels, from, idempotencyKey }) => {
+      try {
+        const items = [];
+        for (const ref of from) for (const it of (await resolveRef(ref)).doc.items) items.push({ set: it.set, label: it.label });
+        items.push(...await loadList({ images, imageUrls, canvases, labels }));
+        const r = await createWorkspace({ name, items, key: idempotencyKey });
+        return { content: [{ type: "text", text: wsText("Created workspace", r) }], structuredContent: wsStructured(r) };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "edit_workspace",
+    {
+      title: "Add, remove or arrange workspace images",
+      description: "Change which images an Estampes workspace shows and where. `add` images (files, URLs or existing canvases, with their marks); `remove` item ids to DETACH them from this workspace only (the image and its marks are kept, also in other workspaces and in its own canvas); `arrange` moves, resizes, rotates (0/90/180/270) or renames items, which never changes the marks' own coordinates; `order` sets the item order; `autoLayout` re-flows them. Pass `expectedRevision` (from the last result) so a change made meanwhile is not overwritten. Returns an undoToken.",
+      inputSchema: z.object({
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/),
+        name: z.string().max(60).optional(),
+        ...ImageList,
+        remove: z.array(z.string().regex(/^wi-\d{1,4}$/)).max(MAX_ITEMS).default([]).describe("Item ids to detach (never deletes images or marks)"),
+        arrange: z.array(z.object({
+          item: z.string().regex(/^wi-\d{1,4}$/),
+          x: z.number().finite().min(-100000).max(100000).optional(), y: z.number().finite().min(-100000).max(100000).optional(),
+          width: z.number().finite().min(50).max(20000).optional().describe("Workspace units; items are 1000 wide by default"),
+          rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).optional(),
+          label: z.string().max(40).optional().describe("Empty string clears"),
+        }).strict()).max(MAX_ITEMS).default([]),
+        order: z.array(z.string().regex(/^wi-\d{1,4}$/)).max(MAX_ITEMS).optional().describe("Every item id once, in the new order"),
+        autoLayout: z.boolean().default(false),
+        expectedRevision: z.number().int().min(0).optional(),
+        idempotencyKey: IdempotencyKey,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["images"] },
+    },
+    async ({ workspaceId, name, images, imageUrls, canvases, labels, remove, arrange, order, autoLayout, expectedRevision, idempotencyKey }) => {
+      try {
+        const add = await loadList({ images, imageUrls, canvases, labels });
+        const r = await editWorkspace(workspaceId, { add, remove, arrange, order, name, autoLayout, expectedRevision, key: idempotencyKey });
+        return { content: [{ type: "text", text: wsText("Updated workspace", r) }], structuredContent: wsStructured(r) };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  const TransferFields = {
+    items: z.array(z.string().max(40)).max(MAX_ITEMS).optional().describe("Which images of the source (item ids like wi-2, or imageIds); default all"),
+    mode: z.enum(["link", "copy"]).default("link").describe("link (default) = the same marks, edits show in both places; copy = independent copies of the marks that remember their source"),
+    removeFromSource: z.boolean().default(false).describe("true = MOVE: also remove the items from the source workspace (never deletes images or marks). Not for a single or paired canvas"),
+    commit: z.boolean().default(false).describe("false (default) = only PREVIEW what would happen; true = apply. Pass previewId from the preview to apply exactly that"),
+    previewId: z.string().max(40).optional(),
+    idempotencyKey: IdempotencyKey,
+  };
+  const planText = (plan) => "mode " + plan.mode + (plan.removeFromSource ? " + move" : "") + "; from " + plan.source.ref + " into " +
+    (plan.target.ref === "new" ? "a NEW workspace" : plan.target.ref + (plan.target.createsWorkspace ? " (a canvas: a NEW workspace is created that shows it plus these; the canvas itself stays as it is)" : "")) +
+    ". Adds " + plan.add.length + " image(s): " + plan.add.map((a) => a.item + " " + a.asset + " " + a.marks + " marks (" + a.userMarks + " the user's), " + a.layers + " layers").join("; ") +
+    (plan.skipped.length ? ". Skipped " + plan.skipped.map((x) => x.item + " (" + x.reason + ")").join("; ") : "") +
+    ". Result: " + plan.result.items + " images, " + plan.result.marks + " marks (" + plan.result.userMarks + " the user's), " + plan.result.layerInstances + " layers; links carried " + plan.links.carried +
+    (plan.links.leftBehind ? ", left behind " + plan.links.leftBehind : "") + ". " + plan.sharedEditing + "." +
+    (plan.warnings.length ? " WARNINGS: " + plan.warnings.join("; ") : "");
+  async function transfer(args, { commit, previewId, idempotencyKey }) {
+    if (!commit) {
+      const { previewId: id, plan } = await previewTransfer(args);
+      return {
+        content: [{ type: "text", text: "PREVIEW (nothing changed yet): " + planText(plan) + ". To apply, call again with commit:true and previewId " + JSON.stringify(id) +
+          ". If the user already asked for exactly this and nothing is surprising (no warnings, no move), you may apply it right away; ask first when it moves items, copies or the counts look wrong." }],
+        structuredContent: { kind: "estampes.workspace_preview", protocol: WORKSPACE_PROTOCOL, previewId: id, plan },
+      };
+    }
+    const r = await commitTransfer(previewId ? { previewId, key: idempotencyKey } : { ...args, key: idempotencyKey });
+    const verdict = r.repeated ? "" : r.verified ? " VERIFIED: the workspace holds exactly what the preview said." :
+      " NOT VERIFIED: " + (r.mismatch ? "these totals differ from the plan: " + r.mismatch.join(", ") : r.check.problems.join("; ")) + ". Tell the user; do not claim the merge is complete.";
+    return {
+      content: [{ type: "text", text: wsText(r.created ? "Created workspace" : "Updated workspace", r) + verdict +
+        (r.itemMap?.length ? " Item ids: " + r.itemMap.map((m) => m.from + "→" + m.to).join(", ") + "." : "") }],
+      structuredContent: { ...wsStructured(r), kind: "estampes.workspace_change", created: !!r.created, verified: !!r.verified, ...(r.itemMap ? { itemMap: r.itemMap } : {}) },
+    };
+  }
+
+  server.registerTool(
+    "merge_workspaces",
+    {
+      title: "Merge canvases or workspaces",
+      description: "Bring the images of one canvas or workspace, WITH their marks, layers and links, into another, so they are edited together (for example the user's paired view B into canvas A = one workspace with three images). Nothing is flattened and nothing is deleted: by default the source stays as it is and the marks are LINKED (the same marks, edits show in both places); mode copy makes independent copies; removeFromSource moves. Call it first WITHOUT commit to get a PREVIEW (counts of images, marks, layers, links and what is shared), then with commit:true and the previewId. Merging the same thing twice adds nothing. Returns an undoToken.",
+      inputSchema: z.object({
+        target: WorkspaceRef.describe("Where the images go: a workspace, or a canvas (then a new workspace is created that shows the canvas's images first)"),
+        source: WorkspaceRef.describe("Where they come from"),
+        ...TransferFields,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ target, source, items, mode, removeFromSource, commit, previewId, idempotencyKey }) => {
+      try { return await transfer({ source, target, items, mode, removeFromSource }, { commit, previewId, idempotencyKey }); }
+      catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "split_workspace",
+    {
+      title: "Split images out into a new workspace",
+      description: "Put some images of a workspace or canvas, WITH their marks, into a NEW workspace. By default the source keeps them and the marks are linked (shared); mode copy makes independent copies; removeFromSource takes them out of the source workspace (a move). Preview first (no commit), then commit:true with the previewId. Returns an undoToken.",
+      inputSchema: z.object({
+        source: WorkspaceRef,
+        name: z.string().max(60).optional().describe("Name of the new workspace"),
+        ...TransferFields,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ source, name, items, mode, removeFromSource, commit, previewId, idempotencyKey }) => {
+      try { return await transfer({ source, target: "new", items, mode, removeFromSource, name }, { commit, previewId, idempotencyKey }); }
+      catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "undo_workspace_change",
+    {
+      title: "Undo a workspace change",
+      description: "Undo one create/edit/merge/split/move by the undoToken it returned. Every workspace it touched goes back to how it was; a workspace it created is removed (its images and marks are kept). Refused if one of them changed again since: undo the later change first. Marks drawn with present_visual are not affected.",
+      inputSchema: z.object({ workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/), undoToken: z.string().regex(/^u-[0-9a-f]{12}$/) }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspaceId, undoToken }) => {
+      try {
+        const r = await undoChange(workspaceId, undoToken);
+        return {
+          content: [{ type: "text", text: "Undid " + r.kind + " " + undoToken + ": " + r.workspaces.map((w) => w.id + (w.archived ? " removed" : " now revision " + w.revision)).join(", ") + "." }],
+          structuredContent: { kind: "estampes.workspace_undo", ...r },
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "export_workspace_bundle",
+    {
+      title: "Export a workspace as a .estampes bundle",
+      description: "Make a portable .estampes file of a workspace (or a canvas / paired view, which becomes a workspace first): every image, and every canvas's marks, layers, claims and links as editable DATA (nothing is flattened). The user can open it on another Estampes server with import_workspace_bundle. Returns a download link and the manifest. It contains no access key, link or chat content. Set fileNames:false to leave original file names out.",
+      inputSchema: z.object({ workspace: WorkspaceRef, fileNames: z.boolean().default(true) }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspace, fileNames }) => {
+      try {
+        let ref = workspace;
+        if (!/^ws:/.test(ref)) {
+          const made = await createWorkspace({ items: (await resolveRef(ref)).doc.items.map((it) => ({ set: it.set, label: it.label })) });
+          ref = made.workspace.id;
+        }
+        const built = await exportBundle(ref, { version: VERSION, fileNames });
+        bundleCache.set(ref.slice(3), built);
+        const link = publicUrl() + "/export/ws/" + ref.slice(3) + "/workspace.estampes" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, ref.slice(3), "workspace.estampes") : "");
+        return {
+          content: [{ type: "text", text: "Bundle " + built.fileName + " (" + Math.round(built.buffer.length / 1024) + " KiB): " + built.manifest.workspace.items + " image(s), " + built.manifest.workspace.marks + " mark(s). Download: " + link +
+            (built.warnings.length ? "\nNotes: " + built.warnings.join(" ") : "") }],
+          structuredContent: { kind: "estampes.workspace_bundle", workspaceId: ref, fileName: built.fileName, bytes: built.buffer.length, downloadUrl: link, manifest: built.manifest, warnings: built.warnings },
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "import_workspace_bundle",
+    {
+      title: "Import a .estampes bundle",
+      description: "Open a .estampes bundle (attached file or public https URL) as a new workspace. Hashes, format, paths and every mark are checked first; nothing is overwritten: a canvas that already has different marks gets an independent copy (collision copy) or, if identical, is reused (collision reuse). Importing the same bundle again returns the same workspace. Returns the workspace, what each canvas became, warnings, and a read-back verification against the bundle's own totals. Show it with present_visual {workspaceId}.",
+      inputSchema: z.object({
+        file: ChatFileSchema.optional().describe("The attached .estampes file"),
+        bundleUrl: z.string().url().optional().describe("Public https URL of a .estampes file"),
+        name: z.string().max(60).optional(),
+        collision: z.enum(["reuse", "copy"]).default("reuse"),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["file"] },
+    },
+    async ({ file, bundleUrl, name, collision }) => {
+      try {
+        if (Boolean(file) === Boolean(bundleUrl)) throw new Error("Give exactly one of file or bundleUrl");
+        const bytes = await downloadImage(file ? file.download_url : bundleUrl, { maxBytes: 256 * 1024 * 1024, accept: "application/octet-stream,application/zip,*/*" });
+        const r = await importBundle(bytes, { name, collision });
+        return {
+          content: [{ type: "text", text: (r.repeated ? "Already imported: " : "Imported ") + (r.workspace?.id ?? "") + " (" + (r.check?.totals?.items ?? "?") + " image(s), " + (r.check?.totals?.marks ?? "?") + " mark(s))." +
+            (r.verified === false ? " Verification differs from the bundle: " + JSON.stringify({ mismatch: r.mismatch, unsupported: r.unsupported }) : "") +
+            (r.warnings?.length ? "\nNotes: " + r.warnings.join(" ") : "") }],
+          structuredContent: { ...wsStructured(r), kind: "estampes.workspace_import", summary: r.summary, warnings: r.warnings, verified: r.verified, repeated: !!r.repeated },
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "get_workspace_state",
+    {
+      title: "Read a workspace",
+      description: "Return an Estampes workspace as one " + WORKSPACE_PROTOCOL + " JSON document: its items (which image, which canvas, placement), the images, every canvas's layers and marks (geometry normalized to its own image, author, note, claim state, where a copy came from), links between items, rejected claims, the recent undo tokens and a CHECK of the totals. A single canvas (imageId) or a paired view (imageId+pairImageId) is returned in the same shape. Read-only.",
+      inputSchema: z.object({ workspace: WorkspaceRef, history: z.number().int().min(0).max(200).default(0) }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspace, history }) => {
+      try {
+        const doc = await workspaceDocument((await resolveRef(workspace)).doc, { history });
+        const t = doc.check.totals;
+        return {
+          content: [{ type: "text", text: WORKSPACE_PROTOCOL + ": " + t.items + " images, " + t.marks + " marks, " + t.layerInstances + " layers, " + t.links + " links" +
+            (doc.check.problems.length ? ", PROBLEMS: " + doc.check.problems.join("; ") : "") + ". " + JSON.stringify(doc) }],
+          structuredContent: doc,
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
   // Private tool for the canvas widget: a sharper tile of the photo while
   // the user zooms. App-only, like load_visual_canvas.
   registerAppTool(
@@ -904,6 +1303,7 @@ function makeServer() {
         scene:SceneSchema.optional(),
         imageId:ImageIdSchema.optional(),
         pairImageId:ImageIdSchema.optional(),
+        workspaceId:z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
         annotations:VisualAnnotationsSchema,
         intent:z.enum(INTENTS).default("free-annotate"),
         note:z.string().max(500).default(""),
@@ -918,16 +1318,40 @@ function makeServer() {
         annotations:VisualAnnotationsSchema,
         layer:z.object({id:z.string(),name:z.string()}).optional(),
         pairLayer:z.object({id:z.string(),name:z.string()}).optional(),
+        itemLayers:z.array(z.object({item:z.string(),id:z.string(),name:z.string()})).optional(),
         event:z.record(z.string(),z.unknown()),
         chatMessage:z.string(),
       }),
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,imageId,pairImageId,annotations,intent,note,replyQuote,gestureDecisions})=>{
+    async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions})=>{
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
       try {
+        if(workspaceId){
+          // Workspace view: each mark joins the canvas of its own item.
+          const {doc}=await resolveRef(workspaceId),items=await workspaceItems(doc);
+          if(!items.length)throw new Error("This workspace has no images");
+          const itemOf=a=>items.find(it=>it.id===a.item)??items[0];
+          const checked=annotations.map(({side:_s,...a})=>({...a,item:itemOf(a).id,author:"user",grounding:"user-pointer"}));
+          const workspace={id:workspaceId,items:items.map(it=>({id:it.id,imageId:it.entry.imageId,width:it.entry.width,height:it.entry.height,label:it.item.label}))};
+          const first=items[0].entry;
+          const decisions=[...items.flatMap(it=>it.entry.gestureDecisions??[]),...gestureDecisions];
+          const event=buildAnnotationEvent({image:{imageId:first.imageId,width:first.width,height:first.height},workspace,annotations:checked,intent,note,replyQuote,gestureDecisions:decisions});
+          const itemLayers=[];
+          for(const it of items){
+            const own=checked.filter(a=>a.item===it.id).map(({item:_i,...a})=>a);
+            if(!own.length)continue;
+            const layer=storeUserMarks(it.entry,own);
+            if(layer)itemLayers.push({item:it.id,id:layer.id,name:layer.name});
+            await saveCanvas(it.entry,{tool:"validate_visual_annotations",author:"user",changed:own.map(a=>a.id),note:intent});
+          }
+          return {
+            content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations in workspace "+workspaceId+"; explicit interaction intent="+intent+" (geometry only)."}],
+            structuredContent:{kind:"estampes.validated_annotations",imageId:first.imageId,count:checked.length,annotations:checked,event,chatMessage:formatAnnotationChatMessage(event),itemLayers},
+          };
+        }
         if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
         let image;
         let entry;
@@ -979,7 +1403,9 @@ function makeServer() {
       description: "Record the user's verdict on a link in an Estampes paired view.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
-        pairImageId: ImageIdSchema,
+        pairImageId: ImageIdSchema.optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
+        fromItem: WorkspaceItemId.optional(), toItem: WorkspaceItemId.optional(),
         linkId: z.string().min(1).max(64),
         review: z.enum([...LINK_REVIEW, "unreviewed"]),
         reason: z.string().max(200).optional(),
@@ -987,8 +1413,19 @@ function makeServer() {
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, linkId, review, reason }) => {
+    async ({ imageId, pairImageId, workspaceId, fromItem, toItem, linkId, review, reason }) => {
       try {
+        if (workspaceId) {
+          const items = await workspaceItems((await resolveRef(workspaceId)).doc);
+          const { owner, link } = reviewWorkspaceLink(items, { fromItem, toItem, id: linkId }, review, reason);
+          await saveCanvas(owner.entry, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
+          const shown = workspaceLinks(items).find((l) => l.id === linkId && [l.fromItem, l.toItem].includes(fromItem) && [l.fromItem, l.toItem].includes(toItem));
+          return {
+            content: [{ type: "text", text: "Link " + linkId + " marked " + review + " by the user." }],
+            structuredContent: { kind: "estampes.link_review", imageId, workspaceId, link: wsWidgetLink(shown ?? { ...link, fromItem, toItem, from: link.left, to: link.right }) },
+          };
+        }
+        if (!pairImageId) throw new Error("pairImageId or workspaceId is required");
         const left = await ensureImage(imageId);
         const link = reviewLink(left, await ensureImage(pairImageId), linkId, review, reason);
         await saveCanvas(left, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
@@ -1016,13 +1453,19 @@ function makeServer() {
         markId: z.string().min(1).max(64),
         review: z.enum([...LINK_REVIEW, "unreviewed"]),
         reason: z.string().max(200).optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional(), item: WorkspaceItemId.optional(),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, markId, review, reason }) => {
+    async ({ imageId, markId, review, reason, workspaceId, item }) => {
       try {
-        const entry = await ensureImage(imageId);
+        let entry;
+        if (workspaceId) {
+          const items = await workspaceItems((await resolveRef(workspaceId)).doc);
+          entry = items.find((it) => it.id === item)?.entry;
+          if (!entry) throw new Error("No item " + item + " in " + workspaceId);
+        } else entry = await ensureImage(imageId);
         const mark = reviewFinding(entry, markId, review, reason);
         await saveCanvas(entry, { tool: "review_visual_finding", author: "user", changed: [markId], note: review });
         return {
@@ -1048,13 +1491,19 @@ function makeServer() {
         imageId: ImageIdSchema.describe("The image the strokes are on (the right image's id for the right of a paired view)"),
         memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
         verdict: z.enum([...GESTURE_VERDICTS, "unreviewed"]),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Workspace view: the strokes are on the canvas of this workspace's `item`"),
+        item: WorkspaceItemId.optional(),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, memberIds, verdict }) => {
+    async ({ imageId, memberIds, verdict, workspaceId, item }) => {
       try {
-        const entry = await ensureImage(imageId);
+        let entry;
+        if (workspaceId) {
+          entry = (await workspaceItems((await resolveRef(workspaceId)).doc)).find((it) => it.id === item)?.entry;
+          if (!entry) throw new Error("No item " + item + " in " + workspaceId);
+        } else entry = await ensureImage(imageId);
         recordGestureDecision(entry, memberIds, verdict);
         await saveCanvas(entry, { tool: "review_gesture_group", author: "user", changed: memberIds, note: verdict });
         return {
@@ -1073,7 +1522,7 @@ function makeServer() {
   // turn can be moved, restyled or relabelled; any unlocked mark can be
   // deleted. GPT is told about these edits on its next present_visual call.
   const EditMarkSchema = z.object({
-    id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(),
+    id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
     points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
     label: z.string().max(64).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
@@ -1088,26 +1537,54 @@ function makeServer() {
       inputSchema: z.object({
         imageId: ImageIdSchema,
         pairImageId: ImageIdSchema.optional(),
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Edits in a workspace view: entries name their `item`"),
         layers: z.array(z.object({
-          id: z.string().regex(/^L\d{1,6}$/), side: z.enum(["left", "right"]).optional(),
+          id: z.string().regex(/^L\d{1,6}$/), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
           name: z.string().max(LAYER_NAME_MAX).optional(), locked: z.boolean().optional(), opacity: z.number().min(0).max(1).optional(),
         }).strict()).max(60).default([]),
-        order: z.object({ left: LayerIds.optional(), right: LayerIds.optional() }).strict().optional().describe("Layer ids bottom to top"),
+        order: z.record(z.string().regex(/^(left|right|wi-\d{1,4})$/), LayerIds).optional().describe("Layer ids bottom to top, per image (left/right, or workspace item id)"),
         marks: z.array(EditMarkSchema).max(30).default([]),
-        remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional() }).strict()).max(30).default([]),
+        remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional() }).strict()).max(30).default([]),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, layers, order, marks, remove }) => {
+    async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove }) => {
       try {
+        const resolveUser = (m) => {
+          const { side: _s, item: _i, ...rest } = m;
+          return replayUserAnnotation(VisualAnnotationSchema.parse(rest));
+        };
+        if (workspaceId) {
+          // Workspace: the same edits, per item, all or nothing.
+          const items = await workspaceItems((await resolveRef(workspaceId)).doc);
+          const known = new Set(items.map((it) => it.id));
+          for (const x of [...layers, ...marks, ...remove]) if (x.item && !known.has(x.item)) throw new Error("No item " + x.item + " in " + workspaceId);
+          for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
+          const first = items[0].id, of = (x) => x.item ?? first;
+          const undo = [], all = [];
+          try {
+            for (const it of items) {
+              const pick = {
+                layers: layers.filter((l) => of(l) === it.id).map(({ side: _s, item: _i, ...l }) => l), order: order?.[it.id],
+                marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
+              };
+              if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
+              const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
+              undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
+              all.push({ it, edits: editCanvas(it.entry, pick) });
+            }
+          } catch (error) { undo.forEach((u) => u()); throw error; }
+          for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
+          const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
+          return {
+            content: [{ type: "text", text: "Applied " + edits.length + " user edit(s) in workspace " + workspaceId + "." }],
+            structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits, annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) },
+          };
+        }
         const left = await ensureImage(imageId), right = pairImageId ? await ensureImage(pairImageId) : null;
         if (!right && [...layers, ...marks, ...remove].some((x) => x.side === "right")) throw new Error("side:'right' needs pairImageId");
         if (!right && order?.right) throw new Error("order.right needs pairImageId");
-        const resolveUser = (m) => {
-          const { side: _s, ...rest } = m;
-          return replayUserAnnotation(VisualAnnotationSchema.parse(rest));
-        };
         const pick = (side) => ({
           layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
           order: order?.[side],
@@ -1848,8 +2325,37 @@ const httpServer = createHttpServer((req, res) => {
       visualProtocol: VISUAL_PROTOCOL,
       stateTool: "get_visual_state",
       stateApi: "/api/v1/canvas/{hash}",
+      workspaceProtocol: WORKSPACE_PROTOCOL,
+      workspaceApi: "/api/v1/workspaces/{hash}",
+      workspaceTools: ["create_workspace", "edit_workspace", "merge_workspaces", "split_workspace", "undo_workspace_change", "get_workspace_state", "export_workspace_bundle", "import_workspace_bundle"],
       storage: config.storageDir ? "disk" : "memory",
     }));
+    return;
+  }
+
+  // A workspace as a .estampes bundle, signed like the other exports.
+  const bundleMatch = /^\/export\/ws\/([0-9a-f]{16})\/workspace\.estampes$/.exec(url.pathname);
+  if (bundleMatch && req.method === "GET") {
+    if (!exportAllowed(ACCESS_KEY, bundleMatch[1], "workspace.estampes", url.searchParams.get("sig"))) {
+      res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+      res.end("This download link is not signed for this server. Ask for the bundle again to get a fresh link.");
+      return;
+    }
+    const send = (built) => {
+      res.writeHead(200, {
+        "content-type": "application/zip", "content-length": built.buffer.length,
+        "content-disposition": "attachment; filename=\"" + built.fileName + "\"",
+        "x-content-type-options": "nosniff", "cache-control": "no-store",
+      });
+      res.end(built.buffer);
+    };
+    // The file the tool described; after a restart it is built again from the stored workspace.
+    const cached = bundleCache.get(bundleMatch[1]);
+    if (cached) { send(cached); return; }
+    exportBundle("ws:" + bundleMatch[1], { version: VERSION }).then(send, (error) => {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Workspace not found on this server: " + String(error?.message || error));
+    });
     return;
   }
 
@@ -1899,6 +2405,20 @@ const httpServer = createHttpServer((req, res) => {
     if (pairHex && !/^[0-9a-f]{16}$/.test(pairHex)) { json(400, { error: "pair must be a 16-character image hash" }); return; }
     Promise.all([ensureImage("img:" + apiMatch[1]), pairHex ? ensureImage("img:" + pairHex) : null])
       .then(async ([left, right]) => json(200, canvasDocument(left, right, history ? { history: await readHistory(left.imageId, history) } : {})))
+      .catch((error) => json(404, { error: String(error?.message || error) }));
+    return;
+  }
+
+  // A workspace as an estampes.workspace/1 document: /api/v1/workspaces/<hex>.
+  const wsMatch = /^\/api\/v1\/workspaces\/([0-9a-f]{16})$/.exec(url.pathname);
+  if (wsMatch && req.method === "GET") {
+    const json = (status, body) => {
+      res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
+      res.end(JSON.stringify(body));
+    };
+    if (!authorized(req, url)) { json(401, { error: "Missing or invalid Estampes access key" }); return; }
+    const history = Math.min(200, Math.max(0, Number(url.searchParams.get("history")) || 0));
+    resolveRef("ws:" + wsMatch[1]).then(async ({ doc }) => json(200, await workspaceDocument(doc, { history })))
       .catch((error) => json(404, { error: String(error?.message || error) }));
     return;
   }

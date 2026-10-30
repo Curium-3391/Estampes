@@ -211,10 +211,13 @@ const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公�
 let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
 const IMAGE_ID=/^img:[0-9a-f]{16}$/;
 // Paired view: two different images side by side, each 1000 units wide,
-// so ink and labels keep the size they have on a single photo.
-let pair=null,frames=null;
+// so ink and labels keep the size they have on a single photo. A workspace
+// is the same with any number of images, each placed (and possibly turned
+// in 90° steps) where the workspace says. `frames` maps each image's key
+// (left/right, or a workspace item id) to where it sits on the canvas.
+let pair=null,ws=null,frames=null;
 const GAP=40;
-const K=()=>(pair?1000:VW)/640;
+const K=()=>(frames?1000:VW)/640;
 // User zoom: the visible part of the canvas, in canvas units (null = all).
 const MAX_ZOOM=24;
 let cam=null,detail=null;
@@ -224,9 +227,34 @@ const Z=()=>cam?VW/cam.w:1;
 const U=()=>K()/Z();
 function layoutPair(wl,hl,wr,hr){
  const hL=wl>0&&hl>0?Math.round(1000*hl/wl):750,hR=wr>0&&hr>0?Math.round(1000*hr/wr):750;
- frames={left:{x0:0,y0:0,w:1000,h:hL},right:{x0:1000+GAP,y0:0,w:1000,h:hR}};
+ frames={left:{x0:0,y0:0,w:1000,h:hL,rot:0},right:{x0:1000+GAP,y0:0,w:1000,h:hR,rot:0}};
  VW=2000+GAP;VH=Math.max(hL,hR);
 }
+// Workspace placement is in workspace units (an image is `width` wide); the
+// canvas starts at the top-left of everything, with a small margin.
+const ROTS=[0,90,180,270];
+function layoutWorkspace(items){
+ const boxes=items.map(it=>{const p=it.placement??{},w=Number(p.width)>0?Number(p.width):1000,
+   h=it.width>0&&it.height>0?w*it.height/it.width:w*.75,rot=ROTS.includes(p.rotation)?p.rotation:0;
+   return {id:it.id,x:Number(p.x)||0,y:Number(p.y)||0,w,h,rot,ew:rot%180?h:w,eh:rot%180?w:h};});
+ const minX=Math.min(0,...boxes.map(b=>b.x)),minY=Math.min(0,...boxes.map(b=>b.y));
+ frames={};for(const b of boxes)frames[b.id]={x0:b.x-minX,y0:b.y-minY,w:b.w,h:b.h,rot:b.rot,ew:b.ew,eh:b.eh};
+ VW=Math.max(1000,...boxes.map(b=>b.x-minX+b.ew));VH=Math.max(200,...boxes.map(b=>b.y-minY+b.eh));
+}
+const extentOf=f=>({w:f.ew??f.w,h:f.eh??f.h});
+// Image-normalized (u,v) → canvas units, and back.
+function framePoint(f,u,v){const lx=u*f.w,ly=v*f.h;
+ const [X,Y]=f.rot===90?[f.h-ly,lx]:f.rot===180?[f.w-lx,f.h-ly]:f.rot===270?[ly,f.w-lx]:[lx,ly];return [f.x0+X,f.y0+Y];}
+function frameUV(f,X,Y){const x=X-f.x0,y=Y-f.y0;
+ const [lx,ly]=f.rot===90?[y,f.h-x]:f.rot===180?[f.w-x,f.h-y]:f.rot===270?[f.w-y,x]:[x,y];return [lx/f.w,ly/f.h];}
+const firstSide=()=>ws?ws.items[0]?.id:"left";
+// What to call an image in the UI: 左/右, or a workspace item's label.
+const SIDE_ZH0={left:"左",right:"右"};
+function sideTitle(side){
+ if(ws){const i=ws.items.findIndex(it=>it.id===side);return i<0?"?":(ws.items[i].label||"圖"+(i+1));}
+ return SIDE_ZH0[side]??"左";
+}
+const sideTag=side=>frames?sideTitle(side??firstSide())+" ":"";
 // Marks are kept in canvas-normalized coordinates while shown; the server
 // and GPT use coordinates normalized to the mark's own image (`side`).
 function mapMark(m,f){
@@ -235,14 +263,33 @@ function mapMark(m,f){
  if(m.points)out.points=m.points.map(p=>{const [px,py]=f(p.x,p.y);return {x:px,y:py};});
  return out;
 }
-const frameOf=m=>frames[m.side==="right"?"right":"left"];
-const toView=m=>{if(!pair)return m;const f=frameOf(m);return mapMark(m,(x,y)=>[(f.x0+x*f.w)/VW,(f.y0+y*f.h)/VH]);};
-const toSide=m=>{if(!pair)return m;const f=frameOf(m);
- return mapMark(m,(x,y)=>[round(clamp((x*VW-f.x0)/f.w,0,1)),round(clamp((y*VH-f.y0)/f.h,0,1))]);};
-const sideAt=p=>pair&&p.x*VW>1000+GAP/2?"right":"left";
-// Layer ids are per image; the right image's get an R prefix on screen.
-const viewLayer=m=>pair&&m.side==="right"&&m.layer?{...m,layer:"R"+m.layer}:m;
-const fromServer=m=>pair?toView(viewLayer({...m,side:m.side==="right"?"right":"left"})):m;
+const frameOf=m=>frames[m.side]??frames[firstSide()];
+const toView=m=>{if(!frames)return m;const f=frameOf(m);return mapMark(m,(x,y)=>{const [X,Y]=framePoint(f,x,y);return [X/VW,Y/VH];});};
+const toSide=m=>{if(!frames)return m;const f=frameOf(m);
+ return mapMark(m,(x,y)=>{const [u,v]=frameUV(f,x*VW,y*VH);return [round(clamp(u,0,1)),round(clamp(v,0,1))];});};
+// The image under a canvas point (or the nearest one).
+function sideAt(p){
+ if(!frames)return "left";
+ const X=p.x*VW,Y=p.y*VH;let best=firstSide(),bestD=Infinity;
+ for(const [key,f] of Object.entries(frames)){const e=extentOf(f);
+   const d=Math.hypot(Math.max(f.x0-X,0,X-f.x0-e.w),Math.max(f.y0-Y,0,Y-f.y0-e.h));if(d<bestD){best=key;bestD=d;}}
+ return best;
+}
+// Layer ids are per image; on screen the right image's get an R prefix and
+// a workspace item's W<n>_ (n = its position).
+const layerPrefix=side=>ws?"W"+(ws.items.findIndex(it=>it.id===side)+1)+"_":pair&&side==="right"?"R":"";
+const viewLayer=m=>frames&&m.layer?{...m,layer:layerPrefix(m.side)+m.layer}:m;
+const sideKey=side=>ws?(ws.items.some(it=>it.id===side)?side:firstSide()):side==="right"?"right":"left";
+const fromServer=m=>frames?toView(viewLayer({...m,side:sideKey(m.side)})):m;
+// In a workspace two images may both have a mark "g1"; such ids get the
+// item in front on screen, and rawId is what the server knows.
+function fromServerList(list){
+ const marks=(Array.isArray(list)?list:[]).filter(valid).slice(0,240);
+ if(!ws)return marks.slice(0,120).map(fromServer);
+ const count=new Map();for(const m of marks)count.set(m.id,(count.get(m.id)??0)+1);
+ return marks.map(m=>{const v=fromServer(m);return count.get(m.id)>1?{...v,id:v.side+":"+m.id,rawId:m.id}:v;});
+}
+const rawOf=m=>m.rawId??m.id;
 // Links: "this left mark and this right mark are the same thing".
 const linksEl=document.querySelector("#links"),linkEl=document.querySelector("#link-annotations");
 let links=[],selectedLink=null,unsentReviews=[];
@@ -253,7 +300,16 @@ const cleanLinks=list=>(Array.isArray(list)?list:[]).filter(l=>l&&typeof l.id===
    confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null,
    evidence:cleanEvidence(l.evidence),ambiguities:(Array.isArray(l.ambiguities)?l.ambiguities:[]).map(a=>String(a).slice(0,120)).slice(0,4),
    reviewReason:String(l.reviewReason??"").slice(0,200),previouslyRejected:!!l.previouslyRejected,
-   verification:VERIFICATION.includes(l.verification)?l.verification:null})).slice(0,30);
+   verification:VERIFICATION.includes(l.verification)?l.verification:null,
+   ...(typeof l.fromItem==="string"&&typeof l.toItem==="string"?{fromItem:l.fromItem,toItem:l.toItem}:{})})).slice(0,60);
+// Server links → the widget's: in a workspace each end is (item, mark id),
+// turned into the on-screen mark id; the link's own id may repeat between
+// different pairs of items, so it gets the pair in front.
+function viewLinks(list){
+ const clean=cleanLinks(list);if(!ws)return clean.slice(0,30);
+ const vid=(item,raw)=>allMarks().find(m=>m.side===item&&rawOf(m)===raw)?.id??item+":"+raw;
+ return clean.map(l=>({...l,rawId:l.id,id:l.fromItem+">"+l.toItem+":"+l.id,left:vid(l.fromItem,l.left),right:vid(l.toItem,l.right)}));
+}
 // Claims (a link, or GPT's note on a mark) carry evidence: where on which
 // image, what GPT says it saw there, and who observed it. Only the user or
 // a tool's evidence verifies a claim; GPT's confidence never does.
@@ -277,19 +333,20 @@ function evidenceRow(owner,c){
  const list=cleanEvidence(c.evidence);if(!list.length)return null;
  const row=el("span",{className:"evidence"});
  list.forEach((e,i)=>{
-   const side=pair&&e.image===pair.imageId?"right":"left";
+   const side=sideOfImage(e.image);
    const who=e.observer==="tool"?"工具":e.observer==="user"?"你":"GPT 自述";
-   const b=el("button",{type:"button",textContent:"證據"+(i+1)+(pair?"（"+SIDE_ZH[side]+"）":"")+"・"+who+"："+e.says,title:e.region?"放大到這個位置":"沒有給位置"});
+   const b=el("button",{type:"button",textContent:"證據"+(i+1)+(frames?"（"+sideTitle(side)+"）":"")+"・"+who+"："+e.says,title:e.region?"放大到這個位置":"沒有給位置"});
    b.dataset.evidence=owner+"|"+i;b.disabled=!e.region;b.classList.toggle("on",selectedEvidence?.key===owner+"|"+i);
    row.append(b);
  });
  return row;
 }
+const sideOfImage=img=>ws?(ws.items.find(it=>it.imageId===img)?.id??firstSide()):pair&&img===pair.imageId?"right":"left";
 function evidenceRect(e){
  const [x,y,x2,y2]=e.region;
- if(!pair)return {x:x*VW,y:y*VH,w:(x2-x)*VW,h:(y2-y)*VH};
- const f=frames[e.image===pair.imageId?"right":"left"];
- return {x:f.x0+x*f.w,y:f.y0+y*f.h,w:(x2-x)*f.w,h:(y2-y)*f.h};
+ if(!frames)return {x:x*VW,y:y*VH,w:(x2-x)*VW,h:(y2-y)*VH};
+ const f=frames[sideOfImage(e.image)],a=framePoint(f,x,y),b=framePoint(f,x2,y2);
+ return {x:Math.min(a[0],b[0]),y:Math.min(a[1],b[1]),w:Math.abs(b[0]-a[0]),h:Math.abs(b[1]-a[1])};
 }
 function showEvidence(key,e){
  if(selectedEvidence?.key===key){selectedEvidence=null;render();return;}
@@ -320,25 +377,31 @@ function reviewControls(li,c){
 const layersEl=document.querySelector("#layers");
 let layers=[],hiddenLayers=new Set(),renamingLayer=null;
 const shown=m=>!m.layer||!hiddenLayers.has(m.layer);
-const LAYER_ID=/^R?L\d{1,6}$/;
+const LAYER_ID=/^(R|W\d{1,2}_)?L\d{1,6}$/;
 const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
  .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(l.locked===true?{locked:true}:{}),
    ...(typeof l.opacity==="number"&&l.opacity>=.1&&l.opacity<1?{opacity:l.opacity}:{})})).slice(0,60);
 const layerOf=id=>layers.find(l=>l.id===id);
 const isLocked=m=>!!m?.layer&&layerOf(m.layer)?.locked===true;
-// Paired view: on screen the right image's layers are "R"+id.
-const serverLayer=id=>id.startsWith("R")?{side:"right",id:id.slice(1)}:{side:"left",id};
-const sideName=id=>pair?(id.startsWith("R")?"右 · ":"左 · "):"";
+// Paired view: on screen the right image's layers are "R"+id; workspace
+// items' are "W<n>_"+id.
+function serverLayer(id){
+ const w=/^W(\d{1,2})_(L\d+)$/.exec(id);
+ if(w)return {side:ws?.items[Number(w[1])-1]?.id??firstSide(),id:w[2]};
+ return id.startsWith("R")?{side:"right",id:id.slice(1)}:{side:ws?firstSide():"left",id};
+}
+const sideName=id=>frames?sideTitle(serverLayer(id).side)+" · ":"";
 // Visibility is remembered per photo for this widget instance when the host
 // keeps widget state (ChatGPT); elsewhere it lasts until the widget reloads.
 let localState={};
 const widgetState=()=>{try{return window.openai?.widgetState??localState}catch{return localState}};
-const savedHidden=()=>widgetState()?.hiddenLayers?.[imageId]??[];
+const viewKey=()=>ws?ws.id:imageId;
+const savedHidden=()=>widgetState()?.hiddenLayers?.[viewKey()]??[];
 function saveHidden(){const st=widgetState()??{};
- localState={...st,hiddenLayers:{...(st.hiddenLayers??{}),[imageId]:[...hiddenLayers]}};
+ localState={...st,hiddenLayers:{...(st.hiddenLayers??{}),[viewKey()]:[...hiddenLayers]}};
  try{window.openai?.setWidgetState?.(localState);}catch{}}
 function setLayers(list){
- const next=cleanLayers(pair?(Array.isArray(list)?list:[]).map(l=>l?.side==="right"?{...l,id:"R"+l.id}:l):list);
+ const next=cleanLayers(frames?(Array.isArray(list)?list:[]).map(l=>l&&typeof l.id==="string"?{...l,id:layerPrefix(sideKey(l.side))+l.id}:l):list);
  if(JSON.stringify(next)===JSON.stringify(layers))return;
  layers=next;const known=new Set(layers.map(l=>l.id));
  hiddenLayers=new Set([...hiddenLayers,...savedHidden()].filter(id=>known.has(id)));
@@ -364,7 +427,7 @@ function renderLayers(){
      name.append(input);requestAnimationFrame(()=>{input.focus();input.select();});
    }else name.append(sideName(l.id)+l.name);
    const op=Math.round((l.opacity??1)*100);
-   const same=shownOrder.filter(o=>o.id.startsWith("R")===l.id.startsWith("R")),pos=same.indexOf(l);
+   const same=shownOrder.filter(o=>serverLayer(o.id).side===serverLayer(l.id).side),pos=same.indexOf(l);
    row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),name,
      el("span",{className:"count",textContent:String(counts.get(l.id))}),
      el("button",{textContent:"✎",title:"改名","aria-label":"改名",disabled:!ready,dataset:{layer:l.id,act:"rename"}}),
@@ -379,9 +442,13 @@ function renderLayers(){
 // Layer settings and edits of earlier marks go to the server (app-only
 // tool); GPT reads them on its next call and in the next message.
 let unsentEdits=[];
+// In a workspace an edit names its item where a paired view names its side.
+const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
 async function editOnServer(args){
  if(!ready||!imageId)throw Error("尚未連線");
- const result=await request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...args}});
+ const body=ws?{...args,layers:asItems(args.layers),marks:asItems(args.marks),remove:asItems(args.remove),workspaceId:ws.id}:args;
+ for(const k of ["layers","marks","remove"])if(body[k]===undefined)delete body[k];
+ const result=await request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...body}});
  if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
  const r=result?.structuredContent;
  if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");
@@ -392,12 +459,13 @@ async function editOnServer(args){
 // The server's canvas after an edit. Unsent marks stay as they are.
 function applyServerCanvas(annotations,layerList,linkList){
  if(Array.isArray(layerList)){layers=[];setLayers(layerList);}
- const marks=(Array.isArray(annotations)?annotations:[]).filter(valid).slice(0,120).map(fromServer);
+ const marks=fromServerList(annotations);
  const byId=new Map(marks.map(m=>[m.id,m])),mine=new Set(userMarks.map(m=>m.id));
- assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
+ const cap=ws?200:60;
+ assistantMarks=marks.filter(a=>a.author!=="user").slice(0,cap);
  userMarks=userMarks.filter(m=>!sentIds.has(m.id)||byId.has(m.id)).map(m=>sentIds.has(m.id)?{...byId.get(m.id)}:m);
- priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,60);
- if(pair&&Array.isArray(linkList))links=cleanLinks(linkList);
+ priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,cap);
+ if(frames&&Array.isArray(linkList))links=viewLinks(linkList);
  if(selected&&!allMarks().some(m=>m.id===selected))selected=null;
 }
 async function layerEdit(args,done){
@@ -406,13 +474,13 @@ async function layerEdit(args,done){
  render();
 }
 function reorder(id,dir){
- const side=id.startsWith("R");
+ const side=serverLayer(id).side;
  const used=new Set([...assistantMarks,...priorUserMarks,...userMarks].map(m=>m.layer));
- const ids=layers.filter(l=>l.id.startsWith("R")===side&&used.has(l.id)).map(l=>l.id);
+ const ids=layers.filter(l=>serverLayer(l.id).side===side&&used.has(l.id)).map(l=>l.id);
  const i=ids.indexOf(id),j=i+dir;if(i<0||j<0||j>=ids.length)return;
  [ids[i],ids[j]]=[ids[j],ids[i]];
  const raw=ids.map(x=>serverLayer(x).id);
- layerEdit({order:{[side?"right":"left"]:raw}},"已調整圖層順序。");
+ layerEdit({order:{[side]:raw}},"已調整圖層順序。");
 }
 layersEl.addEventListener("change",e=>{
  const t=e.target,id=t?.dataset?.layer;if(!id)return;
@@ -569,7 +637,7 @@ function linkAnchor(m){
 }
 function renderLinks(){
  linkEl.replaceChildren();linksEl.replaceChildren();
- if(!pair)return;
+ if(!frames)return;
  const all=new Map([...assistantMarks,...priorUserMarks,...userMarks].map(m=>[m.id,m]));
  const lk=U();
  links.forEach((l,i)=>{
@@ -586,9 +654,10 @@ function renderLinks(){
    const li=document.createElement("li");li.dataset.link=l.id;
    li.classList.toggle("selected",l.id===selectedLink);li.classList.toggle("rejected",l.review==="rejected");
    const num=document.createElement("span");num.className="num";num.style.background=color;num.textContent=String(i+1);
-   const what=document.createElement("span");what.className="what";what.textContent=l.label||l.id;
-   const name=m=>m?(m.label||m.id):"（已刪除）";
-   const endsText=document.createElement("span");endsText.className="ends";endsText.textContent="左 "+name(a)+" ↔ 右 "+name(b);
+   const what=document.createElement("span");what.className="what";what.textContent=l.label||l.rawId||l.id;
+   const name=m=>m?(m.label||rawOf(m)):"（已刪除）";
+   const endsText=document.createElement("span");endsText.className="ends";
+   endsText.textContent=ws?sideTitle(l.fromItem)+" "+name(a)+" ↔ "+sideTitle(l.toItem)+" "+name(b):"左 "+name(a)+" ↔ 右 "+name(b);
    li.append(num,what,endsText,claimChip(l,"chip"));
    if(l.previouslyRejected)li.append(el("span",{className:"chip",textContent:"曾被你否決，GPT 附了新證據"}));
    reviewControls(li,l);
@@ -611,9 +680,11 @@ linksEl.addEventListener("click",async e=>{
  if(!ready)return;
  const reason=verdict==="rejected"?li.querySelector("input.reason")?.value.trim().slice(0,200):"";
  try{
-   const result=await request("tools/call",{name:"review_visual_link",arguments:{imageId,pairImageId:pair.imageId,linkId:id,review:verdict,...(reason?{reason}:{})}});
+   const l=links.find(x=>x.id===id);
+   const where=ws?{workspaceId:ws.id,fromItem:l.fromItem,toItem:l.toItem,linkId:l.rawId}:{pairImageId:pair.imageId,linkId:id};
+   const result=await request("tools/call",{name:"review_visual_link",arguments:{imageId,...where,review:verdict,...(reason?{reason}:{})}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
-   const link=cleanLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
+   const link=viewLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
    links=links.map(l=>l.id===id?link:l);
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="link:"+id),{key:"link:"+id,kind:"link",...link,verdict}];
    status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
@@ -632,7 +703,7 @@ function renderFindings(){
    const m=item.mark;if(!m.note&&!m.status)continue;
    const li=document.createElement("li");li.dataset.key=item.key;
    const who=document.createElement("span");who.className="who";who.style.color=item.author==="AI"?"#C98A2E":"#3C7FE0";
-   who.textContent=(pair?(m.side==="right"?"右 ":"左 "):"")+(m.label||(item.author==="AI"?"GPT":"YOU"));li.append(who);
+   who.textContent=sideTag(m.side)+(m.label||(item.author==="AI"?"GPT":"YOU"));li.append(who);
    if(m.note){const t=document.createElement("span");t.className="note";t.textContent=m.note;li.append(t);}
    if(STATUS_TEXT[m.status]){const b=document.createElement("span");b.className="badge";b.textContent=STATUS_TEXT[m.status];li.append(b);}
    if(m.note&&item.mark.id){
@@ -653,13 +724,14 @@ findingsEl.addEventListener("click",async e=>{
  const m=markOptions().find(o=>o.key===li.dataset.key)?.mark;if(!m||!ready)return;
  const reason=verdict==="rejected"?li.querySelector("input.reason")?.value.trim().slice(0,200):"";
  try{
-   const onImage=pair&&m.side==="right"?pair.imageId:imageId;
-   const result=await request("tools/call",{name:"review_visual_finding",arguments:{imageId:onImage,markId:m.id,review:verdict,...(reason?{reason}:{})}});
+   const onImage=ws?(ws.items.find(it=>it.id===m.side)?.imageId??imageId):pair&&m.side==="right"?pair.imageId:imageId;
+   const where=ws?{workspaceId:ws.id,item:m.side}:{};
+   const result=await request("tools/call",{name:"review_visual_finding",arguments:{imageId:onImage,...where,markId:rawOf(m),review:verdict,...(reason?{reason}:{})}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
-   const back=result?.structuredContent?.mark;if(!back||back.id!==m.id)throw Error("Unexpected response");
+   const back=result?.structuredContent?.mark;if(!back||back.id!==rawOf(m))throw Error("Unexpected response");
    delete m.review;delete m.reviewReason;
    if(back.review)m.review=back.review;if(back.reviewReason)m.reviewReason=back.reviewReason;
-   unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:m.id,label:m.label,note:m.note,side:m.side,verdict,reason}];
+   unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:rawOf(m),label:m.label,note:m.note,side:m.side,verdict,reason}];
    status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
  }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
  render();
@@ -721,7 +793,7 @@ async function decideGesture(memberIds,verdict){
  status.textContent="已記錄；按「把標註傳給 GPT」讓 GPT 知道。";
  if(imageId&&ready){
    try{
-     const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict}});
+     const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict,...(ws?{workspaceId:ws.id,item:findMark(ids[0])?.side??firstSide()}:{})}});
      if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
    }catch(err){status.textContent="已記在畫布上，但存到伺服器失敗："+String(err.message||err)}
  }
@@ -795,7 +867,7 @@ function renderView(){
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?processed.label+" · 處理後檢視（不含標註）":
    {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
- document.querySelector("#caption").textContent=(pair?"左 "+imageId+" ｜ 右 "+pair.imageId+" · 左右對照，不疊合":imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
+ document.querySelector("#caption").textContent=(ws?"工作區「"+ws.name+"」· "+ws.items.length+" 張圖並排，不疊合":pair?"左 "+imageId+" ｜ 右 "+pair.imageId+" · 左右對照，不疊合":imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
 }
 // ---- Scene objects (function plots, axes, shapes from modules) -----------
 // The server's trusted renderer sends drawing primitives in 0..1 canvas
@@ -887,13 +959,18 @@ async function editObject(id,args){
 }
 function render(){
  hit.setAttribute("width",VW);hit.setAttribute("height",VH);
- if(imageId&&pair){
+ if(imageId&&frames){
    sceneEl.replaceChildren();
-   for(const [side,href] of [["left",photo],["right",pair.photo]]){
-     const f=frames[side];
-     if(href)node("image",{href,x:f.x0,y:f.y0,width:f.w,height:f.h,preserveAspectRatio:"none"},sceneEl);
-     else{node("rect",{x:f.x0,y:f.y0,width:f.w,height:f.h,fill:"#8882"},sceneEl);
-       const t=node("text",{x:f.x0+f.w/2,y:f.y0+f.h/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);t.textContent="正在載入圖片…";}
+   const list=ws?ws.items.map(it=>[it.id,it.photo,it.label]):[["left",photo],["right",pair.photo]];
+   for(const [side,href,label] of list){
+     const f=frames[side],e=extentOf(f);if(!f)continue;
+     // A turned image is drawn upright in its own box, then rotated into place.
+     const turn=f.rot===90?"translate("+(f.x0+f.h)+" "+f.y0+") rotate(90)":f.rot===180?"translate("+(f.x0+f.w)+" "+(f.y0+f.h)+") rotate(180)":
+       f.rot===270?"translate("+f.x0+" "+(f.y0+f.w)+") rotate(270)":"translate("+f.x0+" "+f.y0+")";
+     if(href)node("image",{href,x:0,y:0,width:f.w,height:f.h,preserveAspectRatio:"none",transform:turn},sceneEl);
+     else{node("rect",{x:f.x0,y:f.y0,width:e.w,height:e.h,fill:"#8882"},sceneEl);
+       const t=node("text",{x:f.x0+e.w/2,y:f.y0+e.h/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);t.textContent="正在載入圖片…";}
+     if(ws){const t=node("text",{x:f.x0+8*K(),y:f.y0+22*K(),"font-size":16*K(),"font-weight":700,fill:"#fff",stroke:"#17212A","stroke-width":3*K(),"paint-order":"stroke"},sceneEl);t.textContent=sideTitle(side);}
    }
  }else if(imageId){
    sceneEl.replaceChildren();
@@ -910,7 +987,7 @@ function render(){
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
- exportImageBtn.hidden=!!pair||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!pair||!(imageId&&exportLinks?.marks);
+ exportImageBtn.hidden=!!frames||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!frames||!(imageId&&exportLinks?.marks);
  renderLayers();renderObjectsPanel();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
  refreshFocus();renderView();
 }
@@ -927,13 +1004,25 @@ focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;ren
 // every resize, e.g. after a tab click changes the height). Only genuinely
 // new data may reset the view and the user's unsent marks.
 let appliedKey=null;
+const cleanItems=list=>(Array.isArray(list)?list:[]).filter(it=>it&&/^wi-\d{1,4}$/.test(it.id)&&IMAGE_ID.test(it.imageId)).slice(0,24)
+ .map(it=>({id:it.id,imageId:it.imageId,width:Number(it.width),height:Number(it.height),placement:it.placement??{},label:String(it.label??"").slice(0,40)}));
 function applyInput(args){
  if(!args)return;
- const pairId=args.pair?.imageId??args.pairImageId;
- const key=JSON.stringify([args.imageId,args.scene,args.width,args.height,pairId,args.pair?.width,args.pair?.height,args.annotations]);
+ // A workspace call's input has no layout yet; wait for its result.
+ if(typeof args.workspaceId==="string"&&!args.workspace)return;
+ const wsArg=args.workspace&&cleanItems(args.workspace.items).length?args.workspace:null;
+ const pairId=wsArg?null:args.pair?.imageId??args.pairImageId;
+ const key=JSON.stringify([args.imageId,args.scene,args.width,args.height,pairId,args.pair?.width,args.pair?.height,wsArg?.id,wsArg?.revision,wsArg?.items,args.annotations]);
  if(key===appliedKey)return;
  appliedKey=key;
- if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
+ if(wsArg){
+   const items=cleanItems(wsArg.items),same=ws?.id===wsArg.id;
+   if(!same){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;renderViewTabs();}
+   const old=new Map((ws?.items??[]).map(it=>[it.imageId,it.photo]));
+   pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||"工作區",revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
+   imageId=items[0].imageId;layoutWorkspace(ws.items);
+ }else if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
+   if(ws){ws=null;frames=null;photo=null;}
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
    if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;objects=[];renderViewTabs();}
@@ -950,13 +1039,14 @@ function applyInput(args){
  }else if(Object.hasOwn(SCENES,args.scene)){
    selectedScene=args.scene;imageId=null;photo=null;views=[];renderViewTabs();VW=640;VH=360;
  }else return;
- const incoming=Array.isArray(args.annotations)?args.annotations.filter(valid).slice(0,120).map(fromServer):[];
- assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,60);
- priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,60);
+ const incoming=fromServerList(args.annotations);
+ assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,ws?200:60);
+ priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,ws?200:60);
  userMarks=[];past=[];future=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
  // The result normally brings the pixels; if it never does, fetch them.
- if(imageId)setTimeout(()=>{if(imageId&&!photo)syncCanvas()},6000);
+ if(imageId)setTimeout(()=>{if(imageId&&!allPhotos())syncCanvas()},6000);
 }
+const allPhotos=()=>ws?ws.items.every(it=>it.photo):!!photo&&(!pair||!!pair.photo);
 const inRegion=r=>r&&[r.x,r.y,r.x2,r.y2].every(v=>typeof v==="number"&&v>=0&&v<=1)&&r.x2>r.x&&r.y2>r.y;
 const dataUrl=img=>img&&/^image\/(png|jpeg)$/.test(img.mimeType)&&typeof img.data==="string"?"data:"+img.mimeType+";base64,"+img.data:null;
 function applyResult(result){
@@ -971,6 +1061,12 @@ function applyResult(result){
  if(Array.isArray(r.layers))setLayers(r.layers);
  if(Array.isArray(meta["estampes/objects"]))setObjects(meta["estampes/objects"]);
  if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;}
+ if(ws){
+   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it)it.photo=dataUrl(px)??it.photo;}
+   links=viewLinks(meta["estampes/links"]??r.links);
+   if(!allPhotos()||!full)syncCanvas(!full);
+   render();return;
+ }
  if(imageId){
    photo=dataUrl(meta["estampes/image"])??photo;
    const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
@@ -991,6 +1087,7 @@ let pendingSync=null;
 async function syncCanvas(force=false){
  // Results can arrive before the host handshake finishes; sync after it.
  if(!ready){pendingSync=pendingSync||force;return;}
+ if(ws)return syncWorkspace(force);
  if(!imageId||(photo&&(!pair||pair.photo)&&!force)||syncing)return;
  syncing=true;const id=imageId;
  status.textContent="照片沒有隨結果送到，正在重新載入…";
@@ -1020,6 +1117,36 @@ async function syncCanvas(force=false){
  }catch(err){
    status.textContent="照片載入失敗："+String(err.message||err)+"。若伺服器沒有開啟儲存，照片只保留約一小時，過期請重新上傳。";
  }finally{syncing=false;render()}
+}
+// A workspace: marks, layers and links in one call, then each missing image.
+async function syncWorkspace(force){
+ if(syncing||!ws)return;
+ syncing=true;const id=ws.id;
+ try{
+   if(force){
+     const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId,workspaceId:id}});
+     if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+     const r=result?.structuredContent;
+     if(r?.kind!=="estampes.visual_canvas"||r.workspaceId!==id||ws?.id!==id)throw Error("Unexpected response");
+     const items=cleanItems(r.workspace?.items);
+     if(items.length){const old=new Map(ws.items.map(it=>[it.imageId,it.photo]));ws.items=items.map(it=>({...it,photo:old.get(it.imageId)??null}));ws.revision=Number(r.workspace.revision)||ws.revision;layoutWorkspace(ws.items);}
+     if(Array.isArray(r.layers)){layers=[];setLayers(r.layers);}
+     const marks=fromServerList(r.annotations),mine=new Set(userMarks.map(m=>m.id));
+     assistantMarks=marks.filter(a=>a.author!=="user").slice(0,200);
+     priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,200);
+     links=viewLinks(r.links);
+   }
+   for(const it of ws.items.filter(i=>!i.photo)){
+     status.textContent="正在載入圖片 "+sideTitle(it.id)+"…";
+     const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:it.imageId,part:"image"}});
+     if(ws?.id!==id)return;
+     const r=result?.structuredContent;
+     if(!result?.isError&&r?.imageId===it.imageId)it.photo=dataUrl(r.image);
+     render();
+   }
+   status.textContent=allPhotos()?"已載入工作區的圖片與標記。":"有些圖片無法載入。";
+ }catch(err){status.textContent="工作區載入失敗："+String(err.message||err);}
+ finally{syncing=false;render()}
 }
 // The verification image GPT checked its marks against, fetched on demand.
 function setCheck(next){
@@ -1151,7 +1278,7 @@ document.addEventListener("keyup",e=>{if(e.code==="Space")spaceDown=false;});
 let detailTimer=0,detailSeq=0;
 function scheduleDetail(){
  clearTimeout(detailTimer);
- if(!imageId||!photo||pair||!cam||Z()<1.5)return;
+ if(!imageId||!photo||frames||!cam||Z()<1.5)return;
  detailTimer=setTimeout(loadDetail,250);
 }
 async function loadDetail(){
@@ -1218,8 +1345,10 @@ function shiftWithin(m,dx,dy){
  return mapMark(m,(x,y)=>[round(x+dx),round(y+dy)]);
 }
 function shifted(m,dx,dy){
- if(!pair)return shiftWithin(m,dx,dy);
- const f=frameOf(m);return toView(shiftWithin(toSide(m),dx*VW/f.w,dy*VH/f.h));
+ if(!frames)return shiftWithin(m,dx,dy);
+ // The same drag in the mark's own image (turned images turn it too).
+ const f=frameOf(m),[u0,v0]=frameUV(f,f.x0,f.y0),[u1,v1]=frameUV(f,f.x0+dx*VW,f.y0+dy*VH);
+ return toView(shiftWithin(toSide(m),u1-u0,v1-v0));
 }
 function replaceLocal(next){
  const swap=list=>list.map(m=>m.id===next.id?next:m);
@@ -1227,8 +1356,8 @@ function replaceLocal(next){
 }
 // The fields the server takes for one edited mark, in the mark's own image.
 function editFields(m){
- const s=toSide(m),out={id:s.id,x:s.x,y:s.y};
- if(pair)out.side=s.side==="right"?"right":"left";
+ const s=toSide(m),out={id:rawOf(s),x:s.x,y:s.y};
+ if(frames)out.side=sideKey(s.side);
  if(s.x2!==undefined){out.x2=s.x2;out.y2=s.y2;}
  if(s.points){out.points=s.points;if(s.smooth!==undefined)out.smooth=s.smooth;if(s.closed!==undefined)out.closed=s.closed;}
  for(const k of ["label","color","size","pen"])if(s[k]!==undefined)out[k]=s[k];
@@ -1247,7 +1376,7 @@ async function deleteMark(m){
  if(!canDelete(m))return;
  selected=null;
  if(isFresh(m)){commitMarks(userMarks.filter(u=>u.id!==m.id));status.textContent="已刪除（可按上一步復原）。";render();return;}
- try{await editOnServer({remove:[{id:m.id,...(pair?{side:m.side==="right"?"right":"left"}:{})}]});
+ try{await editOnServer({remove:[{id:rawOf(m),...(frames?{side:sideKey(m.side)}:{})}]});
    userMarks=userMarks.filter(u=>u.id!==m.id);
    status.textContent="已刪除"+(isUser(m)?"你的":" GPT 的")+"標記「"+(m.label||m.id)+"」；GPT 下次回覆時會知道。";}
  catch(err){status.textContent="刪除失敗："+String(err.message||err);}
@@ -1275,7 +1404,7 @@ function renderSelection(){
  if(selectionEl.contains(document.activeElement)&&selectionEl.dataset.mark===m.id)return;
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
  const mine=isUser(m),layer=layerOf(m.layer);
- selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:(pair?(m.side==="right"?"右 ":"左 "):"")+(m.label||(mine?"YOU":"GPT"))}),
+ selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"GPT"))}),
    el("span",{className:"meta",textContent:(mine?"你的標記":"GPT 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
  if(canEdit(m)){
    const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤"});
@@ -1363,7 +1492,7 @@ hit.addEventListener("pointerup",e=>{if(!start||mode==="select")return;const p=f
    :{...draft(start,p),id:ID_PREFIX+(++seq)};
  Object.assign(mark,strokeFacts());
  // Paired view: a mark belongs to the image it was started on and stays inside it.
- if(pair)mark=toView(toSide({...mark,side:sideAt(start)}));
+ if(frames)mark=toView(toSide({...mark,side:sideAt(start)}));
  if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
@@ -1430,15 +1559,16 @@ window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
 const VERDICT_ZH={link:{confirmed:"確認是同一個",rejected:"否決，不是同一個",unreviewed:"撤回我先前的判斷"},
  note:{confirmed:"確認你的說明正確",rejected:"否決你的說明",unreviewed:"撤回我先前的判斷"}};
 const GESTURE_ZH={"user-confirmed":"是同一個手勢","user-rejected":"不是同一個手勢，請分開看","unreviewed":"撤回我先前的判斷"};
+const canvasName=()=>ws?"工作區 "+ws.id+"："+ws.items.map(it=>it.id+"="+it.imageId).join("、"):imageId+(pair?" ＋ 右 "+pair.imageId:"");
 function reviewMessage(list){
  const gestureList=list.filter(r=>r.kind==="gesture");list=list.filter(r=>r.kind!=="gesture");
  const gesture=gestureList.length?"我在 Estampes 畫布上說明了哪些筆畫屬於同一個手勢（筆畫本身沒有被合併或修改）：\n"+
-   gestureList.map(r=>"- "+(pair?(r.side==="right"?"右圖 ":"左圖 "):"")+r.labels.join(" + ")+"："+
+   gestureList.map(r=>"- "+(frames?(ws?r.side+" ":r.side==="right"?"右圖 ":"左圖 "):"")+r.labels.join(" + ")+"："+
      (r.made&&r.verdict==="user-confirmed"?"我把它們組成同一個手勢":r.made&&r.verdict==="unreviewed"?"我把它們拆開了，請分開看":GESTURE_ZH[r.verdict])).join("\n"):"";
  if(!list.length)return gesture;
- return (gesture?gesture+"\n\n":"")+"我在 Estampes 畫布上審核了你的說法（"+imageId+(pair?" ＋ 右 "+pair.imageId:"")+"）：\n"+
-   list.map(r=>"- "+(r.kind==="link"?"連結 "+(r.label||r.id)+"（左 "+r.left+" ↔ 右 "+r.right+"）":
-     (pair?(r.side==="right"?"右圖 ":"左圖 "):"")+"標記 "+(r.label||r.id)+" 的說明「"+r.note+"」")+"："+VERDICT_ZH[r.kind][r.verdict]+
+ return (gesture?gesture+"\n\n":"")+"我在 Estampes 畫布上審核了你的說法（"+canvasName()+"）：\n"+
+   list.map(r=>"- "+(r.kind==="link"?"連結 "+(r.label||r.rawId||r.id)+(ws?"（"+r.fromItem+" "+rawOf(markById(r.left)??{id:r.left})+" ↔ "+r.toItem+" "+rawOf(markById(r.right)??{id:r.right})+"）":"（左 "+r.left+" ↔ 右 "+r.right+"）"):
+     (frames?(ws?r.side+" ":r.side==="right"?"右圖 ":"左圖 "):"")+"標記 "+(r.label||r.id)+" 的說明「"+r.note+"」")+"："+VERDICT_ZH[r.kind][r.verdict]+
      (r.verdict==="rejected"&&(r.reason||r.reviewReason)?"，理由："+(r.reason||r.reviewReason):"")).join("\n")+
    "\n請以我的判斷為準：被否決的說法不要再依賴，也不要在沒有新證據時重提；未確認的只是候選。";
 }
@@ -1453,9 +1583,9 @@ const EDIT_ZH={
  "restyle-mark":e=>"改了我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+" 的樣式或標籤",
 };
 function editMessage(list){
- return "我在 Estampes 畫布上手動修改了（"+imageId+(pair?" ＋ 右 "+pair.imageId:"")+"）：\n"+
-   list.map(e=>"- "+(pair?(e.side==="right"?"右圖：":"左圖："):"")+(EDIT_ZH[e.kind]?.(e)??e.kind)).join("\n")+
-   "\n請以畫布現在的狀態為準；需要時用 present_visual（imageId）重新讀取。";
+ return "我在 Estampes 畫布上手動修改了（"+canvasName()+"）：\n"+
+   list.map(e=>"- "+(ws?e.side+"：":pair?(e.side==="right"?"右圖：":"左圖："):"")+(EDIT_ZH[e.kind]?.(e)??e.kind)).join("\n")+
+   "\n請以畫布現在的狀態為準；需要時用 present_visual（"+(ws?"workspaceId="+ws.id:"imageId")+"）重新讀取。";
 }
 send.addEventListener("click",async()=>{
  const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
@@ -1474,7 +1604,7 @@ send.addEventListener("click",async()=>{
    render();return;
  }
  const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen,side,strokeOrder,relativeStartMs,relativeEndMs,pointerType})=>({
-   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,...(pair?{side}:{}),
+   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,...(ws?{item:side}:pair?{side}:{}),
    strokeOrder,relativeStartMs,relativeEndMs,pointerType,
    role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"
@@ -1487,7 +1617,7 @@ send.addEventListener("click",async()=>{
    status.textContent="正在驗證座標並整理對話上下文…";
    const result=await request("tools/call",{
      name:"validate_visual_annotations",
-     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),annotations:marks,intent,note,replyQuote,
+     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),...(ws?{workspaceId:ws.id}:{}),annotations:marks,intent,note,replyQuote,
        gestureDecisions:gestureDecisions.filter(d=>d.memberIds.every(id=>marks.some(m=>m.id===id)))}
    });
    if(result?.isError)throw Error("Tool rejected annotations");
@@ -1502,11 +1632,11 @@ send.addEventListener("click",async()=>{
    validated=true;
    setGestures(r.event.gestureGroups,{merge:true});
    // The server put this send's new marks in one layer.
-   const sent=pair?[["left",r.layer],["right",r.pairLayer]]:[["left",r.layer]];
+   const sent=ws?(Array.isArray(r.itemLayers)?r.itemLayers:[]).map(l=>[l.item,l]):pair?[["left",r.layer],["right",r.pairLayer]]:[["left",r.layer]];
    for(const [side,raw] of sent){
-     const layer=cleanLayers(raw?[{...raw,id:(side==="right"?"R":"")+raw.id,author:"user"}]:[])[0];
+     const layer=cleanLayers(raw?[{...raw,id:layerPrefix(side)+raw.id,author:"user"}]:[])[0];
      if(!layer)continue;
-     for(const m of userMarks)if(freshIds.includes(m.id)&&(!pair||(m.side??"left")===side))m.layer=layer.id;
+     for(const m of userMarks)if(freshIds.includes(m.id)&&(!frames||sideKey(m.side)===side))m.layer=layer.id;
      if(!layers.some(l=>l.id===layer.id))layers=[...layers,layer];
    }
  }catch(err){reason=String(err.message||err)}
@@ -1521,6 +1651,7 @@ send.addEventListener("click",async()=>{
      (imageId?"照片 imageId="+imageId+"，請用 process_image 檢視標註位置；":
        "SVG 底圖 id=demo:"+selectedScene+" revision=svg-v1 viewBox=640×360，")+
      (pair?"右圖 imageId="+pair.imageId+"，每個標註的 side 表示在左圖或右圖；":"")+
+     (ws?"這是工作區 workspaceId="+ws.id+"（"+ws.items.map(it=>it.id+"="+it.imageId).join("、")+"），每個標註的 item 表示它在哪張圖上；":"")+
      "原圖左上角為原點，座標為 0..1。\n"+
      (intent==="point-out"?"點是位置，框是範圍，箭頭尖端(x2,y2)是我指的對象。\n":"點是位置，框是範圍；箭頭保留起點(x,y)到尖端(x2,y2)的方向，它是指向還是表示方向／流向，請看我的補充說明。\n")+
      "未經驗證的標註："+JSON.stringify(marks);
