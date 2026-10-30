@@ -351,6 +351,7 @@ test("author tool: init makes a module that passes test, and test catches a brok
   const ok = await run("test", join(dir, "m", "module.json"));
   assert.match(ok.stdout, /OK org\.example\.sdk 0\.1\.0.*1 example/);
   const manifest = JSON.parse(await readFile(join(dir, "m", "module.json"), "utf8"));
+  await assert.rejects(run("init", join(dir, "m"), "org.example.sdk"), (e) => /already exists/.test(e.stderr));
   manifest.capabilities[0].examples[0].params.x = 7;
   await writeFile(join(dir, "m", "module.json"), JSON.stringify(manifest));
   await assert.rejects(run("test", join(dir, "m", "module.json")), (e) => /self-test|example/.test(e.stderr));

@@ -18,7 +18,7 @@ import { basename, join } from "node:path";
 import { createPackages, generateSigningKey, signBundle, verifyBundle, digestOf, ensureDirs, selfTest } from "../src/modules/packages.js";
 import { validateManifest, MODULE_ID } from "../src/modules/manifest.js";
 import { declarativeRuntime } from "../src/modules/runtimes/declarative.js";
-import { wasmRuntime, WASM_ABI, wasmFileOf } from "../src/modules/runtimes/wasm.js";
+import { wasmRuntime, WASM_ABI, wasmFileOf, checkWasmPackage } from "../src/modules/runtimes/wasm.js";
 import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { createRegistry } from "../src/modules/registry.js";
 import { createAudit } from "../src/modules/audit.js";
@@ -105,6 +105,9 @@ try {
       }],
     };
     await mkdir(target, { recursive: true });
+    for (const name of ["module.json", "README.md"]) {
+      if (await readFile(join(target, name)).then(() => true, () => false)) die(join(target, name) + " already exists; init does not overwrite your files");
+    }
     await writeFile(join(target, "module.json"), JSON.stringify(manifest, null, 2) + "\n");
     await writeFile(join(target, "README.md"), "# " + id + "\n\n" + (wasm
       ? "Write `module.c` (or Rust/any language that targets wasm32 with no imports) following the ABI " + WASM_ABI + " in docs/MODULES.md, build `module.wasm`, then:\n\n"
@@ -118,7 +121,9 @@ try {
     if (manifest.runtime.kind === "wasm") {
       const file = join(path, "..", manifest.runtime.entry);
       const bytes = await readFile(file).catch(() => die("build " + file + " first (runtime.entry)"));
-      runtime = { kind: "wasm", wasm: wasmFileOf(manifest, { [manifest.runtime.entry]: { encoding: "base64", content: bytes.toString("base64") } }) };
+      const files = { [manifest.runtime.entry]: { encoding: "base64", content: bytes.toString("base64") } };
+      checkWasmPackage(manifest, files); // the same checks an install makes, even if no example runs
+      runtime = { kind: "wasm", wasm: wasmFileOf(manifest, files) };
     }
     await selfTest(manifest, runtime, { runtimes: { declarative: declarativeRuntime, wasm: wasmRuntime } });
     const count = manifest.capabilities.reduce((n, c) => n + (c.examples?.length ?? 0), 0);
