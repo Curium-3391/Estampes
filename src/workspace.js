@@ -578,6 +578,38 @@ export async function workspaceDocument(doc, { history = 0 } = {}) {
   });
 }
 
+// A copy of a canvas made from stored data (a bundle import).
+export function forkFromData(base, data) {
+  const fork = makeFork(base, "c" + hex(6), { ...data, imageId: base.imageId });
+  forks.set(fork.setKey, fork);
+  return fork;
+}
+
+// A workspace made from a bundle: items already point at sets that exist.
+// The bundle's id is kept as provenance so importing it again returns this
+// workspace instead of making a second one.
+export function adoptWorkspace({ name, items, layout, provenance, sets = [] }) {
+  return serial(async () => {
+    const known = await findByProvenance(provenance?.bundleId);
+    if (known) return { ...(await repeat({ result: { workspaceId: known.id } })), workspaceId: known.id };
+    const doc = newDoc(name);
+    doc.layout = layout === "manual" ? "manual" : "auto";
+    for (const it of items) addItem(doc, it);
+    if (doc.layout === "auto") await layoutAll(doc);
+    doc.provenance = provenance;
+    doc.revision = -1;
+    const result = { workspaceId: doc.id, created: true };
+    const done = await commitDocs({ kind: "import", before: new Map([[doc.id, null]]), after: [doc], sets, result });
+    return { ...result, ...done, workspace: doc, check: await inspectWorkspace(doc) };
+  });
+}
+async function findByProvenance(bundleId) {
+  if (!bundleId) return null;
+  for (const d of workspaces.values()) if (!d.archived && d.provenance?.bundleId === bundleId) return d;
+  for (const d of await listWorkspaceFiles()) if (!d.archived && d.provenance?.bundleId === bundleId) { workspaces.set(d.id, d); return d; }
+  return null;
+}
+
 export const getWorkspace = (id) => loadWorkspace(id);
 // Tests start from an empty registry.
 export function clearWorkspaces() { workspaces.clear(); forks.clear(); previews.clear(); keyIndex.clear(); }

@@ -26,6 +26,7 @@ import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview,
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, entrySharp } from "./src/image-store.js";
+import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
@@ -44,6 +45,8 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 // package.json is the single source of truth for the release version.
 // Widget HTML uses __ESTAMPES_VERSION__ and versioned ui:// URIs derive from
 // it, so a release bump only touches package.json.
+// The last few bundles built, so a link still downloads if the workspace later fails to rebuild.
+const bundleCache = { map: new Map(), set(k, v) { this.map.delete(k); this.map.set(k, v); if (this.map.size > 4) this.map.delete(this.map.keys().next().value); }, get(k) { return this.map.get(k); } };
 const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
 const BUILD_VERSION = "m" + VERSION;
 // Public origin for download links: PUBLIC_BASE_URL (Render sets
@@ -1125,6 +1128,62 @@ function makeServer() {
   );
 
   server.registerTool(
+    "export_workspace_bundle",
+    {
+      title: "Export a workspace as a .estampes bundle",
+      description: "Make a portable .estampes file of a workspace (or a canvas / paired view, which becomes a workspace first): every image, and every canvas's marks, layers, claims and links as editable DATA (nothing is flattened). The user can open it on another Estampes server with import_workspace_bundle. Returns a download link and the manifest. It contains no access key, link or chat content. Set fileNames:false to leave original file names out.",
+      inputSchema: z.object({ workspace: WorkspaceRef, fileNames: z.boolean().default(true) }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspace, fileNames }) => {
+      try {
+        let ref = workspace;
+        if (!/^ws:/.test(ref)) {
+          const made = await createWorkspace({ items: (await resolveRef(ref)).doc.items.map((it) => ({ set: it.set, label: it.label })) });
+          ref = made.workspace.id;
+        }
+        const built = await exportBundle(ref, { version: VERSION, fileNames });
+        bundleCache.set(ref.slice(3), built);
+        const link = publicUrl() + "/export/ws/" + ref.slice(3) + "/workspace.estampes" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, ref.slice(3), "workspace.estampes") : "");
+        return {
+          content: [{ type: "text", text: "Bundle " + built.fileName + " (" + Math.round(built.buffer.length / 1024) + " KiB): " + built.manifest.workspace.items + " image(s), " + built.manifest.workspace.marks + " mark(s). Download: " + link +
+            (built.warnings.length ? "\nNotes: " + built.warnings.join(" ") : "") }],
+          structuredContent: { kind: "estampes.workspace_bundle", workspaceId: ref, fileName: built.fileName, bytes: built.buffer.length, downloadUrl: link, manifest: built.manifest, warnings: built.warnings },
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "import_workspace_bundle",
+    {
+      title: "Import a .estampes bundle",
+      description: "Open a .estampes bundle (attached file or public https URL) as a new workspace. Hashes, format, paths and every mark are checked first; nothing is overwritten: a canvas that already has different marks gets an independent copy (collision copy) or, if identical, is reused (collision reuse). Importing the same bundle again returns the same workspace. Returns the workspace, what each canvas became, warnings, and a read-back verification against the bundle's own totals. Show it with present_visual {workspaceId}.",
+      inputSchema: z.object({
+        file: ChatFileSchema.optional().describe("The attached .estampes file"),
+        bundleUrl: z.string().url().optional().describe("Public https URL of a .estampes file"),
+        name: z.string().max(60).optional(),
+        collision: z.enum(["reuse", "copy"]).default("reuse"),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["file"] },
+    },
+    async ({ file, bundleUrl, name, collision }) => {
+      try {
+        if (Boolean(file) === Boolean(bundleUrl)) throw new Error("Give exactly one of file or bundleUrl");
+        const bytes = await downloadImage(file ? file.download_url : bundleUrl, { maxBytes: 256 * 1024 * 1024, accept: "application/octet-stream,application/zip,*/*" });
+        const r = await importBundle(bytes, { name, collision });
+        return {
+          content: [{ type: "text", text: (r.repeated ? "Already imported: " : "Imported ") + (r.workspace?.id ?? "") + " (" + (r.check?.totals?.items ?? "?") + " image(s), " + (r.check?.totals?.marks ?? "?") + " mark(s))." +
+            (r.verified === false ? " Verification differs from the bundle: " + JSON.stringify({ mismatch: r.mismatch, unsupported: r.unsupported }) : "") +
+            (r.warnings?.length ? "\nNotes: " + r.warnings.join(" ") : "") }],
+          structuredContent: { ...wsStructured(r), kind: "estampes.workspace_import", summary: r.summary, warnings: r.warnings, verified: r.verified, repeated: !!r.repeated },
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
     "get_workspace_state",
     {
       title: "Read a workspace",
@@ -1965,9 +2024,35 @@ const httpServer = createHttpServer((req, res) => {
       stateApi: "/api/v1/canvas/{hash}",
       workspaceProtocol: WORKSPACE_PROTOCOL,
       workspaceApi: "/api/v1/workspaces/{hash}",
-      workspaceTools: ["create_workspace", "edit_workspace", "merge_workspaces", "split_workspace", "undo_workspace_change", "get_workspace_state"],
+      workspaceTools: ["create_workspace", "edit_workspace", "merge_workspaces", "split_workspace", "undo_workspace_change", "get_workspace_state", "export_workspace_bundle", "import_workspace_bundle"],
       storage: config.storageDir ? "disk" : "memory",
     }));
+    return;
+  }
+
+  // A workspace as a .estampes bundle, signed like the other exports.
+  const bundleMatch = /^\/export\/ws\/([0-9a-f]{16})\/workspace\.estampes$/.exec(url.pathname);
+  if (bundleMatch && req.method === "GET") {
+    if (!exportAllowed(ACCESS_KEY, bundleMatch[1], "workspace.estampes", url.searchParams.get("sig"))) {
+      res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+      res.end("This download link is not signed for this server. Ask for the bundle again to get a fresh link.");
+      return;
+    }
+    const send = (built) => {
+      res.writeHead(200, {
+        "content-type": "application/zip", "content-length": built.buffer.length,
+        "content-disposition": "attachment; filename=\"" + built.fileName + "\"",
+        "x-content-type-options": "nosniff", "cache-control": "no-store",
+      });
+      res.end(built.buffer);
+    };
+    // Built fresh so the file matches the workspace now; the cached one is the fallback.
+    exportBundle("ws:" + bundleMatch[1], { version: VERSION }).then(send, (error) => {
+      const cached = bundleCache.get(bundleMatch[1]);
+      if (cached) return send(cached);
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Workspace not found on this server: " + String(error?.message || error));
+    });
     return;
   }
 

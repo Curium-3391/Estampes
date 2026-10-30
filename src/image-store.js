@@ -21,7 +21,6 @@ const CACHE_LIMIT = config.cacheImages;
 // well under it. Pixels are cached raw: a 4096×3072 photo is ~38 MB.
 const CACHE_BYTES = config.cacheBytes;
 const CACHE_TTL_MS = config.cacheTtlMs;
-const MB = Math.round(MAX_DOWNLOAD_BYTES / 1024 / 1024) + " MB";
 
 const cache = new Map();
 
@@ -54,34 +53,35 @@ export async function assertPublicHttpsUrl(raw) {
   return url;
 }
 
-async function readLimited(response) {
+async function readLimited(response, limit = MAX_DOWNLOAD_BYTES) {
+  const MB = Math.round(limit / 1048576) + " MB";
   const declared = Number(response.headers.get("content-length") ?? 0);
-  if (declared > MAX_DOWNLOAD_BYTES) throw new Error("Image is larger than " + MB);
+  if (declared > limit) throw new Error("Download is larger than " + MB);
   const chunks = [];
   let total = 0;
   for await (const chunk of response.body) {
     total += chunk.length;
-    if (total > MAX_DOWNLOAD_BYTES) throw new Error("Image is larger than " + MB);
+    if (total > limit) throw new Error("Download is larger than " + MB);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
 
-export async function downloadImage(rawUrl, { fetchImpl = fetch, checkUrl = assertPublicHttpsUrl } = {}) {
+export async function downloadImage(rawUrl, { fetchImpl = fetch, checkUrl = assertPublicHttpsUrl, maxBytes = MAX_DOWNLOAD_BYTES, accept = "image/*" } = {}) {
   let current = rawUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const url = await checkUrl(current);
     const response = await fetchImpl(url, {
       redirect: "manual",
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { accept: "image/*" },
+      headers: { accept },
     });
     if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
       current = new URL(response.headers.get("location"), url).toString();
       continue;
     }
     if (!response.ok) throw new Error("Image download failed with HTTP " + response.status);
-    return readLimited(response);
+    return readLimited(response, maxBytes);
   }
   throw new Error("Too many redirects while downloading image");
 }

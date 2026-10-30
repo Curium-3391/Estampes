@@ -94,6 +94,24 @@ Each change returns an `undoToken`. The last 10 are kept per workspace. Undo is 
 
 Marks, layers, claims and rejections have the same fields as in [Visual protocol 2](PROTOCOL-V2.md). Fields that do not apply are left out.
 
+## Moving a workspace: `.estampes` bundles
+
+`export_workspace_bundle { workspace }` returns a signed download link for one `.estampes` file (a ZIP). A canvas or paired view is turned into a workspace first. On another server, `import_workspace_bundle { file | bundleUrl }` opens it as a new workspace.
+
+```
+manifest.json     format estampes.bundle/1, bundleId, totals, sha256 and size of every other file
+workspace.json    items, placement, names (estampes.workspace/1)
+assets/<hash>.<ext>   the original image file (or, when the server no longer has it, the working copy as PNG; the manifest says which)
+sets/<n>.json     one annotation set: layers, marks, links, rejected claims, gesture decisions, objects
+```
+
+- Marks, layers, claims and links are stored as data. Nothing is flattened, re-recognised or renumbered, so every mark stays selectable and editable after import.
+- A bundle holds no access key, signed link, chat content or URL. `fileNames:false` leaves original file names out.
+- Import checks the format version, every hash and size, rejects unsafe paths and oversized content, and validates each mark (type, 0..1 coordinates, text lengths, enums). A mark that cannot be kept is skipped and reported in `unsupported`; the rest is imported. Hashes detect damage; they do not prove who made the bundle.
+- Import never overwrites. An image whose canvas is empty here gets the bundle's canvas; an identical canvas is reused (`collision: "reuse"`); a canvas that already has different marks gets an independent copy (`derivedFrom` remembers it). `collision: "copy"` always copies.
+- Importing the same bundle again returns the same workspace (`provenance.bundleId`).
+- After import the workspace is read back and compared with the manifest totals (`verified`, `mismatch`, `unsupported`).
+
 ## Storage
 
 With `ESTAMPES_STORAGE_DIR`, workspaces are `workspaces/<hex>.json` with a `history.jsonl` beside them, and copied sets are `images/<hash>/sets/<setId>.json` (with their own `marks.svg` and history). Images a stored workspace shows are kept by the retention sweep. Without storage, workspaces and copies live in memory like canvases do.

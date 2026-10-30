@@ -13,6 +13,8 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `merge_workspaces` | Bring the images of one canvas or workspace, with their marks, into another. Previews by default; `commit: true` with the `previewId` applies. `mode` link (shared marks, default) or copy (independent copies); `removeFromSource` moves. |
 | `split_workspace` | The same into a new workspace. |
 | `undo_workspace_change` | Undo one workspace change by its `undoToken`. |
+| `export_workspace_bundle` | Make a portable `.estampes` file of a workspace (signed download link). See [Workspaces](WORKSPACES.md#moving-a-workspace-estampes-bundles). |
+| `import_workspace_bundle` | Open a `.estampes` file (attachment or public https URL) as a new workspace; checked, never overwrites. |
 | `get_workspace_state` | Read a workspace (or a single or paired canvas in the same shape) as one `estampes.workspace/1` document, with a check of its totals. Read-only. |
 | `load_image` | Load an image (`image` from the chat, or `imageUrl`) and get an `imageId` plus a preview. Use when GPT only needs to analyse; `present_visual` loads images too. |
 | `process_image` | Return a processed view of an image or a region of it. Operations, applied in order (max 8): `grayscale`, `normalize`, `clahe`, `contrast`, `brightness`, `sharpen`, `denoise`, `threshold` (adaptive, Otsu, fixed), `invert`, `edges`. `sampling` picks the analysis resolution (`preview` = old behaviour, zoom up to 8x by interpolation; `working`; `native` = pixels from the original file), `output` the delivered size and codec (PNG / lossless WebP / JPEG). Returns a `derivedViewId`, the coordinate mapping back to the image and caveats. See [Image pipeline](IMAGE-PIPELINE.md). |
