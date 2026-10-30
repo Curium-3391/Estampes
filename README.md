@@ -54,7 +54,7 @@ npm start          # http://localhost:8787/mcp
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
 | [Visual protocol 1](docs/PROTOCOL-V1.md) | `estampes.visual/1`, the host-neutral JSON document for a whole canvas |
 | [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
-| [Architecture](docs/ARCHITECTURE.md) | System layers (being rewritten) |
+| [Architecture](docs/ARCHITECTURE.md) | How the server, canvas widget and GPT fit together |
 | [Changelog](CHANGELOG.md) | Changes per version |
 | [History](docs/history/README.md) | Early milestone notes and old protocol drafts |
 | [繁體中文說明](docs/zh-TW/README.md) | Overview and quick start in Traditional Chinese |
