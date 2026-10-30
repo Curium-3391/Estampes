@@ -238,3 +238,21 @@ test("an install plan goes stale when the package is installed by another plan f
   await writeApproval(s.storage, s.key, b.planId);
   await assert.rejects(h.lifecycle.commit(b.planId, { consent: b.consent }), /installed after this plan/);
 });
+
+test("a failed rollback leaves the running version, lock and record unchanged", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await s.put("callout-2", sign(v("1.1.0")));
+  await s.commit(h, "update", "org.example.callout", {}, { approve: true });
+  const rb = await h.lifecycle.prepare("rollback", "org.example.callout");
+  const original = h.registry.setRecord;
+  h.registry.setRecord = async () => { throw new Error("disk full"); };
+  await assert.rejects(h.lifecycle.commit(rb.planId, { consent: rb.consent }), /disk full/);
+  h.registry.setRecord = original;
+  assert.equal(h.registry.get("org.example.callout").manifest.version, "1.1.0");
+  assert.equal(h.registry.record("org.example.callout").version, "1.1.0");
+  const lock = JSON.parse(await readFile(join(s.mods, "lock.json"), "utf8"));
+  assert.equal(lock.modules["org.example.callout"].active.version, "1.1.0");
+});

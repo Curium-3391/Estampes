@@ -239,7 +239,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
     registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: now }));
     const locked = await lock.read();
     const prior = locked.modules[id];
-    const priorLock = structuredClone(locked);
+    const priorLock = structuredClone(locked), priorRecord = registry.records().get(id);
     locked.modules[id] = { active: { version: v.manifest.version, sha256: v.digest, keyId: v.signer?.keyId ?? null, at: now },
       history: [...(prior?.history ?? []), ...(prior?.active ? [prior.active] : [])].slice(-10) };
     try {
@@ -247,6 +247,12 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
       await registry.setRecord(id, { source: "package", state, version: v.manifest.version, granted, previous });
     } catch (error) {
       await lock.write(priorLock).catch(() => {});
+      // The catalog already points at the new version: put the old one back.
+      const was = priorLock.modules[id]?.active;
+      let restored = false;
+      if (was) { try { const old = await loadVersion(id, was.version, was.sha256); registry.addPackage(old.manifest, runtimeFor(old.manifest), infoOf(old, { installedAt: was.at })); restored = true; } catch { /* falls through */ } }
+      if (!restored) registry.removeFromCatalog(id);
+      if (priorRecord) await registry.setRecord(id, priorRecord).catch(() => {}); else await registry.dropRecord(id).catch(() => {});
       throw error;
     }
   }
