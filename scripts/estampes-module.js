@@ -11,13 +11,17 @@
 //   trust <keyId> <public.pem> <publisher> <scope>...   trust a publisher key for module id prefixes
 //   inbox                             list packages waiting in the inbox
 //   approve <planId>                  approve a plan that needs administrator approval
+//   secret set <moduleId> <name>     store an API key for a module (the value is read from standard input)
+//   secret status <moduleId>          which declared secrets are set (names only)
 //   init <dir> <id> [--runtime declarative|wasm]   start a new module (manifest, example, README)
 //   test <module.json>                check a manifest and run its examples the way an install would
-import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir, copyFile, readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createPackages, generateSigningKey, signBundle, verifyBundle, digestOf, ensureDirs, selfTest } from "../src/modules/packages.js";
 import { validateManifest, MODULE_ID } from "../src/modules/manifest.js";
 import { declarativeRuntime } from "../src/modules/runtimes/declarative.js";
+import { createHttpRuntime } from "../src/modules/runtimes/http.js";
+import { createEgress, createSecrets, envName } from "../src/modules/egress.js";
 import { wasmRuntime, WASM_ABI, wasmFileOf, checkWasmPackage } from "../src/modules/runtimes/wasm.js";
 import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { createRegistry } from "../src/modules/registry.js";
@@ -88,6 +92,23 @@ try {
     if (!key) die("no administrator key (is ESTAMPES_STORAGE_DIR right? is it " + storage + "?)");
     await writeApproval(storage, key, planId);
     console.log("Approved " + planId + " for 30 minutes. Now press Confirm in the Estampes Store.");
+  } else if (cmd === "secret") {
+    const [action, moduleId, name] = rest;
+    const secrets = createSecrets({ dir });
+    if (action === "set") {
+      if (!MODULE_ID.test(moduleId ?? "") || !/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name ?? "")) die("secret set <moduleId> <name>  (then type or pipe the value; it is not taken from the command line)");
+      const chunks = []; for await (const c of process.stdin) chunks.push(c);
+      const value = Buffer.concat(chunks).toString("utf8").replace(/\r?\n$/, "");
+      if (!value) die("no value on standard input");
+      await secrets.set(moduleId, name, value);
+      console.log("Stored " + name + " for " + moduleId + " in " + join(dir, "secrets.json") + " (mode 600). The module itself can never read it. Alternatively set the environment variable " + envName(moduleId, name) + ".");
+    } else if (action === "status") {
+      if (!MODULE_ID.test(moduleId ?? "")) die("secret status <moduleId>");
+      const names = [...(await readdir(join(dir, "packages", moduleId)).catch(() => [])).sort().slice(-1)];
+      const manifest = names[0] ? JSON.parse(await readFile(join(dir, "packages", moduleId, names[0], "package.json"), "utf8")).manifest : null;
+      for (const sec of manifest?.secrets ?? []) console.log((await secrets.has(moduleId, sec.name) ? "set      " : "NOT SET  ") + sec.name + (sec.label ? "  (" + sec.label + ")" : "") + "  env: " + envName(moduleId, sec.name));
+      if (!manifest?.secrets?.length) console.log("No declared secrets for " + moduleId + " (or it is not installed).");
+    } else die("secret <set|status> <moduleId> [name]");
   } else if (cmd === "init") {
     const [target, id] = rest, kind = flag("runtime") ?? "declarative";
     if (!target || !MODULE_ID.test(id ?? "") || !["declarative", "wasm"].includes(kind)) die("init <dir> <id> [--runtime declarative|wasm]; id is reverse-DNS such as org.example.mymodule");
@@ -125,14 +146,14 @@ try {
       checkWasmPackage(manifest, files); // the same checks an install makes, even if no example runs
       runtime = { kind: "wasm", wasm: wasmFileOf(manifest, files) };
     }
-    await selfTest(manifest, runtime, { runtimes: { declarative: declarativeRuntime, wasm: wasmRuntime } });
+    await selfTest(manifest, runtime, { runtimes: { declarative: declarativeRuntime, wasm: wasmRuntime, http: createHttpRuntime({ egress: createEgress({ secrets: createSecrets({}) }) }) } });
     const count = manifest.capabilities.reduce((n, c) => n + (c.examples?.length ?? 0), 0);
     console.log("OK " + manifest.id + " " + manifest.version + ": manifest valid, " + count + " example(s) passed" + (count ? "" : " (no examples: add `examples` to each capability)"));
   } else if (cmd === "copy") {
     const [src] = rest; await ensureDirs(dir); await copyFile(src, join(dir, "inbox", basename(src)));
     console.log("Copied into the inbox.");
   } else {
-    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|trust|inbox|copy|approve|init|test> ...  (see the comment at the top of this file)");
+    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|trust|inbox|copy|approve|secret|init|test> ...  (see the comment at the top of this file)");
     process.exitCode = cmd ? 1 : 0;
   }
 } catch (error) { die(String(error?.message || error)); }

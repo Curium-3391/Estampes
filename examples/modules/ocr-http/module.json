@@ -1,0 +1,38 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.example.ocrhttp",
+  "name": "Remote text reader",
+  "description": "Example of an HTTP adapter: asks an external OCR service to read a short text and writes the result on the canvas. The service and its answer format are made up for the example.",
+  "version": "1.0.0",
+  "publisher": { "name": "Example Publisher" },
+  "license": "MPL-2.0",
+  "category": "text",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
+  "runtime": { "kind": "http", "entry": "request" },
+  "permissions": ["canvas.write", "network.request.approved", "module.secrets"],
+  "network": { "allow": ["api.ocr.example.org"], "dataFlow": "Sends the text you give it to api.ocr.example.org. Nothing else leaves the server." },
+  "secrets": [{ "name": "api_key", "label": "OCR service API key" }],
+  "limits": { "timeMs": 8000, "outputKb": 64 },
+  "capabilities": [
+    {
+      "id": "read_text",
+      "title": "Read text",
+      "description": "Send a short text to the service and put the recognised text on the canvas at (x, y).",
+      "target": "canvas",
+      "inputSchema": { "type": "object", "additionalProperties": false, "required": ["text"], "properties": {
+        "text": { "type": "string", "maxLength": 200 }, "lang": { "type": "string", "maxLength": 8 },
+        "x": { "type": "number", "minimum": 0, "maximum": 1 }, "y": { "type": "number", "minimum": 0, "maximum": 1 } } },
+      "examples": [{ "description": "A short sentence", "params": { "text": "hello", "lang": "en" } }],
+      "request": {
+        "method": "POST", "path": "/v1/read",
+        "query": { "lang": { "$param": "lang", "default": "en" } },
+        "secretHeaders": { "Authorization": { "secret": "api_key", "prefix": "Bearer " } },
+        "body": { "text": { "$param": "text" } }
+      },
+      "response": {
+        "data": "result",
+        "operations": [{ "op": "object.create", "type": "shape", "props": { "kind": "text", "x": { "$param": "x", "default": 0.1 }, "y": { "$param": "y", "default": 0.1 }, "text": { "$response": "result.text" } } }]
+      }
+    }
+  ]
+}

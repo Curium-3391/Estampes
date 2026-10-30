@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.14.0 (the contract, the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
+Status: this page describes what is implemented in 0.15.0 (the contract, the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
 
 ## How it fits together
 
@@ -26,7 +26,7 @@ Estampes's own format (not an MCP standard). Validated strictly: unknown fields,
 | --- | --- |
 | `id` | Reverse-DNS name such as `org.estampes.graph`. A name, not proof that the publisher owns the domain. |
 | `version`, `coreCompatibility` | Module version; range of Estampes versions it works with (for example `>=0.10.0 <1.0.0`). |
-| `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), `wasm` (a WebAssembly file inside a signed package). |
+| `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), `wasm` (a WebAssembly file inside a signed package), `http` (a described request to an approved external service). |
 | `permissions` | What it may do, granted when enabled (below). |
 | `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, examples. |
 | `network`, `secrets` | Reserved for adapters: hosts it may call with a description of what data leaves, and named secrets the administrator provides. |
@@ -127,6 +127,20 @@ A module that needs real code ships one `.wasm` file in its signed package (`run
 
 ABI: export `memory`, `alloc(len) -> ptr` and `handle(ptr, len) -> ptr`. The host writes a JSON request `{capability, params, module, canvas}` at the pointer `alloc` returned; `handle` returns a pointer to a 4-byte little-endian length followed by a JSON reply `{operations, summary, data, method}`. The reply goes through the same scene-operation checks as any other module. A capability whose input has required fields and no `examples` is skipped by the install self-test. Example with a C source and build line: `examples/modules/wasm-hello`.
 
+## Talking to external services (http modules)
+
+An `http` module contains no code. Each capability has a `request` (method GET or POST, a fixed `path`, `query`/`body` filled from the input with `{"$param": name}`, optional `secretHeaders`) and a `response` (scene operations and/or `data` read from the JSON reply with `{"$response": "a.b.0.c"}`). The manifest must list the hosts in `network.allow` and say in `network.dataFlow` what is sent; the Store shows both before anything is enabled, and enabling needs the administrator's approval. Example: `examples/modules/ocr-http`.
+
+Every request goes out through one place, `src/modules/egress.js`, which enforces:
+
+- the module holds `network.request.approved` and the host is one of its `network.allow` names (https, port 443, exact match);
+- the name is resolved on the server and every address must be public: loopback, private, link-local (cloud metadata), carrier-grade NAT, multicast and reserved ranges are refused, and the connection is made to the address that was checked, so a DNS answer cannot change afterwards;
+- no redirects, no cookies, only `Accept`/`Content-Type` headers plus the declared secret headers, a time limit (`limits.timeMs`), a response size limit (`limits.outputKb`), and a 1 MB request limit;
+- API keys are added by the server from `<storage>/modules/secrets.json` (mode 600) or an environment variable (name shown by `secret set` and `secret status`; for example `ESTAMPES_MODULE_SECRET_ORG_DEXAMPLE_DOCR_SAPI_KEY` for `org.example.ocr` / `api_key`, where `_D` stands for a dot, `_M` for a hyphen and `_S` separates the id from the name, so two ids can never share a variable), only for secrets the module declared and only when it holds `module.secrets`. Set one with `echo "$KEY" | node scripts/estampes-module.js secret set <moduleId> <name>`; `secret status <moduleId>` lists which declared secrets are set (names only). Module code never sees them, and they are kept out of the audit log.
+- every request is audited (host, status, sizes, time), never its content.
+
+Installing never sends anything: the self-test only checks the requests the examples would make. Not yet supported: sending image pixels, and long-running jobs (submit then poll); those come with the first module that needs them.
+
 ## Roadmap
 
 Each phase is its own change and keeps the rules above.
@@ -134,4 +148,4 @@ Each phase is its own change and keeps the rules above.
 1. Contract, scene objects, Graph and the Store (0.10.0).
 2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
 3. An isolated WebAssembly runtime with time, memory and output limits (0.13.0).
-4. Adapters for external engines and services (OCR, plate solving), and an author SDK.
+4. Author tools (0.14.0) and the controlled network path for adapters (0.15.0). Still to come: image upload, long-running jobs, and the OCR and plate-solving modules themselves (plate solving needs the administrator's Astrometry.net API key).

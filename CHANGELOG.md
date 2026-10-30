@@ -6,6 +6,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 
+## 0.15.0 — Controlled network access for modules
+
+- **`http` modules** describe a request to an approved external service and how to turn its JSON reply into scene operations; they contain no code. All requests go through one egress service: only hosts listed in the manifest, https on 443, public addresses only (loopback, private, link-local and metadata ranges refused, connection pinned to the checked address), no redirects, fixed headers, time and size limits, and an audit record of every request (never its content). Enabling such a module needs administrator approval.
+- **Secrets.** API keys are set by the administrator (`estampes-module.js secret set <moduleId> <name>`, value from standard input) and added to requests by the server for declared secrets only; modules cannot read them and they never reach the audit log. Example: `examples/modules/ocr-http`.
+- Installing an http module sends nothing; its self-test only checks the requests its examples would make.
+
 ## 0.14.0 — Module author tools
 
 - `scripts/estampes-module.js init <dir> <id> [--runtime declarative|wasm]` starts a new module (manifest, a working example, README) and `test <module.json>` validates the manifest and runs its examples the way an install would, so a package is checked before it is packed and signed. See [Writing a module](docs/MODULES.md#writing-a-module).
