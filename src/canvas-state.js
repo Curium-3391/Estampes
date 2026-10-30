@@ -29,6 +29,16 @@ function layerFor(entry, author, name) {
   return (name && layersOf(entry).find((l) => l.author === author && l.name === name)) || newLayer(entry, author, name);
 }
 
+// A layer can be renamed, reordered, locked and faded by the user. Locked
+// means nobody (user or GPT) moves, restyles or deletes its marks; notes
+// (findings) can still be attached. Opacity only changes how it is drawn.
+const findLayer = (entry, id) => layersOf(entry).find((l) => l.id === id);
+export const markLocked = (entry, mark) => !!mark?.layer && findLayer(entry, mark.layer)?.locked === true;
+const lockedText = (entry, mark) => {
+  const l = findLayer(entry, mark.layer);
+  return "is in layer " + l.id + " " + JSON.stringify(l.name) + ", which the user locked; leave it as it is or ask the user to unlock it";
+};
+
 // Layers that still hold marks, in drawing order, with their mark counts.
 export function canvasLayers(entry) {
   const counts = new Map();
@@ -58,6 +68,7 @@ export function storeUserMarks(entry, marks) {
   let layer = null;
   for (const { role, layer: _ignored, ...mark } of marks) {
     const old = state.get(mark.id);
+    if (markLocked(entry, old)) continue;
     const id = old?.layer ?? (layer ??= newLayer(entry, "user")).id;
     state.set(mark.id, { ...(old ?? {}), ...mark, author: "user", grounding: "user-pointer", layer: id });
   }
@@ -86,10 +97,19 @@ export function applyCanvasChanges(entry, changes) {
 
 function applyChanges(entry, { annotations = [], findings = [], remove = [], reset = false, priorUser = [], layer: layerName, frame, resolve }) {
   const state = marksOf(entry);
-  if (reset) { state.clear(); entry.layers = []; }
+  // Reset keeps what the user locked.
+  if (reset) {
+    for (const [id, m] of state) if (!markLocked(entry, m)) state.delete(id);
+    entry.layers = layersOf(entry).filter((l) => l.locked);
+  }
   remove.forEach((id, i) => {
+    if (markLocked(entry, state.get(id))) throw stageError("remove", i, id, "mark " + lockedText(entry, state.get(id)));
     if (!state.delete(id)) throw stageError("remove", i, id, "no such mark on this canvas");
   });
+  const named = layerName && layersOf(entry).find((l) => l.author === "assistant" && l.name === layerName);
+  if (named?.locked && annotations.length) {
+    throw stageError("layer", 0, layerName, "layer " + named.id + " is locked by the user; draw into another layer");
+  }
   const changed = [];
   let replay = null, layer = null;
   for (const mark of priorUser) {
@@ -99,6 +119,7 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     if (state.get(raw.id)?.author === "user") {
       throw stageError("annotations", i, raw.id, "field id is a mark the user drew; comment on it with findings instead of replacing it");
     }
+    if (markLocked(entry, state.get(raw.id))) throw stageError("annotations", i, raw.id, "mark " + lockedText(entry, state.get(raw.id)));
     let mark;
     try { mark = resolve(fromFrame(raw, frame)); } catch (error) { throw stageError("annotations", i, raw.id, error); }
     // Re-using an id edits that mark; its old note survives unless replaced.
@@ -120,6 +141,74 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     changed.push(finding.id);
   });
   return [...new Set(changed)];
+}
+
+// ---- The user's own edits from the canvas ----------------------------------
+// Layer settings, moving or restyling marks the user drew in earlier turns,
+// and deleting marks (the user owns the canvas, so GPT's marks too). GPT
+// learns about them from `userEdits` on its next call. All or nothing.
+export const LAYER_NAME_MAX = 40;
+const opacityOf = (v) => Math.round(Math.min(1, Math.max(0.1, v)) * 20) / 20;
+
+export function editCanvas(entry, { layers = [], order, marks = [], remove = [], resolveUser }) {
+  const restore = snapshotCanvas(entry), state = marksOf(entry), edits = [];
+  const fail = (stage, i, id, message) => new Error("edit_visual_canvas " + stage + "[" + i + "] (" + JSON.stringify(id) + "): " + message);
+  try {
+    entry.layers = layersOf(entry).map((l) => ({ ...l }));
+    layers.forEach((edit, i) => {
+      const layer = findLayer(entry, edit.id);
+      if (!layer) throw fail("layers", i, edit.id, "no such layer");
+      if (edit.name !== undefined) {
+        const name = String(edit.name).trim().slice(0, LAYER_NAME_MAX);
+        if (!name) throw fail("layers", i, edit.id, "name is empty");
+        if (name !== layer.name) edits.push({ kind: "rename-layer", layer: layer.id, from: layer.name, to: name });
+        layer.name = name;
+      }
+      if (edit.locked !== undefined && !!edit.locked !== !!layer.locked) {
+        edits.push({ kind: edit.locked ? "lock-layer" : "unlock-layer", layer: layer.id });
+        if (edit.locked) layer.locked = true; else delete layer.locked;
+      }
+      if (edit.opacity !== undefined) {
+        const o = opacityOf(Number(edit.opacity));
+        if (o >= 1) delete layer.opacity; else layer.opacity = o;
+      }
+    });
+    if (order) {
+      const all = layersOf(entry), byId = new Map(all.map((l) => [l.id, l]));
+      if (new Set(order).size !== order.length || order.some((id) => !byId.has(id))) throw fail("order", 0, order.join(","), "unknown or repeated layer id");
+      const rest = all.filter((l) => !order.includes(l.id));
+      entry.layers = [...order.map((id) => byId.get(id)), ...rest];
+      edits.push({ kind: "reorder-layers", order: entry.layers.map((l) => l.id) });
+    }
+    remove.forEach((id, i) => {
+      const old = state.get(id);
+      if (!old) throw fail("remove", i, id, "no such mark");
+      if (markLocked(entry, old)) throw fail("remove", i, id, "its layer is locked");
+      state.delete(id);
+      edits.push({ kind: "remove-mark", id, author: old.author, ...(old.label ? { label: old.label } : {}) });
+    });
+    marks.forEach((edit, i) => {
+      const old = state.get(edit.id);
+      if (!old) throw fail("marks", i, edit.id, "no such mark");
+      if (old.author !== "user") throw fail("marks", i, edit.id, "only your own marks can be moved or restyled; GPT's marks can be deleted");
+      if (markLocked(entry, old)) throw fail("marks", i, edit.id, "its layer is locked");
+      let next;
+      try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
+      const moved = ["x", "y", "x2", "y2"].some((k) => next[k] !== old[k]) || JSON.stringify(next.points) !== JSON.stringify(old.points);
+      state.set(edit.id, { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) });
+      edits.push({ kind: moved ? "move-mark" : "restyle-mark", id: edit.id, ...(next.label ? { label: next.label } : {}) });
+    });
+    (entry.userEdits ??= []).push(...edits);
+    if (entry.userEdits.length > 60) entry.userEdits.splice(0, entry.userEdits.length - 60);
+    return edits;
+  } catch (error) { restore(); throw error; }
+}
+
+// What the user changed by hand since GPT last looked; read once.
+export function takeUserEdits(entry) {
+  const edits = entry.userEdits ?? [];
+  entry.userEdits = [];
+  return edits;
 }
 
 // Marks restored from an exported file. User marks keep their author but

@@ -1,8 +1,11 @@
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import sharp from "sharp";
-import { registerImage } from "../src/image-store.js";
+import { registerImage, clearImages } from "../src/image-store.js";
+
+// Same bytes return the same cached canvas; each test starts clean.
+beforeEach(() => clearImages());
 import { applyPairChanges, pairLinks, reviewLink, canvasMarks, storeUserMarks } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
 
@@ -76,7 +79,7 @@ test("widget shows links with numbers, asks the user to review low-confidence on
   assert.match(source, /name:"review_visual_link"/);
   assert.match(source, /信心低 · 待你確認/);
   assert.match(source, /function reviewMessage\(list\)/);
-  assert.match(source, /if\(reviewed\.length\)chatMessage\+="\\n\\n"\+reviewMessage\(reviewed\)/);
+  assert.match(source, /if\(reviewed\.length\|\|edited\.length\)chatMessage\+="\\n\\n"\+extra\(\)/);
   assert.match(source, /pairImageId:pair\.imageId/);
   assert.match(source, /if\(pair\)mark=toView\(toSide\(\{\.\.\.mark,side:sideAt\(start\)\}\)\)/);
 });

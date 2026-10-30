@@ -31,6 +31,17 @@ Estampes aims to remove that friction.
 5. **Portable.** Prefer model-agnostic annotation formats and lightweight integrations.
 6. **Low-friction.** No extra app or context switch in the intended end-user workflow.
 
+## Run your own server
+
+```sh
+git clone https://github.com/Curium-3391/Estampes.git
+cd Estampes
+cp .env.example .env
+docker compose up -d
+```
+
+Runs on amd64 and arm64 (Raspberry Pi, NAS, mini PC); images, marks, layers, SVGs and history are kept in a Docker volume. Heroku (Deploy button) and Render (`render.yaml`) also work. See [Deployment](docs/DEPLOYMENT.md). Everything on a canvas can be read as one host-neutral JSON document; see [Visual protocol 1](docs/PROTOCOL-V1.md).
+
 ## Development roadmap
 
 - [ ] **M0 — ChatGPT plugin number-line PoC:** The in-chat AI → widget → user → GPT round trip is **host-verified** (2026-10-29). Remaining: resizing, repeated interactions, and additional coordinate cases.
@@ -42,7 +53,7 @@ Estampes aims to remove that friction.
 - [ ] **M0.4.6 — Evidence-first model annotation:** Removed object-name/scene-anchor lookup from the model-facing `present_visual` schema. AI must supply coordinates rather than ask the plugin for `house`/other labeled positions. CI checks this; blind image grounding is still unverified. See [M0.4.6 grounding evaluation](docs/M0-4-6.md).
 - [ ] **M0.4.7 — Unified shared canvas:** Combined the original image, annotation editor and local zoom in one SVG surface; optional collapsed context, author-specific palette, no routine duplicate viewer. CI passed; ChatGPT one-widget acceptance pending. See [M0.4.7](docs/M0-4-7.md).
 - [x] **M0.4.8 — Deployment hardening:** Optional access key, rate limit, CORS allowlist, committed lockfile, single version source, and widget-only image payload for the legacy viewer. Host-verified in ChatGPT on 2026-10-29, together with the M0.4.7 single-canvas flow. See [M0.4.8](docs/M0-4-8.md) and [Deployment](docs/DEPLOYMENT.md).
-- [ ] **M0.5 — Real-image preprocessing:** `load_image` (ChatGPT file params or public https URL), `process_image` (CLAHE, sharpen, denoise, adaptive/Otsu threshold, edges, zoomed regions) and `overlay_grid` (labelled grid with source-coordinate cell centres). M0.5.1: `present_visual` shows the real photo (original by default, optional processed tabs) and takes the user's marks back. 0.5.3–0.5.5: polylines and freehand drawing, pens and highlighter, verification image, crop coordinates, persistent marks with notes, undo/redo, pixel reload. 0.5.7–0.5.9: zoom and pan in the canvas, layers you can show or hide. 0.6.0: paired view, two different images side by side with links between their marks that GPT records and the user reviews. Upload path and canvas verified live. See [M0.5](docs/M0-5.md).
+- [ ] **M0.5 — Real-image preprocessing:** `load_image` (ChatGPT file params or public https URL), `process_image` (CLAHE, sharpen, denoise, adaptive/Otsu threshold, edges, zoomed regions) and `overlay_grid` (labelled grid with source-coordinate cell centres). M0.5.1: `present_visual` shows the real photo (original by default, optional processed tabs) and takes the user's marks back. 0.5.3–0.5.5: polylines and freehand drawing, pens and highlighter, verification image, crop coordinates, persistent marks with notes, undo/redo, pixel reload. 0.5.7–0.5.9: zoom and pan in the canvas, layers you can show or hide. 0.6.0: paired view, two different images side by side with links between their marks that GPT records and the user reviews. 0.7.0: layers you can rename, reorder, fade and lock; select one mark to move, restyle or delete it, including marks from earlier turns; disk storage; Docker, Heroku; `estampes.visual/1` protocol. Upload path and canvas verified live. See [M0.5](docs/M0-5.md).
 - [ ] **M1 — Real-image grounding:** Support authorized image input and precise model grounding, without assuming access to ChatGPT native searched images.
 - [ ] **M2 — Persistent bidirectional context:** Stable annotation IDs, user corrections, and multi-turn updates.
 - [ ] **M3 — Host-native image integration research:** Investigate supported Plugin Extensions/file viewers for closer integration with existing ChatGPT images, without assuming direct access to host-rendered search images.

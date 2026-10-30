@@ -20,11 +20,14 @@ import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./sr
 import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
-  applyPairChanges, pairLinks, reviewLink, LINK_CONFIDENCE, LINK_REVIEW,
+  applyPairChanges, pairLinks, reviewLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
 } from "./src/canvas-state.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
-import { downloadImage, registerImage, getImage, entrySharp } from "./src/image-store.js";
+import { downloadImage, entrySharp } from "./src/image-store.js";
+import { config, configWarnings, log } from "./src/config.js";
+import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
+import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import {
   processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
@@ -35,8 +38,11 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 // it, so a release bump only touches package.json.
 const VERSION = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
 const BUILD_VERSION = "m" + VERSION;
-// Public origin for download links (Render sets RENDER_EXTERNAL_URL).
-const PUBLIC_URL = (process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/+$/, "");
+// Public origin for download links: PUBLIC_BASE_URL (Render sets
+// RENDER_EXTERNAL_URL), else the origin the last /mcp request came in on,
+// which covers Heroku, Docker behind a tunnel and other hosts with no env.
+let seenOrigin = "";
+const publicUrl = () => config.publicUrl || seenOrigin;
 const URI_TAG = "v" + VERSION.replace(/\./g, "");
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
@@ -45,10 +51,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -82,7 +88,7 @@ const VisualAnnotationSchema = z.object({
   smooth: z.boolean().optional(),
   closed: z.boolean().optional(),
   label: z.string().max(64).optional(),
-  note: z.string().max(200).optional().describe("Assistant's finding about this mark, shown beside it (e.g. the chip's part number)"),
+  note: z.string().max(200).optional().describe("Assistant's finding about this mark, shown beside it (e.g. the text, name or value you read there)"),
   status: z.enum(MARK_STATUSES).optional().describe("inspected = you looked at the pixels (process_image); uncertain = not confirmed"),
   role: z.enum(["focus", "context"]).optional(),
   color: z.enum(MARK_COLORS).optional(),
@@ -106,11 +112,11 @@ const ModelAnnotationSchema = z.object({
   type: z.enum(MARK_TYPES),
   x: ModelCoord.optional(), y: ModelCoord.optional(),
   x2: ModelCoord.optional(), y2: ModelCoord.optional(),
-  points: z.array(z.object({ x: ModelCoord, y: ModelCoord })).min(2).max(MAX_POLYLINE_POINTS).optional().describe("polyline only: ordered vertices, e.g. along a PCB trace or a freehand sketch"),
+  points: z.array(z.object({ x: ModelCoord, y: ModelCoord })).min(2).max(MAX_POLYLINE_POINTS).optional().describe("polyline only: ordered vertices, e.g. along a road, a wire, a crack, an outline or a freehand sketch"),
   smooth: z.boolean().optional().describe("polyline only: draw a smooth curve through the points (freehand look)"),
   closed: z.boolean().optional().describe("polyline only: join the last point to the first, e.g. to circle a part"),
   label: z.string().max(64).optional(),
-  note: z.string().max(200).optional().describe("Your finding about this mark, shown beside it, e.g. 'SONY CXD2500AQ, CD DSP'"),
+  note: z.string().max(200).optional().describe("Your finding about this mark, shown beside it, e.g. a label, a reading or what the thing is"),
   status: z.enum(MARK_STATUSES).optional().describe("inspected only if you actually looked at these pixels (e.g. via process_image); otherwise uncertain or omit"),
   color: z.enum(MARK_COLORS).optional().describe("Default gold. Use different colours to tell several traces or groups apart"),
   size: z.enum(MARK_SIZES).optional().describe("Line thickness; default medium"),
@@ -123,8 +129,8 @@ const LinkSchema = z.object({
   id: z.string().min(1).max(64).describe("Stable link id; re-using it edits the link"),
   left: z.string().min(1).max(64).describe("Id of the mark on the LEFT image"),
   right: z.string().min(1).max(64).describe("Id of the mark on the RIGHT image"),
-  label: z.string().max(64).optional().describe("What both marks are, e.g. 'C105' or 'VCC net'"),
-  note: z.string().max(200).optional().describe("Why they match, e.g. 'same footprint, pin 1 to R12'"),
+  label: z.string().max(64).optional().describe("What both marks are, e.g. a part, a street, a room or a person's name"),
+  note: z.string().max(200).optional().describe("Why they match, e.g. same shape, same position relative to a neighbour, same text"),
   confidence: z.enum(LINK_CONFIDENCE).optional().describe("How sure you are they are the same thing; low asks the user to confirm"),
 }).strict();
 const FindingSchema = z.object({
@@ -143,7 +149,7 @@ const ChatFileSchema = z.object({
 }).strict();
 
 async function readMarksFile(entry, file) {
-  const data = parseMarksFile(await downloadImage(file.download_url));
+  const data = parseMarksFile(await downloadImage(file.download_url), { width: entry.width, height: entry.height });
   if (data.width > 0 && data.height > 0 && Math.abs(data.width / data.height - entry.width / entry.height) > 0.01) {
     throw new Error("These marks were drawn on a " + data.width + "x" + data.height + " image; attach that image too");
   }
@@ -159,7 +165,7 @@ async function readMarksFile(entry, file) {
 
 async function loadImageInput({ image, imageUrl }) {
   const bytes = await downloadImage(image ? image.download_url : imageUrl);
-  return registerImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
+  return intakeImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
 }
 const RegionSchema = z.object({
   x: Point01, y: Point01, x2: Point01, y2: Point01,
@@ -169,7 +175,7 @@ const OpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("grayscale") }),
   z.object({ op: z.literal("normalize") }).describe("Stretch contrast to the full range"),
   z.object({ op: z.literal("clahe"), tile: z.number().int().min(8).max(256).optional(),
-    maxSlope: z.number().min(1).max(10).optional() }).describe("Local adaptive contrast; good for blurry scans, glare, dark PCB photos"),
+    maxSlope: z.number().min(1).max(10).optional() }).describe("Local adaptive contrast; good for blurry scans, glare, dark or low-contrast photos"),
   z.object({ op: z.literal("contrast"), factor: z.number().min(0.2).max(4).optional() }),
   z.object({ op: z.literal("brightness"), factor: z.number().min(0.2).max(4).optional() }),
   z.object({ op: z.literal("sharpen"), sigma: z.number().min(0.3).max(5).optional() }),
@@ -199,12 +205,12 @@ function compactMark(m) {
     id: m.id, type: m.type, author: m.author, ...(m.side ? { side: m.side } : {}), ...(m.layer ? { layer: m.layer } : {}), ...(m.label ? { label: m.label } : {}),
     box: m.type === "point" ? [r3(m.x), r3(m.y)] : [r3(m.x), r3(m.y), r3(m.x2), r3(m.y2)],
     ...(m.type === "polyline" ? { vertices: m.points.length } : {}),
-    ...(m.note ? { note: m.note } : {}), ...(m.status ? { status: m.status } : {}),
+    ...(m.note ? { note: m.note } : {}), ...(m.status ? { status: m.status } : {}), ...(m.edited ? { editedByUser: true } : {}),
     ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
   };
 }
 const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
-  side: z.enum(["left", "right"]).optional() });
+  locked: z.boolean().optional(), opacity: z.number().optional(), side: z.enum(["left", "right"]).optional() });
 const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
   ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}) });
 const REVIEW_TEXT = { confirmed: "USER CONFIRMED", rejected: "USER REJECTED (do not rely on it)" };
@@ -216,10 +222,23 @@ const linkTable = (links, marksById) => links.map((l) => {
     " [" + l.confidence + (l.review ? ", " + REVIEW_TEXT[l.review] : l.confidence === "low" ? ", awaiting user review" : "") + "]" +
     (l.note ? " — " + l.note : "");
 }).join("\n");
-const layerText = (layers) => layers.map((l) => l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count + ")").join("; ");
-const exportLinks = (imageId) => PUBLIC_URL ? {
-  image: PUBLIC_URL + "/export/" + imageId.slice(4) + "/image.jpg",
-  marks: PUBLIC_URL + "/export/" + imageId.slice(4) + "/marks.svg",
+const layerText = (layers) => layers.map((l) => (l.side ? l.side + ":" : "") + l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count +
+  (l.locked ? ", LOCKED by the user: do not edit or remove its marks" : "") + ")").join("; ");
+// Changes the user made by hand in the canvas since GPT's last call.
+const EDIT_TEXT = {
+  "rename-layer": (e) => "renamed layer " + e.layer + " " + JSON.stringify(e.from) + " to " + JSON.stringify(e.to),
+  "lock-layer": (e) => "locked layer " + e.layer, "unlock-layer": (e) => "unlocked layer " + e.layer,
+  "reorder-layers": (e) => "reordered layers (bottom to top) " + e.order.join(", "),
+  "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
+  "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
+  "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
+};
+const userEditsText = (edits) => edits.length
+  ? ". USER EDITS since your last look (trust these over your memory): " + edits.map((e) => (e.side ? e.side + " image: " : "") + (EDIT_TEXT[e.kind]?.(e) ?? e.kind)).join("; ")
+  : "";
+const exportLinks = (imageId) => publicUrl() ? {
+  image: publicUrl() + "/export/" + imageId.slice(4) + "/image.jpg",
+  marks: publicUrl() + "/export/" + imageId.slice(4) + "/marks.svg",
 } : undefined;
 
 // Render logs show what each call costs: text the model reads, images the
@@ -228,7 +247,7 @@ function logSizes(tool, result, { appOnly = false } = {}) {
   const images = (result.content ?? []).filter((b) => b.type === "image");
   const text = JSON.stringify((result.content ?? []).filter((b) => b.type !== "image")).length +
     JSON.stringify(result.structuredContent ?? {}).length;
-  console.log("[size] " + tool + (appOnly ? " appOnly(widget-called)=" : " modelText=") + text + "B modelImages=" + images.length + "x" +
+  log("info", "[size] " + tool + (appOnly ? " appOnly(widget-called)=" : " modelText=") + text + "B modelImages=" + images.length + "x" +
     images.reduce((n, b) => n + b.data.length, 0) + "B widgetOnly=" + JSON.stringify(result._meta ?? {}).length + "B");
   return result;
 }
@@ -253,6 +272,9 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
     }),
     resolve: resolveCoordinateAnnotation,
   });
+  const history = { tool: "present_visual", changed, removed: remove, ...(links.length || removeLinks.length ? { note: "links " + links.map((l) => l.id).concat(removeLinks.map((id) => "-" + id)).join(",") } : {}) };
+  const edits = [...takeUserEdits(left).map((e) => ({ ...e, side: "left" })), ...takeUserEdits(right).map((e) => ({ ...e, side: "right" }))];
+  await Promise.all([saveCanvas(left, history), saveCanvas(right, history)]);
   const marks = pairMarks(left, right), byId = new Map(marks.map((m) => [m.id, m]));
   const linkList = pairLinks(left, right), layers = pairLayers(left, right);
   const sides = { left, right }, checks = [], ink = [];
@@ -267,7 +289,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
   const text = "Paired view: LEFT " + left.imageId + " (" + left.width + "x" + left.height + " px), RIGHT " + right.imageId +
     " (" + right.width + "x" + right.height + " px), side by side, not overlaid. Coordinates are normalized to each mark's own image. " +
     marks.length + " marks (side, id, rounded box): " + JSON.stringify(marks.map(compactMark)) +
-    (layers.length ? ". Layers: " + layers.map((l) => l.side + ":" + l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count + ")").join("; ") : "") +
+    (layers.length ? ". Layers: " + layerText(layers) : "") + userEditsText(edits) +
     ". LINKS (" + linkList.length + ", your record of which left and right marks are the same thing):\n" + (linkTable(linkList, byId) || "(none yet)") +
     (pending.length ? "\n" + pending.length + " low-confidence link(s) await the user's review in the canvas; do not treat them as facts yet." : "") +
     (changed.length ? "\nChanged this call: " + changed.join(", ") : "") +
@@ -278,7 +300,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
   return logSizes("present_visual", {
     content: [{ type: "text", text }, ...checks.map(({ check }) => pixelsBlock(check))],
     structuredContent: {
-      kind: "estampes.visual_surface", imageId: left.imageId, width: left.width, height: left.height, views: [],
+      kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: left.imageId, width: left.width, height: left.height, views: [],
       pair: { imageId: right.imageId, width: right.width, height: right.height, ...(exportLinks(right.imageId) ? { exports: exportLinks(right.imageId) } : {}) },
       marks: marks.map(compactMark), layers, links: linkList.map(compactLink), coordinateSystem: "normalized-top-left",
       ...(exportLinks(left.imageId) ? { exports: exportLinks(left.imageId) } : {}),
@@ -430,8 +452,8 @@ function makeServer() {
         "Whenever YOU ask the user to point at, circle or mark something, call this in the same turn so they have a canvas to draw on (imageId re-opens it with every mark); never ask without one. Also call it when the user asks for the canvas/drawing board again. Do not call it for text-only follow-ups. " +
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
         "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). Ids starting 'user-' and bare labels like 'YOU 3' belong to the user's marks; your own labels may refer to them, e.g. 'YOU 3 → C105'. " +
-        "Marks are grouped in LAYERS the user can show or hide: each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '電源走線', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " +
-        "Put your answer ON the mark: `note` (e.g. the part number you read) and `status:'inspected'` only after you looked at those pixels. " +
+        "Marks are grouped in LAYERS the user can show, hide, rename, reorder, fade or LOCK: never change or remove marks in a locked layer (findings are still allowed). The user can also move, restyle or delete marks by hand; results list these USER EDITS once, so trust them over your memory. get_visual_state returns the whole canvas as JSON when you need to recall it without redrawing. Each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '第一輪', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " +
+        "Put your answer ON the mark: `note` (e.g. the text or value you read) and `status:'inspected'` only after you looked at those pixels. " +
         "If you read positions off a process_image/overlay_grid output, pass `coordinateFrame` = that output's region (plus its width/height to give pixel coordinates); Estampes converts them. " +
         "The result includes a VERIFICATION image: the same crop of the real photo without and with your marks (numbered). Check that the marks sit on the right pixels before telling the user it is done; fix with the same id if not. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
@@ -473,6 +495,7 @@ function makeServer() {
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.visual_surface"),
+        protocol: z.literal(VISUAL_PROTOCOL).optional(),
         scene: SceneSchema.optional(),
         imageId: z.string().optional(),
         width: z.number().optional(),
@@ -507,7 +530,7 @@ function makeServer() {
         if (paired) {
           if (pairImage || pairImageUrl) pairImageId = (await loadImageInput({ image: pairImage, imageUrl: pairImageUrl })).imageId;
           if (pairImageId === imageId) throw new Error("The paired image is the same as the left image; pass a different picture");
-          return await presentPair({ left: getImage(imageId), right: getImage(pairImageId), annotations, findings, remove, reset, layer,
+          return await presentPair({ left: await ensureImage(imageId), right: await ensureImage(pairImageId), annotations, findings, remove, reset, layer,
             coordinateFrame, priorUserAnnotations, links, removeLinks, verify });
         }
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
@@ -528,7 +551,7 @@ function makeServer() {
             },
           };
         }
-        const entry = getImage(imageId);
+        const entry = await ensureImage(imageId);
         // A marks file and this call's changes land together or not at all.
         const parsedFile = marksFile ? await readMarksFile(entry, marksFile) : null;
         const restore = snapshotCanvas(entry);
@@ -543,6 +566,10 @@ function makeServer() {
             resolve: resolveCoordinateAnnotation,
           });
         } catch (error) { restore(); throw error; }
+        const edits = takeUserEdits(entry);
+        if (imported.length || changed.length || remove.length || reset || edits.length) {
+          await saveCanvas(entry, { tool: "present_visual", changed: [...imported, ...changed], removed: remove, ...(reset ? { note: "reset" } : {}) });
+        }
         const resolved = canvasMarks(entry), layers = canvasLayers(entry);
         const drawn = changed.filter(id => annotations.some(a => a.id === id));
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
@@ -564,7 +591,7 @@ function makeServer() {
             text: "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
               (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
               resolved.length + " marks (ids persist; edit by re-using an id; boxes rounded): " + JSON.stringify(resolved.map(compactMark)) +
-              (layers.length ? ". Layers (the user can hide any): " + layerText(layers) : "") +
+              (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + userEditsText(edits) +
               (imported.length ? ". Restored from marks file: " + imported.join(", ") : "") +
               (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
               (ink.length ? ". Ink in image px: " + ink.map(i => i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
@@ -575,7 +602,7 @@ function makeServer() {
                 ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done. The user can open the same image in the canvas tab 「GPT 驗收圖」." : ""),
           }, ...(check ? [imageBlock(check)] : [])],
           structuredContent: {
-            kind: "estampes.visual_surface", imageId, width: entry.width, height: entry.height,
+            kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId, width: entry.width, height: entry.height,
             views: rendered.map(({ label, region }) => ({ label, region })),
             marks: resolved.map(compactMark), layers, coordinateSystem: "normalized-top-left",
             ...(check ? { check: checkSummary(check) } : {}),
@@ -614,9 +641,9 @@ function makeServer() {
     },
     async ({ imageId, part, pairImageId }) => {
       try {
-        const entry = getImage(imageId);
+        const entry = await ensureImage(imageId);
         if (pairImageId && part === "canvas") {
-          const right = getImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
+          const right = await ensureImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Paired canvas data for " + imageId + " + " + pairImageId + " sent to the widget." }],
             structuredContent: {
@@ -651,6 +678,35 @@ function makeServer() {
     }
   );
 
+  // The whole canvas as one estampes.visual/1 document: images, layers,
+  // marks with provenance, links and (with storage) the change history. No
+  // widget and nothing ChatGPT-specific, so any MCP client can read it.
+  server.registerTool(
+    "get_visual_state",
+    {
+      title: "Read the visual canvas state",
+      description: "Return everything on an Estampes canvas as one estampes.visual/1 JSON document: images, layers (order, lock, opacity), marks (geometry normalized to their own image, style, label, note/status, who made them and how), links between a paired left and right image with confidence and the user's review, and optionally the recent change history. Read-only. Use it to recall what is on a canvas without redrawing it, or to hand the canvas to another tool.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        pairImageId: ImageIdSchema.optional().describe("Right-hand image of a paired view"),
+        history: z.number().int().min(0).max(200).default(0).describe("How many recent changes to include (needs server storage)"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, pairImageId, history }) => {
+      try {
+        const left = await ensureImage(imageId), right = pairImageId ? await ensureImage(pairImageId) : null;
+        const doc = canvasDocument(left, right, history ? { history: await readHistory(imageId, history) } : {});
+        return {
+          content: [{ type: "text", text: VISUAL_PROTOCOL + ": " + doc.marks.length + " marks, " + doc.layers.length + " layers, " + doc.links.length + " links. " + JSON.stringify(doc) }],
+          structuredContent: doc,
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
   // Private tool for the canvas widget: a sharper tile of the photo while
   // the user zooms. App-only, like load_visual_canvas.
   registerAppTool(
@@ -669,7 +725,7 @@ function makeServer() {
     },
     async ({ imageId, region, maxSide }) => {
       try {
-        const tile = await regionTile(getImage(imageId), region, maxSide);
+        const tile = await regionTile(await ensureImage(imageId), region, maxSide);
         return logSizes("load_visual_region", {
           content: [{ type: "text", text: "Detail tile for " + imageId + " sent to the widget." }],
           structuredContent: { kind: "estampes.visual_tile", imageId, region: tile.region,
@@ -718,9 +774,9 @@ function makeServer() {
         if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
         let image;
         let entry;
-        if(imageId){entry=getImage(imageId);image={imageId,width:entry.width,height:entry.height};}
+        if(imageId){entry=await ensureImage(imageId);image={imageId,width:entry.width,height:entry.height};}
         if(pairImageId&&!entry) throw new Error("pairImageId needs imageId");
-        const right=pairImageId?getImage(pairImageId):null;
+        const right=pairImageId?await ensureImage(pairImageId):null;
         if(!right&&annotations.some(a=>a.side==="right")) throw new Error("side:'right' needs pairImageId");
         const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
         const pairImage=right?{imageId:pairImageId,width:right.width,height:right.height}:undefined;
@@ -734,6 +790,9 @@ function makeServer() {
           pairLayer=storeUserMarks(right,checked.filter(a=>sideOf(a)==="right").map(({side,...a})=>a));
         // Submitted marks join the photo's canvas so GPT need not replay them.
         }else if(entry)layer=storeUserMarks(entry,checked);
+        const ids=checked.map(a=>a.id);
+        if(entry)await saveCanvas(entry,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
+        if(right)await saveCanvas(right,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
         return {
           content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations; explicit interaction intent="+intent+" (geometry only)."}],
           structuredContent:{
@@ -770,10 +829,85 @@ function makeServer() {
     },
     async ({ imageId, pairImageId, linkId, review }) => {
       try {
-        const link = reviewLink(getImage(imageId), getImage(pairImageId), linkId, review);
+        const left = await ensureImage(imageId);
+        const link = reviewLink(left, await ensureImage(pairImageId), linkId, review);
+        await saveCanvas(left, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
         return {
           content: [{ type: "text", text: "Link " + linkId + " marked " + review + " by the user." }],
           structuredContent: { kind: "estampes.link_review", imageId, pairImageId, link: compactLink(link) },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: the user's own edits. Layers can be
+  // renamed, reordered, locked and faded; the user's marks from any earlier
+  // turn can be moved, restyled or relabelled; any unlocked mark can be
+  // deleted. GPT is told about these edits on its next present_visual call.
+  const EditMarkSchema = z.object({
+    id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(),
+    x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
+    points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
+    label: z.string().max(64).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
+  }).strict();
+  const LayerIds = z.array(z.string().regex(/^L\d{1,6}$/)).max(200);
+  registerAppTool(
+    server,
+    "edit_visual_canvas",
+    {
+      title: "Edit the visual canvas",
+      description: "Apply the user's own layer and mark edits from the Estampes canvas.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        pairImageId: ImageIdSchema.optional(),
+        layers: z.array(z.object({
+          id: z.string().regex(/^L\d{1,6}$/), side: z.enum(["left", "right"]).optional(),
+          name: z.string().max(LAYER_NAME_MAX).optional(), locked: z.boolean().optional(), opacity: z.number().min(0).max(1).optional(),
+        }).strict()).max(60).default([]),
+        order: z.object({ left: LayerIds.optional(), right: LayerIds.optional() }).strict().optional().describe("Layer ids bottom to top"),
+        marks: z.array(EditMarkSchema).max(30).default([]),
+        remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional() }).strict()).max(30).default([]),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, pairImageId, layers, order, marks, remove }) => {
+      try {
+        const left = await ensureImage(imageId), right = pairImageId ? await ensureImage(pairImageId) : null;
+        if (!right && [...layers, ...marks, ...remove].some((x) => x.side === "right")) throw new Error("side:'right' needs pairImageId");
+        if (!right && order?.right) throw new Error("order.right needs pairImageId");
+        const resolveUser = (m) => {
+          const { side: _s, ...rest } = m;
+          return replayUserAnnotation(VisualAnnotationSchema.parse(rest));
+        };
+        const pick = (side) => ({
+          layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
+          order: order?.[side],
+          marks: marks.filter((m) => (m.side ?? "left") === side),
+          remove: remove.filter((m) => (m.side ?? "left") === side).map((m) => m.id),
+          resolveUser,
+        });
+        const undoLeft = snapshotCanvas(left), leftEdits = [...(left.userEdits ?? [])];
+        const edits = editCanvas(left, pick("left"));
+        let rightEdits = [];
+        if (right) {
+          try { rightEdits = editCanvas(right, pick("right")); }
+          catch (error) { undoLeft(); left.userEdits = leftEdits; throw error; }
+        }
+        const history = { tool: "edit_visual_canvas", author: "user" };
+        await saveCanvas(left, { ...history, changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
+        if (right) await saveCanvas(right, { ...history, changed: rightEdits.map((e) => e.id ?? e.layer ?? e.kind) });
+        const all = right ? pairMarks(left, right) : canvasMarks(left);
+        return {
+          content: [{ type: "text", text: "Applied " + (edits.length + rightEdits.length) + " user edit(s) to " + imageId + (right ? " + " + pairImageId : "") + "." }],
+          structuredContent: {
+            kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}),
+            edits: [...edits.map((e) => ({ ...e, side: "left" })), ...rightEdits.map((e) => ({ ...e, side: "right" }))],
+            annotations: all, layers: right ? pairLayers(left, right) : canvasLayers(left),
+            ...(right ? { links: pairLinks(left, right).map(compactLink) } : {}),
+          },
         };
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
@@ -993,7 +1127,7 @@ function makeServer() {
     {
       title: "Preprocess an image region",
       description:
-        "Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region` (zoomed up to 8x), then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for PCB traces. The result covers `region` in source coordinates: a point (u,v) in the output maps to x = region.x + u*(region.x2-region.x), y likewise. Output is for your analysis; the user sees the original unless you choose to show this.",
+        "Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region` (zoomed up to 8x), then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for thin lines and outlines. The result covers `region` in source coordinates: a point (u,v) in the output maps to x = region.x + u*(region.x2-region.x), y likewise. Output is for your analysis; the user sees the original unless you choose to show this.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
         region: RegionSchema.optional(),
@@ -1010,7 +1144,7 @@ function makeServer() {
     },
     async ({ imageId, region, ops }) => {
       try {
-        const out = await processImage(getImage(imageId), { region, ops });
+        const out = await processImage(await ensureImage(imageId), { region, ops });
         return {
           content: [
             { type: "text", text: "Processed " + imageId + " region " + JSON.stringify(out.region) +
@@ -1051,7 +1185,7 @@ function makeServer() {
     },
     async ({ imageId, region, rows, cols }) => {
       try {
-        const out = await overlayGrid(getImage(imageId), { region, rows, cols });
+        const out = await overlayGrid(await ensureImage(imageId), { region, rows, cols });
         const cellCenters = {};
         for (let r = 0; r < rows; r++) for (let c = 1; c <= cols; c++) {
           const label = rowLabel(r) + c;
@@ -1078,16 +1212,16 @@ function makeServer() {
 // MCP transport can parse it.
 const mcpHandler = toNodeHandler(createMcpHandler(makeServer));
 
-const port = Number(process.env.PORT ?? 8787);
+const port = config.port;
 
 // Optional shared secret. When ESTAMPES_ACCESS_KEY is set, /mcp requires it as
 // "?key=..." in the connector URL (ChatGPT's "No authentication" mode can still
 // carry it) or as "Authorization: Bearer ...". Unset keeps the open M0 setup.
-const ACCESS_KEY = process.env.ESTAMPES_ACCESS_KEY ?? "";
+const ACCESS_KEY = config.accessKey;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
-const CORS_ORIGINS = (process.env.ESTAMPES_CORS_ORIGINS ?? "*").split(",").map(s => s.trim()).filter(Boolean);
-const RATE_LIMIT = Number(process.env.ESTAMPES_RATE_LIMIT_PER_MIN ?? 120);
+const CORS_ORIGINS = config.corsOrigins;
+const RATE_LIMIT = config.rateLimitPerMin;
 const hits = new Map();
 
 function corsOrigin(req) {
@@ -1154,6 +1288,10 @@ const httpServer = createHttpServer((req, res) => {
       accessKeyRequired: Boolean(ACCESS_KEY),
       imageTools: ["load_image", "process_image", "overlay_grid"],
       imageInput: ["openai-file-param", "https-url"],
+      visualProtocol: VISUAL_PROTOCOL,
+      stateTool: "get_visual_state",
+      stateApi: "/api/v1/canvas/{hash}",
+      storage: config.storageDir ? "disk" : "memory",
     }));
     return;
   }
@@ -1164,14 +1302,9 @@ const httpServer = createHttpServer((req, res) => {
   const exportMatch = /^\/export\/([0-9a-f]{16})\/(image\.jpg|marks\.svg)$/.exec(url.pathname);
   if (exportMatch && req.method === "GET") {
     const imageId = "img:" + exportMatch[1];
-    let entry;
-    try { entry = getImage(imageId); } catch {
-      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("Image expired (kept about an hour). Show it again in ChatGPT, then export.");
-      return;
-    }
     const svg = exportMatch[2] === "marks.svg";
-    Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
+    ensureImage(imageId).then((entry) => {
+      Promise.resolve(svg ? Buffer.from(exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry))) : entrySharp(entry).jpeg({ quality: 92 }).toBuffer())
       .then((body) => {
         res.writeHead(200, {
           "content-type": svg ? "image/svg+xml; charset=utf-8" : "image/jpeg",
@@ -1183,6 +1316,39 @@ const httpServer = createHttpServer((req, res) => {
         res.end(body);
       })
       .catch((error) => { res.writeHead(500); res.end(String(error?.message || error)); });
+    }, () => {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Image expired from this server" + (config.storageDir ? "" : " (memory only)") + ". Show it again in ChatGPT, then export.");
+    });
+    return;
+  }
+
+  // The canvas as an estampes.visual/1 document for other tools and
+  // scripts: /api/v1/canvas/<hash>[?pair=<hash>][&history=N]. Uses the
+  // access key when one is set.
+  const apiMatch = /^\/api\/v1\/canvas\/([0-9a-f]{16})$/.exec(url.pathname);
+  if (apiMatch && req.method === "GET") {
+    const json = (status, body) => {
+      res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
+      res.end(JSON.stringify(body));
+    };
+    if (!authorized(req, url)) { json(401, { error: "Missing or invalid Estampes access key" }); return; }
+    const pairHex = url.searchParams.get("pair"), history = Math.min(200, Math.max(0, Number(url.searchParams.get("history")) || 0));
+    if (pairHex && !/^[0-9a-f]{16}$/.test(pairHex)) { json(400, { error: "pair must be a 16-character image hash" }); return; }
+    Promise.all([ensureImage("img:" + apiMatch[1]), pairHex ? ensureImage("img:" + pairHex) : null])
+      .then(async ([left, right]) => json(200, canvasDocument(left, right, history ? { history: await readHistory(left.imageId, history) } : {})))
+      .catch((error) => json(404, { error: String(error?.message || error) }));
+    return;
+  }
+
+  // For Docker/compose health checks and uptime monitors: 200 while the
+  // server answers and, when storage is on, the storage folder is writable.
+  if (url.pathname === "/healthz" && req.method === "GET") {
+    storageHealth().then((storage) => {
+      const ok = !storage.enabled || storage.writable;
+      res.writeHead(ok ? 200 : 503, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ ok, version: BUILD_VERSION, uptimeSeconds: Math.round(process.uptime()), storage }));
+    });
     return;
   }
 
@@ -1223,13 +1389,17 @@ const httpServer = createHttpServer((req, res) => {
       res.end("Too many requests");
       return;
     }
+    if (!config.publicUrl && req.headers.host) {
+      const proto = String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() || "http";
+      const host = String(req.headers["x-forwarded-host"] ?? req.headers.host).split(",")[0].trim();
+      if (/^[a-z0-9.:[\]-]+$/i.test(host) && /^https?$/.test(proto)) seenOrigin = proto + "://" + host;
+    }
     const start = Date.now();
     res.once("finish", () => {
-      console.log("[mcp] " + req.method + " status=" + res.statusCode +
-        " ms=" + (Date.now() - start));
+      log("info", "[mcp] " + req.method + " status=" + res.statusCode + " ms=" + (Date.now() - start));
     });
     Promise.resolve(mcpHandler(req, res)).catch((error) => {
-      console.error("[mcp] handler error:", error);
+      log("error", "[mcp] handler error", { error: String(error?.stack || error) });
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "text/plain" });
         res.end("Internal MCP error");
@@ -1242,6 +1412,40 @@ const httpServer = createHttpServer((req, res) => {
   res.end("Not found");
 });
 
-httpServer.listen(port, "0.0.0.0", () => {
-  console.log("Estampes MCP server at http://localhost:" + port + "/mcp");
+// Checked at most every 30 s so a health probe never hammers the disk.
+let lastHealth = null;
+async function storageHealth() {
+  if (lastHealth && Date.now() - lastHealth.at < 30000) return lastHealth.value;
+  let value;
+  try { value = { ...(await checkStorage()), writable: true }; }
+  catch (error) { value = { enabled: true, writable: false, error: String(error?.message || error) }; }
+  if (!config.storageDir) value = { enabled: false };
+  lastHealth = { at: Date.now(), value };
+  return value;
+}
+
+for (const warning of configWarnings()) log("warn", "[config] " + warning);
+const storage = await storageHealth();
+if (storage.enabled && !storage.writable) log("error", "[storage] not writable; marks will only live in memory", { dir: config.storageDir, error: storage.error });
+if (storage.enabled) {
+  sweepStorage().catch(() => {});
+  setInterval(() => sweepStorage().catch(() => {}), 6 * 3600 * 1000).unref();
+}
+
+httpServer.listen(port, config.host, () => {
+  log("info", "Estampes " + VERSION + " MCP server at http://localhost:" + port + "/mcp", {
+    storage: config.storageDir || "memory-only", accessKey: ACCESS_KEY ? "required" : "off",
+    maxImageMB: config.maxImageBytes / 1048576, publicUrl: config.publicUrl || "from-request",
+  });
 });
+
+// docker stop / Heroku dyno restart send SIGTERM: finish pending writes first.
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, () => {
+    log("info", "[shutdown] " + signal);
+    httpServer.close();
+    const force = setTimeout(() => process.exit(0), 8000);
+    force.unref();
+    flushStorage().finally(() => process.exit(0));
+  });
+}

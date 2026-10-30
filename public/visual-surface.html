@@ -39,12 +39,18 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #findings .who{font-weight:700;white-space:nowrap}
 #findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
 #findings .note{overflow-wrap:anywhere}
-#layers{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 0;font-size:.84rem}
-#layers[hidden]{display:none}#layers .title{color:GrayText;margin-right:2px}
-#layers label{display:inline-flex;gap:5px;align-items:center;padding:4px 9px;border:1px solid #8886;border-radius:9px;cursor:pointer}
-#layers label.off{opacity:.5;text-decoration:line-through}
-#layers .dot{width:9px;height:9px;border-radius:50%}#layers .count{color:GrayText;font-variant-numeric:tabular-nums}
-#layers button{padding:4px 9px;font-size:.8rem}
+#layers{display:grid;gap:4px;margin:8px 0 0;font-size:.84rem}
+#layers[hidden]{display:none}#layers .head{display:flex;gap:8px;align-items:center;color:GrayText;flex-wrap:wrap}
+#layers .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 8px;border:1px solid #8885;border-radius:9px}
+#layers .row.off .name{opacity:.5;text-decoration:line-through}#layers .row.locked{border-style:dashed}
+#layers .dot{width:9px;height:9px;border-radius:50%;flex:none}#layers .count{color:GrayText;font-variant-numeric:tabular-nums}
+#layers .name{flex:1 1 6em;min-width:5em;overflow-wrap:anywhere}#layers .name input{width:100%;font:inherit;padding:2px 6px}
+#layers input[type=range]{width:72px}#layers .pct{width:2.6em;color:GrayText;font-size:.75rem;font-variant-numeric:tabular-nums}
+#layers button{padding:2px 7px;font-size:.78rem}
+#selection{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;margin:8px 0 0;padding:7px 10px;border:1px solid #356BD6;border-radius:9px;font-size:.85rem}
+#selection[hidden]{display:none}#selection .who{font-weight:700}#selection .meta{color:GrayText;font-size:.8rem}
+#selection input{font:inherit;font-size:.85rem;padding:3px 7px;border-radius:7px;border:1px solid #8887;background:Canvas;color:CanvasText;width:11em}
+#selection button{padding:3px 9px;font-size:.8rem}#selection .note{flex-basis:100%;overflow-wrap:anywhere}
 #links{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 #links:empty{display:none}
 #links li{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
@@ -71,6 +77,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 <select id="focus-choice" hidden aria-label="放大哪個標註"></select>
 </nav>
 <div class="toolbar" id="edit-tools" role="group" aria-label="標註工具">
+<button data-mode="select" aria-pressed="false" title="點一個標記選取它；拖曳移動你自己的標記，Delete 刪除，方向鍵微調">選取</button>
 <button data-mode="point" aria-pressed="true">點選</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
 <button data-mode="arrow" aria-pressed="false">箭頭</button>
@@ -103,12 +110,13 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 </div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
-<g id="scene"></g><g id="processed"></g><g id="assistant-annotations"></g><g id="user-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="selection-outline"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
-<div id="layers" hidden role="group" aria-label="圖層：勾選要顯示的標記"></div>
+<div id="selection" hidden role="group" aria-label="選取的標記"></div>
+<div id="layers" hidden role="group" aria-label="圖層：顯示、改名、排序、透明度、鎖定"></div>
 <ol id="links" aria-label="左右兩張圖的對應連結"></ol>
 <ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
@@ -135,7 +143,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 <button id="export-image" hidden title="校正方向後的圖，所有座標都以它為準">下載圖片</button>
 <button id="export-marks" hidden title="每個圖層各自一組，可在繪圖軟體裡開關；之後上傳回對話可還原標記與圖層">下載標記 SVG</button>
 </div>
-<p id="status" role="status" aria-live="polite">正在連接 ChatGPT…</p>
+<p id="status" role="status" aria-live="polite">正在連接對話…</p>
 <script type="module">
 const NS="http://www.w3.org/2000/svg";
 const svg=document.querySelector("#surface"),sceneEl=document.querySelector("#scene"),processedEl=document.querySelector("#processed");
@@ -143,7 +151,7 @@ const tabNav=document.querySelector(".view-tabs");
 const freshEl=document.querySelector("#fresh-annotations"),findingsEl=document.querySelector("#findings");
 // Marks already sent to GPT: the next send labels them context, not focus.
 const sentIds=new Set();
-const aiEl=document.querySelector("#assistant-annotations"),userEl=document.querySelector("#user-annotations"),previewEl=document.querySelector("#preview");
+const storedEl=document.querySelector("#stored-annotations"),previewEl=document.querySelector("#preview"),outlineEl=document.querySelector("#selection-outline");
 const hit=document.querySelector("#hit"), status=document.querySelector("#status"),send=document.querySelector("#send"),counter=document.querySelector("#counter");
 const intentSelect=document.querySelector("#intent"),noteInput=document.querySelector("#note"),quoteInput=document.querySelector("#quote");
 let tabs=[...document.querySelectorAll("[data-view]")];const focusChoice=document.querySelector("#focus-choice"),editTools=document.querySelector("#edit-tools");
@@ -226,46 +234,139 @@ const cleanLinks=list=>(Array.isArray(list)?list:[]).filter(l=>l&&typeof l.id===
    confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null})).slice(0,30);
 // Layers: each send and each GPT drawing call is one layer of marks. The
 // viewer hides whole layers; hidden layers stay on the canvas and in GPT's
-// context. Unsent marks have no layer yet and are always shown.
+// context. Unsent marks have no layer yet and are always shown. Name,
+// order (bottom to top), opacity and lock live on the server, so GPT sees
+// them and they survive reloads; hiding is this viewer's own choice.
 const layersEl=document.querySelector("#layers");
-let layers=[],hiddenLayers=new Set();
+let layers=[],hiddenLayers=new Set(),renamingLayer=null;
 const shown=m=>!m.layer||!hiddenLayers.has(m.layer);
 const LAYER_ID=/^R?L\d{1,6}$/;
 const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
- .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40)})).slice(0,60);
+ .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(l.locked===true?{locked:true}:{}),
+   ...(typeof l.opacity==="number"&&l.opacity>=.1&&l.opacity<1?{opacity:l.opacity}:{})})).slice(0,60);
+const layerOf=id=>layers.find(l=>l.id===id);
+const isLocked=m=>!!m?.layer&&layerOf(m.layer)?.locked===true;
+// Paired view: on screen the right image's layers are "R"+id.
+const serverLayer=id=>id.startsWith("R")?{side:"right",id:id.slice(1)}:{side:"left",id};
+const sideName=id=>pair?(id.startsWith("R")?"右 · ":"左 · "):"";
 // Visibility is remembered per photo for this widget instance when the host
 // keeps widget state (ChatGPT); elsewhere it lasts until the widget reloads.
-const savedHidden=()=>{try{return window.openai?.widgetState?.hiddenLayers?.[imageId]??[]}catch{return []}};
-function saveHidden(){try{const st=window.openai?.widgetState??{};
- window.openai?.setWidgetState?.({...st,hiddenLayers:{...(st.hiddenLayers??{}),[imageId]:[...hiddenLayers]}});}catch{}}
+let localState={};
+const widgetState=()=>{try{return window.openai?.widgetState??localState}catch{return localState}};
+const savedHidden=()=>widgetState()?.hiddenLayers?.[imageId]??[];
+function saveHidden(){const st=widgetState()??{};
+ localState={...st,hiddenLayers:{...(st.hiddenLayers??{}),[imageId]:[...hiddenLayers]}};
+ try{window.openai?.setWidgetState?.(localState);}catch{}}
 function setLayers(list){
- // Paired view: each image numbers its own layers.
- const next=cleanLayers(pair?(Array.isArray(list)?list:[]).map(l=>l?.side==="right"?{...l,id:"R"+l.id,name:"右 · "+l.name}:{...l,name:"左 · "+l.name}):list);
+ const next=cleanLayers(pair?(Array.isArray(list)?list:[]).map(l=>l?.side==="right"?{...l,id:"R"+l.id}:l):list);
  if(JSON.stringify(next)===JSON.stringify(layers))return;
  layers=next;const known=new Set(layers.map(l=>l.id));
  hiddenLayers=new Set([...hiddenLayers,...savedHidden()].filter(id=>known.has(id)));
 }
+const el=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="dataset")Object.assign(e.dataset,v);else if(k in e)e[k]=v;else e.setAttribute(k,v);}e.append(...kids);return e;};
 function renderLayers(){
  const counts=new Map();
  for(const m of [...assistantMarks,...priorUserMarks,...userMarks])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
  const list=layers.filter(l=>counts.has(l.id));
  layersEl.hidden=!imageId||!list.length;layersEl.replaceChildren();
  if(layersEl.hidden)return;
- const t=document.createElement("span");t.className="title";t.textContent="圖層";layersEl.append(t);
- for(const l of list){
-   const label=document.createElement("label"),box=document.createElement("input"),dot=document.createElement("span"),
-     name=document.createElement("span"),count=document.createElement("span");
-   box.type="checkbox";box.checked=!hiddenLayers.has(l.id);box.dataset.layer=l.id;
-   label.classList.toggle("off",!box.checked);
-   dot.className="dot";dot.style.background=l.author==="user"?"#579DF6":"#E4AE57";
-   name.textContent=l.name;count.className="count";count.textContent=counts.get(l.id);
-   label.append(box,dot,name,count);layersEl.append(label);
- }
- if(hiddenLayers.size){const all=document.createElement("button");all.id="show-all-layers";all.textContent="全部顯示";layersEl.append(all);}
+ const head=el("div",{className:"head"},el("span",{textContent:"圖層（上面的蓋住下面的）"}));
+ if(hiddenLayers.size)head.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
+ layersEl.append(head);
+ // Top of the list = drawn last = on top.
+ const shownOrder=[...list].reverse();
+ shownOrder.forEach((l,i)=>{
+   const off=hiddenLayers.has(l.id),row=el("div",{className:"row"+(off?" off":"")+(l.locked?" locked":""),dataset:{layer:l.id}});
+   const box=el("input",{type:"checkbox",checked:!off,title:"顯示／隱藏（只影響你的畫面）",dataset:{layer:l.id,act:"toggle"}});
+   const name=el("span",{className:"name"});
+   if(renamingLayer===l.id){
+     const input=el("input",{value:l.name,maxLength:40,"aria-label":"圖層名稱",dataset:{layer:l.id,act:"name"}});
+     name.append(input);requestAnimationFrame(()=>{input.focus();input.select();});
+   }else name.append(sideName(l.id)+l.name);
+   const op=Math.round((l.opacity??1)*100);
+   const same=shownOrder.filter(o=>o.id.startsWith("R")===l.id.startsWith("R")),pos=same.indexOf(l);
+   row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),name,
+     el("span",{className:"count",textContent:String(counts.get(l.id))}),
+     el("button",{textContent:"✎",title:"改名","aria-label":"改名",disabled:!ready,dataset:{layer:l.id,act:"rename"}}),
+     el("input",{type:"range",min:"10",max:"100",step:"5",value:String(op),title:"透明度","aria-label":"透明度",disabled:!ready,dataset:{layer:l.id,act:"opacity"}}),
+     el("span",{className:"pct",textContent:op+"%"}),
+     el("button",{textContent:l.locked?"🔒 已鎖":"🔓",title:l.locked?"解鎖：允許你和 GPT 修改這層":"鎖定：你和 GPT 都不能移動、改樣式或刪除這層的標記","aria-pressed":String(!!l.locked),disabled:!ready,dataset:{layer:l.id,act:"lock"}}),
+     el("button",{textContent:"↑",title:"往上一層",disabled:!ready||pos<=0,dataset:{layer:l.id,act:"up"}}),
+     el("button",{textContent:"↓",title:"往下一層",disabled:!ready||pos>=same.length-1,dataset:{layer:l.id,act:"down"}}));
+   layersEl.append(row);
+ });
 }
-layersEl.addEventListener("change",e=>{const id=e.target?.dataset?.layer;if(!id)return;
- e.target.checked?hiddenLayers.delete(id):hiddenLayers.add(id);saveHidden();render();});
-layersEl.addEventListener("click",e=>{if(e.target.id!=="show-all-layers")return;hiddenLayers.clear();saveHidden();render();});
+// Layer settings and edits of earlier marks go to the server (app-only
+// tool); GPT reads them on its next call and in the next message.
+let unsentEdits=[];
+async function editOnServer(args){
+ if(!ready||!imageId)throw Error("尚未連線");
+ const result=await request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...args}});
+ if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+ const r=result?.structuredContent;
+ if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");
+ applyServerCanvas(r.annotations,r.layers,r.links);
+ unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
+ return r;
+}
+// The server's canvas after an edit. Unsent marks stay as they are.
+function applyServerCanvas(annotations,layerList,linkList){
+ if(Array.isArray(layerList)){layers=[];setLayers(layerList);}
+ const marks=(Array.isArray(annotations)?annotations:[]).filter(valid).slice(0,120).map(fromServer);
+ const byId=new Map(marks.map(m=>[m.id,m])),mine=new Set(userMarks.map(m=>m.id));
+ assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
+ userMarks=userMarks.filter(m=>!sentIds.has(m.id)||byId.has(m.id)).map(m=>sentIds.has(m.id)?{...byId.get(m.id)}:m);
+ priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,60);
+ if(pair&&Array.isArray(linkList))links=cleanLinks(linkList);
+ if(selected&&!allMarks().some(m=>m.id===selected))selected=null;
+}
+async function layerEdit(args,done){
+ try{await editOnServer(args);status.textContent=done;}
+ catch(err){status.textContent="圖層修改失敗："+String(err.message||err);}
+ render();
+}
+function reorder(id,dir){
+ const side=id.startsWith("R");
+ const used=new Set([...assistantMarks,...priorUserMarks,...userMarks].map(m=>m.layer));
+ const ids=layers.filter(l=>l.id.startsWith("R")===side&&used.has(l.id)).map(l=>l.id);
+ const i=ids.indexOf(id),j=i+dir;if(i<0||j<0||j>=ids.length)return;
+ [ids[i],ids[j]]=[ids[j],ids[i]];
+ const raw=ids.map(x=>serverLayer(x).id);
+ layerEdit({order:{[side?"right":"left"]:raw}},"已調整圖層順序。");
+}
+layersEl.addEventListener("change",e=>{
+ const t=e.target,id=t?.dataset?.layer;if(!id)return;
+ if(t.dataset.act==="toggle"){t.checked?hiddenLayers.delete(id):hiddenLayers.add(id);saveHidden();render();}
+ if(t.dataset.act==="opacity"){const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,opacity:Number(t.value)/100}]},"已調整透明度。");}
+});
+// Live preview while the slider moves; the panel itself is not rebuilt.
+layersEl.addEventListener("input",e=>{
+ const t=e.target;if(t?.dataset?.act!=="opacity")return;
+ const l=layerOf(t.dataset.layer);if(!l)return;
+ l.opacity=Number(t.value)/100;t.nextElementSibling.textContent=t.value+"%";renderCanvasMarks();
+});
+function finishRename(input,save){
+ const id=input.dataset.layer,name=input.value.trim();renamingLayer=null;
+ const l=layerOf(id);
+ if(!save||!l||!name||name===l.name){render();return;}
+ const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,name}]},"圖層已改名為「"+name+"」。");
+}
+layersEl.addEventListener("keydown",e=>{
+ if(e.target?.dataset?.act!=="name")return;
+ if(e.key==="Enter"){e.preventDefault();finishRename(e.target,true);}
+ if(e.key==="Escape"){e.preventDefault();finishRename(e.target,false);}
+});
+layersEl.addEventListener("focusout",e=>{if(e.target?.dataset?.act==="name"&&renamingLayer)finishRename(e.target,true);});
+layersEl.addEventListener("click",e=>{
+ if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();render();return;}
+ const b=e.target.closest("button[data-act]");if(!b)return;
+ const id=b.dataset.layer,l=layerOf(id);if(!l)return;
+ const {side,id:raw}=serverLayer(id);
+ if(b.dataset.act==="rename"){renamingLayer=id;renderLayers();}
+ if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 GPT 都不能再改這層的標記。");
+ if(b.dataset.act==="up")reorder(id,1);
+ if(b.dataset.act==="down")reorder(id,-1);
+});
 const MAX_MARKS=30;let selectedScene="landscape",assistantMarks=[],priorUserMarks=[],userMarks=[],mode="point",ready=false,start=null,seq=0,rpcId=0;
 const pending=new Map();
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
@@ -324,8 +425,8 @@ const COLORS={gold:"#E4AE57",blue:"#579DF6",red:"#F2545B",green:"#3DDC84",yellow
 const SIZES={fine:.3,thin:.6,medium:1,thick:1.8};
 // `color` is the author's colour (gold GPT / blue user); it stays on the
 // label so provenance survives when a mark picks its own stroke colour.
-function renderMarks(layer,items,color,author){
- layer.replaceChildren();
+function renderMarks(layer,items,color,author,{keep=false}={}){
+ if(!keep)layer.replaceChildren();
  for(const a of items){
    if(!valid(a))continue;
    const x=px(a.x),y=py(a.y),x2=px(a.x2??a.x),y2=py(a.y2??a.y);
@@ -364,6 +465,23 @@ function renderMarks(layer,items,color,author){
    const labelNode=node("text",{x:clamp(lx+9*lk,5*lk,VW-100*lk),y:clamp(ly-12*lk,14*lk,VH-14*lk),fill:color,"font-size":15*lk,"font-weight":700,stroke:"#17212A","stroke-width":.8*lk,"paint-order":"stroke"},layer);
    labelNode.textContent=label;
  }
+}
+// Stored marks drawn layer by layer in the server's order (bottom first),
+// each layer at its own opacity; sent user marks a little faded. New
+// (unsent) marks on top at full strength, then the selection outline.
+function renderCanvasMarks(){
+ storedEl.replaceChildren();
+ const stored=[...assistantMarks,...priorUserMarks,...userMarks.filter(m=>sentIds.has(m.id))].filter(shown);
+ const order=[null,...layers.map(l=>l.id)],known=new Set(order);
+ for(const id of order){
+   const items=stored.filter(m=>id===null?!known.has(m.layer??null)||!m.layer:m.layer===id);
+   if(!items.length)continue;
+   const g=node("g",{...(id?{"data-layer":id}:{}),opacity:layerOf(id)?.opacity??1},storedEl);
+   renderMarks(g,items.filter(m=>m.author!=="user"),"#E4AE57","AI",{keep:true});
+   renderMarks(node("g",{opacity:.55},g),items.filter(m=>m.author==="user"),"#579DF6","YOU",{keep:true});
+ }
+ renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
+ renderSelection();
 }
 function linkAnchor(m){
  const x=Math.min(px(m.x),px(m.x2??m.x)),y=Math.min(py(m.y),py(m.y2??m.y));
@@ -473,13 +591,13 @@ function renderView(){
    node("image",{href:processed.href,x:r.x*VW,y:r.y*VH,width:(r.x2-r.x)*VW,height:(r.y2-r.y)*VH,preserveAspectRatio:"none"},processedEl);
  }
  for(const b of tabs)b.setAttribute("aria-pressed",String(b.dataset.view===viewMode));
- aiEl.style.display=hideMarks?"none":"";
+ storedEl.style.display=hideMarks?"none":"";
  freshEl.style.display=hideMarks?"none":"";
- userEl.style.display=hideMarks?"none":"";
+ outlineEl.style.display=hideMarks?"none":"";
  previewEl.style.display=hideMarks?"none":"";
  hit.style.pointerEvents=hideMarks?"none":"auto";
  editTools.hidden=hideMarks;styleTools.hidden=hideMarks;
- svg.style.cursor=hideMarks?"default":"crosshair";
+ svg.style.cursor=hideMarks||mode==="select"?"default":"crosshair";
  const marks=markOptions();
  focusChoice.hidden=viewMode!=="zoom"||marks.length<2;
  const focus=marks.find(m=>m.key===selectedFocusId)?.mark;
@@ -512,14 +630,10 @@ function render(){
      t.textContent="正在載入照片…";
    }
  }else sceneEl.innerHTML=SCENES[selectedScene];
- renderMarks(aiEl,assistantMarks.filter(shown),"#E4AE57","AI");
- renderMarks(userEl,[...priorUserMarks,...userMarks.filter(m=>sentIds.has(m.id))].filter(shown),"#579DF6","YOU");
- userEl.style.opacity=".55";
- // New (unsent) marks drawn at full strength in their own layer.
- renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
+ renderCanvasMarks();
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
- send.disabled=!ready||(fresh===0&&!unsentReviews.length);
+ send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
  exportImageBtn.hidden=!!pair||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!pair||!(imageId&&exportLinks?.marks);
  renderLayers();renderLinks();renderFindings();
@@ -547,7 +661,7 @@ function applyInput(args){
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;unsentReviews=[];renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;unsentReviews=[];unsentEdits=[];selected=null;renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    if(pid){
@@ -626,7 +740,7 @@ async function syncCanvas(force=false){
    renderViewTabs();setCheck(r.check??null);
    status.textContent=photo?"已重新載入照片與標記。":"照片資料無法載入。";
  }catch(err){
-   status.textContent="照片載入失敗："+String(err.message||err)+"。伺服器只保留照片約一小時，過期請重新上傳。";
+   status.textContent="照片載入失敗："+String(err.message||err)+"。若伺服器沒有開啟儲存，照片只保留約一小時，過期請重新上傳。";
  }finally{syncing=false;render()}
 }
 // The verification image GPT checked its marks against, fetched on demand.
@@ -672,6 +786,7 @@ styleTools.addEventListener("click",e=>{
    penStyle={...penStyle,[key]:b.dataset[key]};
    for(const other of styleTools.querySelectorAll("[data-"+key+"]"))other.setAttribute("aria-pressed",String(other===b));
  }
+ restyleSelected();
 });
 // Only non-default style is stored on the mark.
 const styleFields=()=>({...(penStyle.color!=="blue"?{color:penStyle.color}:{}),...(penStyle.size!=="medium"?{size:penStyle.size}:{}),...(penStyle.pen!=="pen"?{pen:penStyle.pen}:{})});
@@ -680,7 +795,8 @@ function nextLabel(){
  return "YOU "+(Math.max(0,...used)+1);
 }
 function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:nextLabel(),...styleFields()};}
-function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));}
+function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));
+ if(mode!=="select"&&selected){selected=null;}render();}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
 let stroke=[];
 // ---- Zoom and pan --------------------------------------------------------
@@ -777,8 +893,163 @@ async function loadDetail(){
    detail={href,region:r.region,zoom:z};scheduleRender();
  }catch{}
 }
-hit.addEventListener("pointerdown",e=>{if(!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];hit.setPointerCapture(e.pointerId);});
-hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=fromPointer(e);if(!p)return;
+// ---- Selecting one mark ---------------------------------------------------
+// 選取 mode: tap a mark to select it (topmost first, small before large).
+// Your own marks, sent or not and from any earlier turn, can be dragged,
+// nudged with the arrow keys, restyled with the pen buttons, relabelled or
+// deleted; GPT's marks can be deleted. Locked layers refuse all of that.
+// Unsent marks change locally (with undo); sent ones go to the server.
+const selectionEl=document.querySelector("#selection");
+let selected=null,dragMove=null,nudge=null;
+const allMarks=()=>[...assistantMarks,...priorUserMarks,...userMarks];
+const findMark=id=>allMarks().find(m=>m.id===id);
+const isFresh=m=>!!m&&userMarks.some(u=>u.id===m.id)&&!sentIds.has(m.id);
+const isUser=m=>!!m&&(m.author==="user"||userMarks.some(u=>u.id===m.id));
+const canEdit=m=>isUser(m)&&!isLocked(m);
+const canDelete=m=>!!m&&!isLocked(m);
+function distSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);}
+// Distance from a canvas point to a mark's ink, in canvas units. Inside a
+// box counts as "near" but loses to anything drawn right under the finger.
+function markDistance(m,p,tol){
+ const P={x:px(p.x),y:py(p.y)},A={x:px(m.x),y:py(m.y)};
+ if(m.type==="point")return Math.hypot(P.x-A.x,P.y-A.y);
+ const B={x:px(m.x2),y:py(m.y2)};
+ if(m.type==="arrow")return distSeg(P,A,B);
+ if(m.type==="rect"){
+   const x1=Math.min(A.x,B.x),x2=Math.max(A.x,B.x),y1=Math.min(A.y,B.y),y2=Math.max(A.y,B.y);
+   const out=Math.hypot(Math.max(x1-P.x,0,P.x-x2),Math.max(y1-P.y,0,P.y-y2));
+   return out>0?out:Math.min(tol*.9,P.x-x1,x2-P.x,P.y-y1,y2-P.y);
+ }
+ const pts=m.points.map(q=>({x:px(q.x),y:py(q.y)}));if(m.closed)pts.push(pts[0]);
+ let d=Infinity;for(let i=1;i<pts.length;i++)d=Math.min(d,distSeg(P,pts[i-1],pts[i]));return d;
+}
+function pickMark(p){
+ const tol=12*U();
+ // Top of the drawing first: unsent marks, then layers from the top down.
+ const rank=new Map(layers.map((l,i)=>[l.id,i]));
+ const list=[...userMarks.filter(m=>!sentIds.has(m.id)).reverse(),
+   ...allMarks().filter(m=>!isFresh(m)&&shown(m)).sort((a,b)=>(rank.get(b.layer)??-1)-(rank.get(a.layer)??-1))];
+ let best=null,bestD=tol;
+ for(const m of list){if(!valid(m))continue;const d=markDistance(m,p,tol);if(d<bestD){best=m;bestD=d;}}
+ return best;
+}
+// Shift a mark without letting it leave its image.
+function shiftWithin(m,dx,dy){
+ const xs=[m.x,m.x2??m.x,...(m.points??[]).map(q=>q.x)],ys=[m.y,m.y2??m.y,...(m.points??[]).map(q=>q.y)];
+ dx=clamp(dx,-Math.min(...xs),1-Math.max(...xs));dy=clamp(dy,-Math.min(...ys),1-Math.max(...ys));
+ return mapMark(m,(x,y)=>[round(x+dx),round(y+dy)]);
+}
+function shifted(m,dx,dy){
+ if(!pair)return shiftWithin(m,dx,dy);
+ const f=frameOf(m);return toView(shiftWithin(toSide(m),dx*VW/f.w,dy*VH/f.h));
+}
+function replaceLocal(next){
+ const swap=list=>list.map(m=>m.id===next.id?next:m);
+ assistantMarks=swap(assistantMarks);priorUserMarks=swap(priorUserMarks);userMarks=swap(userMarks);
+}
+// The fields the server takes for one edited mark, in the mark's own image.
+function editFields(m){
+ const s=toSide(m),out={id:s.id,x:s.x,y:s.y};
+ if(pair)out.side=s.side==="right"?"right":"left";
+ if(s.x2!==undefined){out.x2=s.x2;out.y2=s.y2;}
+ if(s.points){out.points=s.points;if(s.smooth!==undefined)out.smooth=s.smooth;if(s.closed!==undefined)out.closed=s.closed;}
+ for(const k of ["label","color","size","pen"])if(s[k]!==undefined)out[k]=s[k];
+ return out;
+}
+async function updateMark(before,after,done){
+ if(isFresh(before)){
+   replaceLocal(before);commitMarks(userMarks.map(m=>m.id===after.id?after:m));status.textContent=done;render();return;
+ }
+ replaceLocal(after);render();
+ try{await editOnServer({marks:[editFields(after)]});status.textContent=done+" GPT 下次回覆時會知道。";}
+ catch(err){replaceLocal(before);status.textContent="修改失敗："+String(err.message||err);}
+ render();
+}
+async function deleteMark(m){
+ if(!canDelete(m))return;
+ selected=null;
+ if(isFresh(m)){commitMarks(userMarks.filter(u=>u.id!==m.id));status.textContent="已刪除（可按上一步復原）。";render();return;}
+ try{await editOnServer({remove:[{id:m.id,...(pair?{side:m.side==="right"?"right":"left"}:{})}]});
+   userMarks=userMarks.filter(u=>u.id!==m.id);
+   status.textContent="已刪除"+(isUser(m)?"你的":" GPT 的")+"標記「"+(m.label||m.id)+"」；GPT 下次回覆時會知道。";}
+ catch(err){status.textContent="刪除失敗："+String(err.message||err);}
+ render();
+}
+// Pen buttons restyle the selected mark when it is yours.
+function restyleSelected(){
+ const m=findMark(selected);if(mode!=="select"||!canEdit(m))return false;
+ const next={...m};for(const k of ["color","size","pen"])delete next[k];
+ // Unsent marks store only non-default style; the server needs it spelled out.
+ Object.assign(next,isFresh(m)?styleFields():{color:penStyle.color,size:penStyle.size,pen:penStyle.pen});
+ updateMark(m,next,"已改變標記樣式。");return true;
+}
+function bounds(m){
+ const xs=[m.x,m.x2??m.x,...(m.points??[]).map(q=>q.x)],ys=[m.y,m.y2??m.y,...(m.points??[]).map(q=>q.y)];
+ return {x:px(Math.min(...xs)),y:py(Math.min(...ys)),x2:px(Math.max(...xs)),y2:py(Math.max(...ys))};
+}
+function renderSelection(){
+ outlineEl.replaceChildren();
+ const m=selected?findMark(selected):null;
+ if(!m||!shown(m)&&!isFresh(m)){selectionEl.hidden=true;selectionEl.replaceChildren();return;}
+ const b=bounds(m),pad=8*U();
+ node("rect",{x:b.x-pad,y:b.y-pad,width:b.x2-b.x+2*pad,height:b.y2-b.y+2*pad,fill:"none",stroke:"#356BD6","stroke-width":2*U(),"stroke-dasharray":(6*U())+" "+(4*U()),rx:4*U()},outlineEl);
+ // Keep the label field alive while the user is typing in it.
+ if(selectionEl.contains(document.activeElement)&&selectionEl.dataset.mark===m.id)return;
+ selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
+ const mine=isUser(m),layer=layerOf(m.layer);
+ selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:(pair?(m.side==="right"?"右 ":"左 "):"")+(m.label||(mine?"YOU":"GPT"))}),
+   el("span",{className:"meta",textContent:(mine?"你的標記":"GPT 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
+ if(canEdit(m)){
+   const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤"});
+   input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const label=input.value.trim();input.blur();
+     if(label!==(m.label??""))updateMark(m,{...m,label:label||m.label},"已改標籤。");}});
+   selectionEl.append(input,el("span",{className:"meta",textContent:"拖曳移動 · 方向鍵微調 · 畫筆按鈕改樣式"}));
+ }
+ if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 GPT 的標記",dataset:{act:"delete"}}));
+ selectionEl.append(el("button",{textContent:"取消選取",dataset:{act:"deselect"}}));
+ if(m.note)selectionEl.append(el("span",{className:"note",textContent:"GPT："+m.note}));
+}
+selectionEl.addEventListener("click",e=>{
+ const act=e.target.closest("button")?.dataset.act;
+ if(act==="delete")deleteMark(findMark(selected));
+ if(act==="deselect"){selected=null;render();}
+});
+function nudgeSelected(dx,dy){
+ const m=findMark(selected);if(!canEdit(m))return;
+ nudge??={before:m};
+ replaceLocal(shifted(m,dx,dy));render();
+ clearTimeout(nudge.timer);
+ nudge.timer=setTimeout(()=>{const {before}=nudge;nudge=null;const after=findMark(before.id);if(after)updateMark(before,after,"已微調位置。");},500);
+}
+document.addEventListener("keydown",e=>{
+ if(!selected||e.target.closest?.("input,textarea,select")||viewMode!=="annotated")return;
+ if(e.key==="Escape"){selected=null;render();return;}
+ if(e.key==="Delete"||e.key==="Backspace"){e.preventDefault();deleteMark(findMark(selected));return;}
+ const step=(e.shiftKey?10:1)*U()/VW,arrows={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step*VW/VH],ArrowDown:[0,step*VW/VH]};
+ if(arrows[e.key]){e.preventDefault();nudgeSelected(...arrows[e.key]);}
+});
+hit.addEventListener("pointerdown",e=>{
+ if(mode!=="select"||!ready&&imageId)return;
+ const p=fromPointer(e);if(!p)return;
+ const m=pickMark(p);selected=m?.id??null;
+ if(canEdit(m)){dragMove={start:p,before:m,moved:false};hit.setPointerCapture(e.pointerId);}
+ status.textContent=m?"已選取「"+(m.label||m.id)+"」。":"這裡沒有標記；點在線條或框上就能選取。";
+ render();
+});
+hit.addEventListener("pointermove",e=>{
+ if(!dragMove)return;const p=fromPointer(e);if(!p)return;
+ const dx=p.x-dragMove.start.x,dy=p.y-dragMove.start.y;
+ if(!dragMove.moved&&Math.hypot(dx*VW,dy*VH)<3*U())return;
+ dragMove.moved=true;replaceLocal(shifted(dragMove.before,dx,dy));scheduleRender();
+});
+function endDrag(){
+ if(!dragMove)return;const {before,moved}=dragMove;dragMove=null;
+ const after=findMark(before.id);if(moved&&after)updateMark(before,after,"已移動標記。");
+}
+hit.addEventListener("pointerup",endDrag);
+hit.addEventListener("pointercancel",()=>{if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}});
+hit.addEventListener("pointerdown",e=>{if(mode==="select"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];hit.setPointerCapture(e.pointerId);});
+hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select")return;const p=fromPointer(e);if(!p)return;
  if(mode==="polyline"){
    // Pens and tablets report more samples than pointermove fires; use them all.
    for(const ev of e.getCoalescedEvents?.()??[e]){
@@ -789,7 +1060,7 @@ hit.addEventListener("pointermove",e=>{if(!start||mode==="point")return;const p=
    return;
  }
  renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");});
-hit.addEventListener("pointerup",e=>{if(!start)return;const p=fromPointer(e);if(p){
+hit.addEventListener("pointerup",e=>{if(!start||mode==="select")return;const p=fromPointer(e);if(p){
  if(mode==="polyline")stroke.push(p);
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
@@ -820,7 +1091,7 @@ async function displayMode(mode){
  try{
    if(window.openai?.requestDisplayMode)await window.openai.requestDisplayMode({mode});
    else await request("ui/request-display-mode",{mode});
- }catch(err){status.textContent="這個 ChatGPT 版本不支援切換顯示方式："+String(err.message||err)}
+ }catch(err){status.textContent="這個對話程式不支援切換顯示方式："+String(err.message||err)}
 }
 document.querySelector("#fullscreen").addEventListener("click",()=>displayMode("fullscreen"));
 document.querySelector("#clear").addEventListener("click",()=>{if(userMarks.length){commitMarks([]);selectedFocusId=null;render()}});
@@ -855,7 +1126,7 @@ window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
 (async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;}
- catch(err){status.textContent="ChatGPT 連線失敗："+String(err.message||err)}})();
+ catch(err){status.textContent="和對話程式連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 // The user's verdicts on GPT's links, as text GPT reads in the chat.
@@ -864,17 +1135,34 @@ function reviewMessage(list){
    list.map(l=>"- "+(l.label||l.id)+"（左 "+l.left+" ↔ 右 "+l.right+"）："+(l.review==="confirmed"?"確認是同一個":"否決，不是同一個")).join("\n")+
    "\n請以我的判斷為準，之後的推理不要再依賴被否決的連結。";
 }
+// The user's hand edits (layers, moved or deleted marks) as chat text. The
+// server also tells GPT on its next call; this makes it visible right away.
+const EDIT_ZH={
+ "rename-layer":e=>"把圖層 "+e.layer+"「"+e.from+"」改名為「"+e.to+"」",
+ "lock-layer":e=>"鎖定了圖層 "+e.layer+"（請不要修改或刪除裡面的標記）","unlock-layer":e=>"解鎖了圖層 "+e.layer,
+ "reorder-layers":e=>"調整了圖層順序（由下到上）"+(e.order??[]).join("、"),
+ "remove-mark":e=>"刪除了"+(e.author==="user"?"我的":"你的")+"標記 "+e.id+(e.label?"「"+e.label+"」":""),
+ "move-mark":e=>"移動或改了形狀：我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+"（你先前對它的說明可能不再適用）",
+ "restyle-mark":e=>"改了我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+" 的樣式或標籤",
+};
+function editMessage(list){
+ return "我在 Estampes 畫布上手動修改了（"+imageId+(pair?" ＋ 右 "+pair.imageId:"")+"）：\n"+
+   list.map(e=>"- "+(pair?(e.side==="right"?"右圖：":"左圖："):"")+(EDIT_ZH[e.kind]?.(e)??e.kind)).join("\n")+
+   "\n請以畫布現在的狀態為準；需要時用 present_visual（imageId）重新讀取。";
+}
 send.addEventListener("click",async()=>{
  const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
- const reviewed=unsentReviews;
- if(!ready||(!freshIds.length&&!reviewed.length))return;
+ const reviewed=unsentReviews,edited=unsentEdits;
+ if(!ready||(!freshIds.length&&!reviewed.length&&!edited.length))return;
  send.disabled=true;
+ const extra=()=>[...(reviewed.length?[reviewMessage(reviewed)]:[]),...(edited.length?[editMessage(edited)]:[])].join("\n\n");
+ const clearExtra=()=>{unsentReviews=unsentReviews.filter(r=>!reviewed.includes(r));unsentEdits=unsentEdits.filter(r=>!edited.includes(r));};
  if(!freshIds.length){
    try{
-     const response=await request("ui/message",{role:"user",content:[{type:"text",text:reviewMessage(reviewed)}]});
+     const response=await request("ui/message",{role:"user",content:[{type:"text",text:extra()}]});
      if(response?.isError)throw Error("Host rejected message");
-     unsentReviews=unsentReviews.filter(r=>!reviewed.includes(r));
-     status.textContent="已把你對連結的判斷傳給 GPT。";
+     clearExtra();
+     status.textContent="已把你的判斷與修改傳給 GPT。";
    }catch(err){status.textContent="傳送失敗："+String(err.message||err)}
    render();return;
  }
@@ -904,9 +1192,9 @@ send.addEventListener("click",async()=>{
    chatMessage=r.chatMessage;
    validated=true;
    // The server put this send's new marks in one layer.
-   const sent=pair?[["left",r.layer,"左 · "],["right",r.pairLayer,"右 · "]]:[["left",r.layer,""]];
-   for(const [side,raw,prefix] of sent){
-     const layer=cleanLayers(raw?[{...raw,id:(side==="right"?"R":"")+raw.id,name:prefix+raw.name,author:"user"}]:[])[0];
+   const sent=pair?[["left",r.layer],["right",r.pairLayer]]:[["left",r.layer]];
+   for(const [side,raw] of sent){
+     const layer=cleanLayers(raw?[{...raw,id:(side==="right"?"R":"")+raw.id,author:"user"}]:[])[0];
      if(!layer)continue;
      for(const m of userMarks)if(freshIds.includes(m.id)&&(!pair||(m.side??"left")===side))m.layer=layer.id;
      if(!layers.some(l=>l.id===layer.id))layers=[...layers,layer];
@@ -927,7 +1215,7 @@ send.addEventListener("click",async()=>{
      "點是位置，框是範圍，箭頭尖端(x2,y2)是目標。\n"+
      "未經驗證的標註："+JSON.stringify(marks);
  }
- if(reviewed.length)chatMessage+="\n\n"+reviewMessage(reviewed);
+ if(reviewed.length||edited.length)chatMessage+="\n\n"+extra();
  try{
    status.textContent=(validated?"座標與意圖已驗證；":"驗證失敗，嘗試傳送原始資料；")+
      "訊息送往 GPT 中…";
@@ -936,7 +1224,7 @@ send.addEventListener("click",async()=>{
    });
    if(response?.isError)throw Error("Host rejected message");
    for(const id of freshIds)sentIds.add(id);
-   unsentReviews=unsentReviews.filter(r=>!reviewed.includes(r));
+   clearExtra();
    past=[];future=[];
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
      (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
