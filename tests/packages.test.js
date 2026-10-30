@@ -212,3 +212,17 @@ test("a rollback plan goes stale when another update lands first", async () => {
   await s.commit(h, "update", "org.example.callout", {}, { approve: true });
   await assert.rejects(h.lifecycle.commit(rb.planId, { consent: rb.consent }), /changed after this rollback/);
 });
+
+test("an update plan goes stale when a newer version is installed first", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await s.put("callout-2", sign(v("1.1.0")));
+  const old = await h.lifecycle.prepare("update", "org.example.callout", { version: "1.1.0" });
+  await s.put("callout-3", sign(v("1.2.0")));
+  await s.commit(h, "update", "org.example.callout", { version: "1.2.0" }, { approve: true });
+  await writeApproval(s.storage, s.key, old.planId);
+  await assert.rejects(h.lifecycle.commit(old.planId, { consent: old.consent }), /out of date/);
+  assert.equal(h.registry.record("org.example.callout").version, "1.2.0");
+});

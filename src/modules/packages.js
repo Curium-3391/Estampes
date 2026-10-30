@@ -305,6 +305,8 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const { id, version, digest } = plan.options;
         const v = await findInInbox(id, version);
         if (v.digest !== digest) throw new LifecycleError("the package in the inbox changed after the plan was made; prepare it again", "integrity");
+        const { compareVersions } = await import("./semver.js");
+        if (compareVersions(v.manifest.version, mod.record.version) <= 0) throw new LifecycleError(id + " " + mod.record.version + " is already installed; this update to " + version + " is out of date, prepare it again", "conflict");
         await stage(v);
         const before = registry.get(id);
         try { await selfTest(v.manifest, runtimeFor(v.manifest), { runtimes }); }
