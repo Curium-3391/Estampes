@@ -88,6 +88,22 @@ try{
  const expandedBefore=findingGroupsOpen.has("L1");
  findingsEl.querySelector("[data-act=toggle]").click();await tick();
  check(hiddenLayers.has("L1")&&findingGroupsOpen.has("L1")===expandedBefore,"visibility control does not toggle evidence");
+ objects=[{id:"o1",type:"axes-2d",primitives:[],editable:{xRange:[-3,3],yRange:[-2,2],title:"y = sin(x)"}},
+   {id:"o2",type:"function-plot",primitives:[],editable:{expression:"sin(2*x)",domain:null,labelMode:"custom",label:"sin(x)"}}];
+ render();
+ check(objectsPanel.querySelector('[aria-label="圖表標題"]').value==="y = sin(x)","axes title is explicitly editable");
+ const labelMode=objectsPanel.querySelector('[aria-label="曲線標籤模式"]');
+ check(labelMode.value==="custom","legacy custom label remains explicit");
+ labelMode.value="auto";labelMode.dispatchEvent(new Event("change"));
+ check(objectsPanel.querySelector('[aria-label="自訂曲線標籤"]').disabled,"auto labels disable custom text field");
+ objects=[];canRestoreObjects=true;render();
+ check(!objectsPanel.hidden&&objectsPanel.textContent.includes("復原上次刪除的物件"),"restore stays reachable when last object is deleted");
+ assistantMarks=[];priorUserMarks=[];userMarks=[];objects=[];hiddenLayers.clear();
+ ws={id:"ws:0123456789abcdef",items:[{id:"wi-1",imageId,objects:[{id:"o90",type:"function-plot",layer:"L9",primitives:[{k:"path",pts:[[0,.5],[1,.5]],stroke:"#579DF6",width:3}]}]}]};
+ frames={"wi-1":{x0:0,y0:0,w:400,h:300,rot:0}};
+ layers=[{id:"W1_L9",name:"Graph",author:"assistant"}];baseAsObject=false;viewMode="annotated";render();
+ check(document.querySelector('#unified-layers [data-object="o90"] path'),"workspace renders Graph primitives");
+ check(findingsEl.querySelector('[data-layer="W1_L9"]'),"workspace object-only layer controls remain visible");
  document.body.dataset.findingTest="passed";
 }catch(error){document.body.dataset.findingTest="failed: "+error.stack;}
 })();

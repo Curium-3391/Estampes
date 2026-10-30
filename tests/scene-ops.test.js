@@ -135,3 +135,25 @@ test("plot labels: legacy formula-looking and empty labels stay custom after res
     assert.deepEqual(labels(), ["y = sin(2*x)"]);
   }
 });
+
+test("deleted axes and plots restore together with original IDs, labels and lock checks", async () => {
+  const e = canvas();
+  applySceneOps(e, [axes, plot()], mod);
+  applySceneOps(e, [{op:"object.delete",id:"o1",cascade:true}], {author:"user"});
+  assert.equal(canvasObjects(e).length,0);
+  assert.equal(e.deletedObjectBatches.length,1);
+  const {serializeCanvas,restoreCanvas}=await import("../src/storage.js");
+  const f=canvas();restoreCanvas(f,JSON.parse(JSON.stringify(serializeCanvas(e))));
+  applySceneOps(f,[{op:"object.restore"}],{author:"user"});
+  assert.deepEqual(canvasObjects(f).map(o=>o.id),["o1","o2"]);
+  e.layers[0].locked=true;
+  assert.throws(()=>applySceneOps(e,[{op:"object.restore"}],{author:"user"}),/locked/);
+  assert.equal(canvasObjects(e).length,0);
+  assert.equal(e.deletedObjectBatches.length,1);
+  delete e.layers[0].locked;
+  applySceneOps(e,[{op:"object.restore"}],{author:"user"});
+  assert.deepEqual(canvasObjects(e).map(o=>o.id),["o1","o2"]);
+  assert.equal(canvasObjects(e).find(o=>o.id==="o2").props.frame,"o1");
+  assert.equal(e.deletedObjectBatches.length,0);
+  assert.ok(widgetObjects(e).find(o=>o.id==="o2").primitives.length);
+});

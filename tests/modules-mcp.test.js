@@ -119,6 +119,18 @@ test("modules over MCP: Store, consent, enable, plot sin(x), edit, restart", { t
     const stale = await s.client.callTool({ name: "render_canvas", arguments: request });
     assert.equal(stale.isError, true);
     assert.equal(stale.structuredContent.code, "STALE_CANVAS");
+    const removed = await s.client.callTool({ name: "edit_scene_object", arguments: { imageId: canvasId, id: "o1", remove: true } });
+    assert.ok(!removed.isError, text(removed));
+    assert.equal(removed.structuredContent.objects.length, 0);
+    assert.equal(removed.structuredContent.canRestoreObjects, true);
+    const restored = await s.client.callTool({ name: "edit_scene_object", arguments: { imageId: canvasId, restore: true } });
+    assert.ok(!restored.isError, text(restored));
+    assert.deepEqual(restored.structuredContent.objects.map(o=>o.id), ["o1", "o2"]);
+    assert.equal(restored.structuredContent.canRestoreObjects, false);
+    const promoted = await s.client.callTool({ name: "add_image_layer", arguments: { imageId: canvasId } });
+    assert.ok(!promoted.isError, text(promoted));
+    assert.equal(promoted.structuredContent.baseAsObject, true);
+    assert.ok(promoted.structuredContent.objects.some(o=>o.type==="image"));
     const activity = await s.client.callTool({ name: "store_get_activity", arguments: {} });
     assert.ok(activity.structuredContent.events.some((e) => e.kind === "run"));
   } finally { s.handle.kill(); }

@@ -65,13 +65,15 @@ export function serializeCanvas(entry) {
   const links = {};
   for (const [rightId, store] of entry.pairLinks ?? []) if (store.size) links[rightId] = [...store.values()];
   return {
+    ...(entry.baseAsObject ? { baseAsObject: true } : {}),
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     ...(entry.setId ? { setId: entry.setId, ...(entry.derivedFrom ? { derivedFrom: entry.derivedFrom } : {}) } : {}),
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
     ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
     ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}),
-    ...(entry.objects?.size ? { objects: serializeObjects(entry), sceneRevision: entry.sceneRevision ?? 0, objectSeq: entry.objectSeq ?? 0 } : {}),
+    ...((entry.objects?.size || entry.deletedObjectBatches?.length) ? { objects: serializeObjects(entry), sceneRevision: entry.sceneRevision ?? 0, objectSeq: entry.objectSeq ?? 0 } : {}),
+    ...(entry.deletedObjectBatches?.length ? { deletedObjectBatches: entry.deletedObjectBatches } : {}),
     savedAt: new Date().toISOString(),
   };
 }
@@ -86,6 +88,8 @@ export function restoreCanvas(entry, data) {
     ? data.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string") : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => setKeyOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
+  entry.baseAsObject = !!data.baseAsObject;
+  entry.deletedObjectBatches = Array.isArray(data.deletedObjectBatches) ? data.deletedObjectBatches.slice(-10) : [];
   restoreObjects(entry, data.objects);
   entry.sceneRevision = Number.isInteger(data.sceneRevision) ? data.sceneRevision : 0;
   entry.objectSeq = Number.isInteger(data.objectSeq) ? data.objectSeq : 0;

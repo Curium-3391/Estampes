@@ -49,6 +49,7 @@ import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
+import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
@@ -494,7 +495,7 @@ async function wsPixels(items) {
   for (const { id, entry } of items) {
     const shown = await displayImage(entry);
     total += shown.data.length;
-    out.push({ id, mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height });
+    out.push({ id, objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height });
   }
   return total <= WS_PIXEL_BUDGET ? out : [];
 }
@@ -884,7 +885,7 @@ function makeServer() {
             "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
             "estampes/views": rendered,
             "estampes/annotations": resolved,
-            "estampes/objects": widgetObjects(entry),
+            "estampes/baseAsObject": !!entry.baseAsObject, "estampes/objects": widgetObjects(entry), "estampes/canRestoreObjects": !!entry.deletedObjectBatches?.length,
           },
         });
       } catch (error) {
@@ -904,7 +905,7 @@ function makeServer() {
       title: "Load visual canvas",
       description: "Reload a photo canvas for the Estampes widget.",
       inputSchema: z.object({
-        imageId: ImageIdSchema,
+        imageId: ImageIdSchema, setId:z.string().regex(/^c[0-9a-f]{12}$/).optional(),
         part: z.enum(["canvas", "check", "image"]).default("canvas"),
         pairImageId: ImageIdSchema.optional(),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Reload a whole workspace (imageId = its first image)"),
@@ -912,7 +913,7 @@ function makeServer() {
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, part, pairImageId, workspaceId }) => {
+    async ({ imageId, setId, part, pairImageId, workspaceId }) => {
       try {
         if (workspaceId && part === "canvas") {
           const { doc } = await resolveRef(workspaceId);
@@ -926,13 +927,13 @@ function makeServer() {
             },
           }, { appOnly: true });
         }
-        const entry = await ensureImage(imageId);
+        const entry = await ensureSet(imageId+(setId?"#"+setId:""));
         if (part === "image") {
           const shown = await displayImage(entry);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Image " + imageId + " sent to the widget." }],
             structuredContent: { kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
-              image: { mimeType: shown.mimeType, data: shown.data.toString("base64") } },
+              objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, image: { mimeType: shown.mimeType, data: shown.data.toString("base64") } },
           }, { appOnly: true });
         }
         if (pairImageId && part === "canvas") {
@@ -960,7 +961,7 @@ function makeServer() {
           : {
               width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
               gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
-              objects: widgetObjects(entry),
+              objects: widgetObjects(entry),baseAsObject:!!entry.baseAsObject,
               image: pixels(await displayImage(entry)),
               views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
               ...(check ? { check: checkSummary(check) } : {}),
@@ -1860,6 +1861,21 @@ function makeServer() {
   };
   const DerivedViewSchema = z.record(z.string(), z.unknown());
 
+  server.registerTool("add_image_layer",{
+    title:"Add an independent image/canvas layer",
+    description:"Promote the base image into an editable layer, optionally copy another canvas and its public objects/marks as independent layers. PNG transparency is preserved. Source is never modified. sourceSet can identify a workspace copy. region positions the copied content in destination normalized coordinates.",
+    inputSchema:z.object({imageId:ImageIdSchema,sourceImageId:ImageIdSchema.optional(),sourceSet:z.string().regex(/^c[0-9a-f]{12}$/).optional(),region:RegionSchema.optional()}),
+    annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},
+  },async({imageId,sourceImageId,sourceSet,region})=>{
+    try{
+      if(sourceSet&&!sourceImageId)throw Error("sourceSet requires sourceImageId");
+      const entry=await ensureImage(imageId),source=sourceImageId?await ensureSet(sourceImageId+(sourceSet?"#"+sourceSet:"")):null;
+      const result=await composeCanvas(entry,source,region);
+      await saveCanvas(entry,{tool:"add_image_layer",author:"user",changed:result.created});
+      return {content:[{type:"text",text:"Independent layers ready."}],structuredContent:{kind:"estampes.composed_canvas",imageId,objects:widgetObjects(entry),layers:canvasLayers(entry),annotations:canvasMarks(entry),baseAsObject:!!entry.baseAsObject}};
+    }catch(error){return fail(error);}
+  });
+
   server.registerTool("render_canvas", {
     title: "Read visible canvas pixels",
     description: "Render the base image, public scene objects and saved marks, including Graph and handwriting. Use for whiteboards and mixed scenes; process_image reads only source pixels. Pass the submission's canvasReads request (expectedRevision and hiddenLayers) to preserve its state and visibility; STALE_CANVAS means that old state is unavailable. Mark labels default to none; formula and axis text stay visible. Returns a pixel-to-canvas mapping. Does not run modules or include scratch. Without hiddenLayers all saved layers are shown. Workspace copies require setId from canvasReads.",
@@ -2300,7 +2316,7 @@ async function canvasPayload(entry) {
     },
     _meta: {
       "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
-      "estampes/views": [], "estampes/annotations": marks, "estampes/objects": widgetObjects(entry),
+      "estampes/views": [], "estampes/annotations": marks, "estampes/baseAsObject": !!entry.baseAsObject, "estampes/objects": widgetObjects(entry), "estampes/canRestoreObjects": !!entry.deletedObjectBatches?.length,
     },
   };
 }

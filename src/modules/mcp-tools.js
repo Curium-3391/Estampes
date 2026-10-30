@@ -226,22 +226,24 @@ export function registerModuleTools(server, deps) {
   // The Core re-renders it; no module code runs, so it works even after the
   // module was disabled.
   registerAppTool(server, "edit_scene_object", {
-    title: "Edit a canvas object", description: "Change or delete a scene object from the canvas widget.",
+    title: "Edit a canvas object", description: "Change or delete a scene object, or restore the last deletion from the canvas widget.",
     inputSchema: z.object({
-      imageId: ImageIdSchema, id: z.string().regex(/^o\d{1,6}$/),
+      imageId: ImageIdSchema, id: z.string().regex(/^o\d{1,6}$/).optional(), restore: z.boolean().default(false),
       props: z.record(z.string(), z.unknown()).optional(), remove: z.boolean().default(false),
       expectedRevision: z.number().int().min(0).optional(),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }, _meta: appOnly,
-  }, async ({ imageId, id, props, remove, expectedRevision }) => {
+  }, async ({ imageId, id, props, remove, restore, expectedRevision }) => {
     try {
       const entry = await deps.ensureImage(imageId);
-      const ops = remove ? [{ op: "object.delete", id, cascade: true }] : [{ op: "object.update", id, props: props ?? {} }];
+      if (!restore && !id) throw new Error("id is required");
+      if (restore && (remove || props)) throw new Error("restore cannot be combined with edits");
+      const ops = restore ? [{ op: "object.restore" }] : remove ? [{ op: "object.delete", id, cascade: true }] : [{ op: "object.update", id, props: props ?? {} }];
       const scene = applySceneOps(entry, ops, { author: "user" }, { expectedRevision });
-      (entry.userEdits ??= []).push({ kind: remove ? "remove-object" : "edit-object", id, ...(props ? { props } : {}) });
+      (entry.userEdits ??= []).push({ kind: restore ? "restore-object" : remove ? "remove-object" : "edit-object", id, ...(props ? { props } : {}) });
       await deps.saveCanvas(entry, { tool: "edit_scene_object", author: "user", changed: scene.updated, removed: scene.deleted });
-      return { content: [{ type: "text", text: (remove ? "Removed " : "Updated ") + id + "." }],
-        structuredContent: { kind: "estampes.scene_objects", imageId, revision: sceneRevision(entry), objects: widgetObjects(entry), layers: deps.canvasLayers(entry),
+      return { content: [{ type: "text", text: restore ? "Restored deleted scene objects." : (remove ? "Removed " : "Updated ") + id + "." }],
+        structuredContent: { kind: "estampes.scene_objects", imageId, revision: sceneRevision(entry), objects: widgetObjects(entry), canRestoreObjects: !!entry.deletedObjectBatches?.length, layers: deps.canvasLayers(entry),
           notes: scene.notes } };
     } catch (error) { return { ...fail(error), structuredContent: { kind: "estampes.module_error", code: error.code ?? "error", message: String(error?.message || error) } }; }
   });
