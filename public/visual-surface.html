@@ -524,7 +524,7 @@ layersEl.addEventListener("click",e=>{
  const id=b.dataset.layer,l=layerOf(id);if(!l)return;
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
  const {side,id:raw}=serverLayer(id);
- if(b.dataset.act==="rename"){renamingLayer=id;renderLayers();}
+ if(b.dataset.act==="rename"){renamingLayer=id;render();}
  if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 GPT 都不能再改這層的標記。");
  if(b.dataset.act==="up")reorder(id,1);
  if(b.dataset.act==="down")reorder(id,-1);
