@@ -21,7 +21,7 @@ test("image tools are discoverable with ChatGPT file params and fail safely",{ti
   try{
     for(let i=0;i<80;i++){try{if((await fetch(base+"/")).ok)break}catch{}await sleep(100)}
     const version=await (await fetch(base+"/version")).json();
-    assert.deepEqual(version.imageTools,["load_image","process_image","overlay_grid"]);
+    assert.deepEqual(version.imageTools,["load_image","process_image","overlay_grid","inspect_image","get_derived_view"]);
     await client.connect(new StreamableHTTPClientTransport(new URL(base+"/mcp")));
     const {tools}=await client.listTools();
     const load=tools.find(t=>t.name==="load_image");
@@ -31,7 +31,7 @@ test("image tools are discoverable with ChatGPT file params and fail safely",{ti
     assert.deepEqual(Object.keys(file.properties).sort(),["download_url","file_id","file_name","mime_type"]);
     assert.deepEqual([...file.required].sort(),["download_url","file_id"]);
     assert.equal(file.additionalProperties,false);
-    for(const name of ["process_image","overlay_grid"]){
+    for(const name of ["process_image","overlay_grid","inspect_image","get_derived_view"]){
       const tool=tools.find(t=>t.name===name);
       assert.ok(tool,name+" missing");
       assert.equal(tool._meta?.ui?.resourceUri,undefined,name+" is model-only");
