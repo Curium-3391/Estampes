@@ -129,7 +129,7 @@ registerEngine({
   async run({ img, toNormalized, params }) {
     const { mask, width, height, threshold } = await binaryMask(img, params);
     const minArea = params.minArea ?? 12, maxCount = params.maxCount ?? 300;
-    const { comps } = labelComponents(mask, width, height, { minArea });
+    const { comps } = labelComponents(mask, width, height, { minArea, maxCount: Infinity });
     comps.sort((a, b) => b.area - a.area);
     const warnings = [];
     if (comps.length > maxCount) warnings.push(comps.length + " components; the largest " + maxCount + " returned");
@@ -167,7 +167,7 @@ registerEngine({
     const k = params.sigma ?? 5;
     const mask = new Uint8Array(resid.length);
     for (let i = 0; i < resid.length; i++) mask[i] = resid[i] > med + k * sigma ? 1 : 0;
-    const { comps, labels } = labelComponents(mask, width, height, { minArea: params.minArea ?? 3 });
+    const { comps, labels } = labelComponents(mask, width, height, { minArea: params.minArea ?? 3, maxCount: Infinity });
     const out = comps.map((c) => {
       let flux = 0, mx = 0, my = 0, peak = 0;
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) {
