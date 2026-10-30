@@ -297,6 +297,7 @@ function buildCalcUI(p){
  const angle=h("select",{"aria-label":"角度單位",title:"度：只有純數字的 sin/cos/tan 引數會當成度；sin(x) 不會被改寫"},h("option",{value:"rad"},"弧度"),h("option",{value:"deg"},"度"));
  const prec=h("input",{type:"number",min:"5",max:"100",value:"15","aria-label":"近似值位數",title:"近似值位數",style:"width:4.5em"});
  const go=h("button",{type:"button",class:"primary"},"計算");
+ const stop=h("button",{type:"button",hidden:true,title:"停止這次計算","aria-label":"停止計算"},"停止");
  const hint=h("small",{class:"calc-hint"},"Enter 計算 · Shift+Enter 換行 · Ctrl/⌘+Enter 一律計算");
  const keysBtn=h("button",{type:"button","aria-expanded":"false",class:"wb-chip"},"符號鍵");
  const keys=h("div",{class:"calc-keys",hidden:true,role:"group","aria-label":"符號鍵（選用）"},KEYS.map(([label,ins])=>h("button",{type:"button",onpointerdown:e=>e.preventDefault(),onclick:()=>insertAtCaret(input,ins)},label)));
@@ -309,8 +310,8 @@ function buildCalcUI(p){
  const list=h("div",{class:"calc-cells","aria-label":"計算紀錄"});
  const root=h("div",{class:"calc"},
   h("div",{class:"calc-row"},mode,op),input,params,
-  h("div",{class:"calc-row calc-go"},go,angle,h("label",{class:"calc-prec"},"位數 ",prec),keysBtn),keys,hint,msg,defsForm,range,list);
- const ui={root,input,op,mode,params,angle,prec,go,keys,keysBtn,msg,list,defsForm,range};
+  h("div",{class:"calc-row calc-go"},go,stop,angle,h("label",{class:"calc-prec"},"位數 ",prec),keysBtn),keys,hint,msg,defsForm,range,list);
+ const ui={root,input,op,mode,params,angle,prec,go,stop,keys,keysBtn,msg,list,defsForm,range};
  st.ui=ui;
  mode.addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;st.mode=b.dataset.m;for(const x of mode.children)x.setAttribute("aria-pressed",String(x===b));
   input.placeholder=st.mode==="latex"?"例如 \\frac{x^{2}+1}{\\sqrt{x}}":"例如 sin(x^2)　或　x^2-4=0";});
@@ -325,6 +326,7 @@ function buildCalcUI(p){
   e.preventDefault();runCalc(p.panelId);
  });
  go.addEventListener("click",()=>runCalc(p.panelId));
+ stop.addEventListener("click",()=>stopCalc(p.panelId));
  keysBtn.addEventListener("click",()=>{keys.hidden=!keys.hidden;keysBtn.setAttribute("aria-expanded",String(!keys.hidden));});
  input.addEventListener("focus",()=>setTimeout(()=>input.scrollIntoView({block:"center",behavior:"smooth"}),250));
  if(window.visualViewport)window.visualViewport.addEventListener("resize",()=>{if(document.activeElement===input)input.scrollIntoView({block:"center"});});
@@ -371,15 +373,23 @@ async function runCalc(id){
  if(!p||st.busy)return;
  let params;try{params=calcParams(ui,st);}catch(err){setMsg(st,String(err.message),"error");return;}
  params.notebook=p.notebook;if(st.editing)params.cell=st.editing;
- st.busy=true;ui.go.disabled=true;ui.root.setAttribute("aria-busy","true");setMsg(st,"SymPy 計算中…","");
+ params.job=newJob(st);
+ st.busy=true;ui.go.disabled=true;ui.stop.hidden=false;ui.root.setAttribute("aria-busy","true");setMsg(st,"SymPy 計算中…","");
  try{
   const r=await wbCall("surface_cas",{...(imageId?{imageId}:ws?{imageId:ws.items[0].imageId}:{}),capability:"calculate",params});
   const cell=r.data?.cell;
   if(cell?.state==="error")setMsg(st,ERR_ZH(cell.error),"error");
   else{setMsg(st,"","");st.editing=null;ui.input.value="";}
   await wbRefresh();
- }catch(err){setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;ui.go.disabled=false;ui.root.removeAttribute("aria-busy");ui.input.focus();}
+ }catch(err){if(st.cancelled)setMsg(st,"已停止，沒有留下任何結果。","");else setMsg(st,String(err.message||err),"error");}
+ finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();}
+}
+// A calculation carries an id so the Stop button can end it in the service.
+const newJob=st=>{st.job=uuid().replace(/[^0-9a-f]/g,"").padEnd(16,"0").slice(0,16);return st.job;};
+async function stopCalc(id){
+ const st=calcState(id);if(!st.job)return;
+ st.cancelled=true;setMsg(st,"正在停止…","");
+ try{await wbCall("surface_cas_cancel",{job:st.job});}catch(err){st.cancelled=false;setMsg(st,String(err.message||err),"error");}
 }
 const ERR_ZH=e=>({syntax:"算式看不懂：",unsupported:"目前不支援：",domain:"數學上不成立：",timeout:"算太久，已停止：",resource_limit:"超過限制：",worker_unavailable:"計算服務沒有啟動：",cancelled:"已取消：",internal:"計算引擎發生錯誤："}[e?.code]??"")+(e?.message??"");
 async function runDefine(id,d){
@@ -399,7 +409,7 @@ function renderCalc(p){
  if(!st.ui){const ui=buildCalcUI(p);el.querySelector(".wb-body").replaceChildren(ui);}
  const ui=st.ui,nb=wb.notebooks[p.panelId],disabled=p.moduleState!=="enabled";
  ui.root.classList.toggle("off",disabled);
- for(const e of ui.root.querySelectorAll(".calc-row button,.calc-go button,.calc-keys button"))if(e!==ui.keysBtn)e.disabled=disabled||st.busy;
+ for(const e of ui.root.querySelectorAll(".calc-row button,.calc-go button,.calc-keys button"))if(e!==ui.keysBtn&&e!==ui.stop)e.disabled=disabled||st.busy;
  ui.go.disabled=disabled||st.busy;
  if(disabled)setMsg(st,"「科學計算機」模組已停用：舊結果仍可閱讀；請到 Store 重新啟用後再計算。","error");
  else if(st.message==="" )ui.msg.textContent="";
@@ -441,9 +451,11 @@ function cellView(p,c,nb,disabled){
  return art;
 }
 async function recompute(p,c){
- const st=calcState(p.panelId);
- try{await wbCall("surface_cas",{capability:"recompute",params:{notebook:p.notebook,cell:c.cellId}});await wbRefresh();}
- catch(err){setMsg(st,String(err.message||err),"error");}
+ const st=calcState(p.panelId);if(st.busy)return;
+ st.busy=true;st.ui.stop.hidden=false;setMsg(st,"SymPy 重算中…","");
+ try{await wbCall("surface_cas",{capability:"recompute",params:{notebook:p.notebook,cell:c.cellId,job:newJob(st)}});setMsg(st,"","");await wbRefresh();}
+ catch(err){if(st.cancelled)setMsg(st,"已停止，原來的結果沒有改變。","");else setMsg(st,String(err.message||err),"error");}
+ finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);}
 }
 async function plotCell(p,c,link){
  const st=calcState(p.panelId);

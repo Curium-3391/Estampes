@@ -239,6 +239,12 @@
             "type": "string",
             "maxLength": 64,
             "description": "Repeat the same key to get the same result instead of a second calculation"
+          },
+          "job": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8,32}$",
+            "maxLength": 32,
+            "description": "Id the caller can later pass to cancel this calculation"
           }
         }
       },
@@ -443,6 +449,12 @@
             "minimum": 1,
             "maximum": 1000000,
             "description": "Notebook revision you read; a newer notebook is refused"
+          },
+          "job": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8,32}$",
+            "maxLength": 32,
+            "description": "Id the caller can later pass to cancel this calculation"
           }
         }
       }

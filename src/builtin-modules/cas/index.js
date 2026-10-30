@@ -45,9 +45,11 @@ function requestOf(nb, p) {
 }
 
 async function compute(nb, p) {
-  try { return { result: await deps.client.compute(requestOf(nb, p)) }; }
+  try { return { result: await deps.client.compute(requestOf(nb, p), p.job ? { id: p.job } : {}) }; }
   catch (e) {
     if (!(e instanceof CasClientError)) throw e;
+    // A cancelled calculation changes nothing: no cell, no error to fix.
+    if (e.code === "cancelled") throw Object.assign(new Error("the calculation was cancelled"), { code: "cancelled" });
     return { error: userError(e) };
   }
 }
@@ -153,7 +155,7 @@ async function recompute(p) {
     const params = { operation: c.operation, ...c.input, ...c.params, angle: c.angle, precision: c.precision };
     if (params.subs && !Array.isArray(params.subs)) params.subs = Object.entries(params.subs).map(([name, value]) => ({ name, value }));
     const current = await notebooks.get(nb.id);
-    const outcome = await compute(current, params);
+    const outcome = await compute(current, { ...params, ...(p.job ? { job: p.job } : {}) });
     const resultId = notebooks.newResultId();
     await notebooks.mutate(nb.id, { expectedRevision: p.expectedRevision !== undefined && !done.length ? p.expectedRevision : undefined }, (d) => {
       const cell = d.cells.find((x) => x.id === c.id);

@@ -96,8 +96,12 @@ class Service:
         if method == "cancel":
             target = str((req.get("params") or {}).get("target", ""))[:64]
             pid = self.running.get(target)
+            # Remembered even before the job starts, so a cancel that races
+            # with the start still wins (bounded: old ids fall away).
+            self.cancelled.add(target)
+            while len(self.cancelled) > 256:
+                self.cancelled.pop()
             if pid:
-                self.cancelled.add(target)
                 self._kill(pid)
             return {"cancelled": bool(pid)}
         if method == "compute":
