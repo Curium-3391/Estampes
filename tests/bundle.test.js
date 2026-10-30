@@ -122,3 +122,26 @@ test("on disk: import persists the restored canvases and workspace", async () =>
   const items = await workspaceItems(again);
   assert.equal(items.flatMap((it) => canvasMarks(it.entry)).length, 29);
 });
+
+test("a JPEG exported without stored originals imports under its new id (working copy)", async () => {
+  const sharp = (await import("sharp")).default;
+  const jpg = await sharp({ create: { width: 640, height: 480, channels: 3, background: "#c33" } }).jpeg().toBuffer();
+  const e = await registerImage(jpg, { source: "test" });
+  applyWorkspaceChanges([{ id: "wi-1", entry: e }], { annotations: [{ id: "m", type: "point", x: 0.5, y: 0.5 }], resolve });
+  const made = await (await import("../src/workspace.js")).createWorkspace({ items: [{ asset: e.imageId }] });
+  const { buffer, warnings } = await exportBundle(made.workspace.id);
+  assert.equal(warnings.length, 1);
+  clearImages(); clearWorkspaces();
+  const r = await importBundle(buffer);
+  assert.equal(r.check.totals.marks, 1);
+  assert.equal(r.verified, true);
+});
+
+test("same marks but different layer settings are not reused: the bundle keeps its own copy", async () => {
+  const { a, ws } = await mergedWorkspace();
+  const { buffer } = await exportBundle(ws);
+  a.layers[0].locked = true;
+  clearWorkspaces();
+  const r = await importBundle(buffer);
+  assert.equal(r.summary.find((s) => s.key === a.imageId).how, "copied");
+});

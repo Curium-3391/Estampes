@@ -152,7 +152,13 @@ function cleanSet(raw, where, warnings) {
   };
 }
 
-const sameMarks = (a, b) => JSON.stringify([...a].sort((x, y) => x.id < y.id ? -1 : 1)) === JSON.stringify([...b].sort((x, y) => x.id < y.id ? -1 : 1));
+const byId = (list) => JSON.stringify([...list].sort((x, y) => x.id < y.id ? -1 : 1));
+// The same annotation state: marks, layer settings, claims and decisions, and the number of links.
+const sameState = (entry, def) => byId(canvasMarks(entry)) === byId(def.marks)
+  && byId(entry.layers ?? []) === byId(def.layers)
+  && JSON.stringify(entry.rejections ?? []) === JSON.stringify(def.rejections)
+  && JSON.stringify(entry.gestureDecisions ?? []) === JSON.stringify(def.gestureDecisions)
+  && [...(entry.pairLinks ?? []).values()].reduce((n, m) => n + m.size, 0) === def.linkCount;
 
 export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
   if (!["reuse", "copy"].includes(collision)) throw new Error("collision must be reuse or copy");
@@ -190,15 +196,10 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
     idMap.set(a.id, entry.imageId); entries.set(a.id, entry);
     if (!a.sourceIncluded) warnings.push("Image " + a.id + " came as a working copy, not the original file; it now has the id " + entry.imageId + ".");
   }
-  const swapIds = (value) => {
-    let t = JSON.stringify(value);
-    for (const [from, to] of idMap) if (from !== to) t = t.split(from).join(to);
-    return JSON.parse(t);
-  };
   const setDefs = new Map();
   for (const s of Array.isArray(manifest.sets) ? manifest.sets : []) {
     const c = cleanSet(parse(s.file), s.file, warnings);
-    setDefs.set(c.key, swapIds(c));
+    setDefs.set(c.key, c);
   }
   const used = new Set(ws.items.map((it) => it.set));
   for (const key of used) if (!setDefs.has(key)) throw new Error("Bundle is incomplete: no annotation set for " + key);
@@ -216,7 +217,7 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
     const own = !key.includes("#");
     let target, how;
     if (own && fresh(base)) { restoreCanvas(base, data); target = base; how = "restored"; }
-    else if (own && collision === "reuse" && sameMarks(canvasMarks(base), def.marks)) { target = base; how = "reused"; }
+    else if (own && collision === "reuse" && sameState(base, def)) { target = base; how = "reused"; }
     else { target = forkFromData(base, { ...data, derivedFrom: def.derivedFrom ?? (own ? { set: image, at: new Date().toISOString() } : undefined) }); how = "copied"; }
     keyMap.set(key, setKeyOf(target));
     touched.push({ target, def, how });
