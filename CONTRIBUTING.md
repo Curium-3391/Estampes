@@ -18,6 +18,6 @@ Please open an issue describing the user problem, proposed behavior, and verific
 
 Keep original images unchanged, state uncertainty clearly, avoid inventing client API capabilities, and prefer portable formats over vendor-specific assumptions.
 
-## License status
+## License
 
-The project license has not yet been committed. Please discuss licensing before submitting source code intended for redistribution.
+Estampes is licensed under the [Mozilla Public License 2.0](LICENSE). By submitting a contribution, you agree that it is licensed under the same terms.

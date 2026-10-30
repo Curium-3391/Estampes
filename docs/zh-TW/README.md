@@ -80,4 +80,4 @@ npm start          # http://localhost:8787/mcp
 
 ## 授權
 
-尚未選定授權條款。在授權條款提交之前，請不要假設擁有重新散布原始碼的權利。
+[Mozilla Public License 2.0](../../LICENSE)。你可以使用、修改和重新散布 Estampes，也可以放進閉源或商業產品裡；但散布時，對 Estampes 本身檔案所做的修改，必須以 MPL 2.0 公開。
