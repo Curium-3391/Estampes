@@ -2,105 +2,355 @@
   "schema": "estampes.module/1",
   "id": "org.estampes.graph",
   "name": "Graph",
-  "nameI18n": { "zh-TW": "函數圖" },
+  "nameI18n": {
+    "zh-TW": "函數圖"
+  },
   "description": "Plot mathematical functions and data on cartesian axes. Plots stay editable: they keep the expression, domain and axes, so changing sin(x) to sin(2x) re-computes the curve.",
-  "descriptionI18n": { "zh-TW": "在座標軸上畫數學函數與資料點。圖形保持可編輯：保留算式、定義域與座標軸，把 sin(x) 改成 sin(2x) 會重新計算曲線。" },
+  "descriptionI18n": {
+    "zh-TW": "在座標軸上畫數學函數與資料點。圖形保持可編輯：保留算式、定義域與座標軸，把 sin(x) 改成 sin(2x) 會重新計算曲線。"
+  },
   "version": "1.0.0",
-  "publisher": { "name": "Estampes Project", "url": "https://github.com/Curium-3391/Estampes" },
+  "publisher": {
+    "name": "Estampes Project",
+    "url": "https://github.com/Curium-3391/Estampes"
+  },
   "license": "MPL-2.0",
   "source": "https://github.com/Curium-3391/Estampes/tree/main/src/builtin-modules/graph",
   "category": "math",
   "coreCompatibility": ">=0.10.0 <1.0.0",
-  "runtime": { "kind": "builtin", "entry": "graph" },
-  "permissions": ["canvas.read", "canvas.write", "workspace.write"],
+  "runtime": {
+    "kind": "builtin",
+    "entry": "graph"
+  },
+  "permissions": [
+    "canvas.read",
+    "canvas.write",
+    "workspace.write"
+  ],
   "capabilities": [
     {
       "id": "plot_function",
       "title": "Plot a function",
-      "titleI18n": { "zh-TW": "畫函數" },
+      "titleI18n": {
+        "zh-TW": "畫函數"
+      },
       "description": "Plot y = f(x). Without a canvas a new blank canvas with axes is created. Reuses the canvas's axes when it has some; otherwise creates axes that fit the curve. Expressions use x, numbers, + - * / ^, implicit multiplication (2x, 3(x+1)), |x|, pi, e and functions such as sin cos tan sqrt abs exp ln log (base 10) floor min max.",
       "target": "canvas-or-new",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["expression"],
+        "required": [
+          "expression"
+        ],
         "properties": {
-          "expression": { "type": "string", "maxLength": 256, "description": "Right-hand side of y = ..., e.g. sin(x) or x^2 - 2x" },
-          "domain": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[xmin, xmax]; default the axes' x range" },
-          "xRange": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "x range of NEW axes; default fits the domain (±2π for trigonometric functions, else ±10)" },
-          "yRange": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "y range of NEW axes; default fits the curve" },
-          "frame": { "type": "string", "maxLength": 64, "description": "id of the axes to draw on, when the canvas has several" },
-          "color": { "type": "string", "enum": ["blue", "red", "green", "gold", "magenta", "cyan", "black", "gray"] },
-          "label": { "type": "string", "maxLength": 64, "description": "Custom legend text; empty hides it" },
-          "labelMode": { "type": "string", "enum": ["auto", "custom"], "description": "auto follows the current expression; custom preserves label. Default custom when label is supplied, otherwise auto." },
-          "title": { "type": "string", "maxLength": 80, "description": "Title of NEW axes" }
+          "expression": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "Right-hand side of y = ..., e.g. sin(x) or x^2 - 2x"
+          },
+          "domain": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[xmin, xmax]; default the axes' x range"
+          },
+          "xRange": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "x range of NEW axes; default fits the domain (±2π for trigonometric functions, else ±10)"
+          },
+          "yRange": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "y range of NEW axes; default fits the curve"
+          },
+          "frame": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "id of the axes to draw on, when the canvas has several"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "blue",
+              "red",
+              "green",
+              "gold",
+              "magenta",
+              "cyan",
+              "black",
+              "gray"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Custom legend text; empty hides it"
+          },
+          "labelMode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "custom"
+            ],
+            "description": "auto follows the current expression; custom preserves label. Default custom when label is supplied, otherwise auto."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Title of NEW axes"
+          }
         }
       },
       "examples": [
-        { "description": "sine over two periods", "params": { "expression": "sin(x)", "domain": [-6.283185307179586, 6.283185307179586] } },
-        { "description": "a parabola", "params": { "expression": "x^2 - 2x - 3", "color": "red" } }
+        {
+          "description": "sine over two periods",
+          "params": {
+            "expression": "sin(x)",
+            "domain": [
+              -6.283185307179586,
+              6.283185307179586
+            ]
+          }
+        },
+        {
+          "description": "a parabola",
+          "params": {
+            "expression": "x^2 - 2x - 3",
+            "color": "red"
+          }
+        }
       ]
     },
     {
       "id": "update_plot",
       "title": "Change a plot",
-      "titleI18n": { "zh-TW": "修改函數圖" },
+      "titleI18n": {
+        "zh-TW": "修改函數圖"
+      },
       "description": "Change an existing function plot: a new expression, domain, colour or label. The curve is re-computed; the object keeps its id.",
       "target": "canvas",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["object"],
+        "required": [
+          "object"
+        ],
         "properties": {
-          "object": { "type": "string", "maxLength": 64, "description": "id of the function plot, e.g. o2" },
-          "expression": { "type": "string", "maxLength": 256 },
-          "domain": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-          "color": { "type": "string", "enum": ["blue", "red", "green", "gold", "magenta", "cyan", "black", "gray"] },
-          "label": { "type": "string", "maxLength": 64 },
-          "labelMode": { "type": "string", "enum": ["auto", "custom"], "description": "Set auto to resume formula labels; setting label alone selects custom." }
+          "object": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "id of the function plot, e.g. o2"
+          },
+          "expression": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "domain": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "blue",
+              "red",
+              "green",
+              "gold",
+              "magenta",
+              "cyan",
+              "black",
+              "gray"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "labelMode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "custom"
+            ],
+            "description": "Set auto to resume formula labels; setting label alone selects custom."
+          }
         }
       },
-      "examples": [{ "description": "double the frequency", "params": { "object": "o2", "expression": "sin(2*x)" } }]
+      "examples": [
+        {
+          "description": "double the frequency",
+          "params": {
+            "object": "o2",
+            "expression": "sin(2*x)"
+          }
+        }
+      ]
     },
     {
       "id": "set_axes",
       "title": "Set the axes",
-      "titleI18n": { "zh-TW": "設定座標軸" },
+      "titleI18n": {
+        "zh-TW": "設定座標軸"
+      },
       "description": "Change the x/y range, grid, π ticks, title or axis labels of the canvas's axes (or create axes on a blank canvas). Every plot on them is redrawn.",
       "target": "canvas-or-new",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "object": { "type": "string", "maxLength": 64, "description": "id of the axes; default the canvas's axes" },
-          "xRange": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-          "yRange": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-          "grid": { "type": "boolean" },
-          "piTicks": { "type": "boolean", "description": "Label the x axis in multiples of π" },
-          "title": { "type": "string", "maxLength": 80 },
-          "xLabel": { "type": "string", "maxLength": 40 },
-          "yLabel": { "type": "string", "maxLength": 40 }
+          "object": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "id of the axes; default the canvas's axes"
+          },
+          "xRange": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "yRange": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "grid": {
+            "type": "boolean"
+          },
+          "piTicks": {
+            "type": "boolean",
+            "description": "Label the x axis in multiples of π"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "xLabel": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "yLabel": {
+            "type": "string",
+            "maxLength": 40
+          }
         }
       }
     },
     {
       "id": "plot_points",
       "title": "Plot data points",
-      "titleI18n": { "zh-TW": "畫資料點" },
+      "titleI18n": {
+        "zh-TW": "畫資料點"
+      },
       "description": "Plot (x, y) data on the canvas's axes as a line or as dots, e.g. measurements or a table of values.",
       "target": "canvas-or-new",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["points"],
+        "required": [
+          "points"
+        ],
         "properties": {
-          "points": { "type": "array", "maxItems": 2000, "minItems": 1, "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } },
-          "style": { "type": "string", "enum": ["line", "dots"], "default": "line" },
-          "frame": { "type": "string", "maxLength": 64 },
-          "color": { "type": "string", "enum": ["blue", "red", "green", "gold", "magenta", "cyan", "black", "gray"] },
-          "label": { "type": "string", "maxLength": 64 }
+          "points": {
+            "type": "array",
+            "maxItems": 2000,
+            "minItems": 1,
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "line",
+              "dots"
+            ],
+            "default": "line"
+          },
+          "frame": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "blue",
+              "red",
+              "green",
+              "gold",
+              "magenta",
+              "cyan",
+              "black",
+              "gray"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 64
+          }
         }
       }
+    }
+  ],
+  "panels": [
+    {
+      "schema": "estampes.panel/1",
+      "id": "graph",
+      "title": "Graph",
+      "titleI18n": {
+        "zh-TW": "函數圖"
+      },
+      "kind": "graph",
+      "uiSchemaVersion": 1,
+      "defaultBinding": "surface.canvas",
+      "preferredSize": {
+        "width": 640,
+        "height": 480
+      },
+      "minSize": {
+        "width": 240,
+        "height": 200
+      },
+      "maxInstances": 1,
+      "resizable": true,
+      "dockable": true,
+      "capabilityBindings": [
+        "plot_function",
+        "update_plot",
+        "set_axes",
+        "plot_points"
+      ],
+      "permissions": [
+        "canvas.read",
+        "canvas.write",
+        "workspace.write"
+      ]
     }
   ]
 }

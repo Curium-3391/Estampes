@@ -7,6 +7,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 - Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
 
+## 0.18.0 — Surface and panels (server side)
+
+- **`estampes.surface/1`**: a shared, persistent record of which panels are open on a canvas and one layout per device profile (desktop, tablet, mobile), stored in `<storage>/surfaces`. Panel geometry is in surface units, always reachable, snapped and size-limited; layouts are revision-checked and idempotent, and a change to one profile never rewrites another.
+- **`estampes.panel/1`**: modules may declare panels (`panels` in the manifest) naming a built-in renderer kind and the capabilities it may trigger; no HTML, script or CSS can come from a manifest. Graph and the calculator declare theirs. Opening a panel never enables a module.
+- New tools: `get_surface_state` and `manage_surface_panels` (model), `surface_get_state`, `surface_apply`, `surface_cas` (widget only). See [docs/SURFACES.md](docs/SURFACES.md).
+
 ## 0.17.0 — Scientific CAS (SymPy)
 
 - **`org.estampes.cas`, a built-in module backed by SymPy.** Exact arithmetic, simplify/expand/factor/collect/cancel/apart/trigsimp, derivatives, definite and indefinite integrals, limits, series, sums, equations and systems (`solve`, `solve_system`, `nsolve`), substitution, matrices, definitions (`f(x) = ...`), assumptions, degrees and radians, and a chosen numeric precision. Every result carries a status (exact, approximate, complex, conditional, partial, undefined), plain text, LaTeX, a typed AST (`estampes.math-ast/1`) and the SymPy version. Input may be text or LaTeX.

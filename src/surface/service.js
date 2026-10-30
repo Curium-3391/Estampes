@@ -1,0 +1,86 @@
+// Surface logic on top of the store: which panels a surface can offer
+// (from the modules' estampes.panel/1 descriptors), opening and closing
+// them, and layout edits per device profile. Opening a panel is a window
+// action: it never enables a module and never grants a permission.
+import { z } from "zod";
+import { localized } from "../modules/manifest.js";
+import { PROFILES, applyLayoutOp, reconcile, LayoutError, MAX_PANELS } from "./layout.js";
+import { SurfaceError } from "./store.js";
+
+const OpSchema = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("open-panel"), module: z.string().max(100), panel: z.string().max(40) }).strict(),
+  z.object({ op: z.literal("close-panel"), panelId: z.string().max(40) }).strict(),
+  z.object({ op: z.literal("layout"), profile: z.enum(PROFILES), layout: z.record(z.string(), z.unknown()) }).strict(),
+]);
+export const ApplySchema = z.object({ ops: z.array(OpSchema).min(1).max(20) }).strict();
+
+export function createSurfaceService({ store, registry, notebooks }) {
+  const offered = () => {
+    const out = [];
+    for (const m of registry.list()) for (const p of m.manifest.panels ?? []) {
+      out.push({ module: m.manifest.id, moduleName: localized(m.manifest, "name"), moduleState: m.record.state, panel: p });
+    }
+    return out;
+  };
+  const openIds = (doc) => doc.panels.filter((p) => p.open).map((p) => p.panelId);
+
+  // Everything a client needs to draw the surface.
+  function view(doc) {
+    const available = offered().map(({ module, moduleName, moduleState, panel }) => ({
+      module, moduleName, enabled: moduleState === "enabled", panel: panel.id, kind: panel.kind, title: localized(panel, "title"),
+      maxInstances: panel.maxInstances, instances: doc.panels.filter((p) => p.module === module && p.panel === panel.id).length,
+      capabilities: panel.capabilityBindings,
+    }));
+    const states = Object.fromEntries(registry.list().map((m) => [m.manifest.id, m.record.state]));
+    return {
+      surfaceId: doc.surfaceId, revision: doc.revision, canvasKey: doc.canvasKey,
+      panels: doc.panels.map((p) => ({ ...p, moduleState: p.module === "core" ? "enabled" : states[p.module] ?? "missing" })),
+      layouts: reconcile(doc.layouts, openIds(doc)), available,
+    };
+  }
+
+  return {
+    view,
+    async state(canvasKey) { return view(await store.forCanvas(canvasKey)); },
+    async apply(canvasKey, { ops, expectedRevision, idempotencyKey }) {
+      const parsed = ApplySchema.safeParse({ ops });
+      if (!parsed.success) throw new SurfaceError("surface ops: " + parsed.error.issues[0].path.join(".") + " " + parsed.error.issues[0].message);
+      const result = await store.mutate(canvasKey, { expectedRevision, idempotencyKey }, async (doc) => {
+        for (const op of parsed.data.ops) {
+          if (op.op === "open-panel") {
+            const mod = registry.get(op.module);
+            const desc = mod?.manifest.panels?.find((p) => p.id === op.panel);
+            if (!desc) throw new SurfaceError("no panel " + op.module + "/" + op.panel);
+            const existing = doc.panels.filter((p) => p.module === op.module && p.panel === op.panel);
+            const closed = existing.find((p) => !p.open);
+            if (closed) { closed.open = true; continue; }
+            if (existing.length >= desc.maxInstances) throw new SurfaceError(desc.title + " can be open at most " + desc.maxInstances + " time(s)", "limit");
+            if (mod.record.state !== "enabled") throw new SurfaceError(mod.manifest.name + " is " + mod.record.state + "; the user enables it in the Store first", "disabled");
+            if (doc.panels.length >= MAX_PANELS) throw new SurfaceError("at most " + MAX_PANELS + " panels");
+            const n = existing.length + 1;
+            const inst = { panelId: "p:" + desc.id.slice(0, 20) + n, module: op.module, panel: desc.id, kind: desc.kind, title: desc.title, open: true };
+            if (desc.defaultBinding === "surface.casNotebook") inst.notebook = (await notebooks.create()).id;
+            doc.panels.push(inst);
+          } else if (op.op === "close-panel") {
+            const p = doc.panels.find((x) => x.panelId === op.panelId);
+            if (!p) throw new SurfaceError("no panel " + op.panelId);
+            if (p.module === "core") throw new SurfaceError("the canvas cannot be closed; minimize it instead");
+            p.open = false; // the notebook and its results stay
+          } else if (op.op === "layout") {
+            try {
+              const ids = doc.panels.filter((p) => p.open).map((p) => p.panelId);
+              const layouts = reconcile(doc.layouts, ids);
+              layouts[op.profile] = applyLayoutOp(layouts[op.profile], op.layout, ids);
+              doc.layouts = layouts;
+            } catch (error) {
+              if (error instanceof LayoutError || error?.name === "ZodError") throw new SurfaceError("layout: " + (error.message || error).toString().slice(0, 200));
+              throw error;
+            }
+          }
+        }
+        doc.layouts = reconcile(doc.layouts, openIds(doc));
+      });
+      return { ...view(result.doc), replayed: result.replayed };
+    },
+  };
+}

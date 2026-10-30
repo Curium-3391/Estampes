@@ -53,7 +53,10 @@ import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { createCasClient } from "./src/cas/client.js";
 import { createNotebooks } from "./src/cas/notebooks.js";
-import { configure as configureCas, casStatus } from "./src/builtin-modules/cas/index.js";
+import { createSurfaceStore } from "./src/surface/store.js";
+import { createSurfaceService } from "./src/surface/service.js";
+import { registerSurfaceTools } from "./src/surface/mcp-tools.js";
+import { configure as configureCas, casStatus, notebookStore } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -77,10 +80,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -2303,6 +2306,7 @@ function makeServer() {
     host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
     ensureImage, saveCanvas, canvasLayers,
   });
+  registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, ensureImage });
 
   return server;
 }
@@ -2338,7 +2342,7 @@ const port = config.port;
 // it is generated on first start. Set before the server listens.
 let ACCESS_KEY = "";
 // Created at startup, once storage is checked (see below).
-let moduleHost = null;
+let moduleHost = null, surfaceService = null;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -2601,10 +2605,12 @@ const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
 const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
 if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in ChatGPT; approve a plan with: node scripts/estampes-module.js approve <planId>");
 configureCas({ client: createCasClient({ socketPath: config.casSocket }), notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "" }) });
+const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "" });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
 });
+surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
   log("warn", "[auth] generated an access key. Connect ChatGPT to https://<your host>/mcp?key=" + keyInfo.key +
