@@ -8,7 +8,7 @@ import { PROFILES, applyLayoutOp, reconcile, LayoutError, MAX_PANELS } from "./l
 import { SurfaceError } from "./store.js";
 
 const OpSchema = z.discriminatedUnion("op", [
-  z.object({ op: z.literal("open-panel"), module: z.string().max(100), panel: z.string().max(40) }).strict(),
+  z.object({ op: z.literal("open-panel"), module: z.string().max(100), panel: z.string().max(40), notebook: z.string().regex(/^nb:[0-9a-f]{12}$/).optional() }).strict(),
   z.object({ op: z.literal("close-panel"), panelId: z.string().max(40) }).strict(),
   z.object({ op: z.literal("layout"), profile: z.enum(PROFILES), layout: z.record(z.string(), z.unknown()) }).strict(),
 ]);
@@ -53,13 +53,13 @@ export function createSurfaceService({ store, registry, notebooks }) {
             if (!desc) throw new SurfaceError("no panel " + op.module + "/" + op.panel);
             const existing = doc.panels.filter((p) => p.module === op.module && p.panel === op.panel);
             const closed = existing.find((p) => !p.open);
-            if (closed) { closed.open = true; continue; }
+            if (closed) { closed.open = true; if (op.notebook && closed.notebook) closed.notebook = (await notebooks.get(op.notebook)).id; continue; }
             if (existing.length >= desc.maxInstances) throw new SurfaceError(desc.title + " can be open at most " + desc.maxInstances + " time(s)", "limit");
             if (mod.record.state !== "enabled") throw new SurfaceError(mod.manifest.name + " is " + mod.record.state + "; the user enables it in the Store first", "disabled");
             if (doc.panels.length >= MAX_PANELS) throw new SurfaceError("at most " + MAX_PANELS + " panels");
             const n = existing.length + 1;
             const inst = { panelId: "p:" + desc.id.slice(0, 20) + n, module: op.module, panel: desc.id, kind: desc.kind, title: desc.title, open: true };
-            if (desc.defaultBinding === "surface.casNotebook") inst.notebook = (await notebooks.create()).id;
+            if (desc.defaultBinding === "surface.casNotebook") inst.notebook = op.notebook ? (await notebooks.get(op.notebook)).id : (await notebooks.create()).id;
             doc.panels.push(inst);
           } else if (op.op === "close-panel") {
             const p = doc.panels.find((x) => x.panelId === op.panelId);

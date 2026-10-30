@@ -58,7 +58,7 @@ export async function startStack({ cas = true } = {}) {
       return (await client.readResource({ uri })).contents[0].text;
     },
     // Opens the widget on `imageId` the way present_visual would deliver it.
-    async open({ imageId, viewport = { width: 1280, height: 900 } }) {
+    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null }) {
       const widget = await this.widgetHtml();
       browser ??= await chromium.launch(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : { args: ["--no-sandbox"] });
       const page = await browser.newPage({ viewport });
@@ -71,7 +71,7 @@ export async function startStack({ cas = true } = {}) {
       });
       await page.setContent(HARNESS);
       const reload = async () => {
-        const r = await call("present_visual", { imageId });
+        const r = result ? await result() : await call("present_visual", { imageId });
         await page.evaluate(([h, res]) => window.load(h, res), [widget, { structuredContent: r.structuredContent, _meta: r._meta, content: r.content }]);
       };
       await reload();
