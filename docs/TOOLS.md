@@ -6,8 +6,16 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 
 | Tool | Purpose |
 | --- | --- |
-| `present_visual` | Show the shared canvas. Takes the attached image (`image`), a public `imageUrl`, an earlier `imageId`, or a second image for a side-by-side view (`pairImage`, `pairImageUrl`, `pairImageId`). Adds, edits or removes marks (`annotations`, `remove`, `reset`), attaches notes and status to marks (`findings`), names the layer (`layer`), records links between paired marks (`links`), adds processed tabs (`views`, max 3) and restores a previous export (`marksFile`). Returns a verification image and download links. |
+| `present_visual` | Show the shared canvas. Takes the attached image (`image`), a public `imageUrl`, an earlier `imageId`, a second image for a side-by-side view (`pairImage`, `pairImageUrl`, `pairImageId`), or a whole workspace of three or more images (`workspaceId`; marks, findings and links then name their `item`). Adds, edits or removes marks (`annotations`, `remove`, `reset`), attaches notes and status to marks (`findings`), names the layer (`layer`), records links between paired marks (`links`), adds processed tabs (`views`, max 3) and restores a previous export (`marksFile`). Returns a verification image and download links. |
 | `get_visual_state` | Read everything on a canvas as one `estampes.visual/2` JSON document (images, layers, marks, links, the confidence, evidence and verification of every claim, rejected claims, optional change history). Read-only. See [Visual protocol 2](PROTOCOL-V2.md). |
+| `create_workspace` | Create a workspace with any number of images (up to 24): new files or URLs, existing canvases with their marks (`canvases`), or every image of other workspaces or canvases (`from`). See [Workspaces](WORKSPACES.md). |
+| `edit_workspace` | Add images, detach items (`remove` never deletes images or marks), move, resize, rotate or label them (`arrange`), reorder, rename, re-flow. Checks `expectedRevision`; returns an `undoToken`. |
+| `merge_workspaces` | Bring the images of one canvas or workspace, with their marks, into another. Previews by default; `commit: true` with the `previewId` applies. `mode` link (shared marks, default) or copy (independent copies); `removeFromSource` moves. |
+| `split_workspace` | The same into a new workspace. |
+| `undo_workspace_change` | Undo one workspace change by its `undoToken`. |
+| `export_workspace_bundle` | Make a portable `.estampes` file of a workspace (signed download link). See [Workspaces](WORKSPACES.md#moving-a-workspace-estampes-bundles). |
+| `import_workspace_bundle` | Open a `.estampes` file (attachment or public https URL) as a new workspace; checked, never overwrites. |
+| `get_workspace_state` | Read a workspace (or a single or paired canvas in the same shape) as one `estampes.workspace/1` document, with a check of its totals. Read-only. |
 | `load_image` | Load an image (`image` from the chat, or `imageUrl`) and get an `imageId` plus a preview. Use when GPT only needs to analyse; `present_visual` loads images too. |
 | `process_image` | Return a processed view of an image or a region of it. Operations, applied in order (max 8): `grayscale`, `normalize`, `clahe`, `contrast`, `brightness`, `sharpen`, `denoise`, `threshold` (adaptive, Otsu, fixed), `invert`, `edges`. `sampling` picks the analysis resolution (`preview` = old behaviour, zoom up to 8x by interpolation; `working`; `native` = pixels from the original file), `output` the delivered size and codec (PNG / lossless WebP / JPEG). `geometry` (rotate, flip, pad, deskew, perspective, mask) runs first; extra operators `gamma`, `levels`, `white_balance`, `channel`, `flat_field`, `morphology`, `canny`. Returns a `derivedViewId`, the coordinate mapping back to the image and caveats. See [Image pipeline](IMAGE-PIPELINE.md). |
 | `get_derived_view` | Render a processed view again from its `derivedViewId` (recipes survive restarts with storage), optionally at another size or codec. |
@@ -17,6 +25,7 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `assess_image` | Sharpness, noise, contrast, clipping, colour cast, histogram, line tilt, with advice; optional clipping map. |
 | `calibrate_scale`, `measure_image` | Set a known length in the image or a processed view, then measure distance, path, area or angle with uncertainty. |
 | `render_pdf_page` | Render one physical PDF page at 36–600 dpi as an image (optional server support), with page label, embedded text boxes and stored-document reuse. See [PDF pages](IMAGE-PIPELINE.md#pdf-pages). |
+| `detect_features` | Run an analysis engine (`components`, `blobs`, `lines`, `circles`, optional `ocr`) and get candidate detections with geometry, attributes and a ready mark, or list the engines. Draws nothing. See [Analysis engines](IMAGE-PIPELINE.md#analysis-engines). |
 | `overlay_grid` | Draw a labelled grid (rows A, B, C… × columns 1, 2, 3…, 2–12 each) over an image or region and return each cell's centre in source coordinates. |
 | `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
 | `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
@@ -69,5 +78,6 @@ Kept for older conversations and regression tests; new conversations do not need
 | --- | --- |
 | `/mcp` | MCP endpoint. Needs the access key when one is set. |
 | `/api/v1/canvas/<hash>[?pair=<hash>][&history=N]` | The `estampes.visual/2` document over plain HTTP (key required when set). |
+| `/api/v1/workspaces/<hex>[?history=N]` | The `estampes.workspace/1` document (key required when set). |
 | `/export/<hash>/image.jpg`, `/export/<hash>/marks.svg` | Downloads; signed with `?sig=` when a key is set. |
 | `/healthz`, `/version` | Public health check and build summary. |

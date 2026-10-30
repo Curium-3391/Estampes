@@ -145,3 +145,19 @@ A rectangle read off a rotated or warped view is not a rectangle on the image an
 - `text: true` returns the embedded text layer with boxes normalized to the page image, so text can be read without OCR. Scanned pages have no text layer. Box positions are approximate for rotated text.
 - The page is described in `entry.page` and in `images/<hash>/meta.json`: `documentSha256`, `pageIndex`, `pageCount`, `pageLabel`, `dpi`, `rotation`, `cropBox`, `widthPt`, `heightPt`, `renderer`. With storage, the PDF is kept under `documents/<sha256>/source.pdf` and later calls can pass `documentSha256` instead of the file.
 - PDFs are untrusted: no scripts run, and size, page count and pixel limits apply.
+
+## Analysis engines
+
+`detect_features` runs an analysis engine on an image or region and returns structured detections. Engines are pure: they read pixels and return evidence, and never write to the canvas. GPT (or you) decides whether to turn a detection into a mark; every detection carries a ready `mark` for `present_visual`.
+
+| Engine | Finds | Notes |
+| --- | --- | --- |
+| `components` | Connected dark or light regions as boxes | area, fill ratio, centroid; `polarity`, `method` (otsu, adaptive, fixed), `minArea` |
+| `blobs` | Point-like sources against the local background | intensity-weighted centroid, flux, peak, FWHM, SNR; for stars, solder joints, particles |
+| `lines` | Straight segments (Hough on Canny edges) | endpoints, length, angle; a thick stroke gives two edge lines |
+| `circles` | Rings, holes, dials | centre, radius, confidence from how much of the ring has edge pixels |
+| `ocr` | Words with boxes and confidence | optional: `npm i tesseract.js`; language data is downloaded on first use unless `ESTAMPES_OCR_LANG_PATH` points at a folder of `.traineddata` files (a network access the owner should know about) |
+
+Every result has the same envelope: `status` (`ok`, `failed` or `unavailable`) with `reasons`, `engine` and `engineVersion`, `imageId` and `sourceAssetId`, the `region` and analysis resolution it ran at, `detections` (normalized source coordinates) and `warnings`. A missing optional engine is a result with status `unavailable`, never an error, and the core starts without it. Detections are candidates: two lines are not a verified wire, recognised text is not a verified part number. Use `sampling: {mode: "native"}` for small features.
+
+Engines register through `registerEngine({id, version, kind, description, available, run})` in `src/image/engines.js`; `run` receives the analysis pixels and a `toNormalized` function and must return detections only. The module system wraps engines as built-in capabilities.

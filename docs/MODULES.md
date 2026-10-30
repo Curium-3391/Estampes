@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.11.0 (the contract, the built-in Graph module, the Store and managed packages). Isolated runtimes and adapters are planned and marked below.
+Status: this page describes what is implemented in 0.12.0 (the contract, the built-in Graph module, the Store and managed packages). Isolated runtimes and adapters are planned and marked below.
 
 ## How it fits together
 
@@ -111,6 +111,6 @@ Declarative modules (code-free): each capability lists scene operations with `{"
 Each phase is its own change and keeps the rules above.
 
 1. Contract, scene objects, Graph and the Store (0.10.0).
-2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.11.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
+2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
 3. An isolated WASM runtime with CPU, memory, output and time limits.
 4. Adapters for external engines and services (OCR, plate solving), and an author SDK.

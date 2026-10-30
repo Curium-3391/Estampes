@@ -189,5 +189,5 @@ test("layers can be hidden without losing marks; unsent marks always show",()=>{
   assert.match(source,/renderMarks\(freshEl,userMarks\.filter\(m=>!sentIds\.has\(m\.id\)\),/);
   assert.match(source,/\]\.filter\(item=>shown\(item\.mark\)\)/);
   assert.match(source,/setWidgetState/);
-  assert.match(source,/if\(freshIds\.includes\(m\.id\)&&\(!pair\|\|\(m\.side\?\?"left"\)===side\)\)m\.layer=layer\.id/);
+  assert.match(source,/if\(freshIds\.includes\(m\.id\)&&\(!frames\|\|sideKey\(m\.side\)===side\)\)m\.layer=layer\.id/);
 });

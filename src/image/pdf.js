@@ -7,6 +7,8 @@
 // PDF content is untrusted: no scripts run, fonts and images are decoded by
 // pdf.js only, and size, page count and pixel limits apply.
 import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { config } from "../config.js";
 
 export const PDF_VERSION = "1";
@@ -44,11 +46,19 @@ class CanvasFactory {
   destroy(pair) { pair.canvas.width = 0; pair.canvas.height = 0; }
 }
 
+// pdf.js needs its bundled standard fonts for PDFs that do not embed them.
+function standardFontsUrl() {
+  try {
+    const dir = join(dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json")), "standard_fonts");
+    return dir.replace(/\\/g, "/") + "/";
+  } catch { return undefined; }
+}
+
 async function openDocument(engine, bytes) {
   const task = engine.pdfjs.getDocument({
     data: new Uint8Array(bytes), isEvalSupported: false, useSystemFonts: false, disableFontFace: true,
     enableXfa: false, verbosity: 0, canvasFactory: new CanvasFactory(engine.canvas),
-    standardFontDataUrl: undefined,
+    standardFontDataUrl: standardFontsUrl(),
   });
   try { return await task.promise; } catch (error) {
     if (/password/i.test(String(error?.message))) throw new Error("The PDF is password protected");

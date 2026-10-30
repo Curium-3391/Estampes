@@ -59,7 +59,7 @@ const source = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
 test("widget maps each image's coordinates into the side-by-side canvas and back", () => {
   const start = source.indexOf("function layoutPair("), stop = source.indexOf("// Layer ids are per image");
   assert.ok(start > 0 && stop > start);
-  const v = new Function("let VW=1000,VH=750,pair={},frames=null;const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
+  const v = new Function("let VW=1000,VH=750,pair={},ws=null,frames=null;const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
     "const round=n=>Math.round(n*100000)/100000;\n" + source.slice(start, stop) +
     "\nreturn {layoutPair,toView,toSide,sideAt,get VW(){return VW},get VH(){return VH}};")();
   v.layoutPair(1600, 1000, 1500, 2000);
@@ -74,6 +74,32 @@ test("widget maps each image's coordinates into the side-by-side canvas and back
   assert.equal(spill.x2, 1); assert.equal(spill.y2, 1);
 });
 
+test("widget lays out a workspace, turns rotated images and maps marks back exactly", () => {
+  const start = source.indexOf("function layoutPair("), stop = source.indexOf("// Layer ids are per image");
+  const v = new Function("let VW=1000,VH=750,pair=null,frames=null;let ws={items:[{id:'wi-1'},{id:'wi-2'},{id:'wi-3'}]};const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
+    "const round=n=>Math.round(n*100000)/100000;\n" + source.slice(start, stop) +
+    "\nreturn {layoutWorkspace,toView,toSide,sideAt,framePoint,frameUV,get frames(){return frames},get VW(){return VW},get VH(){return VH}};")();
+  v.layoutWorkspace([
+    { id: "wi-1", width: 1536, height: 432, placement: { x: 0, y: 0, width: 1000, rotation: 0 } },
+    { id: "wi-2", width: 1152, height: 1536, placement: { x: 1060, y: 0, width: 1000, rotation: 90 } },
+    { id: "wi-3", width: 1323, height: 1871, placement: { x: 2500, y: 0, width: 1000, rotation: 0 } },
+  ]);
+  assert.equal(v.frames["wi-2"].ew, 1000 * 1536 / 1152, "a turned image is as wide as it was tall");
+  assert.ok(v.VW >= 3500);
+  for (const rot of [0, 90, 180, 270]) {
+    const f = { ...v.frames["wi-2"], rot };
+    const [X, Y] = v.framePoint(f, 0.25, 0.75), [u, w] = v.frameUV(f, X, Y);
+    assert.ok(Math.abs(u - 0.25) < 1e-9 && Math.abs(w - 0.75) < 1e-9, "rotation " + rot + " maps back");
+  }
+  // The top-left of the PCB photo turned 90° clockwise lands at the frame's top-right.
+  const tl = v.toView({ id: "a", side: "wi-2", type: "point", x: 0, y: 0 });
+  assert.ok(Math.abs(tl.x * v.VW - (v.frames["wi-2"].x0 + v.frames["wi-2"].ew)) < 1e-6);
+  const mark = { id: "b", side: "wi-3", type: "rect", x: 0.1, y: 0.2, x2: 0.3, y2: 0.4 };
+  const shown = v.toView(mark);
+  assert.equal(v.sideAt(shown), "wi-3");
+  assert.deepEqual(v.toSide(shown), mark);
+});
+
 test("widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict", () => {
   assert.match(html, /<ol id="links"/);
   assert.match(source, /name:"review_visual_link"/);
@@ -86,7 +112,7 @@ test("widget shows links with numbers, asks the user to review every unverified 
   assert.match(source, /function reviewMessage\(list\)/);
   assert.match(source, /if\(reviewed\.length\|\|edited\.length\)chatMessage\+="\\n\\n"\+extra\(\)/);
   assert.match(source, /pairImageId:pair\.imageId/);
-  assert.match(source, /if\(pair\)mark=toView\(toSide\(\{\.\.\.mark,side:sideAt\(start\)\}\)\)/);
+  assert.match(source, /if\(frames\)mark=toView\(toSide\(\{\.\.\.mark,side:sideAt\(start\)\}\)\)/);
 });
 
 test("one call cannot add the same id to both images", async () => {
