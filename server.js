@@ -29,6 +29,9 @@ import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
+import {
+  WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument,
+} from "./src/workspace.js";
 import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import {
   processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
@@ -770,6 +773,211 @@ function makeServer() {
     }
   );
 
+  // ---- Workspaces: several images, merge, split, move, copy, link ----------
+  // See src/workspace.js. These tools change which canvases a workspace
+  // shows; marks are drawn with present_visual as before.
+  const WorkspaceRef = z.string().trim().min(4).max(80)
+    .describe("ws:<id> for a workspace; an imageId for a single canvas; imageId+pairImageId (joined with +) for a paired view");
+  const CanvasKey = z.string().regex(/^img:[0-9a-f]{16}(#c[0-9a-f]{8,16})?$/).describe("An image's own canvas (its imageId) or a copy (imageId#c<hex>)");
+  const IdempotencyKey = z.string().trim().min(1).max(80).optional()
+    .describe("Any unique string for this change; repeating a call with the same key (e.g. after a timeout) returns the first result instead of applying it twice");
+  const itemsText = (doc, check) => doc.items.map((it) => {
+    const c = check.items.find((x) => x.id === it.id) ?? {};
+    return it.id + " " + it.asset + (it.set !== it.asset ? " (copy " + it.set.split("#")[1] + ")" : "") + (it.label ? " " + JSON.stringify(it.label) : "") +
+      ": " + (c.ok === false ? "UNAVAILABLE" : c.marks + " marks (" + c.userMarks + " the user's), " + c.layers + " layers");
+  }).join("; ");
+  const wsText = (head, r) => head + " " + r.workspace.id + " " + JSON.stringify(r.workspace.name) + " revision " + r.workspace.revision + ": " +
+    r.check.totals.items + " images, " + r.check.totals.marks + " marks, " + r.check.totals.layerInstances + " layers, " + r.check.totals.links + " links. Items: " +
+    itemsText(r.workspace, r.check) + (r.check.problems.length ? ". PROBLEMS: " + r.check.problems.join("; ") : "") +
+    (r.skipped?.length ? ". Skipped: " + r.skipped.map((x) => (x.item ?? x.set) + " (" + x.reason + ")").join("; ") : "") +
+    (r.undoToken ? ". undoToken " + r.undoToken : "") + (r.repeated ? ". (Same idempotency key as an earlier call: nothing was applied again.)" : "") +
+    ". Show it with present_visual {workspaceId}.";
+  const wsStructured = (r) => ({ kind: "estampes.workspace_change", protocol: WORKSPACE_PROTOCOL, workspaceId: r.workspace.id, revision: r.workspace.revision,
+    items: r.workspace.items, check: r.check, ...(r.undoToken ? { undoToken: r.undoToken } : {}), ...(r.skipped ? { skipped: r.skipped } : {}),
+    ...(r.repeated ? { repeated: true } : {}) });
+  const ImageList = {
+    images: z.array(ChatFileSchema).max(MAX_ITEMS).default([]).describe("Image files from the conversation, in order"),
+    imageUrls: z.array(z.string().url().max(2048)).max(MAX_ITEMS).default([]).describe("Public https image URLs"),
+    canvases: z.array(CanvasKey).max(MAX_ITEMS).default([]).describe("Images already in Estampes (imageId), or copies of canvases; their marks come along (linked)"),
+    labels: z.array(z.string().max(40)).max(MAX_ITEMS).default([]).describe("Optional short names, in the order images, imageUrls, canvases"),
+  };
+  const loadList = async ({ images, imageUrls, canvases, labels }) => {
+    const keys = [];
+    for (const image of images) keys.push((await loadImageInput({ image })).imageId);
+    for (const imageUrl of imageUrls) keys.push((await loadImageInput({ imageUrl })).imageId);
+    keys.push(...canvases);
+    return keys.map((set, i) => ({ set, ...(labels[i] ? { label: labels[i] } : {}) }));
+  };
+
+  server.registerTool(
+    "create_workspace",
+    {
+      title: "Create a workspace with several images",
+      description: "Create an Estampes WORKSPACE: any number of images (up to " + MAX_ITEMS + ") in one canvas, each keeping its own marks, layers and coordinates. Use it when the user wants three or more images together, or wants to combine canvases. Images can be new files, URLs, or images already in Estampes (`canvases`: their existing marks come along and stay editable; edits show in both places). `from` adds every image of existing workspaces or canvases (imageId, or imageId+pairImageId for a paired view). Never combine images by stitching them into one picture: that loses the marks. Show the result with present_visual {workspaceId}.",
+      inputSchema: z.object({
+        name: z.string().max(60).optional(),
+        ...ImageList,
+        from: z.array(WorkspaceRef).max(8).default([]).describe("Workspaces or canvases whose images (with their marks) to include, linked"),
+        idempotencyKey: IdempotencyKey,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["images"] },
+    },
+    async ({ name, images, imageUrls, canvases, labels, from, idempotencyKey }) => {
+      try {
+        const items = [];
+        for (const ref of from) for (const it of (await resolveRef(ref)).doc.items) items.push({ set: it.set, label: it.label });
+        items.push(...await loadList({ images, imageUrls, canvases, labels }));
+        const r = await createWorkspace({ name, items, key: idempotencyKey });
+        return { content: [{ type: "text", text: wsText("Created workspace", r) }], structuredContent: wsStructured(r) };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "edit_workspace",
+    {
+      title: "Add, remove or arrange workspace images",
+      description: "Change which images an Estampes workspace shows and where. `add` images (files, URLs or existing canvases, with their marks); `remove` item ids to DETACH them from this workspace only (the image and its marks are kept, also in other workspaces and in its own canvas); `arrange` moves, resizes, rotates (0/90/180/270) or renames items, which never changes the marks' own coordinates; `order` sets the item order; `autoLayout` re-flows them. Pass `expectedRevision` (from the last result) so a change made meanwhile is not overwritten. Returns an undoToken.",
+      inputSchema: z.object({
+        workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/),
+        name: z.string().max(60).optional(),
+        ...ImageList,
+        remove: z.array(z.string().regex(/^wi-\d{1,4}$/)).max(MAX_ITEMS).default([]).describe("Item ids to detach (never deletes images or marks)"),
+        arrange: z.array(z.object({
+          item: z.string().regex(/^wi-\d{1,4}$/),
+          x: z.number().finite().min(-100000).max(100000).optional(), y: z.number().finite().min(-100000).max(100000).optional(),
+          width: z.number().finite().min(50).max(20000).optional().describe("Workspace units; items are 1000 wide by default"),
+          rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).optional(),
+          label: z.string().max(40).optional().describe("Empty string clears"),
+        }).strict()).max(MAX_ITEMS).default([]),
+        order: z.array(z.string().regex(/^wi-\d{1,4}$/)).max(MAX_ITEMS).optional().describe("Every item id once, in the new order"),
+        autoLayout: z.boolean().default(false),
+        expectedRevision: z.number().int().min(0).optional(),
+        idempotencyKey: IdempotencyKey,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      _meta: { "openai/fileParams": ["images"] },
+    },
+    async ({ workspaceId, name, images, imageUrls, canvases, labels, remove, arrange, order, autoLayout, expectedRevision, idempotencyKey }) => {
+      try {
+        const add = await loadList({ images, imageUrls, canvases, labels });
+        const r = await editWorkspace(workspaceId, { add, remove, arrange, order, name, autoLayout, expectedRevision, key: idempotencyKey });
+        return { content: [{ type: "text", text: wsText("Updated workspace", r) }], structuredContent: wsStructured(r) };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  const TransferFields = {
+    items: z.array(z.string().max(40)).max(MAX_ITEMS).optional().describe("Which images of the source (item ids like wi-2, or imageIds); default all"),
+    mode: z.enum(["link", "copy"]).default("link").describe("link (default) = the same marks, edits show in both places; copy = independent copies of the marks that remember their source"),
+    removeFromSource: z.boolean().default(false).describe("true = MOVE: also remove the items from the source workspace (never deletes images or marks). Not for a single or paired canvas"),
+    commit: z.boolean().default(false).describe("false (default) = only PREVIEW what would happen; true = apply. Pass previewId from the preview to apply exactly that"),
+    previewId: z.string().max(40).optional(),
+    idempotencyKey: IdempotencyKey,
+  };
+  const planText = (plan) => "mode " + plan.mode + (plan.removeFromSource ? " + move" : "") + "; from " + plan.source.ref + " into " +
+    (plan.target.ref === "new" ? "a NEW workspace" : plan.target.ref + (plan.target.createsWorkspace ? " (a canvas: a NEW workspace is created that shows it plus these; the canvas itself stays as it is)" : "")) +
+    ". Adds " + plan.add.length + " image(s): " + plan.add.map((a) => a.item + " " + a.asset + " " + a.marks + " marks (" + a.userMarks + " the user's), " + a.layers + " layers").join("; ") +
+    (plan.skipped.length ? ". Skipped " + plan.skipped.map((x) => x.item + " (" + x.reason + ")").join("; ") : "") +
+    ". Result: " + plan.result.items + " images, " + plan.result.marks + " marks (" + plan.result.userMarks + " the user's), " + plan.result.layerInstances + " layers; links carried " + plan.links.carried +
+    (plan.links.leftBehind ? ", left behind " + plan.links.leftBehind : "") + ". " + plan.sharedEditing + "." +
+    (plan.warnings.length ? " WARNINGS: " + plan.warnings.join("; ") : "");
+  async function transfer(args, { commit, previewId, idempotencyKey }) {
+    if (!commit) {
+      const { previewId: id, plan } = await previewTransfer(args);
+      return {
+        content: [{ type: "text", text: "PREVIEW (nothing changed yet): " + planText(plan) + ". To apply, call again with commit:true and previewId " + JSON.stringify(id) +
+          ". If the user already asked for exactly this and nothing is surprising (no warnings, no move), you may apply it right away; ask first when it moves items, copies or the counts look wrong." }],
+        structuredContent: { kind: "estampes.workspace_preview", protocol: WORKSPACE_PROTOCOL, previewId: id, plan },
+      };
+    }
+    const r = await commitTransfer(previewId ? { previewId, key: idempotencyKey } : { ...args, key: idempotencyKey });
+    const verdict = r.repeated ? "" : r.verified ? " VERIFIED: the workspace holds exactly what the preview said." :
+      " NOT VERIFIED: " + (r.mismatch ? "these totals differ from the plan: " + r.mismatch.join(", ") : r.check.problems.join("; ")) + ". Tell the user; do not claim the merge is complete.";
+    return {
+      content: [{ type: "text", text: wsText(r.created ? "Created workspace" : "Updated workspace", r) + verdict +
+        (r.itemMap?.length ? " Item ids: " + r.itemMap.map((m) => m.from + "→" + m.to).join(", ") + "." : "") }],
+      structuredContent: { ...wsStructured(r), kind: "estampes.workspace_change", created: !!r.created, verified: !!r.verified, ...(r.itemMap ? { itemMap: r.itemMap } : {}) },
+    };
+  }
+
+  server.registerTool(
+    "merge_workspaces",
+    {
+      title: "Merge canvases or workspaces",
+      description: "Bring the images of one canvas or workspace, WITH their marks, layers and links, into another, so they are edited together (for example the user's paired view B into canvas A = one workspace with three images). Nothing is flattened and nothing is deleted: by default the source stays as it is and the marks are LINKED (the same marks, edits show in both places); mode copy makes independent copies; removeFromSource moves. Call it first WITHOUT commit to get a PREVIEW (counts of images, marks, layers, links and what is shared), then with commit:true and the previewId. Merging the same thing twice adds nothing. Returns an undoToken.",
+      inputSchema: z.object({
+        target: WorkspaceRef.describe("Where the images go: a workspace, or a canvas (then a new workspace is created that shows the canvas's images first)"),
+        source: WorkspaceRef.describe("Where they come from"),
+        ...TransferFields,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ target, source, items, mode, removeFromSource, commit, previewId, idempotencyKey }) => {
+      try { return await transfer({ source, target, items, mode, removeFromSource }, { commit, previewId, idempotencyKey }); }
+      catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "split_workspace",
+    {
+      title: "Split images out into a new workspace",
+      description: "Put some images of a workspace or canvas, WITH their marks, into a NEW workspace. By default the source keeps them and the marks are linked (shared); mode copy makes independent copies; removeFromSource takes them out of the source workspace (a move). Preview first (no commit), then commit:true with the previewId. Returns an undoToken.",
+      inputSchema: z.object({
+        source: WorkspaceRef,
+        name: z.string().max(60).optional().describe("Name of the new workspace"),
+        ...TransferFields,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ source, name, items, mode, removeFromSource, commit, previewId, idempotencyKey }) => {
+      try { return await transfer({ source, target: "new", items, mode, removeFromSource, name }, { commit, previewId, idempotencyKey }); }
+      catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "undo_workspace_change",
+    {
+      title: "Undo a workspace change",
+      description: "Undo one create/edit/merge/split/move by the undoToken it returned. Every workspace it touched goes back to how it was; a workspace it created is removed (its images and marks are kept). Refused if one of them changed again since: undo the later change first. Marks drawn with present_visual are not affected.",
+      inputSchema: z.object({ workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/), undoToken: z.string().regex(/^u-[0-9a-f]{12}$/) }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspaceId, undoToken }) => {
+      try {
+        const r = await undoChange(workspaceId, undoToken);
+        return {
+          content: [{ type: "text", text: "Undid " + r.kind + " " + undoToken + ": " + r.workspaces.map((w) => w.id + (w.archived ? " removed" : " now revision " + w.revision)).join(", ") + "." }],
+          structuredContent: { kind: "estampes.workspace_undo", ...r },
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
+  server.registerTool(
+    "get_workspace_state",
+    {
+      title: "Read a workspace",
+      description: "Return an Estampes workspace as one " + WORKSPACE_PROTOCOL + " JSON document: its items (which image, which canvas, placement), the images, every canvas's layers and marks (geometry normalized to its own image, author, note, claim state, where a copy came from), links between items, rejected claims, the recent undo tokens and a CHECK of the totals. A single canvas (imageId) or a paired view (imageId+pairImageId) is returned in the same shape. Read-only.",
+      inputSchema: z.object({ workspace: WorkspaceRef, history: z.number().int().min(0).max(200).default(0) }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspace, history }) => {
+      try {
+        const doc = await workspaceDocument((await resolveRef(workspace)).doc, { history });
+        const t = doc.check.totals;
+        return {
+          content: [{ type: "text", text: WORKSPACE_PROTOCOL + ": " + t.items + " images, " + t.marks + " marks, " + t.layerInstances + " layers, " + t.links + " links" +
+            (doc.check.problems.length ? ", PROBLEMS: " + doc.check.problems.join("; ") : "") + ". " + JSON.stringify(doc) }],
+          structuredContent: doc,
+        };
+      } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
+    }
+  );
+
   // Private tool for the canvas widget: a sharper tile of the photo while
   // the user zooms. App-only, like load_visual_canvas.
   registerAppTool(
@@ -1384,6 +1592,9 @@ const httpServer = createHttpServer((req, res) => {
       visualProtocol: VISUAL_PROTOCOL,
       stateTool: "get_visual_state",
       stateApi: "/api/v1/canvas/{hash}",
+      workspaceProtocol: WORKSPACE_PROTOCOL,
+      workspaceApi: "/api/v1/workspaces/{hash}",
+      workspaceTools: ["create_workspace", "edit_workspace", "merge_workspaces", "split_workspace", "undo_workspace_change", "get_workspace_state"],
       storage: config.storageDir ? "disk" : "memory",
     }));
     return;
@@ -1435,6 +1646,20 @@ const httpServer = createHttpServer((req, res) => {
     if (pairHex && !/^[0-9a-f]{16}$/.test(pairHex)) { json(400, { error: "pair must be a 16-character image hash" }); return; }
     Promise.all([ensureImage("img:" + apiMatch[1]), pairHex ? ensureImage("img:" + pairHex) : null])
       .then(async ([left, right]) => json(200, canvasDocument(left, right, history ? { history: await readHistory(left.imageId, history) } : {})))
+      .catch((error) => json(404, { error: String(error?.message || error) }));
+    return;
+  }
+
+  // A workspace as an estampes.workspace/1 document: /api/v1/workspaces/<hex>.
+  const wsMatch = /^\/api\/v1\/workspaces\/([0-9a-f]{16})$/.exec(url.pathname);
+  if (wsMatch && req.method === "GET") {
+    const json = (status, body) => {
+      res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
+      res.end(JSON.stringify(body));
+    };
+    if (!authorized(req, url)) { json(401, { error: "Missing or invalid Estampes access key" }); return; }
+    const history = Math.min(200, Math.max(0, Number(url.searchParams.get("history")) || 0));
+    resolveRef("ws:" + wsMatch[1]).then(async ({ doc }) => json(200, await workspaceDocument(doc, { history })))
       .catch((error) => json(404, { error: String(error?.message || error) }));
     return;
   }

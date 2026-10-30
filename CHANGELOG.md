@@ -4,6 +4,11 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Workspaces ([docs/WORKSPACES.md](docs/WORKSPACES.md)): any number of images in one place, each with its own marks, layers and coordinates. New tools `create_workspace`, `edit_workspace`, `merge_workspaces`, `split_workspace`, `undo_workspace_change` and `get_workspace_state`, and `GET /api/v1/workspaces/<hex>`.
+- Merge, split, move, copy and link are non-destructive: they change which canvases a workspace shows, never flatten images, and never delete an image or a mark. Linked marks are shared with the original canvas; copies remember their source. Each change previews first, is checked against the revision it was planned on, can be retried with an idempotency key, is read back and verified against the plan, and can be undone.
+- A single canvas or a paired view can be read, merged or split as a workspace without converting it.
+- Paired-view links are now stored per annotation set, so they also show in workspaces (existing stored links are read unchanged).
+
 - New docs: `docs/USAGE.md`, `docs/TOOLS.md`; `docs/ARCHITECTURE.md` rewritten to describe the current system.
 - Licensed under the Mozilla Public License 2.0 (`LICENSE`, `package.json`).
 

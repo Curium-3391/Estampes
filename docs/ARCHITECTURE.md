@@ -39,6 +39,7 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 | `canvas-state.js` | Per-image marks, layers (order, lock, opacity), paired-view links, user edits |
 | `mark-render.js`, `pixel-font.js` | Verification crops drawn with the marks at real ink width |
 | `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/2` document ([Visual protocol 2](PROTOCOL-V2.md)) |
+| `workspace.js` | Workspaces: several annotation sets in one place, copies of sets, merge/split/move/copy/link with preview, revision checks, idempotency and undo; the `estampes.workspace/1` document ([Workspaces](WORKSPACES.md)) |
 | `storage.js` | Optional disk storage ([Deployment](DEPLOYMENT.md#what-is-stored)) |
 | `security.js`, `config.js` | Access key, signed export links, environment settings |
 | `tunnel.js` | Reads the temporary Cloudflare tunnel address for the docker compose `tunnel` profile |

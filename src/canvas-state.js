@@ -285,16 +285,22 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
 // the same pair again brings them back. GPT gives each link a confidence;
 // the user confirms or rejects links, which GPT then reads back.
 export const LINK_CONFIDENCE = ["high", "medium", "low"];
+// The key of an annotation set: an image's own canvas is keyed by its
+// imageId; a copy made by a workspace Copy is "<imageId>#<setId>" (see
+// workspace.js). Link stores are keyed by the other set's key, so links
+// between two images' own canvases are the same in a paired view and in
+// any workspace that shows both.
+export const setKeyOf = (entry) => entry.setKey ?? entry.imageId;
 export const LINK_REVIEW = ["confirmed", "rejected"];
 
-const linksOf = (left, rightId) => {
+export const linksOf = (left, rightId) => {
   left.pairLinks ??= new Map();
   if (!left.pairLinks.has(rightId)) left.pairLinks.set(rightId, new Map());
   return left.pairLinks.get(rightId);
 };
 
 export function pairLinks(left, right) {
-  const links = linksOf(left, right.imageId), l = marksOf(left), r = marksOf(right);
+  const links = linksOf(left, setKeyOf(right)), l = marksOf(left), r = marksOf(right);
   // A link whose mark was removed goes with it.
   for (const [id, link] of links) if (!l.has(link.left) || !r.has(link.right)) links.delete(id);
   return [...links.values()];
@@ -309,7 +315,7 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
   priorUser = [], layer, frame, links = [], removeLinks = [], resolve, refused = [] }) {
   const images = { left: left.imageId, right: right.imageId };
   const restoreLeft = snapshotCanvas(left), restoreRight = snapshotCanvas(right);
-  const store = linksOf(left, right.imageId), savedLinks = new Map(store);
+  const store = linksOf(left, setKeyOf(right)), savedLinks = new Map(store);
   try {
     const entries = { left, right }, other = { left: right, right: left };
     const split = { left: { annotations: [], findings: [], remove: [], priorUser: [] }, right: { annotations: [], findings: [], remove: [], priorUser: [] } };
@@ -388,7 +394,7 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
     return changed;
   } catch (error) {
     restoreLeft(); restoreRight();
-    left.pairLinks.set(right.imageId, savedLinks);
+    left.pairLinks.set(setKeyOf(right), savedLinks);
     throw error;
   }
 }
@@ -401,9 +407,9 @@ const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete
 
 export function reviewLink(left, right, id, review, reason) {
   if (!LINK_REVIEW.includes(review) && review !== "unreviewed") throw new Error("review must be confirmed, rejected or unreviewed");
-  const store = linksOf(left, right.imageId), link = store.get(id);
+  const store = linksOf(left, setKeyOf(right)), link = store.get(id);
   if (!link) throw new Error("No link " + id + " between these images");
-  const ref = linkRef(right.imageId, id);
+  const ref = linkRef(setKeyOf(right), id);
   dropRejections(left, ref);
   const next = { ...clearReview(link), ...(review === "unreviewed" ? {} : { review }) };
   if (review === "rejected") {
@@ -432,4 +438,154 @@ export function reviewFinding(entry, id, review, reason) {
   }
   state.set(id, next);
   return next;
+}
+
+// ---- Workspaces: any number of images ---------------------------------------
+// A workspace shows N annotation sets side by side (see workspace.js). Each
+// item is { id: itemId, entry } where entry holds that item's marks. Marks
+// are addressed by item and id: ids need only be unique within one item.
+// Links join a mark of one item to a mark of another; they are stored on
+// one of the two sets keyed by the other (the same store a paired view
+// uses), so a link made in a paired view shows in every workspace that has
+// both canvases and the other way round.
+
+// Both directions of the link store between two sets, flattened to
+// { id, fromItem, from, toItem, to, ...claim } in item order.
+export function workspaceLinks(items) {
+  const out = [];
+  for (let i = 0; i < items.length; i++) for (let j = 0; j < items.length; j++) {
+    if (i === j || !items[i].entry.pairLinks?.has(setKeyOf(items[j].entry))) continue;
+    for (const l of pairLinks(items[i].entry, items[j].entry)) {
+      const { left, right, ...rest } = l;
+      out.push({ ...rest, fromItem: items[i].id, from: left, toItem: items[j].id, to: right });
+    }
+  }
+  return out;
+}
+
+// The store for a link between two items, in the direction it already has.
+function linkStoreFor(a, b, id) {
+  const ab = a.entry.pairLinks?.get(setKeyOf(b.entry)), ba = b.entry.pairLinks?.get(setKeyOf(a.entry));
+  if (ba?.has(id) && !ab?.has(id)) return { owner: b, other: a, flipped: true, store: linksOf(b.entry, setKeyOf(a.entry)) };
+  return { owner: a, other: b, flipped: false, store: linksOf(a.entry, setKeyOf(b.entry)) };
+}
+
+const wsError = (stage, i, id, message) =>
+  new Error("present_visual " + stage + "[" + i + "] (" + JSON.stringify(id) + "): " + message);
+
+// Apply one present_visual call on a workspace. annotations carry `item`
+// (default: the first item); findings and remove take `item` or find a
+// mark id that is unique across the workspace; links carry fromItem/from
+// and toItem/to; removeLinks entries are link ids (unique across the
+// workspace) or { id, fromItem, toItem }. All or nothing.
+export function applyWorkspaceChanges(items, { annotations = [], findings = [], remove = [], reset = false, layer, frame, links = [],
+  removeLinks = [], resolve, refused = [] }) {
+  if (!items.length) throw new Error("This workspace has no images; add some first");
+  const byId = new Map(items.map((it) => [it.id, it]));
+  const images = Object.fromEntries(items.map((it) => [it.id, it.entry.imageId]));
+  const restores = items.map((it) => snapshotCanvas(it.entry));
+  const savedLinks = items.map((it) => new Map([...(it.entry.pairLinks ?? new Map())].map(([k, v]) => [k, new Map(v)])));
+  const itemOf = (stage, i, id, item) => {
+    if (item === undefined) return null;
+    const found = byId.get(item);
+    if (!found) throw wsError(stage, i, id, "field item " + JSON.stringify(item) + " is not an item of this workspace (items: " + [...byId.keys()].join(", ") + ")");
+    return found;
+  };
+  const holding = (id) => items.filter((it) => marksOf(it.entry).has(id));
+  const findMark = (stage, i, id, item) => {
+    const it = itemOf(stage, i, id, item);
+    if (it) { if (!marksOf(it.entry).has(id)) throw wsError(stage, i, id, "no such mark on item " + it.id); return it; }
+    const all = holding(id);
+    if (!all.length) throw wsError(stage, i, id, "no such mark on any item");
+    if (all.length > 1) throw wsError(stage, i, id, "this mark id exists on items " + all.map((x) => x.id).join(", ") + "; give `item`");
+    return all[0];
+  };
+  // Evidence names an item (default: the claim's own item).
+  const evidenceIn = (raw, itemId) => raw.evidence === undefined ? raw
+    : { ...raw, evidence: raw.evidence.map((e) => { const { item, ...rest } = e; return { ...rest, side: item ?? itemId }; }) };
+  try {
+    const split = new Map(items.map((it) => [it.id, { annotations: [], findings: [], remove: [] }]));
+    if (reset) for (const it of items) it.entry.pairLinks = new Map([...(it.entry.pairLinks ?? [])].filter(([k]) => !items.some((o) => setKeyOf(o.entry) === k)));
+    annotations.forEach((a, i) => {
+      const it = itemOf("annotations", i, a.id, a.item) ?? items[0];
+      const { item: _i, ...mark } = evidenceIn(a, it.id);
+      split.get(it.id).annotations.push(mark);
+    });
+    findings.forEach((f, i) => {
+      const added = items.filter((it) => split.get(it.id).annotations.some((a) => a.id === f.id));
+      let it = itemOf("findings", i, f.id, f.item);
+      if (!it && added.length === 1) it = added[0];
+      if (!it) it = reset ? null : findMark("findings", i, f.id);
+      if (!it) throw wsError("findings", i, f.id, "no such mark on any item");
+      const { item: _i, ...finding } = evidenceIn(f, it.id);
+      split.get(it.id).findings.push(finding);
+    });
+    remove.forEach((r, i) => {
+      const { id, item } = typeof r === "string" ? { id: r } : r;
+      split.get(findMark("remove", i, id, item).id).remove.push(id);
+    });
+    const changed = [];
+    for (const it of items) {
+      const own = split.get(it.id);
+      changed.push(...applyChanges(it.entry, {
+        ...own, reset, layer, resolve, images, refused,
+        frame: frame && (frame.item ?? items[0].id) === it.id ? frame : undefined,
+      }).map((id) => ({ item: it.id, id })));
+    }
+    removeLinks.forEach((r, i) => {
+      const { id, fromItem, toItem } = typeof r === "string" ? { id: r } : r;
+      const where = "present_visual removeLinks[" + i + "] (link " + JSON.stringify(id) + "): ";
+      const found = workspaceLinks(items).filter((l) => l.id === id && (!fromItem || [l.fromItem, l.toItem].includes(fromItem)) && (!toItem || [l.fromItem, l.toItem].includes(toItem)));
+      if (!found.length) throw new Error(where + "no such link");
+      if (found.length > 1) throw new Error(where + "several links have this id; give fromItem and toItem");
+      const l = found[0];
+      linksOf(byId.get(l.fromItem).entry, setKeyOf(byId.get(l.toItem).entry)).delete(id);
+    });
+    links.forEach((link, i) => {
+      const where = "present_visual links[" + i + "] (link " + JSON.stringify(link.id) + "): ";
+      const a = byId.get(link.fromItem), b = byId.get(link.toItem);
+      if (!a || !b) throw new Error(where + "fromItem and toItem must be items of this workspace (" + [...byId.keys()].join(", ") + ")");
+      if (a === b) throw new Error(where + "a link joins marks on two different items");
+      if (!marksOf(a.entry).has(link.from)) throw new Error(where + "field from " + JSON.stringify(link.from) + " is not a mark on item " + a.id);
+      if (!marksOf(b.entry).has(link.to)) throw new Error(where + "field to " + JSON.stringify(link.to) + " is not a mark on item " + b.id);
+      const { owner, other, flipped, store } = linkStoreFor(a, b, link.id);
+      const leftMark = flipped ? link.to : link.from, rightMark = flipped ? link.from : link.to;
+      const old = store.get(link.id);
+      const moved = old && (old.left !== leftMark || old.right !== rightMark);
+      const { evidence: _e, ambiguities: _a, confidence: _c, fromItem: _f, toItem: _t, from: _fm, to: _tm, ...fields } = link;
+      let assess;
+      try { assess = assessmentInput(evidenceIn(link, a.id), { observer: "model", images, where: "evidence" }); }
+      catch (error) { throw new Error(where + error.message); }
+      let previouslyRejected;
+      if (!old || moved) {
+        const lm = marksOf(owner.entry).get(leftMark), rm = marksOf(other.entry).get(rightMark);
+        const rejection = findRejection(owner.entry.rejections, "link", {
+          from: { image: owner.entry.imageId, region: markRegion(lm) }, to: { image: other.entry.imageId, region: markRegion(rm) },
+        });
+        if (rejection && !bringsNewEvidence(rejection, assess.evidence)) { refused.push({ id: link.id, kind: "link", rejection }); return; }
+        if (rejection) previouslyRejected = { at: rejection.at, ...(rejection.reason ? { reason: rejection.reason } : {}) };
+      }
+      const next = {
+        ...(old && !moved ? old : {}), ...fields, left: leftMark, right: rightMark, ...assess, author: "assistant",
+        confidence: assess.confidence ?? (moved ? undefined : old?.confidence) ?? "medium",
+        ...(previouslyRejected ? { previouslyRejected } : {}),
+      };
+      if (moved) { delete next.review; delete next.reviewReason; }
+      store.set(link.id, next);
+    });
+    return changed;
+  } catch (error) {
+    restores.forEach((r) => r());
+    items.forEach((it, i) => { it.entry.pairLinks = savedLinks[i]; });
+    throw error;
+  }
+}
+
+// The user's verdict on a workspace link: the same as a paired-view review,
+// on whichever of the two sets holds the link.
+export function reviewWorkspaceLink(items, { fromItem, toItem, id }, review, reason) {
+  const a = items.find((it) => it.id === fromItem), b = items.find((it) => it.id === toItem);
+  if (!a || !b) throw new Error("fromItem and toItem must be items of this workspace");
+  const { owner, other } = linkStoreFor(a, b, id);
+  return { owner, link: reviewLink(owner.entry, other.entry, id, review, reason) };
 }
