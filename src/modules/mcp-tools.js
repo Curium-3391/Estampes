@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { localized } from "./manifest.js";
+import { JOB_ID } from "./jobs.js";
 import { describePermission, riskOf, capabilityPermissions } from "./permissions.js";
 import { compactObject, renderedObjects, widgetObjects, applySceneOps, sceneRevision } from "../scene/scene-ops.js";
 import { renderPreview } from "../scene/preview.js";
@@ -120,6 +121,11 @@ export function registerModuleTools(server, deps) {
     try {
       const run = await host.router.execute({ module, capability, params, canvas, newCanvas, expectedRevision, visibility, layer });
       const { entry, scene } = run;
+      if (run.job) {
+        return { content: [{ type: "text", text: module + " " + capability + " is running in the background as " + run.job.id + (entry ? " on canvas " + entry.imageId : "") +
+          ". It can take minutes. Call get_module_job with this id (waitSeconds up to 25) until its status is done or failed; the result lands on the canvas when it is done. Tell the user it is running." }],
+          structuredContent: { kind: "estampes.module_job", job: run.job } };
+      }
       if (!entry) {
         return { content: [{ type: "text", text: module + " " + capability + ": " + (run.summary ?? "done") + (run.data !== undefined ? " " + JSON.stringify(run.data) : "") }],
           structuredContent: { kind: "estampes.module_result", module, capability, ...(run.data !== undefined ? { data: run.data } : {}) } };
@@ -139,6 +145,23 @@ export function registerModuleTools(server, deps) {
         structuredContent: { ...payload.structuredContent, module: { id: module, capability, revision: scene.revision, created: scene.created, updated: scene.updated }, objects },
         _meta: payload._meta,
       });
+    } catch (error) { return fail(error); }
+  });
+
+  server.registerTool("get_module_job", {
+    title: "Check a module's background job",
+    description: "Return the status of a background job started by execute_module (running, done, failed or interrupted), with its progress, result summary and the objects it created. waitSeconds (up to 25) waits for it to finish before answering. Read-only.",
+    inputSchema: z.object({ job: z.string().regex(JOB_ID).describe("job id from execute_module, e.g. job_1a2b3c4d5e6f"), waitSeconds: z.number().min(0).max(25).default(0) }),
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  }, async ({ job: id, waitSeconds }) => {
+    try {
+      const job = await host.jobs.wait(id, waitSeconds * 1000);
+      if (!job) throw new Error("no job " + id + " (jobs are kept for the last 100 runs)");
+      const text = job.module + " " + job.capability + " " + id + ": " + job.status +
+        (job.status === "running" ? (job.progress ? " (" + job.progress + ")" : "") + ". Check again shortly." : "") +
+        (job.summary ? ". " + job.summary : "") + (job.data !== undefined ? ". Data: " + JSON.stringify(job.data).slice(0, 4000) : "") +
+        (job.created?.length ? ". Created " + job.created.join(", ") + " on canvas " + job.canvas : "") + (job.error ? ". " + job.error : "");
+      return { content: [{ type: "text", text }], structuredContent: { kind: "estampes.module_job", job } };
     } catch (error) { return fail(error); }
   });
 

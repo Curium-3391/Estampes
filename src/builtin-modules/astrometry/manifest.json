@@ -1,0 +1,116 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.estampes.astrometry",
+  "name": "Plate solving (Astrometry.net)",
+  "nameI18n": {
+    "zh-TW": "星圖解算（Astrometry.net）"
+  },
+  "description": "Find where a photo of the night sky points. Uploads the chosen image to Astrometry.net, waits for the solution in the background, then marks the named stars and objects it identified and reports the field's centre, scale and rotation.",
+  "descriptionI18n": {
+    "zh-TW": "找出夜空照片拍的是天空的哪個位置。把選定的圖片上傳到 Astrometry.net，在背景等候解算，完成後標出辨識到的恆星與天體，並回報視野中心、比例尺與旋轉角。"
+  },
+  "version": "1.0.0",
+  "publisher": {
+    "name": "Estampes Project",
+    "url": "https://github.com/Curium-3391/Estampes"
+  },
+  "license": "MPL-2.0",
+  "source": "https://github.com/Curium-3391/Estampes/tree/main/src/builtin-modules/astrometry",
+  "category": "astronomy",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
+  "runtime": {
+    "kind": "builtin",
+    "entry": "astrometry"
+  },
+  "permissions": [
+    "canvas.write",
+    "asset.read.selected",
+    "network.request.approved",
+    "module.secrets"
+  ],
+  "network": {
+    "allow": [
+      "nova.astrometry.net"
+    ],
+    "dataFlow": "The whole image you choose is uploaded to nova.astrometry.net (marked private on that site), together with your API key. Nothing else leaves this server."
+  },
+  "secrets": [
+    {
+      "name": "api_key",
+      "label": "Astrometry.net API key",
+      "description": "From your profile on nova.astrometry.net. Set by the server administrator."
+    }
+  ],
+  "limits": {
+    "timeMs": 30000,
+    "outputKb": 512,
+    "jobMs": 900000
+  },
+  "capabilities": [
+    {
+      "id": "solve_field",
+      "title": "Solve a star field",
+      "titleI18n": {
+        "zh-TW": "解算星場"
+      },
+      "description": "Upload the canvas's image to Astrometry.net and find where in the sky it points. Runs in the background (30 s to a few minutes): returns a job id, check it with get_module_job. When done, named objects are marked on the canvas and the job holds centre RA/Dec, scale, rotation and radius. Scale or position hints help.",
+      "target": "canvas",
+      "async": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scaleLowArcsecPerPixel": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000,
+            "description": "Smallest plausible scale, arcsec per pixel (give both low and high)"
+          },
+          "scaleHighArcsecPerPixel": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000,
+            "description": "Largest plausible scale, arcsec per pixel"
+          },
+          "centerRa": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "Rough RA of the field centre in degrees (give with centerDec and radiusDeg)"
+          },
+          "centerDec": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Rough Dec of the field centre in degrees"
+          },
+          "radiusDeg": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 180,
+            "description": "How far from that centre the field can be, degrees"
+          },
+          "maxMarks": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30,
+            "description": "Most named objects to mark (default 20)"
+          }
+        }
+      },
+      "examples": [
+        {
+          "description": "solve with no hints",
+          "params": {}
+        },
+        {
+          "description": "a wide-field photo, 60 to 200 arcsec per pixel",
+          "params": {
+            "scaleLowArcsecPerPixel": 60,
+            "scaleHighArcsecPerPixel": 200
+          }
+        }
+      ]
+    }
+  ]
+}

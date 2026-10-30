@@ -54,6 +54,8 @@ const Capability = z.object({
   operations: z.array(z.record(z.string(), z.unknown())).max(64).optional(),
   request: HttpRequest.optional(),
   response: HttpResponse.optional(),
+  // Returns a job at once; the work runs in the background (see jobs.js).
+  async: z.boolean().optional(),
 }).strict();
 
 export const ManifestSchema = z.object({
@@ -77,6 +79,8 @@ export const ManifestSchema = z.object({
     timeMs: z.number().int().min(50).max(30000).optional(),
     memoryMb: z.number().int().min(1).max(256).optional(),
     outputKb: z.number().int().min(1).max(1024).optional(),
+    // Longest an async capability may run, in milliseconds (default 10 minutes).
+    jobMs: z.number().int().min(1000).max(1800000).optional(),
   }).strict().optional(),
   network: z.object({
     allow: z.array(Host).min(1).max(8),
