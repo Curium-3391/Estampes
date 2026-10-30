@@ -40,7 +40,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Runs on amd64 and arm64 (Raspberry Pi, NAS, mini PC); images, marks, layers, SVGs and history are kept in a Docker volume. Heroku (Deploy button) and Render (`render.yaml`) also work. See [Deployment](docs/DEPLOYMENT.md). Everything on a canvas can be read as one host-neutral JSON document; see [Visual protocol 1](docs/PROTOCOL-V1.md).
+Each person runs their own copy. For a temporary public https address ChatGPT can reach, use `docker compose --profile tunnel up -d` and read the connector URL with `docker compose logs estampes | grep tunnel`. Runs on amd64 and arm64 (Raspberry Pi, NAS, mini PC); images, marks, layers, SVGs and history are kept in a Docker volume. Heroku (Deploy button) and Render (`render.yaml`) also work. See [Deployment](docs/DEPLOYMENT.md). Everything on a canvas can be read as one host-neutral JSON document; see [Visual protocol 1](docs/PROTOCOL-V1.md).
 
 ## Development roadmap
 

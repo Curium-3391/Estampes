@@ -30,6 +30,8 @@ jobs:
           key=$(docker compose exec -T estampes cat /data/access-key)
           test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8787/api/v1/canvas/0123456789abcdef?key=$key")" = 404
           ! docker compose exec -T estampes touch /app/probe
+          # The tunnel profile's compose file is valid (no network use here).
+          docker compose --profile tunnel config --services | grep -qx tunnel
       - name: Logs
         if: always()
         run: docker compose logs
