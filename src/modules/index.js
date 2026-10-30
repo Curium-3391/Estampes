@@ -34,7 +34,7 @@ export async function createModuleHost({ storageDir = "", coreVersion, canvases,
   let packages = null;
   const jobs = createJobs({ dir });
   await jobs.load();
-  const host = { dir, audit, registry, runtimes, coreVersion, admin, egress, jobs };
+  const host = { canvases, dir, audit, registry, runtimes, coreVersion, admin, egress, jobs };
   if (dir) {
     await ensureDirs(dir);
     packages = createPackages({ dir, registry, audit, runtimes, coreVersion, allowUnsigned, trustedKeys, reserved: new Set(builtins.map((b) => b.manifest.id)) });

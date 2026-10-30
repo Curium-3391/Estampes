@@ -12,6 +12,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - **`estampes.surface/1`**: a shared, persistent record of which panels are open on a canvas and one layout per device profile (desktop, tablet, mobile), stored in `<storage>/surfaces`. Panel geometry is in surface units, always reachable, snapped and size-limited; layouts are revision-checked and idempotent, and a change to one profile never rewrites another.
 - **`estampes.panel/1`**: modules may declare panels (`panels` in the manifest) naming a built-in renderer kind and the capabilities it may trigger; no HTML, script or CSS can come from a manifest. Graph and the calculator declare theirs. Opening a panel never enables a module.
 - New tools: `get_surface_state` and `manage_surface_panels` (model), `surface_get_state`, `surface_apply`, `surface_cas` (widget only). See [docs/SURFACES.md](docs/SURFACES.md).
+- Fix: starting or checking a background job on a canvas now hands the widget that canvas, so it shows the real image instead of its sample picture; `get_module_job` shows the canvas with the finished result.
 
 ## 0.17.0 — Scientific CAS (SymPy)
 
