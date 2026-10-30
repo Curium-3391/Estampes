@@ -32,7 +32,15 @@ GPT does not change or delete marks in a locked layer, so lock what you consider
 
 ## Compare two images
 
-Ask GPT to compare two different pictures (a drawing and the real object, a map and an aerial photo, before and after). They appear **side by side**, never overlaid. GPT records links between a mark on the left and the matching mark on the right with a confidence value. Low-confidence links are shown to you: confirm or reject each one, and GPT treats your verdict as more reliable than its own guess.
+Ask GPT to compare two different pictures (a drawing and the real object, a map and an aerial photo, before and after). They appear **side by side**, never overlaid. GPT records links between a mark on the left and the matching mark on the right.
+
+## Check GPT's claims
+
+A note GPT writes on a mark ("this is R12") and a link between two images are **claims**. Each one shows GPT's confidence, the evidence it gives, and what is still unresolved. Every piece of evidence is a button: press it to zoom to the spot GPT says it read, outlined in red, and judge for yourself.
+
+A claim stays 「待你確認」 until you press 確認 or 否決, however confident GPT is; 「僅模型自述」 means only GPT's own reading supports it. Add a reason when you reject, and 撤回 takes your verdict back. Press send so GPT hears about it at once; it also sees it on its next call.
+
+A rejection is remembered for that place on the image, even if the marks are deleted or redrawn. If GPT says the same thing there again without a new kind of evidence, Estampes refuses it and tells GPT why.
 
 ## What GPT does to see better
 
@@ -43,7 +51,7 @@ Estampes only transforms pixels and keeps coordinates honest. **What is in the p
 ## Save and reuse your work
 
 - **Export:** the result includes download links for the image (`image.jpg`) and a layered `marks.svg` (one Inkscape layer per Estampes layer). When an access key is set, the links are signed.
-- **Restore:** attach an exported marks SVG (or an `estampes.visual/1` JSON, see [Visual protocol 1](PROTOCOL-V1.md)) to a new chat and ask GPT to load it onto the image.
+- **Restore:** attach an exported marks SVG (or an `estampes.visual/2` JSON, see [Visual protocol 2](PROTOCOL-V2.md)) to a new chat and ask GPT to load it onto the image.
 - **Server storage:** with `ESTAMPES_STORAGE_DIR` set (Docker does this), marks, layers and history survive restarts, and attaching the same image again in a new chat brings its canvas back. Without it, canvases live in memory for about an hour.
 
 ## Troubleshooting

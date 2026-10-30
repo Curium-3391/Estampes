@@ -17,7 +17,7 @@ Talking about a specific spot in a picture usually means screenshots, circling t
 - **The source stays untouched:** marks live in layers you can show, hide, rename, reorder, fade and lock.
 - **See the details:** zoom and pan inside the canvas with native-resolution tiles; GPT can enhance contrast, sharpen, denoise, threshold, find edges or overlay a coordinate grid on a region before reading it.
 - **Two images side by side:** compare two different pictures (a drawing and the real object, before and after); GPT records which marks correspond and how sure it is, and you confirm or reject each link.
-- **Across turns and chats:** marks, layers and change history are stored on your own server and export as an image, a layered SVG (opens in Inkscape) or an `estampes.visual/1` JSON document you can load again.
+- **Across turns and chats:** marks, layers and change history are stored on your own server and export as an image, a layered SVG (opens in Inkscape) or an `estampes.visual/2` JSON document you can load again.
 
 Images come in only through ChatGPT itself: uploaded or photographed in the chat, or a public URL GPT supplies. Estampes handles pixels and coordinates; **recognition is still GPT's job**, and uncertain locations are shown as such.
 
@@ -52,7 +52,7 @@ npm start          # http://localhost:8787/mcp
 | [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
 | [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
-| [Visual protocol 1](docs/PROTOCOL-V1.md) | `estampes.visual/1`, the host-neutral JSON document for a whole canvas |
+| [Visual protocol 2](docs/PROTOCOL-V2.md) | `estampes.visual/2`, the host-neutral JSON document for a whole canvas, with evidence and verification for every claim |
 | [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
 | [Architecture](docs/ARCHITECTURE.md) | How the server, canvas widget and GPT fit together |
 | [Changelog](CHANGELOG.md) | Changes per version |

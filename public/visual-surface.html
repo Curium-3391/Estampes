@@ -34,7 +34,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #check-view figcaption{font-size:.85rem;margin-top:6px}
 #findings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 #findings:empty{display:none}
-#findings li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
+#findings li{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;padding:7px 10px;border:1px solid #8885;border-radius:9px;cursor:pointer;font-size:.86rem}
 #findings li:hover{border-color:#8889}
 #findings .who{font-weight:700;white-space:nowrap}
 #findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
@@ -59,8 +59,14 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #links .num{display:inline-grid;place-items:center;min-width:1.6em;height:1.6em;border-radius:50%;color:#fff;font-weight:700;font-size:.8rem}
 #links .what{font-weight:700}#links .ends{color:GrayText;font-size:.8rem}#links .note{flex-basis:100%;overflow-wrap:anywhere}
 #links .chip{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;color:GrayText;white-space:nowrap}
-#links .chip.ask{border-color:#E08A1E;color:#E08A1E;font-weight:700}
-#links button{padding:3px 9px;font-size:.8rem}
+#links .chip.ask,#findings .badge.ask{border-color:#E08A1E;color:#E08A1E;font-weight:700}
+#links button,#findings button{padding:3px 9px;font-size:.8rem}
+#links .chip.tool,#findings .badge.tool{border-color:#3BB273;color:#2E9A5E}
+.evidence{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px}
+.evidence button{font-size:.76rem;padding:2px 8px;border-radius:7px;text-align:left;max-width:100%;overflow-wrap:anywhere}
+.evidence button.on{border-color:#E4572E;box-shadow:0 0 0 1px #E4572E}
+.unresolved{flex-basis:100%;font-size:.8rem;color:#C26A00}
+input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886;border-radius:7px;background:transparent;color:inherit;min-width:9em;flex:1}
 #style-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:-4px 0 12px}
 #style-tools[hidden]{display:none}
 #style-tools .swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #8886}
@@ -110,7 +116,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 </div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
-<g id="scene"></g><g id="processed"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="selection-outline"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="selection-outline"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
@@ -231,7 +237,68 @@ const LINK_COLORS=["#E4572E","#2E86AB","#3BB273","#C03AA8","#E1A100","#00A6A6","
 const CONFIDENCE_TEXT={high:"信心高",medium:"信心中",low:"信心低"};
 const cleanLinks=list=>(Array.isArray(list)?list:[]).filter(l=>l&&typeof l.id==="string"&&typeof l.left==="string"&&typeof l.right==="string")
  .map(l=>({id:l.id.slice(0,64),left:l.left,right:l.right,label:String(l.label??"").slice(0,64),note:String(l.note??"").slice(0,200),
-   confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null})).slice(0,30);
+   confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null,
+   evidence:cleanEvidence(l.evidence),ambiguities:(Array.isArray(l.ambiguities)?l.ambiguities:[]).map(a=>String(a).slice(0,120)).slice(0,4),
+   reviewReason:String(l.reviewReason??"").slice(0,200),previouslyRejected:!!l.previouslyRejected,
+   verification:VERIFICATION.includes(l.verification)?l.verification:null})).slice(0,30);
+// Claims (a link, or GPT's note on a mark) carry evidence: where on which
+// image, what GPT says it saw there, and who observed it. Only the user or
+// a tool's evidence verifies a claim; GPT's confidence never does.
+const VERIFICATION=["unverified","user-confirmed","user-rejected","independently-verified"];
+const cleanEvidence=list=>(Array.isArray(list)?list:[]).filter(e=>e&&typeof e.says==="string").map(e=>({
+  id:String(e.id??"").slice(0,8),observer:["model","tool","user"].includes(e.observer)?e.observer:"model",image:String(e.image??""),
+  says:e.says.slice(0,160),region:Array.isArray(e.region)&&e.region.length===4&&e.region.every(v=>Number.isFinite(v)&&v>=0&&v<=1)?e.region:null})).slice(0,6);
+const stateOf=c=>c.verification??(c.review==="confirmed"?"user-confirmed":c.review==="rejected"?"user-rejected":
+  cleanEvidence(c.evidence).some(e=>e.observer==="tool")?"independently-verified":"unverified");
+const STATE_ZH={"user-confirmed":"你已確認","user-rejected":"你已否決","independently-verified":"工具已驗證"};
+const SIDE_ZH={left:"左",right:"右"};
+function claimChip(c,cls){
+ const state=stateOf(c),tool=cleanEvidence(c.evidence).some(e=>e.observer==="tool");
+ const chip=el("span",{className:cls+(state==="unverified"?" ask":state==="independently-verified"?" tool":"")});
+ chip.textContent=state==="unverified"?(c.confidence?CONFIDENCE_TEXT[c.confidence]+" · ":"")+(tool?"":"僅模型自述 · ")+"待你確認":STATE_ZH[state];
+ return chip;
+}
+// Evidence buttons zoom to where GPT says it saw the clue.
+let selectedEvidence=null;
+function evidenceRow(owner,c){
+ const list=cleanEvidence(c.evidence);if(!list.length)return null;
+ const row=el("span",{className:"evidence"});
+ list.forEach((e,i)=>{
+   const side=pair&&e.image===pair.imageId?"right":"left";
+   const who=e.observer==="tool"?"工具":e.observer==="user"?"你":"GPT 自述";
+   const b=el("button",{type:"button",textContent:"證據"+(i+1)+(pair?"（"+SIDE_ZH[side]+"）":"")+"・"+who+"："+e.says,title:e.region?"放大到這個位置":"沒有給位置"});
+   b.dataset.evidence=owner+"|"+i;b.disabled=!e.region;b.classList.toggle("on",selectedEvidence?.key===owner+"|"+i);
+   row.append(b);
+ });
+ return row;
+}
+function evidenceRect(e){
+ const [x,y,x2,y2]=e.region;
+ if(!pair)return {x:x*VW,y:y*VH,w:(x2-x)*VW,h:(y2-y)*VH};
+ const f=frames[e.image===pair.imageId?"right":"left"];
+ return {x:f.x0+x*f.w,y:f.y0+y*f.h,w:(x2-x)*f.w,h:(y2-y)*f.h};
+}
+function showEvidence(key,e){
+ if(selectedEvidence?.key===key){selectedEvidence=null;render();return;}
+ selectedEvidence={key,e};viewMode="annotated";
+ const r=evidenceRect(e),w=Math.max(r.w*4,r.h*4*VW/VH,VW/MAX_ZOOM*2);
+ setCam({x:r.x+r.w/2-w/2,y:r.y+r.h/2-w*VH/VW/2,w});render();
+}
+function renderEvidenceBox(){
+ const g=document.querySelector("#evidence-box");g.replaceChildren();
+ if(!selectedEvidence?.e?.region)return;
+ const r=evidenceRect(selectedEvidence.e),lk=U();
+ node("rect",{x:r.x,y:r.y,width:r.w,height:r.h,fill:"none",stroke:"#fff","stroke-width":4*lk},g);
+ node("rect",{x:r.x,y:r.y,width:r.w,height:r.h,fill:"none",stroke:"#E4572E","stroke-width":2*lk,"stroke-dasharray":(6*lk)+" "+(4*lk)},g);
+}
+function reviewControls(li,c){
+ if(stateOf(c)==="unverified"){
+   for(const [verdict,text] of [["confirmed","確認"],["rejected","否決"]])li.append(el("button",{type:"button",textContent:text,dataset:{review:verdict}}));
+   li.append(el("input",{className:"reason",maxLength:200,placeholder:"否決理由（選填）"}));
+ }else if(c.review)li.append(el("button",{type:"button",textContent:"撤回",title:"取消你的判斷",dataset:{review:"unreviewed"}}));
+ if(c.reviewReason)li.append(el("span",{className:"note",textContent:"你的理由："+c.reviewReason}));
+ if(c.ambiguities?.length)li.append(el("span",{className:"unresolved",textContent:"尚未解決："+c.ambiguities.join("；")}));
+}
 // Layers: each send and each GPT drawing call is one layer of marks. The
 // viewer hides whole layers; hidden layers stay on the canvas and in GPT's
 // context. Unsent marks have no layer yet and are always shown. Name,
@@ -494,7 +561,7 @@ function renderLinks(){
  const lk=U();
  links.forEach((l,i)=>{
    const color=l.review==="rejected"?"#888":LINK_COLORS[i%LINK_COLORS.length],a=all.get(l.left),b=all.get(l.right);
-   const ask=!l.review&&l.confidence==="low";
+   const ask=stateOf(l)==="unverified";
    const ends=[a,b].filter(m=>m&&shown(m)).map(linkAnchor);
    if(l.id===selectedLink&&ends.length===2)node("line",{x1:ends[0].x,y1:ends[0].y,x2:ends[1].x,y2:ends[1].y,stroke:color,"stroke-width":2.5*lk,"stroke-dasharray":(8*lk)+" "+(6*lk)},linkEl);
    for(const e of ends){
@@ -509,29 +576,33 @@ function renderLinks(){
    const what=document.createElement("span");what.className="what";what.textContent=l.label||l.id;
    const name=m=>m?(m.label||m.id):"（已刪除）";
    const endsText=document.createElement("span");endsText.className="ends";endsText.textContent="左 "+name(a)+" ↔ 右 "+name(b);
-   const chip=document.createElement("span");chip.className="chip"+(ask?" ask":"");
-   chip.textContent=l.review==="confirmed"?"你已確認":l.review==="rejected"?"你已否決":ask?"信心低 · 待你確認":CONFIDENCE_TEXT[l.confidence];
-   li.append(num,what,endsText,chip);
-   if(!l.review){
-     for(const [verdict,text] of [["confirmed","確認"],["rejected","否決"]]){
-       const btn=document.createElement("button");btn.dataset.review=verdict;btn.textContent=text;li.append(btn);
-     }
-   }
+   li.append(num,what,endsText,claimChip(l,"chip"));
+   if(l.previouslyRejected)li.append(el("span",{className:"chip",textContent:"曾被你否決，GPT 附了新證據"}));
+   reviewControls(li,l);
    if(l.note){const n=document.createElement("span");n.className="note";n.textContent=l.note;li.append(n);}
+   const ev=evidenceRow("link:"+l.id,l);if(ev)li.append(ev);
    linksEl.append(li);
  });
 }
+function evidenceClick(e,lookup){
+ const b=e.target.closest("button[data-evidence]");if(!b)return false;
+ const [owner,i]=[b.dataset.evidence.slice(0,b.dataset.evidence.lastIndexOf("|")),Number(b.dataset.evidence.split("|").pop())];
+ const ev=cleanEvidence(lookup(owner)?.evidence)[i];if(ev?.region)showEvidence(b.dataset.evidence,ev);
+ return true;
+}
 linksEl.addEventListener("click",async e=>{
- const li=e.target.closest("li");if(!li)return;
+ const li=e.target.closest("li");if(!li||e.target.closest("input"))return;
+ if(evidenceClick(e,owner=>links.find(l=>"link:"+l.id===owner)))return;
  const id=li.dataset.link,verdict=e.target.closest("button")?.dataset.review;
  if(!verdict){selectedLink=selectedLink===id?null:id;render();return;}
  if(!ready)return;
+ const reason=verdict==="rejected"?li.querySelector("input.reason")?.value.trim().slice(0,200):"";
  try{
-   const result=await request("tools/call",{name:"review_visual_link",arguments:{imageId,pairImageId:pair.imageId,linkId:id,review:verdict}});
+   const result=await request("tools/call",{name:"review_visual_link",arguments:{imageId,pairImageId:pair.imageId,linkId:id,review:verdict,...(reason?{reason}:{})}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
    const link=cleanLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
    links=links.map(l=>l.id===id?link:l);
-   unsentReviews=[...unsentReviews.filter(r=>r.id!==id),link];
+   unsentReviews=[...unsentReviews.filter(r=>r.key!=="link:"+id),{key:"link:"+id,kind:"link",...link,verdict}];
    status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
  }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
  render();
@@ -551,10 +622,35 @@ function renderFindings(){
    who.textContent=(pair?(m.side==="right"?"右 ":"左 "):"")+(m.label||(item.author==="AI"?"GPT":"YOU"));li.append(who);
    if(m.note){const t=document.createElement("span");t.className="note";t.textContent=m.note;li.append(t);}
    if(STATUS_TEXT[m.status]){const b=document.createElement("span");b.className="badge";b.textContent=STATUS_TEXT[m.status];li.append(b);}
+   if(m.note&&item.mark.id){
+     li.append(claimChip(m,"badge"));
+     if(m.previouslyRejected)li.append(el("span",{className:"badge",textContent:"曾被你否決，GPT 附了新證據"}));
+     reviewControls(li,m);
+     const ev=evidenceRow("mark:"+m.id,m);if(ev)li.append(ev);
+   }
    findingsEl.append(li);
  }
 }
-findingsEl.addEventListener("click",e=>{const li=e.target.closest("li");if(!li)return;selectedFocusId=li.dataset.key;viewMode="zoom";render()});
+const markById=id=>[...assistantMarks,...priorUserMarks,...userMarks].find(m=>m.id===id);
+findingsEl.addEventListener("click",async e=>{
+ const li=e.target.closest("li");if(!li||e.target.closest("input"))return;
+ if(evidenceClick(e,owner=>markById(owner.slice(5))))return;
+ const verdict=e.target.closest("button")?.dataset.review;
+ if(!verdict){selectedFocusId=li.dataset.key;viewMode="zoom";render();return;}
+ const m=markOptions().find(o=>o.key===li.dataset.key)?.mark;if(!m||!ready)return;
+ const reason=verdict==="rejected"?li.querySelector("input.reason")?.value.trim().slice(0,200):"";
+ try{
+   const onImage=pair&&m.side==="right"?pair.imageId:imageId;
+   const result=await request("tools/call",{name:"review_visual_finding",arguments:{imageId:onImage,markId:m.id,review:verdict,...(reason?{reason}:{})}});
+   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   const back=result?.structuredContent?.mark;if(!back||back.id!==m.id)throw Error("Unexpected response");
+   delete m.review;delete m.reviewReason;
+   if(back.review)m.review=back.review;if(back.reviewReason)m.reviewReason=back.reviewReason;
+   unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:m.id,label:m.label,note:m.note,side:m.side,verdict,reason}];
+   status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
+ }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
+ render();
+});
 function refreshFocus(){
  const marks=markOptions(),previous=selectedFocusId;focusChoice.replaceChildren();
  for(const item of marks){
@@ -636,7 +732,7 @@ function render(){
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
  exportImageBtn.hidden=!!pair||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!pair||!(imageId&&exportLinks?.marks);
- renderLayers();renderLinks();renderFindings();
+ renderLayers();renderLinks();renderFindings();renderEvidenceBox();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -661,7 +757,7 @@ function applyInput(args){
  if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;unsentReviews=[];unsentEdits=[];selected=null;renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    if(pid){
@@ -694,7 +790,7 @@ function applyResult(result){
  applyInput({...r,annotations:full??r.annotations??[]});
  exportLinks=r.exports??exportLinks;
  if(Array.isArray(r.layers))setLayers(r.layers);
- if(pair){links=cleanLinks(r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;}
+ if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;}
  if(imageId){
    photo=dataUrl(meta["estampes/image"])??photo;
    const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
@@ -1130,10 +1226,14 @@ window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 // The user's verdicts on GPT's links, as text GPT reads in the chat.
+const VERDICT_ZH={link:{confirmed:"確認是同一個",rejected:"否決，不是同一個",unreviewed:"撤回我先前的判斷"},
+ note:{confirmed:"確認你的說明正確",rejected:"否決你的說明",unreviewed:"撤回我先前的判斷"}};
 function reviewMessage(list){
- return "我在 Estampes 左右對照畫布審核了你的連結（左 "+imageId+"，右 "+pair?.imageId+"）：\n"+
-   list.map(l=>"- "+(l.label||l.id)+"（左 "+l.left+" ↔ 右 "+l.right+"）："+(l.review==="confirmed"?"確認是同一個":"否決，不是同一個")).join("\n")+
-   "\n請以我的判斷為準，之後的推理不要再依賴被否決的連結。";
+ return "我在 Estampes 畫布上審核了你的說法（"+imageId+(pair?" ＋ 右 "+pair.imageId:"")+"）：\n"+
+   list.map(r=>"- "+(r.kind==="link"?"連結 "+(r.label||r.id)+"（左 "+r.left+" ↔ 右 "+r.right+"）":
+     (pair?(r.side==="right"?"右圖 ":"左圖 "):"")+"標記 "+(r.label||r.id)+" 的說明「"+r.note+"」")+"："+VERDICT_ZH[r.kind][r.verdict]+
+     (r.verdict==="rejected"&&(r.reason||r.reviewReason)?"，理由："+(r.reason||r.reviewReason):"")).join("\n")+
+   "\n請以我的判斷為準：被否決的說法不要再依賴，也不要在沒有新證據時重提；未確認的只是候選。";
 }
 // The user's hand edits (layers, moved or deleted marks) as chat text. The
 // server also tells GPT on its next call; this makes it visible right away.

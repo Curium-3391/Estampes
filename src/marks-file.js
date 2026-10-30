@@ -3,7 +3,7 @@
 // marks travel as JSON inside <metadata>; nothing else in the file is read
 // back, so an edited drawing never turns into unvalidated marks.
 import { markSvg } from "./mark-render.js";
-import { VISUAL_PROTOCOL, marksFromDocument } from "./protocol.js";
+import { READABLE_PROTOCOLS, marksFromDocument } from "./protocol.js";
 
 export const MARKS_FORMAT = "estampes-marks";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -42,7 +42,7 @@ ${groups}
 `;
 }
 
-// Accepts the exported SVG, its bare JSON, or an estampes.visual/1 document
+// Accepts the exported SVG, its bare JSON, or an estampes.visual/1 or /2 document
 // (get_visual_state, /api/v1/canvas). Returns the untrusted payload; the
 // caller validates every mark. `image` picks the matching image of a pair.
 export function parseMarksFile(bytes, image = {}) {
@@ -53,7 +53,7 @@ export function parseMarksFile(bytes, image = {}) {
   if (!json) throw new Error("Not an Estampes marks file (no estampes-marks metadata)");
   let data;
   try { data = JSON.parse(json); } catch { throw new Error("Estampes marks metadata is not valid JSON"); }
-  if (data?.protocol === VISUAL_PROTOCOL) data = { format: MARKS_FORMAT, ...marksFromDocument(data, image) };
+  if (READABLE_PROTOCOLS.includes(data?.protocol)) data = { format: MARKS_FORMAT, ...marksFromDocument(data, image) };
   if (data?.format !== MARKS_FORMAT || !Array.isArray(data.marks)) throw new Error("Not an Estampes marks file");
   if (data.marks.length > 60) throw new Error("Marks file has more than 60 marks");
   return { imageId: data.imageId, width: Number(data.width), height: Number(data.height), marks: data.marks,

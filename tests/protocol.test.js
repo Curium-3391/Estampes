@@ -24,7 +24,7 @@ test("one image: layers, marks with provenance, style and findings, nothing host
   assert.deepEqual(doc.layers.map((l) => [l.id, l.order, l.locked, l.opacity]), [["L1", 0, true, 0.5], ["L2", 1, undefined, undefined]]);
   const [g, path, user] = doc.marks;
   assert.deepEqual(g, { id: "g", image: entry.imageId, type: "rect", geometry: { x: 0.1, y: 0.2, x2: 0.2, y2: 0.4 }, layer: "L1",
-    style: { color: "red" }, finding: { note: "讀到的字", status: "inspected" }, provenance: { author: "assistant", grounding: "unverified" } });
+    style: { color: "red" }, finding: { note: "讀到的字", status: "inspected", verification: { state: "unverified" } }, provenance: { author: "assistant", grounding: "unverified" } });
   assert.deepEqual(path.geometry.bbox, [0.1, 0.7, 0.9, 0.9]);
   assert.equal(path.geometry.smooth, true);
   assert.deepEqual(user.provenance, { author: "user", grounding: "user-pointer", editedByUser: true });
@@ -40,7 +40,7 @@ test("a pair: links point from one image's mark to the other's, with review", as
   assert.deepEqual(doc.images.map((i) => i.role), ["left", "right"]);
   assert.deepEqual(doc.marks.map((m) => [m.id, m.image]), [["a", left.imageId], ["b", right.imageId]]);
   assert.deepEqual(doc.links, [{ id: "k", from: { image: left.imageId, mark: "a" }, to: { image: right.imageId, mark: "b" },
-    label: "同一個", confidence: "low", author: "assistant" }]);
+    label: "同一個", confidence: "low", verification: { state: "unverified" }, author: "assistant" }]);
 });
 
 test("a protocol document attached as a marks file restores the matching image's marks", async () => {
@@ -53,5 +53,5 @@ test("a protocol document attached as a marks file restores the matching image's
   const fresh = await image(600, 800, "#0a1");
   importMarks(fresh, parsed.marks, { layers: parsed.layers, replayUser: replayUserAnnotation, resolve });
   assert.deepEqual(canvasMarks(fresh).map((m) => [m.id, m.type, m.points?.length]), [["p", "polyline", 2]]);
-  assert.throws(() => parseMarksFile(Buffer.from(JSON.stringify({ protocol: VISUAL_PROTOCOL, images: [] })), {}), /Not an estampes.visual\/1 document|no images/);
+  assert.throws(() => parseMarksFile(Buffer.from(JSON.stringify({ protocol: VISUAL_PROTOCOL, images: [] })), {}), /Not an estampes.visual\/1 or estampes.visual\/2 document|no images/);
 });

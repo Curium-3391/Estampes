@@ -1,7 +1,7 @@
 // Optional disk storage (ESTAMPES_STORAGE_DIR). Each image gets a folder:
 //   images/<hash>/source       the bytes exactly as received
 //   images/<hash>/meta.json    where it came from, original size
-//   images/<hash>/canvas.json  marks, layers and links (rewritten atomically)
+//   images/<hash>/canvas.json  marks, layers, links and rejected claims (rewritten atomically)
 //   images/<hash>/marks.svg    the same canvas as a layered SVG
 //   images/<hash>/history.jsonl one line per change: when, which tool, ids
 // Memory stays the working copy; disk is what lets an image come back after
@@ -56,7 +56,8 @@ export function serializeCanvas(entry) {
   return {
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
-    ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}), savedAt: new Date().toISOString(),
+    ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
+    ...(entry.rejections?.length ? { rejections: entry.rejections } : {}), savedAt: new Date().toISOString(),
   };
 }
 
@@ -65,6 +66,7 @@ export function restoreCanvas(entry, data) {
   entry.marks = new Map((data.marks ?? []).filter((m) => m && typeof m.id === "string").map((m) => [m.id, m]));
   entry.layers = Array.isArray(data.layers) ? data.layers : [];
   entry.userEdits = Array.isArray(data.userEdits) ? data.userEdits : [];
+  entry.rejections = Array.isArray(data.rejections) ? data.rejections.filter((r) => r && typeof r.kind === "string" && r.from) : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => hexOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   return entry;

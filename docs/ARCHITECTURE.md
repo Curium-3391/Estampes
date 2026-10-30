@@ -38,7 +38,7 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 | `image-ops.js` | Pixel operations for `process_image` and `overlay_grid` (CLAHE, sharpen, denoise, threshold, edges, crop and zoom, grid) |
 | `canvas-state.js` | Per-image marks, layers (order, lock, opacity), paired-view links, user edits |
 | `mark-render.js`, `pixel-font.js` | Verification crops drawn with the marks at real ink width |
-| `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/1` document ([Visual protocol 1](PROTOCOL-V1.md)) |
+| `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/2` document ([Visual protocol 2](PROTOCOL-V2.md)) |
 | `storage.js` | Optional disk storage ([Deployment](DEPLOYMENT.md#what-is-stored)) |
 | `security.js`, `config.js` | Access key, signed export links, environment settings |
 | `tunnel.js` | Reads the temporary Cloudflare tunnel address for the docker compose `tunnel` profile |

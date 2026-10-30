@@ -3,6 +3,9 @@
 // instead of the model re-sending everything. State lasts as long as the
 // cached image (about an hour, in memory only).
 import { markFindings, MARK_STATUSES } from "./scene-catalog.js";
+import {
+  assessmentInput, markRegion, findRejection, bringsNewEvidence, rejectionOf, addRejection, dropRejections,
+} from "./assessment.js";
 
 const marksOf = (entry) => (entry.marks ??= new Map());
 
@@ -87,6 +90,35 @@ export function snapshotCanvas(entry) {
   return () => { entry.marks = marks; entry.layers = layers; };
 }
 
+// ---- Claims on marks ---------------------------------------------------------
+// A note on a mark is a claim. It carries the assistant's confidence, its
+// evidence and ambiguities, and the user's review (see assessment.js). A
+// changed note is a new claim: the old evidence and review do not carry
+// over. A note the user already rejected at the same place is refused
+// unless new evidence comes with it; refusals are reported, not thrown, so
+// the rest of the call still lands.
+const CLAIM_FIELDS = ["confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected"];
+export const claimOf = (m) => Object.fromEntries(CLAIM_FIELDS.filter((k) => m?.[k] !== undefined).map((k) => [k, m[k]]));
+const withoutClaim = (m) => { const c = { ...m }; for (const k of CLAIM_FIELDS) delete c[k]; return c; };
+
+function settleClaim(entry, old, mark, raw, { images, refused = [], where }) {
+  const assess = assessmentInput(raw, { observer: "model", images: images ?? { left: entry.imageId }, where: where + ".evidence" });
+  const base = withoutClaim(mark);
+  if (!base.note) return base;
+  if (old?.note === base.note) return { ...base, ...claimOf(old), ...assess };
+  const at = { image: entry.imageId, region: markRegion(base) };
+  const rejection = findRejection(entry.rejections, "note", { from: { ...at, text: base.note } }) ??
+    (base.label ? findRejection(entry.rejections, "note", { from: { ...at, text: base.label } }) : undefined);
+  if (rejection && !bringsNewEvidence(rejection, assess.evidence)) {
+    refused.push({ id: base.id, kind: "note", text: base.note, rejection });
+    // Keep whatever the mark said before; the refused wording never lands.
+    if (old?.note) return { ...base, note: old.note, ...claimOf(old) };
+    delete base.note;
+    return base;
+  }
+  return { ...base, ...assess, ...(rejection ? { previouslyRejected: { at: rejection.at, ...(rejection.reason ? { reason: rejection.reason } : {}) } } : {}) };
+}
+
 const stageError = (stage, i, id, error) =>
   new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + (error?.message || error));
 
@@ -95,7 +127,7 @@ export function applyCanvasChanges(entry, changes) {
   try { return applyChanges(entry, changes); } catch (error) { restore(); throw error; }
 }
 
-function applyChanges(entry, { annotations = [], findings = [], remove = [], reset = false, priorUser = [], layer: layerName, frame, resolve }) {
+function applyChanges(entry, { annotations = [], findings = [], remove = [], reset = false, priorUser = [], layer: layerName, frame, resolve, images, refused }) {
   const state = marksOf(entry);
   // Reset keeps what the user locked.
   if (reset) {
@@ -125,7 +157,11 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     // Re-using an id edits that mark; its old note survives unless replaced.
     const old = state.get(mark.id);
     const into = old?.layer && !layerName ? old.layer : (layer ??= layerFor(entry, "assistant", layerName)).id;
-    state.set(mark.id, { ...(old ? markFindings(old) : {}), ...mark, layer: into });
+    let next;
+    try {
+      next = settleClaim(entry, old, { ...(old ? markFindings(old) : {}), ...mark, layer: into }, raw, { images, refused, where: "annotations[" + i + "]" });
+    } catch (error) { throw stageError("annotations", i, raw.id, error); }
+    state.set(mark.id, next);
     changed.push(mark.id);
   });
   findings.forEach((finding, i) => {
@@ -137,7 +173,9 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     const update = markFindings(finding);
     if (finding.note === "") delete mark.note;
     if (finding.status !== undefined && !MARK_STATUSES.includes(finding.status)) delete mark.status;
-    state.set(finding.id, { ...mark, ...update });
+    try {
+      state.set(finding.id, settleClaim(entry, stored, { ...mark, ...update }, finding, { images, refused, where: "findings[" + i + "]" }));
+    } catch (error) { throw stageError("findings", i, finding.id, error); }
     changed.push(finding.id);
   });
   return [...new Set(changed)];
@@ -268,7 +306,8 @@ const sideError = (stage, i, id, message) =>
 // Apply one paired present_visual call. Annotations carry side left|right;
 // findings and remove find their mark on either image. All or nothing.
 export function applyPairChanges(left, right, { annotations = [], findings = [], remove = [], reset = false,
-  priorUser = [], layer, frame, links = [], removeLinks = [], resolve }) {
+  priorUser = [], layer, frame, links = [], removeLinks = [], resolve, refused = [] }) {
+  const images = { left: left.imageId, right: right.imageId };
   const restoreLeft = snapshotCanvas(left), restoreRight = snapshotCanvas(right);
   const store = linksOf(left, right.imageId), savedLinks = new Map(store);
   try {
@@ -308,7 +347,7 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
     const changed = [];
     for (const side of ["left", "right"]) {
       changed.push(...applyChanges(entries[side], {
-        ...split[side], reset, layer, resolve,
+        ...split[side], reset, layer, resolve, images, refused,
         frame: frame && (frame.side ?? "left") === side ? frame : undefined,
       }));
     }
@@ -321,12 +360,30 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
       if (!marksOf(right).has(link.right)) throw new Error(where + "field right " + JSON.stringify(link.right) + " is not a mark on the right image");
       const old = store.get(link.id);
       const moved = old && (old.left !== link.left || old.right !== link.right);
-      // A user's review stays with the link unless GPT re-points it.
-      store.set(link.id, {
-        ...(old && !moved ? old : {}), ...link, author: "assistant",
-        confidence: LINK_CONFIDENCE.includes(link.confidence) ? link.confidence : old?.confidence ?? "medium",
-      });
-      if (moved) { delete store.get(link.id).review; }
+      const { evidence: _e, ambiguities: _a, confidence: _c, ...fields } = link;
+      let assess;
+      try { assess = assessmentInput(link, { observer: "model", images, where: "evidence" }); }
+      catch (error) { throw new Error(where + error.message); }
+      // A new or re-pointed link the user already rejected (same places on
+      // both images, whatever the ids) needs new evidence; otherwise it is
+      // left out and reported.
+      let previouslyRejected;
+      if (!old || moved) {
+        const lm = marksOf(left).get(link.left), rm = marksOf(right).get(link.right);
+        const rejection = findRejection(left.rejections, "link", {
+          from: { image: left.imageId, region: markRegion(lm) }, to: { image: right.imageId, region: markRegion(rm) },
+        });
+        if (rejection && !bringsNewEvidence(rejection, assess.evidence)) { refused.push({ id: link.id, kind: "link", rejection }); return; }
+        if (rejection) previouslyRejected = { at: rejection.at, ...(rejection.reason ? { reason: rejection.reason } : {}) };
+      }
+      // A user's review and the evidence stay with the link unless GPT re-points it.
+      const next = {
+        ...(old && !moved ? old : {}), ...fields, ...assess, author: "assistant",
+        confidence: assess.confidence ?? (moved ? undefined : old?.confidence) ?? "medium",
+        ...(previouslyRejected ? { previouslyRejected } : {}),
+      };
+      if (moved) { delete next.review; delete next.reviewReason; }
+      store.set(link.id, next);
     });
     return changed;
   } catch (error) {
@@ -336,12 +393,43 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
   }
 }
 
-// The user's verdict on one link, from the canvas.
-export function reviewLink(left, right, id, review) {
-  if (!LINK_REVIEW.includes(review)) throw new Error("review must be confirmed or rejected");
+// The user's verdict on one link, from the canvas. A rejection is also
+// remembered apart from the link (see assessment.js), so it outlives the
+// link and its marks; confirming or withdrawing the verdict forgets it.
+export const linkRef = (rightId, id) => "link:" + rightId + ":" + id;
+const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete c.reviewReason; return c; };
+
+export function reviewLink(left, right, id, review, reason) {
+  if (!LINK_REVIEW.includes(review) && review !== "unreviewed") throw new Error("review must be confirmed, rejected or unreviewed");
   const store = linksOf(left, right.imageId), link = store.get(id);
   if (!link) throw new Error("No link " + id + " between these images");
-  const next = { ...link, review };
+  const ref = linkRef(right.imageId, id);
+  dropRejections(left, ref);
+  const next = { ...clearReview(link), ...(review === "unreviewed" ? {} : { review }) };
+  if (review === "rejected") {
+    if (reason?.trim()) next.reviewReason = reason.trim().slice(0, 200);
+    const lm = marksOf(left).get(link.left), rm = marksOf(right).get(link.right);
+    const end = (entry, m) => ({ image: entry.imageId, region: markRegion(m), text: m.label || link.label || m.id });
+    addRejection(left, rejectionOf("link", link, { from: end(left, lm), to: end(right, rm), reason, ref }));
+  }
   store.set(id, next);
+  return next;
+}
+
+// The user's verdict on the note of one mark (the assistant's claim about
+// what is there), on either kind of canvas.
+export function reviewFinding(entry, id, review, reason) {
+  if (!LINK_REVIEW.includes(review) && review !== "unreviewed") throw new Error("review must be confirmed, rejected or unreviewed");
+  const state = marksOf(entry), mark = state.get(id);
+  if (!mark) throw new Error("No mark " + id + " on this image");
+  if (!mark.note) throw new Error("Mark " + id + " has no note to review");
+  const ref = "note:" + id;
+  dropRejections(entry, ref);
+  const next = { ...clearReview(mark), ...(review === "unreviewed" ? {} : { review }) };
+  if (review === "rejected") {
+    if (reason?.trim()) next.reviewReason = reason.trim().slice(0, 200);
+    addRejection(entry, rejectionOf("note", mark, { from: { image: entry.imageId, region: markRegion(mark), text: mark.note }, reason, ref }));
+  }
+  state.set(id, next);
   return next;
 }
