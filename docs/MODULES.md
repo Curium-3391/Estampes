@@ -153,7 +153,12 @@ A capability marked `"async": true` returns at once with a job id (`job_` plus 1
 
 A built-in module that finds where a photo of the sky points, using [Astrometry.net](https://nova.astrometry.net). It uploads the chosen image (marked private there) with the administrator's API key, polls until the solution is ready, then marks the named stars and objects on the canvas and returns the field's centre (RA/Dec in degrees), scale (arcsec per pixel), rotation, radius and parity. Optional hints (scale range, rough position) make solving faster. It reads the stored copy of the image, so storage must be on, and it takes JPEG or PNG.
 
-Setup (administrator): get an API key from your profile on nova.astrometry.net, then either run `echo "$KEY" | node scripts/estampes-module.js secret set org.estampes.astrometry api_key` or set `ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY`. Then enable the module in the Store; it needs the administrator's approval because it sends images to an external host.
+Setup (administrator):
+
+1. Get an API key from your profile on nova.astrometry.net.
+2. Store it where the server runs. With Docker: `echo "$KEY" | docker compose exec -T estampes node scripts/estampes-module.js secret set org.estampes.astrometry api_key`. Without Docker: the same command with `ESTAMPES_STORAGE_DIR=<your storage folder>` in front (after `npm install`). Or set the environment variable `ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY` for the server. `secret status org.estampes.astrometry` shows whether it is set.
+3. Enable the module in the Store; it needs the administrator's approval because it sends images to an external host.
+4. Give ChatGPT a night-sky photo and ask it to solve it. It starts a job, checks it with `get_module_job`, and when done the canvas shows the named objects. A failed job says why (no key set, key refused, no stored copy of the image, unsupported format, or Astrometry.net could not solve it).
 
 ## Roadmap
 

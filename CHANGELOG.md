@@ -5,6 +5,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 ## Unreleased
 
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
+- Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
 
 ## 0.17.0 — Scientific CAS (SymPy)
 
