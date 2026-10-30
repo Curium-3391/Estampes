@@ -147,7 +147,8 @@ function cleanSet(raw, where, warnings) {
     key: raw.key, imageId: raw.imageId, marks, layers, links: linkMap, linkCount: links,
     rejections: Array.isArray(raw.rejections) ? raw.rejections.filter((r) => r && typeof r.kind === "string" && r.from).slice(0, 200) : [],
     gestureDecisions: Array.isArray(raw.gestureDecisions) ? raw.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string").slice(0, 100) : [],
-    objects: raw.objects, derivedFrom: raw.derivedFrom && typeof raw.derivedFrom === "object" ? raw.derivedFrom : undefined, unsupported,
+    objects: Array.isArray(raw.objects) ? raw.objects.slice(0, 500) : undefined,
+    sceneRevision: Number.isInteger(raw.sceneRevision) ? raw.sceneRevision : undefined, objectSeq: Number.isInteger(raw.objectSeq) ? raw.objectSeq : undefined, derivedFrom: raw.derivedFrom && typeof raw.derivedFrom === "object" ? raw.derivedFrom : undefined, unsupported,
   };
 }
 
@@ -211,7 +212,7 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
     if (!image) throw new Error("Bundle set " + key + " refers to an image that is not in the bundle");
     const base = await ensureImage(image);
     const data = { imageId: image, marks: def.marks, layers: def.layers, rejections: def.rejections, gestureDecisions: def.gestureDecisions,
-      ...(def.objects !== undefined ? { objects: def.objects } : {}), links: {}, derivedFrom: def.derivedFrom };
+      ...(def.objects !== undefined ? { objects: def.objects, sceneRevision: def.sceneRevision, objectSeq: def.objectSeq } : {}), links: {}, derivedFrom: def.derivedFrom };
     const own = !key.includes("#");
     let target, how;
     if (own && fresh(base)) { restoreCanvas(base, data); target = base; how = "restored"; }

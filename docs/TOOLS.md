@@ -17,10 +17,18 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `import_workspace_bundle` | Open a `.estampes` file (attachment or public https URL) as a new workspace; checked, never overwrites. |
 | `get_workspace_state` | Read a workspace (or a single or paired canvas in the same shape) as one `estampes.workspace/1` document, with a check of its totals. Read-only. |
 | `load_image` | Load an image (`image` from the chat, or `imageUrl`) and get an `imageId` plus a preview. Use when GPT only needs to analyse; `present_visual` loads images too. |
-| `process_image` | Return a processed view of an image or a region of it. Operations, applied in order (max 8): `grayscale`, `normalize`, `clahe`, `contrast`, `brightness`, `sharpen`, `denoise`, `threshold` (adaptive, Otsu, fixed), `invert`, `edges`. `sampling` picks the analysis resolution (`preview` = old behaviour, zoom up to 8x by interpolation; `working`; `native` = pixels from the original file), `output` the delivered size and codec (PNG / lossless WebP / JPEG). Returns a `derivedViewId`, the coordinate mapping back to the image and caveats. See [Image pipeline](IMAGE-PIPELINE.md). |
+| `process_image` | Return a processed view of an image or a region of it. Operations, applied in order (max 8): `grayscale`, `normalize`, `clahe`, `contrast`, `brightness`, `sharpen`, `denoise`, `threshold` (adaptive, Otsu, fixed), `invert`, `edges`. `sampling` picks the analysis resolution (`preview` = old behaviour, zoom up to 8x by interpolation; `working`; `native` = pixels from the original file), `output` the delivered size and codec (PNG / lossless WebP / JPEG). `geometry` (rotate, flip, pad, deskew, perspective, mask) runs first; extra operators `gamma`, `levels`, `white_balance`, `channel`, `flat_field`, `morphology`, `canny`. Returns a `derivedViewId`, the coordinate mapping back to the image and caveats. See [Image pipeline](IMAGE-PIPELINE.md). |
 | `get_derived_view` | Render a processed view again from its `derivedViewId` (recipes survive restarts with storage), optionally at another size or codec. |
 | `inspect_image` | Describe a loaded image without pixels: source format, size before and after EXIF orientation, colour space, bit depth, alpha, ICC profile, SHA-256 source asset id, working-copy size, coordinate spaces and their matrices, processed views so far. |
+| `register_images` | Align image B onto image A: `auto` (corner features, RANSAC) or `landmarks` (point pairs), optional `mirror`. Reports status with reasons, inliers, error, coverage and residuals per area; optional `mapPoints`. See [Image pipeline](IMAGE-PIPELINE.md#registration-and-comparison). |
+| `compare_images` | Overlay, difference, checkerboard or match lines of a registration, with overlap, SSIM and PSNR. |
+| `assess_image` | Sharpness, noise, contrast, clipping, colour cast, histogram, line tilt, with advice; optional clipping map. |
+| `calibrate_scale`, `measure_image` | Set a known length in the image or a processed view, then measure distance, path, area or angle with uncertainty. |
 | `overlay_grid` | Draw a labelled grid (rows A, B, C… × columns 1, 2, 3…, 2–12 each) over an image or region and return each cell's centre in source coordinates. |
+| `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
+| `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
+| `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. |
+| `prepare_module_change` | Prepare enabling, disabling or (later) installing a module. Changes nothing: the user approves it in the Store. |
 
 Mark types: `point`, `rect`, `arrow` (when GPT draws one, the head is the target) and `polyline` (up to 128 vertices, optionally `smooth` or `closed`). Coordinates are normalized to the full image with the origin at the top left; `coordinateFrame` lets GPT pass coordinates read off a processed view (`derivedViewId`, exact for any crop or zoom; or the older `region` form) and have Estampes convert them. Colour, size and pen (pen or translucent highlighter) are chosen by GPT.
 
@@ -37,6 +45,9 @@ These are hidden from the model (`visibility: ["app"]`).
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
+| `store_get_catalog`, `store_get_detail`, `store_get_activity` | Read the module catalog, one module's details and the recent module activity for the Store widget. |
+| `store_get_plan`, `store_commit_plan` | Prepare a change from a Store button, and apply it after the user confirms. Committing needs the plan's consent token, which only the widget receives. |
+| `edit_scene_object` | Applies your own edit to a module's object from the canvas (for example a new formula for a plot), or deletes it. No module code runs. |
 | `record_number_line_selection` | Validates a selection in the number-line demo. |
 
 ## What your marks mean

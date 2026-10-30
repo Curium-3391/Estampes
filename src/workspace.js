@@ -27,6 +27,7 @@ import { canvasMarks, canvasLayers, setKeyOf, workspaceLinks, linksOf, pairLinks
 import {
   ensureImage, saveCanvas, readSet, readMeta, restoreCanvas, saveWorkspaceFile, readWorkspaceFile, workspaceHistory, listWorkspaceFiles, SET_ID,
 } from "./storage.js";
+import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 import { protocolMark } from "./protocol.js";
 import { verificationOf } from "./assessment.js";
 
@@ -96,7 +97,10 @@ function copySet(entry) {
   fork.layers = clone(entry.layers ?? []);
   fork.rejections = clone(entry.rejections ?? []);
   fork.gestureDecisions = clone(entry.gestureDecisions ?? []);
-  if (entry.objects !== undefined) fork.objects = clone(entry.objects);
+  if (entry.objects?.size) {
+    restoreObjects(fork, clone(serializeObjects(entry)));
+    fork.sceneRevision = entry.sceneRevision ?? 0; fork.objectSeq = entry.objectSeq ?? 0;
+  }
   fork.derivedFrom = { set: from, at: now() };
   forks.set(fork.setKey, fork);
   return fork;
@@ -558,7 +562,7 @@ export async function workspaceDocument(doc, { history = 0 } = {}) {
       key: item.set, asset: entry.imageId, derivedFrom: entry.derivedFrom,
       layers: canvasLayers(entry).map((l, order) => defined({ id: l.id, author: l.author, name: l.name, order, count: l.count, locked: l.locked ? true : undefined, opacity: l.opacity })),
       marks: canvasMarks(entry).map((m) => defined({ ...protocolMark(m, entry.imageId), derivedFrom: m.derivedFrom })),
-      rejections: listOrNone(entry.rejections), objects: entry.objects,
+      rejections: listOrNone(entry.rejections), objects: entry.objects?.size ? serializeObjects(entry) : undefined,
     }));
   }
   const links = workspaceLinks(items).map((l) => defined({

@@ -33,6 +33,16 @@ function layerFor(entry, author, name) {
   return (name && layersOf(entry).find((l) => l.author === author && l.name === name)) || newLayer(entry, author, name);
 }
 
+// Objects a module adds go into a layer of their own, named after the
+// module (or what the caller asked for); the same name re-uses the layer.
+export function moduleLayer(entry, name, module) {
+  const found = layersOf(entry).find((l) => l.author === "assistant" && l.name === name && (l.module ?? null) === (module ?? null));
+  if (found) return found;
+  const layer = newLayer(entry, "assistant", name);
+  if (module) layer.module = module;
+  return layer;
+}
+
 // A layer can be renamed, reordered, locked and faded by the user. Locked
 // means nobody (user or GPT) moves, restyles or deletes its marks; notes
 // (findings) can still be attached. Opacity only changes how it is drawn.
@@ -47,6 +57,8 @@ const lockedText = (entry, mark) => {
 export function canvasLayers(entry) {
   const counts = new Map();
   for (const m of marksOf(entry).values()) if (m.layer) counts.set(m.layer, (counts.get(m.layer) ?? 0) + 1);
+  // Scene objects (scene/scene-ops.js) live in layers too.
+  for (const o of entry.objects?.values() ?? []) if (o.layer) counts.set(o.layer, (counts.get(o.layer) ?? 0) + 1);
   return layersOf(entry).filter((l) => counts.has(l.id)).map((l) => ({ ...l, count: counts.get(l.id) }));
 }
 
@@ -133,10 +145,12 @@ export function applyCanvasChanges(entry, changes) {
 
 function applyChanges(entry, { annotations = [], findings = [], remove = [], reset = false, priorUser = [], layer: layerName, frame, resolve, images, refused }) {
   const state = marksOf(entry);
-  // Reset keeps what the user locked.
+  // Reset keeps what the user locked, and the layers of module objects
+  // (marks are cleared; objects are changed through scene operations).
   if (reset) {
     for (const [id, m] of state) if (!markLocked(entry, m)) state.delete(id);
-    entry.layers = layersOf(entry).filter((l) => l.locked);
+    const objectLayers = new Set([...(entry.objects?.values() ?? [])].map((o) => o.layer));
+    entry.layers = layersOf(entry).filter((l) => l.locked || objectLayers.has(l.id));
   }
   remove.forEach((id, i) => {
     if (markLocked(entry, state.get(id))) throw stageError("remove", i, id, "mark " + lockedText(entry, state.get(id)));

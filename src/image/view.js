@@ -16,6 +16,8 @@ import {
   applyOp, rawImage, fromRaw, regionToPixels, pixelsToRegion, OUTPUT_LONG_SIDE, MAX_UPSCALE,
 } from "../image-ops.js";
 import { scale, translate, chain, step, graphSummary } from "./transform.js";
+import { geometryStage as defaultGeometry } from "./geometry.js";
+import { applyExtraOp } from "./ops-extra.js";
 
 export const VIEW_API = "estampes.image/2";
 export const SAMPLING_MODES = Object.freeze(["preview", "working", "native"]);
@@ -25,8 +27,11 @@ export const MAX_DELIVERY_SIDE = 2048;
 // Bumped when an operator's output changes, so a recipe id never silently
 // refers to different pixels.
 export const OP_VERSIONS = Object.freeze({
-  grayscale: "1", normalize: "1", clahe: "js-1", contrast: "1", brightness: "1", sharpen: "1",
-  denoise: "median-1", threshold: "1", invert: "1", edges: "sobel-1",
+  // "2": grey inputs stay one channel (before 0.9.0 sharp returned them as
+  // sRGB, and the adaptive threshold read its local mean from that copy).
+  grayscale: "1", normalize: "2", clahe: "js-1", contrast: "2", brightness: "2", sharpen: "2",
+  denoise: "median-2", threshold: "2", invert: "2", edges: "sobel-1",
+  gamma: "1", levels: "1", white_balance: "1", channel: "1", flat_field: "1", morphology: "1", canny: "1",
 });
 export const opVersion = (op) => OP_VERSIONS[op] ?? "1";
 const ENHANCING = new Set(["normalize", "clahe", "contrast", "brightness", "sharpen", "denoise", "gamma", "levels", "white_balance", "flat_field", "unsharp"]);
@@ -101,6 +106,16 @@ async function analysisCrop(entry, region, sampling, output) {
   return { img, covered, space: "working", box: norm, boxSize: { width: entry.width, height: entry.height }, scaleX: width / norm.width, scaleY: height / norm.height, warnings };
 }
 
+// The analysis pixels alone (no ops, no delivery): for measurements.
+export async function analysisFor(entry, rawSpec) {
+  const spec = normalizeSpec(rawSpec);
+  const crop = await analysisCrop(entry, spec.region, spec.sampling, spec.output);
+  const srcW = entry.sourceInfo?.width ?? entry.width;
+  const perWorking = srcW / entry.width;
+  const srcPerPx = crop.space === "source" ? 1 / crop.scaleX : perWorking / crop.scaleX;
+  return { analysisPixels: { img: crop.img, region: crop.covered, space: crop.space, srcPerPx: Number(srcPerPx.toFixed(4)), warnings: crop.warnings } };
+}
+
 async function encodeView(img, output) {
   const fmt = output.format;
   if (fmt === "png" || (fmt === "auto" && img.channels === 1)) {
@@ -116,7 +131,7 @@ async function encodeView(img, output) {
 // Render a view. `geometryStage` (optional) is a function provided by the
 // geometry module that warps the analysis crop and returns extra transform
 // steps; it runs before pixel ops so ops see rectified pixels.
-export async function renderView(entry, rawSpec, { geometryStage } = {}) {
+export async function renderView(entry, rawSpec, { geometryStage = defaultGeometry } = {}) {
   const spec = normalizeSpec(rawSpec);
   const crop = await analysisCrop(entry, spec.region, spec.sampling, spec.output);
   const { covered, box, boxSize } = crop;
@@ -136,7 +151,7 @@ export async function renderView(entry, rawSpec, { geometryStage } = {}) {
     const g = await geometryStage(img, spec.geometry, { entry, steps });
     img = g.img; steps.push(...g.steps); warnings.push(...g.warnings); validity = g.validity;
   }
-  for (const s of spec.ops) img = await applyOp(img, s);
+  for (const s of spec.ops) img = (await applyExtraOp(img, s)) ?? (await applyOp(img, s));
   const binary = spec.ops.some((s) => BINARIZING.has(s.op));
   // Delivery: shrink to fit; enlarge only when asked (interpolation adds no detail).
   const long = Math.max(img.width, img.height);
@@ -147,7 +162,9 @@ export async function renderView(entry, rawSpec, { geometryStage } = {}) {
   if (k !== 1) {
     const width = Math.max(1, Math.round(img.width * k)), height = Math.max(1, Math.round(img.height * k));
     const kx = width / img.width, ky = height / img.height;
-    img = await rawImage(fromRaw(img).resize({ width, height, kernel: binary && k > 1 ? "nearest" : "lanczos3" }));
+    // sharp turns a resized one-channel image into sRGB; keep it grey.
+    const resized = fromRaw(img).resize({ width, height, kernel: binary && k > 1 ? "nearest" : "lanczos3" });
+    img = await rawImage(img.channels === 1 ? resized.extractChannel(0) : resized);
     steps.push(step("deliver", "analysis", "derived", scale(kx, ky), { interpolation: binary && k > 1 ? "nearest" : "lanczos3" }));
   }
   const encoded = await encodeView(img, spec.output);

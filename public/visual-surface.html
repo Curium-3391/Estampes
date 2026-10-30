@@ -40,6 +40,10 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #findings .badge{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid #8887;white-space:nowrap;color:GrayText}
 #findings .note{overflow-wrap:anywhere}
 #layers{display:grid;gap:4px;margin:8px 0 0;font-size:.84rem}
+#objects{display:grid;gap:6px;margin:8px 0 0;font-size:.84rem}#objects[hidden]{display:none}
+#objects .obj{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 8px;border:1px solid #8885;border-radius:9px}
+#objects .obj input{font:inherit;padding:4px 6px;border-radius:6px;border:1px solid #8887;background:Canvas;color:CanvasText;min-width:0}
+#objects .obj input.expr{flex:1 1 10em}#objects .obj input.num{width:5.5em}#objects .kind{color:GrayText;font-size:.78rem}
 #layers[hidden]{display:none}#layers .head{display:flex;gap:8px;align-items:center;color:GrayText;flex-wrap:wrap}
 #layers .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 8px;border:1px solid #8885;border-radius:9px}
 #layers .row.off .name{opacity:.5;text-decoration:line-through}#layers .row.locked{border-style:dashed}
@@ -122,13 +126,14 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 </div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
-<g id="scene"></g><g id="processed"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="gesture-outline"></g><g id="selection-outline"></g><g id="preview"></g>
+<g id="scene"></g><g id="processed"></g><g id="scene-objects"></g><g id="stored-annotations"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="gesture-outline"></g><g id="selection-outline"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
 <div id="selection" hidden role="group" aria-label="選取的標記"></div>
 <div id="layers" hidden role="group" aria-label="圖層：顯示、改名、排序、透明度、鎖定"></div>
+<div id="objects" hidden role="group" aria-label="模組建立的物件：可直接修改"></div>
 <ol id="links" aria-label="左右兩張圖的對應連結"></ol>
 <ol id="findings" aria-label="GPT 對各標記的說明"></ol>
 <ol id="gestures" aria-label="可能屬於同一個手勢的筆畫"></ol>
@@ -404,7 +409,7 @@ function setLayers(list){
 const el=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="dataset")Object.assign(e.dataset,v);else if(k in e)e[k]=v;else e.setAttribute(k,v);}e.append(...kids);return e;};
 function renderLayers(){
  const counts=new Map();
- for(const m of [...assistantMarks,...priorUserMarks,...userMarks])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
+ for(const m of [...assistantMarks,...priorUserMarks,...userMarks,...objects])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
  const list=layers.filter(l=>counts.has(l.id));
  layersEl.hidden=!imageId||!list.length;layersEl.replaceChildren();
  if(layersEl.hidden)return;
@@ -863,6 +868,94 @@ function renderView(){
    {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
  document.querySelector("#caption").textContent=(ws?"工作區「"+ws.name+"」· "+ws.items.length+" 張圖並排，不疊合":pair?"左 "+imageId+" ｜ 右 "+pair.imageId+" · 左右對照，不疊合":imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
 }
+// ---- Scene objects (function plots, axes, shapes from modules) -----------
+// The server's trusted renderer sends drawing primitives in 0..1 canvas
+// coordinates; widths and text sizes are canvas units (1000 = width).
+// Only paths, circles and text are drawn, colours must be #rrggbb and text
+// goes in as text, so an object can never inject markup.
+const objectsEl=document.querySelector("#scene-objects"),objectsPanel=document.querySelector("#objects");
+let objects=[],editingObject=null;
+const HEX=/^#[0-9a-fA-F]{6}$/,num=v=>typeof v==="number"&&Number.isFinite(v);
+const cleanObjects=list=>(Array.isArray(list)?list:[]).filter(o=>o&&/^o\d{1,6}$/.test(o.id)&&Array.isArray(o.primitives)).slice(0,200)
+ .map(o=>({id:o.id,type:String(o.type??"").slice(0,24),layer:typeof o.layer==="string"?o.layer:null,label:String(o.label??"").slice(0,64),
+   module:typeof o.module==="string"?o.module.slice(0,100):null,locked:o.locked===true,editable:o.editable&&typeof o.editable==="object"?o.editable:null,
+   primitives:o.primitives.slice(0,4000)}));
+function setObjects(list){objects=pair?[]:cleanObjects(list);}
+function renderObjects(){
+ objectsEl.replaceChildren();
+ if(!imageId||pair)return;
+ const X=x=>x*VW,Y=y=>y*VH,u=VW/1000;
+ for(const o of objects){
+   if(o.layer&&hiddenLayers.has(o.layer))continue;
+   const g=node("g",{"data-object":o.id,opacity:layerOf(o.layer)?.opacity??1},objectsEl);
+   for(const p of o.primitives){
+     if(p?.k==="path"&&Array.isArray(p.pts)&&p.pts.length>=2&&p.pts.length<=5000){
+       const pts=p.pts.filter(q=>Array.isArray(q)&&num(q[0])&&num(q[1]));if(pts.length<2)continue;
+       const d="M"+pts.map(q=>X(q[0]).toFixed(1)+" "+Y(q[1]).toFixed(1)).join("L")+(p.closed?"Z":"");
+       node("path",{d,fill:HEX.test(p.fill)?p.fill:"none","fill-opacity":HEX.test(p.fill)?.25:1,stroke:HEX.test(p.stroke)?p.stroke:"#888","stroke-width":(num(p.width)?Math.min(p.width,40):2)*u,
+         "stroke-linejoin":"round","stroke-linecap":"round",...(Array.isArray(p.dash)&&p.dash.every(num)?{"stroke-dasharray":p.dash.map(v=>v*u).join(" ")}:{}),...(num(p.opacity)?{opacity:p.opacity}:{})},g);
+     }else if(p?.k==="circle"&&num(p.x)&&num(p.y)&&num(p.r)){
+       node("circle",{cx:X(p.x),cy:Y(p.y),r:Math.min(p.r,2000)*u,fill:HEX.test(p.fill)?p.fill:"none",...(HEX.test(p.stroke)?{stroke:p.stroke,"stroke-width":(num(p.width)?p.width:1.5)*u}:{})},g);
+     }else if(p?.k==="text"&&num(p.x)&&num(p.y)&&typeof p.text==="string"){
+       const t=node("text",{x:X(p.x),y:Y(p.y),"font-size":(num(p.size)?Math.min(p.size,64):14)*u,fill:HEX.test(p.fill)?p.fill:"#222",
+         "text-anchor":["start","middle","end"].includes(p.anchor)?p.anchor:"start","dominant-baseline":{hanging:"hanging",middle:"central"}[p.baseline]??"auto",
+         ...(p.weight===700?{"font-weight":700}:{})},g);
+       t.textContent=p.text.slice(0,80);
+     }
+   }
+ }
+}
+const OBJECT_KIND={"function-plot":"函數","axes-2d":"座標軸",shape:"圖形"};
+const pair2=v=>Array.isArray(v)&&v.length===2&&v.every(num)?v:null;
+function renderObjectsPanel(){
+ const editable=objects.filter(o=>o.editable);
+ objectsPanel.hidden=!imageId||!!pair||!editable.length;objectsPanel.replaceChildren();
+ if(objectsPanel.hidden)return;
+ objectsPanel.append(el("div",{className:"kind",textContent:"模組物件（可直接修改，GPT 下一輪會看到）"}));
+ for(const o of editable){
+   const row=el("div",{className:"obj",dataset:{object:o.id}});
+   row.append(el("strong",{textContent:o.id}),el("span",{className:"kind",textContent:OBJECT_KIND[o.type]??o.type}));
+   const numIn=(v,label)=>el("input",{className:"num",type:"number",step:"any",value:num(v)?String(+v.toFixed(6)):"","aria-label":label,disabled:o.locked||!ready});
+   const fields={};
+   if(o.type==="function-plot"){
+     fields.expression=el("input",{className:"expr",value:String(o.editable.expression??""),maxLength:256,"aria-label":"算式 y =",disabled:o.locked||!ready});
+     const dom=pair2(o.editable.domain);fields.d0=numIn(dom?.[0],"x 起點");fields.d1=numIn(dom?.[1],"x 終點");
+     row.append("y =",fields.expression,"x：",fields.d0,"～",fields.d1);
+   }else if(o.type==="axes-2d"){
+     const xr=pair2(o.editable.xRange),yr=pair2(o.editable.yRange);
+     fields.x0=numIn(xr?.[0],"x 最小");fields.x1=numIn(xr?.[1],"x 最大");fields.y0=numIn(yr?.[0],"y 最小");fields.y1=numIn(yr?.[1],"y 最大");
+     row.append("x：",fields.x0,"～",fields.x1,"y：",fields.y0,"～",fields.y1);
+   }
+   const apply=el("button",{textContent:"套用",disabled:o.locked||!ready||editingObject===o.id});
+   const del=el("button",{textContent:"刪除",title:"刪除這個物件（座標軸會連同畫在上面的函數一起刪除）",disabled:o.locked||!ready||editingObject===o.id});
+   apply.addEventListener("click",()=>{
+     const val=i=>i&&i.value.trim()!==""?Number(i.value):null;
+     let props={};
+     if(o.type==="function-plot"){
+       props.expression=fields.expression.value.trim();
+       const a=val(fields.d0),b=val(fields.d1);if(a!==null&&b!==null)props.domain=[a,b];
+     }else{
+       const r=(a,b)=>a!==null&&b!==null?[a,b]:null;const xr=r(val(fields.x0),val(fields.x1)),yr=r(val(fields.y0),val(fields.y1));
+       if(xr)props.xRange=xr;if(yr)props.yRange=yr;
+     }
+     editObject(o.id,{props});
+   });
+   del.addEventListener("click",()=>editObject(o.id,{remove:true}));
+   row.append(apply,del);objectsPanel.append(row);
+ }
+}
+async function editObject(id,args){
+ if(!ready||!imageId)return;
+ editingObject=id;render();
+ try{
+   const result=await request("tools/call",{name:"edit_scene_object",arguments:{imageId,id,...args}});
+   const r=result?.structuredContent;
+   if(result?.isError||r?.kind!=="estampes.scene_objects")throw Error(r?.message||result?.content?.[0]?.text||"失敗");
+   setObjects(r.objects);if(Array.isArray(r.layers))setLayers(r.layers);
+   status.textContent=(args.remove?"已刪除 ":"已更新 ")+id+(r.notes?.length?"（"+r.notes.map(n=>n.note).join("；")+"）":"")+"。GPT 下一次讀取畫布時會看到。";
+ }catch(err){status.textContent="沒有套用："+String(err.message||err);}
+ finally{editingObject=null;render();}
+}
 function render(){
  hit.setAttribute("width",VW);hit.setAttribute("height",VH);
  if(imageId&&frames){
@@ -888,13 +981,13 @@ function render(){
      t.textContent="正在載入照片…";
    }
  }else sceneEl.innerHTML=SCENES[selectedScene];
- renderCanvasMarks();
+ renderObjects();renderCanvasMarks();
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
  undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
  exportImageBtn.hidden=!!frames||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!frames||!(imageId&&exportLinks?.marks);
- renderLayers();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
+ renderLayers();renderObjectsPanel();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
  refreshFocus();renderView();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
@@ -931,7 +1024,7 @@ function applyInput(args){
    if(ws){ws=null;frames=null;photo=null;}
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;renderViewTabs();}
+   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;objects=[];renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    if(pid){
@@ -965,6 +1058,7 @@ function applyResult(result){
  applyInput({...r,annotations:full??r.annotations??[]});
  exportLinks=r.exports??exportLinks;
  if(Array.isArray(r.layers))setLayers(r.layers);
+ if(Array.isArray(meta["estampes/objects"]))setObjects(meta["estampes/objects"]);
  if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;}
  if(ws){
    for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it)it.photo=dataUrl(px)??it.photo;}
@@ -1010,6 +1104,7 @@ async function syncCanvas(force=false){
    }else if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
    if(Array.isArray(r.layers))setLayers(r.layers);
    if(Array.isArray(r.gestureGroups))setGestures(r.gestureGroups);
+   if(Array.isArray(r.objects))setObjects(r.objects);
    const marks=Array.isArray(r.annotations)?r.annotations.filter(valid).slice(0,120).map(fromServer):[];
    const mine=new Set(userMarks.map(m=>m.id));
    assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);

@@ -35,11 +35,18 @@ import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
 import { intakeImage, ensureImage, saveCanvas, saveDerived, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
-import { renderView, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
-import { scale as scaleMatrix, roundMatrix } from "./src/image/transform.js";
+import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
+import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
+import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
+import { measureQuality, clippingMap } from "./src/image/quality.js";
+import { calibrate, measure, toSpacePixels, spaceToNormalized, defaultSigma, UNITS } from "./src/image/measure.js";
 import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
+import { createModuleHost } from "./src/modules/index.js";
+import { registerModuleTools } from "./src/modules/mcp-tools.js";
+import { createBlankCanvas } from "./src/scene/blank-canvas.js";
+import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 // package.json is the single source of truth for the release version.
@@ -62,15 +69,17 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
   readFileSync(join(ROOT, "public", file), "utf8").replaceAll("__ESTAMPES_VERSION__", VERSION);
+const STORE_URI = "ui://estampes/module-store-" + URI_TAG + ".html";
 const html = loadWidget("number-line.html");
+const storeHtml = loadWidget("module-store.html");
 const evidenceHtml = loadWidget("visual-evidence.html");
 const visualHtml = loadWidget("visual-surface.html");
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
@@ -232,6 +241,16 @@ function resolveFrame(frame, left, right) {
   if (!record) throw new Error("coordinateFrame.derivedViewId " + frame.derivedViewId + " is not a processed view of the " + (frame.side ?? "left") + " image; call process_image on that image first");
   return { ...frameFromView(record, frame.units), ...(frame.side ? { side: frame.side } : {}) };
 }
+// Registrations stay in memory (bounded) across requests: each MCP request
+// builds its own server object, so this lives at module level. The same
+// inputs rebuild the same id and result, so a lost one is one call away.
+const registrations = new Map();
+function remember(reg) {
+  registrations.delete(reg.registrationId);
+  registrations.set(reg.registrationId, reg);
+  while (registrations.size > 50) registrations.delete(registrations.keys().next().value);
+  return reg;
+}
 const SamplingSchema = z.object({
   mode: z.enum(SAMPLING_MODES).default("preview").describe("preview (default, the old behaviour: resize to the output size first, then process), working (process the cached working copy at its own resolution), native (process pixels cut from the original file, beyond the 4096 px working copy; best for small text and fine lines)"),
   allowUpscale: z.boolean().optional().describe("working/native: enlarge small crops to the output size AFTER processing (interpolated, no new detail). Default false"),
@@ -258,7 +277,27 @@ const OpSchema = z.discriminatedUnion("op", [
     offset: z.number().min(-50).max(50).optional() }).describe("Black/white; adaptive suits handwriting, book pages and uneven light"),
   z.object({ op: z.literal("invert") }),
   z.object({ op: z.literal("edges") }).describe("Sobel edge magnitude; good for traces and line art"),
+  z.object({ op: z.literal("gamma"), gamma: z.number().min(0.2).max(5).optional() }).describe("Exposure-like curve; above 1 lifts shadows without blowing highlights"),
+  z.object({ op: z.literal("levels"), low: z.number().min(0).max(49).optional(), high: z.number().min(51).max(100).optional(),
+    black: z.number().int().min(0).max(254).optional(), white: z.number().int().min(1).max(255).optional() }).describe("Percentile stretch (low/high percent) or fixed black/white points; robust to a few hot pixels"),
+  z.object({ op: z.literal("white_balance"), method: z.enum(["gray_world", "white_patch"]).optional(), percentile: z.number().min(50).max(100).optional() }).describe("Neutralize a colour cast from lighting"),
+  z.object({ op: z.literal("channel"), channel: z.enum(["red", "green", "blue", "hue", "saturation", "value", "lab_l", "lab_a", "lab_b"]) }).describe("One colour channel as grey; to separate silkscreen, copper, rust, ink colours"),
+  z.object({ op: z.literal("flat_field"), radius: z.number().min(2).max(500).optional() }).describe("Remove uneven illumination (vignetting, shadows across a page)"),
+  z.object({ op: z.literal("morphology"), operation: z.enum(["erode", "dilate", "open", "close"]), radius: z.number().int().min(1).max(20).optional(),
+    shape: z.enum(["square", "disk"]).optional() }).describe("Clean or join binary strokes; radius is in analysis pixels (see sourcePixelsPerOutputPixel)"),
+  z.object({ op: z.literal("canny"), sigma: z.number().min(0).max(5).optional(), low: z.number().min(0.01).max(1).optional(), high: z.number().min(0.01).max(1).optional() }).describe("Thin single-pixel edges with hysteresis; thresholds are fractions of the strongest gradient in the crop"),
 ]);
+const Pt01 = z.object({ x: z.number().finite(), y: z.number().finite() });
+const GeometrySchema = z.array(z.discriminatedUnion("op", [
+  z.object({ op: z.literal("rotate"), degrees: z.number().min(-360).max(360), fill: z.enum(["white", "black"]).optional() }).describe("Rotate clockwise; multiples of 90 are lossless"),
+  z.object({ op: z.literal("flip"), axis: z.enum(["horizontal", "vertical"]).optional() }).describe("Mirror (e.g. the back of a board)"),
+  z.object({ op: z.literal("pad"), px: z.number().int().min(1).max(500), fill: z.enum(["white", "black"]).optional() }),
+  z.object({ op: z.literal("deskew"), maxAngle: z.number().min(1).max(45).optional(), minConfidence: z.number().min(0).max(1).optional(), fill: z.enum(["white", "black"]).optional() }).describe("Straighten text lines or ruled lines; leaves the image alone when no clear direction is found"),
+  z.object({ op: z.literal("perspective"), corners: z.array(Pt01).length(4).describe("Four corners as 0..1 of the FULL image: top-left, top-right, bottom-right, bottom-left of the flat surface"),
+    width: z.number().int().min(2).max(8000).optional(), height: z.number().int().min(2).max(8000).optional(), aspect: z.number().positive().optional().describe("width/height of the real surface, if known"),
+    fill: z.enum(["white", "black"]).optional() }).describe("Rectify a tilted flat surface (page, board, screen) to a top-down view"),
+  z.object({ op: z.literal("mask"), polygon: z.array(Pt01).min(3).max(64).describe("0..1 of the FULL image"), fill: z.enum(["white", "black"]).optional() }).describe("Keep only the inside of a polygon so background does not disturb the result"),
+])).max(6);
 
 // What the widget needs to explain the verification image to the user.
 const CheckSummarySchema = z.object({
@@ -337,6 +376,13 @@ const EDIT_TEXT = {
   "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
+  "edit-object": (e) => "edited object " + e.id + (e.props ? " to " + JSON.stringify(e.props) : ""),
+  "remove-object": (e) => "deleted object " + e.id,
+};
+// Scene objects added by modules (function plots, axes, shapes).
+const objectsText = (entry) => {
+  const list = renderedObjects(entry);
+  return list.length ? ". Scene objects (from modules; change them with execute_module): " + JSON.stringify(list.map(compactObject)) : "";
 };
 const userEditsText = (edits) => edits.length
   ? ". USER EDITS since your last look (trust these over your memory): " + edits.map((e) => (e.side ? e.side + " image: " : "") + (EDIT_TEXT[e.kind]?.(e) ?? e.kind)).join("; ")
@@ -628,6 +674,7 @@ function makeServer() {
     label: z.string().min(1).max(24).describe("Short tab name, e.g. 增強對比 or 二值化"),
     ops: z.array(OpSchema).max(8).default([]),
     region: RegionSchema.optional(),
+    geometry: GeometrySchema.optional(),
     sampling: SamplingSchema.optional().describe("As in process_image; native shows real source pixels in the tab"),
   });
 
@@ -787,7 +834,7 @@ function makeServer() {
         const shown = await displayImage(entry);
         const rendered = [];
         for (const view of views) {
-          const { out: full, record } = await deliverView(entry, { region: view.region, ops: view.ops, sampling: view.sampling });
+          const { out: full, record } = await deliverView(entry, { region: view.region, ops: view.ops, geometry: view.geometry, sampling: view.sampling });
           const out = await compactForDisplay(full);
           rendered.push({ label: view.label, mimeType: out.mimeType, data: out.data.toString("base64"), region: out.region, derivedViewId: record.derivedViewId });
         }
@@ -801,7 +848,7 @@ function makeServer() {
             text: "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
               (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
               resolved.length + " marks (ids persist; edit by re-using an id; boxes rounded): " + JSON.stringify(resolved.map(compactMark)) +
-              (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + userEditsText(edits) +
+              (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + objectsText(entry) + userEditsText(edits) +
               (imported.length ? ". Restored from marks file: " + imported.join(", ") : "") +
               (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
               (resolved.some(m => m.note && needsReview(m)) ? ". Notes marked claim.verification unverified are your own claims: only the user (in the canvas) or a tool's evidence verifies them" : "") +
@@ -825,6 +872,7 @@ function makeServer() {
             "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
             "estampes/views": rendered,
             "estampes/annotations": resolved,
+            "estampes/objects": widgetObjects(entry),
           },
         });
       } catch (error) {
@@ -900,6 +948,7 @@ function makeServer() {
           : {
               width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
               gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
+              objects: widgetObjects(entry),
               image: pixels(await displayImage(entry)),
               views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
               ...(check ? { check: checkSummary(check) } : {}),
@@ -1804,6 +1853,7 @@ function makeServer() {
         imageId: ImageIdSchema,
         region: RegionSchema.optional(),
         ops: z.array(OpSchema).max(8).default([]),
+        geometry: GeometrySchema.optional().describe("Geometry steps applied first (rotate, flip, pad, deskew, perspective, mask); marks read off the result still map back through its derivedViewId"),
         sampling: SamplingSchema.optional(),
         output: OutputSpecSchema.optional(),
       }),
@@ -1818,9 +1868,9 @@ function makeServer() {
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
-    async ({ imageId, region, ops, sampling, output }) => {
+    async ({ imageId, region, ops, geometry, sampling, output }) => {
       try {
-        const { out, record } = await deliverView(await ensureImage(imageId), { region, ops, sampling, output });
+        const { out, record } = await deliverView(await ensureImage(imageId), { region, ops, geometry, sampling, output });
         return {
           content: [{ type: "text", text: viewText(imageId, out, record, ops) }, imageBlock(out)],
           structuredContent: {
@@ -1896,6 +1946,173 @@ function makeServer() {
     }
   );
 
+  // ---- Registration, comparison, quality and measurement (P1) ----------
+  const RegIdSchema = z.string().regex(/^reg:[0-9a-f]{16}$/);
+  const NormPoint = z.object({ x: Point01, y: Point01 });
+  const regSummary = ({ inlierPairs, landmarkResiduals, ...rest }) => ({ ...rest, ...(landmarkResiduals ? { landmarkResiduals } : {}) });
+
+  server.registerTool(
+    "register_images",
+    {
+      title: "Align one image to another",
+      description:
+        "Estimate how image B maps onto image A (a transform in normalized coordinates, both directions) and report how good it is. `method: auto` matches corner features (needs texture shared by both photos: the same board, page or scene); `method: landmarks` fits a transform from 2-4+ point pairs you or the user identified (`landmarks: [{a:{x,y}, b:{x,y}}]`, normalized to each image); use it when auto fails or the two images are different kinds (a schematic and a photo are NOT alignable by pixels). `mirror: true` aligns a flipped copy of B (front vs back of a board). Result: status ok/failed with reasons, inliers, inlier ratio, median and P95 error in pixels, conditioning, coverage and residuals per area of A; the returned `registrationId` feeds compare_images. A homography is exact only for flat subjects. Optional `mapPoints` maps points of A onto B (or B onto A with `direction: 'b-to-a'`). The alignment is a measurement aid; it creates no marks and does not say what anything is.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema.describe("Image A (the reference)"),
+        otherImageId: ImageIdSchema.describe("Image B (the one to align onto A)"),
+        method: z.enum(["auto", "landmarks"]).default("auto"),
+        landmarks: z.array(z.object({ a: NormPoint, b: NormPoint })).max(40).default([]),
+        model: z.enum(REGISTER_MODELS).default("homography").describe("similarity (2+ points), affine (3+), homography (4+, flat subjects)"),
+        mirror: z.boolean().default(false),
+        mapPoints: z.array(NormPoint).max(50).optional(),
+        direction: z.enum(["a-to-b", "b-to-a"]).default("a-to-b"),
+        includeMatches: z.boolean().default(true).describe("Return an image with the matched points drawn"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, otherImageId, method, landmarks, model, mirror, mapPoints, direction, includeMatches }) => {
+      try {
+        if (imageId === otherImageId) throw new Error("Pass two different images");
+        if (method === "landmarks" && !landmarks.length) throw new Error("method landmarks needs landmarks");
+        const a = await ensureImage(imageId), b = await ensureImage(otherImageId);
+        const reg = remember(await registerPair(a, b, { method, landmarks, model, mirror }));
+        const mapped = reg.status === "ok" && mapPoints
+          ? mapPoints.map((p) => { const m = direction === "a-to-b" ? reg.normalizedAtoB : reg.normalizedBtoA; const q = applyMatrix(m, p.x, p.y); return { from: p, to: { x: Number(q.x.toFixed(5)), y: Number(q.y.toFixed(5)) }, inside: q.x >= 0 && q.x <= 1 && q.y >= 0 && q.y <= 1 }; })
+          : undefined;
+        const content = [{ type: "text", text: "Registration " + reg.registrationId + " " + reg.status.toUpperCase() + " (" + model + (mirror ? ", mirrored" : "") + "): " +
+          (reg.quality ? reg.quality.inliers + "/" + reg.quality.correspondences + " inliers, median " + reg.quality.medianErrorPx + " px, P95 " + reg.quality.p95ErrorPx + " px, coverage " + Math.round(reg.quality.coverage * 100) + "%. " : "") +
+          (reg.reasons?.length ? "Why not: " + reg.reasons.join("; ") + ". " : "") + (reg.notes.length ? "Note: " + reg.notes.join("; ") + ". " : "") +
+          "Details in structuredContent; use compare_images to look at the alignment." }];
+        if (includeMatches && reg.status === "ok" && method === "auto") content.push(imageBlock(await compareView(a, b, reg, { mode: "matches" })));
+        return { content, structuredContent: { kind: "estampes.registration", ...regSummary(reg), ...(mapped ? { mappedPoints: mapped } : {}) } };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "compare_images",
+    {
+      title: "Compare two aligned images",
+      description: "Show image B warped onto image A using a registration: `overlay` (50% blend), `difference` (absolute grey difference), `checkerboard` (alternating tiles to check edges line up) or `matches`. Also returns overlap, mean difference, PSNR and SSIM over the area both images cover; lighting changes lower them without any misalignment, so read differences as 'look here', not as proof. Areas of A with no pixels from B are dimmed.",
+      inputSchema: z.object({
+        registrationId: RegIdSchema,
+        mode: z.enum(["overlay", "difference", "checkerboard", "matches"]).default("overlay"),
+        maxSide: z.number().int().min(256).max(1600).default(1024),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ registrationId, mode, maxSide }) => {
+      try {
+        const reg = registrations.get(registrationId);
+        if (!reg) throw new Error("Unknown registrationId " + registrationId + "; call register_images again (the same inputs give the same id)");
+        if (reg.status !== "ok") throw new Error("That registration failed (" + (reg.reasons ?? []).join("; ") + "); nothing to compare");
+        const a = await ensureImage(reg.a), b = await ensureImage(reg.b);
+        const out = await compareView(a, b, reg, { mode, side: maxSide });
+        return {
+          content: [{ type: "text", text: "Comparison " + mode + " of " + reg.b + " onto " + reg.a + " in A's frame, " + out.width + "x" + out.height + " px" +
+            (out.metrics ? ". Overlap " + Math.round((out.metrics.overlap ?? 0) * 100) + "%, mean difference " + out.metrics.meanAbsDiff + ", SSIM " + out.metrics.ssim + ", PSNR " + out.metrics.psnr : "") + "." }, imageBlock(out)],
+          structuredContent: { kind: "estampes.comparison", registrationId, mode, a: reg.a, b: reg.b, width: out.width, height: out.height, metrics: out.metrics },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "assess_image",
+    {
+      title: "Measure image quality",
+      description: "Measure what limits reading an image or a region before choosing filters: sharpness (Laplacian variance), noise sigma, contrast and dynamic range, clipped highlights and crushed shadows per channel, colour cast, a luminance histogram and the dominant line tilt, with plain advice. Values depend on the analysis resolution (stated), so compare only crops measured at the same scale. `clippingMap: true` also returns an image with clipped highlights red and crushed shadows blue.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        region: RegionSchema.optional(),
+        sampling: SamplingSchema.optional(),
+        clippingMap: z.boolean().default(false),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, region, sampling, clippingMap: wantMap }) => {
+      try {
+        const entry = await ensureImage(imageId);
+        // Measured on the analysis pixels, before any delivery resize.
+        const { analysisPixels } = await analysisFor(entry, { region, sampling: { mode: "working", ...sampling } });
+        const q = await measureQuality(analysisPixels.img);
+        const info = { kind: "estampes.image_quality", imageId, region: analysisPixels.region, analysis: { space: analysisPixels.space, width: analysisPixels.img.width, height: analysisPixels.img.height, sourcePixelsPerAnalysisPixel: analysisPixels.srcPerPx }, ...q };
+        const content = [{ type: "text", text: "Quality of " + imageId + " region " + JSON.stringify(analysisPixels.region) + " at " + analysisPixels.space + " resolution (" + info.analysis.width + "x" + info.analysis.height + "): sharpness " + q.metrics.sharpness.laplacianVariance + ", noise " + q.metrics.noise.sigma + ", dynamic range " + q.metrics.contrast.dynamicRange + ". " + (q.advice.length ? "Advice: " + q.advice.join("; ") + "." : "Nothing stands out.") }];
+        if (wantMap) content.push(imageBlock(await clippingMap(analysisPixels.img)));
+        return { content, structuredContent: info };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  const scaleKey = (derivedViewId) => derivedViewId ?? "image";
+  const spaceOf = (entry, derivedViewId) => {
+    if (!derivedViewId) return { kind: "image" };
+    const record = findView(entry, derivedViewId);
+    if (!record) throw new Error("Unknown derivedViewId " + derivedViewId + " for " + entry.imageId);
+    return { kind: "view", record };
+  };
+  const SpaceArgs = {
+    derivedViewId: DerivedViewIdSchema.optional().describe("Measure in this processed view's pixels (best: a perspective-rectified view of a flat surface, where distances are uniform). Omit for source-image pixels"),
+    units: z.enum(["normalized", "pixels"]).default("normalized").describe("normalized = 0..1 of the image (or of the view); pixels = pixels of the view, or oriented source pixels without derivedViewId"),
+  };
+  const perspectiveWarning = (space) => space.kind === "image" ? "measured in image pixels: on a tilted photo distances are not uniform; rectify with process_image geometry perspective and measure in that view for flat surfaces" : null;
+
+  server.registerTool(
+    "calibrate_scale",
+    {
+      title: "Set a real-world scale",
+      description: "Tell Estampes that the distance between two points is a known length (a ruler, a connector pitch, a printed dimension), so measure_image can report real units. The scale belongs to one measurement space: the source image, or one processed view (pass its derivedViewId). Stored with the image. Only valid for a flat surface at the same distance as the reference.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema, ...SpaceArgs,
+        points: z.array(NormPoint.extend({ x: z.number().finite(), y: z.number().finite() })).length(2),
+        length: z.number().positive(), unit: z.enum(UNITS.filter((u) => u !== "px")),
+        lengthUncertainty: z.number().min(0).optional().describe("Uncertainty of the stated length, same unit"),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ imageId, derivedViewId, units, points, length, unit, lengthUncertainty }) => {
+      try {
+        const entry = await ensureImage(imageId), space = spaceOf(entry, derivedViewId);
+        const px = toSpacePixels(entry, space, points, units);
+        const cal = calibrate({ points: px, length, unit, sigmaPx: defaultSigma(entry, space), lengthUncertainty });
+        (entry.calibrations ??= new Map()).set(scaleKey(derivedViewId), cal);
+        await saveDerived(entry);
+        return { content: [{ type: "text", text: "Scale set for " + (derivedViewId ?? "the source image") + ": " + length + " " + unit + " = " + cal.referencePx.toFixed(1) + " px (" + cal.unitsPerPixel.toPrecision(5) + " " + unit + "/px, ±" + (cal.relativeUncertainty * 100).toFixed(2) + "%)." + (perspectiveWarning(space) ? " Caution: " + perspectiveWarning(space) + "." : "") }],
+          structuredContent: { kind: "estampes.scale", imageId, derivedViewId: derivedViewId ?? null, ...cal } };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "measure_image",
+    {
+      title: "Measure distance, path, area or angle",
+      description: "Measure between points you read off an image or processed view: `distance` (2 points), `path` (polyline length), `area` (polygon) or `angle` (3 points: end, vertex, end). Without a calibrate_scale in the same space the answer is in pixels; real units are never guessed. Every value has an uncertainty from point precision (about one working pixel) and the scale. The result is a measurement, not a mark: draw it with present_visual if the user should see it.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema, ...SpaceArgs,
+        kind: z.enum(["distance", "path", "area", "angle"]),
+        points: z.array(z.object({ x: z.number().finite(), y: z.number().finite() })).min(2).max(128),
+        pointPrecisionPx: z.number().min(0.1).max(50).optional().describe("Your estimate of how well you placed the points, in pixels of the measurement space"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, derivedViewId, units, kind, points, pointPrecisionPx }) => {
+      try {
+        const entry = await ensureImage(imageId), space = spaceOf(entry, derivedViewId);
+        const px = toSpacePixels(entry, space, points, units);
+        const calibration = entry.calibrations?.get(scaleKey(derivedViewId)) ?? null;
+        const m = measure(kind, px, { calibration, sigmaPx: pointPrecisionPx ?? defaultSigma(entry, space) });
+        const warnings = [];
+        if (!calibration) warnings.push("no scale calibrated for this space; value is in pixels");
+        const w = perspectiveWarning(space); if (w && calibration) warnings.push(w);
+        return {
+          content: [{ type: "text", text: kind + ": " + m.value + " ±" + m.uncertainty + " " + m.unit + (warnings.length ? ". " + warnings.join("; ") : "") + "." }],
+          structuredContent: { kind: "estampes.measurement", imageId, derivedViewId: derivedViewId ?? null, ...m, calibrated: Boolean(calibration), points: spaceToNormalized(entry, space, px).map((p) => ({ x: Number(p.x.toFixed(5)), y: Number(p.y.toFixed(5)) })), warnings },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
   server.registerTool(
     "overlay_grid",
     {
@@ -1938,7 +2155,30 @@ function makeServer() {
     }
   );
 
+  // ---- Modules and the Store (src/modules) --------------------------------
+  registerModuleTools(server, {
+    host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
+    ensureImage, saveCanvas, canvasLayers,
+  });
+
   return server;
+}
+
+// What the canvas widget needs to show one image's canvas (the same shape
+// present_visual returns), for tools that change a canvas without drawing
+// marks themselves, such as execute_module.
+async function canvasPayload(entry) {
+  const shown = await displayImage(entry), marks = canvasMarks(entry), exports = exportLinks(entry.imageId);
+  return {
+    structuredContent: {
+      kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: entry.imageId, width: entry.width, height: entry.height,
+      views: [], marks: marks.map(compactMark), layers: canvasLayers(entry), coordinateSystem: "normalized-top-left", ...(exports ? { exports } : {}),
+    },
+    _meta: {
+      "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
+      "estampes/views": [], "estampes/annotations": marks, "estampes/objects": widgetObjects(entry),
+    },
+  };
 }
 
 // SDK 2.x handles 2026-07-28 server/discover and legacy initialize on the same
@@ -1954,6 +2194,8 @@ const port = config.port;
 // or, with ESTAMPES_REQUIRE_KEY=1 (Docker), from the storage folder, where
 // it is generated on first start. Set before the server listens.
 let ACCESS_KEY = "";
+// Created at startup, once storage is checked (see below).
+let moduleHost = null;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -2016,7 +2258,7 @@ const httpServer = createHttpServer((req, res) => {
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
       accessKeyRequired: Boolean(ACCESS_KEY),
-      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view"],
+      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view", "register_images", "compare_images", "assess_image", "calibrate_scale", "measure_image"],
       imageApi: VIEW_API,
       imageInput: ["openai-file-param", "https-url"],
       visualProtocol: VISUAL_PROTOCOL,
@@ -2210,6 +2452,10 @@ const storage = await storageHealth();
 const keyInfo = await resolveAccessKey({ configured: config.accessKey, require: config.requireKey, allowOpen: config.allowOpen,
   storageDir: storage.enabled && storage.writable ? config.storageDir : "" });
 ACCESS_KEY = keyInfo.key;
+moduleHost = await createModuleHost({
+  storageDir: storage.enabled && storage.writable ? config.storageDir : "", coreVersion: VERSION,
+  canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas },
+});
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
   log("warn", "[auth] generated an access key. Connect ChatGPT to https://<your host>/mcp?key=" + keyInfo.key +

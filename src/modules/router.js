@@ -1,0 +1,121 @@
+// execute_module: one fixed entry point for every module capability, so
+// enabling a module never changes the MCP tool list. The router checks
+// that the module is enabled, the capability exists, the grant covers it
+// and the input matches its schema; runs it in its runtime; then checks
+// the output and applies it as scene operations. A module only ever
+// returns data; the Core decides what lands on the canvas.
+import { z } from "zod";
+import { validateValue } from "./json-schema.js";
+import { capabilityPermissions, missingPermissions } from "./permissions.js";
+import { applySceneOps, renderedObjects, sceneRevision, SceneOpsError, VISIBILITY } from "../scene/scene-ops.js";
+import { localized } from "./manifest.js";
+
+export class ModuleError extends Error {
+  constructor(message, code = "invalid") { super(message); this.code = code; }
+}
+
+const OutputSchema = z.object({
+  operations: z.array(z.unknown()).max(64).default([]),
+  summary: z.string().max(300).optional(),
+  method: z.string().max(120).optional(),
+  // Free-form structured result for capabilities with target "none".
+  data: z.unknown().optional(),
+}).strict();
+
+// What a module sees of its target canvas: size, revision and (with
+// canvas.read) the public objects plus its own scratch objects.
+function canvasContext(entry, moduleId, granted) {
+  const base = { imageId: entry.imageId, width: entry.width, height: entry.height, revision: sceneRevision(entry) };
+  if (!granted.includes("canvas.read")) return base;
+  const objects = renderedObjects(entry)
+    .filter((r) => r.object.visibility === "public" || r.object.provenance?.module === moduleId)
+    .map((r) => ({ id: r.object.id, type: r.object.type, layer: r.object.layer, props: r.object.props, visibility: r.object.visibility,
+      label: r.object.label, source: r.object.provenance?.module ?? r.object.provenance?.author }));
+  const marks = [...(entry.marks?.values() ?? [])].slice(0, 200).map((m) => ({ id: m.id, type: m.type, author: m.author,
+    box: [m.x, m.y, m.x2 ?? m.x, m.y2 ?? m.y], ...(m.label ? { label: m.label } : {}) }));
+  return { ...base, objects, marks };
+}
+
+// canvases: { ensure(imageId), create(options), save(entry, history) }
+export function createRouter({ registry, audit, canvases, runtimes }) {
+  return {
+    async execute({ module: moduleId, capability: capId, params = {}, canvas: imageId, newCanvas, expectedRevision, visibility = "public", layer }) {
+      const started = Date.now();
+      const mod = registry.get(moduleId);
+      if (!mod) {
+        throw new ModuleError("no module " + JSON.stringify(moduleId) + "; known: " + registry.list().map((m) => m.manifest.id).join(", "), "not-found");
+      }
+      const { manifest, record } = mod;
+      if (record.state !== "enabled") {
+        throw new ModuleError(manifest.id + " is " + record.state + ". Only the user can enable it: call open_module_store (or prepare_module_change with action enable) so they can approve it in the Store", "disabled");
+      }
+      const cap = manifest.capabilities.find((c) => c.id === capId);
+      if (!cap) throw new ModuleError(manifest.id + " has no capability " + JSON.stringify(capId) + "; it has " + manifest.capabilities.map((c) => c.id).join(", "), "not-found");
+      const granted = record.granted ?? [];
+      const missing = missingPermissions(granted, capabilityPermissions(manifest, cap));
+      if (missing.length) throw new ModuleError(manifest.id + " was not granted " + missing.join(", ") + "; the user must approve it again in the Store", "permission");
+      if (!VISIBILITY.includes(visibility)) throw new ModuleError("visibility must be public or scratch");
+      let input;
+      try { input = validateValue(cap.inputSchema, params ?? {}, "params"); }
+      catch (error) { throw new ModuleError(error.message + ". Call get_module_capabilities for the exact schema", "input"); }
+
+      // Target canvas.
+      let entry = null, createdCanvas = false;
+      if (cap.target === "none") {
+        if (imageId || newCanvas) throw new ModuleError(capId + " does not work on a canvas; leave canvas and newCanvas out");
+      } else if (imageId) {
+        if (newCanvas) throw new ModuleError("give canvas or newCanvas, not both");
+        entry = await canvases.ensure(imageId);
+      } else if (cap.target === "canvas-or-new") {
+        entry = await canvases.create(newCanvas ?? {});
+        createdCanvas = true;
+      } else {
+        throw new ModuleError(capId + " needs a canvas: pass canvas (an imageId)", "input");
+      }
+      const seen = entry ? sceneRevision(entry) : null;
+      if (entry && expectedRevision !== undefined && expectedRevision !== seen) {
+        throw new ModuleError("the canvas changed since revision " + expectedRevision + " (now " + seen + "); read it again and retry", "conflict");
+      }
+
+      const runtime = runtimes[mod.runtime.kind];
+      if (!runtime) throw new ModuleError("runtime " + mod.runtime.kind + " is not available on this server", "runtime");
+      const ctx = {
+        module: { id: manifest.id, version: manifest.version },
+        capability: capId, permissions: granted, limits: manifest.limits ?? {},
+        canvas: entry ? canvasContext(entry, manifest.id, granted) : null,
+        entry: granted.includes("asset.read.selected") ? entry : null,
+      };
+      let output;
+      try {
+        const raw = await runtime.run(mod, capId, input, ctx);
+        const parsed = OutputSchema.safeParse(raw ?? {});
+        if (!parsed.success) throw new ModuleError("module output is not valid: " + parsed.error.issues[0].message + " at " + parsed.error.issues[0].path.join("."), "output");
+        output = parsed.data;
+      } catch (error) {
+        audit.record({ kind: "run.failed", module: manifest.id, capability: capId, canvas: entry?.imageId, ms: Date.now() - started, error: String(error?.message || error).slice(0, 300) });
+        throw error instanceof ModuleError ? error : new ModuleError(manifest.id + " " + capId + " failed: " + (error?.message || error), "run");
+      }
+
+      let scene = { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen };
+      if (output.operations.length) {
+        if (!entry) throw new ModuleError(capId + " returned scene operations but has no canvas", "output");
+        try {
+          scene = applySceneOps(entry, output.operations, {
+            author: "module", module: manifest.id, moduleVersion: manifest.version, capability: capId, method: output.method,
+            layerName: localized(manifest, "name"),
+          }, { expectedRevision: seen, visibility, layer });
+        } catch (error) {
+          audit.record({ kind: "run.rejected", module: manifest.id, capability: capId, canvas: entry.imageId, error: String(error?.message || error).slice(0, 300) });
+          if (error instanceof SceneOpsError) throw new ModuleError("the module's result was refused: " + error.message, error.code === "conflict" ? "conflict" : "output");
+          throw error;
+        }
+        await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
+          note: manifest.id + "/" + capId });
+      }
+      const ms = Date.now() - started;
+      audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,
+        created: scene.created.length, updated: scene.updated.length, deleted: scene.deleted.length, ms });
+      return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ms };
+    },
+  };
+}

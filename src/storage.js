@@ -18,6 +18,7 @@ import { config, log } from "./config.js";
 import { registerImage, getImage, hasImage, imageIdOf } from "./image-store.js";
 import { canvasMarks, canvasLayers, setKeyOf } from "./canvas-state.js";
 import { exportMarksSvg } from "./marks-file.js";
+import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 
 let root = config.storageDir;
 export const storageDir = () => root;
@@ -67,11 +68,11 @@ export function serializeCanvas(entry) {
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     ...(entry.setId ? { setId: entry.setId, ...(entry.derivedFrom ? { derivedFrom: entry.derivedFrom } : {}) } : {}),
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
-    // Objects other modules keep with a canvas pass through unchanged.
-    ...(entry.objects !== undefined ? { objects: entry.objects } : {}),
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
     ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
-    ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}), savedAt: new Date().toISOString(),
+    ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}),
+    ...(entry.objects?.size ? { objects: serializeObjects(entry), sceneRevision: entry.sceneRevision ?? 0, objectSeq: entry.objectSeq ?? 0 } : {}),
+    savedAt: new Date().toISOString(),
   };
 }
 
@@ -85,7 +86,9 @@ export function restoreCanvas(entry, data) {
     ? data.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string") : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => setKeyOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
-  if (data.objects !== undefined) entry.objects = data.objects;
+  restoreObjects(entry, data.objects);
+  entry.sceneRevision = Number.isInteger(data.sceneRevision) ? data.sceneRevision : 0;
+  entry.objectSeq = Number.isInteger(data.objectSeq) ? data.objectSeq : 0;
   if (data.derivedFrom) entry.derivedFrom = data.derivedFrom;
   return entry;
 }
@@ -199,6 +202,9 @@ export async function listWorkspaceFiles() {
 }
 
 function restoreDerived(entry, data) {
+  if (data?.calibrations && typeof data.calibrations === "object") {
+    entry.calibrations = new Map(Object.entries(data.calibrations).filter(([, c]) => c && Number.isFinite(c.unitsPerPixel)));
+  }
   if (!Array.isArray(data?.views)) return;
   entry.derivedViews = new Map(data.views.filter((v) => /^dv:[0-9a-f]{16}$/.test(v?.derivedViewId) && v.imageId === entry.imageId)
     .map((v) => [v.derivedViewId, v]));
@@ -206,9 +212,10 @@ function restoreDerived(entry, data) {
 
 // Processed-view recipes, rewritten whole (they are small and bounded).
 export function saveDerived(entry) {
-  if (!root || !entry.derivedViews?.size) return Promise.resolve();
+  if (!root || !(entry.derivedViews?.size || entry.calibrations?.size)) return Promise.resolve();
   const dir = folder(entry.imageId);
-  const body = JSON.stringify({ version: 1, imageId: entry.imageId, views: [...entry.derivedViews.values()] });
+  const body = JSON.stringify({ version: 1, imageId: entry.imageId, views: [...(entry.derivedViews?.values() ?? [])],
+    calibrations: Object.fromEntries(entry.calibrations ?? []) });
   return queued(entry.imageId, async () => {
     await mkdir(dir, { recursive: true });
     await atomicWrite(join(dir, "derived.json"), body);
