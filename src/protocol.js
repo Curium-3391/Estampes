@@ -11,6 +11,7 @@
 import { canvasMarks, canvasLayers, pairLinks } from "./canvas-state.js";
 import { verificationOf } from "./assessment.js";
 import { gestureGroups } from "./gesture-groups.js";
+import { canvasObjects, sceneRevision } from "./scene/scene-ops.js";
 
 export const VISUAL_PROTOCOL = "estampes.visual/2";
 export const READABLE_PROTOCOLS = ["estampes.visual/1", VISUAL_PROTOCOL];
@@ -73,10 +74,15 @@ export function canvasDocument(left, right = null, { history } = {}) {
   // Candidate stroke groups: hypotheses, never part of the marks themselves.
   const groups = sides.flatMap(([, entry]) => gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions)
     .map((g) => ({ ...g, image: entry.imageId })));
+  // Scene objects keep their meaning (type + props) and provenance; see
+  // docs/MODULES.md. Their drawing is re-computed, so it is not included.
+  const objects = sides.flatMap(([, entry]) => canvasObjects(entry).map((o) => ({ ...o, image: entry.imageId })));
+  const revisions = sides.filter(([, entry]) => entry.objects?.size).map(([, entry]) => ({ image: entry.imageId, revision: sceneRevision(entry) }));
   return defined({
     protocol: VISUAL_PROTOCOL, coordinateSystem: COORDINATES,
     images: sides.map(([role, entry]) => imageInfo(entry, role)),
-    layers, marks, links, gestureGroups: listOrNone(groups), rejections: listOrNone(rejections), history,
+    layers, marks, links, gestureGroups: listOrNone(groups), rejections: listOrNone(rejections),
+    objects: listOrNone(objects), sceneRevisions: listOrNone(revisions), history,
   });
 }
 

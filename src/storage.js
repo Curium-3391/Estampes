@@ -13,6 +13,7 @@ import { config, log } from "./config.js";
 import { registerImage, getImage, hasImage, imageIdOf } from "./image-store.js";
 import { canvasMarks, canvasLayers } from "./canvas-state.js";
 import { exportMarksSvg } from "./marks-file.js";
+import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 
 let root = config.storageDir;
 export const storageDir = () => root;
@@ -58,7 +59,9 @@ export function serializeCanvas(entry) {
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
     ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
-    ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}), savedAt: new Date().toISOString(),
+    ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}),
+    ...(entry.objects?.size ? { objects: serializeObjects(entry), sceneRevision: entry.sceneRevision ?? 0, objectSeq: entry.objectSeq ?? 0 } : {}),
+    savedAt: new Date().toISOString(),
   };
 }
 
@@ -72,6 +75,9 @@ export function restoreCanvas(entry, data) {
     ? data.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string") : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => hexOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
+  restoreObjects(entry, data.objects);
+  entry.sceneRevision = Number.isInteger(data.sceneRevision) ? data.sceneRevision : 0;
+  entry.objectSeq = Number.isInteger(data.objectSeq) ? data.objectSeq : 0;
   return entry;
 }
 
