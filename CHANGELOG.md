@@ -8,7 +8,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## 0.13.0 — WebAssembly runtime
 
-- **Isolated WebAssembly modules.** A signed package can carry one `.wasm` file (`estampes.wasm/1`). It must import nothing, so it has no clock, files, network or host functions. Each call runs in its own worker thread with a time limit (the worker is terminated), a memory limit (the binary must declare a maximum within `limits.memoryMb`, checked before it ever runs) and an output limit; results go through the usual scene-operation checks. See [Modules](docs/MODULES.md#webassembly-modules) and `examples/modules/wasm-hello`.
+- **Isolated WebAssembly modules.** A signed package can carry one `.wasm` file (`estampes.wasm/1`). It must import nothing, so it has no clock, files, network or host functions. Each call runs in its own child process with a time limit (the process is killed), a memory limit (the binary must declare a maximum within `limits.memoryMb`, checked before it ever runs) and an output limit; results go through the usual scene-operation checks. See [Modules](docs/MODULES.md#webassembly-modules) and `examples/modules/wasm-hello`.
 
 ## 0.12.0 — Managed module packages
 

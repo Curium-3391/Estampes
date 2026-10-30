@@ -3,8 +3,8 @@
 // A module is one .wasm file inside the signed package. It must import
 // nothing: it gets no clock, no network, no files and no host functions, so
 // everything it can do is compute on the bytes it is given. Each call runs
-// in a fresh worker thread with a time limit (the worker is terminated when
-// it runs out), a memory limit (the module has to declare a maximum no larger
+// in a fresh child process with a time limit (the process is killed when it
+// runs out; a crash while allocating only ever takes down the child), a memory limit (the module has to declare a maximum no larger
 // than limits.memoryMb, checked from the binary before it ever runs) and an
 // output limit (limits.outputKb). State never carries over between calls.
 //
@@ -13,7 +13,7 @@
 // {capability, params, module, canvas} at the pointer from alloc; handle
 // returns a pointer to a 4-byte little-endian length followed by that many
 // bytes of JSON {operations, summary, data, method}. See docs/MODULES.md.
-import { Worker } from "node:worker_threads";
+import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 export const WASM_ABI = "estampes.wasm/1";
@@ -35,27 +35,38 @@ function leb(bytes, at) {
   }
 }
 
-// Reads the module's own memory declaration straight from the binary.
-export function memoryLimits(bytes) {
-  let at = 8, found = null;
+const MAX_TABLE_ELEMENTS = 10000;
+
+// Reads the module's own memory and table declarations straight from the
+// binary, so their sizes are known before anything is allocated.
+export function declaredSizes(bytes) {
+  let at = 8, memory = null;
+  const tables = [];
+  const limits = (p) => {
+    const flags = bytes[p++];
+    if (flags & 0x02) throw new WasmError("shared memory or tables are not allowed");
+    if (flags & 0x04) throw new WasmError("64-bit memory or tables are not allowed");
+    let min, max = null; [min, p] = leb(bytes, p);
+    if (flags & 0x01) [max, p] = leb(bytes, p);
+    return [{ min, max }, p];
+  };
   while (at < bytes.length) {
     const id = bytes[at++];
     let size; [size, at] = leb(bytes, at);
     const end = at + size;
     if (end > bytes.length) throw new WasmError("malformed WebAssembly binary");
-    if (id === 5) {
+    if (id === 4 || id === 5) {
       let count, p = at; [count, p] = leb(bytes, p);
-      if (count !== 1) throw new WasmError("the module must declare exactly one memory");
-      const flags = bytes[p++];
-      if (flags & 0x02) throw new WasmError("shared memory is not allowed");
-      if (flags & 0x04) throw new WasmError("64-bit memory is not allowed");
-      let min, max = null; [min, p] = leb(bytes, p);
-      if (flags & 0x01) [max, p] = leb(bytes, p);
-      found = { min, max };
+      if (count > 16) throw new WasmError("too many " + (id === 4 ? "tables" : "memories"));
+      for (let i = 0; i < count; i++) {
+        if (id === 4) p++; // element type
+        let l; [l, p] = limits(p);
+        if (id === 4) tables.push(l); else memory = memory ? (() => { throw new WasmError("the module must declare exactly one memory"); })() : l;
+      }
     }
     at = end;
   }
-  return found;
+  return { memory, tables };
 }
 
 // Everything that can be checked without running the module.
@@ -70,8 +81,11 @@ export function inspectWasm(bytes, { memoryMb = DEFAULT_MEMORY_MB } = {}) {
   for (const [name, kind] of [["memory", "memory"], ["alloc", "function"], ["handle", "function"]]) {
     if (exported.get(name) !== kind) throw new WasmError("the module must export " + kind + " `" + name + "`");
   }
-  const mem = memoryLimits(bytes);
+  const { memory: mem, tables } = declaredSizes(bytes);
   if (!mem) throw new WasmError("the module declares no memory");
+  for (const t of tables) {
+    if (t.min > MAX_TABLE_ELEMENTS || t.max === null || t.max > MAX_TABLE_ELEMENTS) throw new WasmError("a table may hold at most " + MAX_TABLE_ELEMENTS + " entries and must declare its maximum");
+  }
   const maxPages = Math.floor(memoryMb * 1024 * 1024 / PAGE);
   if (mem.max === null) throw new WasmError("the module must declare a maximum memory size");
   if (mem.max > maxPages || mem.min > maxPages) throw new WasmError("the module asks for up to " + Math.ceil(mem.max * PAGE / 1024 / 1024) + " MB of memory; limits.memoryMb allows " + memoryMb);
@@ -91,19 +105,16 @@ export function checkWasmPackage(manifest, files) {
   inspectWasm(wasmFileOf(manifest, files), { memoryMb: manifest.limits?.memoryMb ?? DEFAULT_MEMORY_MB });
 }
 
-function runInWorker(module, request, { timeMs, outputBytes, maxPages }) {
+function runInChild(wasm, request, { timeMs, outputBytes, maxPages }) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(WORKER, {
-      workerData: { module, request, outputBytes, maxPages },
-      env: {}, argv: [], execArgv: [], stdout: true, stderr: true, trackUnmanagedFds: false,
-      resourceLimits: { maxOldGenerationSizeMb: 48, maxYoungGenerationSizeMb: 8, codeRangeSizeMb: 16, stackSizeMb: 2 },
-    });
+    const child = fork(WORKER, [], { env: {}, execArgv: ["--max-old-space-size=64", "--stack-size=900"], stdio: ["ignore", "ignore", "ignore", "ipc"], serialization: "json" });
     let done = false;
-    const finish = (fn, value) => { if (done) return; done = true; clearTimeout(timer); worker.terminate(); fn(value); };
+    const finish = (fn, value) => { if (done) return; done = true; clearTimeout(timer); child.kill("SIGKILL"); fn(value); };
     const timer = setTimeout(() => finish(reject, new WasmError("the module ran longer than " + timeMs + " ms and was stopped")), timeMs);
-    worker.once("message", (m) => (m.error ? finish(reject, new WasmError(m.error)) : finish(resolve, m.result)));
-    worker.once("error", (e) => finish(reject, new WasmError(e?.code === "ERR_WORKER_OUT_OF_MEMORY" ? "the module ran out of memory" : "the module failed: " + (e?.message ?? e))));
-    worker.once("exit", (code) => finish(reject, new WasmError("the module stopped unexpectedly (exit " + code + ")")));
+    child.once("message", (m) => (m?.error ? finish(reject, new WasmError(m.error)) : finish(resolve, m?.result)));
+    child.once("error", (e) => finish(reject, new WasmError("the module could not start: " + (e?.message ?? e))));
+    child.once("exit", (code, signal) => finish(reject, new WasmError("the module stopped unexpectedly (" + (signal ?? "exit " + code) + "), for example by running out of memory")));
+    child.send({ wasm: wasm.toString("base64"), request, outputBytes, maxPages });
   });
 }
 
@@ -117,7 +128,7 @@ export const wasmRuntime = {
     const memoryMb = limits.memoryMb ?? DEFAULT_MEMORY_MB;
     runtime.compiled ??= inspectWasm(runtime.wasm, { memoryMb });
     const request = JSON.stringify({ capability, params, module: ctx.module ?? { id: manifest.id, version: manifest.version }, canvas: ctx.canvas ?? null });
-    const out = await runInWorker(runtime.compiled.module, request, {
+    const out = await runInChild(runtime.wasm, request, {
       timeMs: limits.timeMs ?? DEFAULT_TIME_MS, outputBytes: (limits.outputKb ?? DEFAULT_OUTPUT_KB) * 1024, maxPages: Math.floor(memoryMb * 1024 * 1024 / PAGE),
     });
     let parsed;

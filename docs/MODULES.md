@@ -108,10 +108,10 @@ Declarative modules (code-free): each capability lists scene operations with `{"
 
 ## WebAssembly modules
 
-A module that needs real code ships one `.wasm` file in its signed package (`runtime: {kind: "wasm", entry: "file.wasm", abi: "estampes.wasm/1"}`). It runs in a worker thread that is created for the call and thrown away afterwards, so nothing carries over between calls. The module can import nothing: no clock, files, network or host functions, only the bytes it is handed. Limits come from the manifest `limits`:
+A module that needs real code ships one `.wasm` file in its signed package (`runtime: {kind: "wasm", entry: "file.wasm", abi: "estampes.wasm/1"}`). It runs in its own child process, created for the call and killed afterwards, so nothing carries over between calls and an engine crash (for example an allocation failure) cannot take the server down. The module can import nothing: no clock, files, network or host functions, only the bytes it is handed. Limits come from the manifest `limits`:
 
 - `timeMs` (default 2000): the worker is terminated when it runs out.
-- `memoryMb` (default 16): the module's binary must declare a memory maximum no larger than this; a package that declares more, none or shared memory is refused at verification, before anything runs.
+- `memoryMb` (default 16): the module's binary must declare a memory maximum no larger than this (and tables of at most 10,000 entries with a declared maximum); a package that declares more, none or shared memory is refused at verification, before anything runs.
 - `outputKb` (default 256): a longer reply is refused.
 
 ABI: export `memory`, `alloc(len) -> ptr` and `handle(ptr, len) -> ptr`. The host writes a JSON request `{capability, params, module, canvas}` at the pointer `alloc` returned; `handle` returns a pointer to a 4-byte little-endian length followed by a JSON reply `{operations, summary, data, method}`. The reply goes through the same scene-operation checks as any other module. A capability whose input has required fields and no `examples` is skipped by the install self-test. Example with a C source and build line: `examples/modules/wasm-hello`.
