@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.13.0 (the contract, the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
+Status: this page describes what is implemented in 0.14.0 (the contract, the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
 
 ## How it fits together
 
@@ -105,6 +105,17 @@ registry.json, audit.jsonl              state, grants, audit log
 Rollback restores a kept version byte for byte and checks it against `lock.json`; if a stored file was changed on disk, the module is marked failed at startup instead of running. Uninstall leaves canvas objects in place and keeps stored versions; purge deletes the stored versions.
 
 Declarative modules (code-free): each capability lists scene operations with `{"$param": "name"}` placeholders (optionally `"default"`), filled from the validated input. See `examples/modules/callout`.
+
+## Writing a module
+
+```
+node scripts/estampes-module.js init mymodule org.example.mymodule            # or --runtime wasm
+node scripts/estampes-module.js test mymodule/module.json                     # manifest + examples, like an install
+node scripts/estampes-module.js keygen mykey                                  # once
+node scripts/estampes-module.js pack mymodule/module.json --out org.example.mymodule.estpkg.json --key mykey.private.pem --key-id mykey [--file module.wasm=mymodule/module.wasm]
+```
+
+Give every capability `examples`: they are what the install self-test runs, and what the Store shows. The administrator then trusts your public key for your id prefix (`trust`) and drops the package in the inbox; see Installing packages above.
 
 ## WebAssembly modules
 
