@@ -203,7 +203,8 @@ export function graphSummary(steps) {
 // normalized source coordinates using derivedToNormalized.
 // A rect stays a rect only under axis-aligned scale + shift; under rotation
 // or perspective its four corners become a closed polyline.
-export const axisAligned = (m, eps = 1e-9) => isAffine(m, eps) && Math.abs(m[1]) < eps && Math.abs(m[3]) < eps;
+export const axisAligned = (m, eps = 1e-9) => isAffine(m, eps) &&
+  ((Math.abs(m[1]) < eps && Math.abs(m[3]) < eps) || (Math.abs(m[0]) < eps && Math.abs(m[4]) < eps));
 export function mapMark(mark, m) {
   if (mark.type === "rect" && !axisAligned(m)) {
     const { x, y, x2, y2, ...rest } = mark;

@@ -39,6 +39,9 @@ export const rawImage = async (pipeline) => {
   return { data, width: info.width, height: info.height, channels: info.channels };
 };
 export const fromRaw = (img) => sharp(img.data, { raw: { width: img.width, height: img.height, channels: img.channels } });
+// sharp hands a one-channel image back as sRGB after most operations;
+// this keeps grey results grey (and one byte per pixel).
+export const sameBands = (img, pipeline) => (img.channels === 1 ? pipeline.extractChannel(0) : pipeline);
 export const toGray = async (img) => img.channels === 1 ? img : rawImage(fromRaw(img).greyscale().extractChannel(0));
 
 function otsu(gray) {
@@ -116,7 +119,7 @@ async function threshold(img, { method = "adaptive", value = 128, blockSize, off
     // Local mean via Gaussian blur; handles uneven lighting on pages and boards.
     // Default window scales with the image so thick strokes are not hollowed out.
     const block = blockSize ?? Math.max(15, Math.round(Math.max(gray.width, gray.height) / 30));
-    const local = await rawImage(fromRaw(gray).blur(Math.max(0.5, block / 6)));
+    const local = await rawImage(sameBands(gray, fromRaw(gray).blur(Math.max(0.5, block / 6))));
     for (let i = 0; i < out.length; i++) out[i] = gray.data[i] > local.data[i] - offset ? 255 : 0;
   } else {
     const t = method === "otsu" ? otsu(gray.data) : value;
@@ -148,14 +151,14 @@ async function edges(img) {
 export async function applyOp(img, step) {
   switch (step.op) {
     case "grayscale": return toGray(img);
-    case "normalize": return rawImage(fromRaw(img).normalise());
+    case "normalize": return rawImage(sameBands(img, fromRaw(img).normalise()));
     case "clahe": return clahe(img, { tile: step.tile ?? 48, maxSlope: step.maxSlope ?? 3 });
-    case "contrast": { const f = step.factor ?? 1.5; return rawImage(fromRaw(img).linear(f, 128 * (1 - f))); }
-    case "brightness": return rawImage(fromRaw(img).linear(step.factor ?? 1.3, 0));
-    case "sharpen": return rawImage(fromRaw(img).sharpen({ sigma: step.sigma ?? 1.2 }));
-    case "denoise": return rawImage(fromRaw(img).median(step.size ?? 3));
+    case "contrast": { const f = step.factor ?? 1.5; return rawImage(sameBands(img, fromRaw(img).linear(f, 128 * (1 - f)))); }
+    case "brightness": return rawImage(sameBands(img, fromRaw(img).linear(step.factor ?? 1.3, 0)));
+    case "sharpen": return rawImage(sameBands(img, fromRaw(img).sharpen({ sigma: step.sigma ?? 1.2 })));
+    case "denoise": return rawImage(sameBands(img, fromRaw(img).median(step.size ?? 3)));
     case "threshold": return threshold(img, step);
-    case "invert": return rawImage(fromRaw(img).negate({ alpha: false }));
+    case "invert": return rawImage(sameBands(img, fromRaw(img).negate({ alpha: false })));
     case "edges": return edges(img);
     default: throw new Error("Unknown operation " + step.op);
   }
