@@ -31,6 +31,7 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
 | `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
 | `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. |
+| `get_module_job` | Check a background job started by `execute_module` (for example plate solving): status, progress, result and created objects; can wait up to 25 s. See [Background jobs](MODULES.md#background-jobs). |
 | `prepare_module_change` | Prepare enabling, disabling or (later) installing a module. Changes nothing: the user approves it in the Store. |
 
 Mark types: `point`, `rect`, `arrow` (when GPT draws one, the head is the target) and `polyline` (up to 128 vertices, optionally `smooth` or `closed`). Coordinates are normalized to the full image with the origin at the top left; `coordinateFrame` lets GPT pass coordinates read off a processed view (`derivedViewId`, exact for any crop or zoom; or the older `region` form) and have Estampes convert them. Colour, size and pen (pen or translucent highlighter) are chosen by GPT.
