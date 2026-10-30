@@ -51,6 +51,9 @@ import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
+import { createCasClient } from "./src/cas/client.js";
+import { createNotebooks } from "./src/cas/notebooks.js";
+import { configure as configureCas, casStatus } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -2505,10 +2508,12 @@ const httpServer = createHttpServer((req, res) => {
   // For Docker/compose health checks and uptime monitors: 200 while the
   // server answers and, when storage is on, the storage folder is writable.
   if (url.pathname === "/healthz" && req.method === "GET") {
-    storageHealth().then((storage) => {
+    Promise.all([storageHealth(), casStatus()]).then(([storage, cas]) => {
       const ok = !storage.enabled || storage.writable;
       res.writeHead(ok ? 200 : 503, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-      res.end(JSON.stringify({ ok, version: BUILD_VERSION, uptimeSeconds: Math.round(process.uptime()), storage }));
+      res.end(JSON.stringify({ ok, version: BUILD_VERSION, uptimeSeconds: Math.round(process.uptime()), storage,
+        // A stopped calculator degrades only the calculator; everything else keeps working.
+        cas: cas.available ? { available: true, engine: cas.engine } : { available: false, reason: cas.reason } }));
     });
     return;
   }
@@ -2595,6 +2600,7 @@ ACCESS_KEY = keyInfo.key;
 const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
 const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
 if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in ChatGPT; approve a plan with: node scripts/estampes-module.js approve <planId>");
+configureCas({ client: createCasClient({ socketPath: config.casSocket }), notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "" }) });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,

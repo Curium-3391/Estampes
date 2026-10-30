@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.15.0 (the contract, the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
+Status: this page describes what is implemented in 0.17.0 (the contract, the built-in Graph and CAS modules ([CAS](CAS.md)), the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
 
 ## How it fits together
 

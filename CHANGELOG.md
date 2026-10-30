@@ -6,6 +6,15 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 
+## 0.17.0 — Scientific CAS (SymPy)
+
+- **`org.estampes.cas`, a built-in module backed by SymPy.** Exact arithmetic, simplify/expand/factor/collect/cancel/apart/trigsimp, derivatives, definite and indefinite integrals, limits, series, sums, equations and systems (`solve`, `solve_system`, `nsolve`), substitution, matrices, definitions (`f(x) = ...`), assumptions, degrees and radians, and a chosen numeric precision. Every result carries a status (exact, approximate, complex, conditional, partial, undefined), plain text, LaTeX, a typed AST (`estampes.math-ast/1`) and the SymPy version. Input may be text or LaTeX.
+- **No `eval` on user input.** Text and LaTeX go through a closed parser that only knows numbers, names, operators and an allowlist of functions; the Python side validates the AST again and maps only allowlisted nodes to SymPy. Python-shaped input is a syntax error before anything runs.
+- **Separate, locked-down service** (`cas-service/`, `cas` in `compose.yaml`): no network, read-only filesystem, no capabilities, reachable only through a Unix socket on one shared volume (mode 0600, peer uid checked). Each calculation runs in a forked child with CPU, memory and wall-clock limits; a timeout or cancel kills it. If the service is down, only calculations fail.
+- **Notebooks** (`<storage>/cas/notebooks`): cells keep their input, result and Graph links; definitions and assumptions apply to the whole notebook and make older results stale; writes are atomic and revision-checked, with idempotency keys.
+- **Plot in Graph.** `plot_result` turns an exact or approximate real single-variable result into an editable `function-plot` through a typed AST-to-expression translator. Conditional, partial, complex or multivariable results are refused and change nothing; a stale result must be recomputed first; a plot made from a result can be refreshed in place.
+- New permission `cas.compute`. `/healthz` reports calculator availability.
+
 ## 0.16.0 — Plate solving and background jobs
 
 - **Background jobs.** A capability can be marked `async`: it returns a job id at once and runs in the background (`limits.jobMs`, default 10 minutes). The new fixed tool `get_module_job` shows its status and result, optionally waiting up to 25 seconds. Jobs survive in `<storage>/modules/jobs.json`; one interrupted by a restart is shown as such. A stopped job never applies a late result.

@@ -8,6 +8,7 @@ export const PERMISSIONS = Object.freeze({
   "workspace.write": { risk: "low", zh: "建立新的空白畫布", en: "Create new blank canvases" },
   "asset.read.selected": { risk: "medium", zh: "讀取目標圖片（或選定區域）的像素", en: "Read the pixels of the target image or selected region" },
   "module.storage.write": { risk: "medium", zh: "在伺服器保存自己的設定與資料", en: "Keep its own settings and data on the server" },
+  "cas.compute": { risk: "medium", zh: "使用本機的 SymPy 計算服務（只傳送算式，不連外網）", en: "Use the local SymPy calculator service (sends only expressions; no internet)" },
   "network.request.approved": { risk: "high", zh: "連線到清單上的外部網站（可能傳送圖片）", en: "Send requests to the listed external hosts (may upload images)" },
   "module.secrets": { risk: "high", zh: "使用管理員設定的 API 金鑰等密鑰（模組看不到原文）", en: "Use secrets such as API keys set by the administrator (never shown to the module)" },
 });

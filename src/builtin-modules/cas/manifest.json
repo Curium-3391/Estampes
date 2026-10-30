@@ -1,0 +1,534 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.estampes.cas",
+  "name": "Scientific CAS",
+  "nameI18n": {
+    "zh-TW": "科學計算機 (CAS)"
+  },
+  "description": "Exact symbolic mathematics computed by SymPy in a separate sandboxed service: arithmetic, simplify/expand/factor, derivatives, integrals, limits, series, equations, matrices. Results are exact (with LaTeX) and can be plotted in Graph as editable function plots.",
+  "descriptionI18n": {
+    "zh-TW": "由獨立沙箱服務中的 SymPy 計算精確符號數學：算術、化簡/展開/因式分解、微分、積分、極限、級數、方程式、矩陣。結果為精確值（含 LaTeX），並可繪成 Graph 中可編輯的函數圖。"
+  },
+  "version": "1.0.0",
+  "publisher": {
+    "name": "Estampes Project",
+    "url": "https://github.com/Curium-3391/Estampes"
+  },
+  "license": "MPL-2.0",
+  "source": "https://github.com/Curium-3391/Estampes/tree/main/src/builtin-modules/cas",
+  "category": "math",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
+  "runtime": {
+    "kind": "builtin",
+    "entry": "cas"
+  },
+  "permissions": [
+    "cas.compute",
+    "canvas.read",
+    "canvas.write",
+    "workspace.write"
+  ],
+  "limits": {
+    "timeMs": 15000
+  },
+  "capabilities": [
+    {
+      "id": "calculate",
+      "title": "Calculate",
+      "titleI18n": {
+        "zh-TW": "計算"
+      },
+      "target": "none",
+      "permissions": [
+        "cas.compute"
+      ],
+      "description": "Run one SymPy operation on an expression (text or LaTeX) and keep it as a cell of a notebook. Returns the exact result (plain text, LaTeX, typed AST), an approximation when numeric, and a status: exact, approximate, complex, conditional, partial (no closed form) or undefined. Never invent a result: only what this returns is verified by SymPy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation"
+        ],
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "evaluate",
+              "simplify",
+              "expand",
+              "factor",
+              "collect",
+              "cancel",
+              "apart",
+              "together",
+              "trigsimp",
+              "differentiate",
+              "integrate",
+              "limit",
+              "series",
+              "summation",
+              "product",
+              "solve",
+              "solve_system",
+              "nsolve",
+              "substitute",
+              "matrix"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Expression, e.g. sin(x^2), x^2-4=0, [[1,2],[3,4]]. ^ is power, 2x is 2*x"
+          },
+          "latex": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "The same, written in LaTeX (\\frac, \\sqrt, ^{}, \\sin ...) instead of text"
+          },
+          "equations": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "description": "solve_system: the equations"
+          },
+          "variable": {
+            "type": "string",
+            "maxLength": 24,
+            "description": "differentiate/integrate/limit/series/solve/summation: the variable; omit when there is only one"
+          },
+          "variables": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "description": "solve_system: unknowns"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "differentiate: derivative order"
+          },
+          "lower": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "integrate/summation/product lower bound"
+          },
+          "upper": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "upper bound; with lower makes a definite integral"
+          },
+          "point": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "limit/series expansion point (default 0)"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "+",
+              "-",
+              "+-"
+            ]
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "description": "series: number of terms"
+          },
+          "guess": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "nsolve: starting value"
+          },
+          "domain": {
+            "type": "string",
+            "enum": [
+              "real",
+              "complex"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "determinant",
+              "inverse",
+              "transpose",
+              "rank",
+              "rref",
+              "trace",
+              "eigenvalues",
+              "add",
+              "multiply"
+            ]
+          },
+          "other": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "matrix add/multiply: the second matrix"
+          },
+          "subs": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 24
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 256
+                }
+              }
+            }
+          },
+          "cell": {
+            "type": "string",
+            "pattern": "^cell:[0-9a-f]{12}$",
+            "maxLength": 18,
+            "description": "Re-use this cell (edit it) instead of adding a new one"
+          },
+          "angle": {
+            "type": "string",
+            "enum": [
+              "rad",
+              "deg"
+            ],
+            "description": "deg reads numeric sin/cos/tan arguments as degrees; sin(x) with a symbol is never rewritten"
+          },
+          "precision": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100,
+            "description": "Digits of the numeric approximation"
+          },
+          "by": {
+            "type": "string",
+            "enum": [
+              "user",
+              "model"
+            ]
+          },
+          "notebook": {
+            "type": "string",
+            "pattern": "^nb:[0-9a-f]{12}$",
+            "maxLength": 16,
+            "description": "Notebook to work in; omit to start a new one"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000,
+            "description": "Notebook revision you read; a newer notebook is refused"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Repeat the same key to get the same result instead of a second calculation"
+          }
+        }
+      },
+      "examples": [
+        {
+          "description": "derivative",
+          "params": {
+            "operation": "differentiate",
+            "text": "sin(x^2)",
+            "variable": "x"
+          }
+        },
+        {
+          "description": "definite integral",
+          "params": {
+            "operation": "integrate",
+            "text": "x^2",
+            "variable": "x",
+            "lower": "0",
+            "upper": "1"
+          }
+        },
+        {
+          "description": "solve",
+          "params": {
+            "operation": "solve",
+            "latex": "x^{2}-4=0"
+          }
+        },
+        {
+          "description": "exact sine of 30 degrees",
+          "params": {
+            "operation": "evaluate",
+            "text": "sin(30)",
+            "angle": "deg"
+          }
+        }
+      ]
+    },
+    {
+      "id": "define",
+      "title": "Define a name",
+      "titleI18n": {
+        "zh-TW": "定義變數或函數"
+      },
+      "target": "none",
+      "permissions": [
+        "cas.compute"
+      ],
+      "description": "Define a variable or function for the whole notebook (f(x) = x^2 + a, a = 3), or give a symbol assumptions (positive, real ...). Cells that used older definitions become stale until recomputed.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,23}$",
+            "maxLength": 24
+          },
+          "params": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "description": "Function parameters, e.g. [\"x\"] for f(x)=..."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Body, e.g. sin(x^2)+a. Omit to remove the definition"
+          },
+          "latex": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "assumptions": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "string",
+              "enum": [
+                "real",
+                "positive",
+                "negative",
+                "nonnegative",
+                "nonpositive",
+                "integer",
+                "rational",
+                "nonzero",
+                "complex"
+              ]
+            },
+            "description": "Assumptions for the symbol <name> instead of a definition"
+          },
+          "notebook": {
+            "type": "string",
+            "pattern": "^nb:[0-9a-f]{12}$",
+            "maxLength": 16,
+            "description": "Notebook to work in; omit to start a new one"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000,
+            "description": "Notebook revision you read; a newer notebook is refused"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Repeat the same key to get the same result instead of a second calculation"
+          }
+        }
+      },
+      "examples": [
+        {
+          "description": "a function",
+          "params": {
+            "name": "f",
+            "params": [
+              "x"
+            ],
+            "text": "x^2+a"
+          }
+        },
+        {
+          "description": "x is positive",
+          "params": {
+            "name": "x",
+            "assumptions": [
+              "positive"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "get_notebook",
+      "title": "Read a notebook",
+      "titleI18n": {
+        "zh-TW": "讀取筆記本"
+      },
+      "target": "none",
+      "permissions": [
+        "cas.compute"
+      ],
+      "description": "Read a notebook's definitions, cells, results, freshness and plot links. Without a notebook id, lists notebooks.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "notebook": {
+            "type": "string",
+            "pattern": "^nb:[0-9a-f]{12}$",
+            "maxLength": 16
+          },
+          "cells": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "full": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "id": "recompute",
+      "title": "Recompute stale cells",
+      "titleI18n": {
+        "zh-TW": "重新計算過期的格子"
+      },
+      "target": "none",
+      "permissions": [
+        "cas.compute"
+      ],
+      "description": "Recompute one cell, or every stale cell of a notebook (at most 20), so results match the current definitions.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notebook"
+        ],
+        "properties": {
+          "notebook": {
+            "type": "string",
+            "pattern": "^nb:[0-9a-f]{12}$",
+            "maxLength": 16
+          },
+          "cell": {
+            "type": "string",
+            "pattern": "^cell:[0-9a-f]{12}$",
+            "maxLength": 18
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000,
+            "description": "Notebook revision you read; a newer notebook is refused"
+          }
+        }
+      }
+    },
+    {
+      "id": "plot_result",
+      "title": "Plot a result in Graph",
+      "titleI18n": {
+        "zh-TW": "把結果畫在 Graph"
+      },
+      "target": "canvas-or-new",
+      "permissions": [
+        "canvas.read",
+        "canvas.write",
+        "workspace.write"
+      ],
+      "description": "Draw the result of a notebook cell as an editable function plot (y = f(x)) on the canvas's axes, or on a new canvas. Only exact or approximate real single-variable results are plotted; conditional, partial, complex or multivariable results are refused and nothing changes. A stale cell must be recomputed first. Pass object to refresh a plot this cell already made.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notebook",
+          "cell"
+        ],
+        "properties": {
+          "notebook": {
+            "type": "string",
+            "pattern": "^nb:[0-9a-f]{12}$",
+            "maxLength": 16
+          },
+          "cell": {
+            "type": "string",
+            "pattern": "^cell:[0-9a-f]{12}$",
+            "maxLength": 18
+          },
+          "domain": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[xmin, xmax]"
+          },
+          "object": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "id of a plot this result already made: refresh it instead of adding another"
+          },
+          "frame": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "id of the axes to draw on"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "blue",
+              "red",
+              "green",
+              "gold",
+              "magenta",
+              "cyan",
+              "black",
+              "gray"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 64
+          }
+        }
+      },
+      "examples": [
+        {
+          "description": "plot the derivative cell",
+          "params": {
+            "notebook": "nb:0123456789ab",
+            "cell": "cell:0123456789ab",
+            "domain": [
+              -3,
+              3
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

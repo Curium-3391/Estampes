@@ -47,6 +47,8 @@ export const config = Object.freeze({
   cacheTtlMs: num("ESTAMPES_CACHE_TTL_MINUTES", 60, { min: 1, max: 525600 }) * 60 * 1000,
   // cloudflared metrics address of the optional quick tunnel (compose sets it).
   tunnelMetrics: str("ESTAMPES_TUNNEL_METRICS"),
+  // Unix socket of the separate SymPy service (cas-service/). Empty = no calculator.
+  casSocket: str("ESTAMPES_CAS_SOCKET"),
   // Optional: ESTAMPES_ADMIN_KEY overrides the generated <storage>/admin-key.
   adminKey: (process.env.ESTAMPES_ADMIN_KEY ?? "").trim(),
   // Install module packages that carry no signature (they are always shown as high risk).
