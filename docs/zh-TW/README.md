@@ -61,6 +61,8 @@ npm start          # http://localhost:8787/mcp
 | 文件 | 內容 |
 | --- | --- |
 | [部署](../DEPLOYMENT.md) | Docker、Heroku、Render、連接 ChatGPT、環境變數、儲存內容 |
+| [使用指南（英文）](../USAGE.md) | 在 ChatGPT 裡使用畫布：標記、圖層、縮放、並排比對、匯出 |
+| [工具一覽（英文）](../TOOLS.md) | MCP 工具與 HTTP 端點 |
 | [視覺協定 1](../PROTOCOL-V1.md) | `estampes.visual/1`：描述整張畫布的 JSON 格式，不綁定 ChatGPT |
 | [願景](../VISION.md) | 想解決的問題、使用情境、非目標 |
 | [架構](../ARCHITECTURE.md) | 系統分層（改寫中） |

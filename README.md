@@ -50,6 +50,8 @@ npm start          # http://localhost:8787/mcp
 | Document | Contents |
 | --- | --- |
 | [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
+| [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
+| [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
 | [Visual protocol 1](docs/PROTOCOL-V1.md) | `estampes.visual/1`, the host-neutral JSON document for a whole canvas |
 | [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
 | [Architecture](docs/ARCHITECTURE.md) | System layers (being rewritten) |
