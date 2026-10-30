@@ -48,7 +48,9 @@ export const OBJECT_TYPES = {
       expression: z.string().min(1).max(MAX_EXPRESSION_LENGTH),
       frame: z.string().min(1).max(64).describe("id of the axes-2d object"),
       domain: Range.optional().describe("x interval; default the axes' xRange"),
-      label: Text.optional(), style: Style.optional(),
+      label: Text.optional(),
+      labelMode: z.enum(["auto", "custom"]).optional().describe("auto follows the expression; custom preserves label (empty hides it)"),
+      style: Style.optional(),
     }).strict(),
     defaults: {},
     dependsOn: (props) => [props.frame],
@@ -87,7 +89,12 @@ export function validateProps(type, props, where = "props") {
     const issue = parsed.error.issues[0];
     throw new Error(where + (issue.path.length ? "." + issue.path.join(".") : "") + ": " + issue.message);
   }
-  if (type === "function-plot") compileExpression(parsed.data.expression); // throws a readable parse error
+  if (type === "function-plot") {
+    compileExpression(parsed.data.expression); // throws a readable parse error
+    // Legacy labels are always custom, even when they look like formulas.
+    parsed.data.labelMode ??= parsed.data.label === undefined ? "auto" : "custom";
+    if (parsed.data.labelMode === "auto") delete parsed.data.label;
+  }
   return parsed.data;
 }
 
@@ -297,7 +304,7 @@ function renderFunction(obj, axes) {
   const { segments, evaluations } = sampleFunction(fn, frame, [lo, hi]);
   const stroke = styled(p.style, COLOR_NAMES.blue, 3);
   const prims = segments.map((s) => ({ k: "path", pts: s.map(pt), ...stroke }));
-  const label = p.label ?? "y = " + fn.source;
+  const label = p.labelMode === "auto" ? "y = " + fn.source : p.label ?? (p.labelMode === "custom" ? "" : "y = " + fn.source);
   const last = segments.at(-1)?.at(-1);
   if (last && label) prims.push({ k: "text", x: r5(Math.min(last[0], frame.region.x2 - 0.01)), y: r5(Math.max(frame.region.y + 0.02, last[1] - 0.025)),
     text: label.slice(0, 80), size: 14, anchor: "end", baseline: "auto", fill: stroke.stroke, weight: 700 });

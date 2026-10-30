@@ -86,3 +86,52 @@ test("renderer: a plot of sin(x) is one smooth curve through the right points; t
   const gone = renderObject({ id: "o2", type: "function-plot", props: validateProps("function-plot", { expression: "x", frame: "o1" }) }, { lookup: () => null });
   assert.match(gone.info.note, /not an axes-2d/);
 });
+
+test("plot labels: Core edits follow auto expressions and preserve custom names", () => {
+  const e = canvas();
+  applySceneOps(e, [axes, plot()], mod);
+  const labels = () => widgetObjects(e)[1].primitives.filter((p) => p.k === "text").map((p) => p.text);
+  const edit = (props) => applySceneOps(e, [{ op: "object.update", id: "o2", props }], { author: "user" });
+  assert.equal(canvasObjects(e)[1].props.labelMode, "auto");
+  edit({ expression: "sin(2*x)" });
+  assert.deepEqual(labels(), ["y = sin(2*x)"]);
+  edit({ label: "實測電壓" });
+  edit({ expression: "cos(x)" });
+  assert.deepEqual(labels(), ["實測電壓"]);
+  assert.equal(canvasObjects(e)[1].props.labelMode, "custom");
+  edit({ label: "" });
+  assert.deepEqual(labels(), []);
+  edit({ labelMode: "auto", label: "stale" });
+  assert.deepEqual(labels(), ["y = cos(x)"]);
+  assert.equal(canvasObjects(e)[1].props.label, undefined);
+  const saved = JSON.parse(JSON.stringify(serializeObjects(e)));
+  const f = canvas();
+  restoreObjects(f, saved);
+  assert.deepEqual(widgetObjects(f), widgetObjects(e));
+  const before = JSON.stringify(serializeObjects(e));
+  const revision = sceneRevision(e);
+  assert.throws(() => applySceneOps(e, [
+    { op: "object.update", id: "o2", props: { label: "temporary" } },
+    { op: "object.update", id: "o2", props: { labelMode: "invalid" } },
+  ], { author: "user" }), /labelMode/);
+  assert.equal(JSON.stringify(serializeObjects(e)), before);
+  assert.equal(sceneRevision(e), revision);
+  assert.deepEqual(labels(), ["y = cos(x)"]);
+});
+
+test("plot labels: legacy formula-looking and empty labels stay custom after restore", () => {
+  for (const label of ["y = sin(x)", "實測電壓", ""]) {
+    const e = canvas();
+    applySceneOps(e, [axes, plot()], mod);
+    const saved = JSON.parse(JSON.stringify(serializeObjects(e)));
+    saved[1].props.label = label;
+    delete saved[1].props.labelMode;
+    restoreObjects(e, saved);
+    applySceneOps(e, [{ op: "object.update", id: "o2", props: { expression: "sin(2*x)" } }], { author: "user" });
+    assert.equal(canvasObjects(e)[1].props.labelMode, "custom");
+    const labels = () => widgetObjects(e)[1].primitives.filter((p) => p.k === "text").map((p) => p.text);
+    assert.deepEqual(labels(), label ? [label] : []);
+    applySceneOps(e, [{ op: "object.update", id: "o2", props: { labelMode: "auto" } }], { author: "user" });
+    assert.deepEqual(labels(), ["y = sin(2*x)"]);
+  }
+});

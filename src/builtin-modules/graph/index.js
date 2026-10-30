@@ -53,7 +53,8 @@ export function run(capability, params, { canvas }) {
     ops.push({
       op: "object.create", type: "function-plot",
       props: { expression: fn.source, frame: axes ? axes.id : "$axes", ...(params.domain ? { domain: params.domain } : {}),
-        ...(params.label ? { label: params.label } : {}), ...style(params.color) },
+        ...(params.label !== undefined ? { label: params.label } : {}),
+        ...(params.labelMode !== undefined ? { labelMode: params.labelMode } : {}), ...style(params.color) },
     });
     return { operations: ops, method: "adaptive sampling of the parsed expression", summary: "y = " + fn.source + (axes ? " on axes " + axes.id : " on new axes") };
   }
@@ -64,9 +65,10 @@ export function run(capability, params, { canvas }) {
     const props = {
       ...(params.expression ? { expression: params.expression } : {}), ...(params.domain ? { domain: params.domain } : {}),
       ...(params.label !== undefined ? { label: params.label } : {}),
+      ...(params.labelMode !== undefined ? { labelMode: params.labelMode } : {}),
       ...(params.color ? { style: { ...(target.props.style ?? {}), color: params.color } } : {}),
     };
-    if (!Object.keys(props).length) throw new Error("nothing to change: give expression, domain, color or label");
+    if (!Object.keys(props).length) throw new Error("nothing to change: give expression, domain, color, label or labelMode");
     return { operations: [{ op: "object.update", id: target.id, props }], summary: "updated " + target.id };
   }
   if (capability === "set_axes") {

@@ -51,6 +51,8 @@ The grant is stored when you approve enabling. The router checks it on every cal
 
 Object types: `axes-2d` (ranges, grid, `π` ticks, labels), `function-plot` (`expression`, `domain`, `frame` = an axes object) and `shape` (polyline, polygon, dots, circle, rect, arrow, point, text, in canvas or frame space). Coordinates of canvas objects are normalized to the canvas (top left origin) like marks; frame space uses the axes' numeric range with y up.
 
+Function plots support `props.labelMode`: `auto` renders `y = ` followed by the current expression; `custom` preserves `props.label` (an empty or omitted label hides it). With no mode, an existing label—including an empty or formula-looking label—is treated as custom; without a label the mode is auto. Setting `label` on an update selects custom unless `labelMode` is also supplied. Switching to auto discards the stored label. Core applies these rules to module operations and direct Canvas edits, even when Graph is disabled. Modes persist with the objects. Graph's `plot_function` and `update_plot` accept `labelMode`; to migrate an old plot explicitly, call `update_plot` with `{ "object": "o2", "labelMode": "auto" }`.
+
 **Scratch objects** are the model's working notes: they are in the model's preview image but not drawn for the user or exported until published. This is not secrecy: scratch objects are still readable by the module that made them and by the model.
 
 ## Graph module

@@ -32,7 +32,7 @@ import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import {
-  WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
+  WORKSPACE_PROTOCOL, MAX_ITEMS, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
 import { intakeImage, ensureImage, saveCanvas, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
@@ -48,6 +48,7 @@ import {
 import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
+import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
@@ -1306,6 +1307,7 @@ function makeServer() {
         imageId:ImageIdSchema.optional(),
         pairImageId:ImageIdSchema.optional(),
         workspaceId:z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
+        hiddenLayers:z.array(z.object({id:z.string().regex(/^L\d+$/),side:z.string().max(64).optional()})).max(200).default([]),
         annotations:VisualAnnotationsSchema,
         intent:z.enum(INTENTS).default("free-annotate"),
         note:z.string().max(500).default(""),
@@ -1327,7 +1329,7 @@ function makeServer() {
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions})=>{
+    async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions,hiddenLayers})=>{
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
       try {
@@ -1342,10 +1344,12 @@ function makeServer() {
           const decisions=[...items.flatMap(it=>it.entry.gestureDecisions??[]),...gestureDecisions];
           const event=buildAnnotationEvent({image:{imageId:first.imageId,width:first.width,height:first.height},workspace,annotations:checked,intent,note,replyQuote,gestureDecisions:decisions});
           const itemLayers=[];
+          event.canvasReads=[];
           for(const it of items){
             const own=checked.filter(a=>a.item===it.id).map(({item:_i,...a})=>a);
-            if(!own.length)continue;
+            if(!own.length){event.canvasReads.push({item:it.id,request:canvasReadRequest(it.entry,hiddenLayers.filter(l=>l.side===it.id).map(l=>l.id))});continue;}
             const layer=storeUserMarks(it.entry,own);
+            event.canvasReads.push({item:it.id,request:canvasReadRequest(it.entry,hiddenLayers.filter(l=>l.side===it.id).map(l=>l.id))});
             if(layer)itemLayers.push({item:it.id,id:layer.id,name:layer.name});
             await saveCanvas(it.entry,{tool:"validate_visual_annotations",author:"user",changed:own.map(a=>a.id),note:intent});
           }
@@ -1366,7 +1370,7 @@ function makeServer() {
         // Stored verdicts first; the widget's own (newer) ones override them.
         const decisions=[...(entry?.gestureDecisions??[]),...(right?.gestureDecisions??[]),...gestureDecisions];
         const event=buildAnnotationEvent({scene,image,pairImage,annotations:checked,intent,note,replyQuote,gestureDecisions:decisions});
-        const chatMessage=formatAnnotationChatMessage(event);
+
         let layer=null,pairLayer=null;
         if(right){
           // Paired view: each mark belongs to its own image.
@@ -1375,6 +1379,10 @@ function makeServer() {
           pairLayer=storeUserMarks(right,checked.filter(a=>sideOf(a)==="right").map(({side,...a})=>a));
         // Submitted marks join the photo's canvas so GPT need not replay them.
         }else if(entry)layer=storeUserMarks(entry,checked);
+        if(entry)event.canvasReads=[{side:"left",request:canvasReadRequest(entry,hiddenLayers.filter(l=>!l.side||l.side==="left").map(l=>l.id))},
+          ...(right?[{side:"right",request:canvasReadRequest(right,hiddenLayers.filter(l=>l.side==="right").map(l=>l.id))}]:[])];
+        if(entry)event.image.sourceKind=entry.source==="blank"?"blank":entry.page?"pdf-page":"image";
+        const chatMessage=formatAnnotationChatMessage(event);
         const ids=checked.map(a=>a.id);
         if(entry)await saveCanvas(entry,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
         if(right)await saveCanvas(right,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
@@ -1852,12 +1860,31 @@ function makeServer() {
   };
   const DerivedViewSchema = z.record(z.string(), z.unknown());
 
+  server.registerTool("render_canvas", {
+    title: "Read visible canvas pixels",
+    description: "Render the base image, public scene objects and saved marks, including Graph and handwriting. Use for whiteboards and mixed scenes; process_image reads only source pixels. Pass the submission's canvasReads request (expectedRevision and hiddenLayers) to preserve its state and visibility; STALE_CANVAS means that old state is unavailable. Mark labels default to none; formula and axis text stay visible. Returns a pixel-to-canvas mapping. Does not run modules or include scratch. Without hiddenLayers all saved layers are shown. Workspace copies require setId from canvasReads.",
+    inputSchema: z.object({ imageId: ImageIdSchema, setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
+      region: RegionSchema.optional(), maxSide: z.number().int().min(64).max(4096).default(1600),
+      format: z.enum(["png", "webp"]).default("png"), labels: z.enum(["none", "all"]).default("none"),
+      hiddenLayers: z.array(z.string().regex(/^L\d+$/)).max(200).default([]),
+      expectedRevision: z.string().regex(/^cv:[0-9a-f]{24}$/).optional() }),
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  }, async ({ imageId, setId, ...options }) => {
+    try {
+      const entry = await ensureSet(imageId + (setId ? "#" + setId : ""));
+      const out = await renderCanvas(entry, options);
+      return { content: [{ type: "text", text: "Visible canvas composite; " + out.metadata.revision }, imageBlock(out)], structuredContent: out.metadata };
+    } catch (error) {
+      return { ...fail(error), structuredContent: { kind: "estampes.canvas_render_error", code: error.code ?? "INVALID_RENDER", ...(error.revision ? { revision: error.revision } : {}) } };
+    }
+  });
+
   server.registerTool(
     "process_image",
     {
       title: "Preprocess an image region",
       description:
-        "Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region`, then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for thin lines and outlines. " +
+        "Read only the source image, excluding scene objects and all annotations. For handwriting or Graph on the canvas use render_canvas. Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region`, then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for thin lines and outlines. " +
         "`sampling.mode` picks the resolution the ops run at: preview (default; old behaviour, the crop is resized to the output first and zoomed up to 8x by interpolation), working (the cached working copy at its own pixels), native (pixels cut from the original file; use it for small text, fine traces and anything you must not guess, before trying interpolation). " +
         "`output` picks the delivered size and codec (png/webp are lossless). Every result has a derivedViewId, a coordinate mapping back to the image and caveats (interpolated, lossy, thresholded, enhanced): enhanced pixels are not new evidence, so check the original. Output is for your analysis; the user sees the original unless you choose to show this.",
       inputSchema: z.object({
