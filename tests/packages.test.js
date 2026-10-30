@@ -182,3 +182,33 @@ test("a purge plan goes stale when the package is installed before it is confirm
   await assert.rejects(h.lifecycle.commit(purge.planId, { consent: purge.consent }), /installed after this plan/);
   await readFile(join(s.mods, "packages", "org.example.callout", "1.0.0", "package.json"));
 });
+
+test("a corrupted active version stays visible so it can be rolled back", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  let h = await s.boot();
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await s.put("callout-2", sign(v("1.1.0")));
+  await s.commit(h, "update", "org.example.callout", {}, { approve: true });
+  const file = join(s.mods, "packages", "org.example.callout", "1.1.0", "package.json");
+  const bundle = JSON.parse(await readFile(file, "utf8")); bundle.manifest.description = "evil";
+  const { chmod } = await import("node:fs/promises"); await chmod(file, 0o644); await writeFile(file, JSON.stringify(bundle));
+  h = await s.boot();
+  assert.equal(h.registry.record("org.example.callout").state, "failed");
+  assert.equal(h.registry.has("org.example.callout"), true);
+  const rb = await s.commit(h, "rollback", "org.example.callout");
+  assert.equal(rb.done.result.version, "1.0.0");
+});
+
+test("a rollback plan goes stale when another update lands first", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await s.put("callout-2", sign(v("1.1.0")));
+  await s.commit(h, "update", "org.example.callout", {}, { approve: true });
+  const rb = await h.lifecycle.prepare("rollback", "org.example.callout");
+  await s.put("callout-3", sign(v("1.2.0")));
+  await s.commit(h, "update", "org.example.callout", {}, { approve: true });
+  await assert.rejects(h.lifecycle.commit(rb.planId, { consent: rb.consent }), /changed after this rollback/);
+});

@@ -224,6 +224,11 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: entry.at }));
       } catch (error) {
         audit.record({ kind: "package.rejected", module: id, reason: "startup: " + String(error?.message || error).slice(0, 200) });
+        // Keep it visible so rollback or uninstall can still be prepared: show the
+        // newest earlier version that still verifies, in the failed state.
+        for (const old of [...(locked.modules[id]?.history ?? [])].reverse()) {
+          try { const v = await loadVersion(id, old.version, old.sha256); registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: old.at })); break; } catch { /* try the next */ }
+        }
         await registry.setRecord(id, { ...rec, state: "failed", error: String(error?.message || error).slice(0, 200) });
       }
     }
@@ -319,10 +324,12 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         if (mod.source !== "package" || !prev) throw new LifecycleError(mod.manifest.id + " has no earlier version to go back to", "noop");
         const v = await loadVersion(mod.manifest.id, prev.version, prev.sha256);
         return { name: v.manifest.name, toVersion: prev.version, requested: v.manifest.permissions, diff: permissionDiff(mod.record.granted ?? [], v.manifest.permissions),
-          risk: "low", requiresAdmin: false, notes: ["Restores the exact bytes of " + prev.version + " that were verified earlier."], options: { id: mod.manifest.id, version: prev.version, digest: prev.sha256 } };
+          risk: "low", requiresAdmin: false, notes: ["Restores the exact bytes of " + prev.version + " that were verified earlier."], options: { id: mod.manifest.id, version: prev.version, digest: prev.sha256, from: mod.record.version } };
       },
       async commit(mod, plan) {
-        const { id, version, digest } = plan.options;
+        const { id, version, digest, from } = plan.options;
+        const last = (mod.record.previous ?? []).at(-1);
+        if (mod.record.version !== from || last?.version !== version || last?.sha256 !== digest) throw new LifecycleError(id + " changed after this rollback was planned; prepare it again", "conflict");
         const v = await loadVersion(id, version, digest);
         const previous = (mod.record.previous ?? []).slice(0, -1);
         const wasEnabled = mod.record.state === "enabled";
