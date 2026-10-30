@@ -24,7 +24,7 @@ Rules: the canvas panel (`p:canvas`) always exists and cannot be closed; a panel
 
 ```json
 { "schema": "estampes.panel/1", "id": "calculator", "title": "Scientific CAS", "kind": "calculator",
-  "uiSchemaVersion": 1, "defaultBinding": "surface.casNotebook", "maxInstances": 2,
+  "uiSchemaVersion": 1, "defaultBinding": "surface.casNotebook", "maxInstances": 4,
   "capabilityBindings": ["calculate", "define", "get_notebook", "recompute", "plot_result"],
   "permissions": ["cas.compute", "canvas.read", "canvas.write", "workspace.write"] }
 ```

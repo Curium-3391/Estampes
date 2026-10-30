@@ -86,7 +86,7 @@ function renderWB(){
 }
 function decoratePanel(el,p){
  const lay=layoutNow(),pl=lay.placements[p.panelId];
- const title=el.querySelector(".wb-title");if(title)title.textContent=p.title==="Canvas"?"畫布與函數圖":p.title==="Scientific CAS"?"科學計算機":p.title;
+ const title=el.querySelector(".wb-title");if(title)title.textContent=p.title==="Canvas"?"畫布與函數圖":wbTitle(p);
  const max=el.querySelector("[data-act=maximize]");if(max){max.setAttribute("aria-pressed",String(pl?.mode==="maximized"));max.title=pl?.mode==="maximized"?"還原大小":"在工作台內最大化";}
  el.dataset.state=p.moduleState??"enabled";
  const solo=openPanels().length<=1;el.querySelector(".wb-head").hidden=solo&&p.panelId==="p:canvas";
@@ -119,7 +119,7 @@ function renderBar(open,lay,mobile,solo){
  if(!solo){bar.push(h("button",{class:"wb-chip",title:"把目前這個裝置的面板排回預設位置",onclick:()=>wbLayout({op:"reset",profile:wb.profile,panelIds:openPanels().map(p=>p.panelId)})},"重設版面"));}
  wbBar.replaceChildren(...bar);
 }
-const wbTitle=p=>p.kind==="canvas"?"畫布":p.kind==="calculator"?"科學計算機":p.title;
+const wbTitle=p=>p.kind==="canvas"?"畫布":p.kind==="calculator"?"科學計算機"+(/(\d+)$/.exec(p.panelId)?.[1]>1?" "+/(\d+)$/.exec(p.panelId)[1]:""):p.title;
 function wbReorder(dir){
  const lay=layoutNow(),ids=lay.order.filter(id=>openPanels().some(p=>p.panelId===id)),i=ids.indexOf(lay.active),j=i+dir;
  if(i<0||j<0||j>=ids.length)return;const next=[...ids];[next[i],next[j]]=[next[j],next[i]];
