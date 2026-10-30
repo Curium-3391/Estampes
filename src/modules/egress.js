@@ -30,7 +30,7 @@ for (const [net, bits] of [
   ["192.0.0.0", 24], ["192.0.2.0", 24], ["192.88.99.0", 24], ["192.168.0.0", 16], ["198.18.0.0", 15], ["198.51.100.0", 24],
   ["203.0.113.0", 24], ["224.0.0.0", 4], ["240.0.0.0", 4],
 ]) blocked.addSubnet(net, bits, "ipv4");
-for (const [net, bits] of [["::", 128], ["::1", 128], ["64:ff9b::", 96], ["100::", 64], ["2001:db8::", 32], ["fc00::", 7], ["fe80::", 10], ["ff00::", 8]]) blocked.addSubnet(net, bits, "ipv6");
+for (const [net, bits] of [["::", 128], ["::1", 128], ["64:ff9b::", 96], ["100::", 64], ["2001:db8::", 32], ["fc00::", 7], ["fe80::", 10], ["fec0::", 10], ["ff00::", 8], ["2002::", 16], ["2001::", 32]]) blocked.addSubnet(net, bits, "ipv6");
 
 export function isPublicAddress(address) {
   const family = isIP(address);
@@ -87,9 +87,12 @@ export function httpsTransport({ host, path, method, headers, body, timeoutMs, m
 
 // ---- Secrets ---------------------------------------------------------------
 // <storage>/modules/secrets.json: { "<moduleId>": { "<name>": "value" } }, mode 600,
-// or the environment variable ESTAMPES_MODULE_SECRET_<ID>_<NAME> (dots and dashes
-// become underscores, upper case). Modules never read these; only this file does.
-const envName = (moduleId, name) => "ESTAMPES_MODULE_SECRET_" + (moduleId + "_" + name).replace(/[^A-Za-z0-9]/g, "_").toUpperCase();
+// or an environment variable named by envName() below. Modules never read these; only this file does.
+// Collision-free: ids only contain a-z 0-9 . -, so "_" never appears in them and
+// can start an escape ("." -> _D, "-" -> _M); "_S" separates the id from the name.
+// org.estampes.astrometry + api_key -> ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY
+export const envName = (moduleId, name) =>
+  "ESTAMPES_MODULE_SECRET_" + moduleId.replace(/\./g, "_D").replace(/-/g, "_M").toUpperCase() + "_S" + name.toUpperCase();
 
 export function createSecrets({ dir = "", env = process.env } = {}) {
   const file = dir ? join(dir, "secrets.json") : "";

@@ -21,7 +21,7 @@ import { createPackages, generateSigningKey, signBundle, verifyBundle, digestOf,
 import { validateManifest, MODULE_ID } from "../src/modules/manifest.js";
 import { declarativeRuntime } from "../src/modules/runtimes/declarative.js";
 import { createHttpRuntime } from "../src/modules/runtimes/http.js";
-import { createEgress, createSecrets } from "../src/modules/egress.js";
+import { createEgress, createSecrets, envName } from "../src/modules/egress.js";
 import { wasmRuntime, WASM_ABI, wasmFileOf, checkWasmPackage } from "../src/modules/runtimes/wasm.js";
 import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { createRegistry } from "../src/modules/registry.js";
@@ -101,12 +101,12 @@ try {
       const value = Buffer.concat(chunks).toString("utf8").replace(/\r?\n$/, "");
       if (!value) die("no value on standard input");
       await secrets.set(moduleId, name, value);
-      console.log("Stored " + name + " for " + moduleId + " in " + join(dir, "secrets.json") + " (mode 600). The module itself can never read it.");
+      console.log("Stored " + name + " for " + moduleId + " in " + join(dir, "secrets.json") + " (mode 600). The module itself can never read it. Alternatively set the environment variable " + envName(moduleId, name) + ".");
     } else if (action === "status") {
       if (!MODULE_ID.test(moduleId ?? "")) die("secret status <moduleId>");
       const names = [...(await readdir(join(dir, "packages", moduleId)).catch(() => [])).sort().slice(-1)];
       const manifest = names[0] ? JSON.parse(await readFile(join(dir, "packages", moduleId, names[0], "package.json"), "utf8")).manifest : null;
-      for (const sec of manifest?.secrets ?? []) console.log((await secrets.has(moduleId, sec.name) ? "set      " : "NOT SET  ") + sec.name + (sec.label ? "  (" + sec.label + ")" : ""));
+      for (const sec of manifest?.secrets ?? []) console.log((await secrets.has(moduleId, sec.name) ? "set      " : "NOT SET  ") + sec.name + (sec.label ? "  (" + sec.label + ")" : "") + "  env: " + envName(moduleId, sec.name));
       if (!manifest?.secrets?.length) console.log("No declared secrets for " + moduleId + " (or it is not installed).");
     } else die("secret <set|status> <moduleId> [name]");
   } else if (cmd === "init") {

@@ -376,7 +376,7 @@ const reply = (obj, status = 200) => async () => ({ status, headers: {}, body: B
 
 test("addresses: only public ones are reachable", () => {
   for (const a of ["8.8.8.8", "1.1.1.1", "2606:4700::1111", "::ffff:8.8.8.8"]) assert.equal(isPublicAddress(a), true, a);
-  for (const a of ["127.0.0.1", "10.0.0.5", "172.16.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fe80::1", "fc00::1", "::ffff:127.0.0.1", "not-an-ip"]) assert.equal(isPublicAddress(a), false, a);
+  for (const a of ["127.0.0.1", "10.0.0.5", "172.16.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fe80::1", "fec0::1", "fc00::1", "::ffff:127.0.0.1", "not-an-ip"]) assert.equal(isPublicAddress(a), false, a);
 });
 
 test("an HTTP module installs without any network call, then runs through the egress rules", async () => {
@@ -424,4 +424,15 @@ test("HTTP manifests: host must be named when there are several, secrets must be
   assert.throws(bad((m) => { m.secrets = []; delete m.secrets; m.permissions = ["canvas.write", "network.request.approved"]; }), /not declared|module\.secrets/);
   assert.throws(bad((m) => { m.capabilities[0].request.path = "/v1/../x"; }), /fixed path/);
   assert.throws(bad((m) => { m.permissions = ["canvas.write"]; delete m.network; delete m.secrets; }), /network\.request\.approved/);
+});
+
+test("environment secret names cannot collide between module ids", async () => {
+  const { envName } = await import("../src/modules/egress.js");
+  const ids = ["org.example.a-b", "org.example.a.b", "org.example.ab", "org.example.a-.b", "org.example.a.b-", "org.example.s.api"];
+  const names = ids.map((id) => envName(id, "api_key"));
+  assert.equal(new Set(names).size, ids.length);
+  assert.equal(envName("org.estampes.astrometry", "api_key"), "ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY");
+  const secrets = createSecrets({ env: { [envName("org.example.a-b", "api_key")]: "one" } });
+  assert.equal(await secrets.get("org.example.a-b", "api_key"), "one");
+  assert.equal(await secrets.get("org.example.a.b", "api_key"), null);
 });
