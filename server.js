@@ -39,6 +39,10 @@ import { calibrate, measure, toSpacePixels, spaceToNormalized, defaultSigma, UNI
 import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
+import { createModuleHost } from "./src/modules/index.js";
+import { registerModuleTools } from "./src/modules/mcp-tools.js";
+import { createBlankCanvas } from "./src/scene/blank-canvas.js";
+import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 // package.json is the single source of truth for the release version.
@@ -67,7 +71,9 @@ const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
   readFileSync(join(ROOT, "public", file), "utf8").replaceAll("__ESTAMPES_VERSION__", VERSION);
+const STORE_URI = "ui://estampes/module-store-" + URI_TAG + ".html";
 const html = loadWidget("number-line.html");
+const storeHtml = loadWidget("module-store.html");
 const evidenceHtml = loadWidget("visual-evidence.html");
 const visualHtml = loadWidget("visual-surface.html");
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
@@ -351,6 +357,13 @@ const EDIT_TEXT = {
   "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
+  "edit-object": (e) => "edited object " + e.id + (e.props ? " to " + JSON.stringify(e.props) : ""),
+  "remove-object": (e) => "deleted object " + e.id,
+};
+// Scene objects added by modules (function plots, axes, shapes).
+const objectsText = (entry) => {
+  const list = renderedObjects(entry);
+  return list.length ? ". Scene objects (from modules; change them with execute_module): " + JSON.stringify(list.map(compactObject)) : "";
 };
 const userEditsText = (edits) => edits.length
   ? ". USER EDITS since your last look (trust these over your memory): " + edits.map((e) => (e.side ? e.side + " image: " : "") + (EDIT_TEXT[e.kind]?.(e) ?? e.kind)).join("; ")
@@ -726,7 +739,7 @@ function makeServer() {
             text: "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
               (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
               resolved.length + " marks (ids persist; edit by re-using an id; boxes rounded): " + JSON.stringify(resolved.map(compactMark)) +
-              (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + userEditsText(edits) +
+              (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + objectsText(entry) + userEditsText(edits) +
               (imported.length ? ". Restored from marks file: " + imported.join(", ") : "") +
               (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
               (resolved.some(m => m.note && needsReview(m)) ? ". Notes marked claim.verification unverified are your own claims: only the user (in the canvas) or a tool's evidence verifies them" : "") +
@@ -750,6 +763,7 @@ function makeServer() {
             "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
             "estampes/views": rendered,
             "estampes/annotations": resolved,
+            "estampes/objects": widgetObjects(entry),
           },
         });
       } catch (error) {
@@ -804,6 +818,7 @@ function makeServer() {
           : {
               width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
               gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
+              objects: widgetObjects(entry),
               image: pixels(await displayImage(entry)),
               views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
               ...(check ? { check: checkSummary(check) } : {}),
@@ -1671,7 +1686,30 @@ function makeServer() {
     }
   );
 
+  // ---- Modules and the Store (src/modules) --------------------------------
+  registerModuleTools(server, {
+    host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
+    ensureImage, saveCanvas, canvasLayers,
+  });
+
   return server;
+}
+
+// What the canvas widget needs to show one image's canvas (the same shape
+// present_visual returns), for tools that change a canvas without drawing
+// marks themselves, such as execute_module.
+async function canvasPayload(entry) {
+  const shown = await displayImage(entry), marks = canvasMarks(entry), exports = exportLinks(entry.imageId);
+  return {
+    structuredContent: {
+      kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: entry.imageId, width: entry.width, height: entry.height,
+      views: [], marks: marks.map(compactMark), layers: canvasLayers(entry), coordinateSystem: "normalized-top-left", ...(exports ? { exports } : {}),
+    },
+    _meta: {
+      "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
+      "estampes/views": [], "estampes/annotations": marks, "estampes/objects": widgetObjects(entry),
+    },
+  };
 }
 
 // SDK 2.x handles 2026-07-28 server/discover and legacy initialize on the same
@@ -1687,6 +1725,8 @@ const port = config.port;
 // or, with ESTAMPES_REQUIRE_KEY=1 (Docker), from the storage folder, where
 // it is generated on first start. Set before the server listens.
 let ACCESS_KEY = "";
+// Created at startup, once storage is checked (see below).
+let moduleHost = null;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -1900,6 +1940,10 @@ const storage = await storageHealth();
 const keyInfo = await resolveAccessKey({ configured: config.accessKey, require: config.requireKey, allowOpen: config.allowOpen,
   storageDir: storage.enabled && storage.writable ? config.storageDir : "" });
 ACCESS_KEY = keyInfo.key;
+moduleHost = await createModuleHost({
+  storageDir: storage.enabled && storage.writable ? config.storageDir : "", coreVersion: VERSION,
+  canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas },
+});
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
   log("warn", "[auth] generated an access key. Connect ChatGPT to https://<your host>/mcp?key=" + keyInfo.key +

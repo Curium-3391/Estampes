@@ -4,6 +4,8 @@
 // back, so an edited drawing never turns into unvalidated marks.
 import { markSvg } from "./mark-render.js";
 import { READABLE_PROTOCOLS, marksFromDocument } from "./protocol.js";
+import { renderedObjects } from "./scene/scene-ops.js";
+import { primitivesSvg } from "./scene/objects.js";
 
 export const MARKS_FORMAT = "estampes-marks";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -16,8 +18,13 @@ const xml = (s) => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt
 export function exportMarksSvg(entry, marks, layers = []) {
   const { width: W, height: H } = entry, toPx = W / 1000;
   const map = (nx, ny) => [Math.round(nx * W * 10) / 10, Math.round(ny * H * 10) / 10];
-  const layer = (id, name, list, opacity) => !list.length ? "" :
-    `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${xml(name)}"${opacity < 1 ? ` opacity="${opacity}"` : ""}>` + list.map((m) => {
+  // Public scene objects (function plots, axes, shapes) are drawn in their
+  // layer under the marks, as plain vector paths and text.
+  const objects = renderedObjects(entry).filter((r) => r.object.visibility === "public");
+  const objectSvg = (layerId) => objects.filter((r) => (r.object.layer ?? null) === layerId)
+    .map((r) => `<g id="object-${xml(r.object.id)}">${primitivesSvg(r.primitives, W, H)}</g>`).join("");
+  const layer = (id, name, list, opacity, layerId = undefined) => !list.length && !(layerId && objectSvg(layerId)) ? "" :
+    `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${xml(name)}"${opacity < 1 ? ` opacity="${opacity}"` : ""}>` + (layerId ? objectSvg(layerId) : "") + list.map((m) => {
       const a = m.type === "polyline" ? m.points[0] : { x: m.x, y: m.y };
       const [lx, ly] = map(a.x, a.y), fs = 15 * K * toPx;
       const label = m.label ? `<text x="${lx + fs * 0.6}" y="${ly - fs * 0.8}" font-size="${fs}" font-weight="700" fill="${m.author === "user" ? "#579DF6" : "#E4AE57"}" stroke="#17212A" stroke-width="${0.8 * K * toPx}" paint-order="stroke">${xml(m.label)}</text>` : "";
@@ -25,7 +32,7 @@ export function exportMarksSvg(entry, marks, layers = []) {
     }).join("") + "</g>";
   const known = new Set(layers.map((l) => l.id));
   const groups = [
-    ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity)),
+    ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity, l.id)),
     layer("estampes-user", "使用者", marks.filter((m) => m.author === "user" && !known.has(m.layer))),
     layer("estampes-gpt", "GPT", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
   ].filter(Boolean).join("\n");

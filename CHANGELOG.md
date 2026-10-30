@@ -2,7 +2,14 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
-## Unreleased
+## 0.10.0 — Modules and the Store
+
+- **Module system, phase 0 and 1.** A module is described by an `estampes.module/1` manifest (capabilities with strict input schemas, permissions, limits) and returns *scene operations* instead of drawing: `object.create`, `object.update`, `object.delete`, `object.publish`. The core validates every batch, applies it all or nothing, assigns ids, records provenance and bumps a per-canvas scene revision. Modules change only their own objects; the user can change anything. See [Modules](docs/MODULES.md).
+- **Scene objects** keep their meaning instead of becoming pixels: `axes-2d`, `function-plot` (expression, domain, frame) and generic `shape`. A trusted renderer turns them into drawing primitives for the canvas, the layered SVG export and the preview image. Objects are saved in `canvas.json`, appear in `get_visual_state` (`objects`, `sceneRevisions`) and live in their own layers.
+- **Safe expressions.** Formulas are tokenized and parsed by Estampes's own parser (numbers, `+ - * / ^`, implicit multiplication, `|x|`, constants, a fixed function list); there is no `eval`, and anything else is refused with the position of the problem.
+- **Built-in Graph module** (`org.estampes.graph`): `plot_function`, `update_plot`, `set_axes`, `plot_points`. `sin(x)` on a new blank canvas keeps its formula; changing it to `sin(2x)` re-computes the curve, from GPT or from a field under the canvas.
+- **Estampes Store** (`open_module_store`): an MCP Apps widget with browse, search, detail, permission preview, enable and disable, and an activity tab. Enabling needs a plan the user confirms in the widget (a consent token the model never sees); everything is audited in `<storage>/modules/audit.jsonl`, and module state in `registry.json`.
+- Five fixed model tools (`open_module_store`, `list_modules`, `get_module_capabilities`, `execute_module`, `prepare_module_change`), so enabling a module never changes the tool list. Blank canvases are ordinary images, so storage, export and zoom work unchanged.
 
 ## 0.10.0 — Geometry, registration, quality and measurement
 
