@@ -30,3 +30,17 @@ jobs:
       - run: npm ci --no-audit --no-fund
       # The Node CAS tests start the real Python service.
       - run: node --test tests/cas-module.test.js
+      - run: node --test tests/surface.test.js
+      # Browser test of the workbench: real server, real SymPy, real widget,
+      # driven by the runner's Chrome. (A live ChatGPT host is not covered.)
+      - run: npm install --no-save --no-audit --no-fund playwright-core
+      - run: node --test tests/workbench-e2e.test.js
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          ESTAMPES_E2E_SHOTS: ${{ runner.temp }}/workbench-shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workbench-screenshots
+          path: ${{ runner.temp }}/workbench-shots
+          if-no-files-found: ignore

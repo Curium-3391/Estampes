@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { inlineWorkbench } from "../src/surface/widget-source.js";
 import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,7 +17,7 @@ const available = !!browser;
 test("finding groups: compact rows, detail drilldown, canvas selection and review drafts", { skip: !available && "Chromium unavailable", timeout: 45000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "estampes-findings-"));
   try {
-    const html = readFileSync(new URL("../public/visual-surface.html", import.meta.url), "utf8");
+    const html = inlineWorkbench(readFileSync(new URL("../public/visual-surface.html", import.meta.url), "utf8"));
     const probe = String.raw`
 (async()=>{
 const check=(ok,message)=>{if(!ok)throw Error(message);};
@@ -109,7 +110,7 @@ try{
 })();
 `;
     const page = join(dir, "probe.html");
-    writeFileSync(page, html.replace("<head>","<head><script>window.addEventListener('error',e=>document.body.dataset.findingTest='error: '+e.message)</script>").replace("</script></main>", probe + "\n</script></main>"));
+    writeFileSync(page, html.replace("<head>","<head><script>window.addEventListener('error',e=>document.body.dataset.findingTest='error: '+e.message)</script>").replace("</script></body>", probe + "\n</script></body>"));
     const server=createServer((req,res)=>{res.setHeader("content-type","text/html; charset=utf-8");res.end(readFileSync(page));});
     await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
     const child = spawn(browser, ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir="+join(dir,"profile"), "about:blank"], { detached: process.platform !== "win32", stdio: ["ignore","ignore","pipe"] });

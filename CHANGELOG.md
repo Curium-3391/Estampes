@@ -7,6 +7,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 - Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
 
+## 0.19.0 — Workbench UI
+
+- The Visual Surface widget is now a workbench: the canvas and the SymPy calculator are panels you can move, resize, dock, minimise and maximise inside the widget; phones get tabs; each device profile keeps its own layout (also by keyboard: Alt+Arrows). No pop-out, no second page.
+- **Calculator panel**: operations, text or LaTeX input, exact results typeset as MathML, approximate values, warnings, status, definitions and assumptions, **畫在 Graph** with links that go stale when upstream definitions change, recompute, edit, copy LaTeX/text. Everything is built with DOM APIs (no `innerHTML`).
+- Browser test `tests/workbench-e2e.test.js` (real server, real SymPy, real widget, fake host) runs in CI with screenshots. A live ChatGPT host test has not been executed. See [docs/WORKBENCH.md](docs/WORKBENCH.md).
+
 ## 0.18.0 — Surface and panels (server side)
 
 - **`estampes.surface/1`**: a shared, persistent record of which panels are open on a canvas and one layout per device profile (desktop, tablet, mobile), stored in `<storage>/surfaces`. Panel geometry is in surface units, always reachable, snapped and size-limited; layouts are revision-checked and idempotent, and a change to one profile never rewrites another.

@@ -41,6 +41,8 @@ A panel is data. `kind` names a renderer that ships with Estampes (`canvas`, `gr
 
 `surface_apply` ops: `open-panel {module, panel}`, `close-panel {panelId}`, `layout {profile, layout}` where `layout` is one of `add`, `remove`, `focus`, `arrange {panelId, rect, mode?, dock?}`, `minimize`, `restore`, `maximize`, `reorder {order}`, `sheet`, `reset`.
 
+The widget side (window manager, calculator panel) is described in [WORKBENCH.md](WORKBENCH.md).
+
 ## Limits of this version
 
 The Graph panel and the photo canvas share one viewport (`p:canvas`); a second, independent Graph viewport is not implemented. Single-user trust boundary: two widgets of the same user cannot overwrite each other silently (revision check), but there is no multi-user editing.
