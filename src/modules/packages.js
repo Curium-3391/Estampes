@@ -275,6 +275,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
       },
       async commit(_mod, plan) {
         const { id, version, digest } = plan.options;
+        if (registry.has(id)) throw new LifecycleError(id + " was installed after this plan was made; prepare it again", "conflict");
         const v = await findInInbox(id, version);
         if (v.digest !== digest) throw new LifecycleError("the package in the inbox changed after the plan was made; prepare it again", "integrity");
         await stage(v);

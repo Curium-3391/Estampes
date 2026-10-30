@@ -226,3 +226,15 @@ test("an update plan goes stale when a newer version is installed first", async 
   await assert.rejects(h.lifecycle.commit(old.planId, { consent: old.consent }), /out of date/);
   assert.equal(h.registry.record("org.example.callout").version, "1.2.0");
 });
+
+test("an install plan goes stale when the package is installed by another plan first", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  const h = await s.boot();
+  const a = await h.lifecycle.prepare("install", "org.example.callout");
+  const b = await h.lifecycle.prepare("install", "org.example.callout");
+  await writeApproval(s.storage, s.key, a.planId);
+  await h.lifecycle.commit(a.planId, { consent: a.consent });
+  await writeApproval(s.storage, s.key, b.planId);
+  await assert.rejects(h.lifecycle.commit(b.planId, { consent: b.consent }), /installed after this plan/);
+});
