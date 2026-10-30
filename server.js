@@ -19,8 +19,9 @@ import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./sr
 import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
-  applyPairChanges, pairLinks, reviewLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
+  applyPairChanges, pairLinks, reviewLink, reviewFinding, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
 } from "./src/canvas-state.js";
+import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
 import { downloadImage, entrySharp } from "./src/image-store.js";
@@ -101,6 +102,21 @@ const VisualAnnotationSchema = z.object({
 }).superRefine(checkGeometry);
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
+// Evidence the assistant gives for a claim (a note or a link). It is always
+// recorded as the model's own observation; only a tool's or the user's
+// evidence can make a claim verified.
+const EvidenceSchema = z.object({
+  kind: z.enum(EVIDENCE_KINDS.filter((k) => k !== "tool-result")).describe("text = words/numbers read there; position = where it sits relative to other things; shape = outline, size, colour; context = what surrounds it"),
+  side: z.enum(["left", "right"]).optional().describe("Paired view: the image this evidence is on (default left)"),
+  region: z.array(z.number().min(0).max(1)).length(4).optional().describe("[x, y, x2, y2] normalized to the FULL image (not coordinateFrame) where the clue is, so the user can zoom in and check it"),
+  says: z.string().min(1).max(160).describe("What you see there, e.g. 'silkscreen reads IC502'"),
+}).strict();
+const ClaimFields = {
+  confidence: z.enum(CONFIDENCE).optional().describe("Your own belief in the note or link. It only orders the user's review; it never makes a claim verified"),
+  evidence: z.array(EvidenceSchema).max(6).optional().describe("Where on which image the claim is supported and what you see there; empty list clears"),
+  ambiguities: z.array(z.string().max(120)).max(4).optional().describe("What is still unresolved, e.g. 'part number unreadable'"),
+};
+
 // Model-facing annotations use coordinates ONLY. Legacy semantic anchors
 // are retained in scene-catalog.js for isolated geometry unit tests, but
 // never exposed as an object-position catalog to the model.
@@ -123,6 +139,7 @@ const ModelAnnotationSchema = z.object({
   pen: z.enum(MARK_PENS).optional().describe("highlighter = wide translucent stroke that keeps the picture visible; use it to shade an area rather than draw a precise line"),
   author: z.literal("assistant").optional(),
   side: z.enum(["left", "right"]).optional().describe("Paired view only: the image this mark is on (default left); coordinates are normalized to that image"),
+  ...ClaimFields,
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
 const LinkSchema = z.object({
@@ -131,12 +148,14 @@ const LinkSchema = z.object({
   right: z.string().min(1).max(64).describe("Id of the mark on the RIGHT image"),
   label: z.string().max(64).optional().describe("What both marks are, e.g. a part, a street, a room or a person's name"),
   note: z.string().max(200).optional().describe("Why they match, e.g. same shape, same position relative to a neighbour, same text"),
-  confidence: z.enum(LINK_CONFIDENCE).optional().describe("How sure you are they are the same thing; low asks the user to confirm"),
+  confidence: z.enum(LINK_CONFIDENCE).optional().describe("How sure you are they are the same thing. Every unverified link goes to the user's review; confidence only orders it"),
+  evidence: ClaimFields.evidence, ambiguities: ClaimFields.ambiguities,
 }).strict();
 const FindingSchema = z.object({
   id: z.string().min(1).max(64),
   note: z.string().max(200).optional().describe("Empty string clears the note"),
   status: z.enum(MARK_STATUSES).optional(),
+  ...ClaimFields,
 }).strict();
 
 // M0.5 real-image schemas, shared by the image tools and present_visual.
@@ -200,26 +219,59 @@ const checkSummary = ({ layout, region, numbers }) => ({ layout, region, numbers
 // polyline vertices. Full geometry goes to the widget in _meta only, so a
 // long session does not re-send every point on every call.
 const r3 = (v) => Math.round(v * 1000) / 1000;
+// What the model reads about a claim: its state, its own confidence, how
+// much evidence of each kind of observer, and what is unresolved.
+function claimSummary(c) {
+  const n = evidenceCount(c);
+  return {
+    verification: verificationOf(c), ...(c.confidence ? { confidence: c.confidence } : {}),
+    evidence: { model: n.model, tool: n.tool, user: n.user },
+    ...(c.ambiguities?.length ? { ambiguities: c.ambiguities } : {}),
+    ...(c.reviewReason ? { userReason: c.reviewReason } : {}), ...(c.previouslyRejected ? { previouslyRejected: true } : {}),
+  };
+}
 function compactMark(m) {
   return {
     id: m.id, type: m.type, author: m.author, ...(m.side ? { side: m.side } : {}), ...(m.layer ? { layer: m.layer } : {}), ...(m.label ? { label: m.label } : {}),
     box: m.type === "point" ? [r3(m.x), r3(m.y)] : [r3(m.x), r3(m.y), r3(m.x2), r3(m.y2)],
     ...(m.type === "polyline" ? { vertices: m.points.length } : {}),
-    ...(m.note ? { note: m.note } : {}), ...(m.status ? { status: m.status } : {}), ...(m.edited ? { editedByUser: true } : {}),
+    ...(m.note ? { note: m.note, claim: claimSummary(m) } : {}), ...(m.status ? { status: m.status } : {}), ...(m.edited ? { editedByUser: true } : {}),
     ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
   };
 }
 const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
   locked: z.boolean().optional(), opacity: z.number().optional(), side: z.enum(["left", "right"]).optional() });
 const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
-  ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}) });
-const REVIEW_TEXT = { confirmed: "USER CONFIRMED", rejected: "USER REJECTED (do not rely on it)" };
+  ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}), claim: claimSummary(l) });
+// The widget also gets each piece of evidence, to show where it is.
+const widgetLink = (l) => ({ ...compactLink(l), evidence: l.evidence ?? [], ambiguities: l.ambiguities ?? [],
+  verification: verificationOf(l), ...(l.reviewReason ? { reviewReason: l.reviewReason } : {}), ...(l.previouslyRejected ? { previouslyRejected: l.previouslyRejected } : {}) });
+const STATE_TEXT = {
+  "user-confirmed": "USER CONFIRMED", "user-rejected": "USER REJECTED (do not rely on it)",
+  "independently-verified": "VERIFIED by a tool", unverified: "UNVERIFIED",
+};
+const claimTag = (c) => {
+  const n = evidenceCount(c), state = verificationOf(c);
+  return c.confidence + ", evidence model " + n.model + " tool " + n.tool + ", " + STATE_TEXT[state] +
+    (c.reviewReason ? " because " + JSON.stringify(c.reviewReason) : "") + (c.previouslyRejected ? ", re-proposed after a rejection" : "") +
+    (c.ambiguities?.length ? "; unresolved: " + c.ambiguities.join("; ") : "");
+};
+// Claims refused this call, and what the user rejected before.
+const refusedText = (refused) => refused.length
+  ? ". REFUSED (the user rejected the same claim at the same place before; it was not stored): " + refused.map((r) =>
+    r.kind + " " + r.id + (r.rejection.reason ? " (user's reason: " + r.rejection.reason + ")" : "")).join("; ") +
+    ". Re-propose only with NEW evidence (a different kind of clue or another image), or drop it."
+  : "";
+const rejectionsText = (entries) => {
+  const list = entries.flatMap((e) => e.rejections ?? []);
+  return list.length ? ". The user REJECTED these claims (do not repeat them without new evidence): " + list.slice(-12).map(rejectionText).join("; ") : "";
+};
 // One line per link so the model can reason from its own earlier matches
 // without looking at the images again.
 const linkTable = (links, marksById) => links.map((l) => {
   const name = (id) => id + (marksById.get(id)?.label ? " " + JSON.stringify(marksById.get(id).label) : "");
   return l.id + (l.label ? " " + JSON.stringify(l.label) : "") + ": left " + name(l.left) + " <-> right " + name(l.right) +
-    " [" + l.confidence + (l.review ? ", " + REVIEW_TEXT[l.review] : l.confidence === "low" ? ", awaiting user review" : "") + "]" +
+    " [" + claimTag(l) + "]" +
     (l.note ? " — " + l.note : "");
 }).join("\n");
 const layerText = (layers) => layers.map((l) => (l.side ? l.side + ":" : "") + l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count +
@@ -267,8 +319,9 @@ const pairLayers = (left, right) => [
 const pixelsBlock = (out) => ({ type: "image", data: out.data.toString("base64"), mimeType: out.mimeType });
 
 async function presentPair({ left, right, annotations, findings, remove, reset, layer, coordinateFrame, priorUserAnnotations, links, removeLinks, verify }) {
+  const refused = [];
   const changed = applyPairChanges(left, right, {
-    annotations, findings, remove, reset, layer, frame: coordinateFrame, links, removeLinks,
+    annotations, findings, remove, reset, layer, frame: coordinateFrame, links, removeLinks, refused,
     priorUser: priorUserAnnotations.map((m, i) => {
       try { return { ...replayUserAnnotation(m), side: m.side ?? "left" }; }
       catch (error) { throw new Error("present_visual priorUserAnnotations[" + i + "] (mark " + JSON.stringify(m.id) + "): " + error.message); }
@@ -287,14 +340,15 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
     if (verify && drawn.length) checks.push({ side, check: await renderVerification(entry, own, drawn) });
     ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, side })));
   }
-  const pending = linkList.filter((l) => l.confidence === "low" && !l.review);
+  const pending = linkList.filter(needsReview);
   const [shownLeft, shownRight] = [await displayImage(left), await displayImage(right)];
   const text = "Paired view: LEFT " + left.imageId + " (" + left.width + "x" + left.height + " px), RIGHT " + right.imageId +
     " (" + right.width + "x" + right.height + " px), side by side, not overlaid. Coordinates are normalized to each mark's own image. " +
     marks.length + " marks (side, id, rounded box): " + JSON.stringify(marks.map(compactMark)) +
     (layers.length ? ". Layers: " + layerText(layers) : "") + userEditsText(edits) +
     ". LINKS (" + linkList.length + ", your record of which left and right marks are the same thing):\n" + (linkTable(linkList, byId) || "(none yet)") +
-    (pending.length ? "\n" + pending.length + " low-confidence link(s) await the user's review in the canvas; do not treat them as facts yet." : "") +
+    (pending.length ? "\n" + pending.length + " link(s) are UNVERIFIED and wait for the user's review in the canvas. Your confidence does not verify them: treat them as candidates, not facts, until the user confirms them." : "") +
+    refusedText(refused) + rejectionsText([left, right]) +
     (changed.length ? "\nChanged this call: " + changed.join(", ") : "") +
     (ink.length ? ". Ink in image px: " + ink.map((i) => i.side + ":" + i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
     checks.map(({ side, check }) => ". VERIFICATION image for the " + side.toUpperCase() + " image follows: crop " + JSON.stringify(check.region) + ", " +
@@ -309,6 +363,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
       ...(exportLinks(left.imageId) ? { exports: exportLinks(left.imageId) } : {}),
     },
     _meta: {
+      "estampes/links": linkList.map(widgetLink),
       "estampes/image": { mimeType: shownLeft.mimeType, data: shownLeft.data.toString("base64"), width: shownLeft.width, height: shownLeft.height },
       "estampes/pairImage": { mimeType: shownRight.mimeType, data: shownRight.data.toString("base64"), width: shownRight.width, height: shownRight.height },
       "estampes/views": [],
@@ -464,7 +519,8 @@ function makeServer() {
         "The result lists each changed mark's ink width in image pixels with warnings, and the verification image draws ink at its real width: if ink hides its target or is too faint, redraw the same id with another size or pen. " +
         "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as traces, wires, roads, outlines, handwriting strokes or loose circles; follow only what is visible in zoomed process_image output, and say where a path is hidden. " +
         "`marksFile`: an Estampes marks SVG the user exported earlier and attached again; its marks are restored onto this image. The result has download links (`exports`) for the image and a layered marks SVG; give them when the user wants to save or export. " +
-        "PAIRED VIEW: to compare two DIFFERENT images side by side (a schematic and a board photo, a map and an aerial photo, a drawing and the object), pass the second as `pairImage`/`pairImageUrl`/`pairImageId`: it shows on the RIGHT, the first image on the LEFT. The images are never overlaid. Each annotation takes `side` (left|right, default left) with coordinates normalized to that image; ids are unique across both. `links` records that a left mark and a right mark are the same thing (same part, net, pin, building...), with your `confidence`; low-confidence links are shown to the user to confirm or reject. Every result lists all links as a table: use it to remember and reason about earlier matches, and trust USER CONFIRMED / USER REJECTED over your own guess. " +
+        "PAIRED VIEW: to compare two DIFFERENT images side by side (a schematic and a board photo, a map and an aerial photo, a drawing and the object), pass the second as `pairImage`/`pairImageUrl`/`pairImageId`: it shows on the RIGHT, the first image on the LEFT. The images are never overlaid. Each annotation takes `side` (left|right, default left) with coordinates normalized to that image; ids are unique across both. `links` records that a left mark and a right mark are the same thing (same part, net, pin, building...), with your `confidence`. Every result lists all links as a table: use it to remember and reason about earlier matches, and trust USER CONFIRMED / USER REJECTED over your own guess. " +
+        "CLAIMS AND EVIDENCE: a note on a mark and a link are claims. Give `evidence` for them: each item says what you see (`says`), what kind of clue it is, and the `region` (full-image 0..1, `side` in a paired view) where the user can zoom in to check it; list what is unresolved in `ambiguities`. Your evidence is recorded as your own observation: a claim stays UNVERIFIED until the user confirms it in the canvas or a tool's evidence backs it, whatever your confidence, so call such claims candidates, not facts. A claim the user REJECTED is remembered for that place even if its marks are deleted; repeating it without new evidence is refused. " +
         "Optional `views` (real images only, max 3) add extra tabs with processed versions (e.g. clahe+sharpen, threshold, a zoomed region) that the user can switch to; only add them when they help the user see something. " +
         "Coordinates are normalized to the full image, top-left origin. For small or ambiguous targets, zoom with process_image or overlay_grid (imageId from this call's result) before marking; coordinates alone are not evidence of recognition. " +
         "Do NOT also call present_visual_evidence for the same task.",
@@ -559,10 +615,11 @@ function makeServer() {
         const parsedFile = marksFile ? await readMarksFile(entry, marksFile) : null;
         const restore = snapshotCanvas(entry);
         let imported = [], changed;
+        const refused = [];
         try {
           if (parsedFile) imported = importMarks(entry, parsedFile.marks, parsedFile.options);
           changed = applyCanvasChanges(entry, {
-            annotations, findings, remove, reset, layer, frame: coordinateFrame,
+            annotations, findings, remove, reset, layer, frame: coordinateFrame, refused,
             priorUser: priorUserAnnotations.map((m, i) => {
               try { return replayUserAnnotation(m); } catch (error) { throw new Error("present_visual priorUserAnnotations[" + i + "] (mark " + JSON.stringify(m.id) + "): " + error.message); }
             }),
@@ -597,6 +654,8 @@ function makeServer() {
               (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + userEditsText(edits) +
               (imported.length ? ". Restored from marks file: " + imported.join(", ") : "") +
               (changed.length ? ". Changed this call: " + changed.join(", ") : "") +
+              (resolved.some(m => m.note && needsReview(m)) ? ". Notes marked claim.verification unverified are your own claims: only the user (in the canvas) or a tool's evidence verifies them" : "") +
+              refusedText(refused) + rejectionsText([entry]) +
               (ink.length ? ". Ink in image px: " + ink.map(i => i.id + " " + i.pen + "/" + i.size + " " + i.px + "px" + (i.warn ? " WARNING " + i.warn : "")).join("; ") : "") +
               (check ? ". The next image is a VERIFICATION crop of region " + JSON.stringify(check.region) + ", " +
                 (check.layout === "side-by-side" ? "left" : "top") + " = original pixels, " +
@@ -654,7 +713,7 @@ function makeServer() {
               image: { mimeType: own.mimeType, data: own.data.toString("base64") },
               pair: { imageId: pairImageId, width: right.width, height: right.height, image: { mimeType: shown.mimeType, data: shown.data.toString("base64") },
                 ...(exportLinks(pairImageId) ? { exports: exportLinks(pairImageId) } : {}) },
-              annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: pairLinks(entry, right).map(compactLink), views: [],
+              annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: pairLinks(entry, right).map(widgetLink), views: [],
               ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}),
             },
           }, { appOnly: true });
@@ -688,7 +747,7 @@ function makeServer() {
     "get_visual_state",
     {
       title: "Read the visual canvas state",
-      description: "Return everything on an Estampes canvas as one estampes.visual/1 JSON document: images, layers (order, lock, opacity), marks (geometry normalized to their own image, style, label, note/status, who made them and how), links between a paired left and right image with confidence and the user's review, and optionally the recent change history. Read-only. Use it to recall what is on a canvas without redrawing it, or to hand the canvas to another tool.",
+      description: "Return everything on an Estampes canvas as one estampes.visual/2 JSON document: images, layers (order, lock, opacity), marks (geometry normalized to their own image, style, label, note/status, who made them and how), links between a paired left and right image, the confidence, evidence and verification state of every note and link, the claims the user rejected, and optionally the recent change history. Read-only. Use it to recall what is on a canvas without redrawing it, or to hand the canvas to another tool.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
         pairImageId: ImageIdSchema.optional().describe("Right-hand image of a paired view"),
@@ -825,19 +884,53 @@ function makeServer() {
         imageId: ImageIdSchema,
         pairImageId: ImageIdSchema,
         linkId: z.string().min(1).max(64),
-        review: z.enum(LINK_REVIEW),
+        review: z.enum([...LINK_REVIEW, "unreviewed"]),
+        reason: z.string().max(200).optional(),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, linkId, review }) => {
+    async ({ imageId, pairImageId, linkId, review, reason }) => {
       try {
         const left = await ensureImage(imageId);
-        const link = reviewLink(left, await ensureImage(pairImageId), linkId, review);
+        const link = reviewLink(left, await ensureImage(pairImageId), linkId, review, reason);
         await saveCanvas(left, { tool: "review_visual_link", author: "user", changed: [linkId], note: review });
         return {
           content: [{ type: "text", text: "Link " + linkId + " marked " + review + " by the user." }],
-          structuredContent: { kind: "estampes.link_review", imageId, pairImageId, link: compactLink(link) },
+          structuredContent: { kind: "estampes.link_review", imageId, pairImageId, link: widgetLink(link) },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: the user confirms or rejects GPT's
+  // note on one mark (what GPT says is there). A rejection is remembered
+  // for that place, so GPT cannot simply say it again.
+  registerAppTool(
+    server,
+    "review_visual_finding",
+    {
+      title: "Review a note on a mark",
+      description: "Record the user's verdict on the assistant's note about one mark in an Estampes canvas.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema.describe("The image the mark is on (the right image's id for a mark on the right of a paired view)"),
+        markId: z.string().min(1).max(64),
+        review: z.enum([...LINK_REVIEW, "unreviewed"]),
+        reason: z.string().max(200).optional(),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, markId, review, reason }) => {
+      try {
+        const entry = await ensureImage(imageId);
+        const mark = reviewFinding(entry, markId, review, reason);
+        await saveCanvas(entry, { tool: "review_visual_finding", author: "user", changed: [markId], note: review });
+        return {
+          content: [{ type: "text", text: "Note on " + markId + " marked " + review + " by the user." }],
+          structuredContent: { kind: "estampes.finding_review", imageId, mark },
         };
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };

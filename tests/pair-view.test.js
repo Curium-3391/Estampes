@@ -74,10 +74,15 @@ test("widget maps each image's coordinates into the side-by-side canvas and back
   assert.equal(spill.x2, 1); assert.equal(spill.y2, 1);
 });
 
-test("widget shows links with numbers, asks the user to review low-confidence ones, and sends the verdict", () => {
+test("widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict", () => {
   assert.match(html, /<ol id="links"/);
   assert.match(source, /name:"review_visual_link"/);
-  assert.match(source, /信心低 · 待你確認/);
+  assert.match(source, /name:"review_visual_finding"/);
+  // Any unverified claim asks, whatever GPT's confidence; GPT's own evidence is labelled as such.
+  assert.match(source, /const ask=stateOf\(l\)==="unverified"/);
+  assert.match(source, /僅模型自述 · /);
+  assert.match(source, /待你確認/);
+  assert.match(source, /function showEvidence\(key,e\)/);
   assert.match(source, /function reviewMessage\(list\)/);
   assert.match(source, /if\(reviewed\.length\|\|edited\.length\)chatMessage\+="\\n\\n"\+extra\(\)/);
   assert.match(source, /pairImageId:pair\.imageId/);

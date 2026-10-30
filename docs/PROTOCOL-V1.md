@@ -1,5 +1,7 @@
 # Estampes visual protocol 1 (`estampes.visual/1`)
 
+> Superseded by [version 2](PROTOCOL-V2.md), which adds confidence, evidence, verification and rejections. Version 1 documents are still accepted as marks files.
+
 One JSON document describes everything on an Estampes canvas. It does not depend on ChatGPT, on MCP Apps widgets or on any subject (photos, scans, maps, drawings, schematics, handwriting all use the same fields). The document comes from:
 
 - the MCP tool `get_visual_state` (`imageId`, optional `pairImageId`, optional `history` count), readable by any MCP client;

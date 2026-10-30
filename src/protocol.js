@@ -1,14 +1,18 @@
-// Estampes visual protocol 1 ("estampes.visual/1"): one JSON document for
+// Estampes visual protocol 2 ("estampes.visual/2"): one JSON document for
 // everything on a canvas, independent of ChatGPT and of any subject. Images
 // are referenced by content hash, every coordinate is normalized to its own
 // image (top-left origin), marks say who made them and how sure that is,
 // layers carry order/lock/opacity, and links pair marks across two images.
 // The same document comes out of get_visual_state, /api/v1/canvas and the
 // storage folder's canvas.json can be rebuilt from it; it can be attached
-// back as a marks file. See docs/PROTOCOL-V1.md.
+// back as a marks file. Version 2 adds confidence, evidence and verification
+// to every claim (a mark's note, a link) and the list of claims the user
+// rejected. See docs/PROTOCOL-V2.md; version 1 documents are still read.
 import { canvasMarks, canvasLayers, pairLinks } from "./canvas-state.js";
+import { verificationOf } from "./assessment.js";
 
-export const VISUAL_PROTOCOL = "estampes.visual/1";
+export const VISUAL_PROTOCOL = "estampes.visual/2";
+export const READABLE_PROTOCOLS = ["estampes.visual/1", VISUAL_PROTOCOL];
 export const COORDINATES = "normalized-top-left";
 
 const geometryOf = (m) => m.type === "point" ? { x: m.x, y: m.y }
@@ -16,10 +20,17 @@ const geometryOf = (m) => m.type === "point" ? { x: m.x, y: m.y }
   : { x: m.x, y: m.y, x2: m.x2, y2: m.y2 };
 
 const defined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
+const listOrNone = (l) => Array.isArray(l) && l.length ? l : undefined;
+const claimFields = (c) => ({
+  confidence: c.confidence, evidence: listOrNone(c.evidence), ambiguities: listOrNone(c.ambiguities),
+  verification: defined({ state: verificationOf(c), reason: c.reviewReason }),
+  previouslyRejected: c.previouslyRejected,
+});
 
 export function protocolMark(m, image) {
   const style = defined({ color: m.color, size: m.size, pen: m.pen });
-  const finding = defined({ note: m.note, status: m.status });
+  // A note is a claim: its confidence, evidence and the user's verdict travel with it.
+  const finding = defined({ note: m.note, status: m.status, ...(m.note ? claimFields(m) : {}) });
   return defined({
     id: m.id, image, type: m.type, geometry: geometryOf(m), label: m.label, layer: m.layer,
     style: Object.keys(style).length ? style : undefined,
@@ -49,20 +60,21 @@ export function canvasDocument(left, right = null, { history } = {}) {
   }
   const links = right ? pairLinks(left, right).map((l) => defined({
     id: l.id, from: { image: left.imageId, mark: l.left }, to: { image: right.imageId, mark: l.right },
-    label: l.label, note: l.note, confidence: l.confidence, review: l.review, author: l.author,
+    label: l.label, note: l.note, ...claimFields(l), review: l.review, author: l.author,
   })) : [];
+  const rejections = sides.flatMap(([, entry]) => entry.rejections ?? []);
   return defined({
     protocol: VISUAL_PROTOCOL, coordinateSystem: COORDINATES,
     images: sides.map(([role, entry]) => imageInfo(entry, role)),
-    layers, marks, links, history,
+    layers, marks, links, rejections: listOrNone(rejections), history,
   });
 }
 
 // A protocol document → flat marks for one image (for marks-file import).
 // The caller validates every mark, as with any other untrusted file.
 export function marksFromDocument(doc, { width, height } = {}) {
-  if (doc?.protocol !== VISUAL_PROTOCOL || !Array.isArray(doc.images) || !Array.isArray(doc.marks)) {
-    throw new Error("Not an " + VISUAL_PROTOCOL + " document");
+  if (!READABLE_PROTOCOLS.includes(doc?.protocol) || !Array.isArray(doc.images) || !Array.isArray(doc.marks)) {
+    throw new Error("Not an " + READABLE_PROTOCOLS.join(" or ") + " document");
   }
   // Pick the image with the same aspect ratio as the one being shown.
   const image = doc.images.find((i) => width && height && Math.abs(i.width / i.height - width / height) < 0.01) ?? doc.images[0];
@@ -73,7 +85,7 @@ export function marksFromDocument(doc, { width, height } = {}) {
     return defined({
       id: m.id, type: m.type, ...box, x: g.x ?? box.x, y: g.y ?? box.y, x2: g.x2 ?? box.x2, y2: g.y2 ?? box.y2,
       points: g.points, smooth: g.smooth, closed: g.closed, label: m.label, layer: m.layer,
-      ...(m.style ?? {}), ...(m.finding ?? {}), author: m.provenance?.author,
+      ...(m.style ?? {}), note: m.finding?.note, status: m.finding?.status, author: m.provenance?.author,
     });
   });
   const layers = (doc.layers ?? []).filter((l) => l?.image === image.id).map((l) => ({ id: l.id, author: l.author, name: l.name }));
