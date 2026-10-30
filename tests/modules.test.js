@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { validateManifest } from "../src/modules/manifest.js";
 import { checkSchema, validateValue } from "../src/modules/json-schema.js";
 import { satisfies, compareVersions } from "../src/modules/semver.js";
+import { readFile } from "node:fs/promises";
 import { createModuleHost } from "../src/modules/index.js";
 import { fillTemplate } from "../src/modules/runtimes/declarative.js";
 import { createBlankCanvas } from "../src/scene/blank-canvas.js";
@@ -149,4 +150,37 @@ test("graph: plot_points and set_axes on a canvas", async () => {
   assert.equal(canvasObjects(pts.entry).map((o) => o.type).join(), "axes-2d,shape");
   const ax = await h.router.execute({ module: "org.estampes.graph", capability: "set_axes", canvas: pts.entry.imageId, params: { xRange: [-1, 5], title: "Measured" } });
   assert.deepEqual(ax.scene.updated, ["o1"]);
+});
+
+test("capability profile: network use must be declared, local work must not claim to leave, jobs are not instant, text must match", async () => {
+  const { validateManifest } = await import("../src/modules/manifest.js");
+  const astro = JSON.parse(await readFile(new URL("../src/builtin-modules/astrometry/manifest.json", import.meta.url), "utf8"));
+  const bad = (edit, pattern) => { const m = structuredClone(astro); edit(m); assert.throws(() => validateManifest(m), pattern); };
+  validateManifest(astro);
+  bad((m) => { delete m.capabilities[0].profile; delete m.capabilities[0].profileI18n; }, /must say what it sends/);
+  bad((m) => { m.capabilities[0].profile.dataFlow.leavesServer = false; }, /must say what it sends/);
+  bad((m) => { m.capabilities[1].profile.dataFlow.leavesServer = true; delete m.capabilities[1].profileI18n; }, /no network\.request\.approved/);
+  bad((m) => { m.capabilities[0].profile.cost.latency = "instant"; delete m.capabilities[0].profileI18n; }, /cannot be instant/);
+  bad((m) => { m.capabilities[0].profileI18n["zh-TW"].dataFlow.leavesServer = false; }, /must match profile/);
+  bad((m) => { m.capabilities[0].profile.surprise = 1; }, /Unrecognized|unknown/i);
+  // A module with no network needs no profile at all.
+  const graph = JSON.parse(await readFile(new URL("../src/builtin-modules/graph/manifest.json", import.meta.url), "utf8"));
+  for (const c of graph.capabilities) { delete c.profile; delete c.profileI18n; }
+  validateManifest(graph);
+});
+
+test("get_module_capabilities and the catalog carry each capability's profile", async () => {
+  const { registerModuleTools } = await import("../src/modules/mcp-tools.js");
+  const { h } = await host();
+  const tools = new Map();
+  registerModuleTools({ registerTool: (name, spec, handler) => tools.set(name, handler), registerResource() {} },
+    { host: h, storeUri: "ui://s", storeHtml: "", visualUri: "ui://v", canvasPayload: async () => ({}), logSizes: (_n, r) => r, ensureImage: async () => ({}), saveCanvas: async () => {}, canvasLayers: () => [] });
+  const caps = await tools.get("get_module_capabilities")({ module: "org.estampes.astrometry" });
+  const solve = caps.structuredContent.capabilities.find((c) => c.id === "solve_field");
+  assert.equal(solve.async, true);
+  assert.equal(solve.profile.dataFlow.leavesServer, true);
+  assert.ok(solve.profile.fallbacks.length >= 2 && solve.profile.reliability.verify);
+  const store = await tools.get("store_get_catalog")({});
+  const listed = store.structuredContent.modules.find((m) => m.id === "org.estampes.astrometry").capabilities.find((c) => c.id === "solve_field");
+  assert.match(listed.profile.whenToUse, /夜空照片/, "the Store gets the Traditional Chinese text");
 });
