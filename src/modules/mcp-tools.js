@@ -203,17 +203,14 @@ export function registerModuleTools(server, deps) {
     title: "Apply an approved module change", description: "Apply a plan the user confirmed in the Store.",
     inputSchema: z.object({
       planId: z.string().max(64), consent: z.string().max(64),
-      adminCode: z.string().max(200).optional(), adminToken: z.string().max(200).optional(),
     }),
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false }, _meta: appOnly,
-  }, async ({ planId, consent, adminCode, adminToken }) => {
+  }, async ({ planId, consent }) => {
     try {
-      const { plan, result, repeated } = await host.lifecycle.commit(planId, { consent, adminCode, adminToken, by: "store" });
-      const token = adminCode && host.admin?.issueToken ? host.admin.issueToken() : null;
+      const { plan, result, repeated } = await host.lifecycle.commit(planId, { consent, by: "store" });
       return {
         content: [{ type: "text", text: plan.action + " " + plan.module + (repeated ? " was already applied." : " applied.") }],
         structuredContent: { kind: "estampes.module_plan", plan: host.lifecycle.publicPlan(plan), result, modules: catalog() },
-        ...(token ? { _meta: { "estampes/adminToken": token } } : {}),
       };
     } catch (error) { return { ...fail(error), structuredContent: { kind: "estampes.module_error", code: error.code ?? "error", message: String(error?.message || error) } }; }
   });

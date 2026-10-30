@@ -49,7 +49,7 @@ const RISK={low:"低風險",medium:"中風險",high:"高風險"};
 const ACTION={enable:"啟用",disable:"停用",install:"安裝",update:"更新",rollback:"回滾到上一版",uninstall:"解除安裝",purge:"清除模組資料"};
 const KIND={run:"執行","run.failed":"執行失敗","run.rejected":"結果被拒絕","plan.created":"準備變更","plan.committed":"已套用","plan.refused":"拒絕（未授權）","plan.failed":"變更失敗",
  "package.staged":"已暫存套件","package.verified":"套件驗證通過","package.rejected":"套件驗證失敗","package.activated":"已切換版本","package.rolledback":"已回滾","admin.failed":"管理碼錯誤","job":"背景工作"};
-let tab="browse",modules=[],available=[],actions=["enable","disable"],admin={configured:false},detail=null,plan=null,consents=new Map(),adminToken=null,ready=false,rpcId=0,query="",category="";
+let tab="browse",modules=[],available=[],actions=["enable","disable"],admin={configured:false},detail=null,plan=null,consents=new Map(),ready=false,rpcId=0,query="",category="";
 const pending=new Map();
 function el(tag,props={},...kids){const n=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="dataset")Object.assign(n.dataset,v);else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(k=>k!==null&&k!==undefined&&k!==false));return n;}
 const text=s=>String(s??"");
@@ -87,11 +87,13 @@ function renderList(){
  renderCards();
  view.replaceChildren(filters,list);
  if(tab==="browse"&&available.length){
-  const box=el("div",{className:"box"},el("h3",{textContent:"可安裝的套件"}),el("small",{className:"muted",textContent:"來自伺服器信任的套件來源；安裝前會驗證簽章與雜湊，並需要管理員核准。"}));
+  const box=el("div",{className:"box"},el("h3",{textContent:"可安裝的套件"}),el("small",{className:"muted",textContent:"管理員放在伺服器收件匣的套件；安裝前會驗證簽章與雜湊，並需要管理員在伺服器上核准。"}));
   const ul=el("ul",{className:"cards"});
-  for(const p of available)ul.append(el("li",{className:"card"},el("div",{className:"row"},el("strong",{textContent:p.name||p.id}),badge(p.version),badge(p.origin==="registry"?"套件來源":"本機收件匣")),
+  for(const p of available){
+   if(p.error){ul.append(el("li",{className:"card"},el("strong",{textContent:p.file}),el("small",{className:"muted",textContent:"無法安裝："+p.error})));continue;}
+   ul.append(el("li",{className:"card"},el("div",{className:"row"},el("strong",{textContent:p.name||p.id}),badge(p.version),badge(p.signed?"已簽章："+(p.signer||""):"未簽章")),
    el("small",{textContent:p.id+(p.installed?" · 已安裝 "+p.installed:"")}),
-   el("div",{className:"row"},el("button",{className:"primary",disabled:!ready,textContent:p.installed?"更新到 "+p.version:"安裝",onclick:()=>preparePlan(p.installed?"update":"install",p.id,p.version)}))));
+   el("div",{className:"row"},el("button",{className:"primary",disabled:!ready,textContent:p.installed?"更新到 "+p.version:"安裝",onclick:()=>preparePlan(p.installed?"update":"install",p.id,p.version)}))));}
   box.append(ul);view.append(box);
  }
  if(!admin.configured)view.append(el("p",{className:"muted",style:"font-size:.8rem",textContent:"管理員金鑰未設定：只能啟用或停用內建的低風險模組。"}));
@@ -136,15 +138,15 @@ function renderPlan(){
  for(const n of p.notes??[])box.append(el("p",{className:"muted",textContent:"・"+n}));
  if(p.status!=="pending"){box.append(el("p",{textContent:p.status==="committed"?"已套用。":"這個計畫已"+p.status+"。"}));view.replaceChildren(box);return;}
  const consent=consents.get(p.planId);
- let code=null;
  if(p.requiresAdmin){
-  const warn=el("div",{className:"box warn"},el("strong",{textContent:"需要管理員核准"}),
-   el("p",{style:"margin:6px 0;font-size:.86rem",textContent:adminToken?"這次對話已用管理碼驗證過，可直接確認。":"輸入伺服器的管理碼（docker compose exec estampes cat /data/admin-key），或在伺服器上執行 estampes-admin approve "+p.planId+" 後直接按確認。"}));
-  if(!adminToken){code=el("input",{type:"password",autocomplete:"off",placeholder:"管理碼（選填）","aria-label":"管理碼"});warn.append(code);}
-  box.append(warn);
+  const cmd="docker compose exec estampes node scripts/estampes-module.js approve "+p.planId;
+  box.append(el("div",{className:"box warn"},el("strong",{textContent:"需要管理員核准"}),
+   admin.configured?el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"在架設 Estampes 的伺服器上執行下面這行（管理金鑰不會經過聊天），再按確認："}):
+    el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"這台伺服器沒有開啟儲存，無法核准這類變更。設定 ESTAMPES_STORAGE_DIR 後才能安裝套件。"}),
+   admin.configured?el("code",{textContent:cmd,style:"display:block;user-select:all"}):null));
  }
  const row=el("div",{className:"row"});
- row.append(el("button",{className:"primary",textContent:"確認"+(ACTION[p.action]??p.action),disabled:!ready||!consent,onclick:()=>commitPlan(p,code?.value)}),
+ row.append(el("button",{className:"primary",textContent:"確認"+(ACTION[p.action]??p.action),disabled:!ready||!consent,onclick:()=>commitPlan(p)}),
   el("button",{textContent:"取消",onclick:()=>{plan=null;render();}}));
  if(!consent)box.append(el("p",{className:"muted",textContent:"這個計畫的確認碼不在這個視窗裡；請按上一步重新準備。"}));
  box.append(row);view.replaceChildren(box);
@@ -186,10 +188,10 @@ async function preparePlan(action,module,version){
   const c=r._meta?.["estampes/consent"];if(c)consents.set(c.planId,c.consent);plan=r.structuredContent.plan;status.textContent="請確認下面的變更。";render();}
  catch(e){status.textContent="無法準備："+e.message;}
 }
-async function commitPlan(p,code){
+async function commitPlan(p){
  try{status.textContent="套用中…";
-  const r=await call("store_commit_plan",{planId:p.planId,consent:consents.get(p.planId),...(code?{adminCode:code}:{}),...(adminToken&&!code?{adminToken}:{})});
-  const s=r.structuredContent;if(r._meta?.["estampes/adminToken"])adminToken=r._meta["estampes/adminToken"];
+  const r=await call("store_commit_plan",{planId:p.planId,consent:consents.get(p.planId)});
+  const s=r.structuredContent;
   modules=s.modules??modules;plan=s.plan;consents.delete(p.planId);
   status.textContent=(ACTION[p.action]??p.action)+" "+(p.name||p.module)+" 完成。";render();tellModel(p);refresh();}
  catch(e){status.textContent="沒有套用："+e.message;}

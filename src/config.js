@@ -47,6 +47,10 @@ export const config = Object.freeze({
   cacheTtlMs: num("ESTAMPES_CACHE_TTL_MINUTES", 60, { min: 1, max: 525600 }) * 60 * 1000,
   // cloudflared metrics address of the optional quick tunnel (compose sets it).
   tunnelMetrics: str("ESTAMPES_TUNNEL_METRICS"),
+  // Optional: ESTAMPES_ADMIN_KEY overrides the generated <storage>/admin-key.
+  adminKey: (process.env.ESTAMPES_ADMIN_KEY ?? "").trim(),
+  // Install module packages that carry no signature (they are always shown as high risk).
+  moduleAllowUnsigned: str("ESTAMPES_MODULE_ALLOW_UNSIGNED") === "1",
   logFormat: str("ESTAMPES_LOG_FORMAT", "text") === "json" ? "json" : "text",
 });
 

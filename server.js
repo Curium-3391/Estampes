@@ -41,6 +41,7 @@ import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 import { createModuleHost } from "./src/modules/index.js";
+import { resolveAdminKey } from "./src/modules/admin.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
@@ -1993,8 +1994,11 @@ const storage = await storageHealth();
 const keyInfo = await resolveAccessKey({ configured: config.accessKey, require: config.requireKey, allowOpen: config.allowOpen,
   storageDir: storage.enabled && storage.writable ? config.storageDir : "" });
 ACCESS_KEY = keyInfo.key;
+const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
+const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
+if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in ChatGPT; approve a plan with: node scripts/estampes-module.js approve <planId>");
 moduleHost = await createModuleHost({
-  storageDir: storage.enabled && storage.writable ? config.storageDir : "", coreVersion: VERSION,
+  storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas },
 });
 // The key is printed once, when it is made; afterwards only where it lives.

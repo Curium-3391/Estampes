@@ -62,7 +62,7 @@ export function createLifecycle({ registry, audit, admin = null, actions = {} })
       if (!handler) throw new LifecycleError("unknown action " + JSON.stringify(action) + " (known: " + Object.keys(handlers).join(", ") + ")");
       const mod = registry.get(moduleId);
       if (!mod && !handler.withoutModule) throw new LifecycleError("no module " + JSON.stringify(moduleId), "not-found");
-      const details = await handler.prepare(mod, options);
+      const details = await handler.prepare(mod, { ...options, module: moduleId });
       const added = details.diff?.added ?? [];
       const risk = details.risk ?? riskOf(added);
       const requiresAdmin = details.requiresAdmin ?? risk === "high";

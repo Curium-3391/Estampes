@@ -27,6 +27,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json server.js ./
 COPY src ./src
+COPY scripts ./scripts
 COPY public ./public
 # Run as the image's unprivileged "node" user (uid 1000). /data is created
 # here so a new named volume starts owned by that user.
