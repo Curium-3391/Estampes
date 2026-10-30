@@ -17,6 +17,7 @@
 import { BlockList, isIP } from "node:net";
 import { lookup as dnsLookup } from "node:dns";
 import { request as httpsRequest } from "node:https";
+import { randomBytes } from "node:crypto";
 import { chmod, mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -59,7 +60,7 @@ export function safeLookup(hostname, options, callback) {
 const PATH = /^\/[A-Za-z0-9._~\/-]{0,200}$/;
 const METHODS = new Set(["GET", "POST"]);
 const SAFE_HEADERS = new Map([["accept", "Accept"], ["content-type", "Content-Type"]]);
-const MAX_REQUEST_BYTES = 1024 * 1024;
+const MAX_UPLOAD_MB = 25;
 const DEFAULT_TIME_MS = 10000, DEFAULT_RESPONSE_KB = 256;
 
 // The default transport. Tests replace it; it is the only code that opens a socket.
@@ -120,7 +121,7 @@ export function createSecrets({ dir = "", env = process.env } = {}) {
 
 export function createEgress({ audit = null, secrets = createSecrets(), transport = httpsTransport } = {}) {
   // Checks and builds the request without sending it (used by install self-tests).
-  async function prepare({ manifest, granted, request, resolveSecrets = true }) {
+  async function prepare({ manifest, granted, request, resolveSecrets = true, limits }) {
     const id = manifest.id;
     if (!granted.includes("network.request.approved")) throw new EgressError(id + " has not been given permission to use the network");
     const allow = manifest.network?.allow ?? [];
@@ -153,23 +154,72 @@ export function createEgress({ audit = null, secrets = createSecrets(), transpor
         headers[headerName.toLowerCase()] = String(ref.prefix ?? "") + value;
       }
     }
+    // Secrets can also be written into body fields as "${secret:name}"; the
+    // server substitutes them, the module only ever names them.
+    const secretValues = [];
+    const resolveTokens = async (value, depth = 0) => {
+      if (depth > 8) throw new EgressError("the request body is nested too deeply");
+      if (typeof value === "string") {
+        const names = [...value.matchAll(/\$\{secret:([a-zA-Z][a-zA-Z0-9_]{0,31})\}/g)].map((m) => m[1]);
+        let out = value;
+        for (const name of new Set(names)) {
+          if (!granted.includes("module.secrets")) throw new EgressError(id + " has not been given permission to use secrets");
+          if (!(manifest.secrets ?? []).some((x) => x.name === name)) throw new EgressError("secret " + JSON.stringify(name) + " is not declared in the manifest");
+          secretNames.push(name);
+          if (!resolveSecrets) continue;
+          const secret = await secrets.get(id, name);
+          if (!secret) throw new EgressError("The administrator has not set the secret " + name + " for " + id + " (node scripts/estampes-module.js secret set " + id + " " + name + ")", "secret");
+          secretValues.push(secret);
+          out = out.split("${secret:" + name + "}").join(secret);
+        }
+        return out;
+      }
+      if (Array.isArray(value)) return Promise.all(value.map((v) => resolveTokens(v, depth + 1)));
+      if (value && typeof value === "object") return Object.fromEntries(await Promise.all(Object.entries(value).map(async ([k, v]) => [k, await resolveTokens(v, depth + 1)])));
+      return value;
+    };
+    const asText = (v) => (typeof v === "string" ? v : JSON.stringify(v));
     let body = null;
-    if (request.body !== undefined && request.body !== null) {
+    const forms = [request.body !== undefined && request.body !== null, !!request.form, !!request.multipart].filter(Boolean).length;
+    if (forms > 1) throw new EgressError("a request has one body: body, form or multipart");
+    if (forms) {
       if (method !== "POST") throw new EgressError("only POST may carry a body");
-      body = Buffer.from(JSON.stringify(request.body));
-      if (body.length > MAX_REQUEST_BYTES) throw new EgressError("the request body is larger than 1 MB");
-      headers["content-type"] = "application/json";
+      if (request.body !== undefined && request.body !== null) {
+        body = Buffer.from(JSON.stringify(await resolveTokens(request.body)));
+        headers["content-type"] = "application/json";
+      } else if (request.form) {
+        const fields = await resolveTokens(request.form);
+        body = Buffer.from(new URLSearchParams(Object.entries(fields).map(([k, v]) => [k, asText(v)])).toString());
+        headers["content-type"] = "application/x-www-form-urlencoded";
+      } else {
+        const { fields = {}, file } = request.multipart;
+        if (file && !granted.includes("asset.read.selected")) throw new EgressError(id + " has not been given permission to read the image, so it cannot upload it");
+        const boundary = "----estampes" + randomBytes(12).toString("hex");
+        const parts = [];
+        for (const [k, v] of Object.entries(await resolveTokens(fields))) {
+          if (!/^[A-Za-z0-9_.-]{1,40}$/.test(k)) throw new EgressError("form field " + JSON.stringify(k) + " is not allowed");
+          parts.push(Buffer.from("--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + k + "\"\r\n\r\n" + asText(v) + "\r\n"));
+        }
+        if (file) {
+          if (!Buffer.isBuffer(file.bytes) || !/^[A-Za-z0-9_.-]{1,40}$/.test(file.field) || !/^[A-Za-z0-9_. -]{1,80}$/.test(file.filename) || !/^[a-z]+\/[a-z0-9.+-]{1,40}$/.test(file.contentType)) throw new EgressError("the file part is not allowed");
+          parts.push(Buffer.from("--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + file.field + "\"; filename=\"" + file.filename + "\"\r\nContent-Type: " + file.contentType + "\r\n\r\n"), file.bytes, Buffer.from("\r\n"));
+        }
+        parts.push(Buffer.from("--" + boundary + "--\r\n"));
+        body = Buffer.concat(parts);
+        headers["content-type"] = "multipart/form-data; boundary=" + boundary;
+      }
+      if (body.length > MAX_UPLOAD_MB * 1024 * 1024) throw new EgressError("the request is larger than " + MAX_UPLOAD_MB + " MB");
       headers["content-length"] = String(body.length);
     }
     const path = request.path + (query.size ? "?" + query.toString() : "");
-    return { host, method, path, headers, body, secretNames };
+    return { host, method, path, headers, body, secretNames, secretValues };
   }
 
   return {
     prepare,
     async call({ manifest, granted, request, limits = {}, capability }) {
       const started = Date.now();
-      const prepared = await prepare({ manifest, granted, request });
+      const prepared = await prepare({ manifest, granted, request, limits });
       const maxBytes = (limits.outputKb ?? DEFAULT_RESPONSE_KB) * 1024;
       let res;
       try {
@@ -191,6 +241,6 @@ export function createEgress({ audit = null, secrets = createSecrets(), transpor
 // Error text can echo a header; never let a secret value into logs or replies.
 const scrub = (text, prepared) => {
   let out = text;
-  for (const v of Object.values(prepared.headers)) if (typeof v === "string" && v.length >= 8) out = out.split(v).join("[hidden]");
+  for (const v of [...Object.values(prepared.headers), ...prepared.secretValues]) if (typeof v === "string" && v.length >= 8) out = out.split(v).join("[hidden]");
   return out.slice(0, 300);
 };

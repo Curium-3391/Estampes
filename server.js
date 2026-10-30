@@ -34,7 +34,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { intakeImage, ensureImage, saveCanvas, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { readSource, intakeImage, ensureImage, saveCanvas, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -77,10 +77,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -2603,7 +2603,7 @@ if (adminInfo.source === "generated") log("warn", "[modules] made an administrat
 configureCas({ client: createCasClient({ socketPath: config.casSocket }), notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "" }) });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
-  canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas },
+  canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
 });
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {

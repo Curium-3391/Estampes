@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.16.0 (the contract, the built-in Graph and CAS modules ([CAS](CAS.md)), the built-in Graph module, the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
+Status: this page describes what is implemented in 0.17.0 (the contract, the built-in Graph and CAS modules ([CAS](CAS.md)), the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
 
 ## How it fits together
 
@@ -137,11 +137,23 @@ Every request goes out through one place, `src/modules/egress.js`, which enforce
 
 - the module holds `network.request.approved` and the host is one of its `network.allow` names (https, port 443, exact match);
 - the name is resolved on the server and every address must be public: loopback, private, link-local (cloud metadata), carrier-grade NAT, multicast and reserved ranges are refused, and the connection is made to the address that was checked, so a DNS answer cannot change afterwards;
-- no redirects, no cookies, only `Accept`/`Content-Type` headers plus the declared secret headers, a time limit (`limits.timeMs`), a response size limit (`limits.outputKb`), and a 1 MB request limit;
+- no redirects, no cookies, only `Accept`/`Content-Type` headers plus the declared secret headers, a time limit (`limits.timeMs`), a response size limit (`limits.outputKb`), and a 25 MB request limit;
 - API keys are added by the server from `<storage>/modules/secrets.json` (mode 600) or an environment variable (name shown by `secret set` and `secret status`; for example `ESTAMPES_MODULE_SECRET_ORG_DEXAMPLE_DOCR_SAPI_KEY` for `org.example.ocr` / `api_key`, where `_D` stands for a dot, `_M` for a hyphen and `_S` separates the id from the name, so two ids can never share a variable), only for secrets the module declared and only when it holds `module.secrets`. Set one with `echo "$KEY" | node scripts/estampes-module.js secret set <moduleId> <name>`; `secret status <moduleId>` lists which declared secrets are set (names only). Module code never sees them, and they are kept out of the audit log.
 - every request is audited (host, status, sizes, time), never its content.
 
-Installing never sends anything: the self-test only checks the requests the examples would make. Not yet supported: sending image pixels, and long-running jobs (submit then poll); those come with the first module that needs them.
+Installing never sends anything: the self-test only checks the requests the examples would make.
+
+Besides JSON, a request can carry a URL-encoded `form` or a `multipart` body with a file part (the image's bytes; needs `asset.read.selected`), and any string in a body may contain `${secret:name}` for a declared secret, which the server fills in. The built-in module below uses these; declarative `http` modules do not send image pixels yet.
+
+## Background jobs
+
+A capability marked `"async": true` returns at once with a job id (`job_` plus 12 hex digits) and does its work in the background, for services that take minutes. The model checks it with the fixed tool `get_module_job` (optionally waiting up to 25 seconds); the result lands on the canvas when the job is done, with no revision check, since the canvas may have moved on. `limits.jobMs` (default 10 minutes, at most 30) stops a job that runs too long, and a stopped job never applies a late result. Jobs are kept in `<storage>/modules/jobs.json` (the last 100, summaries only); one that was running when the server stopped shows as `interrupted`.
+
+## Plate solving (`org.estampes.astrometry`)
+
+A built-in module that finds where a photo of the sky points, using [Astrometry.net](https://nova.astrometry.net). It uploads the chosen image (marked private there) with the administrator's API key, polls until the solution is ready, then marks the named stars and objects on the canvas and returns the field's centre (RA/Dec in degrees), scale (arcsec per pixel), rotation, radius and parity. Optional hints (scale range, rough position) make solving faster. It reads the stored copy of the image, so storage must be on, and it takes JPEG or PNG.
+
+Setup (administrator): get an API key from your profile on nova.astrometry.net, then either run `echo "$KEY" | node scripts/estampes-module.js secret set org.estampes.astrometry api_key` or set `ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY`. Then enable the module in the Store; it needs the administrator's approval because it sends images to an external host.
 
 ## Roadmap
 
@@ -150,7 +162,7 @@ Each phase is its own change and keeps the rules above.
 1. Contract, scene objects, Graph and the Store (0.10.0).
 2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
 3. An isolated WebAssembly runtime with time, memory and output limits (0.13.0).
-4. Author tools (0.14.0) and the controlled network path for adapters (0.15.0). Still to come: image upload, long-running jobs, and the OCR and plate-solving modules themselves (plate solving needs the administrator's Astrometry.net API key).
+4. Author tools (0.14.0), the controlled network path for adapters (0.15.0), image upload, background jobs and the Astrometry.net plate-solving module (0.16.0). Still to come: an OCR module.
 
 ## Direct Canvas editing and deletion recovery
 

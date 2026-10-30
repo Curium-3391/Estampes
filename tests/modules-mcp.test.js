@@ -31,7 +31,10 @@ test("modules over MCP: Store, consent, enable, plot sin(x), edit, restart", { t
   try {
     const tools = (await s.client.listTools()).tools;
     const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-    for (const n of ["open_module_store", "list_modules", "get_module_capabilities", "execute_module", "prepare_module_change"]) assert.ok(byName[n], n);
+    for (const n of ["open_module_store", "list_modules", "get_module_capabilities", "execute_module", "prepare_module_change", "get_module_job"]) assert.ok(byName[n], n);
+    const missing = await s.client.callTool({ name: "get_module_job", arguments: { job: "job_0123456789ab" } });
+    assert.equal(missing.isError, true);
+    assert.match(text(missing), /no job job_0123456789ab/);
     // The Store's own tools are hidden from the model.
     for (const n of ["store_get_catalog", "store_commit_plan", "store_get_plan", "edit_scene_object"]) assert.deepEqual(byName[n]._meta.ui.visibility, ["app"], n);
     assert.ok(byName.open_module_store._meta.ui.resourceUri.startsWith("ui://estampes/module-store-"));
