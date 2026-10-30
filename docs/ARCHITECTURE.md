@@ -35,7 +35,8 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 | Module | Role |
 | --- | --- |
 | `image-store.js` | Image intake (ChatGPT file param or public https URL), EXIF orientation, size limits, content-hash identity, in-memory cache |
-| `image-ops.js` | Pixel operations for `process_image` and `overlay_grid` (CLAHE, sharpen, denoise, threshold, edges, crop and zoom, grid) |
+| `image-ops.js` | Pixel operations for `process_image` and `overlay_grid` (CLAHE, sharpen, denoise, threshold, edges, crop and zoom, grid), zoom tiles |
+| `image/view.js`, `image/transform.js` | Derived views: analysis vs delivery resolution, native-resolution crops, recipes and ids, 3×3 coordinate transforms ([Image pipeline](IMAGE-PIPELINE.md)) |
 | `canvas-state.js` | Per-image marks, layers (order, lock, opacity), paired-view links, user edits |
 | `mark-render.js`, `pixel-font.js` | Verification crops drawn with the marks at real ink width |
 | `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/2` document ([Visual protocol 2](PROTOCOL-V2.md)) |
@@ -47,7 +48,7 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 
 ### Image identity and coordinates
 
-An image's id is derived from its content hash, so the same file attached in another chat maps to the same canvas. Every coordinate is **normalized to its own image with the origin at the top left**, independent of screen size, zoom or the working-copy resolution. Operations that return a crop report the region they cover so GPT can convert back (`coordinateFrame`).
+An image's id is derived from its content hash, so the same file attached in another chat maps to the same canvas. Every coordinate is **normalized to its own image with the origin at the top left**, independent of screen size, zoom or the working-copy resolution. Operations that return a crop report the region they cover and a `derivedViewId` whose matrix converts back exactly (`coordinateFrame`). The source file is kept unchanged next to the working copy, so crops and zoom tiles can use its full resolution. See [Image pipeline](IMAGE-PIPELINE.md).
 
 ### State and persistence
 

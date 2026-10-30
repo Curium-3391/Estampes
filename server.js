@@ -33,9 +33,11 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { intakeImage, ensureImage, saveCanvas, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { intakeImage, ensureImage, saveCanvas, saveDerived, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { renderView, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
+import { scale as scaleMatrix, roundMatrix } from "./src/image/transform.js";
 import {
-  processImage, overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
+  overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -57,10 +59,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -217,6 +219,27 @@ const RegionSchema = z.object({
   x: Point01, y: Point01, x2: Point01, y2: Point01,
 }).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
 const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/).describe("imageId returned by load_image");
+const DerivedViewIdSchema = z.string().regex(/^dv:[0-9a-f]{16}$/).describe("derivedViewId returned by process_image");
+// A coordinateFrame naming a derived view becomes that view's exact
+// derived -> normalized matrix; the older region form passes through.
+function resolveFrame(frame, left, right) {
+  if (!frame?.derivedViewId) return frame;
+  const entry = (frame.side ?? "left") === "right" ? right : left;
+  const record = entry && findView(entry, frame.derivedViewId);
+  if (!record) throw new Error("coordinateFrame.derivedViewId " + frame.derivedViewId + " is not a processed view of the " + (frame.side ?? "left") + " image; call process_image on that image first");
+  return { ...frameFromView(record, frame.units), ...(frame.side ? { side: frame.side } : {}) };
+}
+const SamplingSchema = z.object({
+  mode: z.enum(SAMPLING_MODES).default("preview").describe("preview (default, the old behaviour: resize to the output size first, then process), working (process the cached working copy at its own resolution), native (process pixels cut from the original file, beyond the 4096 px working copy; best for small text and fine lines)"),
+  allowUpscale: z.boolean().optional().describe("working/native: enlarge small crops to the output size AFTER processing (interpolated, no new detail). Default false"),
+  maxPixels: z.number().int().min(10000).max(200_000_000).optional().describe("Analysis budget for the crop; larger crops are reduced and the result says so"),
+  alpha: z.enum(["flatten", "flatten-black", "keep"]).optional().describe("Transparent sources: flatten on white (default), on black, or keep alpha (native only)"),
+}).describe("Resolution the operations run at (analysis resolution), separate from the delivered size");
+const OutputSpecSchema = z.object({
+  format: z.enum(OUTPUT_FORMATS).default("auto").describe("auto (PNG for grey results, else JPEG), png or webp (lossless; use for small text, line art and evidence), jpeg"),
+  maxLongSide: z.number().int().min(64).max(MAX_DELIVERY_SIDE).optional().describe("Delivered long side in px (default 1600)"),
+  quality: z.number().int().min(40).max(100).optional().describe("JPEG quality (default 88)"),
+}).describe("Delivery size and codec of the returned image");
 const OpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("grayscale") }),
   z.object({ op: z.literal("normalize") }).describe("Stretch contrast to the full range"),
@@ -602,6 +625,7 @@ function makeServer() {
     label: z.string().min(1).max(24).describe("Short tab name, e.g. 增強對比 or 二值化"),
     ops: z.array(OpSchema).max(8).default([]),
     region: RegionSchema.optional(),
+    sampling: SamplingSchema.optional().describe("As in process_image; native shows real source pixels in the tab"),
   });
 
   registerAppTool(
@@ -616,7 +640,7 @@ function makeServer() {
         "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). Ids starting 'user-' and bare labels like 'YOU 3' belong to the user's marks; your own labels may refer to them, e.g. 'YOU 3 → C105'. " +
         "Marks are grouped in LAYERS the user can show, hide, rename, reorder, fade or LOCK: never change or remove marks in a locked layer (findings are still allowed). The user can also move, restyle or delete marks by hand; results list these USER EDITS once, so trust them over your memory. get_visual_state returns the whole canvas as JSON when you need to recall it without redrawing. Each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '第一輪', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " +
         "Put your answer ON the mark: `note` (e.g. the text or value you read) and `status:'inspected'` only after you looked at those pixels. " +
-        "If you read positions off a process_image/overlay_grid output, pass `coordinateFrame` = that output's region (plus its width/height to give pixel coordinates); Estampes converts them. " +
+        "If you read positions off a process_image output, pass `coordinateFrame` = {derivedViewId} of that output and its pixel coordinates; Estampes converts them exactly. For overlay_grid use its cellCenters, or coordinateFrame {region (plus width/height for pixels)}. " +
         "The result includes a VERIFICATION image: the same crop of the real photo without and with your marks (numbered). Check that the marks sit on the right pixels before telling the user it is done; fix with the same id if not. " +
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
         "Choose color, size and pen YOURSELF; never ask the user. pen = precise points, outlines and paths; highlighter = translucent band to cover an area or follow a feature without hiding it. Sizes fine < thin < medium (default) < thick: a line must be narrower than the thing it follows (a fine trace, a pen stroke, a crack), thick only for large regions. " +
@@ -651,12 +675,15 @@ function makeServer() {
         removeLinks: z.array(z.string().max(64)).max(30).default([]).describe("Link ids to delete"),
         layer: z.string().trim().min(1).max(40).optional().describe("Name of the layer for this call's new marks; an existing name of yours adds to that layer, and edited marks move into it"),
         coordinateFrame: z.object({
-          region: RegionSchema,
+          derivedViewId: DerivedViewIdSchema.optional().describe("The process_image result you read the coordinates from; exact for any crop or zoom"),
+          units: z.enum(["pixels", "normalized"]).optional().describe("With derivedViewId: pixels of that output (default) or 0..1 of it"),
+          region: RegionSchema.optional(),
           width: z.number().int().positive().optional(),
           height: z.number().int().positive().optional(),
           side: z.enum(["left", "right"]).optional().describe("Paired view: the image the region belongs to (default left)"),
           item: WorkspaceItemId.optional().describe("Workspace: the item the region belongs to (default the first)"),
-        }).optional().describe("Coordinates in `annotations` (of that side) are relative to this region (0..1), or pixels of a width×height output of it"),
+        }).refine((f) => Boolean(f.derivedViewId) !== Boolean(f.region), { message: "coordinateFrame needs exactly one of derivedViewId or region" })
+          .optional().describe("Coordinates in `annotations` (of that side) are in a processed output: give its derivedViewId, or (older form) its region with 0..1 coordinates or pixels of a width×height output of it"),
         verify: z.boolean().default(true).describe("Return the verification image of changed marks"),
       }),
       outputSchema: z.object({
@@ -666,7 +693,7 @@ function makeServer() {
         imageId: z.string().optional(),
         width: z.number().optional(),
         height: z.number().optional(),
-        views: z.array(z.object({ label: z.string(), region: RegionSchema })).optional(),
+        views: z.array(z.object({ label: z.string(), region: RegionSchema, derivedViewId: z.string().optional() })).optional(),
         annotations: VisualAnnotationsSchema.optional(),
         marks: z.array(z.record(z.string(), z.unknown())).optional(),
         layers: z.array(LayerSchema).optional(),
@@ -706,8 +733,9 @@ function makeServer() {
         if (paired) {
           if (pairImage || pairImageUrl) pairImageId = (await loadImageInput({ image: pairImage, imageUrl: pairImageUrl })).imageId;
           if (pairImageId === imageId) throw new Error("The paired image is the same as the left image; pass a different picture");
-          return await presentPair({ left: await ensureImage(imageId), right: await ensureImage(pairImageId), annotations, findings, remove, reset, layer,
-            coordinateFrame, priorUserAnnotations, links, removeLinks, verify });
+          const left = await ensureImage(imageId), right = await ensureImage(pairImageId);
+          return await presentPair({ left, right, annotations, findings, remove, reset, layer,
+            coordinateFrame: resolveFrame(coordinateFrame, left, right), priorUserAnnotations, links, removeLinks, verify });
         }
         if (scene && views.length) throw new Error("views are only available for real images (imageId)");
         if (scene) {
@@ -728,6 +756,7 @@ function makeServer() {
           };
         }
         const entry = await ensureImage(imageId);
+        coordinateFrame = resolveFrame(coordinateFrame, entry, null);
         // A marks file and this call's changes land together or not at all.
         const parsedFile = marksFile ? await readMarksFile(entry, marksFile) : null;
         const restore = snapshotCanvas(entry);
@@ -755,8 +784,9 @@ function makeServer() {
         const shown = await displayImage(entry);
         const rendered = [];
         for (const view of views) {
-          const out = await compactForDisplay(await processImage(entry, { region: view.region, ops: view.ops }));
-          rendered.push({ label: view.label, mimeType: out.mimeType, data: out.data.toString("base64"), region: out.region });
+          const { out: full, record } = await deliverView(entry, { region: view.region, ops: view.ops, sampling: view.sampling });
+          const out = await compactForDisplay(full);
+          rendered.push({ label: view.label, mimeType: out.mimeType, data: out.data.toString("base64"), region: out.region, derivedViewId: record.derivedViewId });
         }
         // Kept so the widget can fetch them again if the host drops this
         // result's _meta (see load_visual_canvas).
@@ -782,7 +812,7 @@ function makeServer() {
           }, ...(check ? [imageBlock(check)] : [])],
           structuredContent: {
             kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId, width: entry.width, height: entry.height,
-            views: rendered.map(({ label, region }) => ({ label, region })),
+            views: rendered.map(({ label, region, derivedViewId }) => ({ label, region, derivedViewId })),
             marks: resolved.map(compactMark), layers, coordinateSystem: "normalized-top-left",
             ...(check ? { check: checkSummary(check) } : {}),
             ...(exports ? { exports } : {}),
@@ -1678,16 +1708,45 @@ function makeServer() {
     }
   );
 
+  // One renderer for process_image and get_derived_view: remembers the
+  // recipe (and stores it with the image) so the view can be rebuilt by id.
+  async function deliverView(entry, spec) {
+    const out = await renderView(entry, spec);
+    const record = rememberView(entry, out.record);
+    await saveDerived(entry);
+    return { out, record };
+  }
+  const viewText = (imageId, out, record, ops) => {
+    const ev = record.evidence;
+    return "Processed " + imageId + " region " + JSON.stringify(out.region) +
+      " with " + (ops.map(o => o.op).join(" > ") || "no ops") + " (analysis at " + record.analysis.space + " resolution, " +
+      record.analysis.width + "x" + record.analysis.height + " px; " + ev.sourcePixelsPerOutputPixel + " source px per output px). " +
+      "derivedViewId " + record.derivedViewId + ". The next block is the result, " + out.width + "x" + out.height + " px" +
+      (ev.warnings.length ? ". Caveats: " + ev.warnings.join("; ") : "") +
+      ". To mark something you see in it, call present_visual with coordinateFrame {derivedViewId: " + JSON.stringify(record.derivedViewId) +
+      "} and pixel coordinates from this image (older form: {region: " + JSON.stringify(out.region) + ", width: " + out.width + ", height: " + out.height + "}).";
+  };
+  // What the model gets about a view: everything except the step list.
+  const viewSummary = (record) => {
+    const { coordinateMapping: { steps, ...mapping }, ...rest } = record;
+    return { ...rest, coordinateMapping: { ...mapping, steps: steps.map((st) => st.kind) } };
+  };
+  const DerivedViewSchema = z.record(z.string(), z.unknown());
+
   server.registerTool(
     "process_image",
     {
       title: "Preprocess an image region",
       description:
-        "Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region` (zoomed up to 8x), then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for thin lines and outlines. The result covers `region` in source coordinates: a point (u,v) in the output maps to x = region.x + u*(region.x2-region.x), y likewise. Output is for your analysis; the user sees the original unless you choose to show this.",
+        "Return a processed view of a loaded image to help you read or locate details. Optionally crop to `region`, then apply `ops` in order, e.g. [{op:'clahe'},{op:'sharpen'}] for blurry scans or dark boards, [{op:'grayscale'},{op:'threshold',method:'adaptive'}] for handwriting and book pages, [{op:'edges'}] for thin lines and outlines. " +
+        "`sampling.mode` picks the resolution the ops run at: preview (default; old behaviour, the crop is resized to the output first and zoomed up to 8x by interpolation), working (the cached working copy at its own pixels), native (pixels cut from the original file; use it for small text, fine traces and anything you must not guess, before trying interpolation). " +
+        "`output` picks the delivered size and codec (png/webp are lossless). Every result has a derivedViewId, a coordinate mapping back to the image and caveats (interpolated, lossy, thresholded, enhanced): enhanced pixels are not new evidence, so check the original. Output is for your analysis; the user sees the original unless you choose to show this.",
       inputSchema: z.object({
         imageId: ImageIdSchema,
         region: RegionSchema.optional(),
         ops: z.array(OpSchema).max(8).default([]),
+        sampling: SamplingSchema.optional(),
+        output: OutputSpecSchema.optional(),
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.processed_image"),
@@ -1695,25 +1754,85 @@ function makeServer() {
         region: z.object({ x: z.number(), y: z.number(), x2: z.number(), y2: z.number() }),
         ops: z.array(z.record(z.string(), z.unknown())),
         output: z.object({ width: z.number(), height: z.number(), mimeType: z.string(), scale: z.number() }),
+        derivedViewId: z.string().optional(),
+        derivedView: DerivedViewSchema.optional(),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
-    async ({ imageId, region, ops }) => {
+    async ({ imageId, region, ops, sampling, output }) => {
       try {
-        const out = await processImage(await ensureImage(imageId), { region, ops });
+        const { out, record } = await deliverView(await ensureImage(imageId), { region, ops, sampling, output });
         return {
-          content: [
-            { type: "text", text: "Processed " + imageId + " region " + JSON.stringify(out.region) +
-              " with " + (ops.map(o => o.op).join(" > ") || "no ops") + ". The next block is the result, " + out.width + "x" + out.height +
-              " px. To mark something you see in it, call present_visual with coordinateFrame {region: " + JSON.stringify(out.region) +
-              ", width: " + out.width + ", height: " + out.height + "} and pixel coordinates from this image." },
-            imageBlock(out),
-          ],
+          content: [{ type: "text", text: viewText(imageId, out, record, ops) }, imageBlock(out)],
           structuredContent: {
             kind: "estampes.processed_image", imageId, region: out.region, ops,
             output: { width: out.width, height: out.height, mimeType: out.mimeType, scale: out.scale },
+            derivedViewId: record.derivedViewId, derivedView: viewSummary(record),
           },
         };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "get_derived_view",
+    {
+      title: "Re-render a processed view",
+      description: "Render a processed view again from its derivedViewId (its recipe is kept with the image, also across restarts with storage), optionally at another delivered size or codec. Use it to look at an earlier result again or to get a lossless copy, instead of rebuilding the recipe. `includeImage:false` returns only the record (recipe, coordinate mapping, caveats).",
+      inputSchema: z.object({
+        imageId: ImageIdSchema,
+        derivedViewId: DerivedViewIdSchema,
+        output: OutputSpecSchema.optional().describe("Different delivered size or codec (gives a new derivedViewId)"),
+        includeImage: z.boolean().default(true),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId, derivedViewId, output, includeImage }) => {
+      try {
+        const entry = await ensureImage(imageId);
+        const saved = findView(entry, derivedViewId);
+        if (!saved) throw new Error("No processed view " + derivedViewId + " for " + imageId + "; recipes are kept for the last " + config.derivedViewsPerImage + " views of an image");
+        if (!includeImage) {
+          return { content: [{ type: "text", text: VIEW_API + " record " + JSON.stringify(viewSummary(saved)) }], structuredContent: { kind: "estampes.derived_view", derivedView: saved } };
+        }
+        const { recipe } = saved;
+        const { out, record } = await deliverView(entry, { ...recipe, output: output ? { ...recipe.output, ...output } : recipe.output });
+        const reproduced = !output && record.derivedViewId === derivedViewId;
+        return {
+          content: [{ type: "text", text: (output ? "" : reproduced ? "Re-rendered from its recipe. " : "WARNING: the recipe now gives a different id (" + record.derivedViewId + "), so an operator changed since it was made. ") +
+            viewText(imageId, out, record, recipe.ops) }, imageBlock(out)],
+          structuredContent: { kind: "estampes.derived_view", derivedViewId: record.derivedViewId, reproduced, derivedView: viewSummary(record) },
+        };
+      } catch (error) { return fail(error); }
+    }
+  );
+
+  server.registerTool(
+    "inspect_image",
+    {
+      title: "Describe an image source",
+      description: "Report what Estampes knows about a loaded image without returning pixels: source file format, size before and after EXIF orientation, colour space, bit depth, alpha, ICC profile, density, the SHA-256 source asset id, the working copy's size, the coordinate spaces and the matrices between them, and the processed views made so far. Use it to decide whether native-resolution processing can show more than the working copy.",
+      inputSchema: z.object({ imageId: ImageIdSchema }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ imageId }) => {
+      try {
+        const entry = await ensureImage(imageId);
+        const src = entry.sourceInfo ?? { width: entry.width, height: entry.height };
+        const info = {
+          kind: "estampes.image_source", apiVersion: VIEW_API, imageId, sourceAssetId: entry.sourceAssetId ?? null,
+          source: { ...src, origin: entry.source, fileName: entry.fileName ?? null },
+          working: { width: entry.width, height: entry.height, colorSpace: "srgb", alpha: "flattened on white", scaleFromSource: Number((entry.width / src.width).toFixed(6)) },
+          ...(entry.page ? { page: entry.page } : {}),
+          spaces: {
+            normalized: "0..1 of the oriented source, top-left origin; every mark and region uses it",
+            source: { width: src.width, height: src.height, normalizedToSource: roundMatrix(scaleMatrix(src.width, src.height)) },
+            working: { width: entry.width, height: entry.height, normalizedToWorking: roundMatrix(scaleMatrix(entry.width, entry.height)) },
+          },
+          nativeDetailAvailable: src.width > entry.width,
+          derivedViews: [...(entry.derivedViews?.values() ?? [])].slice(-20).map((v) => ({ derivedViewId: v.derivedViewId, ops: v.recipe.ops.map((o) => o.op), region: v.recipe.region, sampling: v.recipe.sampling.mode })),
+        };
+        return { content: [{ type: "text", text: JSON.stringify(info) }], structuredContent: info };
       } catch (error) { return fail(error); }
     }
   );
@@ -1838,7 +1957,8 @@ const httpServer = createHttpServer((req, res) => {
       visualInputFormat: "mcp-image-content-png",
       visualModelVisibility: "host-dependent-unverified",
       accessKeyRequired: Boolean(ACCESS_KEY),
-      imageTools: ["load_image", "process_image", "overlay_grid"],
+      imageTools: ["load_image", "process_image", "overlay_grid", "inspect_image", "get_derived_view"],
+      imageApi: VIEW_API,
       imageInput: ["openai-file-param", "https-url"],
       visualProtocol: VISUAL_PROTOCOL,
       stateTool: "get_visual_state",

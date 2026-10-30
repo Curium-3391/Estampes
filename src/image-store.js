@@ -86,14 +86,17 @@ export async function downloadImage(rawUrl, { fetchImpl = fetch, checkUrl = asse
   throw new Error("Too many redirects while downloading image");
 }
 
+// Raw working pixels plus the source file kept for native-resolution crops.
+const entryBytes = (entry) => entry.pixels.length + (entry.sourceBytes?.length ?? 0);
+
 function prune(now = Date.now()) {
   for (const [id, entry] of cache) if (now - entry.touched > CACHE_TTL_MS) cache.delete(id);
   let bytes = 0;
-  for (const entry of cache.values()) bytes += entry.pixels.length;
+  for (const entry of cache.values()) bytes += entryBytes(entry);
   // Map order is least-recently used first; always keep the newest entry.
   while (cache.size > 1 && (cache.size > CACHE_LIMIT || bytes > CACHE_BYTES)) {
     const [oldest, entry] = cache.entries().next().value;
-    bytes -= entry.pixels.length;
+    bytes -= entryBytes(entry);
     cache.delete(oldest);
   }
 }
@@ -101,7 +104,8 @@ function prune(now = Date.now()) {
 // Decode with sharp (which also rejects non-images), apply EXIF orientation
 // and cap the working size. Coordinates are always normalized to this
 // oriented image, so the cap never changes what a coordinate means.
-export const imageIdOf = (bytes) => "img:" + createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+export const sha256Of = (bytes) => createHash("sha256").update(bytes).digest("hex");
+export const imageIdOf = (bytes) => "img:" + sha256Of(bytes).slice(0, 16);
 
 // The same bytes again return the cached entry, so its marks survive.
 export async function registerImage(bytes, { source, fileName = null } = {}) {
@@ -120,8 +124,14 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
     .toColourspace("srgb")
     .raw()
     .toBuffer({ resolveWithObject: true });
+  const digest = sha256Of(bytes);
   const entry = {
     imageId,
+    // The full hash is the immutable source asset's identity (RFC PRE-02);
+    // imageId stays the short form every tool already uses.
+    sourceAssetId: "sha256:" + digest,
+    sourceBytes: bytes,
+    sourceInfo: describeSource(meta, bytes.length),
     pixels: working.data,
     channels: working.info.channels,
     width: working.info.width,
@@ -134,6 +144,33 @@ export async function registerImage(bytes, { source, fileName = null } = {}) {
   cache.set(imageId, entry);
   prune();
   return entry;
+}
+
+// What the source file is, reported rather than silently dropped (RFC A04):
+// stored vs oriented size, EXIF orientation, colour space, bit depth, alpha,
+// ICC profile and density. Oriented width/height is the frame of `source`
+// pixel coordinates.
+export function describeSource(meta, bytes) {
+  const orientation = meta.orientation ?? 1;
+  const swap = orientation >= 5 && orientation <= 8;
+  const depthBits = { uchar: 8, char: 8, ushort: 16, short: 16, uint: 32, int: 32, float: 32, complex: 64, double: 64, dpcomplex: 128 }[meta.depth] ?? null;
+  return {
+    format: meta.format ?? null,
+    bytes,
+    width: swap ? meta.height : meta.width,
+    height: swap ? meta.width : meta.height,
+    storedWidth: meta.width, storedHeight: meta.height,
+    orientation,
+    colorSpace: meta.space ?? null,
+    channels: meta.channels ?? null,
+    bitDepth: meta.bitsPerSample ?? depthBits,
+    hasAlpha: Boolean(meta.hasAlpha),
+    hasIccProfile: Boolean(meta.hasProfile),
+    density: meta.density ?? null,
+    pages: meta.pages ?? 1,
+    progressive: Boolean(meta.isProgressive),
+    ...(meta.chromaSubsampling ? { chromaSubsampling: meta.chromaSubsampling } : {}),
+  };
 }
 
 export function getImage(imageId) {

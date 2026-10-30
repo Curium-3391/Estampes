@@ -37,6 +37,11 @@ export const config = Object.freeze({
   maxImageBytes: num("ESTAMPES_MAX_IMAGE_MB", 20, { min: 1, max: 200 }) * 1024 * 1024,
   maxInputPixels: num("ESTAMPES_MAX_IMAGE_MEGAPIXELS", 50, { min: 1, max: 500 }) * 1_000_000,
   workingLongSide: num("ESTAMPES_WORKING_LONG_SIDE", 4096, { min: 512, max: 16384 }),
+  // Largest crop (in megapixels) processed at native or working resolution;
+  // bigger crops are reduced to fit and the result says so.
+  maxAnalysisPixels: num("ESTAMPES_MAX_ANALYSIS_MEGAPIXELS", 16, { min: 1, max: 200 }) * 1_000_000,
+  // Processed-view recipes remembered per image (get_derived_view).
+  derivedViewsPerImage: num("ESTAMPES_DERIVED_VIEWS_PER_IMAGE", 200, { min: 10, max: 10000 }),
   cacheBytes: num("ESTAMPES_CACHE_MB", 160, { min: 16, max: 65536 }) * 1024 * 1024,
   cacheImages: num("ESTAMPES_CACHE_IMAGES", 12, { min: 1, max: 1000 }),
   cacheTtlMs: num("ESTAMPES_CACHE_TTL_MINUTES", 60, { min: 1, max: 525600 }) * 60 * 1000,
