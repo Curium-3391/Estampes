@@ -23,7 +23,7 @@ import { createHash, createPublicKey, createPrivateKey, sign as edSign, verify a
 import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { validateManifest, ManifestError } from "./manifest.js";
+import { validateManifest, ManifestError, MODULE_ID } from "./manifest.js";
 import { riskOf, permissionDiff } from "./permissions.js";
 import { LifecycleError } from "./lifecycle.js";
 import { applySceneOps } from "../scene/scene-ops.js";
@@ -234,11 +234,22 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
     registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: now }));
     const locked = await lock.read();
     const prior = locked.modules[id];
+    const priorLock = structuredClone(locked);
     locked.modules[id] = { active: { version: v.manifest.version, sha256: v.digest, keyId: v.signer?.keyId ?? null, at: now },
       history: [...(prior?.history ?? []), ...(prior?.active ? [prior.active] : [])].slice(-10) };
-    await lock.write(locked);
-    await registry.setRecord(id, { source: "package", state, version: v.manifest.version, granted, previous });
+    try {
+      await lock.write(locked);
+      await registry.setRecord(id, { source: "package", state, version: v.manifest.version, granted, previous });
+    } catch (error) {
+      await lock.write(priorLock).catch(() => {});
+      throw error;
+    }
   }
+
+  const checkedId = (id) => {
+    if (typeof id !== "string" || !MODULE_ID.test(id)) throw new LifecycleError("not a module id: " + JSON.stringify(String(id).slice(0, 60)), "invalid");
+    return id;
+  };
 
   const handlers = {
     install: {
@@ -246,6 +257,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
       async prepare(_mod, options) {
         const id = options.module ?? options.id;
         if (!id) throw new LifecycleError("install needs a module id", "invalid");
+        checkedId(id);
         if (registry.has(id) && registry.get(id).source === "package") throw new LifecycleError(id + " is already installed (version " + registry.record(id).version + "); use update", "noop");
         if (registry.has(id)) throw new LifecycleError(id + " is built in", "noop");
         const v = await findInInbox(id, options.version);
@@ -337,7 +349,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
     purge: {
       withoutModule: true,
       async prepare(_mod, options) {
-        const id = options.module ?? options.id;
+        const id = checkedId(options.module ?? options.id);
         if (registry.has(id) && registry.get(id).source === "package") throw new LifecycleError(id + " is installed; uninstall it first", "invalid");
         const present = await stat(join(store, id)).then(() => true, () => false);
         if (!present) throw new LifecycleError("nothing stored for " + id, "not-found");
@@ -345,7 +357,8 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
           notes: ["Deletes every stored version of this package. Rolling back or reinstalling then needs the package in the inbox again."], options: { id } };
       },
       async commit(_mod, plan) {
-        const { id } = plan.options;
+        const id = checkedId(plan.options.id);
+        if (registry.has(id) && registry.get(id).source === "package") throw new LifecycleError(id + " was installed after this plan was made; prepare it again", "conflict");
         await rm(join(store, id), { recursive: true, force: true });
         const locked = await lock.read(); delete locked.modules[id]; await lock.write(locked);
         return { state: "purged" };

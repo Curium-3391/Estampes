@@ -162,3 +162,23 @@ test("uninstall keeps canvas objects; purge removes stored versions and needs ad
   const audit = (await h.audit.read()).map((e) => e.kind); await h.audit.flush();
   assert.ok(audit.includes("package.activated"));
 });
+
+test("purge and install refuse ids that are not module ids (no path traversal)", async () => {
+  const s = await setup();
+  const h = await s.boot();
+  await assert.rejects(h.lifecycle.prepare("purge", "../../images"), /not a module id/);
+  await assert.rejects(h.lifecycle.prepare("install", "../x"), /not a module id/);
+});
+
+test("a purge plan goes stale when the package is installed before it is confirmed", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0")));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await s.commit(h, "uninstall", "org.example.callout");
+  const purge = await h.lifecycle.prepare("purge", "org.example.callout");
+  await s.commit(h, "install", "org.example.callout", {}, { approve: true });
+  await writeApproval(s.storage, s.key, purge.planId);
+  await assert.rejects(h.lifecycle.commit(purge.planId, { consent: purge.consent }), /installed after this plan/);
+  await readFile(join(s.mods, "packages", "org.example.callout", "1.0.0", "package.json"));
+});
