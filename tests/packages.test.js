@@ -22,7 +22,7 @@ async function setup({ allowUnsigned = false, scopes = ["org.example"] } = {}) {
   await mkdir(join(mods, "inbox"), { recursive: true });
   await writeFile(join(mods, "trusted-keys.json"), JSON.stringify([{ keyId: "pub1", publisher: "Example Publisher", publicKey: keys.publicKey, scopes }]));
   const { key } = await resolveAdminKey({ storageDir: storage });
-  const boot = () => createModuleHost({ storageDir: storage, coreVersion: "0.10.0", canvases, adminKey: key, allowUnsigned });
+  const boot = (extra = {}) => createModuleHost({ storageDir: storage, coreVersion: "0.10.0", canvases, adminKey: key, allowUnsigned, ...extra });
   const put = (name, bundle) => writeFile(join(mods, "inbox", name + ".estpkg.json"), typeof bundle === "string" ? bundle : JSON.stringify(bundle));
   const commit = async (h, action, id, opts = {}, { approve = false } = {}) => {
     const plan = await h.lifecycle.prepare(action, id, opts);
@@ -355,4 +355,73 @@ test("author tool: init makes a module that passes test, and test catches a brok
   manifest.capabilities[0].examples[0].params.x = 7;
   await writeFile(join(dir, "m", "module.json"), JSON.stringify(manifest));
   await assert.rejects(run("test", join(dir, "m", "module.json")), (e) => /self-test|example/.test(e.stderr));
+});
+
+// ---- HTTP adapters and the egress rules -------------------------------------
+const { createEgress, createSecrets, isPublicAddress, EgressError } = await import("../src/modules/egress.js");
+const ocr = JSON.parse(await readFile(new URL("../examples/modules/ocr-http/module.json", import.meta.url), "utf8"));
+const OCR_ID = "org.example.ocrhttp";
+
+async function ocrHost(transport) {
+  const s = await setup();
+  await s.put("ocr-1", sign(ocr));
+  const h = await s.boot({ transport });
+  await s.commit(h, "install", OCR_ID, {}, { approve: true });
+  await s.commit(h, "enable", OCR_ID, {}, { approve: true });
+  const entry = await createBlankCanvas({});
+  const run = (params) => h.router.execute({ module: OCR_ID, capability: "read_text", canvas: entry.imageId, params });
+  return { s, h, entry, run };
+}
+const reply = (obj, status = 200) => async () => ({ status, headers: {}, body: Buffer.from(JSON.stringify(obj)) });
+
+test("addresses: only public ones are reachable", () => {
+  for (const a of ["8.8.8.8", "1.1.1.1", "2606:4700::1111", "::ffff:8.8.8.8"]) assert.equal(isPublicAddress(a), true, a);
+  for (const a of ["127.0.0.1", "10.0.0.5", "172.16.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fe80::1", "fc00::1", "::ffff:127.0.0.1", "not-an-ip"]) assert.equal(isPublicAddress(a), false, a);
+});
+
+test("an HTTP module installs without any network call, then runs through the egress rules", async () => {
+  const seen = [];
+  const { s, h, entry, run } = await ocrHost(async (req) => { seen.push(req); return { status: 200, headers: {}, body: Buffer.from(JSON.stringify({ result: { text: "HELLO" } })) }; });
+  assert.equal(seen.length, 0, "install self-test must not send anything");
+  await assert.rejects(run({ text: "hello" }), /has not set the secret api_key/);
+  await createSecrets({ dir: s.mods }).set(OCR_ID, "api_key", "sk-secret-123456");
+  const out = await run({ text: "hello", lang: "de" });
+  assert.equal(out.scene.created.length, 1);
+  assert.equal(canvasObjects(entry).at(-1).props.text, "HELLO");
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].host, "api.ocr.example.org");
+  assert.equal(seen[0].path, "/v1/read?lang=de");
+  assert.equal(seen[0].headers.authorization, "Bearer sk-secret-123456");
+  assert.equal(JSON.parse(seen[0].body).text, "hello");
+  const log = JSON.stringify(await h.audit.read());
+  assert.ok(log.includes('"kind":"network"') && log.includes("api.ocr.example.org"));
+  assert.ok(!log.includes("sk-secret") && !log.includes("hello"), "audit holds neither secrets nor content");
+});
+
+test("egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions", async () => {
+  const egress = createEgress({ secrets: { get: async () => "k" }, transport: reply({}) });
+  const m = { id: OCR_ID, network: { allow: ["api.ocr.example.org"] }, secrets: [{ name: "api_key" }] };
+  const all = ["network.request.approved", "module.secrets"];
+  const call = (request, granted = all, manifest = m) => egress.call({ manifest, granted, request: { method: "GET", path: "/v1/x", ...request } });
+  await call({});
+  await assert.rejects(call({ host: "evil.example.com" }), /not in the module's allowed hosts/);
+  await assert.rejects(call({ path: "/v1/../admin" }), /path is not allowed/);
+  await assert.rejects(call({ path: "http://evil/x" }), /path is not allowed/);
+  await assert.rejects(call({ headers: { Cookie: "a=b" } }), /header "Cookie" is not allowed/);
+  await assert.rejects(call({ secretHeaders: { Authorization: { secret: "other" } } }), /not declared/);
+  await assert.rejects(call({ secretHeaders: { Cookie: { secret: "api_key" } } }), /not allowed/);
+  await assert.rejects(call({ secretHeaders: { "X-Key": { secret: "api_key" } } }, ["network.request.approved"]), /permission to use secrets/);
+  await assert.rejects(call({}, ["canvas.write"]), /permission to use the network/);
+  await assert.rejects(call({ body: { a: 1 } }), /only POST may carry a body/);
+  await assert.rejects(createEgress({ transport: reply({}, 302) }).call({ manifest: m, granted: all, request: { path: "/x" } }), /redirect/);
+  await assert.rejects(createEgress({ transport: reply({}, 500) }).call({ manifest: m, granted: all, request: { path: "/x" } }), /answered 500/);
+});
+
+test("HTTP manifests: host must be named when there are several, secrets must be declared", () => {
+  const bad = (edit) => { const m = structuredClone(ocr); edit(m); return () => verifyBundle(Buffer.from(JSON.stringify(sign(m))), { trusted: new Map([["pub1", { keyId: "pub1", publicKey: keys.publicKey, publisher: "P", scopes: ["org.example"] }]]), coreVersion: "0.10.0" }); };
+  bad(() => {})();
+  assert.throws(bad((m) => { m.network.allow.push("other.example.org"); }), /name one of network\.allow/);
+  assert.throws(bad((m) => { m.secrets = []; delete m.secrets; m.permissions = ["canvas.write", "network.request.approved"]; }), /not declared|module\.secrets/);
+  assert.throws(bad((m) => { m.capabilities[0].request.path = "/v1/../x"; }), /fixed path/);
+  assert.throws(bad((m) => { m.permissions = ["canvas.write"]; delete m.network; delete m.secrets; }), /network\.request\.approved/);
 });

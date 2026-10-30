@@ -129,7 +129,7 @@ export function selfTest(manifest, runtime, { runtimes }) {
         let input;
         try { input = validateValue(cap.inputSchema, ex.params ?? {}, cap.id + " example"); }
         catch (error) { if (!cap.examples) continue; throw new LifecycleError("self-test: " + error.message, "selftest"); }
-        const out = await rt.run({ manifest, runtime }, cap.id, input, { canvas: { objects: [], marks: [] }, module: { id: manifest.id, version: manifest.version }, permissions: manifest.permissions, limits: manifest.limits ?? {} });
+        const out = await (rt.selfTest ?? rt.run).call(rt, { manifest, runtime }, cap.id, input, { canvas: { objects: [], marks: [] }, module: { id: manifest.id, version: manifest.version }, permissions: manifest.permissions, limits: manifest.limits ?? {} });
         if (out?.operations?.length) {
           const entry = { imageId: "img:0000000000000000", width: 1600, height: 1000, marks: new Map(), layers: [] };
           try { applySceneOps(entry, out.operations, { author: "module", module: manifest.id, moduleVersion: manifest.version, capability: cap.id }); }

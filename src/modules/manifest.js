@@ -8,7 +8,7 @@ import { PERMISSION_NAMES } from "./permissions.js";
 import { isVersion, parseRange, satisfies } from "./semver.js";
 
 export const MODULE_SCHEMA = "estampes.module/1";
-export const RUNTIME_KINDS = ["builtin", "declarative", "wasm"];
+export const RUNTIME_KINDS = ["builtin", "declarative", "wasm", "http"];
 export const CATEGORIES = ["math", "diagram", "analysis", "text", "astronomy", "electronics", "utility", "other"];
 export const TARGETS = ["none", "canvas", "canvas-or-new"];
 
@@ -23,6 +23,24 @@ const Https = z.string().max(300).url().refine((u) => u.startsWith("https://"), 
 const Host = z.string().max(253).regex(/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "a lower-case public host name such as api.example.org");
 
 const Example = z.object({ description: Text(200), params: z.record(z.string(), z.unknown()) }).strict();
+// http runtime only: a request description, never a URL or code. `path` is
+// fixed; values from the input go in `query` and `body` as {"$param": name}.
+const HttpRequest = z.object({
+  method: z.enum(["GET", "POST"]).default("GET"),
+  host: z.string().max(253).optional(),
+  path: z.string().max(200).regex(/^\/[A-Za-z0-9._~\/-]*$/, "a fixed path of letters, digits and . _ ~ / -").refine((p) => !p.split("/").some((x) => x === "." || x === ".."), "a fixed path of letters, digits and . _ ~ / - without . or .. segments"),
+  query: z.record(z.string(), z.unknown()).optional(),
+  headers: z.record(z.string(), z.string().max(200)).optional(),
+  secretHeaders: z.record(z.string(), z.object({ secret: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/), prefix: z.string().max(40).optional() }).strict()).optional(),
+  body: z.unknown().optional(),
+}).strict();
+const HttpResponse = z.object({
+  // Scene operations; {"$response": "a.b.0.c"} reads the JSON reply, {"$param": name} the input.
+  operations: z.array(z.record(z.string(), z.unknown())).max(64).optional(),
+  // Dotted path of the part of the reply to hand back as data (default: all of it).
+  data: z.string().max(120).optional(),
+}).strict();
+
 const Capability = z.object({
   id: z.string().regex(CAPABILITY_ID),
   title: Text(60).optional(), titleI18n: I18n(60).optional(),
@@ -34,6 +52,8 @@ const Capability = z.object({
   // Declarative runtime only: scene operations with {"$param": name}
   // placeholders, filled in from the validated input.
   operations: z.array(z.record(z.string(), z.unknown())).max(64).optional(),
+  request: HttpRequest.optional(),
+  response: HttpResponse.optional(),
 }).strict();
 
 export const ManifestSchema = z.object({
@@ -97,6 +117,20 @@ export function validateManifest(raw, { coreVersion } = {}) {
     if (c.target === "canvas-or-new" && !(c.permissions ?? m.permissions).includes("workspace.write")) {
       throw new ManifestError(where + ": target canvas-or-new needs workspace.write");
     }
+    if ((m.runtime.kind === "http") !== !!c.request) {
+      throw new ManifestError(where + (c.request ? ": request is only for the http runtime" : ": the http runtime needs a request"));
+    }
+    if (c.response && !c.request) throw new ManifestError(where + ": response is only for the http runtime");
+    if (c.request) {
+      const hosts = m.network?.allow ?? [];
+      if (!(c.permissions ?? m.permissions).includes("network.request.approved")) throw new ManifestError(where + ": a request needs network.request.approved");
+      if (c.request.host ? !hosts.includes(c.request.host) : hosts.length !== 1) throw new ManifestError(where + ".request.host: name one of network.allow" + (hosts.length === 1 ? "" : " (there is more than one)"));
+      for (const ref of Object.values(c.request.secretHeaders ?? {})) {
+        if (!m.secrets?.some((x) => x.name === ref.secret)) throw new ManifestError(where + ".request.secretHeaders: secret " + ref.secret + " is not declared in manifest.secrets");
+      }
+      if (JSON.stringify(c.request).length > 16 * 1024) throw new ManifestError(where + ".request: larger than 16 KB");
+    }
+    if (c.response?.operations && JSON.stringify(c.response.operations).length > 64 * 1024) throw new ManifestError(where + ".response.operations: larger than 64 KB");
     if ((m.runtime.kind === "declarative") !== !!c.operations) {
       throw new ManifestError(where + (c.operations ? ": operations are only for the declarative runtime" : ": the declarative runtime needs operations"));
     }
