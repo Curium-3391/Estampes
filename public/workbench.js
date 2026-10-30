@@ -113,9 +113,14 @@ function renderBar(open,lay,mobile,solo){
   launch.append(h("button",{class:"wb-open",disabled:off||full,title:off?"到 Store 啟用「"+a.moduleName+"」後才能使用":full?"已經開啟":"開啟"+a.title,onclick:()=>wbApply([{op:"open-panel",module:a.module,panel:a.panel}])},
    "＋ "+(a.kind==="calculator"?"科學計算機":a.title)+(off?"（未啟用）":"")));
  }
+ // The canvas (photo + Graph) is always open; when it is minimized or covered
+ // by a maximized window this button lays the windows out side by side again.
+ const cv=open.find(p=>p.kind==="canvas"),cpl=cv&&lay.placements[cv.panelId];
+ const covered=cv&&!mobile&&(cpl?.mode==="minimized"||open.some(p=>p!==cv&&lay.placements[p.panelId]?.mode==="maximized"));
+ if(covered)launch.prepend(h("button",{class:"wb-open",title:"把畫布與函數圖叫回來，和其他視窗並排",onclick:()=>wbLayout({op:"reset",profile:wb.profile,panelIds:open.map(p=>p.panelId)})},"＋ 函數圖／畫布"));
  bar.push(launch);
  for(const p of open){const pl=lay.placements[p.panelId];
-  if(!mobile&&pl?.mode==="minimized")bar.push(h("button",{class:"wb-chip",onclick:()=>wbLayout({op:"restore",panelId:p.panelId})},"還原："+wbTitle(p)));}
+  if(!mobile&&pl?.mode==="minimized"&&p.kind!=="canvas")bar.push(h("button",{class:"wb-chip",onclick:()=>wbLayout({op:"restore",panelId:p.panelId})},"還原："+wbTitle(p)));}
  if(!solo){bar.push(h("button",{class:"wb-chip",title:"把目前這個裝置的面板排回預設位置",onclick:()=>wbLayout({op:"reset",profile:wb.profile,panelIds:openPanels().map(p=>p.panelId)})},"重設版面"));}
  wbBar.replaceChildren(...bar);
 }

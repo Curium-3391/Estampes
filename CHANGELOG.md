@@ -14,6 +14,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 - Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
 
+## 0.19.6 — A way back to the Graph
+
+- With the calculator open alone (minimized or covered canvas), the launcher shows **＋ 函數圖／畫布**; it lays the windows out side by side again. It replaces the easy-to-miss 「還原：畫布」 chip.
+- `manage_surface_panels open` on a panel that is already open just shows it instead of opening another window; more windows come from the launcher.
+- Tests: `tests/surface-open.test.js`.
+
 ## 0.19.5 — Several calculator windows
 
 - A surface can hold up to four calculator windows, each with its own notebook (`maxInstances` 4); extra windows are titled 科學計算機 2, 3, 4 and close independently without losing data.

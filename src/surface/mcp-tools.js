@@ -175,7 +175,10 @@ export function registerSurfaceTools(server, deps) {
       if (imageId) entry = await ensureImage(imageId);
       else if (!workspaceId) { entry = await host.canvases.create({}); await host.canvases.save(entry, { tool: "manage_surface_panels", author: "module", changed: [] }); made = true; }
       const op = action === "open" ? { op: "open-panel", module, panel, ...(notebook ? { notebook } : {}) } : { op: "close-panel", panelId };
-      let view = await service.apply(keyOf({ imageId: entry?.imageId, workspaceId }), { ops: [op] });
+      // Asking again for a panel that is already open shows it; a second
+      // window is something the user opens from the launcher.
+      const already = action === "open" && !notebook && !made && (await service.state(keyOf({ imageId: entry?.imageId, workspaceId }))).panels.some((p) => p.open && p.module === module && p.panel === panel);
+      let view = already ? await service.state(keyOf({ imageId: entry?.imageId, workspaceId })) : await service.apply(keyOf({ imageId: entry?.imageId, workspaceId }), { ops: [op] });
       // No canvas was asked for: nothing is shown behind the new panel. The
       // panel fills the workbench (the blank canvas stays one click away).
       if (made && action === "open") {
