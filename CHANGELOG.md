@@ -2,6 +2,12 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
+## 0.19.4 — Notebooks and layouts travel in `.estampes`
+
+- `export_workspace_bundle` adds `surface.json` (open panels, per-device layouts) and `notebooks/<n>.json` (definitions, cells, Graph links) when the workspace has a surface. The format stays `estampes.bundle/1`; the files are optional, so older readers ignore them.
+- `import_workspace_bundle` rebuilds them from known fields under new ids and never overwrites. Calculator results come in **stale** (a file cannot prove SymPy computed them) with their Graph links marked stale; press 重算 or 更新所有連結. Links are remapped to the imported images. Limits: 20 notebooks, 200 cells each, bounded sizes.
+- Tests: `tests/bundle-extras.test.js`.
+
 ## 0.19.1 — Stop a calculation
 
 - Calculator panel: **停止** cancels a running calculation or recompute. `calculate` and `recompute` accept a `job` id; new widget-only tool `surface_cas_cancel`. A cancelled calculation leaves no cell and no error behind; the service remembers a cancel that arrives before the job starts.

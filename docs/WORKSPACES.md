@@ -119,3 +119,7 @@ With `ESTAMPES_STORAGE_DIR`, workspaces are `workspaces/<hex>.json` with a `hist
 ## Scope
 
 Estampes is self-hosted with one owner per instance, so there are no per-user permissions on workspaces: anyone with the access key can read and change them, and every device connected to the same server sees the same workspaces. Conflicts between devices are caught by revisions (`expectedRevision`, preview checks), not merged automatically.
+
+### Surface and notebooks in a bundle
+
+When the workspace has a Visual Surface, `export_workspace_bundle` also writes `surface.json` (panels and one layout per device profile) and `notebooks/<n>.json` (calculator definitions, cells and Graph links). On import they are rebuilt from known fields under new ids and nothing is overwritten. Calculator results arrive stale, and their Graph links are marked stale, until you recompute them with SymPy (重算, or 更新所有連結). A bundle without these files imports as before.

@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { SURFACE_SCHEMA, defaultLayouts } from "./layout.js";
+import { SURFACE_SCHEMA, defaultLayouts, LayoutsSchema, reconcile } from "./layout.js";
 
 export const SURFACE_ID = /^sf:[0-9a-f]{16}$/;
 export class SurfaceError extends Error {
@@ -43,12 +43,38 @@ export function createSurfaceStore({ dir = "" } = {}) {
   };
 
   return {
+    // The surface for a canvas key if one exists; never creates one.
+    async peek(canvasKey) { return load(surfaceIdFor(canvasKey)); },
     // The surface for a canvas key, created on first use.
     async forCanvas(canvasKey) {
       const id = surfaceIdFor(canvasKey);
       const existing = await load(id);
       if (existing) return existing;
       return this.mutate(canvasKey, {}, () => {}, { create: true });
+    },
+    // For .estampes bundles: a surface for a canvas key built from what a
+    // file says. Panels and layouts are rebuilt from known fields, layouts are
+    // checked against the schema (or reset), and an existing surface is never
+    // overwritten. `notebookMap` renames the notebooks the panels show.
+    async importFor(canvasKey, raw, { notebookMap = new Map() } = {}) {
+      const id = surfaceIdFor(canvasKey);
+      if (await load(id)) return { created: false };
+      const doc = fresh(canvasKey);
+      const seen = new Set(["p:canvas"]);
+      for (const p of (Array.isArray(raw?.panels) ? raw.panels : []).slice(0, 12)) {
+        if (!p || typeof p !== "object" || !/^p:[a-z0-9][a-z0-9-]{0,30}$/.test(p.panelId) || seen.has(p.panelId) || p.module === "core") continue;
+        if (typeof p.module !== "string" || typeof p.panel !== "string" || typeof p.kind !== "string") continue;
+        seen.add(p.panelId);
+        const inst = { panelId: p.panelId, module: p.module.slice(0, 100), panel: p.panel.slice(0, 40), kind: p.kind.slice(0, 20), title: typeof p.title === "string" ? p.title.slice(0, 60) : p.panel, open: p.open === true };
+        if (typeof p.notebook === "string" && notebookMap.has(p.notebook)) inst.notebook = notebookMap.get(p.notebook);
+        doc.panels.push(inst);
+      }
+      const ids = doc.panels.filter((p) => p.open).map((p) => p.panelId);
+      const parsed = LayoutsSchema.safeParse(raw?.layouts);
+      doc.layouts = reconcile(parsed.success ? parsed.data : defaultLayouts(ids), ids);
+      docs.set(id, doc);
+      try { await persist(doc); } catch (error) { docs.delete(id); throw error; }
+      return { created: true, surfaceId: id };
     },
     async mutate(canvasKey, { expectedRevision, idempotencyKey } = {}, fn, { create = false } = {}) {
       const id = surfaceIdFor(canvasKey);

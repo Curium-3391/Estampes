@@ -46,7 +46,7 @@ export async function startStack({ cas = true } = {}) {
   let browser = null;
   const call = (name, args) => client.callTool({ name, arguments: args });
   return {
-    client, call, dir,
+    client, call, dir, port,
     async enable(ids) {
       for (const id of ids) {
         const prep = await call("prepare_module_change", { action: "enable", module: id });

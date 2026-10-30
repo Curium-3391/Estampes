@@ -6,6 +6,8 @@
 //   assets/<hash>.<ext>    the image bytes of every item (the original file when the server
 //                          still has it, else the working copy as PNG; see manifest `assets`)
 //   sets/<n>.json          one annotation set: layers, marks, links, rejected claims, objects
+//   surface.json           (optional) the Visual Surface: open panels and one layout per device profile
+//   notebooks/<n>.json     (optional) calculator notebooks the surface shows: definitions, cells, Graph links
 //
 // Marks, layers, claims and links are copied as they are: nothing is
 // flattened, re-recognised or re-numbered, so every mark stays selectable and
@@ -24,14 +26,14 @@ import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, rest
 import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
 
 export const BUNDLE_FORMAT = "estampes.bundle/1";
-const MAX_MARKS_PER_SET = 5000, MAX_LAYERS = 200, MAX_LINKS = 5000;
+const MAX_MARKS_PER_SET = 5000, MAX_LAYERS = 200, MAX_LINKS = 5000, MAX_NOTEBOOKS = 20;
 const sha = (buf) => createHash("sha256").update(buf).digest("hex");
 const json = (v) => Buffer.from(JSON.stringify(v, null, 1));
 const EXT = { jpeg: "jpg", jpg: "jpg", png: "png", webp: "webp", gif: "gif", tiff: "tif", heif: "heic", avif: "avif" };
 const defined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
 
 // ---- Export ----------------------------------------------------------------
-export async function exportBundle(ref, { version = "dev", fileNames = true } = {}) {
+export async function exportBundle(ref, { version = "dev", fileNames = true, extras = null } = {}) {
   const { doc } = await resolveRef(ref);
   const items = await workspaceItems(doc);
   if (!items.length) throw new Error("This workspace has no images to export");
@@ -72,12 +74,20 @@ export async function exportBundle(ref, { version = "dev", fileNames = true } = 
     items: doc.items.map((it) => defined({ id: it.id, asset: it.asset, set: it.set, label: it.label, placement: it.placement })),
   });
   add("workspace.json", json(workspace));
+  // Optional extras: the surface and calculator notebooks, as data. The caller
+  // owns where they live; the bundle only carries them.
+  const extraInfo = {};
+  if (extras?.surface) { add("surface.json", json(extras.surface)); extraInfo.surface = "surface.json"; }
+  const books = (extras?.notebooks ?? []).slice(0, MAX_NOTEBOOKS);
+  if (books.length) {
+    extraInfo.notebooks = books.map((nb, n) => { add("notebooks/" + (n + 1) + ".json", json(nb)); return { id: nb.id, file: "notebooks/" + (n + 1) + ".json", cells: nb.cells?.length ?? 0 }; });
+  }
   const check = await inspectWorkspace(doc);
   const bundleId = sha(Buffer.from(listed.map((f) => f.path + ":" + f.sha256).sort().join("\n"))).slice(0, 16);
   const manifest = {
     format: BUNDLE_FORMAT, bundleId, generator: "Estampes " + version, createdAt: new Date().toISOString(),
     requires: [WORKSPACE_PROTOCOL, "estampes.visual/2"],
-    workspace: { name: doc.name, ...check.totals }, assets, sets, files: listed,
+    workspace: { name: doc.name, ...check.totals }, assets, sets, ...(Object.keys(extraInfo).length ? { extras: extraInfo } : {}), files: listed,
     notes: "Marks, layers, claims and links are stored as data, not drawn into the images. Contains no access key, link or chat content.",
   };
   const buffer = zipFiles([{ name: "manifest.json", data: json(manifest) }, ...files]);
@@ -248,5 +258,16 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
     && !(k === "links" && summary.some((s) => s.how === "reused")));
   const unsupported = touched.flatMap((x) => x.def.unsupported);
   const verified = adopted.check.ok && !mismatch.length && !unsupported.length;
-  return { ...adopted, summary, warnings, mismatch, unsupported, verified, manifest: { bundleId: manifest.bundleId, generator: manifest.generator } };
+  // Surface and notebooks ride along as untrusted data; the server installs
+  // them (see installBundleExtras) once the workspace exists.
+  const extras = { surface: null, notebooks: [], imageIds: Object.fromEntries(idMap) };
+  const ex = manifest.extras;
+  if (ex && typeof ex === "object") {
+    if (typeof ex.surface === "string" && files.has(ex.surface)) { try { extras.surface = parse(ex.surface); } catch { warnings.push("The surface in the bundle could not be read; it was left out."); } }
+    for (const n of (Array.isArray(ex.notebooks) ? ex.notebooks : []).slice(0, MAX_NOTEBOOKS)) {
+      if (typeof n?.file !== "string" || !files.has(n.file)) continue;
+      try { extras.notebooks.push({ id: String(n.id), raw: parse(n.file) }); } catch { warnings.push("A calculator notebook in the bundle could not be read; it was left out."); }
+    }
+  }
+  return { ...adopted, summary, warnings, mismatch, unsupported, verified, extras, manifest: { bundleId: manifest.bundleId, generator: manifest.generator } };
 }
