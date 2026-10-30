@@ -146,7 +146,11 @@ export function applySceneOps(entry, operations, source, { expectedRevision, vis
         mayTouch(old, i, "update");
         let props = old.props;
         if (op.props) {
-          try { props = validateProps(old.type, withRefs({ ...old.props, ...op.props }, i)); }
+          const merged = { ...old.props, ...op.props };
+          // Setting a label selects custom unless the caller explicitly requests auto.
+          // This policy belongs to Core: widget edits run without module code.
+          if (old.type === "function-plot" && op.props.label !== undefined && op.props.labelMode === undefined) merged.labelMode = "custom";
+          try { props = validateProps(old.type, withRefs(merged, i)); }
           catch (error) { throw error instanceof SceneOpsError ? error : new SceneOpsError(error.message, { index: i }); }
           checkRefs(old.type, props, i);
         }

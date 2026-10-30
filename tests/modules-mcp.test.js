@@ -70,6 +70,7 @@ test("modules over MCP: Store, consent, enable, plot sin(x), edit, restart", { t
     const edited = await s.client.callTool({ name: "edit_scene_object", arguments: { imageId: canvasId, id: "o2", props: { expression: "sin(2*x)" } } });
     assert.ok(!edited.isError, text(edited));
     assert.equal(edited.structuredContent.objects[1].editable.expression, "sin(2*x)");
+    assert.ok(edited.structuredContent.objects[1].primitives.some((p) => p.k === "text" && p.text === "y = sin(2*x)"));
     const hostile = await s.client.callTool({ name: "edit_scene_object", arguments: { imageId: canvasId, id: "o2", props: { expression: "constructor.constructor('x')()" } } });
     assert.equal(hostile.isError, true);
 
@@ -89,6 +90,35 @@ test("modules over MCP: Store, consent, enable, plot sin(x), edit, restart", { t
     const again = await s.client.callTool({ name: "execute_module", arguments: { module: "org.estampes.graph", capability: "update_plot", canvas: canvasId, params: { object: "o2", expression: "sin(3x)" } } });
     assert.ok(!again.isError, text(again));
     assert.equal(again.structuredContent.module.revision, 3);
+    const custom = await s.client.callTool({ name: "execute_module", arguments: { module: "org.estampes.graph", capability: "update_plot", canvas: canvasId, params: { object: "o2", label: "實測電壓" } } });
+    assert.ok(!custom.isError, text(custom));
+    assert.equal(custom.structuredContent.objects.find((o) => o.id === "o2").props.labelMode, "custom");
+    const auto = await s.client.callTool({ name: "execute_module", arguments: { module: "org.estampes.graph", capability: "update_plot", canvas: canvasId, params: { object: "o2", labelMode: "auto" } } });
+    assert.ok(!auto.isError, text(auto));
+    const disable = await s.client.callTool({ name: "prepare_module_change", arguments: { action: "disable", module: "org.estampes.graph" } });
+    const disabled = await s.client.callTool({ name: "store_commit_plan", arguments: { planId: disable.structuredContent.plan.planId, consent: disable._meta["estampes/consent"].consent } });
+    assert.ok(!disabled.isError, text(disabled));
+    const direct = await s.client.callTool({ name: "edit_scene_object", arguments: { imageId: canvasId, id: "o2", props: { expression: "sin(4*x)" } } });
+    assert.ok(!direct.isError, text(direct));
+    assert.ok(direct.structuredContent.objects[1].primitives.some((p) => p.k === "text" && p.text === "y = sin(4*x)"));
+    // Read-only composites continue to work with Graph disabled. Submission
+    // captures both saved handwriting and widget-local visibility.
+    const submitted = await s.client.callTool({ name: "validate_visual_annotations", arguments: {
+      imageId: canvasId, annotations: [{ id: "user-render-1", type: "arrow", x: .2, y: .2, x2: .6, y2: .6, label: "YOU 1" }],
+      hiddenLayers: [], note: "看看這段曲線", } });
+    assert.ok(!submitted.isError, text(submitted));
+    const request = submitted.structuredContent.event.canvasReads[0].request;
+    assert.match(submitted.structuredContent.chatMessage, /render_canvas/);
+    assert.doesNotMatch(submitted.structuredContent.chatMessage, /使用者的實際照片|請先用 Estampes 的 process_image/);
+    const composite = await s.client.callTool({ name: "render_canvas", arguments: { ...request, region: { x: .1, y: .1, x2: .9, y2: .9 } } });
+    assert.ok(!composite.isError, text(composite));
+    assert.ok(composite.content.some((b) => b.type === "image"));
+    assert.deepEqual(composite.structuredContent.included.objects, ["o1", "o2"]);
+    assert.deepEqual(composite.structuredContent.included.marks, ["user-render-1"]);
+    await s.client.callTool({ name: "edit_scene_object", arguments: { imageId: canvasId, id: "o2", props: { expression: "cos(x)" } } });
+    const stale = await s.client.callTool({ name: "render_canvas", arguments: request });
+    assert.equal(stale.isError, true);
+    assert.equal(stale.structuredContent.code, "STALE_CANVAS");
     const activity = await s.client.callTool({ name: "store_get_activity", arguments: {} });
     assert.ok(activity.structuredContent.events.some((e) => e.kind === "run"));
   } finally { s.handle.kill(); }

@@ -31,7 +31,8 @@
           "yRange": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "y range of NEW axes; default fits the curve" },
           "frame": { "type": "string", "maxLength": 64, "description": "id of the axes to draw on, when the canvas has several" },
           "color": { "type": "string", "enum": ["blue", "red", "green", "gold", "magenta", "cyan", "black", "gray"] },
-          "label": { "type": "string", "maxLength": 64, "description": "Legend text; default y = expression" },
+          "label": { "type": "string", "maxLength": 64, "description": "Custom legend text; empty hides it" },
+          "labelMode": { "type": "string", "enum": ["auto", "custom"], "description": "auto follows the current expression; custom preserves label. Default custom when label is supplied, otherwise auto." },
           "title": { "type": "string", "maxLength": 80, "description": "Title of NEW axes" }
         }
       },
@@ -55,7 +56,8 @@
           "expression": { "type": "string", "maxLength": 256 },
           "domain": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
           "color": { "type": "string", "enum": ["blue", "red", "green", "gold", "magenta", "cyan", "black", "gray"] },
-          "label": { "type": "string", "maxLength": 64 }
+          "label": { "type": "string", "maxLength": 64 },
+          "labelMode": { "type": "string", "enum": ["auto", "custom"], "description": "Set auto to resume formula labels; setting label alone selects custom." }
         }
       },
       "examples": [{ "description": "double the frequency", "params": { "object": "o2", "expression": "sin(2*x)" } }]

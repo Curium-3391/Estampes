@@ -1617,7 +1617,7 @@ send.addEventListener("click",async()=>{
    status.textContent="正在驗證座標並整理對話上下文…";
    const result=await request("tools/call",{
      name:"validate_visual_annotations",
-     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),...(ws?{workspaceId:ws.id}:{}),annotations:marks,intent,note,replyQuote,
+     arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),...(ws?{workspaceId:ws.id}:{}),annotations:marks,intent,note,replyQuote,hiddenLayers:[...hiddenLayers].map(serverLayer),
        gestureDecisions:gestureDecisions.filter(d=>d.memberIds.every(id=>marks.some(m=>m.id===id)))}
    });
    if(result?.isError)throw Error("Tool rejected annotations");
@@ -1648,7 +1648,7 @@ send.addEventListener("click",async()=>{
      (note?"我的補充："+note+"\n":"")+
      (replyQuote?"我手動提供的前文引述："+replyQuote+"\n":
        "沒有前文的精確引述，請勿猜測。\n")+
-     (imageId?"照片 imageId="+imageId+"，請用 process_image 檢視標註位置；":
+     (imageId?"畫布 imageId="+imageId+"；手繪與場景物件請用 render_canvas，照片細節才用 process_image。這次提交尚未保存，合成圖可能不含新筆畫，不可宣稱已看過；":
        "SVG 底圖 id=demo:"+selectedScene+" revision=svg-v1 viewBox=640×360，")+
      (pair?"右圖 imageId="+pair.imageId+"，每個標註的 side 表示在左圖或右圖；":"")+
      (ws?"這是工作區 workspaceId="+ws.id+"（"+ws.items.map(it=>it.id+"="+it.imageId).join("、")+"），每個標註的 item 表示它在哪張圖上；":"")+
