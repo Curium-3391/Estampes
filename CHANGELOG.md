@@ -2,6 +2,10 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
+## 0.19.1 — Stop a calculation
+
+- Calculator panel: **停止** cancels a running calculation or recompute. `calculate` and `recompute` accept a `job` id; new widget-only tool `surface_cas_cancel`. A cancelled calculation leaves no cell and no error behind; the service remembers a cancel that arrives before the job starts.
+
 ## Unreleased
 
 - Browser test `tests/layers-e2e.test.js` (shared helper `tests/helpers/widget-host.js`): a base image, an image laid over it, a Graph curve and marks are all layers; fading one to 50% and moving it down are saved on the server. No product change: layers, opacity, order and `add_image_layer` already shipped.

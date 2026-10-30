@@ -110,6 +110,19 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
     assert.equal(await page.evaluate(() => window.__pwn), undefined);
     assert.equal(await w.locator("img[src=x]").count(), 0);
 
+    // 4b. A long calculation can be stopped; nothing is left behind.
+    const cellsBefore = await w.locator(".cell").count();
+    await w.locator(".calc select").first().selectOption("integrate");
+    await w.locator(".calc-input").fill("exp(-x^2)*ln(x)");
+    await w.locator(".calc-go .primary").click();
+    await w.locator(".calc-go button[aria-label=停止計算]").waitFor({ state: "visible", timeout: 10000 });
+    await sleep(500);
+    await w.locator(".calc-go button[aria-label=停止計算]").click();
+    await w.locator(".calc-msg", { hasText: "已停止" }).waitFor({ timeout: 15000 });
+    assert.equal(await w.locator(".cell").count(), cellsBefore, "a stopped calculation adds no cell");
+    assert.equal(await w.locator(".calc-go .primary").isEnabled(), true, "the calculator is usable again");
+    await w.locator(".calc select").first().selectOption("differentiate");
+
     // 5. Plot the result on the Graph panel; the object is linked.
     await w.locator(".calc-input").fill("x^3-3x");
     await w.locator(".calc-go .primary").click();

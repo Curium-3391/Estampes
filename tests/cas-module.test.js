@@ -149,3 +149,22 @@ test("bridge: only real single-variable results become Graph expressions", () =>
   assert.throws(() => checkPlottable({ status: "conditional", exact: { ast: x } }), /not an ordinary real function/);
   assert.throws(() => checkPlottable({ status: "exact", exact: { ast: { node: "call", fn: "ln", args: [{ node: "pow", left: x, right: { node: "integer", value: "2" } }, ] } } }, [-0.0, 0.0]), /no real values/);
 });
+
+test("cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged", { skip }, async () => {
+  const nb = (await call("calculate", { operation: "evaluate", text: "2+2" })).data;
+  const job = "a1b2c3d4e5f60718";
+  const slow = call("calculate", { operation: "integrate", text: "exp(-x^2)*ln(x)", variable: "x", notebook: nb.notebookId, job });
+  await new Promise((r) => setTimeout(r, 400));
+  const client = createCasClient({ socketPath: sock });
+  assert.equal((await client.cancel(job)).cancelled, true);
+  await assert.rejects(slow, /cancelled/);
+  const after = (await call("get_notebook", { notebook: nb.notebookId })).data;
+  assert.equal(after.cells.length, 1, "no cell and no error cell was added");
+  assert.equal(after.revision, nb.notebookRevision);
+  // A cancel that arrives before the job starts still wins.
+  await client.cancel("0123456789abcdef");
+  await assert.rejects(call("calculate", { operation: "evaluate", text: "1+1", notebook: nb.notebookId, job: "0123456789abcdef" }), /cancelled/);
+  // The service keeps working.
+  assert.equal((await call("calculate", { operation: "evaluate", text: "3+3", notebook: nb.notebookId })).data.cell.result.plain, "6");
+  await assert.rejects(call("calculate", { operation: "evaluate", text: "1", job: "../../x" }), /pattern|job/);
+});

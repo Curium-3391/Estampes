@@ -99,6 +99,24 @@ export function registerSurfaceTools(server, deps) {
     } catch (error) { return fail(error); }
   });
 
+  // Stops a running calculation the panel started (its `job` id). Nothing is
+  // written: a cancelled calculation leaves no cell and no error behind.
+  registerAppTool(server, "surface_cas_cancel", {
+    title: "Stop a calculation",
+    description: "Cancel the calculator job with this id, if it is still running.",
+    inputSchema: z.object({ job: z.string().regex(/^[0-9a-f]{8,32}$/) }),
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    _meta: { ui: { visibility: ["app"] } },
+  }, async ({ job }) => {
+    try {
+      const client = deps.casClient?.();
+      if (!client) throw new SurfaceError("the calculator service is not configured");
+      const r = await client.cancel(job);
+      return { content: [{ type: "text", text: r.cancelled ? "Calculation stopped." : "Nothing was running for that job." }],
+        structuredContent: { kind: "estampes.surface_cas_cancel", job, cancelled: !!r.cancelled } };
+    } catch (error) { return fail(error); }
+  });
+
   server.registerTool("get_surface_state", {
     title: "Read the Visual Surface state",
     description: "What the user has open on the Estampes Visual Surface: panels (canvas/Graph, scientific calculator), which are open, and every calculator cell with its exact result, status (exact, approximate, complex, conditional, partial, undefined), freshness (fresh/stale/error) and the Graph objects drawn from it. Read this instead of asking the user what they typed into the calculator. Results here were computed by SymPy; do not restate them differently.",
