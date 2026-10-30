@@ -115,7 +115,75 @@
             "scaleHighArcsecPerPixel": 200
           }
         }
-      ]
+      ],
+      "profile": {
+        "whenToUse": "A photo of the night sky (stars visible, not heavily edited) when you need to know where it points, or to name the stars and objects in it.",
+        "whenNotToUse": "Daytime or indoor photos, drawings or stock images with composited stars, images with very few stars, or when the user does not want the image sent to an outside service.",
+        "inputLimits": "JPEG or PNG stored on this server, up to 25 MB. Scale hints (arcsec per pixel, both ends) and a rough position make solving faster and more reliable.",
+        "cost": {
+          "latency": "minutes",
+          "resource": "One upload and a queue on nova.astrometry.net's free service; stops after 15 minutes.",
+          "billable": false
+        },
+        "dataFlow": {
+          "leavesServer": true,
+          "sends": "The whole image and the administrator's API key go to nova.astrometry.net; the image is marked private there."
+        },
+        "reliability": {
+          "kind": "external",
+          "note": "A successful solve is a strong match against star catalogs; named objects come from its catalogs. Wide lenses and unflipped assumptions can shift the orientation.",
+          "verify": "Check that a few marked stars sit on the right stars; compare the field size with the lens."
+        },
+        "fallbacks": [
+          {
+            "when": "the solve fails",
+            "then": "Retry with a scale range from the lens and sensor, or with a rough position; use a sharper, less processed or less cropped photo."
+          },
+          {
+            "when": "the key is refused or missing",
+            "then": "Ask the administrator to set it (secret set); do not guess positions from the picture alone."
+          },
+          {
+            "when": "the user will not send the image",
+            "then": "Identify bright stars by eye and label them as unverified suggestions."
+          }
+        ]
+      },
+      "profileI18n": {
+        "zh-TW": {
+          "whenToUse": "夜空照片（看得到星星、沒有過度後製），想知道它拍的是天空哪裡，或想標出裡面的恆星與天體。",
+          "whenNotToUse": "白天或室內照片、合成星空的圖片、星星太少的圖，或使用者不想把圖片傳到外部服務時。",
+          "inputLimits": "存放在這台伺服器的 JPEG 或 PNG，最大 25 MB。給比例尺範圍（兩端都要，單位 arcsec/像素）與大概位置能讓解算更快更可靠。",
+          "cost": {
+            "latency": "minutes",
+            "resource": "在 nova.astrometry.net 的免費服務上傳並排隊；15 分鐘後會停止。",
+            "billable": false
+          },
+          "dataFlow": {
+            "leavesServer": true,
+            "sends": "整張圖片與管理員的 API 金鑰會送到 nova.astrometry.net，圖片在該站設為不公開。"
+          },
+          "reliability": {
+            "kind": "external",
+            "note": "解算成功代表與星表有很強的吻合；標出的天體名稱來自它的星表。廣角鏡頭可能讓方向有偏差。",
+            "verify": "檢查幾顆標記是否真的落在對應的星上，並用鏡頭資料核對視野大小。"
+          },
+          "fallbacks": [
+            {
+              "when": "解算失敗",
+              "then": "依鏡頭與感光元件給比例尺範圍，或給大概位置再試；換一張更清晰、後製與裁切更少的照片。"
+            },
+            {
+              "when": "金鑰被拒或沒設定",
+              "then": "請管理員設定金鑰（secret set），不要只憑圖片猜位置。"
+            },
+            {
+              "when": "使用者不願送出圖片",
+              "then": "用肉眼辨認亮星，並標明是未經驗證的建議。"
+            }
+          ]
+        }
+      }
     },
     {
       "id": "sky_position",
@@ -185,7 +253,57 @@
             "rotationDeg": 71.3
           }
         }
-      ]
+      ],
+      "profile": {
+        "whenToUse": "After a solve, to show where the field lies on the whole sky.",
+        "whenNotToUse": "When you need an exact footprint: the outline ignores lens distortion and image flipping.",
+        "inputLimits": "Needs the field centre (RA 0-360, Dec -90..90); size and rotation default to a small unrotated field.",
+        "cost": {
+          "latency": "instant",
+          "resource": "Pure calculation on this server."
+        },
+        "dataFlow": {
+          "leavesServer": false,
+          "sends": "Nothing leaves the server."
+        },
+        "reliability": {
+          "kind": "estimate",
+          "note": "The centre is exact as given; the outline is an approximation.",
+          "verify": "Compare with the Astrometry.net result page's sky plot."
+        },
+        "fallbacks": [
+          {
+            "when": "the field crosses the map edge at RA 180",
+            "then": "Only its centre is drawn; say so, and give the RA/Dec range in words."
+          }
+        ]
+      },
+      "profileI18n": {
+        "zh-TW": {
+          "whenToUse": "解算完成後，顯示視野在整個天球上的位置。",
+          "whenNotToUse": "需要精確的視野範圍時：外框不含鏡頭畸變與影像翻轉。",
+          "inputLimits": "需要視野中心（赤經 0–360、赤緯 -90 到 90）；大小與旋轉省略時用小而未旋轉的視野。",
+          "cost": {
+            "latency": "instant",
+            "resource": "只在這台伺服器上計算。"
+          },
+          "dataFlow": {
+            "leavesServer": false,
+            "sends": "沒有任何資料離開伺服器。"
+          },
+          "reliability": {
+            "kind": "estimate",
+            "note": "中心位置依你給的值；外框是近似。",
+            "verify": "對照 Astrometry.net 結果頁的天球位置圖。"
+          },
+          "fallbacks": [
+            {
+              "when": "視野跨過地圖在赤經 180 的邊緣",
+              "then": "只畫中心點；要說明這點，並用文字說出赤經赤緯範圍。"
+            }
+          ]
+        }
+      }
     }
   ]
 }

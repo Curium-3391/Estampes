@@ -98,6 +98,19 @@ function renderList(){
  }
  if(!admin.configured)view.append(el("p",{className:"muted",style:"font-size:.8rem",textContent:"管理員金鑰未設定：只能啟用或停用內建的低風險模組。"}));
 }
+const LATENCY={instant:"即時",seconds:"數秒",minutes:"數分鐘",hours:"可能數小時"},RELIABILITY={exact:"精確計算",estimate:"估計值",heuristic:"啟發式判斷",external:"外部服務的判斷"};
+// One capability's "know before you use it" sheet; folded so the list stays short.
+function capProfile(c){
+ const p=c.profile;if(!p)return el("span");
+ const box=el("details",{className:"profile"},el("summary",{textContent:"適用條件、成本與資料流向"+(c.async?"（背景工作）":"")}));
+ const row=(k,v)=>{if(v)box.append(el("div",{},el("strong",{textContent:k+"："}),el("span",{textContent:v})));};
+ row("適用",p.whenToUse);row("不適用",p.whenNotToUse);row("輸入限制",p.inputLimits);
+ if(p.cost)row("運算成本",LATENCY[p.cost.latency]+(p.cost.resource?"；"+p.cost.resource:"")+(p.cost.billable?"；可能計費":""));
+ if(p.dataFlow)row("資料流向",(p.dataFlow.leavesServer?"會離開伺服器：":"留在伺服器：")+p.dataFlow.sends);
+ if(p.reliability)row("結果可信度",RELIABILITY[p.reliability.kind]+"；"+p.reliability.note+(p.reliability.verify?" 驗證方式："+p.reliability.verify:""));
+ for(const f of p.fallbacks??[])row("失敗時（"+f.when+"）",f.then);
+ return box;
+}
 function renderDetail(){
  const {module:m,manifest:raw,activity=[]}=detail;
  const box=el("div");
@@ -109,7 +122,7 @@ function renderDetail(){
  add("相容 Estampes",raw?.coreCompatibility);add("原始碼",m.sourceUrl);add("套件雜湊",m.package?.sha256);add("簽章金鑰",m.package?.keyId);add("可回滾到",m.rollbackTo);
  box.append(dl);
  box.append(el("h3",{textContent:"能做什麼"}));
- box.append(el("ul",{className:"caps"},...m.capabilities.map(c=>el("li",{},el("strong",{textContent:c.title+" "}),el("code",{textContent:c.id}),el("div",{className:"muted",textContent:c.description})))));
+ box.append(el("ul",{className:"caps"},...m.capabilities.map(c=>el("li",{},el("strong",{textContent:c.title+" "}),el("code",{textContent:c.id}),el("div",{className:"muted",textContent:c.description}),capProfile(c)))));
  box.append(el("h3",{textContent:"需要的權限"}));
  for(const p of m.permissions)box.append(el("div",{className:"perm"},badge(RISK[p.risk]??p.risk,p.risk),el("span",{textContent:p.zh}),el("code",{textContent:p.id})));
  if(m.network)box.append(el("div",{className:"box alert"},el("strong",{textContent:"資料流向："}),el("span",{textContent:" 會連線到 "+m.network.allow.join("、")+"。"+m.network.dataFlow})));

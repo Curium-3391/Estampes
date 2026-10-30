@@ -41,6 +41,21 @@ const HttpResponse = z.object({
   data: z.string().max(120).optional(),
 }).strict();
 
+// What a model (and the person approving the module) needs to decide whether
+// to use a capability, beyond its input schema. Every field is plain text a
+// reader can act on; `cost.latency` and `dataFlow.leavesServer` are checked
+// against what the capability really does.
+export const LATENCIES = ["instant", "seconds", "minutes", "hours"];
+const Profile = z.object({
+  whenToUse: Text(300),
+  whenNotToUse: Text(300).optional(),
+  inputLimits: Text(300).optional(),
+  cost: z.object({ latency: z.enum(LATENCIES), resource: Text(200).optional(), billable: z.boolean().optional() }).strict().optional(),
+  dataFlow: z.object({ leavesServer: z.boolean(), sends: Text(300) }).strict().optional(),
+  reliability: z.object({ kind: z.enum(["exact", "estimate", "heuristic", "external"]), note: Text(300), verify: Text(300).optional() }).strict().optional(),
+  fallbacks: z.array(z.object({ when: Text(160), then: Text(300) }).strict()).max(6).optional(),
+}).strict();
+
 const Capability = z.object({
   id: z.string().regex(CAPABILITY_ID),
   title: Text(60).optional(), titleI18n: I18n(60).optional(),
@@ -56,6 +71,7 @@ const Capability = z.object({
   response: HttpResponse.optional(),
   // Returns a job at once; the work runs in the background (see jobs.js).
   async: z.boolean().optional(),
+  profile: Profile.optional(), profileI18n: z.record(z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/), Profile).refine((o) => Object.keys(o).length <= 8, "at most 8 languages").optional(),
 }).strict();
 
 // estampes.panel/1: a panel a module offers inside the Visual Surface. It is
@@ -144,6 +160,14 @@ export function validateManifest(raw, { coreVersion } = {}) {
     }
     if (c.target === "canvas-or-new" && !(c.permissions ?? m.permissions).includes("workspace.write")) {
       throw new ManifestError(where + ": target canvas-or-new needs workspace.write");
+    }
+    const caps = c.permissions ?? m.permissions;
+    const usesNetwork = caps.includes("network.request.approved");
+    if (c.profile?.dataFlow?.leavesServer && !usesNetwork) throw new ManifestError(where + ".profile.dataFlow: says data leaves the server, but the capability has no network.request.approved permission");
+    if (usesNetwork && !c.profile?.dataFlow?.leavesServer) throw new ManifestError(where + ".profile.dataFlow: a capability that uses the network must say what it sends (leavesServer true and sends)");
+    if (c.async && c.profile && (!c.profile.cost || c.profile.cost.latency === "instant")) throw new ManifestError(where + ".profile.cost: a background job cannot be instant");
+    if (c.profileI18n) for (const [lang, p] of Object.entries(c.profileI18n)) {
+      if (!!p.dataFlow?.leavesServer !== !!c.profile?.dataFlow?.leavesServer || p.cost?.latency !== c.profile?.cost?.latency) throw new ManifestError(where + ".profileI18n." + lang + ": cost and data flow must match profile (only the text may differ)");
     }
     if ((m.runtime.kind === "http") !== !!c.request) {
       throw new ManifestError(where + (c.request ? ": request is only for the http runtime" : ": the http runtime needs a request"));
