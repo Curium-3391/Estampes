@@ -32,6 +32,8 @@ Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This p
 | `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
 | `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. |
 | `get_module_job` | Check a background job started by `execute_module` (for example plate solving): status, progress, result and created objects; can wait up to 25 s. See [Background jobs](MODULES.md#background-jobs). |
+| `get_surface_state`, `manage_surface_panels` | Read which panels are open on a canvas and their layouts; open, close or arrange panels. `manage_surface_panels` also shows the Visual Surface, so it is how the calculator opens beside a canvas. See [Surfaces](SURFACES.md). |
+| `add_image_layer` | Promote the base image into an editable layer, or copy another canvas (with its objects and marks) in as independent layers. PNG transparency is kept; the source is never modified. See [Canvas reads](CANVAS-READS.md). |
 | `prepare_module_change` | Prepare enabling, disabling or (later) installing a module. Changes nothing: the user approves it in the Store. |
 
 Mark types: `point`, `rect`, `arrow` (when GPT draws one, the head is the target) and `polyline` (up to 128 vertices, optionally `smooth` or `closed`). Coordinates are normalized to the full image with the origin at the top left; `coordinateFrame` lets GPT pass coordinates read off a processed view (`derivedViewId`, exact for any crop or zoom; or the older `region` form) and have Estampes convert them. Colour, size and pen (pen or translucent highlighter) are chosen by GPT.
@@ -51,6 +53,8 @@ These are hidden from the model (`visibility: ["app"]`).
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
 | `store_get_catalog`, `store_get_detail`, `store_get_activity` | Read the module catalog, one module's details and the recent module activity for the Store widget. |
 | `store_get_plan`, `store_commit_plan` | Prepare a change from a Store button, and apply it after the user confirms. Committing needs the plan's consent token, which only the widget receives. |
+| `surface_get_state`, `surface_apply` | Read and change the open panels and this device's layout for the workbench. |
+| `surface_cas`, `surface_cas_cancel` | The calculator panel: run, recompute, edit, plot a result in Graph, refresh links; cancel a running calculation. See [Scientific calculator](CAS.md). |
 | `edit_scene_object` | Applies your own edit to a module's object from the canvas (for example a new formula for a plot), or deletes it. No module code runs. |
 | `record_number_line_selection` | Validates a selection in the number-line demo. |
 
