@@ -604,7 +604,7 @@
         "width": 240,
         "height": 220
       },
-      "maxInstances": 2,
+      "maxInstances": 4,
       "resizable": true,
       "dockable": true,
       "capabilityBindings": [

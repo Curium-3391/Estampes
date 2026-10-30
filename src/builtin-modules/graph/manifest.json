@@ -131,7 +131,57 @@
             "color": "red"
           }
         }
-      ]
+      ],
+      "profile": {
+        "whenToUse": "Plot y = f(x) from a formula so the user can edit it later.",
+        "whenNotToUse": "Data without a formula, implicit curves, 3D or parametric plots.",
+        "inputLimits": "Expression up to 256 characters in x; one curve per call.",
+        "cost": {
+          "latency": "instant",
+          "resource": "Calculated on this server; at most a few thousand evaluations."
+        },
+        "dataFlow": {
+          "leavesServer": false,
+          "sends": "Nothing leaves the server."
+        },
+        "reliability": {
+          "kind": "exact",
+          "note": "Computed from the parsed expression by adaptive sampling; asymptotes are not joined.",
+          "verify": "Look at the preview: the curve should match the formula at a few points."
+        },
+        "fallbacks": [
+          {
+            "when": "the expression is refused",
+            "then": "Rewrite it with the supported functions (sin cos tan sqrt abs exp ln log floor min max) or plot sampled points with plot_points."
+          }
+        ]
+      },
+      "profileI18n": {
+        "zh-TW": {
+          "whenToUse": "用公式畫 y = f(x)，之後使用者可以再編輯。",
+          "whenNotToUse": "沒有公式的資料、隱函數、3D 或參數式曲線。",
+          "inputLimits": "算式最多 256 字元、變數 x；每次一條曲線。",
+          "cost": {
+            "latency": "instant",
+            "resource": "在這台伺服器計算，最多幾千次取樣。"
+          },
+          "dataFlow": {
+            "leavesServer": false,
+            "sends": "沒有任何資料離開伺服器。"
+          },
+          "reliability": {
+            "kind": "exact",
+            "note": "依解析後的算式自適應取樣；漸近線不會被連起來。",
+            "verify": "看預覽圖：曲線在幾個點上應符合公式。"
+          },
+          "fallbacks": [
+            {
+              "when": "算式被拒絕",
+              "then": "改用支援的函數（sin cos tan sqrt abs exp ln log floor min max），或用 plot_points 畫取樣點。"
+            }
+          ]
+        }
+      }
     },
     {
       "id": "update_plot",
@@ -200,7 +250,57 @@
             "expression": "sin(2*x)"
           }
         }
-      ]
+      ],
+      "profile": {
+        "whenToUse": "Change the formula, domain, colour or label of a plot you made.",
+        "whenNotToUse": "Plots another module made, or a plot that was deleted.",
+        "inputLimits": "Refer to the plot by its object id.",
+        "cost": {
+          "latency": "instant",
+          "resource": "Calculated on this server; at most a few thousand evaluations."
+        },
+        "dataFlow": {
+          "leavesServer": false,
+          "sends": "Nothing leaves the server."
+        },
+        "reliability": {
+          "kind": "exact",
+          "note": "Computed from the parsed expression by adaptive sampling; asymptotes are not joined.",
+          "verify": "Look at the preview: the curve should match the formula at a few points."
+        },
+        "fallbacks": [
+          {
+            "when": "the expression is refused",
+            "then": "Rewrite it with the supported functions (sin cos tan sqrt abs exp ln log floor min max) or plot sampled points with plot_points."
+          }
+        ]
+      },
+      "profileI18n": {
+        "zh-TW": {
+          "whenToUse": "修改自己畫的函數圖的公式、定義域、顏色或標籤。",
+          "whenNotToUse": "別的模組畫的圖，或已被刪除的圖。",
+          "inputLimits": "用物件 id 指定要改哪一條。",
+          "cost": {
+            "latency": "instant",
+            "resource": "在這台伺服器計算，最多幾千次取樣。"
+          },
+          "dataFlow": {
+            "leavesServer": false,
+            "sends": "沒有任何資料離開伺服器。"
+          },
+          "reliability": {
+            "kind": "exact",
+            "note": "依解析後的算式自適應取樣；漸近線不會被連起來。",
+            "verify": "看預覽圖：曲線在幾個點上應符合公式。"
+          },
+          "fallbacks": [
+            {
+              "when": "算式被拒絕",
+              "then": "改用支援的函數（sin cos tan sqrt abs exp ln log floor min max），或用 plot_points 畫取樣點。"
+            }
+          ]
+        }
+      }
     },
     {
       "id": "set_axes",
@@ -254,6 +354,56 @@
             "type": "string",
             "maxLength": 40
           }
+        }
+      },
+      "profile": {
+        "whenToUse": "Change the range, ticks or title of existing axes; plots on them are redrawn.",
+        "whenNotToUse": "Creating a first plot (use plot_function).",
+        "inputLimits": "Ranges must have max greater than min.",
+        "cost": {
+          "latency": "instant",
+          "resource": "Calculated on this server; at most a few thousand evaluations."
+        },
+        "dataFlow": {
+          "leavesServer": false,
+          "sends": "Nothing leaves the server."
+        },
+        "reliability": {
+          "kind": "exact",
+          "note": "Computed from the parsed expression by adaptive sampling; asymptotes are not joined.",
+          "verify": "Look at the preview: the curve should match the formula at a few points."
+        },
+        "fallbacks": [
+          {
+            "when": "the expression is refused",
+            "then": "Rewrite it with the supported functions (sin cos tan sqrt abs exp ln log floor min max) or plot sampled points with plot_points."
+          }
+        ]
+      },
+      "profileI18n": {
+        "zh-TW": {
+          "whenToUse": "調整現有座標軸的範圍、刻度或標題，畫在上面的圖會重畫。",
+          "whenNotToUse": "畫第一條曲線（請用 plot_function）。",
+          "inputLimits": "範圍的最大值必須大於最小值。",
+          "cost": {
+            "latency": "instant",
+            "resource": "在這台伺服器計算，最多幾千次取樣。"
+          },
+          "dataFlow": {
+            "leavesServer": false,
+            "sends": "沒有任何資料離開伺服器。"
+          },
+          "reliability": {
+            "kind": "exact",
+            "note": "依解析後的算式自適應取樣；漸近線不會被連起來。",
+            "verify": "看預覽圖：曲線在幾個點上應符合公式。"
+          },
+          "fallbacks": [
+            {
+              "when": "算式被拒絕",
+              "then": "改用支援的函數（sin cos tan sqrt abs exp ln log floor min max），或用 plot_points 畫取樣點。"
+            }
+          ]
         }
       }
     },
@@ -314,6 +464,56 @@
             "type": "string",
             "maxLength": 64
           }
+        }
+      },
+      "profile": {
+        "whenToUse": "Show measured or sampled data points, optionally joined by a line.",
+        "whenNotToUse": "Fitting or smoothing: it only draws the points given.",
+        "inputLimits": "A limited number of points per call; values must be finite numbers.",
+        "cost": {
+          "latency": "instant",
+          "resource": "Calculated on this server; at most a few thousand evaluations."
+        },
+        "dataFlow": {
+          "leavesServer": false,
+          "sends": "Nothing leaves the server."
+        },
+        "reliability": {
+          "kind": "exact",
+          "note": "Computed from the parsed expression by adaptive sampling; asymptotes are not joined.",
+          "verify": "Look at the preview: the curve should match the formula at a few points."
+        },
+        "fallbacks": [
+          {
+            "when": "the expression is refused",
+            "then": "Rewrite it with the supported functions (sin cos tan sqrt abs exp ln log floor min max) or plot sampled points with plot_points."
+          }
+        ]
+      },
+      "profileI18n": {
+        "zh-TW": {
+          "whenToUse": "顯示量測或取樣得到的資料點，可選擇用線連起來。",
+          "whenNotToUse": "擬合或平滑：它只畫你給的點。",
+          "inputLimits": "每次點數有上限，數值必須是有限的數字。",
+          "cost": {
+            "latency": "instant",
+            "resource": "在這台伺服器計算，最多幾千次取樣。"
+          },
+          "dataFlow": {
+            "leavesServer": false,
+            "sends": "沒有任何資料離開伺服器。"
+          },
+          "reliability": {
+            "kind": "exact",
+            "note": "依解析後的算式自適應取樣；漸近線不會被連起來。",
+            "verify": "看預覽圖：曲線在幾個點上應符合公式。"
+          },
+          "fallbacks": [
+            {
+              "when": "算式被拒絕",
+              "then": "改用支援的函數（sin cos tan sqrt abs exp ln log floor min max），或用 plot_points 畫取樣點。"
+            }
+          ]
         }
       }
     }

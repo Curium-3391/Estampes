@@ -25,7 +25,8 @@ export function catalogEntry(mod, lang = "zh-TW") {
     state: mod.record.state, granted: mod.record.granted ?? [],
     permissions: m.permissions.map(describePermission), risk: riskOf(m.permissions),
     ...(m.network ? { network: m.network } : {}),
-    capabilities: m.capabilities.map((c) => ({ id: c.id, title: localized(c, "title", lang) ?? c.id, description: c.description, target: c.target })),
+    capabilities: m.capabilities.map((c) => ({ id: c.id, title: localized(c, "title", lang) ?? c.id, description: c.description, target: c.target,
+      ...(c.async ? { async: true } : {}), ...(localized(c, "profile", lang) ? { profile: localized(c, "profile", lang) } : {}) })),
     ...(m.panels?.length ? { panels: m.panels.map((p) => ({ id: p.id, title: localized(p, "title", lang), kind: p.kind, maxInstances: p.maxInstances })) } : {}),
     ...(mod.package ? { package: { sha256: mod.package.sha256, keyId: mod.package.keyId, installedAt: mod.package.installedAt } } : {}),
     ...(mod.record.previous?.length ? { rollbackTo: mod.record.previous.at(-1).version } : {}),
@@ -77,7 +78,7 @@ export function registerModuleTools(server, deps) {
 
   server.registerTool("get_module_capabilities", {
     title: "Read a module's capabilities",
-    description: "Return one module's capabilities with their exact input schemas, examples, target (none, canvas, canvas-or-new) and the permissions they need, plus whether the module is enabled. Read it before the first execute_module call to a module.",
+    description: "Return one module's capabilities with their exact input schemas, examples, target (none, canvas, canvas-or-new) and the permissions they need, plus whether the module is enabled. Each capability can carry a profile: when to use it and when not to, input limits, cost (latency, resources, billing), where data goes, how far to trust the result and how to check it, and what to do when it fails. Read it before the first execute_module call to a module, and follow its fallbacks when a run fails.",
     inputSchema: z.object({ module: ModuleIdSchema }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, async ({ module }) => {
@@ -86,7 +87,8 @@ export function registerModuleTools(server, deps) {
       if (!mod) throw new Error("no module " + module + "; call list_modules");
       const m = mod.manifest;
       const caps = m.capabilities.map((c) => ({ id: c.id, title: c.title, description: c.description, target: c.target,
-        permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.examples ? { examples: c.examples } : {}) }));
+        permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.async ? { async: true } : {}),
+        ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples } : {}) }));
       return {
         content: [{ type: "text", text: m.id + " " + m.version + " is " + STATE_TEXT[mod.record.state] + ". " + JSON.stringify(caps) }],
         structuredContent: { kind: "estampes.module_capabilities", module: m.id, version: m.version, state: mod.record.state, capabilities: caps },

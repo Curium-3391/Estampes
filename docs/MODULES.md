@@ -31,6 +31,19 @@ Estampes's own format (not an MCP standard). Validated strictly: unknown fields,
 | `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, examples. |
 | `network`, `secrets` | Reserved for adapters: hosts it may call with a description of what data leaves, and named secrets the administrator provides. |
 
+## Capability profile
+
+An input schema says what a capability accepts, not whether it is the right tool. Each capability can carry a `profile` (and a translated `profileI18n`) with:
+
+- `whenToUse` and `whenNotToUse`: the situations it fits and the ones it does not;
+- `inputLimits`: limits beyond the schema (formats, sizes, what makes it work better);
+- `cost`: `latency` (`instant`, `seconds`, `minutes`, `hours`), what it uses up and whether it can bill;
+- `dataFlow`: whether data leaves the server and what is sent;
+- `reliability`: `kind` (`exact`, `estimate`, `heuristic`, `external`), a note on how far to trust the result and how to check it;
+- `fallbacks`: what to do when it fails, as `when`/`then` pairs.
+
+`get_module_capabilities` hands the profile to the model, which is told to read it before the first run and to follow the fallbacks when a run fails; the Store shows it (folded) under each capability. It is checked, not decoration: a capability that uses the network must say that data leaves the server and what is sent, one that does not cannot claim it does, a background job cannot be `instant`, and a translation may change only the text, never the cost or the data flow.
+
 ## Permissions
 
 | Permission | Risk | Meaning |

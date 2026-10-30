@@ -94,6 +94,15 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
     const overlap = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
     assert.equal(overlap, false, "default layout does not overlap");
 
+    // 2b. A second calculator opens as its own window with its own notebook.
+    assert.equal(await w.locator(".wb-open").first().isEnabled(), true, "the launcher stays enabled below the instance limit");
+    await w.locator(".wb-open").first().click();
+    await w.locator(".calc").nth(1).waitFor({ timeout: 20000 });
+    assert.equal(await w.locator(".calc").count(), 2);
+    assert.equal(await w.locator(".wb-panel .wb-title", { hasText: "科學計算機 2" }).count(), 1);
+    await w.locator(".wb-panel", { has: w.locator(".wb-title", { hasText: "科學計算機 2" }) }).locator("[data-act=close]").click();
+    await w.locator(".calc").nth(1).waitFor({ state: "detached", timeout: 20000 });
+
     // 3. Calculate: exact result, LaTeX drawn as MathML.
     await w.locator(".calc select").first().selectOption("differentiate");
     await w.locator(".calc-input").fill("sin(x^2)");

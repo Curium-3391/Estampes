@@ -2,6 +2,12 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
+## 0.19.5 — Several calculator windows
+
+- A surface can hold up to four calculator windows, each with its own notebook (`maxInstances` 4); extra windows are titled 科學計算機 2, 3, 4 and close independently without losing data.
+- A second *independent Graph viewport inside one surface* is not part of this change: the canvas viewer is a single-instance component. For an independent Graph, plot into a new canvas (`newCanvas`), which opens its own surface.
+- Tests: `tests/surface.test.js`, `tests/workbench-e2e.test.js` (browser).
+
 ## 0.19.4 — Notebooks and layouts travel in `.estampes`
 
 - `export_workspace_bundle` adds `surface.json` (open panels, per-device layouts) and `notebooks/<n>.json` (definitions, cells, Graph links) when the workspace has a surface. The format stays `estampes.bundle/1`; the files are optional, so older readers ignore them.
@@ -26,6 +32,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 ## Unreleased
 
 - Docs: README, the Chinese guide, ARCHITECTURE, TOOLS, DEPLOYMENT and VISION brought up to date (all docs indexed, modules, calculator container, surface tools, `ESTAMPES_ADMIN_KEY`, `ESTAMPES_MODULE_ALLOW_UNSIGNED`).
+- **Capability profile.** Besides its input schema, a capability can describe when to use it and when not to, input limits, cost (latency, resources, billing), data flow, how far to trust the result and how to check it, and what to do when it fails. The model reads it through `get_module_capabilities` and the Store shows it; network capabilities must declare what they send, and the text may be translated (`profileI18n`) but not the cost or data flow. Filled in for Graph, plate solving and the example OCR adapter.
 - **Info cards.** A new scene object `info-card` (title, label/value rows, optional https links) shown beside the canvas, not on the picture. The widget groups cards by module; each folds open and closed, starts folded, can be hidden by the module (`shown: false`) or the user, and hidden cards are listed so they can be brought back.
 - Plate solving adds hms/dms, field size, constellation tags, objects in the field, result and Legacy Surveys links to its result and an info card (`showCard`), and a new `sky_position` capability draws an all-sky map with the solved field outlined. It asks for `workspace.write` (it can make a new canvas), so an already enabled install must be approved again for that capability.
 - Plate solving marks the brightest named stars first (for example Altair, Deneb, Vega), then deep-sky objects, and skips labels that would overlap one already drawn.

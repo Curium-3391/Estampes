@@ -127,8 +127,16 @@ test("surface over MCP: panels, calculator, plot, layouts per profile, restart",
     assert.ok(st.layouts.mobile.order.includes(calc.panelId));
     const replay = await call(s.client, "surface_apply", { imageId, ops: [{ op: "open-panel", module: "org.estampes.cas", panel: "calculator" }], idempotencyKey: "k-open" });
     assert.equal(replay.structuredContent.panels.filter((p) => p.kind === "calculator").length, 1, "an idempotent replay does not open a second calculator");
-    const again = await call(s.client, "surface_apply", { imageId, ops: [{ op: "open-panel", module: "org.estampes.cas", panel: "calculator" }, { op: "open-panel", module: "org.estampes.cas", panel: "calculator" }] });
+    // Several calculators can be open side by side, each with its own notebook.
+    const open = { op: "open-panel", module: "org.estampes.cas", panel: "calculator" };
+    const more = await call(s.client, "surface_apply", { imageId, ops: [open, open, open] });
+    assert.notEqual(more.isError, true, more.content?.[0]?.text);
+    const calcs = more.structuredContent.panels.filter((p) => p.kind === "calculator");
+    assert.equal(calcs.length, 4);
+    assert.equal(new Set(calcs.map((p) => p.notebook)).size, 4, "every calculator window has its own notebook");
+    const again = await call(s.client, "surface_apply", { imageId, ops: [open] });
     assert.equal(again.isError, true, "more instances than maxInstances are refused");
+    for (const p of calcs.slice(1)) await call(s.client, "surface_apply", { imageId, ops: [{ op: "close-panel", panelId: p.panelId }] });
 
     // Type sin(x^2), differentiate, plot it.
     const calcRes = await call(s.client, "surface_cas", { imageId, capability: "calculate", params: { operation: "differentiate", text: "sin(x^2)", variable: "x", notebook: calc.notebook } });
