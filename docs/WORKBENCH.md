@@ -37,5 +37,5 @@ A cell's **畫在 Graph** plot is linked to it. When a definition or assumption 
 ## Limits
 
 - The Graph panel and the photo canvas share one viewport; a second independent Graph viewport is not implemented.
-- Editing a plot directly does not mark its link stale; only upstream calculator changes do. Auto-refresh runs for changes made in the panel, not for definitions the model makes through `execute_module`.
+- Editing a plot directly does not mark its link stale; only upstream calculator changes do. Auto-refresh follows changes from the panel and from the model (`execute_module`), on every canvas the notebook is plotted on; a deleted plot is marked "removed" and not retried.
 - `.estampes` export of notebooks and surfaces is not implemented.

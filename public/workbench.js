@@ -441,7 +441,7 @@ function renderCalc(p){
  for(const e of ui.root.querySelectorAll(".calc-row button,.calc-go button,.calc-keys button"))if(e!==ui.keysBtn&&e!==ui.stop)e.disabled=disabled||st.busy;
  ui.go.disabled=disabled||st.busy;
  ui.auto.checked=!!nb?.autoRefresh;ui.auto.disabled=disabled||st.busy;
- const staleLinks=(nb?.cells??[]).filter(c=>(c.links??[]).some(l=>l.status!=="fresh")).length;
+ const staleLinks=(nb?.cells??[]).filter(c=>(c.links??[]).some(l=>l.status!=="fresh"&&l.status!=="removed")).length;
  ui.refreshBtn.hidden=!imageId||!staleLinks;ui.refreshBtn.disabled=disabled||st.busy;ui.refreshBtn.textContent="更新所有連結（"+staleLinks+"）";
  if(disabled)setMsg(st,"「科學計算機」模組已停用：舊結果仍可閱讀；請到 Store 重新啟用後再計算。","error");
  else if(st.message==="" )ui.msg.textContent="";
@@ -470,9 +470,9 @@ function cellView(p,c,nb,disabled){
   if(c.state==="stale")art.append(h("p",{class:"cell-warn"},"⚠ 這個結果和目前的定義不一致（"+(c.staleReason??"上游已變更")+"）。按「重算」更新。"));
  }
  const here=(c.links??[]).filter(l=>l.canvas===imageId||ws?.items.some(i=>i.imageId===l.canvas));
- if(here.length)art.append(h("p",{class:"cell-link"},here.map(l=>"Graph 物件 "+l.object+"："+(l.status==="fresh"?"同步":l.status==="stale"?"已過期":l.status)).join("　")));
+ if(here.length)art.append(h("p",{class:"cell-link"},here.map(l=>"Graph 物件 "+l.object+"："+(l.status==="fresh"?"同步":l.status==="stale"?"已過期":l.status==="removed"?"圖形已刪除":l.status)).join("　")));
  const plottable=r&&["exact","approximate"].includes(r.status)&&c.state==="fresh";
- const linkHere=here[0];
+ const linkHere=here.find(l=>l.status!=="removed");
  const acts=h("div",{class:"cell-acts"},
   h("button",{type:"button",class:"primary",disabled:disabled||!plottable||(!imageId&&!ws),title:plottable?"把這個結果畫成可編輯的函數圖":"只有精確或近似的實數單變數結果能畫圖；過期的結果要先重算",onclick:()=>plotCell(p,c,linkHere)},linkHere?"更新 Graph 圖形":"畫在 Graph"),
   c.state==="stale"||c.state==="error"?h("button",{type:"button",disabled,onclick:()=>recompute(p,c)},"重算"):null,
