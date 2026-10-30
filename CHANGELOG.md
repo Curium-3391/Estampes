@@ -10,6 +10,10 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - `scripts/estampes-module.js` also makes keys, packs and verifies packages, trusts publisher keys for module id prefixes, and lists the inbox. Example: `examples/modules/callout`.
 - Declarative modules (scene-operation templates with `$param` placeholders, no code) can be installed; WASM modules are refused until their isolated runtime exists.
 
+## 0.10.1 — PDF pages
+
+- `render_pdf_page`: render one physical PDF page at 36–600 dpi as an ordinary image, with the printed page label, optional embedded text boxes (no OCR needed), and storage of the PDF so a page can be rendered again by hash. Optional: needs `pdfjs-dist` and `@napi-rs/canvas` (`--build-arg ESTAMPES_WITH_PDF=1` for Docker); without them the tool reports it is unavailable. See [PDF pages](docs/IMAGE-PIPELINE.md#pdf-pages).
+
 ## 0.10.0 — Modules and the Store
 
 - **Module system, phase 0 and 1.** A module is described by an `estampes.module/1` manifest (capabilities with strict input schemas, permissions, limits) and returns *scene operations* instead of drawing: `object.create`, `object.update`, `object.delete`, `object.publish`. The core validates every batch, applies it all or nothing, assigns ids, records provenance and bumps a per-canvas scene revision. Modules change only their own objects; the user can change anything. See [Modules](docs/MODULES.md).
@@ -18,10 +22,6 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - **Built-in Graph module** (`org.estampes.graph`): `plot_function`, `update_plot`, `set_axes`, `plot_points`. `sin(x)` on a new blank canvas keeps its formula; changing it to `sin(2x)` re-computes the curve, from GPT or from a field under the canvas.
 - **Estampes Store** (`open_module_store`): an MCP Apps widget with browse, search, detail, permission preview, enable and disable, and an activity tab. Enabling needs a plan the user confirms in the widget (a consent token the model never sees); everything is audited in `<storage>/modules/audit.jsonl`, and module state in `registry.json`.
 - Five fixed model tools (`open_module_store`, `list_modules`, `get_module_capabilities`, `execute_module`, `prepare_module_change`), so enabling a module never changes the tool list. Blank canvases are ordinary images, so storage, export and zoom work unchanged.
-
-## 0.10.1 — PDF pages
-
-- `render_pdf_page`: render one physical PDF page at 36–600 dpi as an ordinary image, with the printed page label, optional embedded text boxes (no OCR needed), and storage of the PDF so a page can be rendered again by hash. Optional: needs `pdfjs-dist` and `@napi-rs/canvas` (`--build-arg ESTAMPES_WITH_PDF=1` for Docker); without them the tool reports it is unavailable. See [PDF pages](docs/IMAGE-PIPELINE.md#pdf-pages).
 
 ## 0.10.0 — Geometry, registration, quality and measurement
 
