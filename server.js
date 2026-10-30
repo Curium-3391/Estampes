@@ -56,6 +56,7 @@ import { createNotebooks } from "./src/cas/notebooks.js";
 import { createSurfaceStore } from "./src/surface/store.js";
 import { createSurfaceService } from "./src/surface/service.js";
 import { inlineWorkbench } from "./src/surface/widget-source.js";
+import { collectBundleExtras, installBundleExtras } from "./src/surface/bundle-extras.js";
 import { registerSurfaceTools } from "./src/surface/mcp-tools.js";
 import { configure as configureCas, casStatus, notebookStore } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
@@ -81,10 +82,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -1211,7 +1212,9 @@ function makeServer() {
           const made = await createWorkspace({ items: (await resolveRef(ref)).doc.items.map((it) => ({ set: it.set, label: it.label })) });
           ref = made.workspace.id;
         }
-        const built = await exportBundle(ref, { version: VERSION, fileNames });
+        const first = (await resolveRef(ref)).doc.items[0];
+        const extras = await collectBundleExtras({ surfaceStore, notebooks: notebookStore(), keys: [workspace, ref, first?.set?.split("#")[0]] });
+        const built = await exportBundle(ref, { version: VERSION, fileNames, extras });
         bundleCache.set(ref.slice(3), built);
         const link = publicUrl() + "/export/ws/" + ref.slice(3) + "/workspace.estampes" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, ref.slice(3), "workspace.estampes") : "");
         return {
@@ -1242,11 +1245,13 @@ function makeServer() {
         if (Boolean(file) === Boolean(bundleUrl)) throw new Error("Give exactly one of file or bundleUrl");
         const bytes = await downloadImage(file ? file.download_url : bundleUrl, { maxBytes: 256 * 1024 * 1024, accept: "application/octet-stream,application/zip,*/*" });
         const r = await importBundle(bytes, { name, collision });
+        const installed = r.repeated ? null : await installBundleExtras({ surfaceStore, notebooks: notebookStore(), workspaceId: r.workspace?.id, extras: r.extras });
+        if (installed?.notes.length) r.warnings = [...(r.warnings ?? []), ...installed.notes];
         return {
           content: [{ type: "text", text: (r.repeated ? "Already imported: " : "Imported ") + (r.workspace?.id ?? "") + " (" + (r.check?.totals?.items ?? "?") + " image(s), " + (r.check?.totals?.marks ?? "?") + " mark(s))." +
             (r.verified === false ? " Verification differs from the bundle: " + JSON.stringify({ mismatch: r.mismatch, unsupported: r.unsupported }) : "") +
             (r.warnings?.length ? "\nNotes: " + r.warnings.join(" ") : "") }],
-          structuredContent: { ...wsStructured(r), kind: "estampes.workspace_import", summary: r.summary, warnings: r.warnings, verified: r.verified, repeated: !!r.repeated },
+          structuredContent: { ...wsStructured(r), kind: "estampes.workspace_import", summary: r.summary, warnings: r.warnings, verified: r.verified, repeated: !!r.repeated, ...(installed ? { surface: installed.surface, notebooks: installed.notebooks } : {}) },
         };
       } catch (error) { return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] }; }
     }
