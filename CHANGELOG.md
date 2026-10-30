@@ -6,6 +6,11 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - Calculator panel: **停止** cancels a running calculation or recompute. `calculate` and `recompute` accept a `job` id; new widget-only tool `surface_cas_cancel`. A cancelled calculation leaves no cell and no error behind; the service remembers a cancel that arrives before the job starts.
 
+## 0.19.3 — Links follow their cells
+
+- Plots made from calculator cells can be refreshed: **更新所有連結** recomputes stale cells and redraws their Graph plots (`refresh_links`, widget only). Turn on **自動更新 Graph** (`set_options autoRefresh`) and a changed definition or assumption does it for you. A link remembers its plot domain; a plot you deleted is reported, not recreated; a cell that cannot be recomputed keeps its stale links.
+- Tests: `tests/surface-refresh.test.js`, browser step in `tests/workbench-e2e.test.js`. The cancel tests use an integral that stays slow, so they no longer depend on machine speed.
+
 ## 0.19.2 — Open the calculator from the model
 
 - `manage_surface_panels` now shows the Visual Surface. It had no widget, so a model that ran `org.estampes.cas` through `execute_module` left the user with the sample landscape and no calculator. Give it an `imageId` to open the calculator beside that canvas; with none, the calculator opens alone. `notebook` attaches the calculation the model already made. `execute_module` results that are not on a canvas now tell the model to call it.

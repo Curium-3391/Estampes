@@ -188,7 +188,16 @@ async function plotResult(p, ctx) {
     built = graph.run("plot_function", { expression: g.expression, domain, label, labelMode: "custom", ...(p.color ? { color: p.color } : {}), ...(p.frame ? { frame: p.frame } : {}) }, ctx);
   }
   return { operations: built.operations, method: "SymPy result " + cell.result.resultId + " drawn by the Graph renderer", summary: built.summary,
-    data: { notebookId: nb.id, cellId: cell.id, resultId: cell.result.resultId, expression: g.expression, refreshed: !!p.object } };
+    data: { notebookId: nb.id, cellId: cell.id, resultId: cell.result.resultId, expression: g.expression, domain, refreshed: !!p.object } };
+}
+
+async function setOptions(p) {
+  needBackend();
+  const nb = await deps.notebooks.mutate(p.notebook, { expectedRevision: p.expectedRevision }, (d) => {
+    if (p.autoRefresh !== undefined) d.autoRefresh = p.autoRefresh;
+    return d;
+  });
+  return { data: { notebookId: nb.id, notebookRevision: nb.revision, autoRefresh: !!nb.autoRefresh }, summary: "auto-refresh " + (nb.autoRefresh ? "on" : "off") + " for " + nb.id };
 }
 
 export async function run(capability, params, ctx) {
@@ -197,6 +206,7 @@ export async function run(capability, params, ctx) {
   if (capability === "get_notebook") return getNotebook(params);
   if (capability === "recompute") return recompute(params);
   if (capability === "plot_result") return plotResult(params, ctx);
+  if (capability === "set_options") return setOptions(params);
   throw new Error("unknown capability " + capability);
 }
 
@@ -213,7 +223,7 @@ export async function after(capability, params, ctx, { output, scene, entry }) {
     const cell = nb.cells.find((c) => c.id === d.cellId);
     if (!cell) return nb;
     cell.links = (cell.links ?? []).filter((l) => !(l.canvas === entry.imageId && l.object === objectId));
-    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, status: "fresh", at: new Date().toISOString() });
+    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: d.domain, status: "fresh", at: new Date().toISOString() });
     return nb;
   });
 }

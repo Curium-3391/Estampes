@@ -307,11 +307,14 @@ function buildCalcUI(p){
   h("div",{class:"calc-row"},h("input",{class:"a-name",maxlength:"24",placeholder:"符號 x","aria-label":"符號"}),h("select",{class:"a-flag","aria-label":"假設"},["","real","positive","negative","nonnegative","integer","rational","nonzero"].map(v=>h("option",{value:v},v||"（無假設）"))),h("button",{type:"button",class:"a-set"},"設定假設")),
   h("div",{class:"calc-chips"}));
  const range=h("details",{class:"calc-range"},h("summary",null,"畫圖範圍"),h("div",{class:"calc-row"},"x ",h("input",{type:"number",class:"x0",value:"-10",step:"any","aria-label":"x 最小"}),"到",h("input",{type:"number",class:"x1",value:"10",step:"any","aria-label":"x 最大"})));
+ const auto=h("input",{type:"checkbox",class:"calc-auto"});
+ const refreshBtn=h("button",{type:"button",hidden:true,title:"重算過期的格子並重畫連到它們的圖形"},"更新所有連結");
+ const syncRow=h("div",{class:"calc-row calc-sync"},h("label",{title:"改了變數、函數或假設時，自動重算並重畫連結的 Graph 圖形"},auto," 自動更新 Graph"),refreshBtn);
  const list=h("div",{class:"calc-cells","aria-label":"計算紀錄"});
  const root=h("div",{class:"calc"},
   h("div",{class:"calc-row"},mode,op),input,params,
-  h("div",{class:"calc-row calc-go"},go,stop,angle,h("label",{class:"calc-prec"},"位數 ",prec),keysBtn),keys,hint,msg,defsForm,range,list);
- const ui={root,input,op,mode,params,angle,prec,go,stop,keys,keysBtn,msg,list,defsForm,range};
+  h("div",{class:"calc-row calc-go"},go,stop,angle,h("label",{class:"calc-prec"},"位數 ",prec),keysBtn),keys,hint,msg,defsForm,range,syncRow,list);
+ const ui={root,input,op,mode,params,angle,prec,go,stop,auto,refreshBtn,keys,keysBtn,msg,list,defsForm,range};
  st.ui=ui;
  mode.addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;st.mode=b.dataset.m;for(const x of mode.children)x.setAttribute("aria-pressed",String(x===b));
   input.placeholder=st.mode==="latex"?"例如 \\frac{x^{2}+1}{\\sqrt{x}}":"例如 sin(x^2)　或　x^2-4=0";});
@@ -327,6 +330,8 @@ function buildCalcUI(p){
  });
  go.addEventListener("click",()=>runCalc(p.panelId));
  stop.addEventListener("click",()=>stopCalc(p.panelId));
+ auto.addEventListener("change",()=>setAuto(p.panelId,auto.checked));
+ refreshBtn.addEventListener("click",()=>refreshLinks(p.panelId));
  keysBtn.addEventListener("click",()=>{keys.hidden=!keys.hidden;keysBtn.setAttribute("aria-expanded",String(!keys.hidden));});
  input.addEventListener("focus",()=>setTimeout(()=>input.scrollIntoView({block:"center",behavior:"smooth"}),250));
  if(window.visualViewport)window.visualViewport.addEventListener("resize",()=>{if(document.activeElement===input)input.scrollIntoView({block:"center"});});
@@ -379,7 +384,7 @@ async function runCalc(id){
   const r=await wbCall("surface_cas",{...(imageId?{imageId}:ws?{imageId:ws.items[0].imageId}:{}),capability:"calculate",params});
   const cell=r.data?.cell;
   if(cell?.state==="error")setMsg(st,ERR_ZH(cell.error),"error");
-  else{setMsg(st,"","");st.editing=null;ui.input.value="";}
+  else{setMsg(st,"","");st.editing=null;ui.input.value="";applyRefresh(st,r);}
   await wbRefresh();
  }catch(err){if(st.cancelled)setMsg(st,"已停止，沒有留下任何結果。","");else setMsg(st,String(err.message||err),"error");}
  finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();}
@@ -391,6 +396,25 @@ async function stopCalc(id){
  st.cancelled=true;setMsg(st,"正在停止…","");
  try{await wbCall("surface_cas_cancel",{job:st.job});}catch(err){st.cancelled=false;setMsg(st,String(err.message||err),"error");}
 }
+// Results of a calculation that also redrew linked plots.
+function applyRefresh(st,r){
+ if(Array.isArray(r.objects)){setObjects(r.objects);render();}
+ const f=r.refresh;if(!f)return;
+ if(f.failed.length)setMsg(st,"已更新 "+f.updated.length+" 個圖形；"+f.failed.length+" 個沒有更新（"+f.failed[0].reason+"）","error");
+ else if(f.updated.length)setMsg(st,"已重算並更新 "+f.updated.length+" 個 Graph 圖形。","");
+}
+async function setAuto(id,on){
+ const p=wb.surface.panels.find(x=>x.panelId===id),st=calcState(id);
+ try{await wbCall("surface_cas",{capability:"set_options",params:{notebook:p.notebook,autoRefresh:on}});await wbRefresh();setMsg(st,on?"之後改定義時會自動更新連結的圖形。":"改為手動更新連結。","");}
+ catch(err){setMsg(st,String(err.message||err),"error");await wbRefresh();}
+}
+async function refreshLinks(id){
+ const p=wb.surface.panels.find(x=>x.panelId===id),st=calcState(id);if(st.busy||!imageId)return;
+ st.busy=true;renderCalc(p);setMsg(st,"正在更新連結…","");
+ try{const r=await wbCall("surface_cas",{imageId,capability:"refresh_links",params:{notebook:p.notebook}});applyRefresh(st,r);if(!r.refresh?.updated.length&&!r.refresh?.failed.length)setMsg(st,"連結都是最新的。","");await wbRefresh();}
+ catch(err){setMsg(st,String(err.message||err),"error");}
+ finally{st.busy=false;renderCalc(p);}
+}
 const ERR_ZH=e=>({syntax:"算式看不懂：",unsupported:"目前不支援：",domain:"數學上不成立：",timeout:"算太久，已停止：",resource_limit:"超過限制：",worker_unavailable:"計算服務沒有啟動：",cancelled:"已取消：",internal:"計算引擎發生錯誤："}[e?.code]??"")+(e?.message??"");
 async function runDefine(id,d){
  const p=wb.surface.panels.find(x=>x.panelId===id),st=calcState(id);
@@ -398,8 +422,8 @@ async function runDefine(id,d){
   const params={notebook:p.notebook,name:d.name};
   if(d.assumptions)params.assumptions=d.assumptions;
   else if(d.body){params.text=d.body;params.params=d.params?d.params.split(",").map(s=>s.trim()).filter(Boolean):[];}
-  await wbCall("surface_cas",{capability:"define",params});
-  setMsg(st,"已更新 "+d.name+"；用到它的舊結果已標示為過期，可按「重算」。","");await wbRefresh();
+  const r=await wbCall("surface_cas",{...(imageId?{imageId}:{}),capability:"define",params});
+  setMsg(st,"已更新 "+d.name+"；用到它的舊結果已標示為過期，可按「重算」。","");applyRefresh(st,r);await wbRefresh();
  }catch(err){setMsg(st,String(err.message||err),"error");}
 }
 function setMsg(st,text,kind){st.message=text;st.messageKind=kind;if(st.ui){st.ui.msg.textContent=text;st.ui.msg.dataset.kind=kind;}}
@@ -411,6 +435,9 @@ function renderCalc(p){
  ui.root.classList.toggle("off",disabled);
  for(const e of ui.root.querySelectorAll(".calc-row button,.calc-go button,.calc-keys button"))if(e!==ui.keysBtn&&e!==ui.stop)e.disabled=disabled||st.busy;
  ui.go.disabled=disabled||st.busy;
+ ui.auto.checked=!!nb?.autoRefresh;ui.auto.disabled=disabled||st.busy;
+ const staleLinks=(nb?.cells??[]).filter(c=>(c.links??[]).some(l=>l.status!=="fresh")).length;
+ ui.refreshBtn.hidden=!imageId||!staleLinks;ui.refreshBtn.disabled=disabled||st.busy;ui.refreshBtn.textContent="更新所有連結（"+staleLinks+"）";
  if(disabled)setMsg(st,"「科學計算機」模組已停用：舊結果仍可閱讀；請到 Store 重新啟用後再計算。","error");
  else if(st.message==="" )ui.msg.textContent="";
  // definitions
@@ -453,7 +480,7 @@ function cellView(p,c,nb,disabled){
 async function recompute(p,c){
  const st=calcState(p.panelId);if(st.busy)return;
  st.busy=true;st.ui.stop.hidden=false;setMsg(st,"SymPy 重算中…","");
- try{await wbCall("surface_cas",{capability:"recompute",params:{notebook:p.notebook,cell:c.cellId,job:newJob(st)}});setMsg(st,"","");await wbRefresh();}
+ try{const r=await wbCall("surface_cas",{...(imageId?{imageId}:{}),capability:"recompute",params:{notebook:p.notebook,cell:c.cellId,job:newJob(st)}});setMsg(st,"","");applyRefresh(st,r);await wbRefresh();}
  catch(err){if(st.cancelled)setMsg(st,"已停止，原來的結果沒有改變。","");else setMsg(st,String(err.message||err),"error");}
  finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);}
 }

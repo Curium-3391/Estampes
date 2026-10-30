@@ -37,7 +37,7 @@ A panel is data. `kind` names a renderer that ships with Estampes (`canvas`, `gr
 |---|---|---|
 | `get_surface_state` | model | open panels, calculator cells with exact results, status, freshness and Graph links (bounded) |
 | `manage_surface_panels` | model | open or close a panel and show the surface: on the given `imageId`, or with no canvas given the calculator alone (a blank canvas stays behind it, one click away). `notebook` attaches a calculation the model already made. Never enables a module |
-| `surface_get_state`, `surface_apply`, `surface_cas`, `surface_cas_cancel` | widget only | read the surface; open/close/arrange panels; run calculator capabilities for a panel; stop a running calculation |
+| `surface_get_state`, `surface_apply`, `surface_cas` (also `set_options`, `refresh_links`), `surface_cas_cancel` | widget only | read the surface; open/close/arrange panels; run calculator capabilities for a panel; stop a running calculation |
 
 `surface_apply` ops: `open-panel {module, panel}`, `close-panel {panelId}`, `layout {profile, layout}` where `layout` is one of `add`, `remove`, `focus`, `arrange {panelId, rect, mode?, dock?}`, `minimize`, `restore`, `maximize`, `reorder {order}`, `sheet`, `reset`.
 

@@ -113,13 +113,14 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
     // 4b. A long calculation can be stopped; nothing is left behind.
     const cellsBefore = await w.locator(".cell").count();
     await w.locator(".calc select").first().selectOption("integrate");
-    await w.locator(".calc-input").fill("exp(-x^2)*ln(x)");
+    await w.locator(".calc-input").fill("sin(x)^7*exp(x)*ln(x)/(x^2+1)");
     await w.locator(".calc-go .primary").click();
     await w.locator(".calc-go button[aria-label=停止計算]").waitFor({ state: "visible", timeout: 10000 });
     await sleep(500);
     await w.locator(".calc-go button[aria-label=停止計算]").click();
     await w.locator(".calc-msg", { hasText: "已停止" }).waitFor({ timeout: 15000 });
-    assert.equal(await w.locator(".cell").count(), cellsBefore, "a stopped calculation adds no cell");
+    const srv = Object.values((await call(client, "get_surface_state", { imageId })).structuredContent.notebooks)[0].cells.map((c) => c.state + ":" + (c.input.text ?? "") + ":" + JSON.stringify(c.error ?? "")).join(" | ");
+    assert.equal(await w.locator(".cell").count(), cellsBefore, "a stopped calculation adds no cell; server cells: " + srv);
     assert.equal(await w.locator(".calc-go .primary").isEnabled(), true, "the calculator is usable again");
     await w.locator(".calc select").first().selectOption("differentiate");
 
@@ -130,6 +131,29 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
     await w.locator(".cell-acts .primary", { hasText: "畫在 Graph" }).first().click();
     await w.locator(".cell-link").first().waitFor({ timeout: 30000 });
     await shot("3-plotted");
+
+    // 5b. Definitions go through the same route (a changed definition makes every plotted result stale); with auto-update on, the
+    // linked plot follows a changed definition without another click.
+    const defs = w.locator(".calc-defs");
+    await defs.locator("summary").click();
+    await defs.locator(".d-name").fill("g");
+    await defs.locator(".d-params").fill("x");
+    await defs.locator(".d-body").fill("x^2");
+    await defs.locator(".d-set").click();
+    await w.locator(".calc-msg", { hasText: "已更新 g" }).waitFor({ timeout: 20000 });
+    await w.locator(".calc select").first().selectOption("differentiate");
+    await w.locator(".calc-input").fill("g(x)");
+    await w.locator(".calc-go .primary").click();
+    await w.locator(".cell-in", { hasText: "g(x)" }).first().waitFor({ timeout: 30000 });
+    await w.locator(".cell-acts .primary", { hasText: "畫在 Graph" }).first().click();
+    await w.locator(".cell-link", { hasText: "同步" }).first().waitFor({ timeout: 30000 });
+    await w.locator(".calc-auto").check();
+    await w.locator(".calc-msg", { hasText: "自動更新" }).waitFor({ timeout: 20000 });
+    await defs.locator(".d-body").fill("x^3");
+    await defs.locator(".d-set").click();
+    await w.locator(".calc-msg", { hasText: "已重算並更新 2" }).waitFor({ timeout: 30000 });
+    assert.match(await w.locator("#unified-layers, #scene-objects").first().evaluate((n) => n.ownerDocument.body.innerHTML), /3\*x\^2/);
+    await shot("3b-auto-refresh");
 
     // 6. Dragging the calculator's title bar moves it; the layout is saved.
     const before = (await call(client, "surface_get_state", { imageId })).structuredContent;
