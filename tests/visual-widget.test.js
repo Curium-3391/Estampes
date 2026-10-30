@@ -51,7 +51,7 @@ test("M0.4 tools and message bridge are both present",()=>{
   assert.match(html,/intent,note,replyQuote/);
   assert.match(html,/r\?\.event\?\.schemaVersion!=="0\.2-draft"/);
   // Intent is optional, so the user can point first without filling a form.
-  assert.match(html,/const intent=intentSelect.value\|\|"point-out"/);
+  assert.match(html,/const intent=intentSelect.value\|\|"free-annotate"/);
   assert.doesNotMatch(html,/!intentSelect\.value/);
   assert.match(html,/沒有前文的精確引述/);
   assert.match(html,/箭頭尖端/);
