@@ -26,6 +26,7 @@ These are hidden from the model (`visibility: ["app"]`).
 | `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, move, restyle, delete). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
+| `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
 | `record_number_line_selection` | Validates a selection in the number-line demo. |
 
 ## What your marks mean
@@ -35,6 +36,7 @@ A mark's `type` records what you drew, never what you meant. `validate_visual_an
 - The default purpose is `free-annotate` (`requestedAssistantAction: "interpret-annotation"`). Every arrow you send carries `semanticHint: "unspecified"`: it may point at something, or show a direction, a flow, a movement or a relation. GPT is told to treat it as a direction when your note talks about direction or flow, as a pointer when you ask what it points at, and to give the possible readings (asking at most once) when there is no note.
 - Only when you pick 「只是指出這裡」 (`point-out`) does an arrow get `semanticHint: "point-to-target"`, meaning the head is the referent. Even then, a note that says otherwise wins and GPT is told to point out the mismatch.
 - Every arrow keeps its tail (`x`,`y`), head (`x2`,`y2`) and a `direction` computed in image pixels: `heading` (`right`, `up-right`, `up`, … ), `angleDeg` (0 = right, 90 = up, counter-clockwise), `lengthPx`, `provenance: "computed-from-geometry"`.
+- Several strokes can form one gesture. The widget sends each stroke's order, time relative to the first stroke of the send and input device (`stroke`); Estampes proposes `gestureGroups` from where strokes meet in image pixels (end to end, or an end on another stroke; strokes that only cross are left alone) and recognises an arrowhead drawn as a separate stroke. Each group is labelled `system-inferred` and `unconfirmed` until you confirm or reject it, or `user-created` when you grouped the marks yourself, and GPT is told not to treat a guess as your intent. The fields are described in [Visual protocol 2](PROTOCOL-V2.md#gesture-groups).
 - `interaction.arrowMeaning` is kept for older readers (`arrowhead-is-target` only for `point-out`, otherwise `unspecified`); `interaction.semanticsPolicy` is `geometry-is-not-intent`.
 
 ## Legacy and demo tools

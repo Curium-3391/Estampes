@@ -57,7 +57,8 @@ export function serializeCanvas(entry) {
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
-    ...(entry.rejections?.length ? { rejections: entry.rejections } : {}), savedAt: new Date().toISOString(),
+    ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
+    ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}), savedAt: new Date().toISOString(),
   };
 }
 
@@ -67,6 +68,8 @@ export function restoreCanvas(entry, data) {
   entry.layers = Array.isArray(data.layers) ? data.layers : [];
   entry.userEdits = Array.isArray(data.userEdits) ? data.userEdits : [];
   entry.rejections = Array.isArray(data.rejections) ? data.rejections.filter((r) => r && typeof r.kind === "string" && r.from) : [];
+  entry.gestureDecisions = Array.isArray(data.gestureDecisions)
+    ? data.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string") : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => hexOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   return entry;

@@ -16,6 +16,7 @@ import {
   MARK_COLORS, MARK_SIZES, MARK_PENS,
 } from "./src/scene-catalog.js";
 import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./src/interaction-protocol.js";
+import { GESTURE_VERDICTS, gestureGroups, recordGestureDecision } from "./src/gesture-groups.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
@@ -100,7 +101,16 @@ const VisualAnnotationSchema = z.object({
   grounding: z.enum(["scene-anchor", "unverified", "replayed-unverified", "user-pointer"]).optional(),
   layer: z.string().max(12).optional(),
   side: z.enum(["left", "right"]).optional().describe("Paired view only: which image the mark is on"),
+  // Drawing facts the widget records for the user's strokes (gesture grouping).
+  strokeOrder: z.number().int().min(1).max(1e6).optional(),
+  relativeStartMs: z.number().int().min(0).max(36e5).optional(),
+  relativeEndMs: z.number().int().min(0).max(36e5).optional(),
+  pointerType: z.enum(["mouse", "pen", "touch"]).optional(),
 }).superRefine(checkGeometry);
+const GestureDecisionSchema = z.object({
+  memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
+  verdict: z.enum(GESTURE_VERDICTS),
+}).strict();
 const VisualAnnotationsSchema = z.array(VisualAnnotationSchema).max(30);
 
 // Evidence the assistant gives for a claim (a note or a link). It is always
@@ -715,6 +725,8 @@ function makeServer() {
               pair: { imageId: pairImageId, width: right.width, height: right.height, image: { mimeType: shown.mimeType, data: shown.data.toString("base64") },
                 ...(exportLinks(pairImageId) ? { exports: exportLinks(pairImageId) } : {}) },
               annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: pairLinks(entry, right).map(widgetLink), views: [],
+              gestureGroups: [...gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
+                ...gestureGroups(canvasMarks(right), right, right.gestureDecisions).map((g) => ({ ...g, side: "right" }))],
               ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}),
             },
           }, { appOnly: true });
@@ -727,6 +739,7 @@ function makeServer() {
           ? { check: check ? { ...checkSummary(check), image: pixels(check) } : null }
           : {
               width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
+              gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
               image: pixels(await displayImage(entry)),
               views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
               ...(check ? { check: checkSummary(check) } : {}),
@@ -815,6 +828,7 @@ function makeServer() {
         intent:z.enum(INTENTS).default("free-annotate"),
         note:z.string().max(500).default(""),
         replyQuote:z.string().max(300).default(""),
+        gestureDecisions:z.array(GestureDecisionSchema).max(30).default([]).describe("The user's verdicts on stroke groups not yet stored (e.g. on the demo scenes)"),
       }),
       outputSchema:z.object({
         kind:z.literal("estampes.validated_annotations"),
@@ -830,7 +844,7 @@ function makeServer() {
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,imageId,pairImageId,annotations,intent,note,replyQuote})=>{
+    async ({scene,imageId,pairImageId,annotations,intent,note,replyQuote,gestureDecisions})=>{
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
       try {
@@ -843,7 +857,9 @@ function makeServer() {
         if(!right&&annotations.some(a=>a.side==="right")) throw new Error("side:'right' needs pairImageId");
         const checked=annotations.map(a=>({...a,author:"user",grounding:"user-pointer"}));
         const pairImage=right?{imageId:pairImageId,width:right.width,height:right.height}:undefined;
-        const event=buildAnnotationEvent({scene,image,pairImage,annotations:checked,intent,note,replyQuote});
+        // Stored verdicts first; the widget's own (newer) ones override them.
+        const decisions=[...(entry?.gestureDecisions??[]),...(right?.gestureDecisions??[]),...gestureDecisions];
+        const event=buildAnnotationEvent({scene,image,pairImage,annotations:checked,intent,note,replyQuote,gestureDecisions:decisions});
         const chatMessage=formatAnnotationChatMessage(event);
         let layer=null,pairLayer=null;
         if(right){
@@ -932,6 +948,39 @@ function makeServer() {
         return {
           content: [{ type: "text", text: "Note on " + markId + " marked " + review + " by the user." }],
           structuredContent: { kind: "estampes.finding_review", imageId, mark },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: the user says whether some strokes
+  // are one gesture (confirming or rejecting a candidate, or grouping marks
+  // by hand). Only the verdict is stored; the strokes are untouched.
+  registerAppTool(
+    server,
+    "review_gesture_group",
+    {
+      title: "Review a gesture group",
+      description: "Record the user's verdict on whether some of their strokes in an Estampes canvas form one gesture.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema.describe("The image the strokes are on (the right image's id for the right of a paired view)"),
+        memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
+        verdict: z.enum([...GESTURE_VERDICTS, "unreviewed"]),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, memberIds, verdict }) => {
+      try {
+        const entry = await ensureImage(imageId);
+        recordGestureDecision(entry, memberIds, verdict);
+        await saveCanvas(entry, { tool: "review_gesture_group", author: "user", changed: memberIds, note: verdict });
+        return {
+          content: [{ type: "text", text: "Strokes " + memberIds.join(", ") + " marked " + verdict + " as one gesture by the user." }],
+          structuredContent: { kind: "estampes.gesture_review", imageId, memberIds, verdict,
+            gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions) },
         };
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };

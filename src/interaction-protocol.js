@@ -2,6 +2,7 @@
 // Stable *demo* scene metadata only. Future user images need explicit
 // content identity, crop transforms and a real raster pixel resolution.
 import { MARK_TYPES, polylineWithBounds, markStyle } from "./scene-catalog.js";
+import { gestureGroups } from "./gesture-groups.js";
 export const PROTOCOL_VERSION = "0.2-draft";
 export const INTENTS = Object.freeze([
   "free-annotate", "point-out", "ask-about-region", "answer-question", "correct-assistant",
@@ -48,13 +49,25 @@ export function arrowDirection(g, width, height) {
     lengthPx: Math.round(Math.hypot(dx, dy)), provenance: "computed-from-geometry" };
 }
 const textValue=(value,max)=>String(value??"").trim().slice(0,max);
+// Low-level drawing facts from the widget: order within this send, time
+// relative to the first stroke of the send (no clock time), input device.
+const msValue=(n)=>Number.isInteger(n)&&n>=0&&n<=36e5?n:undefined;
+function strokeFacts(raw){
+  const facts={
+    order:Number.isInteger(raw.strokeOrder)&&raw.strokeOrder>0?raw.strokeOrder:undefined,
+    relativeStartMs:msValue(raw.relativeStartMs),relativeEndMs:msValue(raw.relativeEndMs),
+    pointerType:["mouse","pen","touch"].includes(raw.pointerType)?raw.pointerType:undefined,
+  };
+  for(const k of Object.keys(facts))if(facts[k]===undefined)delete facts[k];
+  return Object.keys(facts).length?{stroke:facts}:{};
+}
 const in01=(n)=>typeof n==="number"&&Number.isFinite(n)&&n>=0&&n<=1;
 
 // `image` describes a real photo loaded with load_image:
 // {imageId, width, height}. Otherwise `scene` names a bundled demo SVG.
 // `pairImage` (same shape as `image`) makes it a paired view: each mark's
 // `side` says which of the two images its coordinates belong to.
-export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="free-annotate",note="",replyQuote=""}) {
+export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="free-annotate",note="",replyQuote="",gestureDecisions=[]}) {
   if(pairImage&&!image) throw new Error("A paired view needs two photos");
   const metadata=image
     ? {id:image.imageId,revision:"raster-v1",width:image.width,height:image.height,kind:"raster"}
@@ -76,7 +89,7 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
     const side=pairImage?{side:raw.side==="right"?"right":"left"}:{};
     if(raw.type==="polyline") {
       return {id,author:"user",type:"polyline",role,...side,...markStyle(raw),geometry:polylineWithBounds(raw.points,raw),
-        label:textValue(raw.label,64),grounding:"user-pointer"};
+        ...strokeFacts(raw),label:textValue(raw.label,64),grounding:"user-pointer"};
     }
     if(!in01(raw.x)||!in01(raw.y))throw new Error("Invalid normalized point");
     if(raw.type!=="point"&&(!in01(raw.x2)||!in01(raw.y2))) {
@@ -89,11 +102,20 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
       geometry,
       ...(raw.type==="arrow"?{arrowhead:"end",semanticHint:arrowHintFor(intent),
         direction:arrowDirection(geometry,dims.width,dims.height)}:{}),
+      ...strokeFacts(raw),
       label:textValue(raw.label,64),
       grounding:"user-pointer",
     };
   });
   if(!marks.some(m=>m.role==="focus"))for(const m of marks)m.role="focus";
+  // Candidate groups per image, on the raw normalized marks. Only groups
+  // that touch this send's focus marks are reported.
+  const focusIds=new Set(marks.filter(m=>m.role==="focus").map(m=>m.id));
+  const sides=pairImage?[["left",image],["right",pairImage]]:[[null,{width:metadata.width,height:metadata.height}]];
+  const groups=sides.flatMap(([which,dims])=>{
+    const own=annotations.filter(a=>!which||(a.side==="right"?"right":"left")===which);
+    return gestureGroups(own,dims,gestureDecisions).map(g=>which?{...g,side:which}:g);
+  }).filter(g=>g.memberIds.some(id=>focusIds.has(id)));
   const cleanNote=textValue(note,500),cleanQuote=textValue(replyQuote,300);
   return {
     schemaVersion:PROTOCOL_VERSION,
@@ -113,6 +135,7 @@ export function buildAnnotationEvent({scene,image,pairImage,annotations,intent="
       right:{id:pairImage.imageId,width:pairImage.width,height:pairImage.height},
     }}:{}),
     annotations:marks,
+    ...(groups.length?{gestureGroups:groups}:{}),
     interaction:{
       intent,
       requestedAssistantAction: INTENT_ACTIONS[intent],
@@ -143,6 +166,22 @@ function arrowLines(event) {
   ];
 }
 
+const MEANING_ZH={"direction-arrow":"一支方向箭頭","connected-path":"一條分段畫的連續路徑","unknown":"同一個手勢（意思不明）"};
+const CONFIRM_ZH={"unconfirmed":"系統依幾何推測，我沒有確認","user-confirmed":"我確認過是同一個手勢","user-rejected":"我說過它們不是同一個手勢，請分開看"};
+function gestureLines(event){
+  const groups=event.gestureGroups??[];
+  if(!groups.length)return [];
+  const name=new Map(event.annotations.map(m=>[m.id,m.label||m.id]));
+  const HEAD={right:"往右",["up-right"]:"往右上",up:"往上",["up-left"]:"往左上",left:"往左",["down-left"]:"往左下",down:"往下",["down-right"]:"往右下"};
+  return [
+    "下面幾筆可能屬於同一個手勢（gestureGroups）。每一筆仍是獨立的標註；分組只是候選，provenance=system-inferred 是 Estampes 依筆畫相接位置"+"與繪製時間推測的，不代表我的意思：",
+    ...groups.map(g=>"- "+g.id+"："+g.memberIds.map(id=>name.get(id)??id).join(" + ")+" → 可能是"+(MEANING_ZH[g.proposedMeaning]??g.proposedMeaning)+
+      (g.arrow?"（"+(HEAD[g.arrow.direction.heading]??g.arrow.direction.heading)+"，尖端約在 x="+g.arrow.tip.x+", y="+g.arrow.tip.y+"）":"")+
+      "；"+(CONFIRM_ZH[g.confirmation]??g.confirmation)+(g.evidence?.length?"；線索："+g.evidence.join("、"):"")+"。"),
+    "未確認的分組請當成可能性考慮，不要說成我確定的意思，也不要把每一筆都當成各自獨立的問題；只有在「是不是同一個手勢」會明顯改變答案時，才問我一次。",
+  ];
+}
+
 export function formatAnnotationChatMessage(event) {
   if(event?.schemaVersion!==PROTOCOL_VERSION)throw new Error("Unsupported protocol version");
   const interaction=event.interaction;
@@ -164,6 +203,7 @@ export function formatAnnotationChatMessage(event) {
   lines.push(
     "標註的 type 只描述我畫了什麼形狀，不代表我的意思；意思請綜合我的補充說明、這次的目的、畫面和對話判斷，不要讓形狀蓋過我寫的文字。",
     ...arrowLines(event),
+    ...gestureLines(event),
     "點代表位置；框代表範圍；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。pen=highlighter 是半透明螢光筆，代表「這一片區域」而不是精確的線；color 只是我選的顏色，不代表其他意思。",
     ...(event.pair?[
       "底圖是左右對照畫布，兩張不同的照片並排、不疊合：左圖 imageId="+event.pair.left.id+"（"+event.pair.left.width+"×"+event.pair.left.height+"），右圖 imageId="+event.pair.right.id+"（"+event.pair.right.width+"×"+event.pair.right.height+"）。每個標註的 side（left／right）表示它在哪張圖上，座標以那張圖的左上角為原點正規化。",
