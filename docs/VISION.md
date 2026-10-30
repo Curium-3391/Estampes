@@ -50,7 +50,7 @@ Annotations should be attributable, referenceable by ID, optionally hidden, and 
 
 Estampes must feel like a **native ChatGPT plugin**: the user stays in the existing conversation, with in-chat image markup and a direct response path from user gestures to the LLM. An external drawing website or separate chatbot does not satisfy the product goal.
 
-Initial verification will use **number lines**, then **mathematical formulas**, then **simple images**, before advancing to dense PCB photographs. The first milestone must exercise the ChatGPT plugin/UI bridge rather than treating an independent demo webpage as the finished experience.
+Early versions were verified in that order: a number line, then built-in demo scenes, then real photographs. Estampes is built for any kind of image, not for one subject; a particular photo is only ever a test case. The experience must stay inside the ChatGPT plugin/UI bridge rather than becoming an independent web page.
 
 ## Long-term aspiration
 

@@ -41,6 +41,11 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 | `mark-render.js`, `pixel-font.js` | Verification crops drawn with the marks at real ink width |
 | `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/2` document ([Visual protocol 2](PROTOCOL-V2.md)) |
 | `workspace.js` | Workspaces: several annotation sets in one place, copies of sets, merge/split/move/copy/link with preview, revision checks, idempotency and undo; the `estampes.workspace/1` document ([Workspaces](WORKSPACES.md)) |
+| `scene/*` | Scene objects (`axes-2d`, `function-plot`, `info-card`, shapes), scene operations, safe expression parser, rendering and previews ([Modules](MODULES.md)) |
+| `modules/*`, `builtin-modules/*` | The module system: manifests, permissions, registry, lifecycle with administrator approval, signed packages, declarative, WebAssembly and http runtimes, egress, background jobs; built in: Graph, calculator, plate solving |
+| `cas/*` | Client, notebooks and the Graph bridge for the calculator ([CAS](CAS.md)) |
+| `surface/*` | Panels and per-device layouts, refresh of plots from calculator cells ([Surfaces](SURFACES.md)) |
+| `bundle.js`, `zip.js` | `.estampes` workspace bundles |
 | `storage.js` | Optional disk storage ([Deployment](DEPLOYMENT.md#what-is-stored)) |
 | `security.js`, `config.js` | Access key, signed export links, environment settings |
 | `tunnel.js` | Reads the temporary Cloudflare tunnel address for the docker compose `tunnel` profile |
@@ -58,9 +63,15 @@ Memory is the working copy: decoded images and canvases are cached (`ESTAMPES_CA
 
 Self-hosted, one owner per instance. A shared access key (`?key=` or Bearer) gates `/mcp` and `/api/v1/*`; export links are signed; `X-Forwarded-*` headers are trusted only with `ESTAMPES_TRUST_PROXY`; remote image fetches are limited to public addresses with size, time and pixel caps; the Docker image runs unprivileged with a read-only filesystem. The key is a bearer secret in a URL, not per-user authentication. See [Deployment](DEPLOYMENT.md#caveats).
 
+## Modules and the calculator
+
+Core stays a shared canvas. A **module** adds a capability that returns *scene operations* (create, update, delete or publish an object) instead of drawing; the core validates every batch, applies it all or nothing, records who made it and bumps a per-canvas scene revision. Objects keep their meaning (a plot keeps its formula) and are rendered by trusted code for the canvas, the layered SVG and previews. Enabling, disabling and installing modules needs a plan the user confirms in the Store widget (a consent token the model never sees); installing also needs administrator approval on the server. See [Modules](MODULES.md).
+
+The scientific calculator runs SymPy in a **separate container** (`cas-service/`, the `cas` service in `compose.yaml`) with no network, a read-only filesystem and no capabilities, reachable only through a Unix socket. If it is stopped, only calculations fail. See [CAS](CAS.md).
+
 ## Widget
 
-`public/visual-surface.html` is a single self-contained page (no build step) served as an MCP Apps resource whose `ui://` URI contains the package version, so a release invalidates ChatGPT's cached copy. It draws the image and marks as SVG, supports zoom and pan with native-resolution tiles, drawing and selecting, undo/redo, layers, processed-image tabs and the paired view, and talks to the host through the MCP Apps bridge. `number-line.html` and `visual-evidence.html` are the demo and legacy widgets.
+`public/visual-surface.html` is a single self-contained page (no build step) served as an MCP Apps resource whose `ui://` URI contains the package version, so a release invalidates ChatGPT's cached copy. It draws the image and marks as SVG, supports zoom and pan with native-resolution tiles, drawing and selecting, undo/redo, layers, processed-image tabs and the paired view, and talks to the host through the MCP Apps bridge. Since 0.19 it is a workbench: the canvas and the calculator are panels you can move, resize, dock and minimise inside the same widget, with one layout per device profile ([Workbench](WORKBENCH.md), [Surfaces](SURFACES.md)). The Store is a separate widget. `number-line.html` and `visual-evidence.html` are the demo and legacy widgets.
 
 ## Constraints that shaped the design
 

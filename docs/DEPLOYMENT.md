@@ -42,6 +42,12 @@ The second command prints the ChatGPT connector URL, e.g. `https://calm-words-he
 - Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` (`latest` from `main`, `X.Y.Z` from `vX.Y.Z` tags). To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:latest`. A new GHCR package is private until its visibility is changed in the package settings.
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
 
+### Calculator container and optional PDF support
+
+`docker compose up -d` starts a second container, `cas`, which runs the SymPy calculator ([CAS](CAS.md)) with no network and a read-only filesystem; only Estampes can reach it, through a Unix socket on the `cas-run` volume. Stop it and only calculations stop working. `/healthz` reports whether it is available. Calculator limits are set on that container (see `.env.example`).
+
+PDF page rendering is optional: build with `docker compose build --build-arg ESTAMPES_WITH_PDF=1` (adds about 60 MB). See [PDF pages](IMAGE-PIPELINE.md#pdf-pages).
+
 ### What is stored
 
 With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`), every image gets a folder `images/<hash>/`:
@@ -112,6 +118,8 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_CACHE_MB` / `ESTAMPES_CACHE_IMAGES` / `ESTAMPES_CACHE_TTL_MINUTES` | `160` / `12` / `60` | In-memory cache of decoded images (working pixels plus the source file kept for native crops). |
 | `ESTAMPES_RATE_LIMIT_PER_MIN` | `120` | Requests per minute per client IP on `/mcp`; `0` disables. |
 | `ESTAMPES_CORS_ORIGINS` | `*` | Browser origins allowed by CORS (only browser tools such as MCP Inspector need it). |
+| `ESTAMPES_ADMIN_KEY` | generated in `<storage>/admin-key` | Administrator secret for approving module installs, updates and purges (`scripts/estampes-module.js approve`). Separate from the connector key; 32–256 letters, digits, `-` or `_`. See [Modules](MODULES.md). |
+| `ESTAMPES_MODULE_ALLOW_UNSIGNED` | `0` | `1` allows installing module packages without a signature (always shown as high risk). |
 | `ESTAMPES_LOG_FORMAT` | `text` | `json` for one JSON object per log line. |
 
 Invalid values fall back to the default and are reported in the log at startup.
