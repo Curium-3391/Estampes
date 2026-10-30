@@ -137,6 +137,9 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
 }
 
 function restoreDerived(entry, data) {
+  if (data?.calibrations && typeof data.calibrations === "object") {
+    entry.calibrations = new Map(Object.entries(data.calibrations).filter(([, c]) => c && Number.isFinite(c.unitsPerPixel)));
+  }
   if (!Array.isArray(data?.views)) return;
   entry.derivedViews = new Map(data.views.filter((v) => /^dv:[0-9a-f]{16}$/.test(v?.derivedViewId) && v.imageId === entry.imageId)
     .map((v) => [v.derivedViewId, v]));
@@ -144,9 +147,10 @@ function restoreDerived(entry, data) {
 
 // Processed-view recipes, rewritten whole (they are small and bounded).
 export function saveDerived(entry) {
-  if (!root || !entry.derivedViews?.size) return Promise.resolve();
+  if (!root || !(entry.derivedViews?.size || entry.calibrations?.size)) return Promise.resolve();
   const dir = folder(entry.imageId);
-  const body = JSON.stringify({ version: 1, imageId: entry.imageId, views: [...entry.derivedViews.values()] });
+  const body = JSON.stringify({ version: 1, imageId: entry.imageId, views: [...(entry.derivedViews?.values() ?? [])],
+    calibrations: Object.fromEntries(entry.calibrations ?? []) });
   return queued(entry.imageId, async () => {
     await mkdir(dir, { recursive: true });
     await atomicWrite(join(dir, "derived.json"), body);

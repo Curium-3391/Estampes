@@ -98,3 +98,40 @@ Records (not pixels) are kept per image, the last `ESTAMPES_DERIVED_VIEWS_PER_IM
 ## Zoom tiles
 
 When the user zooms in the canvas, `load_visual_region` cuts the tile from the source file if the source is larger than the working copy and the working copy cannot fill the tile, so zooming past 4096 px shows real pixels. Recent tiles are cached.
+
+## Geometry steps
+
+`process_image` (and `present_visual` `views`) take `geometry`, applied to the analysis crop before `ops`, so filters see straightened pixels. Each step adds an exact matrix to the view's `coordinateMapping`, and the record reports `validity.validFraction`, the share of output pixels that really come from the image (the rest is fill).
+
+| Step | What it does |
+| --- | --- |
+| `rotate` | Clockwise degrees. Multiples of 90 are lossless; other angles are resampled bilinearly and grow the canvas. |
+| `flip` | Mirror horizontally or vertically (the back of a board). |
+| `pad` | Add a border of `px`. |
+| `deskew` | Estimate the dominant line direction (projection profiles) and rotate it level. Reports the estimated angle and a confidence, and leaves the image alone when there is no clear direction. |
+| `perspective` | Four corners (0..1 of the whole image; top-left, top-right, bottom-right, bottom-left) become a top-down rectangle. Optional `width`, `height` or `aspect`. Degenerate corners fail. Correct only for flat surfaces. |
+| `mask` | Keep the inside of a polygon; the rest is filled. |
+
+A rectangle read off a rotated or warped view is not a rectangle on the image any more, so `coordinateFrame: {derivedViewId}` turns it into a closed four-point polyline (quarter turns and flips keep rectangles).
+
+## More operators
+
+`gamma`, `levels` (percentile or fixed points), `white_balance` (gray world or white patch), `channel` (red, green, blue, hue, saturation, value, Lab L/a/b as grey), `flat_field` (uneven illumination), `morphology` (erode, dilate, open, close; radius in analysis pixels) and `canny` (thin edges with hysteresis; thresholds are fractions of the strongest gradient in the crop). The older ten are unchanged except that one-channel inputs now stay one channel through sharp (before, the adaptive threshold's local mean was read from a three-channel copy); their operator versions changed, so new recipe ids differ from 0.9.0 for those ops.
+
+## Registration and comparison
+
+`register_images` estimates how image B maps onto image A, in normalized coordinates both ways.
+
+- `method: auto`: Harris corners at four scales, oriented BRIEF descriptors, ratio and mutual-nearest tests, RANSAC (seeded, so the same pair always gives the same answer). Needs texture both photos share.
+- `method: landmarks`: similarity (2+ pairs), affine (3+) or homography (4+) fitted to pairs the model or user identified; works across image types where pixels do not match. Residuals are reported per pair.
+- `mirror: true` aligns a flipped copy of B.
+- Result: `status` `ok` or `failed` with `reasons` (too few corners, too few matches, inliers below 12 or ratio below 0.25, ill-conditioned transform), inliers, inlier ratio, median and P95 error (working pixels of B), conditioning, coverage (hull of inliers over A) and median error per 4×4 cell of A. A schematic and a photo are not alignable this way; use landmarks.
+- Nothing is written to the canvas. `registrationId` is a hash of the inputs; registrations are kept in memory.
+
+`compare_images` shows B warped onto A: `overlay`, `difference`, `checkerboard` or `matches`, plus overlap, mean difference, PSNR and SSIM over the shared area. Lighting differences lower SSIM without misalignment; it points to where to look.
+
+## Quality, scale and measurement
+
+`assess_image` measures sharpness (Laplacian variance), noise (Immerkaer sigma), contrast and 1–99% range, clipped highlights and crushed shadows per channel, colour cast, a luminance histogram and the dominant line tilt, with plain advice. Values depend on the analysis resolution (stated in the result). Optional clipping map.
+
+`calibrate_scale` fixes a known length between two points in one measurement space, the source image or one derived view, and stores it with the image. `measure_image` returns distance, path length, area or angle with an uncertainty from point precision and the scale; without a calibration the unit is `px`. Measure on a perspective-rectified view of a flat surface, where distances are uniform; on a tilted photo the tool warns.
