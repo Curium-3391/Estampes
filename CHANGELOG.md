@@ -4,7 +4,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
-- New docs: `docs/USAGE.md` and `docs/TOOLS.md`.
+- New docs: `docs/USAGE.md`, `docs/TOOLS.md`; `docs/ARCHITECTURE.md` rewritten to describe the current system.
 - Licensed under the Mozilla Public License 2.0 (`LICENSE`, `package.json`).
 
 ## 0.7.2 — Temporary public address

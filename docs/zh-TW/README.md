@@ -65,7 +65,7 @@ npm start          # http://localhost:8787/mcp
 | [工具一覽（英文）](../TOOLS.md) | MCP 工具與 HTTP 端點 |
 | [視覺協定 1](../PROTOCOL-V1.md) | `estampes.visual/1`：描述整張畫布的 JSON 格式，不綁定 ChatGPT |
 | [願景](../VISION.md) | 想解決的問題、使用情境、非目標 |
-| [架構](../ARCHITECTURE.md) | 系統分層（改寫中） |
+| [架構](../ARCHITECTURE.md) | 伺服器、畫布小工具與 GPT 如何分工（英文） |
 | [變更紀錄](../../CHANGELOG.md) | 各版本的變更 |
 | [開發歷程](../history/README.md) | 早期里程碑筆記與舊版協定草稿 |
 | [貢獻](../../CONTRIBUTING.md) | 歡迎哪些貢獻 |
