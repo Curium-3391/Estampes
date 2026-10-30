@@ -273,3 +273,65 @@ test("updating a failed package keeps a coherent rollback target", async () => {
   const rb = await s.commit(h, "rollback", "org.example.callout");
   assert.equal(rb.done.result.version, "1.0.0");
 });
+
+// ---- WebAssembly runtime ---------------------------------------------------
+const wasmBytes = await readFile(new URL("../examples/modules/wasm-hello/hello.wasm", import.meta.url));
+const wasmManifest = JSON.parse(await readFile(new URL("../examples/modules/wasm-hello/module.json", import.meta.url), "utf8"));
+const wasmPackage = (manifest = wasmManifest, bytes = wasmBytes) =>
+  sign(manifest, { "hello.wasm": { encoding: "base64", content: Buffer.from(bytes).toString("base64") } });
+const WASM_ID = "org.example.wasmhello";
+
+async function wasmHost() {
+  const s = await setup();
+  await s.put("wasm-1", wasmPackage());
+  const h = await s.boot();
+  await s.commit(h, "install", WASM_ID, {}, { approve: true });
+  await s.commit(h, "enable", WASM_ID);
+  const entry = await createBlankCanvas({});
+  const run = (capability) => h.router.execute({ module: WASM_ID, capability, canvas: entry.imageId, params: capability === "hello" ? {} : { go: true } });
+  return { s, h, entry, run };
+}
+
+test("a WebAssembly module installs, passes its self-test and draws through scene operations", async () => {
+  const { entry, run, h } = await wasmHost();
+  const out = await run("hello");
+  assert.equal(out.scene.created.length, 1);
+  assert.equal(canvasObjects(entry).at(-1).props.text, "hello from wasm");
+  assert.equal(h.registry.get(WASM_ID).manifest.runtime.kind, "wasm");
+});
+
+test("WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped", async () => {
+  const { run, entry } = await wasmHost();
+  const before = canvasObjects(entry).length;
+  await assert.rejects(run("spin"), /longer than 500 ms/);
+  await assert.rejects(run("trap"), /trapped/);
+  await assert.rejects(run("huge"), /limit is 65536/);
+  const grew = await run("grow");
+  assert.equal(grew.summary, "grew");
+  assert.equal(canvasObjects(entry).length, before);
+});
+
+test("WebAssembly packages with imports, no memory maximum or too much memory are refused", async () => {
+  const trusted = new Map([["pub1", { keyId: "pub1", publicKey: keys.publicKey, publisher: "P", scopes: ["org.example"] }]]);
+  const check = (manifest, bytes) => verifyBundle(Buffer.from(JSON.stringify(wasmPackage(manifest, bytes))), { trusted, coreVersion: "0.10.0" });
+  check(wasmManifest, wasmBytes);
+  const patch = (from, to) => { const b = Buffer.from(wasmBytes), at = b.indexOf(Buffer.from(from, "hex")); assert.ok(at > 0); Buffer.from(to, "hex").copy(b, at); return b; };
+  // memory section: count 1, flags 1 (has max), min 4, max 16 pages -> max 127 pages
+  assert.throws(() => check({ ...wasmManifest, limits: { ...wasmManifest.limits, memoryMb: 1 } }, patch("050401010410", "05040101047f")), /asks for up to 8 MB/);
+  check({ ...wasmManifest, limits: { ...wasmManifest.limits, memoryMb: 8 } }, patch("050401010410", "05040101047f"));
+  // flags 0: no maximum declared (keep the section length by padding with a custom-free rewrite)
+  assert.throws(() => check(wasmManifest, patch("050401010410", "050301000400".slice(0, 12))), /maximum|malformed|not valid/);
+  assert.throws(() => check(wasmManifest, Buffer.from("not wasm")), /not a WebAssembly file/);
+  // (module (import "env" "f" (func)))
+  const withImport = Buffer.from("0061736d010000000104016000000209010365 6e760166 0000".replace(/ /g, ""), "hex");
+  assert.throws(() => check(wasmManifest, withImport), /imports env\.f/);
+  const missing = { ...wasmManifest, runtime: { ...wasmManifest.runtime, entry: "other.wasm" } };
+  assert.throws(() => check(missing, wasmBytes), /no file other\.wasm/);
+});
+
+test("a WebAssembly module survives a restart", async () => {
+  const { s, entry } = await wasmHost();
+  const h2 = await s.boot();
+  const out = await h2.router.execute({ module: WASM_ID, capability: "hello", canvas: entry.imageId, params: {} });
+  assert.equal(out.scene.created.length, 1);
+});

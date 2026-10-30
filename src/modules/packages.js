@@ -28,6 +28,7 @@ import { riskOf, permissionDiff } from "./permissions.js";
 import { LifecycleError } from "./lifecycle.js";
 import { applySceneOps } from "../scene/scene-ops.js";
 import { validateValue } from "./json-schema.js";
+import { checkWasmPackage, wasmFileOf } from "./runtimes/wasm.js";
 
 export const PACKAGE_SCHEMA = "estampes.package/1";
 export const MAX_PACKAGE_BYTES = 2 * 1024 * 1024, MAX_FILES = 16;
@@ -87,6 +88,9 @@ export function verifyBundle(bytes, { trusted = new Map(), allowUnsigned = false
   const manifest = validateManifest(bundle.manifest, { coreVersion });
   if (reserved.has(manifest.id)) throw new ManifestError(manifest.id + " is a built-in module and cannot be replaced by a package");
   if (manifest.runtime.kind === "builtin") throw new ManifestError("packages cannot use the builtin runtime");
+  if (manifest.runtime.kind === "wasm") {
+    try { checkWasmPackage(manifest, bundle.files); } catch (error) { throw new ManifestError("WebAssembly module: " + error.message); }
+  }
   const digest = digestOf(bundle), warnings = [];
   let signer = null;
   if (bundle.signature) {
@@ -208,7 +212,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
     if (expectedDigest && v.digest !== expectedDigest) throw new LifecycleError("stored package " + id + " " + version + " no longer matches its lock entry", "integrity");
     return v;
   }
-  const runtimeFor = (manifest) => ({ kind: manifest.runtime.kind });
+  const runtimeFor = (v) => (v.manifest.runtime.kind === "wasm" ? { kind: "wasm", wasm: wasmFileOf(v.manifest, v.bundle.files) } : { kind: v.manifest.runtime.kind });
   const infoOf = (v, extra = {}) => ({ sha256: v.digest, keyId: v.signer?.keyId ?? null, signer: v.signer?.publisher ?? null, ...extra });
 
   // At startup: bring installed packages back, re-verifying each.
@@ -221,13 +225,13 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
       try {
         if (!entry) throw new Error("no lock entry");
         const v = await loadVersion(id, entry.version, entry.sha256);
-        registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: entry.at }));
+        registry.addPackage(v.manifest, runtimeFor(v), infoOf(v, { installedAt: entry.at }));
       } catch (error) {
         audit.record({ kind: "package.rejected", module: id, reason: "startup: " + String(error?.message || error).slice(0, 200) });
         // Keep it visible so rollback or uninstall can still be prepared: show the
         // newest earlier version that still verifies, in the failed state.
         for (const old of [...(locked.modules[id]?.history ?? [])].reverse()) {
-          try { const v = await loadVersion(id, old.version, old.sha256); registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: old.at })); break; } catch { /* try the next */ }
+          try { const v = await loadVersion(id, old.version, old.sha256); registry.addPackage(v.manifest, runtimeFor(v), infoOf(v, { installedAt: old.at })); break; } catch { /* try the next */ }
         }
         await registry.setRecord(id, { ...rec, state: "failed", error: String(error?.message || error).slice(0, 200) });
       }
@@ -245,14 +249,14 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
       await lock.write(locked);
       // Catalog and record change in the same tick so nothing runs the new
       // manifest under the old grants (or the reverse) while the file saves.
-      registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v, { installedAt: now }));
+      registry.addPackage(v.manifest, runtimeFor(v), infoOf(v, { installedAt: now }));
       await registry.setRecord(id, { source: "package", state, version: v.manifest.version, granted, previous });
     } catch (error) {
       await lock.write(priorLock).catch(() => {});
       // The catalog already points at the new version: put the old one back.
       const was = priorLock.modules[id]?.active;
       let restored = false;
-      if (was) { try { const old = await loadVersion(id, was.version, was.sha256); registry.addPackage(old.manifest, runtimeFor(old.manifest), infoOf(old, { installedAt: was.at })); restored = true; } catch { /* falls through */ } }
+      if (was) { try { const old = await loadVersion(id, was.version, was.sha256); registry.addPackage(old.manifest, runtimeFor(old), infoOf(old, { installedAt: was.at })); restored = true; } catch { /* falls through */ } }
       if (!restored) registry.removeFromCatalog(id);
       if (priorRecord) await registry.setRecord(id, priorRecord).catch(() => {}); else await registry.dropRecord(id).catch(() => {});
       throw error;
@@ -287,7 +291,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const v = await findInInbox(id, version);
         if (v.digest !== digest) throw new LifecycleError("the package in the inbox changed after the plan was made; prepare it again", "integrity");
         await stage(v);
-        try { await selfTest(v.manifest, runtimeFor(v.manifest), { runtimes }); }
+        try { await selfTest(v.manifest, runtimeFor(v), { runtimes }); }
         catch (error) { audit.record({ kind: "package.rejected", module: id, reason: String(error?.message || error).slice(0, 200) }); throw error; }
         audit.record({ kind: "package.verified", module: id, toVersion: version, sha256: digest, keyId: v.signer?.keyId });
         await activate(v, { previous: [], state: "installed", granted: [] });
@@ -318,7 +322,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         if (compareVersions(v.manifest.version, mod.record.version) <= 0) throw new LifecycleError(id + " " + mod.record.version + " is already installed; this update to " + version + " is out of date, prepare it again", "conflict");
         await stage(v);
         const before = registry.get(id);
-        try { await selfTest(v.manifest, runtimeFor(v.manifest), { runtimes }); }
+        try { await selfTest(v.manifest, runtimeFor(v), { runtimes }); }
         catch (error) { audit.record({ kind: "package.rejected", module: id, reason: String(error?.message || error).slice(0, 200) }); throw error; }
         const wasEnabled = mod.record.state === "enabled";
         try {
@@ -386,7 +390,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
   async function restoreActive(id, record) {
     const entry = (await lock.read()).modules[id]?.active;
     if (!entry) return;
-    try { const v = await loadVersion(id, entry.version, entry.sha256); registry.addPackage(v.manifest, runtimeFor(v.manifest), infoOf(v)); await registry.setRecord(id, record); } catch {}
+    try { const v = await loadVersion(id, entry.version, entry.sha256); registry.addPackage(v.manifest, runtimeFor(v), infoOf(v)); await registry.setRecord(id, record); } catch {}
   }
 
   return { dir, inbox, trusted, loadKeys, loadInstalled, available, verifyBundle: (b) => verifyBundle(b, verifyOptions()), actions: handlers };
