@@ -341,3 +341,17 @@ test("a WebAssembly module survives a restart", async () => {
   const out = await h2.router.execute({ module: WASM_ID, capability: "hello", canvas: entry.imageId, params: {} });
   assert.equal(out.scene.created.length, 1);
 });
+
+test("author tool: init makes a module that passes test, and test catches a broken example", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const run = (...args) => promisify(execFile)(process.execPath, [new URL("../scripts/estampes-module.js", import.meta.url).pathname, ...args]);
+  const dir = await mkdtemp(join(tmpdir(), "estampes-init-"));
+  await run("init", join(dir, "m"), "org.example.sdk");
+  const ok = await run("test", join(dir, "m", "module.json"));
+  assert.match(ok.stdout, /OK org\.example\.sdk 0\.1\.0.*1 example/);
+  const manifest = JSON.parse(await readFile(join(dir, "m", "module.json"), "utf8"));
+  manifest.capabilities[0].examples[0].params.x = 7;
+  await writeFile(join(dir, "m", "module.json"), JSON.stringify(manifest));
+  await assert.rejects(run("test", join(dir, "m", "module.json")), (e) => /self-test|example/.test(e.stderr));
+});

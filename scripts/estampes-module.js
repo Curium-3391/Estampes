@@ -11,9 +11,14 @@
 //   trust <keyId> <public.pem> <publisher> <scope>...   trust a publisher key for module id prefixes
 //   inbox                             list packages waiting in the inbox
 //   approve <planId>                  approve a plan that needs administrator approval
+//   init <dir> <id> [--runtime declarative|wasm]   start a new module (manifest, example, README)
+//   test <module.json>                check a manifest and run its examples the way an install would
 import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { createPackages, generateSigningKey, signBundle, verifyBundle, digestOf, ensureDirs } from "../src/modules/packages.js";
+import { createPackages, generateSigningKey, signBundle, verifyBundle, digestOf, ensureDirs, selfTest } from "../src/modules/packages.js";
+import { validateManifest, MODULE_ID } from "../src/modules/manifest.js";
+import { declarativeRuntime } from "../src/modules/runtimes/declarative.js";
+import { wasmRuntime, WASM_ABI, wasmFileOf } from "../src/modules/runtimes/wasm.js";
 import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { createRegistry } from "../src/modules/registry.js";
 import { createAudit } from "../src/modules/audit.js";
@@ -83,11 +88,46 @@ try {
     if (!key) die("no administrator key (is ESTAMPES_STORAGE_DIR right? is it " + storage + "?)");
     await writeApproval(storage, key, planId);
     console.log("Approved " + planId + " for 30 minutes. Now press Confirm in the Estampes Store.");
+  } else if (cmd === "init") {
+    const [target, id] = rest, kind = flag("runtime") ?? "declarative";
+    if (!target || !MODULE_ID.test(id ?? "") || !["declarative", "wasm"].includes(kind)) die("init <dir> <id> [--runtime declarative|wasm]; id is reverse-DNS such as org.example.mymodule");
+    const wasm = kind === "wasm";
+    const manifest = {
+      schema: "estampes.module/1", id, name: id.split(".").at(-1), description: "What this module does, in one sentence.", version: "0.1.0",
+      publisher: { name: "Your name" }, license: "MPL-2.0", category: "other", coreCompatibility: ">=" + version + " <1.0.0",
+      runtime: wasm ? { kind: "wasm", entry: "module.wasm", abi: WASM_ABI } : { kind: "declarative", entry: "operations" },
+      permissions: ["canvas.write"], ...(wasm ? { limits: { timeMs: 500, memoryMb: 16, outputKb: 64 } } : {}),
+      capabilities: [{
+        id: "add_label", title: "Add a label", description: "Put a text label on the canvas at (x, y), normalized 0..1 from the top left.", target: "canvas",
+        inputSchema: { type: "object", additionalProperties: false, required: ["x", "y", "text"], properties: { x: { type: "number", minimum: 0, maximum: 1 }, y: { type: "number", minimum: 0, maximum: 1 }, text: { type: "string", maxLength: 60 } } },
+        examples: [{ description: "A label near the top left", params: { x: 0.1, y: 0.1, text: "hello" } }],
+        ...(wasm ? {} : { operations: [{ op: "object.create", type: "shape", props: { kind: "text", x: { $param: "x" }, y: { $param: "y" }, text: { $param: "text" } } }] }),
+      }],
+    };
+    await mkdir(target, { recursive: true });
+    await writeFile(join(target, "module.json"), JSON.stringify(manifest, null, 2) + "\n");
+    await writeFile(join(target, "README.md"), "# " + id + "\n\n" + (wasm
+      ? "Write `module.c` (or Rust/any language that targets wasm32 with no imports) following the ABI " + WASM_ABI + " in docs/MODULES.md, build `module.wasm`, then:\n\n"
+      : "Edit `module.json`: each capability lists scene operations with `{\"$param\": \"name\"}` placeholders.\n\n")
+      + "```\nnode scripts/estampes-module.js test " + join(target, "module.json") + "\nnode scripts/estampes-module.js keygen mykey\nnode scripts/estampes-module.js pack " + join(target, "module.json") + " --out " + id + ".estpkg.json --key mykey.private.pem --key-id mykey" + (wasm ? " --file module.wasm=" + join(target, "module.wasm") : "") + "\n```\n");
+    console.log("Created " + join(target, "module.json") + ". Next: node scripts/estampes-module.js test " + join(target, "module.json"));
+  } else if (cmd === "test") {
+    const path = rest[0] ?? die("test <module.json>");
+    const manifest = validateManifest(JSON.parse(await readFile(path, "utf8")), { coreVersion: version });
+    let runtime = { kind: manifest.runtime.kind };
+    if (manifest.runtime.kind === "wasm") {
+      const file = join(path, "..", manifest.runtime.entry);
+      const bytes = await readFile(file).catch(() => die("build " + file + " first (runtime.entry)"));
+      runtime = { kind: "wasm", wasm: wasmFileOf(manifest, { [manifest.runtime.entry]: { encoding: "base64", content: bytes.toString("base64") } }) };
+    }
+    await selfTest(manifest, runtime, { runtimes: { declarative: declarativeRuntime, wasm: wasmRuntime } });
+    const count = manifest.capabilities.reduce((n, c) => n + (c.examples?.length ?? 0), 0);
+    console.log("OK " + manifest.id + " " + manifest.version + ": manifest valid, " + count + " example(s) passed" + (count ? "" : " (no examples: add `examples` to each capability)"));
   } else if (cmd === "copy") {
     const [src] = rest; await ensureDirs(dir); await copyFile(src, join(dir, "inbox", basename(src)));
     console.log("Copied into the inbox.");
   } else {
-    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|trust|inbox|copy|approve> ...  (see the comment at the top of this file)");
+    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|trust|inbox|copy|approve|init|test> ...  (see the comment at the top of this file)");
     process.exitCode = cmd ? 1 : 0;
   }
 } catch (error) { die(String(error?.message || error)); }
