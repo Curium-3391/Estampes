@@ -2,6 +2,12 @@
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
+## 0.19.5 — Several calculator windows
+
+- A surface can hold up to four calculator windows, each with its own notebook (`maxInstances` 4); extra windows are titled 科學計算機 2, 3, 4 and close independently without losing data.
+- A second *independent Graph viewport inside one surface* is not part of this change: the canvas viewer is a single-instance component. For an independent Graph, plot into a new canvas (`newCanvas`), which opens its own surface.
+- Tests: `tests/surface.test.js`, `tests/workbench-e2e.test.js` (browser).
+
 ## 0.19.4 — Notebooks and layouts travel in `.estampes`
 
 - `export_workspace_bundle` adds `surface.json` (open panels, per-device layouts) and `notebooks/<n>.json` (definitions, cells, Graph links) when the workspace has a surface. The format stays `estampes.bundle/1`; the files are optional, so older readers ignore them.
