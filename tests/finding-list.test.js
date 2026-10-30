@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -95,7 +96,7 @@ try{
     writeFileSync(page, html.replace("<head>","<head><script>window.addEventListener('error',e=>document.body.dataset.findingTest='error: '+e.message)</script>").replace("</script></main>", probe + "\n</script></main>"));
     const server=createServer((req,res)=>{res.setHeader("content-type","text/html; charset=utf-8");res.end(readFileSync(page));});
     await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-    const child = spawn(browser, ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir="+join(dir,"profile"), "about:blank"], { stdio: ["ignore","ignore","pipe"] });
+    const child = spawn(browser, ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir="+join(dir,"profile"), "about:blank"], { detached: process.platform !== "win32", stdio: ["ignore","ignore","pipe"] });
     let socket;
     try {
       const port = await new Promise((resolve,reject)=>{
@@ -117,7 +118,22 @@ try{
         await new Promise(resolve=>setTimeout(resolve,50));
       }
       assert.equal(outcome,"passed");
-    } finally {server.close();socket?.close();if(child.exitCode===null){child.kill();await new Promise(resolve=>child.once("exit",resolve));}}
+    } finally {
+      server.close();
+      // Let Chrome flush and close its profile before removing the directory.
+      if(socket?.readyState===WebSocket.OPEN){
+        socket.send(JSON.stringify({id:999999,method:"Browser.close"}));
+        await new Promise(resolve=>setTimeout(resolve,500));
+      }
+      socket?.close();
+      // Chrome launchers can exit before their subprocesses. Terminate this
+      // test's process group so profile writers cannot outlive teardown.
+      if(child.pid){
+        try{process.platform!=="win32"?process.kill(-child.pid,"SIGTERM"):child.kill();}
+        catch(error){if(error.code!=="ESRCH")throw error;}
+      }
+      if(child.exitCode===null&&child.signalCode===null)await new Promise(resolve=>child.once("exit",resolve));
+    }
 
-  } finally { rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
+  } finally { await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 });
