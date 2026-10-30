@@ -167,18 +167,18 @@ registerEngine({
     const k = params.sigma ?? 5;
     const mask = new Uint8Array(resid.length);
     for (let i = 0; i < resid.length; i++) mask[i] = resid[i] > med + k * sigma ? 1 : 0;
-    const { comps } = labelComponents(mask, width, height, { minArea: params.minArea ?? 3 });
+    const { comps, labels } = labelComponents(mask, width, height, { minArea: params.minArea ?? 3 });
     const out = comps.map((c) => {
       let flux = 0, mx = 0, my = 0, peak = 0;
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) {
         const v = Math.max(0, resid[y * width + x] - med);
-        if (!mask[y * width + x]) continue;
+        if (labels[y * width + x] !== c.label) continue;
         flux += v; mx += v * x; my += v * y; if (v > peak) peak = v;
       }
       const cx = flux ? mx / flux + 0.5 : c.cx + 0.5, cy = flux ? my / flux + 0.5 : c.cy + 0.5;
       // FWHM from the second moment of a Gaussian: 2.355 * sigma_x.
       let vx = 0;
-      for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) if (mask[y * width + x]) vx += Math.max(0, resid[y * width + x] - med) * (x + 0.5 - cx) ** 2;
+      for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) if (labels[y * width + x] === c.label) vx += Math.max(0, resid[y * width + x] - med) * (x + 0.5 - cx) ** 2;
       const fwhm = flux ? 2.355 * Math.sqrt(vx / flux) : 0;
       return { c, flux, peak, cx, cy, fwhm };
     }).sort((a, b) => b.flux - a.flux).slice(0, params.maxCount ?? 200);
