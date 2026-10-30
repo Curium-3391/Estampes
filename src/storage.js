@@ -258,6 +258,13 @@ export async function sweepStorage(now = Date.now()) {
     const times = await Promise.all(["canvas.json", "meta.json"].map((f) => stat(join(dir, f)).then((s) => s.mtimeMs, () => 0)));
     if (now - Math.max(...times) > config.retentionDays * 86400000) { await rm(dir, { recursive: true, force: true }); removed++; }
   }
+  // PDF source documents follow the same retention, judged by their last write.
+  for (const name of await readdir(join(root, "documents")).catch(() => [])) {
+    if (!/^[0-9a-f]{64}$/.test(name)) continue;
+    const dir = join(root, "documents", name);
+    const t = await stat(join(dir, "source.pdf")).then((s) => s.mtimeMs, () => 0);
+    if (now - t > config.retentionDays * 86400000) { await rm(dir, { recursive: true, force: true }); removed++; }
+  }
   if (removed) log("info", "[storage] retention sweep", { removed });
   return removed;
 }
