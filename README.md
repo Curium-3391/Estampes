@@ -18,11 +18,6 @@
 
 </div>
 
-<p align="center">
-  <img src="docs/assets/readme-research-instrument.svg" alt="Estampes research-instrument illustration: a shared canvas with an annotated circuit board, evidence notes, and editable layers." width="1200">
-</p>
-<p align="center"><sub>Concept illustration, not a screenshot of the live widget.</sub></p>
-
 ---
 
 ## Make “look here” part of the conversation.
