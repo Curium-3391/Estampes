@@ -72,8 +72,11 @@ npm start          # http://localhost:8787/mcp
 | [模組（英文）](../MODULES.md) | 模組系統、Store、套件、背景工作、天體定位 |
 | [科學計算機（英文）](../CAS.md) | SymPy 計算機模組與它的隔離容器 |
 | [工作台（英文）](../WORKBENCH.md) | 畫布與計算機以視窗形式放在同一個小工具裡 |
-| [模組系統（英文）](../MODULES.md) | 模組、商店與函數圖（Graph）模組 |
+| [畫布讀取（英文）](../CANVAS-READS.md) | `render_canvas`：把已存的畫布讀成像素 |
+| [影像功能對照（英文）](../IMAGE-CAPABILITIES.md) | 影像工具涵蓋與不涵蓋的範圍 |
+| [面板與版面（英文）](../SURFACES.md) | 面板與各裝置的版面（`estampes.surface/1`） |
 | [視覺協定 2](../PROTOCOL-V2.md) | `estampes.visual/2`：描述整張畫布的 JSON 格式，含每個說法的證據與驗證狀態，不綁定 ChatGPT |
+| [視覺協定 1（英文）](../PROTOCOL-V1.md) | 舊版格式，仍可讀取 |
 | [願景](../VISION.md) | 想解決的問題、使用情境、非目標 |
 | [架構](../ARCHITECTURE.md) | 伺服器、畫布小工具與 GPT 如何分工（英文） |
 | [變更紀錄](../../CHANGELOG.md) | 各版本的變更 |

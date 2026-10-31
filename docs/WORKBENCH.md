@@ -38,4 +38,4 @@ A cell's **畫在 Graph** plot is linked to it. When a definition or assumption 
 
 - The Graph panel and the photo canvas share one viewport; a second independent Graph viewport is not implemented.
 - Editing a plot directly does not mark its link stale; only upstream calculator changes do. Auto-refresh runs for changes made in the panel, not for definitions the model makes through `execute_module`.
-- `.estampes` export of notebooks and surfaces is not implemented.
+- `.estampes` bundles carry the surface (open panels, per-device layouts) and calculator notebooks since 0.19.4, but not as live results: imported calculator results arrive **stale**, with their Graph links marked stale, because a file cannot prove that SymPy computed them. Recompute them (重算, or 更新所有連結) before treating them as valid on the new server. See [Surface and notebooks in a bundle](WORKSPACES.md#surface-and-notebooks-in-a-bundle).

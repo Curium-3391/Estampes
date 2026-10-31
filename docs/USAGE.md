@@ -21,7 +21,13 @@ Pick a pen, highlighter, box or arrow, draw on the image, optionally write a sho
 
 ## Zoom and pan
 
-Pinch, Ctrl+wheel or the zoom buttons zoom in; the pan tool moves the image. While you zoom, Estampes loads the image at its working resolution (the long side is 4096 px by default), so small details become readable. The readout under the canvas shows the resolution you are looking at.
+Pinch, Ctrl+wheel or the zoom buttons zoom in; the pan tool moves the image. Three kinds of pixels can be on screen while you zoom:
+
+- **Working copy.** The picture shown at first, reduced so its long side is at most 4096 px by default (`ESTAMPES_WORKING_LONG_SIDE`). Marks and coordinates always refer to this image's proportions.
+- **Detail tile.** When you zoom in, the canvas asks the server for a sharper tile of the area you are looking at. If your original file is larger than the working copy and the area is small enough, the tile is cut from the **original file** (real pixels, nothing guessed). Otherwise it is cut from the working copy. The server never enlarges a tile. The readout under the canvas says 「原始解析度」 whenever a detail tile is shown; it does not by itself prove the pixels came from the original file.
+- **Interpolated zoom.** Zooming further than a tile's pixels can fill makes the browser scale the pixels up. That adds no information; do not read fine detail from it.
+
+When GPT needs real detail it asks for a `native` view itself ([Image pipeline](IMAGE-PIPELINE.md)); processed views report whether they are interpolated.
 
 ## Layers
 
