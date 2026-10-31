@@ -1,35 +1,79 @@
+<div align="center">
+
+<p><sub>OPEN-SOURCE VISUAL INSTRUMENT · MCP APPS</sub></p>
+
 # Estampes
 
-**Point at the same image, together with AI, without leaving the conversation.**
+**A shared visual language for humans and AI.**
 
-[繁體中文說明](docs/zh-TW/README.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
+Point at the same image. Keep the marks. Work out what they mean—together.
 
-Estampes is an open-source ChatGPT plugin: an MCP server with MCP Apps widgets that shows your picture as a shared canvas inside the chat. GPT draws on the original image, you draw back on the same canvas, and both sides refer to the same marks across turns. It works with any image (photos, scans, handwriting, book pages, diagrams, maps, drawings), and **each person runs their own server**.
+<p>
+  <a href="docs/USAGE.md">Explore the canvas</a> ·
+  <a href="#quick-start">Get started</a> ·
+  <a href="docs/zh-TW/README.md">繁體中文</a>
+</p>
 
-Named after Claude Debussy's *Estampes* (1903).
+<p><code>MCP Apps</code> · <code>Node.js 22</code> · <code>Self-hosted</code> · <code>MPL-2.0</code></p>
 
-## What it does
+</div>
 
-Talking about a specific spot in a picture usually means screenshots, circling things in another editor, re-uploading and several rounds of "which one?". Estampes keeps that in the conversation:
+<p align="center">
+  <img src="docs/assets/readme-research-instrument.svg" alt="Estampes research-instrument illustration: a shared canvas with an annotated circuit board, evidence notes, and editable layers." width="1200">
+</p>
+<p align="center"><sub>Concept illustration, not a screenshot of the live widget.</sub></p>
 
-- **GPT points for you:** boxes, arrows, polylines, freehand lines and labels over the original image, each with an optional note and status.
-- **You point back:** pens, highlighter, boxes and arrows on the same canvas, plus one sentence, then send.
-- **The source stays untouched:** marks live in layers you can show, hide, rename, reorder, fade and lock.
-- **See the details:** zoom and pan inside the canvas with native-resolution tiles; GPT can enhance contrast, sharpen, denoise, threshold, find edges or overlay a coordinate grid on a region before reading it.
-- **Two images side by side:** compare two different pictures (a drawing and the real object, before and after); GPT records which marks correspond and how sure it is, and you confirm or reject each link.
-- **Evidence, not guesses:** every note and link GPT adds is a claim with its confidence, the evidence behind it (which image, where) and a verification state that only you or a tool can change. Claims you reject are remembered.
-- **Many images, one place:** a workspace holds up to 24 images side by side, each with its own marks and coordinates; merge, split, copy and link them without flattening anything, and carry a whole workspace to another server as one `.estampes` file.
-- **Measure and align:** register two images (with honest quality reporting), overlay or difference them, assess sharpness and noise, calibrate a scale and measure distance, area or angle with uncertainty, render PDF pages, and detect candidate shapes, lines, circles or text.
-- **Modules on the same canvas:** an optional Store adds capabilities that put *objects* on the canvas instead of pixels: plot a function (Graph), compute exactly with SymPy in a separate sandboxed container (calculator, with results you can plot), or plate-solve a photo of the sky. Each module asks for explicit permissions, and you approve every change.
-- **Across turns and chats:** marks, layers and change history are stored on your own server and export as an image, a layered SVG (opens in Inkscape) or an `estampes.visual/2` JSON document you can load again.
+---
 
-Images come in only through ChatGPT itself: uploaded or photographed in the chat, or a public URL GPT supplies. Estampes handles pixels and coordinates; **recognition is still GPT's job**, and uncertain locations are shown as such.
+## Make “look here” part of the conversation.
+
+An image should not require five screenshots, two editors, and a paragraph of directions just to discuss one detail.
+
+**Estampes brings a shared visual canvas directly into a ChatGPT conversation.** GPT can point at a region of your image; you can mark it back without leaving the chat. The image remains untouched, while marks, layers, notes, and corrections remain accessible across turns.
+
+It is a self-hosted **MCP server with MCP Apps widgets**—a visual interaction layer, **not** a new vision model or a replacement chatbot.
+
+## Observe. Annotate. Verify.
+
+| 01 / OBSERVE | 02 / ANNOTATE | 03 / VERIFY |
+| :--- | :--- | :--- |
+| Bring a photo, scan, schematic, or PDF page into the conversation. Zoom and process regions when details matter. | GPT draws boxes, arrows, paths, and labels; you respond with your own marks on the **same canvas**. | Review claims, inspect their evidence regions, correct links, and keep the decisions for later turns. |
+
+**A typical exchange**
+
+> **You:** “Which part of this board matches the symbol in the schematic?”  
+> **GPT:** Points to a candidate and records the evidence behind the match.  
+> **You:** Circles a different component and asks it to reconsider.  
+> **Together:** Keep both the correction and the annotated image—without flattening the result.
+
+That is the idea: **less describing where, more reasoning about what.** Recognition is still the model's responsibility; Estampes keeps the spatial context and its uncertainty explicit.
+
+## Built for work that happens on images
+
+| Capability | What you can do |
+| :--- | :--- |
+| **Bidirectional annotation** | Draw boxes, arrows, polylines, freehand strokes, and labels. Select and edit marks from earlier turns. |
+| **Non-destructive layers** | Show, hide, rename, reorder, fade, and lock annotation layers without changing the source. |
+| **High-detail inspection** | Zoom using source-native tiles when available; enhance contrast, sharpen, denoise, threshold, find edges, or add a coordinate grid. |
+| **Evidence-aware claims** | Store confidence, evidence regions, and verification states for notes and cross-image links. User rejections are remembered. |
+| **Comparison and measurement** | View two images side by side, register them, compare differences, calibrate a scale, and measure dimensions with uncertainty reporting. |
+| **Portable workspaces** | Organize up to 24 images, move or copy annotation sets, and export an editable `.estampes` bundle for another server. |
+| **Extendable instruments** | Optional modules add function plots, an isolated SymPy calculator, and plate solving, with explicit capability permissions. |
+
+*PDF rendering, OCR, and some domain capabilities depend on optional installs or external services. See the [image capability map](docs/IMAGE-CAPABILITIES.md) for what is built in, optional, or not implemented.*
+
+## Your source stays your source.
+
+- **Original pixels remain untouched.** Annotations are separate data, with image-relative coordinates independent of zoom or screen size.
+- **Corrections do not evaporate.** With persistent storage enabled, images, marks, layers, claims, and history survive restarts and can be reopened across chats.
+- **Bring your work elsewhere.** Export a layered SVG, a visual-protocol JSON document, or an `.estampes` workspace bundle; layers do not have to become one flattened image.
+- **You run the server.** Estampes is self-hosted, with no centrally hosted Estampes service.
 
 ## Quick start
 
-Docker on amd64 or arm64 (Raspberry Pi, NAS, mini PC):
+**Requirements:** Docker Compose; an environment where ChatGPT can connect to a public HTTPS MCP endpoint. Docker runs on amd64 and arm64 machines (including suitable Raspberry Pi, NAS, and mini PCs).
 
-```sh
+```bash
 git clone https://github.com/Curium-3391/Estampes.git
 cd Estampes
 cp .env.example .env
@@ -37,52 +81,83 @@ docker compose --profile tunnel up -d
 docker compose logs estampes | grep tunnel
 ```
 
-The last command prints the connector URL, `https://….trycloudflare.com/mcp?key=…`. In ChatGPT web open Plugins → **Add custom MCP server**, paste it and choose **No authentication**. The URL contains your key, so keep it to yourself.
+The last command displays a connector URL resembling:
 
-The temporary tunnel gets a new address on every restart. For lasting use, put a reverse proxy or a named tunnel in front of `docker compose up -d`; see [Deployment](docs/DEPLOYMENT.md), which also covers Heroku, Render and every setting.
+```text
+https://<temporary-address>.trycloudflare.com/mcp?key=<your-access-key>
+```
 
-Local development (Node 22):
+In **ChatGPT on the web**, open **Plugins → Add custom MCP server**, paste that URL, and select **No authentication** (the access key is already in the URL). Then attach an image and ask GPT to point something out.
 
-```sh
+> [!IMPORTANT]
+> The URL contains a bearer secret. **Do not publish or share it.** The quick tunnel address changes when it restarts; for regular use, configure your own reverse proxy or named tunnel. Estampes currently uses a single-owner access model, not per-user accounts.
+
+See the [deployment guide](docs/DEPLOYMENT.md) for persistent hosting, Render/Heroku, PDF support, storage, and security limitations.
+
+<details>
+<summary><strong>Local development (Node.js 22)</strong></summary>
+
+```bash
 npm ci
 npm test
 npm start          # http://localhost:8787/mcp
 ```
 
+The SymPy calculator is a separate optional service; see [CAS](docs/CAS.md) for running it.
+
+</details>
+
+## One canvas, clear responsibilities.
+
+```text
+Human  ── points, edits, confirms ──────┐
+                                       ▼
+ChatGPT / MCP client  ◀─────────▶  Estampes MCP server
+       │                               │
+       │ understands images            ├── shared canvas + workspaces
+       │ proposes marks & claims       ├── image processing + coordinate maps
+       │                               ├── persistent layers + evidence
+       ▼                               └── permissioned modules
+  MCP Apps widget  ◀───────────────────┘
+       └── shows the original image and editable overlays inside the chat
+```
+
+**GPT interprets. Estampes validates coordinates, preserves state, renders overlays, and carries the conversation's visual references forward.** Read the [architecture](docs/ARCHITECTURE.md) and [product vision](docs/VISION.md) for design decisions and boundaries.
+
 ## Documentation
 
-| Document | Contents |
-| --- | --- |
-| [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
-| [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
-| [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
-| [Image pipeline](docs/IMAGE-PIPELINE.md) | Source files, derived views, exact coordinate transforms, PDF pages, analysis engines |
-| [Image capabilities](docs/IMAGE-CAPABILITIES.md) | What the image tools do and do not cover, and what needs a plugin or an external service |
-| [Canvas reads](docs/CANVAS-READS.md) | `render_canvas`: reading the saved canvas as pixels |
-| [Workspaces](docs/WORKSPACES.md) | Several images in one place; merge, split, copy, link; `.estampes` bundles |
-| [Modules](docs/MODULES.md) | The module system, the Store, packages, WebAssembly and http modules, background jobs, plate solving |
-| [Scientific calculator](docs/CAS.md) | The SymPy calculator module and its isolated container |
-| [Surfaces](docs/SURFACES.md) | Panels and per-device layouts (`estampes.surface/1`) |
-| [Workbench](docs/WORKBENCH.md) | The canvas and the calculator as windows inside one widget |
-| [Visual protocol 2](docs/PROTOCOL-V2.md) | `estampes.visual/2`, the host-neutral JSON document for a whole canvas, with evidence and verification for every claim |
-| [Visual protocol 1](docs/PROTOCOL-V1.md) | The earlier version, still read |
-| [Vision](docs/VISION.md) | The problem, user journeys and non-goals |
-| [Architecture](docs/ARCHITECTURE.md) | How the server, canvas widget and GPT fit together |
-| [Changelog](CHANGELOG.md) | Changes per version |
-| [History](docs/history/README.md) | Early milestone notes and old protocol drafts |
-| [繁體中文說明](docs/zh-TW/README.md) | Overview and quick start in Traditional Chinese |
-| [Contributing](CONTRIBUTING.md) | Contributions that help most |
+| If you're here to… | Start with |
+| :--- | :--- |
+| **Use the canvas** | [Usage guide](docs/USAGE.md) · [Image capabilities](docs/IMAGE-CAPABILITIES.md) · [Workspaces](docs/WORKSPACES.md) |
+| **Deploy and maintain** | [Deployment](docs/DEPLOYMENT.md) · [Configuration & storage](docs/DEPLOYMENT.md#environment-variables) |
+| **Build on Estampes** | [Architecture](docs/ARCHITECTURE.md) · [MCP tools](docs/TOOLS.md) · [Modules](docs/MODULES.md) · [Visual protocol v2](docs/PROTOCOL-V2.md) |
+| **Read in Chinese** | [繁體中文說明](docs/zh-TW/README.md) |
 
-## Status and limits
+<details>
+<summary><strong>Complete technical documentation</strong></summary>
 
-The current version is in [`package.json`](package.json) and at `/version` on your server.
+- **Imaging:** [Image pipeline](docs/IMAGE-PIPELINE.md), [Image capability map](docs/IMAGE-CAPABILITIES.md), [Canvas reads](docs/CANVAS-READS.md)
+- **Composition:** [Workspaces](docs/WORKSPACES.md), [Surfaces](docs/SURFACES.md), [Workbench](docs/WORKBENCH.md)
+- **Extensions:** [Modules and Store](docs/MODULES.md), [Scientific CAS](docs/CAS.md)
+- **Interfaces:** [Tools and endpoints](docs/TOOLS.md), [Visual protocol v2](docs/PROTOCOL-V2.md), [Visual protocol v1](docs/PROTOCOL-V1.md)
+- **Project:** [Vision](docs/VISION.md), [Architecture](docs/ARCHITECTURE.md), [Changelog](CHANGELOG.md), [Development history](docs/history/README.md), [Contributing](CONTRIBUTING.md)
 
-- Upload, canvas, marks, layers, zoom and the paired view have been tested live in ChatGPT on web and mobile. Newer parts (workbench, calculator, plate solving, workspaces) are covered by automated tests; each page says whether it has been tried in a live ChatGPT host.
-- How well GPT recognises what is in an image is not guaranteed; Estampes does not decide what something is.
-- Plugins cannot draw over images ChatGPT itself shows (such as image search results), so images are shown in the Estampes canvas instead.
-- The access key is a shared secret in the URL, not per-user sign-in. Do not share your connector URL.
-- Self-hosting only; there is no hosted service.
+</details>
 
-## License
+## What is tested—and what isn't
 
-[Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.
+- Image upload, canvas annotations, layers, zoom, and paired-image views have been tested in live ChatGPT web and mobile sessions.
+- Newer features—including the workbench, calculator, plate solving, and workspaces—have automated coverage. **Not all have been validated in a live ChatGPT host.**
+- Estampes does not guarantee the accuracy of GPT's visual recognition; an unverified model claim remains unverified.
+- MCP Apps cannot draw directly over images displayed by ChatGPT itself. Estampes renders images inside **its own in-chat canvas**.
+- This is a **single-owner, self-hosted** project. The access key protects the endpoint but does not provide individual user identities.
+
+The version in use is recorded in [`package.json`](package.json) and exposed at `/version` on your server.
+
+## License and origin
+
+Licensed under the [Mozilla Public License 2.0](LICENSE). You can use, modify, and distribute Estampes, including in commercial products, subject to MPL-2.0's file-level obligations.
+
+The name comes from Claude Debussy's *Estampes* (1903): three musical impressions, each rendering a different place through sound.
+
+**A shared visual language for humans and AI.**
