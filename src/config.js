@@ -39,6 +39,9 @@ export const config = Object.freeze({
   workingLongSide: num("ESTAMPES_WORKING_LONG_SIDE", 4096, { min: 512, max: 16384 }),
   // Largest crop (in megapixels) processed at native or working resolution;
   // bigger crops are reduced to fit and the result says so.
+  // Largest tool result in characters (claude.ai drops results above about
+  // 150,000); model-facing images shrink to fit. 0 turns it off.
+  maxResultChars: num("ESTAMPES_MAX_RESULT_CHARS", 145_000, { min: 0, max: 100_000_000 }),
   maxAnalysisPixels: num("ESTAMPES_MAX_ANALYSIS_MEGAPIXELS", 16, { min: 1, max: 200 }) * 1_000_000,
   // Processed-view recipes remembered per image (get_derived_view).
   derivedViewsPerImage: num("ESTAMPES_DERIVED_VIEWS_PER_IMAGE", 200, { min: 10, max: 10000 }),

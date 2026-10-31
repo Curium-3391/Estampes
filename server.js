@@ -25,7 +25,7 @@ import {
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
-import { downloadImage, entrySharp } from "./src/image-store.js";
+import { downloadImage, entrySharp, MAX_DOWNLOAD_BYTES } from "./src/image-store.js";
 import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
@@ -43,10 +43,14 @@ import { runEngine, listEngines } from "./src/image/engines.js";
 import { pdfAvailable, renderPdfPage, pdfInfo, isPdf, MAX_DPI } from "./src/image/pdf.js";
 import { calibrate, measure, toSpacePixels, spaceToNormalized, defaultSigma, UNITS } from "./src/image/measure.js";
 import {
-  overlayGrid, previewImage, cellCenter, rowLabel, displayImage, compactForDisplay, regionTile,
+  overlayGrid, previewImage, cellCenter, rowLabel, displayImage, widgetImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
+import sharp from "sharp";
+import { fitResult } from "./src/result-budget.js";
+import { randomBytes } from "node:crypto";
+import { createOAuth, readBody } from "./src/oauth.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
 import { composeCanvas } from "./src/scene/compose.js";
@@ -82,10 +86,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -428,6 +432,22 @@ const pairLayers = (left, right) => [
   ...canvasLayers(left).map((l) => ({ ...l, side: "left" })),
   ...canvasLayers(right).map((l) => ({ ...l, side: "right" })),
 ];
+// Widget pixels per tool result (see widgetImage): a whole result must stay
+// under the strictest host's cap (claude.ai, about 150,000 characters).
+// Canvas uploads in progress (upload_visual_image), by uploadId.
+const uploads = new Map();
+const INLINE_IMAGE_CHARS = 80_000;
+const INLINE_TOTAL_CHARS = 90_000;
+const metaImage = (img) => ({ mimeType: img.mimeType, data: img.data, width: img.width, height: img.height, ...(img.full ? {} : { preview: true }) });
+// Processed views ride along only while the result stays under budget; the
+// rest are listed without pixels and fetched by the widget.
+function budgetViews(views, used) {
+  return views.map((v, index) => {
+    const size = v.data?.length ?? 0;
+    if (used + size <= INLINE_TOTAL_CHARS) { used += size; return v; }
+    return { label: v.label, region: v.region, derivedViewId: v.derivedViewId, index, deferred: true };
+  });
+}
 const pixelsBlock = (out) => ({ type: "image", data: out.data.toString("base64"), mimeType: out.mimeType });
 
 async function presentPair({ left, right, annotations, findings, remove, reset, layer, coordinateFrame, priorUserAnnotations, links, removeLinks, verify }) {
@@ -453,7 +473,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
     ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, side })));
   }
   const pending = linkList.filter(needsReview);
-  const [shownLeft, shownRight] = [await displayImage(left), await displayImage(right)];
+  const [shownLeft, shownRight] = [await widgetImage(left, INLINE_IMAGE_CHARS / 2), await widgetImage(right, INLINE_IMAGE_CHARS / 2)];
   const text = "Paired view: LEFT " + left.imageId + " (" + left.width + "x" + left.height + " px), RIGHT " + right.imageId +
     " (" + right.width + "x" + right.height + " px), side by side, not overlaid. Coordinates are normalized to each mark's own image. " +
     marks.length + " marks (side, id, rounded box): " + JSON.stringify(marks.map(compactMark)) +
@@ -476,8 +496,8 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
     },
     _meta: {
       "estampes/links": linkList.map(widgetLink),
-      "estampes/image": { mimeType: shownLeft.mimeType, data: shownLeft.data.toString("base64"), width: shownLeft.width, height: shownLeft.height },
-      "estampes/pairImage": { mimeType: shownRight.mimeType, data: shownRight.data.toString("base64"), width: shownRight.width, height: shownRight.height },
+      "estampes/image": metaImage(shownLeft),
+      "estampes/pairImage": metaImage(shownRight),
       "estampes/views": [],
       "estampes/annotations": marks,
     },
@@ -487,7 +507,6 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
 // ---- Workspace view: N images, each with its own marks --------------------
 // The widget gets every item's placement; pixels go in _meta when they are
 // small enough, else the widget fetches each image with load_visual_canvas.
-const WS_PIXEL_BUDGET = 1_400_000;
 const wsMarks = (items) => items.flatMap(({ id, entry }) => canvasMarks(entry).map((m) => ({ ...m, side: id })));
 const wsLayers = (items) => items.flatMap(({ id, entry }) => canvasLayers(entry).map((l) => ({ ...l, side: id })));
 const wsItemInfo = ({ item, entry }) => ({ id: item.id, imageId: entry.imageId, set: item.set, width: entry.width, height: entry.height,
@@ -499,13 +518,15 @@ const wsLinkTable = (links, items) => links.map((l) => {
 const wsWidgetLink = (l) => ({ ...widgetLink({ ...l, left: l.from, right: l.to }), fromItem: l.fromItem, toItem: l.toItem });
 async function wsPixels(items) {
   const out = [];
-  let total = 0;
+  const each = Math.floor(INLINE_IMAGE_CHARS / Math.max(1, items.length));
+  // Below ~8,000 characters a preview is too coarse to help; the widget
+  // fetches every image itself instead.
+  if (each < 8000) return [];
   for (const { id, entry } of items) {
-    const shown = await displayImage(entry);
-    total += shown.data.length;
-    out.push({ id, objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height });
+    const shown = await widgetImage(entry, each);
+    out.push({ id, objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, ...metaImage(shown) });
   }
-  return total <= WS_PIXEL_BUDGET ? out : [];
+  return out;
 }
 
 async function presentWorkspace(workspaceId, { annotations, findings, remove, reset, layer, coordinateFrame, links, removeLinks, verify }) {
@@ -571,6 +592,9 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
 
 function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION });
+  // Every tool result goes through the host size cap (src/result-budget.js).
+  const register = server.registerTool.bind(server);
+  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => fitResult(await handler(...args), config.maxResultChars));
 
   registerAppResource(
     server,
@@ -600,7 +624,7 @@ function makeServer() {
     {
       title: "Show interactive number line",
       description:
-        "Display an interactive number line from -4 to 4 in ChatGPT, with a mark at the specified integer.",
+        "Display an interactive number line from -4 to 4 in the chat, with a mark at the specified integer.",
       inputSchema: z.object({
         target: z.number().int().min(-4).max(4).describe("Tick to highlight"),
       }),
@@ -728,6 +752,7 @@ function makeServer() {
         image: ChatFileSchema.optional().describe("Image file from the conversation; loads and shows it in one call"),
         imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
         imageId: ImageIdSchema.optional(),
+        upload: z.boolean().optional().describe("Open an empty canvas where the user picks or photographs an image on their device. Use it when the user wants to show you a picture but no image file reaches this tool (no `image` parameter in this app, or the attachment is not passed to tools)."),
         scene: SceneSchema.optional().describe("Bundled demo scene; use only when there is no real image"),
         marksFile: ChatFileSchema.optional().describe("Estampes marks SVG (exported earlier) attached by the user; restores its marks"),
         annotations: ModelAnnotationsSchema.default([]),
@@ -774,16 +799,27 @@ function makeServer() {
           exports: z.object({ image: z.string(), marks: z.string() }).optional() }).optional(),
         workspace: z.object({ id: z.string(), name: z.string(), revision: z.number(), items: z.array(z.record(z.string(), z.unknown())) }).optional(),
         links: z.array(z.record(z.string(), z.unknown())).optional(),
+        awaitingUpload: z.boolean().optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile", "pairImage"] },
     },
     async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify,
-      pairImage, pairImageUrl, pairImageId, links, removeLinks, workspaceId }) => {
+      pairImage, pairImageUrl, pairImageId, links, removeLinks, workspaceId, upload }) => {
       try {
+        if (upload) {
+          if ([image, imageUrl, imageId, scene, workspaceId, pairImage, pairImageUrl, pairImageId, marksFile].some(Boolean) || annotations.length) {
+            throw new Error("upload opens an empty canvas; it takes no image, scene, workspace or marks");
+          }
+          return {
+            content: [{ type: "text", text: "Opened an empty Estampes canvas with a 選擇圖片／拍照 (pick or photograph an image) button. " +
+              "When the user adds a picture, the canvas reports its imageId in the conversation; then use that imageId with present_visual, inspect_image or process_image. Nothing is loaded yet." }],
+            structuredContent: { kind: "estampes.visual_surface", awaitingUpload: true, coordinateSystem: "normalized-top-left" },
+          };
+        }
         if ([image, imageUrl, imageId, scene, workspaceId].filter(Boolean).length !== 1) {
-          throw new Error("Provide exactly one of image, imageUrl, imageId, workspaceId or scene");
+          throw new Error("Provide exactly one of image, imageUrl, imageId, workspaceId or scene (or upload: true)");
         }
         if (workspaceId) {
           if (pairImage || pairImageUrl || pairImageId || views.length || marksFile || priorUserAnnotations.length) {
@@ -852,7 +888,7 @@ function makeServer() {
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
         const ink = inkReport(resolved.filter(m => drawn.includes(m.id)), entry);
         const exports = exportLinks(imageId);
-        const shown = await displayImage(entry);
+        const shown = await widgetImage(entry, INLINE_IMAGE_CHARS);
         const rendered = [];
         for (const view of views) {
           const { out: full, record } = await deliverView(entry, { region: view.region, ops: view.ops, geometry: view.geometry, sampling: view.sampling });
@@ -879,7 +915,7 @@ function makeServer() {
                 (check.layout === "side-by-side" ? "left" : "top") + " = original pixels, " +
                 (check.layout === "side-by-side" ? "right" : "bottom") + " = with marks numbered " +
                 check.numbers.map(n => n.n + "=" + n.id).join(", ") +
-                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done. The user can open the same image in the canvas tab 「GPT 驗收圖」." : ""),
+                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done. The user can open the same image in the canvas tab 「AI 驗收圖」." : ""),
           }, ...(check ? [imageBlock(check)] : [])],
           structuredContent: {
             kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId, width: entry.width, height: entry.height,
@@ -890,14 +926,118 @@ function makeServer() {
           },
           // Pixels go to the widget only; the model already has them from load_image.
           _meta: {
-            "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
-            "estampes/views": rendered,
+            "estampes/image": metaImage(shown),
+            "estampes/views": budgetViews(rendered, shown.data.length),
             "estampes/annotations": resolved,
             "estampes/baseAsObject": !!entry.baseAsObject, "estampes/objects": widgetObjects(entry), "estampes/canRestoreObjects": !!entry.deletedObjectBatches?.length,
           },
         });
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: the full display image (or one
+  // processed view) as base64 in slices, for hosts that cap result size.
+  // A result that carried a preview (preview: true) or a deferred view is
+  // completed with this, one slice per call.
+  const PIXEL_SLICE = 90_000;
+  registerAppTool(
+    server,
+    "load_visual_pixels",
+    {
+      title: "Load canvas pixels",
+      description: "Fetch the Estampes canvas photo or a processed view in slices, for the widget.",
+      inputSchema: z.object({
+        imageId: ImageIdSchema, setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
+        view: z.number().int().min(0).max(2).optional().describe("Index of a processed view; omit for the photo"),
+        offset: z.number().int().min(0).default(0),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ imageId, setId, view, offset }) => {
+      try {
+        const entry = await ensureSet(imageId + (setId ? "#" + setId : ""));
+        let source;
+        if (view == null) {
+          const shown = await displayImage(entry);
+          source = { mimeType: shown.mimeType, width: shown.width, height: shown.height, data: shown.data.toString("base64") };
+        } else {
+          const v = entry.lastViews?.[view];
+          if (!v) throw new Error("No processed view " + view + " on " + imageId);
+          source = { mimeType: v.mimeType, label: v.label, region: v.region, data: Buffer.isBuffer(v.data) ? v.data.toString("base64") : v.data };
+        }
+        const { data, ...info } = source;
+        if (offset > data.length) throw new Error("offset is past the end");
+        const slice = data.slice(offset, offset + PIXEL_SLICE);
+        return {
+          content: [{ type: "text", text: "Pixels for " + imageId + " sent to the widget." }],
+          structuredContent: { kind: "estampes.visual_pixels", imageId, ...(view == null ? {} : { view }), ...info,
+            total: data.length, offset, data: slice, done: offset + slice.length >= data.length },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
+  // Private tool for the canvas widget: an image the user picked or
+  // photographed in the canvas itself, sent as base64 in slices (hosts limit
+  // message sizes). The last slice loads it and returns its canvas.
+  registerAppTool(
+    server,
+    "upload_visual_image",
+    {
+      title: "Upload an image to the canvas",
+      description: "Receive an image the user picked in the Estampes canvas, in base64 slices.",
+      inputSchema: z.object({
+        uploadId: z.string().regex(/^up[0-9a-f]{16}$/).optional().describe("From the first slice's result; omit on the first slice"),
+        fileName: z.string().max(120).optional(),
+        total: z.number().int().min(1).max(Math.ceil(MAX_DOWNLOAD_BYTES * 4 / 3) + 4),
+        offset: z.number().int().min(0),
+        data: z.string().max(400_000).regex(/^[A-Za-z0-9+/=]*$/),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ uploadId, fileName, total, offset, data }) => {
+      try {
+        const nowMs = Date.now();
+        for (const [id, u] of uploads) if (nowMs - u.touched > 10 * 60 * 1000) uploads.delete(id);
+        let u;
+        if (!uploadId) {
+          if (offset !== 0) throw new Error("The first slice starts at offset 0");
+          if (uploads.size >= 16) throw new Error("Too many uploads in progress; try again in a few minutes");
+          uploadId = "up" + randomBytes(8).toString("hex");
+          u = { total, parts: [], received: 0, fileName: fileName ?? null, touched: nowMs };
+          uploads.set(uploadId, u);
+        } else {
+          u = uploads.get(uploadId);
+          if (!u) throw new Error("This upload expired; pick the image again");
+          if (u.total !== total || offset !== u.received) throw new Error("Slice out of order: expected offset " + u.received);
+        }
+        if (offset + data.length > total) throw new Error("Slice runs past the declared size");
+        u.parts.push(data); u.received += data.length; u.touched = nowMs;
+        if (u.received < total) {
+          return { content: [{ type: "text", text: "Received " + u.received + "/" + total }],
+            structuredContent: { kind: "estampes.upload_progress", uploadId, received: u.received, total } };
+        }
+        uploads.delete(uploadId);
+        const bytes = Buffer.from(u.parts.join(""), "base64");
+        if (!bytes.length || bytes.length > MAX_DOWNLOAD_BYTES) throw new Error("The image must be 1 byte to " + Math.round(MAX_DOWNLOAD_BYTES / 1048576) + " MB");
+        const entry = await intakeImage(bytes, { source: "upload", fileName: u.fileName });
+        const payload = await canvasPayload(entry);
+        log("info", "[upload] " + entry.imageId + " " + bytes.length + "B from the canvas");
+        return logSizes("upload_visual_image", {
+          content: [{ type: "text", text: "Loaded " + entry.imageId + " (" + entry.width + "x" + entry.height + ") from the canvas." }],
+          structuredContent: { ...payload.structuredContent, uploaded: { imageId: entry.imageId, fileName: u.fileName } },
+          _meta: payload._meta,
+        }, { appOnly: true });
+      } catch (error) {
+        if (uploadId) uploads.delete(uploadId);
+        return { isError: true, content: [{ type: "text", text: "Estampes: " + String(error?.message || error) }] };
       }
     }
   );
@@ -937,21 +1077,21 @@ function makeServer() {
         }
         const entry = await ensureSet(imageId+(setId?"#"+setId:""));
         if (part === "image") {
-          const shown = await displayImage(entry);
+          const shown = await widgetImage(entry, INLINE_IMAGE_CHARS);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Image " + imageId + " sent to the widget." }],
             structuredContent: { kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
-              objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, image: { mimeType: shown.mimeType, data: shown.data.toString("base64") } },
+              objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, image: metaImage(shown) },
           }, { appOnly: true });
         }
         if (pairImageId && part === "canvas") {
-          const right = await ensureImage(pairImageId), shown = await displayImage(right), own = await displayImage(entry);
+          const right = await ensureImage(pairImageId), shown = await widgetImage(right, INLINE_IMAGE_CHARS / 2), own = await widgetImage(entry, INLINE_IMAGE_CHARS / 2);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Paired canvas data for " + imageId + " + " + pairImageId + " sent to the widget." }],
             structuredContent: {
               kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
-              image: { mimeType: own.mimeType, data: own.data.toString("base64") },
-              pair: { imageId: pairImageId, width: right.width, height: right.height, image: { mimeType: shown.mimeType, data: shown.data.toString("base64") },
+              image: metaImage(own),
+              pair: { imageId: pairImageId, width: right.width, height: right.height, image: metaImage(shown),
                 ...(exportLinks(pairImageId) ? { exports: exportLinks(pairImageId) } : {}) },
               annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: pairLinks(entry, right).map(widgetLink), views: [],
               gestureGroups: [...gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
@@ -970,8 +1110,10 @@ function makeServer() {
               width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
               gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
               objects: widgetObjects(entry),baseAsObject:!!entry.baseAsObject,
-              image: pixels(await displayImage(entry)),
-              views: (entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })),
+              ...(await (async () => {
+                const shown = await widgetImage(entry, INLINE_IMAGE_CHARS);
+                return { image: metaImage(shown), views: budgetViews((entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })), shown.data.length) };
+              })()),
               ...(check ? { check: checkSummary(check) } : {}),
             };
         return logSizes("load_visual_canvas", {
@@ -1296,7 +1438,13 @@ function makeServer() {
     },
     async ({ imageId, region, maxSide }) => {
       try {
-        const tile = await regionTile(await ensureImage(imageId), region, maxSide);
+        let tile = await regionTile(await ensureImage(imageId), region, maxSide);
+        // Same result-size cap as the canvas photo: shrink until it fits.
+        for (let side = Math.max(tile.width, tile.height); tile.data.length * 4 / 3 > INLINE_TOTAL_CHARS && side > 320; ) {
+          side = Math.round(side * 0.8);
+          const { data, info } = await sharp(tile.data).resize({ width: side, height: side, fit: "inside" }).jpeg({ quality: 72 }).toBuffer({ resolveWithObject: true });
+          tile = { ...tile, data, mimeType: "image/jpeg", width: info.width, height: info.height };
+        }
         return logSizes("load_visual_region", {
           content: [{ type: "text", text: "Detail tile for " + imageId + " sent to the widget." }],
           structuredContent: { kind: "estampes.visual_tile", imageId, region: tile.region,
@@ -1671,7 +1819,7 @@ function makeServer() {
     {
       title:"Inspect actual source pixels and annotated region",
       description:
-        "Retrieve PIXEL IMAGES for a user-marked location on an Estampes demo SVG. Call this when asked what a marked object is, rather than inferring objects from coordinates or scene names. Pass imageId='demo:'+scene, revision='svg-v1', and focus={type:'point'|'rect'|'arrow',x,y[,x2,y2]} copied from the user's Estampes annotation; for arrows the crop centres on the head x2/y2; when the user's arrow shows a direction rather than a target, pass a rect covering the whole arrow instead. Returns original PNG, full PNG with focus overlay, and locally cropped magnified PNG. These are image content blocks plus geometry metadata; if your host does not expose image pixels to vision, explicitly state that and do not guess the object's identity. This M0.4.3 tool supports ONLY bundled SVG demo images, not arbitrary user uploads or ChatGPT image search.",
+        "Retrieve PIXEL IMAGES for a user-marked location on an Estampes demo SVG. Call this when asked what a marked object is, rather than inferring objects from coordinates or scene names. Pass imageId='demo:'+scene, revision='svg-v1', and focus={type:'point'|'rect'|'arrow',x,y[,x2,y2]} copied from the user's Estampes annotation; for arrows the crop centres on the head x2/y2; when the user's arrow shows a direction rather than a target, pass a rect covering the whole arrow instead. Returns original PNG, full PNG with focus overlay, and locally cropped magnified PNG. These are image content blocks plus geometry metadata; if your host does not expose image pixels to vision, explicitly state that and do not guess the object's identity. This M0.4.3 tool supports ONLY bundled SVG demo images, not arbitrary user uploads or web image search.",
       inputSchema:z.object({
         scene:SceneSchema,
         imageId:z.string().min(1).max(80),
@@ -1717,7 +1865,7 @@ function makeServer() {
               ". The NEXT THREE MCP blocks contain real PNG pixels: (1) original whole image, (2) whole image with NEUTRAL inspection-focus overlay (not an authored annotation), (3) enlarged raw crop with no overlay. "+
               "Focus metadata: "+JSON.stringify({focus:evidence.focus,crop:evidence.crop})+
               ". Please identify the marked object ONLY if you can actually perceive the image content. Do not infer the answer from sceneId or coordinates alone. "+
-              "If your ChatGPT host hides image blocks from the model, say you could not inspect the pixels."},
+              "If your host hides image blocks from the model, say you could not inspect the pixels."},
             {type:"image",data:images.original.toString("base64"),mimeType:"image/png"},
             {type:"image",data:images.marked.toString("base64"),mimeType:"image/png"},
             {type:"image",data:images.crop.toString("base64"),mimeType:"image/png"},
@@ -1745,7 +1893,7 @@ function makeServer() {
     {
       title:"Show Estampes visual evidence",
       description:
-        "LEGACY standalone PNG evidence viewer, retained for older conversations and explicit requests for the separate 3-PNG view. Do NOT call after present_visual in the same visual task: present_visual now already includes annotation, original image and zoom in one shared canvas. For general new ChatGPT visual exchanges prefer inspect_visual (model pixels) followed by present_visual (one UI). This tool performs no object recognition.",
+        "LEGACY standalone PNG evidence viewer, retained for older conversations and explicit requests for the separate 3-PNG view. Do NOT call after present_visual in the same visual task: present_visual now already includes annotation, original image and zoom in one shared canvas. For general new visual exchanges prefer inspect_visual (model pixels) followed by present_visual (one UI). This tool performs no object recognition.",
       inputSchema:z.object({
         scene:SceneSchema,
         imageId:z.string().min(1).max(80),
@@ -1812,7 +1960,7 @@ function makeServer() {
     {
       title: "Load a real image for Estampes",
       description:
-        "Load a photo, scan or picture so Estampes can preprocess it (enhance, zoom, grid). To simply SHOW the user a photo with marks, call present_visual with the image directly instead; it loads it too. Pass `image` for a file the user attached or photographed in this ChatGPT conversation, OR `imageUrl` for a public https image you found. Returns an imageId plus a preview image. Use the imageId with process_image (enhance, threshold, edges, zoom into a region) and overlay_grid (labelled grid for precise locating). Estampes never identifies content; you do, from the returned pixels.",
+        "Load a photo, scan or picture so Estampes can preprocess it (enhance, zoom, grid). To simply SHOW the user a photo with marks, call present_visual with the image directly instead; it loads it too. Pass `image` for a file the user attached or photographed in this conversation (hosts that pass attachments to tools), OR `imageUrl` for a public https image you found. If neither is possible (the host does not pass attachments), call present_visual with upload: true so the user picks or photographs the image in the canvas. Returns an imageId plus a preview image. Use the imageId with process_image (enhance, threshold, edges, zoom into a region) and overlay_grid (labelled grid for precise locating). Estampes never identifies content; you do, from the returned pixels.",
       inputSchema: z.object({
         image: ChatFileSchema.optional().describe("Image file from the conversation"),
         imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
@@ -2321,14 +2469,14 @@ function makeServer() {
 // present_visual returns), for tools that change a canvas without drawing
 // marks themselves, such as execute_module.
 async function canvasPayload(entry) {
-  const shown = await displayImage(entry), marks = canvasMarks(entry), exports = exportLinks(entry.imageId);
+  const shown = await widgetImage(entry, INLINE_IMAGE_CHARS), marks = canvasMarks(entry), exports = exportLinks(entry.imageId);
   return {
     structuredContent: {
       kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: entry.imageId, width: entry.width, height: entry.height,
       views: [], marks: marks.map(compactMark), layers: canvasLayers(entry), coordinateSystem: "normalized-top-left", ...(exports ? { exports } : {}),
     },
     _meta: {
-      "estampes/image": { mimeType: shown.mimeType, data: shown.data.toString("base64"), width: shown.width, height: shown.height },
+      "estampes/image": metaImage(shown),
       "estampes/views": [], "estampes/annotations": marks, "estampes/baseAsObject": !!entry.baseAsObject, "estampes/objects": widgetObjects(entry), "estampes/canRestoreObjects": !!entry.deletedObjectBatches?.length,
     },
   };
@@ -2364,7 +2512,78 @@ function corsOrigin(req) {
 function authorized(req, url) {
   if (!ACCESS_KEY) return true;
   const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "")?.[1];
-  return sameSecret(url.searchParams.get("key"), ACCESS_KEY) || sameSecret(bearer, ACCESS_KEY);
+  return sameSecret(url.searchParams.get("key"), ACCESS_KEY) || sameSecret(bearer, ACCESS_KEY) || oauth.validAccessToken(bearer);
+}
+
+// OAuth sign-in for hosts that prefer it over a key in the URL (see src/oauth.js).
+const oauth = createOAuth({ getKey: () => ACCESS_KEY,
+  fetchClientDocument: async (clientUrl) => JSON.parse((await downloadImage(clientUrl, { maxBytes: 64 * 1024, accept: "application/json" })).toString("utf8")) });
+
+// The origin clients reach this server on, for OAuth metadata.
+function requestOrigin(req) {
+  if (config.publicUrl) return config.publicUrl.replace(/\/+$/, "");
+  const fwd = (name) => config.trustProxy > 0 ? String(req.headers[name] ?? "").split(",")[0].trim() : "";
+  const proto = fwd("x-forwarded-proto") || "http";
+  const host = fwd("x-forwarded-host") || String(req.headers.host ?? "").trim();
+  if (/^[a-z0-9.:[\]-]+$/i.test(host) && /^https?$/.test(proto)) return proto + "://" + host;
+  return tunnelOrigin || seenOrigin;
+}
+
+async function handleOAuth(req, res, url) {
+  const json = (status, body) => {
+    res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+      "access-control-allow-origin": "*", "x-content-type-options": "nosniff" });
+    res.end(JSON.stringify(body));
+  };
+  const html = (status, body) => {
+    res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https: http://localhost:* http://127.0.0.1:*; frame-ancestors 'none'",
+      "referrer-policy": "no-referrer", "x-content-type-options": "nosniff" });
+    res.end(body);
+  };
+  const redirect = (location) => { res.writeHead(302, { location, "cache-control": "no-store" }); res.end(); };
+  const origin = requestOrigin(req);
+  const path = url.pathname;
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "content-type, authorization, mcp-protocol-version" });
+    res.end();
+    return;
+  }
+  if (req.method === "GET" && (path === "/.well-known/oauth-protected-resource" || path === "/.well-known/oauth-protected-resource/mcp")) {
+    json(200, oauth.resourceMetadata(origin)); return;
+  }
+  if (req.method === "GET" && (path === "/.well-known/oauth-authorization-server" || path === "/.well-known/openid-configuration")) {
+    json(200, oauth.serverMetadata(origin)); return;
+  }
+  if (rateLimited(req)) { json(429, { error: "slow_down", error_description: "Too many requests" }); return; }
+  try {
+    if (path === "/oauth/register" && req.method === "POST") {
+      const out = oauth.register(await readBody(req));
+      json(out.status, out.body);
+      return;
+    }
+    if (path === "/oauth/authorize" && (req.method === "GET" || req.method === "POST")) {
+      const params = req.method === "GET" ? Object.fromEntries(url.searchParams) : await readBody(req);
+      const out = await (req.method === "GET" ? oauth.checkAuthorize(params) : oauth.approve(params));
+      if (out.redirect) {
+        if (req.method === "POST") log("info", "[oauth] sign-in " + (out.redirect.includes("code=") ? "approved" : "not approved"));
+        redirect(out.redirect);
+      } else if (out.html) html(out.status, out.html);
+      else if (out.client) html(200, oauth.consentPage(params, { client: out.client }));
+      else html(400, "<!doctype html><meta charset=utf-8><title>Estampes</title><p>" + out.page.replace(/[<>&]/g, "") + "</p>");
+      return;
+    }
+    if (path === "/oauth/token" && req.method === "POST") {
+      const out = oauth.token(await readBody(req));
+      json(out.status, out.body);
+      return;
+    }
+  } catch (error) {
+    json(error?.status ?? 400, { error: "invalid_request", error_description: String(error?.message || error) });
+    return;
+  }
+  json(404, { error: "not_found" });
 }
 
 // Fixed one-minute window per client IP (see clientIp for when
@@ -2478,7 +2697,7 @@ const httpServer = createHttpServer((req, res) => {
       .catch((error) => { res.writeHead(500); res.end(String(error?.message || error)); });
     }, () => {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("Image expired from this server" + (config.storageDir ? "" : " (memory only)") + ". Show it again in ChatGPT, then export.");
+      res.end("Image expired from this server" + (config.storageDir ? "" : " (memory only)") + ". Show it again in the chat, then export.");
     });
     return;
   }
@@ -2534,6 +2753,15 @@ const httpServer = createHttpServer((req, res) => {
     return;
   }
 
+  // OAuth only exists when the server has an access key to protect.
+  if (ACCESS_KEY && (url.pathname.startsWith("/.well-known/oauth-") || url.pathname === "/.well-known/openid-configuration" || url.pathname.startsWith("/oauth/"))) {
+    handleOAuth(req, res, url).catch((error) => {
+      log("error", "[oauth] " + String(error?.stack || error));
+      if (!res.headersSent) { res.writeHead(500); res.end(); }
+    });
+    return;
+  }
+
   if (url.pathname === "/mcp" && req.method === "OPTIONS") {
     const origin = corsOrigin(req);
     res.writeHead(204, origin ? {
@@ -2556,7 +2784,8 @@ const httpServer = createHttpServer((req, res) => {
       if (origin !== "*") res.setHeader("vary", "Origin");
     }
     if (!authorized(req, url)) {
-      res.writeHead(401, { "content-type": "text/plain", "www-authenticate": "Bearer" });
+      res.writeHead(401, { "content-type": "text/plain",
+        "www-authenticate": 'Bearer resource_metadata="' + requestOrigin(req) + '/.well-known/oauth-protected-resource"' });
       res.end("Missing or invalid Estampes access key");
       return;
     }
@@ -2609,7 +2838,7 @@ const keyInfo = await resolveAccessKey({ configured: config.accessKey, require: 
 ACCESS_KEY = keyInfo.key;
 const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
 const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
-if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in ChatGPT; approve a plan with: node scripts/estampes-module.js approve <planId>");
+if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in the chat; approve a plan with: node scripts/estampes-module.js approve <planId>");
 const casClientInstance = createCasClient({ socketPath: config.casSocket });
 configureCas({ client: casClientInstance, notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "" }) });
 const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "" });
@@ -2620,7 +2849,7 @@ moduleHost = await createModuleHost({
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
-  log("warn", "[auth] generated an access key. Connect ChatGPT to https://<your host>/mcp?key=" + keyInfo.key +
+  log("warn", "[auth] generated an access key. Connector URL: https://<your host>/mcp?key=" + keyInfo.key +
     (keyInfo.path ? " (saved in " + keyInfo.path + "; read it again with: docker compose exec estampes cat " + keyInfo.path + ")" : " (not saved: no storage; it changes on restart)"));
 } else if (keyInfo.source === "file") {
   log("info", "[auth] access key loaded from " + keyInfo.path + " (docker compose exec estampes cat " + keyInfo.path + ")");
@@ -2639,7 +2868,7 @@ if (storage.enabled) {
 if (config.tunnelMetrics) {
   watchQuickTunnel(config.tunnelMetrics, (origin) => {
     tunnelOrigin = origin;
-    log("warn", "[tunnel] public address " + origin + ". ChatGPT connector URL: " + origin + "/mcp" + (ACCESS_KEY ? "?key=" + ACCESS_KEY : "") +
+    log("warn", "[tunnel] public address " + origin + ". Connector URL: " + origin + "/mcp" + (ACCESS_KEY ? "?key=" + ACCESS_KEY : "") +
       " (temporary: it changes when the tunnel restarts)");
   });
 }

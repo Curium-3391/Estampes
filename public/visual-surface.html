@@ -159,14 +159,17 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 @media(max-width:599px){body{padding:6px}main{padding:10px}#wb.mobile #wb-area{min-height:60vh}}
 @media(prefers-reduced-motion:no-preference){.wb-panel{transition:box-shadow .15s}}
+#upload-empty{display:none}
+.awaiting-upload #upload-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 16px;border:2px dashed #8aa4c8;border-radius:12px;text-align:center}
+.awaiting-upload #upload,.awaiting-upload #surface,.awaiting-upload #caption,.awaiting-upload #edit-tools,.awaiting-upload #style-tools,.awaiting-upload #zoom-tools,.awaiting-upload .view-tabs,.awaiting-upload #context-details,.awaiting-upload .actions:not(#extra-actions){display:none}
 </style></head><body><div id="wb" class="solo"><div id="wb-bar"></div><p id="wb-help" hidden>拖曳標題列移動面板，拖曳右下角調整大小；鍵盤：在標題列按 Alt＋方向鍵移動，Alt＋Shift＋方向鍵調整大小。</p><div id="wb-area"><main id="panel-canvas">
 <header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
-<p class="help">同一張圖片，同一套座標。標籤<strong>金色＝GPT</strong>、<strong>藍色＝你</strong>，線條顏色可自選；預設顯示原圖，可直接標記、放大，或切換到 GPT 提供的處理後檢視。</p>
+<p class="help">同一張圖片，同一套座標。標籤<strong>金色＝AI</strong>、<strong>藍色＝你</strong>，線條顏色可自選；預設顯示原圖，可直接標記、放大，或切換到 AI 提供的處理後檢視。</p>
 <nav class="view-tabs" aria-label="檢視模式">
 <button data-view="annotated" aria-pressed="true">標註與編輯</button>
 <button data-view="original" aria-pressed="false">原始圖片</button>
 <button data-view="zoom" aria-pressed="false">局部放大</button>
-<button data-view="check" aria-pressed="false" hidden title="GPT 畫完後自己檢查用的圖">GPT 驗收圖</button>
+<button data-view="check" aria-pressed="false" hidden title="AI 畫完後自己檢查用的圖">AI 驗收圖</button>
 <select id="focus-choice" hidden aria-label="放大哪個標註"></select>
 </nav>
 <div class="toolbar" id="edit-tools" role="group" aria-label="標註工具">
@@ -201,20 +204,21 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 <button data-mode="pan" aria-pressed="false" title="拖曳移動畫面；也可以按住空白鍵或用滑鼠中鍵拖曳">移動</button>
 <span class="hint">雙指捏合或 Ctrl＋滾輪縮放，放大後畫細線</span>
 </div>
+<div id="upload-empty"><p>把要討論的圖片放到這個畫布。可以選擇裝置上的檔案，手機也可以直接拍照。</p><button id="upload-big" class="primary">選擇圖片／拍照</button></div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
 <g id="scene"></g><g id="processed"></g><g id="scene-objects"></g><g id="stored-annotations"></g><g id="unified-layers"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="gesture-outline"></g><g id="selection-outline"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
-<figure id="check-view" hidden><img id="check-img" alt="GPT 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
+<figure id="check-view" hidden><img id="check-img" alt="AI 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
 <div id="selection" hidden role="group" aria-label="選取的標記"></div>
 <div id="layers" hidden role="group" aria-label="圖層：顯示、改名、排序、透明度、鎖定"></div>
 <div id="objects" hidden role="group" aria-label="模組建立的物件：可直接修改"></div>
 <ol id="links" aria-label="左右兩張圖的對應連結"></ol>
-<ol id="findings" aria-label="GPT 對各標記的說明"></ol>
+<ol id="findings" aria-label="AI 對各標記的說明"></ol>
 <ol id="gestures" aria-label="可能屬於同一個手勢的筆畫"></ol>
-<details id="context-details"><summary>補充給 GPT 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
+<details id="context-details"><summary>補充給 AI 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
 <label for="intent">這次標註的目的</label>
 <select id="intent">
 <option value="">自由標註（預設：意思看我的補充說明）</option>
@@ -229,11 +233,13 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 <textarea id="note" maxlength="500" placeholder="例如：我指的是這棵樹，不是後面的山。或：我覺得水是往這個方向流的。"></textarea>
 <label for="quote">你在回覆的那句話（選填，手動貼上）</label>
 <input id="quote" maxlength="300" placeholder="例如：你剛剛問我哪一個元件發熱？">
-<p class="hint">Estampes 不會自動讀取聊天紀錄。送出後 GPT 可呼叫 inspect_visual 取得原始圖片與局部裁切；模型是否真的看到圖片仍須確認。</p>
+<p class="hint">Estampes 不會自動讀取聊天紀錄。送出後 AI 可呼叫 inspect_visual 取得原始圖片與局部裁切；模型是否真的看到圖片仍須確認。</p>
 </section></details>
 <div class="actions"><span id="counter">我的標註：0</span>
-<button id="send" class="primary" disabled>把標註傳給 GPT</button></div>
+<button id="send" class="primary" disabled>把標註傳給 AI</button></div>
 <div class="actions" id="extra-actions">
+<button id="upload" title="從裝置選一張圖片或用相機拍照，直接放到這個畫布；不經過聊天附件">選擇圖片／拍照</button>
+<input type="file" id="upload-file" accept="image/*" hidden>
 <button id="fullscreen">全螢幕</button>
 <button id="export-image" hidden title="校正方向後的圖，所有座標都以它為準">下載圖片</button>
 <button id="export-marks" hidden title="每個圖層各自一組，可在繪圖軟體裡開關；之後上傳回對話可還原標記與圖層">下載標記 SVG</button>
@@ -245,7 +251,7 @@ const NS="http://www.w3.org/2000/svg";
 const svg=document.querySelector("#surface"),sceneEl=document.querySelector("#scene"),processedEl=document.querySelector("#processed");
 const tabNav=document.querySelector(".view-tabs");
 const freshEl=document.querySelector("#fresh-annotations"),findingsEl=document.querySelector("#findings");
-// Marks already sent to GPT: the next send labels them context, not focus.
+// Marks already sent to AI: the next send labels them context, not focus.
 const sentIds=new Set();
 const storedEl=document.querySelector("#stored-annotations"),previewEl=document.querySelector("#preview"),outlineEl=document.querySelector("#selection-outline");
 const hit=document.querySelector("#hit"), status=document.querySelector("#status"),send=document.querySelector("#send"),counter=document.querySelector("#counter");
@@ -334,7 +340,7 @@ function sideTitle(side){
 }
 const sideTag=side=>frames?sideTitle(side??firstSide())+" ":"";
 // Marks are kept in canvas-normalized coordinates while shown; the server
-// and GPT use coordinates normalized to the mark's own image (`side`).
+// and AI use coordinates normalized to the mark's own image (`side`).
 function mapMark(m,f){
  const out={...m},[x,y]=f(m.x,m.y);out.x=x;out.y=y;
  if(m.x2!==undefined){const [x2,y2]=f(m.x2,m.y2);out.x2=x2;out.y2=y2;}
@@ -388,9 +394,9 @@ function viewLinks(list){
  const vid=(item,raw)=>allMarks().find(m=>m.side===item&&rawOf(m)===raw)?.id??item+":"+raw;
  return clean.map(l=>({...l,rawId:l.id,id:l.fromItem+">"+l.toItem+":"+l.id,left:vid(l.fromItem,l.left),right:vid(l.toItem,l.right)}));
 }
-// Claims (a link, or GPT's note on a mark) carry evidence: where on which
-// image, what GPT says it saw there, and who observed it. Only the user or
-// a tool's evidence verifies a claim; GPT's confidence never does.
+// Claims (a link, or AI's note on a mark) carry evidence: where on which
+// image, what AI says it saw there, and who observed it. Only the user or
+// a tool's evidence verifies a claim; AI's confidence never does.
 const VERIFICATION=["unverified","user-confirmed","user-rejected","independently-verified"];
 const cleanEvidence=list=>(Array.isArray(list)?list:[]).filter(e=>e&&typeof e.says==="string").map(e=>({
   id:String(e.id??"").slice(0,8),observer:["model","tool","user"].includes(e.observer)?e.observer:"model",image:String(e.image??""),
@@ -405,14 +411,14 @@ function claimChip(c,cls){
  chip.textContent=state==="unverified"?(c.confidence?CONFIDENCE_TEXT[c.confidence]+" · ":"")+(tool?"":"僅模型自述 · ")+"待你確認":STATE_ZH[state];
  return chip;
 }
-// Evidence buttons zoom to where GPT says it saw the clue.
+// Evidence buttons zoom to where AI says it saw the clue.
 let selectedEvidence=null;
 function evidenceRow(owner,c){
  const list=cleanEvidence(c.evidence);if(!list.length)return null;
  const row=el("span",{className:"evidence"});
  list.forEach((e,i)=>{
    const side=sideOfImage(e.image);
-   const who=e.observer==="tool"?"工具":e.observer==="user"?"你":"GPT 自述";
+   const who=e.observer==="tool"?"工具":e.observer==="user"?"你":"AI 自述";
    const b=el("button",{type:"button",textContent:"證據"+(i+1)+(frames?"（"+sideTitle(side)+"）":"")+"・"+who+"："+e.says,title:e.region?"放大到這個位置":"沒有給位置"});
    b.dataset.evidence=owner+"|"+i;b.disabled=!e.region;b.classList.toggle("on",selectedEvidence?.key===owner+"|"+i);
    row.append(b);
@@ -447,10 +453,10 @@ function reviewControls(li,c){
  if(c.reviewReason)li.append(el("span",{className:"note",textContent:"你的理由："+c.reviewReason}));
  if(c.ambiguities?.length)li.append(el("span",{className:"unresolved",textContent:"尚未解決："+c.ambiguities.join("；")}));
 }
-// Layers: each send and each GPT drawing call is one layer of marks. The
-// viewer hides whole layers; hidden layers stay on the canvas and in GPT's
+// Layers: each send and each AI drawing call is one layer of marks. The
+// viewer hides whole layers; hidden layers stay on the canvas and in AI's
 // context. Unsent marks have no layer yet and are always shown. Name,
-// order (bottom to top), opacity and lock live on the server, so GPT sees
+// order (bottom to top), opacity and lock live on the server, so AI sees
 // them and they survive reloads; hiding is this viewer's own choice.
 const layersEl=document.querySelector("#layers");
 let layers=[],hiddenLayers=new Set(),renamingLayer=null;
@@ -511,14 +517,14 @@ function renderLayers(){
      el("button",{textContent:"✎",title:"改名","aria-label":"改名",disabled:!ready,dataset:{layer:l.id,act:"rename"}}),
      el("input",{type:"range",min:"0",max:"100",step:"5",value:String(op),title:"透明度","aria-label":"透明度",disabled:!ready,dataset:{layer:l.id,act:"opacity"}}),
      el("span",{className:"pct",textContent:op+"%"}),
-     el("button",{textContent:l.locked?"🔒 已鎖":"🔓",title:l.locked?"解鎖：允許你和 GPT 修改這層":"鎖定：你和 GPT 都不能移動、改樣式或刪除這層的標記","aria-pressed":String(!!l.locked),disabled:!ready,dataset:{layer:l.id,act:"lock"}}),
+     el("button",{textContent:l.locked?"🔒 已鎖":"🔓",title:l.locked?"解鎖：允許你和 AI 修改這層":"鎖定：你和 AI 都不能移動、改樣式或刪除這層的標記","aria-pressed":String(!!l.locked),disabled:!ready,dataset:{layer:l.id,act:"lock"}}),
      el("button",{textContent:"↑",title:"往上一層",disabled:!ready||pos<=0,dataset:{layer:l.id,act:"up"}}),
      el("button",{textContent:"↓",title:"往下一層",disabled:!ready||pos>=same.length-1,dataset:{layer:l.id,act:"down"}}));
    layerRows.set(l.id,row);
  });
 }
 // Layer settings and edits of earlier marks go to the server (app-only
-// tool); GPT reads them on its next call and in the next message.
+// tool); AI reads them on its next call and in the next message.
 let unsentEdits=[];
 // In a workspace an edit names its item where a paired view names its side.
 const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
@@ -590,7 +596,7 @@ layersEl.addEventListener("click",e=>{
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
  const {side,id:raw}=serverLayer(id);
  if(b.dataset.act==="rename"){renamingLayer=id;render();}
- if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 GPT 都不能再改這層的標記。");
+ if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 AI 都不能再改這層的標記。");
  if(b.dataset.act==="up")reorder(id,1);
  if(b.dataset.act==="down")reorder(id,-1);
 });
@@ -650,7 +656,7 @@ function thin(points){
 }
 const COLORS={gold:"#E4AE57",blue:"#579DF6",red:"#F2545B",green:"#3DDC84",yellow:"#FFD23F",magenta:"#E36BF0",cyan:"#3FD0E0",white:"#FFFFFF",black:"#111111"};
 const SIZES={fine:.3,thin:.6,medium:1,thick:1.8};
-// `color` is the author's colour (gold GPT / blue user); it stays on the
+// `color` is the author's colour (gold AI / blue user); it stays on the
 // label so provenance survives when a mark picks its own stroke colour.
 function renderMarks(layer,items,color,author,{keep=false}={}){
  if(!keep)layer.replaceChildren();
@@ -685,7 +691,7 @@ function renderMarks(layer,items,color,author,{keep=false}={}){
      if(!hl&&a.smooth!==true)for(const p of [a.points[0],a.points.at(-1)])node("circle",{cx:px(p.x),cy:py(p.y),r:4.5*lk,fill:ink,stroke:"#fff","stroke-width":1.5*lk},layer);
    }
    // Distinguish a guessed model coordinate from a known scene landmark;
-   // GPT may claim it inspected the pixels (✓), which is still its own claim.
+   // AI may claim it inspected the pixels (✓), which is still its own claim.
    const uncertain=author==="AI" && a.grounding!=="scene-anchor" && a.status!=="inspected";
    const label=String((a.status==="inspected"?"✓ ":uncertain?"? ":"")+(a.label||author)).slice(0,64);
    const lx=a.type==="polyline"?px(a.points[0].x):x,ly=a.type==="polyline"?py(a.points[0].y):y;
@@ -738,7 +744,7 @@ function renderLinks(){
    const endsText=document.createElement("span");endsText.className="ends";
    endsText.textContent=ws?sideTitle(l.fromItem)+" "+name(a)+" ↔ "+sideTitle(l.toItem)+" "+name(b):"左 "+name(a)+" ↔ 右 "+name(b);
    li.append(num,what,endsText,claimChip(l,"chip"));
-   if(l.previouslyRejected)li.append(el("span",{className:"chip",textContent:"曾被你否決，GPT 附了新證據"}));
+   if(l.previouslyRejected)li.append(el("span",{className:"chip",textContent:"曾被你否決，AI 附了新證據"}));
    reviewControls(li,l);
    if(l.note){const n=document.createElement("span");n.className="note";n.textContent=l.note;li.append(n);}
    const ev=evidenceRow("link:"+l.id,l);if(ev)li.append(ev);
@@ -766,7 +772,7 @@ linksEl.addEventListener("click",async e=>{
    const link=viewLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
    links=links.map(l=>l.id===id?link:l);
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="link:"+id),{key:"link:"+id,kind:"link",...link,verdict}];
-   status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
+   status.textContent="已記錄你的判斷；按「把標註傳給 AI」讓 AI 知道。";
  }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
  render();
 });
@@ -775,7 +781,7 @@ const markOptions=()=>[
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
 ].filter(item=>shown(item.mark));
-const STATUS_TEXT={inspected:"GPT 表示已看過像素",uncertain:"GPT 不確定"};
+const STATUS_TEXT={inspected:"AI 表示已看過像素",uncertain:"AI 不確定"};
 // Expansion is keyed by stable mark/layer identity, never array positions.
 let findingGroupsOpen=new Set(),focusedFinding=null,openFinding=null;
 const findingReasons=new Map();
@@ -831,7 +837,7 @@ function renderFindings(){
      const row=el("button",{type:"button",className:"finding-row",dataset:{mark:id},
        "aria-expanded":String(expanded),"aria-current":String(focusedFinding===id),
        title:"點一下定位並高亮，再點展開詳情"});
-     row.append(el("span",{className:"who",style:"color:"+(item.author==="AI"?"#C98A2E":"#3C7FE0"),textContent:m.label||m.id||(item.author==="AI"?"GPT":"YOU")}),
+     row.append(el("span",{className:"who",style:"color:"+(item.author==="AI"?"#C98A2E":"#3C7FE0"),textContent:m.label||m.id||(item.author==="AI"?"AI":"YOU")}),
        el("span",{className:"badge",textContent:CONFIDENCE_TEXT[m.confidence]||"未提供信心"}),
        el("span",{className:"badge"+(m.note&&stateOf(m)==="unverified"?" ask":""),textContent:m.note?(STATE_ZH[stateOf(m)]||"待確認"):"無待審說明"}));
      li.append(row);
@@ -841,7 +847,7 @@ function renderFindings(){
        if(STATUS_TEXT[m.status])detail.append(el("span",{className:"badge",textContent:STATUS_TEXT[m.status]}));
        if(m.note&&m.id){
          detail.append(claimChip(m,"badge"));
-         if(m.previouslyRejected)detail.append(el("span",{className:"badge",textContent:"曾被你否決，GPT 附了新證據"}));
+         if(m.previouslyRejected)detail.append(el("span",{className:"badge",textContent:"曾被你否決，AI 附了新證據"}));
          reviewControls(detail,m);
          const reason=detail.querySelector("input.reason");
          if(reason){reason.value=findingReasons.get(id)||"";reason.setAttribute("aria-label","否決理由（選填）");}
@@ -887,7 +893,7 @@ findingsEl.addEventListener("click",async e=>{
    findingReasons.delete(m.id);
    if(back.review)m.review=back.review;if(back.reviewReason)m.reviewReason=back.reviewReason;
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:rawOf(m),label:m.label,note:m.note,side:m.side,verdict,reason}];
-   status.textContent="已記錄你的判斷；按「把標註傳給 GPT」讓 GPT 知道。";
+   status.textContent="已記錄你的判斷；按「把標註傳給 AI」讓 AI 知道。";
  }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
  render();
 });
@@ -895,7 +901,7 @@ findingsEl.addEventListener("click",async e=>{
 // Several strokes may be one gesture (a shaft plus a head). The server
 // proposes candidates from geometry; the strokes themselves are never
 // merged. The user confirms or rejects a candidate, or groups and ungroups
-// marks by hand; GPT is told which groups are only system guesses.
+// marks by hand; AI is told which groups are only system guesses.
 let gestures=[],gestureDecisions=[],selectedGesture=null,groupingFrom=null;
 const gesturesEl=document.querySelector("#gestures"),gestureOutlineEl=document.querySelector("#gesture-outline");
 const gkey=ids=>[...new Set(ids)].sort().join("+");
@@ -945,7 +951,7 @@ async function decideGesture(memberIds,verdict){
  else if(verdict==="user-confirmed")gestures=[...gestures,{key,memberIds:ids,proposedMeaning:"unknown",provenance:"user-created",confirmation:"user-confirmed",heading:null,side:findMark(ids[0])?.side==="right"?"right":"left"}];
  const side=(known??gestures.find(g=>g.key===key))?.side;
  unsentReviews=[...unsentReviews.filter(r=>r.key!=="gesture:"+key),{key:"gesture:"+key,kind:"gesture",labels:ids.map(id=>findMark(id)?.label||id),verdict,made:!known||known.provenance==="user-created",side}];
- status.textContent="已記錄；按「把標註傳給 GPT」讓 GPT 知道。";
+ status.textContent="已記錄；按「把標註傳給 AI」讓 AI 知道。";
  if(imageId&&ready){
    try{
      const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict,...(ws?{workspaceId:ws.id,item:findMark(ids[0])?.side??firstSide()}:{})}});
@@ -1022,7 +1028,7 @@ function renderView(){
  zoomTools.hidden=!zoomable();zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?" · 原始解析度":"");
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?processed.label+" · 處理後檢視（不含標註）":
-   {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"GPT 驗收圖"}[viewMode];
+   {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"AI 驗收圖"}[viewMode];
  document.querySelector("#caption").textContent=(ws?"工作區「"+ws.name+"」· "+ws.items.length+" 張圖並排，不疊合":pair?"左 "+imageId+" ｜ 右 "+pair.imageId+" · 左右對照，不疊合":imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
 }
 // ---- Scene objects (function plots, axes, shapes from modules) -----------
@@ -1093,7 +1099,7 @@ const readSet=name=>{try{return new Set(JSON.parse(localStorage.getItem(name)||"
 const writeSet=(name,set)=>{try{localStorage.setItem(name,JSON.stringify([...set].slice(-200)))}catch{}};
 // Kept in memory first (storage can be blocked in the sandbox), then saved when the browser allows it.
 const cardPrefs={hid:readSet(HIDDEN_KEY),show:readSet(SHOWN_KEY)};
-// A card the module (or GPT, through the capability's showCard) marked hidden stays out of the way until
+// A card the module (or AI, through the capability's showCard) marked hidden stays out of the way until
 // the user brings it back; the user can also hide any card. The user's choice always wins.
 const cardKeys=o=>imageId+":"+o.id;
 function cardHidden(o){
@@ -1143,7 +1149,7 @@ function renderObjectsPanel(){
  const editable=objects.filter(o=>o.editable);
  objectsPanel.hidden=!imageId||!!pair||!!ws;objectsPanel.replaceChildren();
  if(objectsPanel.hidden)return;
- objectsPanel.append(el("div",{className:"kind",textContent:"模組物件（可直接修改，GPT 下一輪會看到）"}));
+ objectsPanel.append(el("div",{className:"kind",textContent:"模組物件（可直接修改，AI 下一輪會看到）"}));
  const sourceInput=el("input",{placeholder:"來源 imageId（留空只啟用底圖層）","aria-label":"加入圖片圖層來源"});
  const add=el("button",{textContent:"加入圖片／畫布圖層",disabled:!ready});
  add.addEventListener("click",async()=>{
@@ -1204,7 +1210,7 @@ async function editObject(id,args){
    const r=result?.structuredContent;
    if(result?.isError||r?.kind!=="estampes.scene_objects")throw Error(r?.message||result?.content?.[0]?.text||"失敗");
    setObjects(r.objects);if(typeof r.baseAsObject==="boolean")baseAsObject=r.baseAsObject;canRestoreObjects=!!r.canRestoreObjects;if(Array.isArray(r.layers))setLayers(r.layers);
-   status.textContent=(args.restore?"已復原刪除的物件":(args.remove?"已刪除 ":"已更新 ")+id)+(r.notes?.length?"（"+r.notes.map(n=>n.note).join("；")+"）":"")+"。GPT 下一次讀取畫布時會看到。";
+   status.textContent=(args.restore?"已復原刪除的物件":(args.remove?"已刪除 ":"已更新 ")+id)+(r.notes?.length?"（"+r.notes.map(n=>n.note).join("；")+"）":"")+"。AI 下一次讀取畫布時會看到。";
  }catch(err){status.textContent="沒有套用："+String(err.message||err);}
  finally{editingObject=null;render();}
 }
@@ -1302,9 +1308,51 @@ function applyInput(args){
 const allPhotos=()=>ws?ws.items.every(it=>it.photo):!!photo&&(!pair||!!pair.photo);
 const inRegion=r=>r&&[r.x,r.y,r.x2,r.y2].every(v=>typeof v==="number"&&v>=0&&v<=1)&&r.x2>r.x&&r.y2>r.y;
 const dataUrl=img=>img&&/^image\/(png|jpeg)$/.test(img.mimeType)&&typeof img.data==="string"?"data:"+img.mimeType+";base64,"+img.data:null;
+// Hosts cap tool-result size (claude.ai near 150,000 characters), so a big
+// photo first arrives as a small preview and the full display image follows
+// in slices from load_visual_pixels (app-only). Views can be deferred too.
+const readyWaiters=[];
+const whenReady=()=>ready?Promise.resolve():new Promise(resolve=>readyWaiters.push(resolve));
+async function fetchPixels(id,{setId=null,view=null}={}){
+ await whenReady();
+ let offset=0,mime="image/jpeg";const parts=[];
+ for(let i=0;i<120;i++){
+   const result=await request("tools/call",{name:"load_visual_pixels",arguments:{imageId:id,...(setId?{setId}:{}),...(view!=null?{view}:{}),offset}});
+   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   const r=result?.structuredContent;
+   if(r?.kind!=="estampes.visual_pixels"||r.imageId!==id||r.offset!==offset||typeof r.data!=="string")throw Error("Unexpected response");
+   mime=r.mimeType;parts.push(r.data);offset+=r.data.length;
+   if(r.done||!r.data.length)break;
+ }
+ return dataUrl({mimeType:mime,data:parts.join("")});
+}
+const upgrading=new Set();
+async function upgradePhoto(key,id,setId,apply){
+ if(!id||upgrading.has(key))return;
+ upgrading.add(key);
+ try{const href=await fetchPixels(id,{setId});if(href){apply(href);render();}}
+ catch(err){status.textContent="清晰版照片載入失敗，先顯示預覽："+String(err.message||err);}
+ finally{upgrading.delete(key)}
+}
+const upgradeMain=img=>{if(img?.preview){const id=imageId;upgradePhoto("main:"+id,id,null,h=>{if(imageId===id)photo=h})}};
+const upgradePair=img=>{if(img?.preview&&pair){const p=pair,id=p.imageId;upgradePhoto("pair:"+id,id,null,h=>{if(pair===p)p.photo=h})}};
+const upgradeItem=(it,img)=>{if(img?.preview){const w=ws,setId=it.set?.includes("#")?it.set.split("#")[1]:null;upgradePhoto("ws:"+it.imageId+(setId||""),it.imageId,setId,h=>{if(ws===w)it.photo=h})}};
+// Deferred views: listed without pixels, fetched one by one.
+async function completeViews(list){
+ const id=imageId;
+ for(const v of list.filter(v=>v?.deferred&&Number.isInteger(v.index))){
+   try{const href=await fetchPixels(id,{view:v.index});if(imageId!==id)return;
+     const label=String(v.label??"").slice(0,24);
+     if(href&&label&&inRegion(v.region)&&!views.some(x=>x.label===label)&&views.length<3){views=[...views,{label,href,region:v.region}];renderViewTabs();render();}}
+   catch{}
+ }
+}
 function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
  gotResult=true;
+ // An empty canvas waiting for the user's own picture.
+ if(r.awaitingUpload&&!r.imageId){document.body.classList.add("awaiting-upload");status.textContent="按「選擇圖片／拍照」放一張圖片到畫布。";return;}
+ document.body.classList.remove("awaiting-upload");
  // Pixels and full mark geometry travel in widget-only _meta; the model
  // only gets a compact list. ChatGPT also exposes _meta on window.openai.
  const meta=result?._meta??window.openai?.toolResponseMetadata??{};
@@ -1315,20 +1363,21 @@ function applyResult(result){
  if(Array.isArray(meta["estampes/objects"]))setObjects(meta["estampes/objects"]);
  if(typeof meta["estampes/baseAsObject"]==="boolean")baseAsObject=meta["estampes/baseAsObject"];
  if(typeof meta["estampes/canRestoreObjects"]==="boolean")canRestoreObjects=meta["estampes/canRestoreObjects"];
- if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;}
+ if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;upgradePair(meta["estampes/pairImage"]);}
  if(ws){
-   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=dataUrl(px)??it.photo;it.objects=cleanObjects(px.objects);it.baseAsObject=!!px.baseAsObject;}}
+   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=dataUrl(px)??it.photo;it.objects=cleanObjects(px.objects);it.baseAsObject=!!px.baseAsObject;upgradeItem(it,px);}}
    links=viewLinks(meta["estampes/links"]??r.links);
    if(!allPhotos()||!full)syncCanvas(!full);
    render();return;
  }
  if(imageId){
-   photo=dataUrl(meta["estampes/image"])??photo;
+   photo=dataUrl(meta["estampes/image"])??photo;upgradeMain(meta["estampes/image"]);
    const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
    const next=(incoming??[]).map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
    const sig=list=>JSON.stringify(list.map(v=>[v.label,v.region,v.href.length]));
    if(incoming&&sig(next)!==sig(views)){views=next;renderViewTabs();}
+   if(incoming)completeViews(incoming);
    setCheck(r.check??null);
    if(!photo||(pair&&!pair.photo)||(!full&&!r.annotations))syncCanvas(!!photo&&(!pair||!!pair.photo));
  }
@@ -1353,9 +1402,9 @@ async function syncCanvas(force=false){
    const r=result?.structuredContent;
    if(r?.kind!=="estampes.visual_canvas"||r.imageId!==id)throw Error("Unexpected response");
    if(id!==imageId||pid!==pair?.imageId)return;
-   photo=dataUrl(r.image)??photo;exportLinks=r.exports??exportLinks;
+   photo=dataUrl(r.image)??photo;exportLinks=r.exports??exportLinks;upgradeMain(r.image);
    if(pid&&r.pair?.imageId===pid){
-     pair.photo=dataUrl(r.pair.image)??pair.photo;pair.width=Number(r.pair.width);pair.height=Number(r.pair.height);
+     pair.photo=dataUrl(r.pair.image)??pair.photo;upgradePair(r.pair.image);pair.width=Number(r.pair.width);pair.height=Number(r.pair.height);
      layoutPair(Number(r.width),Number(r.height),pair.width,pair.height);links=cleanLinks(r.links);
    }else if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
    if(Array.isArray(r.layers))setLayers(r.layers);
@@ -1368,6 +1417,7 @@ async function syncCanvas(force=false){
    views=(Array.isArray(r.views)?r.views:[]).map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
    renderViewTabs();setCheck(r.check??null);
+   if(Array.isArray(r.views))completeViews(r.views);
    status.textContent=photo?"已重新載入照片與標記。":"照片資料無法載入。";
  }catch(err){
    status.textContent="照片載入失敗："+String(err.message||err)+"。若伺服器沒有開啟儲存，照片只保留約一小時，過期請重新上傳。";
@@ -1396,14 +1446,14 @@ async function syncWorkspace(force){
      const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:it.imageId,...(it.set?.includes("#")?{setId:it.set.split("#")[1]}:{}),part:"image"}});
      if(ws?.id!==id)return;
      const r=result?.structuredContent;
-     if(!result?.isError&&r?.imageId===it.imageId){it.photo=dataUrl(r.image);it.objects=cleanObjects(r.objects);it.baseAsObject=!!r.baseAsObject;}
+     if(!result?.isError&&r?.imageId===it.imageId){it.photo=dataUrl(r.image);upgradeItem(it,r.image);it.objects=cleanObjects(r.objects);it.baseAsObject=!!r.baseAsObject;}
      render();
    }
    status.textContent=allPhotos()?"已載入工作區的圖片與標記。":"有些圖片無法載入。";
  }catch(err){status.textContent="工作區載入失敗："+String(err.message||err);}
  finally{syncing=false;render()}
 }
-// The verification image GPT checked its marks against, fetched on demand.
+// The verification image AI checked its marks against, fetched on demand.
 function setCheck(next){
  if(JSON.stringify(next)===JSON.stringify(check))return;
  check=next;checkImage=null;checkTab.hidden=!check;
@@ -1423,11 +1473,11 @@ async function loadCheck(){
  finally{loadingCheck=false}
 }
 function renderCheck(){
- if(!check){checkCaption.textContent="這次 GPT 沒有新畫的標記，所以沒有驗收圖。";return}
+ if(!check){checkCaption.textContent="這次 AI 沒有新畫的標記，所以沒有驗收圖。";return}
  if(!checkImage){checkImg.removeAttribute("src");checkCaption.textContent="正在載入驗收圖…";loadCheck();return}
  checkImg.src=checkImage;
  const [a,b]=check.layout==="side-by-side"?["左","右"]:["上","下"];
- checkCaption.textContent="GPT 畫完後用這張圖檢查自己的標記："+a+"邊是原圖，"+b+"邊是同一區域加上編號標記。編號："+
+ checkCaption.textContent="AI 畫完後用這張圖檢查自己的標記："+a+"邊是原圖，"+b+"邊是同一區域加上編號標記。編號："+
    check.numbers.map(n=>n.n+"＝"+(n.label||n.id)).join("、")+"。";
 }
 function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;
@@ -1435,7 +1485,7 @@ function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clien
  const p=point.matrixTransform(matrix.inverse());
  return {x:round(clamp(p.x/VW,0,1)),y:round(clamp(p.y/VH,0,1))};
 }
-// GPT re-presents earlier user marks (e.g. "YOU 1") in a new canvas, so new
+// AI re-presents earlier user marks (e.g. "YOU 1") in a new canvas, so new
 // marks continue the numbering and get ids that cannot collide with them.
 const ID_PREFIX="user-"+Math.random().toString(36).slice(2,6)+"-";
 let penStyle={color:"blue",size:"medium",pen:"pen"};
@@ -1557,7 +1607,7 @@ async function loadDetail(){
 // 選取 mode: tap a mark to select it (topmost first, small before large).
 // Your own marks, sent or not and from any earlier turn, can be dragged,
 // nudged with the arrow keys, restyled with the pen buttons, relabelled or
-// deleted; GPT's marks can be deleted. Locked layers refuse all of that.
+// deleted; AI's marks can be deleted. Locked layers refuse all of that.
 // Unsent marks change locally (with undo); sent ones go to the server.
 const selectionEl=document.querySelector("#selection");
 let selected=null,dragMove=null,nudge=null,findingPointer=null;
@@ -1623,7 +1673,7 @@ async function updateMark(before,after,done){
    replaceLocal(before);commitMarks(userMarks.map(m=>m.id===after.id?after:m));status.textContent=done;render();return;
  }
  replaceLocal(after);render();
- try{await editOnServer({marks:[editFields(after)]});status.textContent=done+" GPT 下次回覆時會知道。";}
+ try{await editOnServer({marks:[editFields(after)]});status.textContent=done+" AI 下次回覆時會知道。";}
  catch(err){replaceLocal(before);status.textContent="修改失敗："+String(err.message||err);}
  render();
 }
@@ -1633,7 +1683,7 @@ async function deleteMark(m){
  if(isFresh(m)){commitMarks(userMarks.filter(u=>u.id!==m.id));status.textContent="已刪除（可按上一步復原）。";render();return;}
  try{await editOnServer({remove:[{id:rawOf(m),...(frames?{side:sideKey(m.side)}:{})}]});
    userMarks=userMarks.filter(u=>u.id!==m.id);
-   status.textContent="已刪除"+(isUser(m)?"你的":" GPT 的")+"標記「"+(m.label||m.id)+"」；GPT 下次回覆時會知道。";}
+   status.textContent="已刪除"+(isUser(m)?"你的":" AI 的")+"標記「"+(m.label||m.id)+"」；AI 下次回覆時會知道。";}
  catch(err){status.textContent="刪除失敗："+String(err.message||err);}
  render();
 }
@@ -1663,15 +1713,15 @@ function renderSelection(){
  if(selectionEl.contains(document.activeElement)&&selectionEl.dataset.mark===m.id)return;
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
  const mine=isUser(m),layer=layerOf(m.layer);
- selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"GPT"))}),
-   el("span",{className:"meta",textContent:(mine?"你的標記":"GPT 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
+ selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"AI"))}),
+   el("span",{className:"meta",textContent:(mine?"你的標記":"AI 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
  if(canEdit(m)){
    const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤"});
    input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const label=input.value.trim();input.blur();
      if(label!==(m.label??""))updateMark(m,{...m,label:label||m.label},"已改標籤。");}});
    selectionEl.append(input,el("span",{className:"meta",textContent:"拖曳移動 · 方向鍵微調 · 畫筆按鈕改樣式"}));
  }
- if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 GPT 的標記",dataset:{act:"delete"}}));
+ if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 AI 的標記",dataset:{act:"delete"}}));
  if(mine){
    const inGroup=liveGestures().find(g=>g.memberIds.includes(m.id)&&g.confirmation==="user-confirmed");
    selectionEl.append(el("button",{textContent:groupingFrom===m.id?"取消組合":"和另一筆組成手勢",dataset:{act:"group"},title:"這幾筆是同一個手勢（例如箭桿＋箭頭）；筆畫本身不會被合併"}));
@@ -1754,7 +1804,7 @@ hit.addEventListener("pointerup",e=>{if(!start||mode==="select")return;const p=f
  Object.assign(mark,strokeFacts());
  // Paired view: a mark belongs to the image it was started on and stays inside it.
  if(frames)mark=toView(toSide({...mark,side:sideAt(start)}));
- if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 GPT。";}
+ if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 AI。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
@@ -1771,7 +1821,66 @@ function openLink(href){
  request("ui/open-link",{url:href}).catch(()=>{window.open(href,"_blank","noopener")});
 }
 exportImageBtn.addEventListener("click",()=>openLink(exportLinks?.image));
-exportMarksBtn.addEventListener("click",()=>{openLink(exportLinks?.marks);status.textContent="SVG 是你和 GPT 目前所有標記（分兩個圖層）；之後把它和圖片一起上傳回對話，就能還原標記。"});
+exportMarksBtn.addEventListener("click",()=>{openLink(exportLinks?.marks);status.textContent="SVG 是你和 AI 目前所有標記（分兩個圖層）；之後把它和圖片一起上傳回對話，就能還原標記。"});
+// Pick or photograph an image right here. Some hosts cannot hand chat
+// attachments to tools, so the widget sends the file itself, in slices,
+// through the app-only upload_visual_image tool, then shows its canvas and
+// tells the model the new imageId.
+const uploadBtn=document.querySelector("#upload"),uploadFile=document.querySelector("#upload-file");
+uploadBtn.addEventListener("click",()=>uploadFile.click());
+document.querySelector("#upload-big").addEventListener("click",()=>uploadFile.click());
+uploadFile.addEventListener("change",()=>{const f=uploadFile.files?.[0];uploadFile.value="";if(f)uploadImage(f)});
+const UPLOAD_MAX_SIDE=4096;
+// Phone photos are large: above 6 MB or 4096 px the browser re-encodes a
+// JPEG at 4096 px (orientation applied), the working size Estampes uses.
+async function uploadBytes(file){
+ const raw=new Uint8Array(await file.arrayBuffer());
+ let bmp=null;try{bmp=await createImageBitmap(file,{imageOrientation:"from-image"})}catch{}
+ if(!bmp||(raw.length<=6*1024*1024&&Math.max(bmp.width,bmp.height)<=UPLOAD_MAX_SIDE))return{bytes:raw,name:file.name};
+ const k=Math.min(1,UPLOAD_MAX_SIDE/Math.max(bmp.width,bmp.height));
+ const c=document.createElement("canvas");c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+ c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+ const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.9));
+ return{bytes:new Uint8Array(await blob.arrayBuffer()),name:String(file.name||"photo").replace(/\.[^.]*$/,"")+".jpg"};
+}
+function toBase64(bytes){let s="";for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s)}
+let uploading=false;
+async function uploadImage(file){
+ if(uploading)return;
+ if(!ready){status.textContent="還在連接對話，請稍候再選圖片。";return}
+ if(!/^image\//.test(file.type||"image/")){status.textContent="請選擇圖片檔。";return}
+ uploading=true;uploadBtn.disabled=true;
+ try{
+   status.textContent="正在準備圖片…";
+   const {bytes,name}=await uploadBytes(file);
+   const data=toBase64(bytes);
+   let size=240000,offset=0,uploadId=null,result=null;
+   while(offset<data.length){
+     const part=data.slice(offset,offset+size);
+     try{
+       result=await request("tools/call",{name:"upload_visual_image",arguments:{...(uploadId?{uploadId}:{}),fileName:String(name||"image").slice(0,120),total:data.length,offset,data:part}});
+     }catch(err){if(size>30000){size=Math.floor(size/2);continue}throw err}
+     if(result?.isError)throw Error(result.content?.[0]?.text||"上傳失敗");
+     const r=result?.structuredContent;
+     uploadId=r?.uploadId??uploadId;offset+=part.length;
+     status.textContent="上傳中… "+Math.min(100,Math.round(offset*100/data.length))+"%";
+   }
+   const r=result?.structuredContent;
+   if(r?.kind!=="estampes.visual_surface"||!r.imageId)throw Error("伺服器沒有回傳畫布");
+   gotResult=true;applyResult(result);
+   const text="我在 Estampes 畫布上傳了一張圖片："+r.imageId+"（"+r.width+"×"+r.height+" px，檔名 "+JSON.stringify(name)+"）。"+
+     "它已經在畫布上；需要看內容時請用 inspect_image 或 present_visual（imageId="+r.imageId+"）。";
+   await tellModel(text);
+   status.textContent="已上傳 "+r.imageId+"，AI 會在你下一則訊息看到它。";
+ }catch(err){status.textContent="上傳失敗："+String(err.message||err)}
+ finally{uploading=false;uploadBtn.disabled=false}
+}
+// Model context first (silent); a chat message where the host lacks it.
+async function tellModel(text){
+ try{await request("ui/update-model-context",{content:[{type:"text",text}]});return}
+ catch{}
+ try{await request("ui/message",{role:"user",content:[{type:"text",text}]})}catch{}
+}
 // Keep the canvas on screen while chatting (ChatGPT: picture-in-picture;
 // on phones the host shows it full screen instead).
 async function displayMode(mode){
@@ -1810,13 +1919,13 @@ window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 // More room for the canvas when ChatGPT shows the widget full screen.
 const syncDisplayMode=()=>document.body.classList.toggle("fullscreen",window.openai?.displayMode==="fullscreen");
 window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
- notify("ui/notifications/initialized",{});ready=true;render();status.textContent="已連線，可以任意點選或拖曳標註。";
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen","pip"]},protocolVersion:"2026-01-26"});
+ notify("ui/notifications/initialized",{});ready=true;readyWaiters.splice(0).forEach(f=>f());render();status.textContent="已連線，可以任意點選或拖曳標註。";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;}
  catch(err){status.textContent="和對話程式連線失敗："+String(err.message||err)}})();
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
-// The user's verdicts on GPT's links, as text GPT reads in the chat.
+// The user's verdicts on AI's links, as text AI reads in the chat.
 const VERDICT_ZH={link:{confirmed:"確認是同一個",rejected:"否決，不是同一個",unreviewed:"撤回我先前的判斷"},
  note:{confirmed:"確認你的說明正確",rejected:"否決你的說明",unreviewed:"撤回我先前的判斷"}};
 const GESTURE_ZH={"user-confirmed":"是同一個手勢","user-rejected":"不是同一個手勢，請分開看","unreviewed":"撤回我先前的判斷"};
@@ -1834,7 +1943,7 @@ function reviewMessage(list){
    "\n請以我的判斷為準：被否決的說法不要再依賴，也不要在沒有新證據時重提；未確認的只是候選。";
 }
 // The user's hand edits (layers, moved or deleted marks) as chat text. The
-// server also tells GPT on its next call; this makes it visible right away.
+// server also tells AI on its next call; this makes it visible right away.
 const EDIT_ZH={
  "rename-layer":e=>"把圖層 "+e.layer+"「"+e.from+"」改名為「"+e.to+"」",
  "lock-layer":e=>"鎖定了圖層 "+e.layer+"（請不要修改或刪除裡面的標記）","unlock-layer":e=>"解鎖了圖層 "+e.layer,
@@ -1860,7 +1969,7 @@ send.addEventListener("click",async()=>{
      const response=await request("ui/message",{role:"user",content:[{type:"text",text:extra()}]});
      if(response?.isError)throw Error("Host rejected message");
      clearExtra();
-     status.textContent="已把你的判斷與修改傳給 GPT。";
+     status.textContent="已把你的判斷與修改傳給 AI。";
    }catch(err){status.textContent="傳送失敗："+String(err.message||err)}
    render();return;
  }
@@ -1920,7 +2029,7 @@ send.addEventListener("click",async()=>{
  if(reviewed.length||edited.length)chatMessage+="\n\n"+extra();
  try{
    status.textContent=(validated?"座標與意圖已驗證；":"驗證失敗，嘗試傳送原始資料；")+
-     "訊息送往 GPT 中…";
+     "訊息送往 AI 中…";
    const response=await request("ui/message",{
      role:"user",content:[{type:"text",text:chatMessage}]
    });
@@ -1930,7 +2039,7 @@ send.addEventListener("click",async()=>{
    batchStart=null;strokeCount=0;
    past=[];future=[];
    status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
-     (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 GPT 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
+     (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 AI 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
  }catch(err){
    status.textContent=(validated?"座標驗證成功；":"座標驗證失敗："+reason+"；")+
      "聊天傳送失敗："+String(err.message||err);

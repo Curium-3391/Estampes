@@ -1,12 +1,12 @@
 # MCP tools
 
-Estampes exposes its tools at `/mcp`. Users never name them; GPT chooses. This page lists what each one does, which is useful when connecting another MCP client or debugging.
+Estampes exposes its tools at `/mcp`. Users never name them; the AI chooses. This page lists what each one does, which is useful when connecting another MCP client or debugging.
 
-## Tools GPT calls
+## Tools the AI calls
 
 | Tool | Purpose |
 | --- | --- |
-| `present_visual` | Show the shared canvas. Takes the attached image (`image`), a public `imageUrl`, an earlier `imageId`, a second image for a side-by-side view (`pairImage`, `pairImageUrl`, `pairImageId`), or a whole workspace of three or more images (`workspaceId`; marks, findings and links then name their `item`). Adds, edits or removes marks (`annotations`, `remove`, `reset`), attaches notes and status to marks (`findings`), names the layer (`layer`), records links between paired marks (`links`), adds processed tabs (`views`, max 3) and restores a previous export (`marksFile`). Returns a verification image and download links. |
+| `present_visual` | Show the shared canvas. Takes the attached image (`image`), a public `imageUrl`, an earlier `imageId`, a second image for a side-by-side view (`pairImage`, `pairImageUrl`, `pairImageId`), or a whole workspace of three or more images (`workspaceId`; marks, findings and links then name their `item`). `upload: true` opens an empty canvas where the user picks or photographs an image themselves (for hosts such as Claude that do not pass attachments to tools). Adds, edits or removes marks (`annotations`, `remove`, `reset`), attaches notes and status to marks (`findings`), names the layer (`layer`), records links between paired marks (`links`), adds processed tabs (`views`, max 3) and restores a previous export (`marksFile`). Returns a verification image and download links. |
 | `render_canvas` | Read full or cropped canvas pixels: base image, public scene objects and saved marks. Use submission `canvasReads` requests to retain hidden layers and check the revision. See [Canvas reads](CANVAS-READS.md). |
 | `get_visual_state` | Read everything on a canvas as one `estampes.visual/2` JSON document (images, layers, marks, links, the confidence, evidence and verification of every claim, rejected claims, optional change history). Read-only. See [Visual protocol 2](PROTOCOL-V2.md). |
 | `create_workspace` | Create a workspace with any number of images (up to 24): new files or URLs, existing canvases with their marks (`canvases`), or every image of other workspaces or canvases (`from`). See [Workspaces](WORKSPACES.md). |
@@ -47,6 +47,8 @@ These are hidden from the model (`visibility: ["app"]`).
 | `validate_visual_annotations` | Validates the marks you send, adds your intent and note, and produces the chat message GPT receives. See [What your marks mean](#what-your-marks-mean). |
 | `load_visual_canvas` | Reloads a photo (or pair) into the widget, for example after the host dropped the pixels. |
 | `load_visual_region` | Returns a higher-resolution tile while you zoom. |
+| `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
+| `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
 | `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, move, restyle, delete). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
@@ -82,8 +84,9 @@ Kept for older conversations and regression tests; new conversations do not need
 
 | Path | Purpose |
 | --- | --- |
-| `/mcp` | MCP endpoint. Needs the access key when one is set. |
+| `/mcp` | MCP endpoint. Needs the access key (or an OAuth token) when one is set. |
 | `/api/v1/canvas/<hash>[?pair=<hash>][&history=N]` | The `estampes.visual/2` document over plain HTTP (key required when set). |
 | `/api/v1/workspaces/<hex>[?history=N]` | The `estampes.workspace/1` document (key required when set). |
 | `/export/<hash>/image.jpg`, `/export/<hash>/marks.svg` | Downloads; signed with `?sig=` when a key is set. |
+| `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/register`, `/oauth/authorize`, `/oauth/token` | OAuth 2.1 sign-in (PKCE, dynamic registration, client ID metadata documents) for hosts such as Claude; only when a key is set. See [Connecting Claude](DEPLOYMENT.md#connecting-claude). |
 | `/healthz`, `/version` | Public health check and build summary. |

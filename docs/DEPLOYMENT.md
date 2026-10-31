@@ -93,6 +93,24 @@ In ChatGPT **web**, open Plugins → **Add custom MCP server**, and use:
 
 After each deploy that changes tool definitions or widgets, refresh the connector in ChatGPT and start a **new conversation**, so cached templates are not reused.
 
+## Connecting Claude
+
+Claude reaches the server from Anthropic's cloud, so it needs the same public https address (a tunnel or reverse proxy; `localhost` does not work for claude.ai).
+
+**claude.ai, Claude Desktop and mobile (Free, Pro, Max):** open **Customize → Connectors → Add custom connector**, name it Estampes and paste `https://<host>/mcp` (without `?key=`). Leave the OAuth fields empty and press **Add**, then **Connect**. A sign-in page from your own server opens: type the access key (`docker compose exec estampes cat /data/access-key`) and press 允許. Claude receives a token; the key itself never leaves the page. Then enable Estampes from the **+** menu in a chat and allow the canvas the first time Claude asks. Connectors added on web or desktop appear on mobile too. Team and Enterprise owners add it under **Organization settings → Connectors → Add → Custom**.
+
+The old URL form `https://<host>/mcp?key=<key>` with no sign-in also connects, but Claude recommends against secrets in URLs; prefer the sign-in.
+
+**Claude Code:** `claude mcp add --transport http estampes https://<host>/mcp`, then `/mcp` to sign in the same way; or skip sign-in with `--header "Authorization: Bearer <key>"`.
+
+What differs from ChatGPT:
+
+- Claude does not pass chat attachments to tools. Ask Claude to open the canvas for an upload (it calls `present_visual` with `upload: true`), then press **選擇圖片／拍照** in the canvas to pick a file or take a photo; the canvas sends it to your server in slices and tells Claude the new `imageId`. Public https image URLs work as in ChatGPT.
+- Claude limits a tool result to about 150,000 characters. Estampes keeps every result under `ESTAMPES_MAX_RESULT_CHARS` (default 145,000): images the model sees are re-encoded or reduced to fit, and the canvas first shows a preview, then loads the full image in slices.
+- Download links (image, marks SVG) open after a confirmation dialog.
+
+**How sign-in works:** OAuth 2.1 with dynamic client registration or client ID metadata documents, PKCE (S256) and refresh tokens, at `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server` and `/oauth/*`. Tokens are signed with a key derived from the access key and last one hour (refresh tokens 90 days); changing the access key signs every client out. These endpoints exist only when the server has an access key.
+
 ## Environment variables
 
 All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Render from their dashboards.
@@ -103,7 +121,7 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_HOST_PORT` | `8787` | Docker only: host port that compose publishes. |
 | `HOST` | `0.0.0.0` | Listening address. |
 | `PUBLIC_BASE_URL` | from request | Public https origin used in download links. |
-| `ESTAMPES_ACCESS_KEY` | unset (Docker: generated) | When there is a key, `/mcp` and `/api/v1/*` require `?key=` or `Authorization: Bearer <key>`, and download links are signed. `/`, `/version`, `/healthz` stay public. |
+| `ESTAMPES_ACCESS_KEY` | unset (Docker: generated) | When there is a key, `/mcp` and `/api/v1/*` require `?key=`, `Authorization: Bearer <key>` or an OAuth token from the sign-in page (see Connecting Claude), and download links are signed. `/`, `/version`, `/healthz` stay public. |
 | `ESTAMPES_REQUIRE_KEY` | `0` (Docker: `1`) | With no `ESTAMPES_ACCESS_KEY`, generate one into the storage folder instead of running open. |
 | `ESTAMPES_ALLOW_OPEN` | `0` | `1` = run without any key even when one is required. |
 | `ESTAMPES_BIND` | `127.0.0.1` | Docker only: address compose publishes on. |
@@ -120,6 +138,7 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_CORS_ORIGINS` | `*` | Browser origins allowed by CORS (only browser tools such as MCP Inspector need it). |
 | `ESTAMPES_ADMIN_KEY` | generated in `<storage>/admin-key` | Administrator secret for approving module installs, updates and purges (`scripts/estampes-module.js approve`). Separate from the connector key; 32–256 letters, digits, `-` or `_`. See [Modules](MODULES.md). |
 | `ESTAMPES_MODULE_ALLOW_UNSIGNED` | `0` | `1` allows installing module packages without a signature (always shown as high risk). |
+| `ESTAMPES_MAX_RESULT_CHARS` | `145000` | Largest tool result in characters; model-facing images shrink to fit (Claude drops results above about 150,000). `0` turns it off. |
 | `ESTAMPES_LOG_FORMAT` | `text` | `json` for one JSON object per log line. |
 
 Invalid values fall back to the default and are reported in the log at startup.

@@ -87,13 +87,13 @@ test("each send and each GPT drawing call becomes one layer", async () => {
   const byId = Object.fromEntries(canvasMarks(entry).map(m => [m.id, m.layer]));
   assert.deepEqual(byId, { a: "L1", b: "L1", u1: first.id, u2: second.id, c: "L4", d: "L4" });
   assert.deepEqual(canvasLayers(entry).map(l => [l.id, l.author, l.name, l.count]), [
-    ["L1", "assistant", "GPT · 第1次", 2], ["L2", "user", "你 · 第1次", 1], ["L3", "user", "你 · 第2次", 1], ["L4", "assistant", "電源", 2],
+    ["L1", "assistant", "AI · 第1次", 2], ["L2", "user", "你 · 第1次", 1], ["L3", "user", "你 · 第2次", 1], ["L4", "assistant", "電源", 2],
   ]);
   // Moving a mark out empties its layer, which then drops from the list.
   applyCanvasChanges(entry, { annotations: [box("a", 0.1), box("b", 0.3)], layer: "電源", resolve });
   assert.deepEqual(canvasLayers(entry).map(l => l.id), ["L2", "L3", "L4"]);
   applyCanvasChanges(entry, { reset: true, annotations: [box("z", 0.1)], resolve });
-  assert.deepEqual(canvasLayers(entry).map(l => [l.id, l.name]), [["L1", "GPT · 第1次"]]);
+  assert.deepEqual(canvasLayers(entry).map(l => [l.id, l.name]), [["L1", "AI · 第1次"]]);
 });
 
 // Live trial 2026-10-29 (img:298756bcc232f6bd): after the user sent three

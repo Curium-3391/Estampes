@@ -64,7 +64,7 @@ test("the Docker defaults start a closed server and keep its key across restarts
   let s = await run();
   try {
     const key = readFileSync(join(dir, KEY_FILE), "utf8").trim();
-    assert.match(s.log(), /generated an access key\. Connect ChatGPT to https:\/\/<your host>\/mcp\?key=/);
+    assert.match(s.log(), /generated an access key\. Connector URL: https:\/\/<your host>\/mcp\?key=/);
     assert.equal((await fetch(base + "/mcp", { method: "POST" })).status, 401);
     assert.equal((await fetch(base + "/api/v1/canvas/0123456789abcdef")).status, 401);
     assert.equal((await fetch(base + "/api/v1/canvas/0123456789abcdef?key=" + key)).status, 404);
