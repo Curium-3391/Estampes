@@ -2,11 +2,11 @@
 
 <p><sub>OPEN-SOURCE VISUAL INSTRUMENT · MCP APPS</sub></p>
 
-# Estampes
+<h1>Estampes</h1>
 
-**A shared visual language for humans and AI.**
+<p><strong>A shared visual language for humans and AI.</strong></p>
 
-Point at the same image. Keep the marks. Work out what they mean—together.
+<p>Point at the same image. Keep the marks. Work out what they mean—together.</p>
 
 <p>
   <a href="docs/USAGE.md">Explore the canvas</a> ·
