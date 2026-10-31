@@ -1,7 +1,13 @@
 name: M0 checks
 on:
   push:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
 jobs:
   node-tests:
     runs-on: ubuntu-latest
