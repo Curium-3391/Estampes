@@ -3,9 +3,7 @@ name: Docker image
 # ghcr.io/<owner>/estampes on main and on v* tags.
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
 permissions:
   contents: read
   packages: write
