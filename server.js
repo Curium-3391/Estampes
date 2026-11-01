@@ -57,6 +57,7 @@ import { createSurfaceStore } from "./src/surface/store.js";
 import { createSurfaceService } from "./src/surface/service.js";
 import { inlineWorkbench } from "./src/surface/widget-source.js";
 import { collectBundleExtras, installBundleExtras } from "./src/surface/bundle-extras.js";
+import { autoRefresh } from "./src/surface/refresh.js";
 import { registerSurfaceTools } from "./src/surface/mcp-tools.js";
 import { configure as configureCas, casStatus, notebookStore } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
@@ -82,10 +83,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -2311,6 +2312,12 @@ function makeServer() {
   registerModuleTools(server, {
     host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
     ensureImage, saveCanvas, canvasLayers,
+    // The model changed a calculator notebook that has auto-refresh on: redraw its linked plots, like the panel does for the user.
+    afterRun: async ({ module, capability, params, run }) => {
+      if (module !== "org.estampes.cas") return null;
+      const r = await autoRefresh({ host: moduleHost, notebooks: notebookStore(), capability, notebookId: params.notebook ?? run.data?.notebookId });
+      return r ? "Auto-refresh: recomputed " + r.recomputed.length + " cell(s), redrew " + r.updated.length + " Graph plot(s)" + (r.failed.length ? ", " + r.failed.length + " could not be updated (" + r.failed.map((f) => f.reason).slice(0, 2).join("; ") + ")" : "") + (r.remaining ? ", " + r.remaining + " cell(s) still stale" : "") + "." : null;
+    },
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 

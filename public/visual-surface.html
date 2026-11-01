@@ -1225,7 +1225,11 @@ function render(){
      if(ws){const t=node("text",{x:f.x0+8*K(),y:f.y0+22*K(),"font-size":16*K(),"font-weight":700,fill:"#fff",stroke:"#17212A","stroke-width":3*K(),"paint-order":"stroke"},sceneEl);t.textContent=sideTitle(side);}
    }
  }else if(imageId){
-   sceneEl.replaceChildren();
+   // The photo (and its detail tile) is rebuilt only when it changes: re-creating a
+   // data-URL <image> on every render makes the browser decode it again.
+   const sceneKey=photo?photo.length+":"+photo.slice(-32)+"|"+(detail&&cam?detail.href.length+":"+detail.href.slice(-32)+JSON.stringify(detail.region):""):"";
+   if(!(photo&&sceneEl.dataset.key===sceneKey&&sceneEl.childElementCount)){
+   sceneEl.dataset.key=photo?sceneKey:"";sceneEl.replaceChildren();
    if(photo){node("image",{href:photo,x:0,y:0,width:VW,height:VH,preserveAspectRatio:"none"},sceneEl);
      if(detail&&cam){const r=detail.region;node("image",{href:detail.href,x:r.x*VW,y:r.y*VH,width:(r.x2-r.x)*VW,height:(r.y2-r.y)*VH,preserveAspectRatio:"none"},sceneEl);}}
    else{
@@ -1233,9 +1237,10 @@ function render(){
      const t=node("text",{x:VW/2,y:VH/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);
      t.textContent="正在載入照片…";
    }
- }else sceneEl.innerHTML=SCENES[selectedScene];
+   }
+ }else{sceneEl.dataset.key="";sceneEl.innerHTML=SCENES[selectedScene];}
  renderObjects();renderCanvasMarks();restackLayers();
- if(baseAsObject&&!frames&&(viewMode==="annotated"||viewMode==="zoom"))sceneEl.replaceChildren();
+ if(baseAsObject&&!frames&&(viewMode==="annotated"||viewMode==="zoom")){sceneEl.dataset.key="";sceneEl.replaceChildren();}
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
@@ -1468,10 +1473,21 @@ const zoomable=()=>viewMode==="annotated"||viewMode==="original";
 function applyViewBox(){if(zoomable())svg.setAttribute("viewBox",cam?[cam.x,cam.y,cam.w,cam.h].join(" "):"0 0 "+VW+" "+VH);}
 let raf=0;
 function scheduleRender(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render();});}
+// Zooming and panning only move the viewBox (cheap, no re-decoding of the
+// photo). The full render (marks, panels, layer lists) is what costs time, and
+// only the screen-size of marks depends on the zoom, so it is rerun at most
+// every 140 ms while the camera moves, and once more when it stops.
+let camRenderAt=0,camRenderTimer=0;
+function renderSoon(){
+ const wait=camRenderAt+140-performance.now();
+ if(wait<=0){clearTimeout(camRenderTimer);camRenderTimer=0;camRenderAt=performance.now();scheduleRender();return;}
+ if(!camRenderTimer)camRenderTimer=setTimeout(()=>{camRenderTimer=0;camRenderAt=performance.now();scheduleRender();},wait);
+}
+const cameraMoved=()=>{zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?" · 原始解析度":"");renderSoon();};
 function setCam(next){
  if(!next||next.w>=VW*0.999)cam=null;
  else{const w=clamp(next.w,VW/MAX_ZOOM,VW),h=w*VH/VW;cam={w,h,x:clamp(next.x,0,VW-w),y:clamp(next.y,0,VH-h)};}
- applyViewBox();scheduleRender();scheduleDetail();
+ applyViewBox();cameraMoved();scheduleDetail();
 }
 function canvasPoint(e){const m=svg.getScreenCTM();if(!m)return {x:VW/2,y:VH/2};const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(m.inverse());return {x:q.x,y:q.y};}
 function zoomAt(f,c){const v=cam??{x:0,y:0,w:VW,h:VH};const w=clamp(v.w/f,VW/MAX_ZOOM,VW),t=w/v.w;setCam({x:c.x-(c.x-v.x)*t,y:c.y-(c.y-v.y)*t,w});}

@@ -559,7 +559,7 @@
       "permissions": [
         "cas.compute"
       ],
-      "description": "Change notebook options. autoRefresh: when on, the user's calculator panel recomputes stale cells and redraws their linked Graph plots after a definition changes.",
+      "description": "Change notebook options. autoRefresh: when on, a change to a definition or assumption (from the calculator panel or from you) recomputes the stale cells and redraws their linked Graph plots on every canvas they are plotted on; turning it on also redraws plots that are already stale.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,

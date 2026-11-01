@@ -51,3 +51,23 @@ test("browser: the widget opened by manage_surface_panels shows the calculator w
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("browser: with the calculator alone, the launcher offers the Graph canvas and brings it back", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph", "org.estampes.cas"]);
+    const first = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
+    const imageId = first.structuredContent.imageId;
+    const twice = await s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" });
+    assert.equal(twice.structuredContent.surface.panels.filter((p) => p.kind === "calculator").length, 1, "asking again does not open another window");
+    const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" }) });
+    await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
+    const button = ui.frame.locator(".wb-open", { hasText: "函數圖／畫布" });
+    await button.waitFor({ timeout: 10000 });
+    await button.click();
+    await ui.frame.locator("#panel-canvas svg#surface").waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(await ui.frame.locator(".calc").isVisible(), true, "both are on screen");
+    assert.equal(await ui.frame.locator(".wb-open", { hasText: "函數圖／畫布" }).count(), 0, "the button goes away once the canvas is back");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
