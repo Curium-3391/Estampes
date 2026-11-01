@@ -75,7 +75,7 @@ Run `docker compose up -d`, wait for `healthy`, and check:
 2. `curl -s http://127.0.0.1:8787/healthz` shows `"storage":{"enabled":true,"writable":true}`.
 3. In ChatGPT (same connector URL, because `access-key` came back) ask GPT to show a canvas you know; marks, layers and notebooks should be there. Imported calculator results may need recomputing ([Workbench](WORKBENCH.md)).
 
-The `chown` matters: the container runs as user `node` (uid 1000) and the key files are mode 600, so files owned by root would make the server unable to read them. Once you are satisfied, remove the override and the old volume yourself (`docker volume rm …`); Estampes never does that for you.
+The `chown` matters: the container runs as user `node` (uid 1000) and the key files are mode 600, so files owned by root would make the server unable to read them. **Keep `compose.override.yaml`**: it is the only thing that points `/data` at the restored volume, and Compose reads it together with `compose.yaml` every time. Without it the next `docker compose up` would use the original (older) volume again, or create an empty one. If you prefer, instead change the `estampes-data` volume name in `compose.yaml` itself and delete the override. Remove the old volume (`docker volume rm …`) only after you have run on the restored one for a while and have a fresh backup; Estampes never deletes it for you.
 
 Without Docker: unpack into an empty folder and set `ESTAMPES_STORAGE_DIR` to it. **Two servers must never share one storage folder.**
 
@@ -112,8 +112,8 @@ With no `ESTAMPES_STORAGE_DIR`, nothing is written to disk. Canvases live in mem
 
 | Secret | Where | Rotate | After rotating |
 | --- | --- | --- | --- |
-| Access key (connector) | `/data/access-key`, or `ESTAMPES_ACCESS_KEY` | Delete the file and restart (`docker compose restart estampes`); the new URL is printed once in the log. If you set `ESTAMPES_ACCESS_KEY`, change it in `.env` and restart. | Replace the connector URL in ChatGPT. Old download links stop working (they were signed with the old key). |
-| Administrator key | `/data/admin-key`, or `ESTAMPES_ADMIN_KEY` | Delete the file and restart. | Module approvals made with the old key no longer count; approve pending plans again. |
+| Access key (connector) | `/data/access-key`, or `ESTAMPES_ACCESS_KEY` | Key file: delete it and restart (`docker compose restart estampes`); the new URL is printed once in the log. If you set `ESTAMPES_ACCESS_KEY` in `.env`: edit it, then **recreate** the container, `docker compose up -d --force-recreate estampes`. A plain `restart` does not re-read `.env`, so the old key would stay active, and an environment value always wins over the key file. Check: the old URL must now answer `401`. | Replace the connector URL in ChatGPT. Old download links stop working (they were signed with the old key). |
+| Administrator key | `/data/admin-key`, or `ESTAMPES_ADMIN_KEY` | Key file: delete it and restart. If you set `ESTAMPES_ADMIN_KEY` in `.env`: edit it and `docker compose up -d --force-recreate estampes`. | Module approvals made with the old key no longer count; approve pending plans again. |
 | Module secrets (for example the Astrometry.net API key) | `/data/modules/secrets.json` or environment | Revoke the key at its provider, then `scripts/estampes-module.js secret set <moduleId> <name>` with the new value. | Run a job that uses it to confirm. |
 | Tunnel address | Printed by the `tunnel` container | Restart the tunnel (`docker compose --profile tunnel restart tunnel`) for a new address; the key is still required. | Update the connector. |
 
