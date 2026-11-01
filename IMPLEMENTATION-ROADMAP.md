@@ -1,6 +1,6 @@
 # Unified Visual Architecture — Implementation Roadmap
 
-Status：**PR-1A有限實作授權；其餘PR仍Proposed**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。Phase0/0.1/0.2是歷史設計基線；最新維護者授權僅PR-1A，見PR-1A-AUTHORIZATION；不授權1C/1D/1B與後續階段。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
+Status：**PR-1A修訂／隔離PR-1C有限實作授權；1D/1B與其餘PR仍Proposed**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。Phase0/0.1/0.2是歷史設計基線；最新維護者授權僅PR-1A，見PR-1A-AUTHORIZATION；不授權1C/1D/1B與後續階段。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
 
 後續Agent先確認新HEAD差異與批准紀錄；已批准架構不重新發散探索；缺失的ownership/ordering/publicbehavior不能猜。每PR附before/after fixture、sourceSHA、實測命令、flag狀態、rollback步驟與publicformat差異。以下為likelyfiles，不代表Phase0已新增這些核心模組。
 
@@ -137,3 +137,9 @@ Phase退出追加：Phase1=UVA-41/42schema+46–50/56–60/62storage/authority�
 ## PR-1A — Actual implementation / stop boundary
 
 [有限授權](docs/rfc/unified-visual-architecture/PR-1A-AUTHORIZATION.md)允許10個隔離schema/helper modules與2個聚焦tests及fixture；實際exports／限制見[Schema Contract](docs/rfc/unified-visual-architecture/PR-1A-SCHEMA-CONTRACT.md)，實測狀態以[Implementation Report](docs/rfc/unified-visual-architecture/PR-1A-IMPLEMENTATION-REPORT.md)為準。PR-1A不啟用production Doc writer、module grant、GraphViewer或migration；既有source/config不變。完成本PR後停止，PR-1C即使依賴schema已具備也仍須維護者另行授權／審查。
+
+## PR-1C — Actual implementation / blocked native verification
+
+[新有限授權](docs/rfc/unified-visual-architecture/PR-1C-AUTHORIZATION.md)已允許獨立PR-1A review修訂及PR-1C隔離transaction backend；歷史1A stop紀錄不被改成全OD批准。真file I/O、flock／journal／sixroots／OCC／ledger／recovery與fault tests的實際範圍見[Implementation Report](docs/rfc/unified-visual-architecture/PR-1C-IMPLEMENTATION-REPORT.md)。
+
+PR-1C尚未完整退出：本環境無已批准ext4/XFS掛載，native durable正向test明確Skip；test-only ACK不算native durable evidence。後續最小工作是在批准的disposable native mount重跑backend／stage faults，保留FS/driver/kernel與exact commands；不用重開架構或先做1D。沒有maintenance／fullotherstore adapters／部署fence，不允啟productionwriter。1D與1B均未開始亦未授權；本輪commit後停止，未push／merge／release。

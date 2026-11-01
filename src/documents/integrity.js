@@ -57,7 +57,8 @@ function analyzeReferences(input, mode) {
       const active = e.applicability !== "historical" && e.applicability !== "stale";
       requireRef(e.source.ref, active, active ? "active-evidence" : "historical");
     }
-    for (const source of finding?.claimContext?.sourceRevisionVector ?? []) requireRef(source.ref, false, "historical-context");
+    const activeContext = ["user-confirmed", "user-rejected", "independently-verified"].includes(finding?.verification?.currentState);
+    for (const source of finding?.claimContext?.sourceRevisionVector ?? []) requireRef(source.ref, activeContext, activeContext ? "active-claim-context" : "historical-context");
   };
   const canonicalBindings = new Map();
   for (const d of documents) {

@@ -126,3 +126,18 @@ Status：以下均為 Proposed product acceptance，尚未執行；UVA-55文件�
 | Contracts (UVA-55) | proposed22tests/9examples與applicable production wire/Provenance/Matrix/CommitRoot negatives | fullnewtools/APIvalidators/dispatch runtime |
 
 其他UVA-41–67相關Schema只提供prerequisite，沒有把GC/Embed/Authority/Host acceptance標Completed。舊67個case定義與Priority保留。
+
+## PR-1A remediation / PR-1C — Actual partial acceptance
+
+觀察範圍與命令見[remediation](PR-1A-REMEDIATION-REPORT.md)／[PR-1C report](PR-1C-IMPLEMENTATION-REPORT.md)。原67個完整case與Priority不變；不以Schema或fake native ACK填滿product gate。
+
+| Applicable subset | Executed production tests | Unexecuted / full gate remains |
+| --- | --- | --- |
+| F-01 / F-02 | documents-review：partial/complete closure、consistent declaration、active ClaimContext、raw/mapped/editable與bytes/binary邊界；原53不改期待 | 真asset／Notebook／全部repository closure、migration、runtime authorization |
+| Process recovery (UVA-31, UVA-49) | persistence-faults：15個SIGKILL邊界／重啟、membership、Doc metadata hash／ledger effect=1、recovery SIGKILL | Notebook/CAS/Surface/Workspace multi-store、projection、真正durable native profile |
+| Retry / concurrency (UVA-32) | persistence-transactions：8 concurrent duplicate callers、samekey異payload、不同Doc順序compose、read-set/OCC、失ACKretryexact | realWidget／MCP routes與domain async jobs |
+| Fault / recovery (UVA-33) | fsync／rename／ENOSPC／corruptCURRENT/root/pages/generation/intent/outcome、secondwriter、readonly，零falseACK | fullbackup/downgrade、新寫入v2 export與真legacy volume fencing |
+| Barriers / profiles (UVA-59, UVA-66) | 真flock lease、SIGKILL釋放、supervisor disconnect、unsupportedFS拒、13file/dirfsync注入，test-only ACK標示 | native ext4/XFS positive case明確Skip；Docker backing FS／VM/hardware power-loss／oldbinary ROmount未驗 |
+| Root coherence (UVA-63) | 六root同代、COW分頁／hash／resolver／logical version、fixedsnapshot、splitroot拒、publish前disk closure check | GC／compaction touchedpage race、active FD pins、fullhistory delta/pack替換（PR-1D） |
+
+PR-1C目前只執行Document entity transactions，binaryassets與其他store adapter未實作。不將整個UVA-31/32/33/49/59/63/66標Passed；nativeSkip不算通過，overall exit blocked。

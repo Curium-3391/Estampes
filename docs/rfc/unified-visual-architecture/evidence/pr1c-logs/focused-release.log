@@ -1,0 +1,772 @@
+TAP version 13
+# Subtest: PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+ok 1 - PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+  ---
+  duration_ms: 20.672152
+  type: 'test'
+  ...
+# Subtest: asset aliases validate full SHA and cannot become Document identities
+ok 2 - asset aliases validate full SHA and cannot become Document identities
+  ---
+  duration_ms: 20.771404
+  type: 'test'
+  ...
+# Subtest: legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+ok 3 - legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+  ---
+  duration_ms: 54.778518
+  type: 'test'
+  ...
+# Subtest: import identity tables reject source/target collisions without conflating different domains
+ok 4 - import identity tables reject source/target collisions without conflating different domains
+  ---
+  duration_ms: 21.632839
+  type: 'test'
+  ...
+# Subtest: graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+ok 5 - graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+  ---
+  duration_ms: 169.568278
+  type: 'test'
+  ...
+# Subtest: scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+ok 6 - scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+  ---
+  duration_ms: 465.994446
+  type: 'test'
+  ...
+# Subtest: strict read records preserve opacity zero, precision, locking and reject unknown fields
+ok 7 - strict read records preserve opacity zero, precision, locking and reject unknown fields
+  ---
+  duration_ms: 77.435565
+  type: 'test'
+  ...
+# Subtest: duplicates and all layer membership inconsistencies are rejected
+ok 8 - duplicates and all layer membership inconsistencies are rejected
+  ---
+  duration_ms: 60.88774
+  type: 'test'
+  ...
+# Subtest: frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+ok 9 - frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+  ---
+  duration_ms: 23.388578
+  type: 'test'
+  ...
+# Subtest: finite geometry and normalized bounds reject invalid coordinates without clamping
+ok 10 - finite geometry and normalized bounds reject invalid coordinates without clamping
+  ---
+  duration_ms: 3.527564
+  type: 'test'
+  ...
+# Subtest: imported authors remain unknown with complete original source, never active module owners
+ok 11 - imported authors remain unknown with complete original source, never active module owners
+  ---
+  duration_ms: 7.049355
+  type: 'test'
+  ...
+# Subtest: unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+ok 12 - unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+  ---
+  duration_ms: 1.125592
+  type: 'test'
+  ...
+# Subtest: creator/source history and sticky user audit cannot be overwritten
+ok 13 - creator/source history and sticky user audit cannot be overwritten
+  ---
+  duration_ms: 2.857672
+  type: 'test'
+  ...
+# Subtest: trusted actor shape and grant intersection are not caller-granted permissions
+ok 14 - trusted actor shape and grant intersection are not caller-granted permissions
+  ---
+  duration_ms: 1.717334
+  type: 'test'
+  ...
+# Subtest: production wire schemas accept formal EX-04 but reject forged actor fields at every level
+ok 15 - production wire schemas accept formal EX-04 but reject forged actor fields at every level
+  ---
+  duration_ms: 100.128131
+  type: 'test'
+  ...
+# Subtest: existing-annotation input uses entity OCC and validates geometry against stored type
+ok 16 - existing-annotation input uses entity OCC and validates geometry against stored type
+  ---
+  duration_ms: 2.36837
+  type: 'test'
+  ...
+# Subtest: Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+ok 17 - Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+  ---
+  duration_ms: 6.426841
+  type: 'test'
+  ...
+# Subtest: embed object and canonical binding agree, child is authoritative and independently identified
+ok 18 - embed object and canonical binding agree, child is authoritative and independently identified
+  ---
+  duration_ms: 99.211875
+  type: 'test'
+  ...
+# Subtest: fresh cross-document targets must exist; unresolved materialized status never grants access
+ok 19 - fresh cross-document targets must exist; unresolved materialized status never grants access
+  ---
+  duration_ms: 64.725782
+  type: 'test'
+  ...
+# Subtest: embed cycles and depth are checked on supplied after-state snapshots
+ok 20 - embed cycles and depth are checked on supplied after-state snapshots
+  ---
+  duration_ms: 98.767541
+  type: 'test'
+  ...
+# Subtest: snapshot refusal uses closed redacted projections and cannot imply raster success
+ok 21 - snapshot refusal uses closed redacted projections and cannot imply raster success
+  ---
+  duration_ms: 3.781739
+  type: 'test'
+  ...
+# Subtest: six-root CommitRoot cannot use missing/extra/self-referential descriptors
+ok 22 - six-root CommitRoot cannot use missing/extra/self-referential descriptors
+  ---
+  duration_ms: 7.58469
+  type: 'test'
+  ...
+# Subtest: CURRENT checksum is canonical, excludes itself and matches exactly one root
+ok 23 - CURRENT checksum is canonical, excludes itself and matches exactly one root
+  ---
+  duration_ms: 6.03287
+  type: 'test'
+  ...
+# Subtest: recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+ok 24 - recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+  ---
+  duration_ms: 7.988282
+  type: 'test'
+  ...
+# Subtest: adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+ok 25 - adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+  ---
+  duration_ms: 1.377822
+  type: 'test'
+  ...
+# Subtest: JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+ok 26 - JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+  ---
+  duration_ms: 521.689659
+  type: 'test'
+  ...
+# Subtest: 95 pre-existing production/config files still match the verified baseline
+ok 27 - 95 pre-existing production/config files still match the verified baseline
+  ---
+  duration_ms: 36.022561
+  type: 'test'
+  ...
+# Subtest: removed annotation anchors retain invalid references only with explicit matching tombstones
+ok 28 - removed annotation anchors retain invalid references only with explicit matching tombstones
+  ---
+  duration_ms: 30.89934
+  type: 'test'
+  ...
+# Subtest: interaction/gesture references and canonical axes associations are checked
+ok 29 - interaction/gesture references and canonical axes associations are checked
+  ---
+  duration_ms: 14.52999
+  type: 'test'
+  ...
+# Subtest: binding UUID collisions across parent Documents cannot create two canonical records
+ok 30 - binding UUID collisions across parent Documents cannot create two canonical records
+  ---
+  duration_ms: 6.953956
+  type: 'test'
+  ...
+# Subtest: repeated embed edges cannot amplify bounded traversal exponentially
+ok 31 - repeated embed edges cannot amplify bounded traversal exponentially
+  ---
+  duration_ms: 277.288716
+  type: 'test'
+  ...
+# Subtest: external provenance profile cannot be self-promoted and import evidence never becomes current verification
+ok 32 - external provenance profile cannot be self-promoted and import evidence never becomes current verification
+  ---
+  duration_ms: 6.709036
+  type: 'test'
+  ...
+# Subtest: mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+ok 33 - mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+  ---
+  duration_ms: 6.29992
+  type: 'test'
+  ...
+# Subtest: arbitrary JSON metadata in parsed records is detached from its input snapshot
+ok 34 - arbitrary JSON metadata in parsed records is detached from its input snapshot
+  ---
+  duration_ms: 0.939364
+  type: 'test'
+  ...
+# Subtest: F-01 partial snapshots report a missing active external dependency without inventing a target
+ok 35 - F-01 partial snapshots report a missing active external dependency without inventing a target
+  ---
+  duration_ms: 144.547703
+  type: 'test'
+  ...
+# Subtest: F-01 a declared complete closure rejects missing active dependencies and accepts coherent provided children
+ok 36 - F-01 a declared complete closure rejects missing active dependencies and accepts coherent provided children
+  ---
+  duration_ms: 18.531968
+  type: 'test'
+  ...
+# Subtest: F-01 missing targets in supplied Documents remain errors even in partial mode
+ok 37 - F-01 missing targets in supplied Documents remain errors even in partial mode
+  ---
+  duration_ms: 6.013719
+  type: 'test'
+  ...
+# Subtest: F-01 closure declarations are exact revision/hash sets, not caller assertions of validity
+ok 38 - F-01 closure declarations are exact revision/hash sets, not caller assertions of validity
+  ---
+  duration_ms: 2.61181
+  type: 'test'
+  ...
+# Subtest: F-01 explicitly unresolved and historical references are preserved and reported in complete closure
+ok 39 - F-01 explicitly unresolved and historical references are preserved and reported in complete closure
+  ---
+  duration_ms: 31.641564
+  type: 'test'
+  ...
+# Subtest: F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits
+ok 40 - F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits
+  ---
+  duration_ms: 59.168463
+  type: 'test'
+  ...
+# Subtest: F-02 JSON record recovery never attests source-file bytes, assets or successful migration
+ok 41 - F-02 JSON record recovery never attests source-file bytes, assets or successful migration
+  ---
+  duration_ms: 33.138319
+  type: 'test'
+  ...
+# Subtest: F-02 mapped, editableComplete and rawRecoverable are independent statements
+ok 42 - F-02 mapped, editableComplete and rawRecoverable are independent statements
+  ---
+  duration_ms: 47.102653
+  type: 'test'
+  ...
+# Subtest: PR-1A / UVA-24: legacy shadow is pure, deterministic and round-trips geometry, layers and rich claims
+ok 43 - PR-1A / UVA-24: legacy shadow is pure, deterministic and round-trips geometry, layers and rich claims
+  ---
+  duration_ms: 125.503266
+  type: 'test'
+  ...
+# Subtest: legacy creators do not borrow layer.module or fabricate actor identities/timestamps
+ok 44 - legacy creators do not borrow layer.module or fabricate actor identities/timestamps
+  ---
+  duration_ms: 33.197672
+  type: 'test'
+  ...
+# Subtest: external import keeps full original claims but cannot activate local module owners or verification
+ok 45 - external import keeps full original claims but cannot activate local module owners or verification
+  ---
+  duration_ms: 7.864161
+  type: 'test'
+  ...
+# Subtest: legacy edited geometry conservatively stales current Evidence without erasing review
+ok 46 - legacy edited geometry conservatively stales current Evidence without erasing review
+  ---
+  duration_ms: 7.502018
+  type: 'test'
+  ...
+# Subtest: unknown fields at each level remain recoverable with an explicit archive report
+ok 47 - unknown fields at each level remain recoverable with an explicit archive report
+  ---
+  duration_ms: 10.334336
+  type: 'test'
+  ...
+# Subtest: historical intent, rejected claims, old undo and unsupported gestures are archived, not invented
+ok 48 - historical intent, rejected claims, old undo and unsupported gestures are archived, not invented
+  ---
+  duration_ms: 11.661894
+  type: 'test'
+  ...
+# Subtest: unlayered fallback is an explicit allocated identity; bad references are not auto-repaired
+ok 49 - unlayered fallback is an explicit allocated identity; bad references are not auto-repaired
+  ---
+  duration_ms: 13.693011
+  type: 'test'
+  ...
+# Subtest: duplicate domain IDs, missing axes and unsupported objects block without dropping source entities
+ok 50 - duplicate domain IDs, missing axes and unsupported objects block without dropping source entities
+  ---
+  duration_ms: 38.164917
+  type: 'test'
+  ...
+# Subtest: legacy raster objects require verified asset intake instead of fake conversion or flattening
+ok 51 - legacy raster objects require verified asset intake instead of fake conversion or flattening
+  ---
+  duration_ms: 1.855195
+  type: 'test'
+  ...
+# Subtest: explicit link mappings preserve direction and claim source; external targets stay unresolved
+ok 52 - explicit link mappings preserve direction and claim source; external targets stay unresolved
+  ---
+  duration_ms: 17.142409
+  type: 'test'
+  ...
+# Subtest: derivedFrom is remapped only through the explicit namespaced allocation table
+ok 53 - derivedFrom is remapped only through the explicit namespaced allocation table
+  ---
+  duration_ms: 15.051831
+  type: 'test'
+  ...
+# Subtest: missing observer/source never becomes fabricated tool evidence
+ok 54 - missing observer/source never becomes fabricated tool evidence
+  ---
+  duration_ms: 4.961961
+  type: 'test'
+  ...
+# Subtest: invalid coordinates, schemas and malformed records fail explicitly, never clamp or discard
+ok 55 - invalid coordinates, schemas and malformed records fail explicitly, never clamp or discard
+  ---
+  duration_ms: 14.381036
+  type: 'test'
+  ...
+# Subtest: fork identity and coordinate transforms use caller context, not image pixels as Document identity
+ok 56 - fork identity and coordinate transforms use caller context, not image pixels as Document identity
+  ---
+  duration_ms: 13.879861
+  type: 'test'
+  ...
+# Subtest: UVA-27 subset: actual legacy serialization and legacy AI editing restrictions remain unchanged
+ok 57 - UVA-27 subset: actual legacy serialization and legacy AI editing restrictions remain unchanged
+  ---
+  duration_ms: 29.891491
+  type: 'test'
+  ...
+# Subtest: mapping contexts cannot accidentally resolve a local source in another store namespace
+ok 58 - mapping contexts cannot accidentally resolve a local source in another store namespace
+  ---
+  duration_ms: 0.751023
+  type: 'test'
+  ...
+# Subtest: malformed optional containers and null link entries produce reports instead of TypeErrors
+ok 59 - malformed optional containers and null link entries produce reports instead of TypeErrors
+  ---
+  duration_ms: 11.644978
+  type: 'test'
+  ...
+# Subtest: unsupported provenance metadata and malformed historical times are explicitly archived
+ok 60 - unsupported provenance metadata and malformed historical times are explicitly archived
+  ---
+  duration_ms: 5.987706
+  type: 'test'
+  ...
+# Subtest: same short alias with different full hashes blocks instead of last-wins asset substitution
+ok 61 - same short alias with different full hashes blocks instead of last-wins asset substitution
+  ---
+  duration_ms: 1.425385
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-intent preserves one whole root and at most one retry effect
+ok 62 - SIGKILL / before-intent preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1004.076141
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+ok 63 - SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1553.38324
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+ok 64 - SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1879.7969
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+ok 65 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1163.401723
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+ok 66 - SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1190.465623
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+ok 67 - SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1204.039826
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+ok 68 - SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 962.266573
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+ok 69 - SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 819.755115
+  type: 'test'
+  ...
+# Subtest: SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+ok 70 - SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1687.262096
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-prepared preserves one whole root and at most one retry effect
+ok 71 - SIGKILL / after-prepared preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1986.592188
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+ok 72 - SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 896.06964
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+ok 73 - SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1395.566547
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+ok 74 - SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1445.224592
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+ok 75 - SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1188.107181
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-ack preserves one whole root and at most one retry effect
+ok 76 - SIGKILL / before-ack preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 904.67697
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+ok 77 - fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 849.319658
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+ok 78 - fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1123.265527
+  type: 'test'
+  ...
+# Subtest: fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+ok 79 - fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1198.664279
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+ok 80 - fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1313.548425
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+ok 81 - fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1010.717024
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+ok 82 - fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 927.473782
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+ok 83 - fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1135.689925
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+ok 84 - fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 2058.077876
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+ok 85 - fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1057.065249
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+ok 86 - fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1173.815644
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+ok 87 - fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 988.581191
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+ok 88 - fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1142.809644
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+ok 89 - fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1113.592037
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+ok 90 - ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+  ---
+  duration_ms: 721.89939
+  type: 'test'
+  ...
+# Subtest: ENOSPC / staged.before-write retains committed data and recovers without a second effect
+ok 91 - ENOSPC / staged.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 929.584563
+  type: 'test'
+  ...
+# Subtest: ENOSPC / root.before-write retains committed data and recovers without a second effect
+ok 92 - ENOSPC / root.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1482.68881
+  type: 'test'
+  ...
+# Subtest: ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+ok 93 - ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1912.142357
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-write retains committed data and recovers without a second effect
+ok 94 - ENOSPC / current.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1246.777822
+  type: 'test'
+  ...
+# Subtest: EXDEV / staged.before-rename retains committed data and recovers without a second effect
+ok 95 - EXDEV / staged.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 3239.200631
+  type: 'test'
+  ...
+# Subtest: EXDEV / current.before-rename retains committed data and recovers without a second effect
+ok 96 - EXDEV / current.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1940.536729
+  type: 'test'
+  ...
+# Subtest: ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+ok 97 - ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+  ---
+  duration_ms: 1110.826598
+  type: 'test'
+  ...
+# Subtest: corrupt CURRENT enters read-only recovery without guessing an older root
+ok 98 - corrupt CURRENT enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 742.140508
+  type: 'test'
+  ...
+# Subtest: corrupt root enters read-only recovery without guessing an older root
+ok 99 - corrupt root enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1103.394547
+  type: 'test'
+  ...
+# Subtest: corrupt registry-page enters read-only recovery without guessing an older root
+ok 100 - corrupt registry-page enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1696.01041
+  type: 'test'
+  ...
+# Subtest: corrupt generation enters read-only recovery without guessing an older root
+ok 101 - corrupt generation enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1129.607543
+  type: 'test'
+  ...
+# Subtest: corrupt intent enters read-only recovery without guessing an older root
+ok 102 - corrupt intent enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 978.328099
+  type: 'test'
+  ...
+# Subtest: corrupt outcome enters read-only recovery without guessing an older root
+ok 103 - corrupt outcome enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 965.514114
+  type: 'test'
+  ...
+# Subtest: mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+ok 104 - mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+  ---
+  duration_ms: 1084.115079
+  type: 'test'
+  ...
+# Subtest: an aborted prepared generation is never adopted, even when its staged file is corrupt
+ok 105 - an aborted prepared generation is never adopted, even when its staged file is corrupt
+  ---
+  duration_ms: 1068.224969
+  type: 'test'
+  ...
+# Subtest: interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+ok 106 - interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+  ---
+  duration_ms: 1887.798514
+  type: 'test'
+  ...
+# Subtest: recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+ok 107 - recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+  ---
+  duration_ms: 895.665647
+  type: 'test'
+  ...
+# Subtest: reused orphan generation bytes must pass file/directory barriers again before publication
+ok 108 - reused orphan generation bytes must pass file/directory barriers again before publication
+  ---
+  duration_ms: 1688.309799
+  type: 'test'
+  ...
+# Subtest: committed metadata tamper detected during a live write fences the writer before any ACK
+ok 109 - committed metadata tamper detected during a live write fences the writer before any ACK
+  ---
+  duration_ms: 549.946244
+  type: 'test'
+  ...
+# Subtest: SIGKILL during recovery outcome repair is idempotent on the next restart
+ok 110 - SIGKILL during recovery outcome repair is idempotent on the next restart
+  ---
+  duration_ms: 1796.388511
+  type: 'test'
+  ...
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 111 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 12.111018
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 112 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 2.934707
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+ok 113 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 925.070084
+  type: 'test'
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 114 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 471.094088
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 115 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 1618.831132
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 116 - native ext4/XFS durable ACK survives process restart (still not a power-loss test) # SKIP No approved native ext4/XFS temporary mount; durable writer refused rather than simulating support
+  ---
+  duration_ms: 3.202475
+  type: 'test'
+  ...
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 117 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 1645.224774
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 118 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 1163.838205
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 119 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 1445.448613
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 120 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 864.483169
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 121 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 1787.602215
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 122 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 1691.942924
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 123 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 740.371037
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 124 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 633.104916
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 125 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 3382.96241
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 126 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 710.099091
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 127 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 541.603361
+  type: 'test'
+  ...
+1..127
+# tests 127
+# suites 0
+# pass 126
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 86287.586754

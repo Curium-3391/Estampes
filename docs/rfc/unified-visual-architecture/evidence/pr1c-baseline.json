@@ -1,0 +1,110 @@
+{
+  "status": "OBSERVED",
+  "productionBaseline": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "pr1aBase": "7eae7f5748a4c264a7dc996b07f005f95e34ff37",
+  "remediationCommit": "75a30febee1f60e18981ec54e3c76b225c515bb1",
+  "workingBranch": "feat/unified-visual-architecture-pr1c",
+  "version": "0.20.0",
+  "initialWorkingTreeClean": true,
+  "mainDriftAtFetch": false,
+  "preExistingSourceConfigHashesUnchanged": 95,
+  "preExistingProductTestExpectationsChanged": false,
+  "newCodeAndTestFiles": [
+    {
+      "path": "src/persistence/coordinator.js",
+      "bytes": 14318,
+      "sha256": "85c4c8a64340aebe52b2a147d2cc82c45ced7f91fabb61a0c74306383e1a71da"
+    },
+    {
+      "path": "src/persistence/errors.js",
+      "bytes": 386,
+      "sha256": "7dbaa84e43b6b37b4b9e7d155205015185c079e83306f286c66be9e6bd57fec2"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "bytes": 6404,
+      "sha256": "d1d187e676a325b86bb2170c4e40e2f978b2d87756a2ad60ed7e4363071d591b"
+    },
+    {
+      "path": "src/persistence/journal.js",
+      "bytes": 4563,
+      "sha256": "1ded4df2b6dc5a255e2618ffa827af1b4cbcbb666b0e47c1bc3300acf69e18b0"
+    },
+    {
+      "path": "src/persistence/lease.js",
+      "bytes": 3440,
+      "sha256": "35346c761fcac361e055ea4898865c5ed206f7c8ba6d8fdf76cafc8d7c8fa3b7"
+    },
+    {
+      "path": "src/persistence/pages.js",
+      "bytes": 3858,
+      "sha256": "181661203fa53235fb95194811d1da173d7375980b74b5e91bf5cff658f5b5f4"
+    },
+    {
+      "path": "src/persistence/platform.js",
+      "bytes": 3304,
+      "sha256": "44a05deab0975d0edd01b4a92b8725d12900e7cc8d66e187f7a734e53efaf95f"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "bytes": 10079,
+      "sha256": "ef745d334437179905f1ebadcbb763a5930d547915ff7c523bd83b0b866a5c2c"
+    },
+    {
+      "path": "src/persistence/worker.js",
+      "bytes": 2236,
+      "sha256": "b14e3950064b2e61c7103e8acb2cd19cfba8b9473692ac1718fcbebf4aeb9bbf"
+    },
+    {
+      "path": "tests/fixtures/uva-persistence.mjs",
+      "bytes": 1925,
+      "sha256": "14741a446a9a3f49d7cafd89e18d27b437cde4ff46db3c81a3bd298541c95d68"
+    },
+    {
+      "path": "tests/persistence-faults.test.js",
+      "bytes": 11633,
+      "sha256": "f1ad459e34c9c3d05d8af323e4b5edea290c8de5b1b3ed0ada6c6496648debc9"
+    },
+    {
+      "path": "tests/persistence-platform.test.js",
+      "bytes": 4548,
+      "sha256": "b0ae423951631983620f2394614fef26656350a89723564ed54a00fe4db440ad"
+    },
+    {
+      "path": "tests/persistence-transactions.test.js",
+      "bytes": 9499,
+      "sha256": "e33ed2c164426bbafe57738573edb783466998acbd5d54d3daa4b38f5a4c94bf"
+    }
+  ],
+  "reviewFollowupPaths": [
+    "src/documents/integrity.js",
+    "src/documents/legacy-shadow.js",
+    "tests/documents-review.test.js"
+  ],
+  "profileEnvironment": {
+    "workspaceFs": "overlayfs",
+    "temporaryFs": "tmpfs",
+    "effectiveCapabilities": "0",
+    "approvedNativeExt4XfsMountAvailable": false,
+    "nativePositiveAcceptance": "SKIPPED_NOT_PASSED",
+    "powerLossAcceptance": "NOT_EXECUTED"
+  },
+  "activation": false,
+  "userDataMigration": false,
+  "pushAuthorized": false,
+  "laterPrsAuthorized": false,
+  "reviewCurrentFileHashes": [
+    {
+      "path": "src/documents/integrity.js",
+      "sha256": "627a9e1f884472fc95222bb329edf5182920a2a5c5b3816138b3f14224262452"
+    },
+    {
+      "path": "src/documents/legacy-shadow.js",
+      "sha256": "f4b13f9fef6c30bf366c591d8e8c982e1be471f413b79f05102614d65e2b5870"
+    },
+    {
+      "path": "tests/documents-review.test.js",
+      "sha256": "667aa3767682ce497608aedd1b3a3768666a01fcf95d91e964a2ab37ac4e6216"
+    }
+  ]
+}

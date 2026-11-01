@@ -1,0 +1,391 @@
+{
+  "status": "OBSERVED",
+  "overallExit": "IMPLEMENTATION BLOCKED — native profile positive validation unavailable",
+  "pr1aBase": "7eae7f5748a4c264a7dc996b07f005f95e34ff37",
+  "remediationCommit": "75a30febee1f60e18981ec54e3c76b225c515bb1",
+  "branch": "feat/unified-visual-architecture-pr1c",
+  "environment": {
+    "node": "v22.23.4",
+    "platform": "linux",
+    "arch": "x64",
+    "sharp": "0.34.5",
+    "vips": "8.17.3",
+    "zod": "4.6.7",
+    "defaultNode": "24.19.0",
+    "npm": "11.9.0",
+    "python": "3.12.14",
+    "chromium": "154.0.8037.57",
+    "flock": "util-linux 2.41.5",
+    "kernel": "Linux 6.18.57 x64",
+    "workspaceFilesystem": "overlayfs",
+    "temporaryFilesystem": "tmpfs",
+    "effectiveCapabilities": "0",
+    "clientDate": "2026-11-02",
+    "clientTimezone": "Asia/Taipei"
+  },
+  "runs": [
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "results": {
+        "tests": 402,
+        "pass": 401,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 177360.242766
+      },
+      "log": "pr1c-logs/node22-sealed-source.log",
+      "bytes": 90909,
+      "sha256": "e6c160e625f0fb9a5ab7cba84a1c6927ea820f5e579f73342e00422912e8d254"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/documents-review.test.js tests/documents-foundation.test.js tests/documents-shadow.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 61,
+        "pass": 61,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 3564.407771
+      },
+      "log": "pr1c-logs/review-final.log",
+      "bytes": 14966,
+      "sha256": "78c61989b6a370eaf964e6eef156742970660df5337fdd305a932e41179a56e8"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-transactions.test.js tests/persistence-faults.test.js tests/persistence-platform.test.js tests/documents-review.test.js tests/documents-foundation.test.js tests/documents-shadow.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 127,
+        "pass": 126,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 86287.586754,
+        "sourceNote": "Storage source finalized; before last F-01 active ClaimContext refinement. Full 402 and focused review 61 re-executed after refinement; sealed-source full 402 plus platform6 repeat after making publisher private and rechecking profile in the coordinator."
+      },
+      "log": "pr1c-logs/focused-release.log",
+      "bytes": 31241,
+      "sha256": "03b44d9520b3dec861e93f3fac75b7d81a905c0eee9f04c7cf606b35c818bf32"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 1722.570221
+      },
+      "log": "pr1c-logs/proposed-contract.log",
+      "bytes": 4604,
+      "sha256": "e1ee42a53ed7ead5c420484ae79a360392a420c75d802b221080f4bd55a88bee"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "exitCode": 0,
+      "results": {
+        "status": "PASS",
+        "formalExamples": 9,
+        "formalFences": 9,
+        "toolSchemas": 7,
+        "errors": []
+      },
+      "log": "pr1c-logs/examples.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": "python -m unittest discover -s cas-service/tests -v",
+      "exitCode": 0,
+      "results": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 9.56,
+        "warnings": [
+          "unclosed BufferedReader/StreamWriter ResourceWarnings",
+          "asyncio slow teardown diagnostics"
+        ]
+      },
+      "log": "pr1c-logs/cas-python.log",
+      "bytes": 3688,
+      "sha256": "3fa590f8bd5a7a380b4cb6fd096dc7949b74afe60db2eedcc5f1ac9627c0e5ed"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-platform.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 6,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 2172.291541
+      },
+      "log": "pr1c-logs/platform-final.log",
+      "bytes": 1627,
+      "sha256": "66a6b5ccd8e92786bfbe300ae9a0a34e6faf073122a26c480c1e17fb1c9f5787"
+    },
+    {
+      "command": "git ls-remote --heads origin main feat/unified-visual-architecture-pr1a",
+      "exitCode": 0,
+      "results": {
+        "main": "7fb9b73442401fc32a7034888deaf49303e582a6",
+        "pr1a": "7eae7f5748a4c264a7dc996b07f005f95e34ff37"
+      },
+      "log": "pr1c-logs/remote-refs.log",
+      "bytes": 147,
+      "sha256": "239fd86cb377372ad453030194690f2551b3ceb12e1c63de694ab454fcb436ee"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {
+        "output": "> estampes@0.20.0 docs:check\n> node scripts/check-docs.mjs\n\ndocs:check ok (88 markdown files, 55 tools, 22 config variables)."
+      },
+      "log": "pr1c-logs/docs-check.log",
+      "bytes": 127,
+      "sha256": "db42c4c03f1469d3b05b6a1e491a0c0b9a3125e8030353e2b5a5cb73474afdbd"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {
+        "output": "> estampes@0.20.0 release:check\n> node scripts/check-release.mjs\n\nRelease 0.20.0 looks consistent.\nPushing tag v0.20.0 would publish ghcr.io/<owner>/estampes: 0.20.0, latest, sha-<short>"
+      },
+      "log": "pr1c-logs/release-check.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {
+        "output": "Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, 23 PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; limited PR-1A remediation / PR-1C authorized; PR-1D / PR-1B remain pending."
+      },
+      "log": "pr1c-logs/consistency.log",
+      "bytes": 350,
+      "sha256": "7a9ed6f636d84db5cea03509e302b3fef1ab658e60eb28c4ddce277129204c78"
+    },
+    {
+      "command": "git diff --check 7eae7f5748a4c264a7dc996b07f005f95e34ff37",
+      "exitCode": 0,
+      "results": {
+        "output": ""
+      },
+      "log": "pr1c-logs/whitespace.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "supportingArtifacts": [
+    {
+      "log": "pr1c-logs/toolchain.log",
+      "bytes": 99,
+      "sha256": "d165ee1b6a7a645082f473bd9d4214165fbab84e55e1b5b35dba9bdcfc27dfc2",
+      "classification": "TOOLCHAIN"
+    },
+    {
+      "log": "pr1c-logs/transactions-first.log",
+      "bytes": 2415,
+      "sha256": "65b2837a629872245a8dcd0a30d39f846aee4135ddc1e3cbb6f13648aa46fb67",
+      "classification": "EARLIER_OBSERVED_PASS_NOT_SUBSTITUTE_FOR_FINAL_SOURCE_RESULTS",
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-transactions.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 6013.6261
+      }
+    },
+    {
+      "log": "pr1c-logs/faults-first.log",
+      "bytes": 12260,
+      "sha256": "1e3a78d3e9f5d56fbe1a3a0dbde85b961b7eb03b207dcd19a1b3cc1f6087615d",
+      "classification": "EARLIER_OBSERVED_PASS_NOT_SUBSTITUTE_FOR_FINAL_SOURCE_RESULTS",
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-faults.test.js tests/persistence-platform.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 50,
+        "pass": 49,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 33836.555381
+      }
+    },
+    {
+      "log": "pr1c-logs/transactions-final.log",
+      "bytes": 2943,
+      "sha256": "5376e0ea887d376492ee987e44c7dd88bf9cfc1d60e0824c37c6def1faac433a",
+      "classification": "EARLIER_OBSERVED_PASS_NOT_SUBSTITUTE_FOR_FINAL_SOURCE_RESULTS",
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-transactions.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 11,
+        "pass": 11,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 10344.777439
+      }
+    },
+    {
+      "log": "pr1c-logs/node22-full.log",
+      "bytes": 90953,
+      "sha256": "6568d1ab20e326cd0ff24b8ae73127878aa82b981fbbf8867bcc9f8048ac35b8",
+      "classification": "EARLIER_OBSERVED_PASS_NOT_SUBSTITUTE_FOR_FINAL_SOURCE_RESULTS",
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "results": {
+        "tests": 402,
+        "pass": 401,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 234790.779312
+      }
+    },
+    {
+      "log": "pr1c-logs/node22-final-source.log",
+      "bytes": 90936,
+      "sha256": "e9813ca66bd11e73b10db7449f33400d2bf328e0d3798f424942ffcaccf6090a",
+      "classification": "EARLIER_OBSERVED_PASS_NOT_SUBSTITUTE_FOR_FINAL_SOURCE_RESULTS",
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "results": {
+        "tests": 402,
+        "pass": 401,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 191751.651646
+      }
+    },
+    {
+      "log": "pr1c-logs/platform-final.log",
+      "bytes": 1627,
+      "sha256": "66a6b5ccd8e92786bfbe300ae9a0a34e6faf073122a26c480c1e17fb1c9f5787",
+      "classification": "EARLIER_OBSERVED_PASS_NOT_SUBSTITUTE_FOR_FINAL_SOURCE_RESULTS",
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-platform.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 6,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "durationMs": 2172.291541
+      }
+    }
+  ],
+  "skip": {
+    "tests": 1,
+    "name": "native ext4/XFS durable ACK survives process restart (still not a power-loss test)",
+    "reason": "No approved native ext4/XFS temporary mount; durable writer refused rather than simulating support",
+    "passed": false
+  },
+  "evidenceBoundary": {
+    "realFileIo": true,
+    "realKernelFlock": true,
+    "sigkillAndRestart": true,
+    "errorInjection": "adapter throws at actual filesystem operation boundaries",
+    "testProfileAckDurability": "process-crash-test",
+    "durableAckOnUnsupportedMount": false,
+    "nativePositiveDurabilityTestExecuted": false,
+    "hardwarePowerLossTestExecuted": false,
+    "normalProductActivation": false,
+    "realUserDataReadOrMigrated": false,
+    "gcCompactionImplemented": false,
+    "oldBinaryFencingImplemented": false,
+    "entireArchitectureApproved": false
+  },
+  "newCodeTestHashes": [
+    {
+      "path": "src/persistence/coordinator.js",
+      "bytes": 14318,
+      "sha256": "85c4c8a64340aebe52b2a147d2cc82c45ced7f91fabb61a0c74306383e1a71da"
+    },
+    {
+      "path": "src/persistence/errors.js",
+      "bytes": 386,
+      "sha256": "7dbaa84e43b6b37b4b9e7d155205015185c079e83306f286c66be9e6bd57fec2"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "bytes": 6404,
+      "sha256": "d1d187e676a325b86bb2170c4e40e2f978b2d87756a2ad60ed7e4363071d591b"
+    },
+    {
+      "path": "src/persistence/journal.js",
+      "bytes": 4563,
+      "sha256": "1ded4df2b6dc5a255e2618ffa827af1b4cbcbb666b0e47c1bc3300acf69e18b0"
+    },
+    {
+      "path": "src/persistence/lease.js",
+      "bytes": 3440,
+      "sha256": "35346c761fcac361e055ea4898865c5ed206f7c8ba6d8fdf76cafc8d7c8fa3b7"
+    },
+    {
+      "path": "src/persistence/pages.js",
+      "bytes": 3858,
+      "sha256": "181661203fa53235fb95194811d1da173d7375980b74b5e91bf5cff658f5b5f4"
+    },
+    {
+      "path": "src/persistence/platform.js",
+      "bytes": 3304,
+      "sha256": "44a05deab0975d0edd01b4a92b8725d12900e7cc8d66e187f7a734e53efaf95f"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "bytes": 10079,
+      "sha256": "ef745d334437179905f1ebadcbb763a5930d547915ff7c523bd83b0b866a5c2c"
+    },
+    {
+      "path": "src/persistence/worker.js",
+      "bytes": 2236,
+      "sha256": "b14e3950064b2e61c7103e8acb2cd19cfba8b9473692ac1718fcbebf4aeb9bbf"
+    },
+    {
+      "path": "tests/fixtures/uva-persistence.mjs",
+      "bytes": 1925,
+      "sha256": "14741a446a9a3f49d7cafd89e18d27b437cde4ff46db3c81a3bd298541c95d68"
+    },
+    {
+      "path": "tests/persistence-faults.test.js",
+      "bytes": 11633,
+      "sha256": "f1ad459e34c9c3d05d8af323e4b5edea290c8de5b1b3ed0ada6c6496648debc9"
+    },
+    {
+      "path": "tests/persistence-platform.test.js",
+      "bytes": 4548,
+      "sha256": "b0ae423951631983620f2394614fef26656350a89723564ed54a00fe4db440ad"
+    },
+    {
+      "path": "tests/persistence-transactions.test.js",
+      "bytes": 9499,
+      "sha256": "e33ed2c164426bbafe57738573edb783466998acbd5d54d3daa4b38f5a4c94bf"
+    }
+  ],
+  "repeatedRuns": "First transactions 9/9 and fault/platform 49/50 + 1 skip passed. After orphan resync/candidate disk validation/tombstone read/active-claim fixes, final Node full suite and review regression were rerun; the final lease encapsulation change was checked by platform tests and another complete sealed-source Node run. No existing assertion weakened."
+}

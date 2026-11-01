@@ -75,3 +75,16 @@ R-01–06的**最新獨立分類**見FINAL-ARCHITECTURE-GATE B；原REVIEW-REMED
 | Scope/approval/integrity | PR-1A-AUTHORIZATION、pr1a-authorization.json、consistency exact13newpaths、原95hash | explicitlimitedhumanapproval；既有production/tests不改；laterOD/PR未解鎖 |
 
 實際results/loghash與counterexamples見[PR-1A-IMPLEMENTATION-REPORT](PR-1A-IMPLEMENTATION-REPORT.md)及executionmanifest；originalPhase0reports為歷史，不能拿當新功能已實作證據。
+
+## PR-1C implementation / remaining evidence gates
+
+| Requirement | CURRENT code / observed tests | Case subset / deferred gate |
+| --- | --- | --- |
+| F-01 explicit closure | documents/integrity、documents-review；coordinator after-state full registry declaration | active/unresolved/historical Document refs；不證binaryassets或auth |
+| F-02 raw recovery | legacy-shadow report明列json-record-only與bytes/binary/migration false；8review tests | 不能把mapped／rawRecoverable當verifiedmigration |
+| Atomic root / immutable generations | persistence/coordinator、pages、records、filesystem；transactions + SIGKILL | UVA-31/49/63 Doc-only；其他store／compaction／delta仍未驗 |
+| Ledger / request key | records/replayLedgerEntry、journal membership；concurrent／restart／samekey mismatch | UVA-32／49；fullACK不刪，tombstone read only；PR-1D才做compact/clock/retention |
+| Lifetime lease / supportedFS | platform、lease、worker；second process／clientkill／OS FD evidence | UVA-33/59/66 partial；native positive Skip，outerpowerloss／oldbinary fence未做 |
+| No cutover / scope | 現有95hash不變、exact allowednewfiles與2remediatedhelpers；defaultnative拒unknown | 1D/1B／migration／newAPI仍未授權；native gap阻擋PR-1C complete exit |
+
+實際counts與raw log SHA256見PR-1C execution manifest；所有gate仍依owning PR，而非全67case數量宣稱完成。

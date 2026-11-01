@@ -37,6 +37,10 @@ test("F-01 explicitly unresolved and historical references are preserved and rep
   assert.equal(r.missingDependencies[0].required,false);assert.equal(r.missingDependencies[0].reason,"explicitly-unresolved");
   const p=populated();p.scenes[0].annotations[0].provenance.derivedFrom={documentId:id("doc",99),sceneId:id("scene",99),kind:"annotation",id:"history"};
   assert.equal(validateCompleteDocumentClosure([p],declare([p])).missingDependencies[0].reason,"historical");
+  p.scenes[0].annotations[0].finding={claimContext:{claimId:id("event"),claimRevision:1,geometryHash:"a".repeat(64),anchorHash:"a".repeat(64),sourceRevisionVector:[{ref:p.scenes[0].annotations[0].provenance.derivedFrom,revision:1,semanticHash:"a".repeat(64)}]},verification:{historicalState:"user-confirmed",currentState:"user-confirmed",contextHash:"a".repeat(64)}};
+  assert.throws(()=>validateCompleteDocumentClosure([p],declare([p])),code("UNRESOLVED_REFERENCE"));
+  p.scenes[0].annotations[0].finding.verification.currentState="stale";
+  assert.ok(validateCompleteDocumentClosure([p],declare([p])).missingDependencies.some(x=>x.reason==="historical-context"));
 });
 test("F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits", () => {
   const a=embed(document(),document(2)),b=embed(document(2),document());

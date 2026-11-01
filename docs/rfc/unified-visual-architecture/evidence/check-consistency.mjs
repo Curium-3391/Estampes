@@ -53,7 +53,7 @@ for(const p of docs){const s=read(p);
 }
 const inventory=JSON.parse(read(join(dir,'evidence/source-index.json')));
 for(const f of inventory.files)check(createHash('sha256').update(readFileSync(join(root,f.path))).digest('hex')===f.sha256,`production/config modified: ${f.path}`);
-for(const manifest of ['execution-manifest.json','review-execution-manifest.json','final-gate-execution-manifest.json','pr1a-execution-manifest.json'].filter(n=>existsSync(join(dir,'evidence',n)))){
+for(const manifest of ['execution-manifest.json','review-execution-manifest.json','final-gate-execution-manifest.json','pr1a-execution-manifest.json','pr1c-execution-manifest.json'].filter(n=>existsSync(join(dir,'evidence',n)))){
  const data=JSON.parse(read(join(dir,'evidence',manifest)));
  for(const run of data.runs){if(!run.log)continue;const bytes=readFileSync(join(dir,'evidence',run.log));check(bytes.length===run.bytes&&createHash('sha256').update(bytes).digest('hex')===run.sha256,`log integrity: ${run.log}`);}
 }
@@ -85,14 +85,24 @@ if(existsSync(authorizationPath)){
 }
 const pr1cAuthorizationPath=join(dir,'evidence/pr1c-authorization.json');
 const reviewPaths=new Set(['src/documents/integrity.js','src/documents/legacy-shadow.js','tests/documents-review.test.js']);
+const persistencePaths=new Set([
+ 'src/persistence/coordinator.js','src/persistence/errors.js','src/persistence/filesystem.js',
+ 'src/persistence/journal.js','src/persistence/lease.js','src/persistence/pages.js',
+ 'src/persistence/platform.js','src/persistence/records.js','src/persistence/worker.js',
+ 'tests/persistence-transactions.test.js','tests/persistence-faults.test.js',
+ 'tests/persistence-platform.test.js','tests/fixtures/uva-persistence.mjs',
+]);
 let pr1cAuthorized=false;
 if(existsSync(pr1cAuthorizationPath)){
  const a=JSON.parse(read(pr1cAuthorizationPath));
  check(a.source==='explicit-maintainer-user-instruction'&&a.evidenceBaseCommit==='7eae7f5748a4c264a7dc996b07f005f95e34ff37'&&a.scope==='isolated-coordinator-journal-generations-recovery-only','invalid limited PR-1C authorization');
  check(a.authorizedPrs.includes('PR-1C')&&existsSync(join(dir,'PR-1C-AUTHORIZATION.md')),'missing PR-1C authorization scope');
  pr1cAuthorized=true;
+ for(const p of persistencePaths)check(!execFileSync('git',['ls-tree','--name-only',a.evidenceBaseCommit,'--',p],{cwd:root,encoding:'utf8'}).trim(),`PR-1C must add isolated files: ${p}`);
+ const sincePr1a=new Set([...git('diff','--name-only',a.evidenceBaseCommit),...git('ls-files','--others','--exclude-standard')]);
+ for(const p of sincePr1a)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||reviewPaths.has(p)||persistencePaths.has(p),`outside PR-1A remediation / PR-1C scope: ${p}`);
 }
-for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p))||(pr1cAuthorized&&reviewPaths.has(p)),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
+for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p))||(pr1cAuthorized&&(reviewPaths.has(p)||persistencePaths.has(p))),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
 // The original audit and logs remain historical evidence, not rewritten results.
 for(const p of ['tests/uva-characterization.test.js','docs/rfc/unified-visual-architecture/BASELINE.md','docs/rfc/unified-visual-architecture/evidence/source-index.json','docs/rfc/unified-visual-architecture/evidence/execution-manifest.json']){
  const original=execFileSync('git',['show',base+':'+p],{cwd:root});check(original.equals(readFileSync(join(root,p))),`historical baseline changed: ${p}`);

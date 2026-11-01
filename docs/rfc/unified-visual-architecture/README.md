@@ -1,6 +1,6 @@
 # Unified Visual Architecture — Phase 0 / 0.1 / 0.2 / PR-1A
 
-狀態：**PR-1A有限子集已獲維護者授權；後續architecture/runtime/deployment仍pending**。歷史調查日期：2026-11-01 UTC，production baseline為 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本仍 `0.20.0`。Phase 0–0.2文件保留設計及審查歷史；PR-1A的隔離實作、實測及授權範圍另見下方專節，不代表後續Phase 1–7已獲准。
+狀態：**PR-1A及其review修訂／隔離PR-1C已獲有限授權；1D/1B與後續runtime/deployment仍pending**。歷史調查日期：2026-11-01 UTC，production baseline為 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本仍 `0.20.0`。Phase 0–0.2文件保留設計及審查歷史；PR-1A的隔離實作、實測及授權範圍另見下方專節，不代表後續Phase 1–7已獲准。
 
 ## 閱讀與決策權限
 
@@ -77,3 +77,7 @@ Current Implementation：見 AUDIT。Proposed Architecture：見 RFC。Open Deci
 ## PR-1A review / PR-1C authorization
 
 [有限授權](PR-1C-AUTHORIZATION.md)、[F-01/F-02 remediation report](PR-1A-REMEDIATION-REPORT.md)。此為PR-1A之後的新維護者授權，歷史停止紀錄不改寫；1D/1B、部署與真正cutover仍pending。
+
+## PR-1C — Isolated persistence / native profile blocker
+
+[Implementation Report](PR-1C-IMPLEMENTATION-REPORT.md)記錄真file I/O、OS lease、six-root publication／recovery及fault results。現有MCP/UI/storage路徑未啟用；process-crash test ACK不是Durable ACK。Native ext4/XFS正向測試缺掛載，整體PR-1C驗收仍有阻擋，不能開始1D/1B或啟用production writer。

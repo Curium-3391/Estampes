@@ -1,0 +1,35 @@
+test_bad_frames (test_client.ServerTest.test_bad_frames) ... Executing <Task finished name='Task-3' coro=<ServerTest.asyncTearDown() done, defined at /workspace/Estampes/cas-service/tests/test_client.py:27> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.214 seconds
+ok
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/suite.py:107: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  for index, test in enumerate(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+test_cancel_kills_job (test_client.ServerTest.test_cancel_kills_job) ... /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/streams.py:416: ResourceWarning: unclosed <StreamWriter transport=<_SelectorSocketTransport closing fd=8 read=idle write=<idle, bufsize=0>> reader=<StreamReader transport=<_SelectorSocketTransport closing fd=8 read=idle write=<idle, bufsize=0>>>>
+  warnings.warn(f"unclosed {self!r}", ResourceWarning)
+Executing <Task finished name='Task-9' coro=<ServerTest.asyncTearDown() done, defined at /workspace/Estampes/cas-service/tests/test_client.py:27> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.312 seconds
+ok
+test_health_and_compute (test_client.ServerTest.test_health_and_compute) ... Executing <Task finished name='Task-14' coro=<ServerTest.asyncTearDown() done, defined at /workspace/Estampes/cas-service/tests/test_client.py:27> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.309 seconds
+ok
+test_injection_not_executed (test_client.ServerTest.test_injection_not_executed) ... Executing <Task finished name='Task-19' coro=<ServerTest.asyncTearDown() done, defined at /workspace/Estampes/cas-service/tests/test_client.py:27> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.171 seconds
+ok
+test_timeout_kills_and_server_survives (test_client.ServerTest.test_timeout_kills_and_server_survives) ... Executing <Task finished name='Task-24' coro=<ServerTest.asyncTearDown() done, defined at /workspace/Estampes/cas-service/tests/test_client.py:27> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.318 seconds
+ok
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/suite.py:84: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  return self.run(*args, **kwds)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+test_algebra (test_ops.Math.test_algebra) ... ok
+test_angles_and_precision (test_ops.Math.test_angles_and_precision) ... ok
+test_ast_round_trip (test_ops.Math.test_ast_round_trip) ... ok
+test_calculus (test_ops.Math.test_calculus) ... ok
+test_exact (test_ops.Math.test_exact) ... ok
+test_latex_round_trip (test_ops.Math.test_latex_round_trip) ... ok
+test_notebook_environment (test_ops.Math.test_notebook_environment) ... ok
+test_status_is_honest (test_ops.Math.test_status_is_honest) ... ok
+test_domain (test_ops.Rejections.test_domain) ... ok
+test_limits (test_ops.Rejections.test_limits) ... ok
+test_python_shaped_input (test_ops.Rejections.test_python_shaped_input) ... ok
+test_unknown_function_rejected_before_compute (test_ops.Rejections.test_unknown_function_rejected_before_compute) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 9.560s
+
+OK

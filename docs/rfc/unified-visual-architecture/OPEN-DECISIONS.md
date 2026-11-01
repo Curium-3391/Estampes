@@ -64,3 +64,7 @@ Maintainer尚未批准任一列。Phase0.1交付不啟動相依PR；最小下一
 ## Phase 0.2 — Final Gate Refinements
 
 OD-01推薦不變，但批准內容必含coherent CommitRoot、G1/G2/checkpoint thinning、Linux平台allowlist與10GiB非通用capacity。OD-02完整user-edit、不可變creator、Evidence/guard仍待產品確認；schema批准不自動開啟newpolicy。OD-03/04/05推薦不變，render/Host/CAS退出證據仍須逐階段取得。OD-06需批准nested snapshot V1預檢拒絕與editablebundle替代，以及Desktop/nativeMac預設拒cutover與oldbinaryROfence。六OD的原選項與本輪cost/阻擋PR詳FINAL-ARCHITECTURE-GATE G。尚無Approver/Date；不得從本輪推薦補造批准紀錄。
+
+## PR-1C observed gate (limited authorization)
+
+PR-1C已有隔離backend實作與process-crash／real file I/O測試；native ext4/XFS正向profile因測試掛載缺失尚未驗收。這不撤銷維護者的限定實作授權，也不自動批准platform／capacity／cutover；完整狀態見[report](PR-1C-IMPLEMENTATION-REPORT.md)。1D/1B未開始。

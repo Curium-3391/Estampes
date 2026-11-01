@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 1 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 756.61421
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 2 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 337.788585
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 3 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 653.771054
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 4 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 361.072565
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 5 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 808.741884
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 6 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 702.051966
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 7 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 312.195244
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 8 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 326.824599
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 9 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 1565.396378
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6013.6261
