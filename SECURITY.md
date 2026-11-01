@@ -4,7 +4,9 @@
 
 Please report security problems **privately**. Do not open a public issue or pull request with details.
 
-Use GitHub's private vulnerability reporting: on the repository page open **Security → Report a vulnerability**. If that button is missing (the owner may not have switched the feature on), open a public issue that says only "I have a security report, please enable a private channel" and contains no technical details; the maintainer will answer with a way to send it.
+Send an email to **az95050731@gmail.com** with the subject "Estampes security report". Please do not include exploit details in a public place first.
+
+When the repository is public and GitHub's private vulnerability reporting is switched on, you can use that instead: open **Security → Report a vulnerability** on the repository page. Until then, email is the only private channel.
 
 Include the Estampes version (`/version`), how you run it (Docker, Node, Heroku, Render), what you did, what you expected and what happened. If you can, say whether the problem needs the access key or works without it.
 
