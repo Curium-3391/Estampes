@@ -1,6 +1,6 @@
 # Using Estampes in ChatGPT
 
-This guide assumes your server is running and ChatGPT is connected to it (see [Deployment](DEPLOYMENT.md)). You never need to name a tool: describe what you want in the chat and GPT calls Estampes itself.
+This guide assumes your server is running and ChatGPT is connected to it (see the [Quick start](QUICKSTART.md) or [Deployment](DEPLOYMENT.md)). Worked examples with failure paths are in the [tutorials](tutorials/README.md); what has been tried on which client is in [Compatibility](COMPATIBILITY.md). You never need to name a tool: describe what you want in the chat and GPT calls Estampes itself.
 
 ## Open a canvas
 

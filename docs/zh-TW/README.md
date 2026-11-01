@@ -64,6 +64,9 @@ npm start          # http://localhost:8787/mcp
 
 | 文件 | 內容 |
 | --- | --- |
+| [快速開始（英文）](../QUICKSTART.md) | 從部署到第一個標記，每一步的預期結果與失敗時怎麼辦 |
+| [教學（英文）](../tutorials/README.md) | 標註照片、分析 PDF 頁面、解算星空照片；可自行產生的範例素材 |
+| [相容性（英文）](../COMPATIBILITY.md) | 哪些客戶端、平台與選用功能被測過，以及怎麼測的 |
 | [部署](../DEPLOYMENT.md) | Docker、Heroku、Render、連接 ChatGPT、環境變數、儲存內容 |
 | [發布流程（英文）](../RELEASE.md) | 給維護者：版本順序、Docker 映像標籤、發布前檢查、回復 |
 | [使用指南（英文）](../USAGE.md) | 在 ChatGPT 裡使用畫布：標記、圖層、縮放、並排比對、匯出 |
