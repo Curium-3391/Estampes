@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: UVA characterization: changing axes reprojects frame shapes but leaves normalized user ink unchanged
+ok 1 - UVA characterization: changing axes reprojects frame shapes but leaves normalized user ink unchanged
+  ---
+  duration_ms: 18.225234
+  type: 'test'
+  ...
+# Subtest: UVA characterization: storage form retains rich ink, empty locked layers, gesture decisions and deleted objects
+ok 2 - UVA characterization: storage form retains rich ink, empty locked layers, gesture decisions and deleted objects
+  ---
+  duration_ms: 2.371202
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 365.589413

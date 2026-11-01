@@ -1,0 +1,421 @@
+
+> estampes@0.20.0 test
+> node --test
+
+✔ confidence never verifies a claim: every unverified link waits for review (43.945957ms)
+✔ evidence regions are checked: inside 0..1, on an image of this view (8.003436ms)
+✔ a rejected link outlives its marks and cannot be re-proposed without new evidence (23.261004ms)
+✔ withdrawing or reversing a rejection forgets it; re-pointing a link clears the verdict (15.934578ms)
+✔ a note is a claim: new wording starts fresh, a rejected note is refused at that place (15.540885ms)
+✔ rejections are stored with the canvas and come back after a restart (7.888084ms)
+✔ same region: half overlap or the new centre inside the old box (0.554749ms)
+✔ plate solving runs as a background job and marks the named objects (94.544563ms)
+✔ a failed solve is reported as a result, not an error, and changes nothing (53.377255ms)
+✔ errors become a failed job with a plain reason (147.539471ms)
+✔ a job that runs too long is stopped and never applies its result later (1124.366951ms)
+✔ jobs survive a restart as interrupted, and the id format is checked (1041.933161ms)
+✔ the module cannot run unless the user granted its permissions (30.892325ms)
+✔ job tools return the canvas payload, so the widget shows the photo and not its sample (52.068835ms)
+✔ marks: bright named stars come first and overlapping labels are skipped (0.883173ms)
+✔ the sky map draws the solved field with no network (57.736384ms)
+✔ sky geometry: Hammer centre, RA grows to the left, field outline stays near its centre (1.589225ms)
+✔ export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting (1451.110493ms)
+✔ export_workspace_bundle over MCP: signed link downloads a bundle that imports back (718.557584ms)
+✔ zip: round trip, and unsafe names are refused (2.953355ms)
+✔ export then import into an empty server: 3 images, 29 marks, same layers, still editable (120.393011ms)
+✔ importing the same bundle twice returns the same workspace and adds nothing (95.441877ms)
+✔ import onto a server that has the images with other marks never overwrites them (88.405459ms)
+✔ tampering, wrong format, missing files and bad marks are refused or dropped (82.150967ms)
+✔ a bundle with an out-of-range mark keeps the rest and reports it (93.790633ms)
+[storage] restored imageId=img:cdd7884aea5523cd marks=25
+[storage] restored imageId=img:236cdd18eb31ff52 marks=2
+[storage] restored imageId=img:7adaeac0f3f67a71 marks=2
+✔ on disk: import persists the restored canvases and workspace (136.925915ms)
+✔ a JPEG exported without stored originals imports under its new id (working copy) (17.25278ms)
+✔ same marks but different layer settings are not reused: the bundle keeps its own copy (87.928019ms)
+✔ canvas pixels include saved handwriting in full and cropped views; source stays blank (248.470402ms)
+✔ public Graph pixels update; hidden layers and scratch are excluded, locked layers remain visible (673.273411ms)
+✔ revision checks cover marks, layer opacity and view visibility; render takes a consistent snapshot (38.586459ms)
+✔ mixed canvas draws marks over public objects and supports lossless WebP (37.691606ms)
+✔ crop coordinates convert back to the full image (2.248249ms)
+✔ marks persist with stable ids: add, edit, comment, remove (13.223901ms)
+✔ verification image shows the crop with and without the marks (53.154197ms)
+✔ each send and each GPT drawing call becomes one layer (7.944267ms)
+✔ GPT can add a trace about user marks after several rounds; nothing is lost (6.711318ms)
+✖ info cards in a browser: per-module groups, fold, hide and bring back (823.986736ms)
+✔ cas: disabled until the user enables it (442.977964ms)
+✔ cas: exact results come from SymPy, with LaTeX and a typed AST (101.690524ms)
+✔ cas: bad input is a cell error, the input is kept and nothing executes (15.007783ms)
+✔ cas: plot_result draws a semantic function plot and links it to the cell (50.699481ms)
+✔ cas: editing upstream makes results and links stale, and a stale result is not plotted (84.18179ms)
+✔ cas: conditional, partial and complex results are never plotted as ordinary functions (465.712733ms)
+✔ cas: revision conflicts and idempotency keys (21.796553ms)
+✔ cas: notebooks survive a restart of the Core (13.818197ms)
+✔ cas: with no calculator service the module reports it and Core keeps working (8.716808ms)
+✔ bridge: only real single-variable results become Graph expressions (1.794416ms)
+✔ cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged (428.502297ms)
+✔ claims over MCP: unverified until the user reviews, a rejection refuses the repeat (921.589828ms)
+✔ image layers retain alpha and reorder across raster, marks and editable Graph copies (134.997874ms)
+✔ composition refuses self-copy and rolls back failed layer insertion (11.085319ms)
+✔ transform matrices: quarter turns are exact, singular matrices have no inverse (3.396562ms)
+✔ fitTransform recovers similarity, affine and homography and reports residuals (1.792894ms)
+✔ preview sampling returns exactly the old process_image pixels (1374.082162ms)
+✔ native sampling cuts real source pixels beyond the working copy, EXIF applied (1187.493035ms)
+✔ derived view ids are deterministic and recipes rebuild the same pixels (616.752932ms)
+✔ coordinates read off a derived view map back exactly, rects under rotation become polygons (466.032641ms)
+✔ zoom tiles come from the source file when it is larger than the working copy (401.846329ms)
+[storage] restored imageId=img:3986680c66f4d2c3 marks=0
+✔ derived view recipes are stored with the image and survive a restart (738.055077ms)
+✔ MCP: native process_image, marking through derivedViewId, inspect_image and get_derived_view (2347.632348ms)
+✔ engine list reports availability and optional engines degrade to a result, not a crash (45.247428ms)
+✔ components return boxes in normalized source coordinates with version and provenance (86.409425ms)
+✔ blobs find point sources with sub-pixel centroids (31.789881ms)
+✔ lines and circles find strokes and rings, and do not call a square a circle (180.178801ms)
+✔ custom engines register once, run purely and failures keep one shape (11.476365ms)
+✔ MCP: detect_features lists engines, runs one and refuses a missing image (667.922139ms)
+✔ evidence viewer inline UI is parsable and protocol-ready (1.519543ms)
+✔ evidence viewer actually renders the 3 PNG blocks for user (0.227972ms)
+✔ preview requires real png blocks and never claims to classify the subject (0.340417ms)
+✔ expressions: arithmetic, precedence, implicit multiplication, bars and constants (2.4671ms)
+✔ expressions: anything that is not math is refused, never evaluated (2.137544ms)
+✔ expressions: detects trigonometry for default axes (0.219703ms)
+✔ finding groups: compact rows, detail drilldown, canvas selection and review drafts (2218.504366ms)
+✔ deskew finds the tilt of ruled lines and refuses a blank page (203.454841ms)
+✔ rotation by 90 degrees maps marks back exactly; any angle reports invalid corners (12.222999ms)
+✔ perspective rectification recovers a flat surface and inverts to the image (104.240336ms)
+✔ extra operators behave: levels stretch, gamma lifts, white balance neutralizes, channel isolates (17.747338ms)
+✔ auto registration recovers a rotated, scaled copy; mirror needs the flag; unrelated images fail (4245.802427ms)
+✔ landmark registration fits exactly and reports residuals; too few points fail (176.627718ms)
+✔ quality metrics tell sharp from blurred, clean from noisy, and flag clipping and casts (323.057823ms)
+✔ measurements carry uncertainty and never invent units (6.477072ms)
+✔ MCP: assess, rectify, calibrate in the rectified view, measure, register and compare (2319.755774ms)
+✔ all ticks round trip (1.165755ms)
+✔ midpoint mapping (0.155338ms)
+✔ clamping (0.208359ms)
+✔ invalid inputs (0.348089ms)
+✔ T04/T05: a two-stroke freehand arrow is one unconfirmed direction-arrow candidate (2.687855ms)
+✔ the strokes stay separate, unchanged marks in the event; the group is extra metadata (1.549404ms)
+✔ T06: two lines that only cross in their middles are not grouped (0.199062ms)
+✔ T04 variant: strokes joined end to end without a head are a connected path, not an arrow (0.299032ms)
+✔ T07: the same marks give the same groups at any resolution or display size (0.437124ms)
+✔ T08: the user's no keeps the candidate visible as rejected; the strokes are untouched (2.134715ms)
+✔ T09: deleting a member drops the group, including a hand-made one (0.525403ms)
+✔ assistant marks and closed loops do not start groups; keys ignore order (0.327268ms)
+✔ a head drawn as two separate wings is still an arrow; a forward continuation is not (0.576266ms)
+✔ acceptance 4: a loop touched by a line stays a group of unknown meaning (0.464174ms)
+✔ the canvas records stroke facts, shows candidates and sends the user's verdicts (18.549093ms)
+✔ gesture groups over MCP: candidate, user verdict stored, strokes untouched (1261.196478ms)
+✔ access key gates /mcp but not health or version (469.847898ms)
+✔ rate limit returns 429 and CORS follows the allowlist (403.01948ms)
+✔ image tools are discoverable with ChatGPT file params and fail safely (711.691821ms)
+✔ URL guard accepts public https and rejects SSRF targets (7.448628ms)
+✔ downloads follow redirects through the guard and enforce the size cap (29.508851ms)
+✔ registerImage applies EXIF orientation, rejects non-images and caches by content (24.391779ms)
+✔ regions map to source pixels and back without drifting (0.624495ms)
+✔ process_image crops, upscales and reports the covered source region (181.066848ms)
+✔ threshold and edges produce single-channel binary/edge maps (61.863437ms)
+✔ overlay_grid labels map to correct source coordinates (114.928364ms)
+✔ zoom tiles come from native pixels and are never enlarged (33.696931ms)
+✔ v0.2 uses explicit SVG dimensions, not imaginary DPI or raster pixels (2.618165ms)
+✔ v0.2 carries explicit user intent and optional quote without making up a messageId (0.907986ms)
+✔ without explicit context the message refuses to invent a prior question (0.303576ms)
+✔ invalid coordinates, unknown intent or duplicate IDs are rejected (1.183756ms)
+✔ all intents supported and text limits enforced (1.005501ms)
+✔ free annotation is the default and leaves arrow meaning unspecified (0.512666ms)
+✔ only an explicit point-out makes the arrowhead the target, and the note can still override (0.554916ms)
+✔ arrow direction uses image pixels, not stretched normalized units (0.215653ms)
+✔ without a note the message asks for several readings instead of assuming one (0.476055ms)
+✔ the user renames, reorders, fades and locks layers; GPT reads the edits once (24.570488ms)
+✔ a locked layer stops GPT and the user changing its marks, but reset keeps it and notes still attach (9.604881ms)
+✔ the user moves and restyles an earlier mark, deletes GPT's, and cannot move GPT's (6.269579ms)
+✔ finding recency follows changed evidence without changing layer or ink order (10.978044ms)
+✔ layer rename re-renders the mounted panel, not detached rows (2.364117ms)
+✖ layers in a browser: base image + overlay image + Graph curve, fade and reorder (957.392628ms)
+✔ marks export as a layered SVG and load back onto the canvas (54.091023ms)
+✔ ink report gives real widths and flags ink that hides its target (68.960824ms)
+✔ verification draws ink at its real width (97.095388ms)
+✔ layers survive export and come back as their own layers (42.843246ms)
+✔ MCP discovers tools, calls show_number_line, and reads its inline UI (998.010651ms)
+✔ every bundled example module passes the validator and its own examples (627.739623ms)
+✔ author walkthrough: create, test, sign, trust, install, enable, run (2985.49029ms)
+✔ modules over MCP: Store, consent, enable, plot sin(x), edit, restart (2557.98912ms)
+✔ manifest: the bundled Graph manifest is valid for this core (16.416588ms)
+✔ manifest: strict, unknown fields and unsafe schemas are refused (2.980211ms)
+✔ json schema subset: validates, fills defaults, rejects regex bombs and unbounded input (1.389461ms)
+✔ semver ranges (0.308014ms)
+✔ declarative templates fill only declared placeholders (0.271551ms)
+✔ lifecycle: a model-prepared plan cannot be committed without the consent only the Store has (29.638937ms)
+✔ lifecycle: state survives a restart; disabling stops execution but keeps the objects (45.648306ms)
+✔ router: sin(x) then sin(2x) on the same canvas, expected revision enforced, bad input explained (35.149165ms)
+✔ router: a module that returns something unexpected is refused, not applied (20.807372ms)
+✔ graph: plot_points and set_axes on a canvas (27.765111ms)
+✔ capability profile: network use must be declared, local work must not claim to leave, jobs are not instant, text must match (6.864624ms)
+✔ get_module_capabilities and the catalog carry each capability's profile (10.832505ms)
+✔ OAuth sign-in: discovery, registration, consent with the access key, PKCE, tokens (762.297108ms)
+✔ an open server (no access key) has no OAuth endpoints (431.348305ms)
+✔ client ID metadata documents: an https client_id is checked against its own redirect URIs (3.89246ms)
+[mcp-sdk] OAuthClientProvider does not implement saveDiscoveryState()/discoveryState(); the SEP-2352 callback-leg authorization-server binding cannot be checked. Implement discoveryState (persist alongside codeVerifier) — see docs/migration/upgrade-to-v2.md §SEP-2352.
+✔ the MCP SDK's own OAuth client signs in end to end (598.840596ms)
+✔ package verification: digest, signature, scope, tampering, reserved ids, bad files (23.272176ms)
+✔ install needs consent AND the administrator's approval from the server; the chat cannot supply it (61.28662ms)
+✔ installed package: enable, run, restart, lock file (45.828736ms)
+✔ update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup (32.591268ms)
+✔ a package whose own example fails never becomes active; unsigned needs the explicit switch (25.877396ms)
+✔ uninstall keeps canvas objects; purge removes stored versions and needs admin (34.245312ms)
+✔ purge and install refuse ids that are not module ids (no path traversal) (4.84532ms)
+✔ a purge plan goes stale when the package is installed before it is confirmed (18.575695ms)
+✔ a corrupted active version stays visible so it can be rolled back (37.887882ms)
+✔ a rollback plan goes stale when another update lands first (29.689508ms)
+✔ an update plan goes stale when a newer version is installed first (23.527398ms)
+✔ an install plan goes stale when the package is installed by another plan first (11.142658ms)
+✔ a failed rollback leaves the running version, lock and record unchanged (25.732831ms)
+✔ updating a failed package keeps a coherent rollback target (32.831744ms)
+✔ a WebAssembly module installs, passes its self-test and draws through scene operations (137.121899ms)
+✔ WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped (775.917371ms)
+✔ WebAssembly packages with imports, no memory maximum or too much memory are refused (11.524458ms)
+✔ a WebAssembly module survives a restart (142.091965ms)
+✔ author tool: init makes a module that passes test, and test catches a broken example (685.088613ms)
+✔ addresses: only public ones are reachable (7.28919ms)
+✔ an HTTP module installs without any network call, then runs through the egress rules (53.69296ms)
+✔ egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions (1.609893ms)
+✔ HTTP manifests: host must be named when there are several, secrets must be declared (5.911421ms)
+✔ environment secret names cannot collide between module ids (0.350864ms)
+✔ paired marks go to their own image and links join them (64.425682ms)
+✔ a failed paired call changes neither image nor the links (42.138049ms)
+✔ widget maps each image's coordinates into the side-by-side canvas and back (3.057599ms)
+✔ widget lays out a workspace, turns rotated images and maps marks back exactly (1.325499ms)
+✔ widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict (6.822909ms)
+✔ one call cannot add the same id to both images (41.378208ms)
+✔ a user send on a paired view tells GPT which image each mark is on (6.849517ms)
+✔ pdf recognition is cheap and does not need the engine (1.132613ms)
+✔ PDF pages render at any dpi with the same normalized layout, labels and a text layer (180.925017ms)
+✔ stored PDFs can be rendered again from their hash (3.072926ms)
+✔ polylines keep their vertices and expose a bounding box (2.262134ms)
+✔ assistant and replayed user polylines resolve with provenance (1.037041ms)
+✔ user polylines become raster events GPT can follow (1.588546ms)
+✔ smooth and closed flags survive for freehand curves and loops (0.441894ms)
+✔ submission separates the focus mark from earlier context marks (0.478251ms)
+✔ assistant findings (note, status) are kept on marks (0.263231ms)
+✔ pen style (colour, size, highlighter) is kept and validated (0.372539ms)
+✔ one image: layers, marks with provenance, style and findings, nothing host-specific (26.020173ms)
+✔ a pair: links point from one image's mark to the other's, with review (18.321994ms)
+✔ a protocol document attached as a marks file restores the matching image's marks (26.771059ms)
+✔ downsized process_image preview reports its actual pixels and preserves precise derived-view mapping (193.819282ms)
+✔ render_canvas pixel-to-canvas matrix matches the resized image (206.237508ms)
+✔ canvas results stay under host size caps; uploads and slices carry the rest (3550.707489ms)
+✔ mountain-right resolves away from tree even when model guesses tree coordinates (1.619356ms)
+✔ sun landmark matches source SVG geometry (0.228795ms)
+✔ semantic target must exist in selected scene (0.572942ms)
+✔ previous human marks cannot be silently converted into AI marks (0.674348ms)
+✔ free coordinates are retained but never called semantically grounded (0.269395ms)
+✔ replayed human annotations preserve user author, but provenance is unverified (0.197433ms)
+✔ all built-in scene anchors use normalized bounded coordinates (0.301924ms)
+✔ scene ops: create with refs, ids assigned by the core, provenance recorded (18.00374ms)
+✔ scene ops: all or nothing, with a pointed error (2.570923ms)
+✔ scene ops: a module changes only its own objects; the user changes anything (10.380088ms)
+✔ scene ops: optimistic concurrency, in-use frames, locked layers (3.944002ms)
+✔ scene ops: scratch objects are not drawn for the user until published (3.318117ms)
+✔ scene ops: objects survive a round trip through storage form and re-render the same (3.065313ms)
+✔ renderer: a plot of sin(x) is one smooth curve through the right points; tan breaks at asymptotes (6.103831ms)
+✔ plot labels: Core edits follow auto expressions and preserve custom names (8.638413ms)
+✔ plot labels: legacy formula-looking and empty labels stay custom after restore (12.355136ms)
+✔ deleted axes and plots restore together with original IDs, labels and lock checks (51.067608ms)
+✔ a required key is generated once, saved with mode 600 and reused; an explicit key or opt-out wins (10.704859ms)
+✔ X-Forwarded-For counts only behind the number of proxies the operator trusts (0.353576ms)
+✔ download links are signed per image and file when a key exists (1.107386ms)
+✔ the Docker defaults start a closed server and keep its key across restarts (1576.214247ms)
+[storage] restored imageId=img:7a98620bb4bcad23 marks=2
+✔ a canvas survives the memory cache being emptied (restart or eviction) (47.166793ms)
+[storage] restored imageId=img:36ae3ced8386e509 marks=1
+[storage] restored imageId=img:d52861abd38dc641 marks=1
+✔ paired links and the user's review are stored with the left image (24.67574ms)
+✔ without a storage dir nothing touches the disk and unknown ids still fail clearly (5.861173ms)
+✔ manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook (2138.714986ms)
+✖ browser: the widget opened by manage_surface_panels shows the calculator with the model's cell (1736.824181ms)
+✖ browser: with the calculator alone, the launcher offers the Graph canvas and brings it back (1466.023265ms)
+✔ link refresh: stale plots are recomputed and redrawn, manually and automatically (2054.411473ms)
+✔ layout: defaults put the viewport left and companions right; phones get tabs (22.83808ms)
+✔ layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size (0.411702ms)
+✔ layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing (7.895004ms)
+✔ layout: a stored layout is reconciled with the panel list and profiles do not touch each other (4.536788ms)
+✔ panel descriptors: strict, bound to real capabilities, inert when the kind is unknown (28.947254ms)
+✔ surface over MCP: panels, calculator, plot, layouts per profile, restart (3022.106299ms)
+✔ the quick tunnel address is read from cloudflared's metrics and checked (1.638646ms)
+✔ the watcher reports the address once and survives a missing tunnel (3301.913404ms)
+✔ unified canvas contains all views without a second tool call (5.598143ms)
+✔ context is optional; drawing and submission require no menu completion (0.290985ms)
+✔ crop stays inside the source and preserves original aspect (0.385816ms)
+✔ arrows zoom around the arrowhead, not the tail (0.157412ms)
+✔ photo canvases crop in their own aspect ratio (0.307601ms)
+✔ real photos render from widget-only _meta and processed views get their own tabs (0.444623ms)
+✔ re-delivered host data does not reset the chosen tab or unsent marks (0.213305ms)
+✔ only new marks are focus; sent marks become context and fade (0.227486ms)
+✔ GPT notes and status appear beside their marks (0.207405ms)
+✔ new user marks continue numbering after re-presented ones (0.276769ms)
+✔ users pick colour, size and a translucent highlighter (0.273839ms)
+✔ undo and redo step through marks, including a clear (4.684116ms)
+✔ a late tool input never replaces the applied result (0.571138ms)
+✔ missing pixels are reloaded and the verification image has its own tab (0.746101ms)
+✔ provenance colors are distinct from viewer inspection marker (0.276158ms)
+✔ zoom keeps the point under the pointer and clamps to the photo (0.815914ms)
+✔ pinch, wheel and pan never draw; labels and drawing tolerances follow the zoom (0.746506ms)
+✔ layers can be hidden without losing marks; unsent marks always show (0.277674ms)
+✖ pick a photo in the canvas: upload in slices, preview then full image, model told (1473.261923ms)
+✔ M0.4.3 uses the exact widget's scene artwork, not a separate semantic object catalog (3.452607ms)
+✔ M0.4.3 returns genuine PNG bytes for original, blue-focus view and crop (69.352842ms)
+✔ Arrow crop is around the arrowhead, NOT the tail (0.41851ms)
+✔ Reversed rectangle coordinates and near-edge point are handled (0.64323ms)
+✔ Reject arbitrary URLs, unknown image IDs, wrong revisions or invalid geometry (1.541345ms)
+✔ M0.4 embedded canvas JavaScript parses (38.10676ms)
+✔ M0.4 separates media, AI overlays and human overlays (1.974919ms)
+✔ M0.4 tools and message bridge are both present (2.008253ms)
+✔ M0.4 uses fixed local scenes; no arbitrary image URL fetch (0.349114ms)
+✔ M0.3 widget JavaScript parses (1.861886ms)
+✔ M0.3 widget has separate validation and chat paths (0.389028ms)
+✖ workbench in a browser: Graph + calculator side by side, drag, mobile tabs (1971.140057ms)
+✔ workspaces over MCP: preview, commit, retry, read back, undo (1631.397998ms)
+✔ legacy adapter: a single and a paired canvas read as workspaces without changes (107.993232ms)
+✔ merge B into A: 3 images, 29 editable marks, 9 layer instances; A and B untouched (PORT-01, MC-05..MC-09) (85.374751ms)
+✔ a stale preview is refused and a failed change leaves documents alone (104.892703ms)
+✔ split with copy: the copy changes independently and remembers its source (PORT-02, PORT-03) (102.462314ms)
+✔ move then undo: items return, nothing is deleted (PORT-05, PORT-17) (84.181006ms)
+✔ links join marks across items and are shared with paired views (87.805974ms)
+[storage] restored imageId=img:cdd7884aea5523cd marks=25
+[storage] restored imageId=img:7adaeac0f3f67a71 marks=2
+[storage] restored imageId=img:236cdd18eb31ff52 marks=2
+✔ workspaces, copies and links survive a restart with storage (PORT-12) (132.616396ms)
+✔ review fixes: retry after a stale preview, annotation changes stale a preview, successive undo, duplicate picks (87.36661ms)
+✖ browser: a burst of wheel zooms triggers only a few full renders (679.646105ms)
+ℹ tests 273
+ℹ suites 0
+ℹ pass 266
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91150.875984
+
+✖ failing tests:
+
+test at tests/cards-e2e.test.js:8:1
+✖ info cards in a browser: per-module groups, fold, hide and bring back (823.986736ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at Object.open (/workspace/Estampes/tests/helpers/widget-host.js:63:34)
+      at async TestContext.<anonymous> (/workspace/Estampes/tests/cards-e2e.test.js:16:16) {
+    name: 'Error',
+    log: []
+  }
+
+test at tests/layers-e2e.test.js:8:1
+✖ layers in a browser: base image + overlay image + Graph curve, fade and reorder (957.392628ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at Object.open (/workspace/Estampes/tests/helpers/widget-host.js:63:34)
+      at async TestContext.<anonymous> (/workspace/Estampes/tests/layers-e2e.test.js:23:16) {
+    name: 'Error',
+    log: []
+  }
+
+test at tests/surface-open.test.js:38:1
+✖ browser: the widget opened by manage_surface_panels shows the calculator with the model's cell (1736.824181ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at Object.open (/workspace/Estampes/tests/helpers/widget-host.js:63:34)
+      at async TestContext.<anonymous> (/workspace/Estampes/tests/surface-open.test.js:46:16) {
+    name: 'Error',
+    log: []
+  }
+
+test at tests/surface-open.test.js:55:1
+✖ browser: with the calculator alone, the launcher offers the Graph canvas and brings it back (1466.023265ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at Object.open (/workspace/Estampes/tests/helpers/widget-host.js:63:34)
+      at async TestContext.<anonymous> (/workspace/Estampes/tests/surface-open.test.js:63:16) {
+    name: 'Error',
+    log: []
+  }
+
+test at tests/upload-e2e.test.js:16:1
+✖ pick a photo in the canvas: upload in slices, preview then full image, model told (1473.261923ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at Object.open (/workspace/Estampes/tests/helpers/widget-host.js:63:34)
+      at async TestContext.<anonymous> (/workspace/Estampes/tests/upload-e2e.test.js:19:37) {
+    name: 'Error',
+    log: []
+  }
+
+test at tests/workbench-e2e.test.js:40:1
+✖ workbench in a browser: Graph + calculator side by side, drag, mobile tabs (1971.140057ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at TestContext.<anonymous> (/workspace/Estampes/tests/workbench-e2e.test.js:65:30) {
+    name: 'Error',
+    log: []
+  }
+
+test at tests/zoom-perf.test.js:11:1
+✖ browser: a burst of wheel zooms triggers only a few full renders (679.646105ms)
+  browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
+  ╔════════════════════════════════════════════════════════════╗
+  ║ Looks like Playwright was just installed or updated.       ║
+  ║ Please run the following command to download new browsers: ║
+  ║                                                            ║
+  ║     npx playwright install                                 ║
+  ║                                                            ║
+  ║ <3 Playwright Team                                         ║
+  ╚════════════════════════════════════════════════════════════╝
+      at Object.open (/workspace/Estampes/tests/helpers/widget-host.js:63:34)
+      at async TestContext.<anonymous> (/workspace/Estampes/tests/zoom-perf.test.js:19:16) {
+    name: 'Error',
+    log: []
+  }
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

@@ -1,5 +1,7 @@
 # Architecture
 
+Phase 0 design review: [Unified Visual Architecture RFCs](rfc/unified-visual-architecture/README.md) and [implementation roadmap](../IMPLEMENTATION-ROADMAP.md) describe a **proposed**, unapproved evolution. They do not describe implemented Document or multi-viewport features. The current implementation below remains the baseline.
+
 Estampes is one Node 22 process. ChatGPT (or any MCP client) talks to it at `/mcp`; ChatGPT renders the canvas as an MCP Apps widget inside the conversation. This page describes what exists today. For the reasons behind the design, see [Vision](VISION.md); for older experiments, see [history](history/README.md).
 
 ## Who does what

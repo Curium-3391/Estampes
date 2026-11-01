@@ -1,0 +1,157 @@
+{
+  "status": "OBSERVED",
+  "dateUTC": "2026-11-01",
+  "auditedCommit": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "phase": "0",
+  "realHostTests": "NOT RUN",
+  "dockerTests": "NOT RUN",
+  "runs": [
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY npm test",
+      "exitCode": 1,
+      "result": {
+        "node": "24.19.0",
+        "tests": 273,
+        "pass": 266,
+        "fail": 7,
+        "skip": 0,
+        "seconds": 91.150876
+      },
+      "log": "logs/npm-test-initial.log",
+      "sha256": "aa6b6c611f58c89a2db14d63a422b4a6b1dc3004d5170ab70e466ff0f93ed734",
+      "bytes": 34419
+    },
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "result": {
+        "node": "22.23.4",
+        "tests": 273,
+        "pass": 273,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 109.10302
+      },
+      "log": "logs/npm-test-node22.log",
+      "sha256": "8303f0b1c66f0e5acb3bb77555b9bb3874eecefae3dd60ed5169d654cc3a3543",
+      "bytes": 59132
+    },
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "result": {
+        "node": "22.23.4",
+        "tests": 275,
+        "pass": 275,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 114.554448
+      },
+      "log": "logs/npm-test-final.log",
+      "sha256": "eca5a205eb1c895ed59baea98ec6bed4347aae0351898d3e5843738bc2887e6f",
+      "bytes": 59727
+    },
+    {
+      "command": "python -m unittest discover -s cas-service/tests -v",
+      "exitCode": 0,
+      "result": {
+        "python": "3.12.14",
+        "sympy": "1.14.0",
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 6.889
+      },
+      "log": "logs/cas-python.log",
+      "sha256": "d0d02c912e186ce5345d2776295186bbe7ec3b8baec92267701e62b5782287b4",
+      "bytes": 3688
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/uva-characterization.test.js",
+      "exitCode": 0,
+      "result": {
+        "node": "22.23.4",
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 0.365589
+      },
+      "log": "logs/characterization.log",
+      "sha256": "2e024cededc7cefdb83e6d66232f909338efec12d5da2fabc170db75698d7049",
+      "bytes": 684
+    },
+    {
+      "command": "npm run docs:check",
+      "exitCode": 0,
+      "result": {},
+      "log": "logs/docs-initial.log",
+      "sha256": "11befac6c7a247b6dcdf68d3c0d69aeb09e7a816c19371d42eed8476c345eb7b",
+      "bytes": 127
+    },
+    {
+      "command": "npm run release:check",
+      "exitCode": 0,
+      "result": {},
+      "log": "logs/release-initial.log",
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+      "bytes": 188
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "result": {
+        "markdownFiles": 72,
+        "registeredTools": 55,
+        "configVariables": 22
+      },
+      "log": "logs/docs-final.log",
+      "sha256": "8d10c8bc20b4c2ca600d33586da5953559b2350b6cbfc4420977a23000b7b878",
+      "bytes": 127
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "result": {
+        "version": "0.20.0"
+      },
+      "log": "logs/release-final.log",
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+      "bytes": 188
+    },
+    {
+      "command": "node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "result": {
+        "RFCs": 8,
+        "ADRs": 8,
+        "testCases": 40,
+        "PRUnits": 20,
+        "unchangedProductionConfigFiles": 95
+      },
+      "log": "logs/consistency-final.log",
+      "sha256": "595bf4db6402d3e99bf95b921cfb0cc9780ef89fadcf0662abc0173381597862",
+      "bytes": 126
+    }
+  ],
+  "benchmark": {
+    "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/benchmark.mjs",
+    "exitCode": 0,
+    "artifact": "benchmark-results.json",
+    "sha256": "47d3847aa2acf0a418f01d41f87901a995567eb4f89aca739549aa506f58fbed",
+    "workloads": 4,
+    "warmups": 2,
+    "samplesPerWorkload": 12
+  },
+  "notRun": [
+    "Real ChatGPT Web",
+    "Real ChatGPT iOS",
+    "Real ChatGPT Android",
+    "Real MCP Apps CSP acceptance",
+    "Docker build/Compose smoke",
+    "Multi-arch image builds",
+    "Python 3.13 rerun",
+    "New multi-viewport performance (not implemented)"
+  ]
+}
