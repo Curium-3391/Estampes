@@ -173,7 +173,7 @@ A built-in module that finds where a photo of the sky points, using [Astrometry.
 Setup (administrator):
 
 1. Get an API key from your profile on nova.astrometry.net.
-2. Store it where the server runs. With Docker: `echo "$KEY" | docker compose exec -T estampes node scripts/estampes-module.js secret set org.estampes.astrometry api_key`. Without Docker: the same command with `ESTAMPES_STORAGE_DIR=<your storage folder>` in front (after `npm install`). Or set the environment variable `ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY` for the server. `secret status org.estampes.astrometry` shows whether it is set.
+2. Store it where the server runs. With Docker: `echo "$KEY" | docker compose exec -T estampes node scripts/estampes-module.js secret set org.estampes.astrometry api_key`. Without Docker: the same command with `ESTAMPES_STORAGE_DIR=<your storage folder>` in front (after `npm install`). Or set the environment variable `ESTAMPES_MODULE_SECRET_ORG_DESTAMPES_DASTROMETRY_SAPI_KEY` for the server. (`secret status` reads installed packages' declared secrets, so it does not list this built-in module's key; check that `<storage>/modules/secrets.json` exists, or run a solve: a missing key is reported by the job.)
 3. Enable the module in the Store; it needs the administrator's approval because it sends images to an external host.
 4. Give ChatGPT a night-sky photo and ask it to solve it. It starts a job, checks it with `get_module_job`, and when done the canvas shows the named objects. A failed job says why (no key set, key refused, no stored copy of the image, unsupported format, or Astrometry.net could not solve it).
 

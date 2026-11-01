@@ -16,10 +16,11 @@ Goal: find where a photo of the sky points and see the named stars and objects o
 
    ```sh
    echo "$KEY" | docker compose exec -T estampes node scripts/estampes-module.js secret set org.estampes.astrometry api_key
-   docker compose exec estampes node scripts/estampes-module.js secret status org.estampes.astrometry
+   docker compose exec estampes ls -l /data/modules/secrets.json
    ```
 
-   Expected: `secret status` lists `api_key` as set (names only, never values).
+   Expected: `secret set` prints `Stored api_key for org.estampes.astrometry in …/secrets.json (mode 600)`, and the file exists with mode `-rw-------`. Do not rely on `secret status org.estampes.astrometry` for this module: that command reads the declared secrets of an *installed package*, and plate solving is built in, so it prints "No declared secrets … (or it is not installed)" even when the key is stored. The real test is the first solve: a missing key is reported by the job as "no key set".
+
 2. In ChatGPT ask: *"Open the Estampes Store."* Find **Plate solving**, read the permissions it asks for (it sends images to an external host and can create a new canvas), and enable it. Enabling this module is a high-risk change, so the Store shows the exact command that approves the plan on the server; run it. **User confirmation** in the Store and **administrator approval** on the server are both required; GPT can prepare the change but cannot approve it ([Modules](../MODULES.md)).
 
 ## Success path
@@ -46,7 +47,7 @@ Other failures, each reported by the job with its reason:
 
 | Message says | Cause | Fix |
 | --- | --- | --- |
-| no key set / key refused | Secret missing or wrong | `secret set` again, check with `secret status`; refresh the key on nova.astrometry.net. |
+| no key set / key refused | Secret missing or wrong | `secret set` again (check the file as above); refresh the key on nova.astrometry.net. |
 | no stored copy of the image | Server runs without storage | Turn storage on (`ESTAMPES_STORAGE_DIR`). |
 | unsupported format | Not JPEG or PNG | Convert and attach again. |
 | module not enabled | Store plan not confirmed or not approved | Finish both steps under Administrator setup. |

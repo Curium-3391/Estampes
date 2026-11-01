@@ -21,7 +21,7 @@ Goal: turn one PDF page into an image on the canvas, mark a region, and see what
 
 **3. Mark and verify.** Ask: *"Mark the line with the measured value."* Check the mark covers the line; the embedded text box gives an exact position, a pixel reading may be a little off.
 
-**4. Zoom or raise the resolution.** Ask for the page again at a higher resolution (the tool accepts 36–600 dpi). Marks keep their position because coordinates are normalized to the page.
+**4. Zoom or raise the resolution.** To see more detail on the page you already marked, zoom the canvas; detail tiles are cut from the rendered page. Asking for the page again at another resolution (the tool accepts 36–600 dpi) makes a **different image**, with its own canvas: your marks are not carried over, and the workspace tools warn that two renders of one PDF page do not share marks. Geometry is normalized, so you can re-draw a mark at the same place, but Estampes does not copy it for you.
 
 **5. Come back later.** With storage on, the PDF is kept; later requests can reuse the stored document instead of attaching it again.
 
