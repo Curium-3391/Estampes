@@ -10,6 +10,12 @@ Estampes is a self-hosted, pre-1.0 project (see `package.json` for the version).
 - Evaluation sets with known target locations
 - Research on supported MCP Apps / ChatGPT integration APIs
 
+## Getting started
+
+- Set up, run the tests and find your way around the code: [Development guide](docs/DEVELOPMENT.md).
+- Write a module: [Module quick start](docs/modules/QUICKSTART.md) and [Testing modules](docs/modules/TESTING.md).
+- A good first change is a failing test for a bug you found, or a corrected document (run the commands in it).
+
 ## Before a large change
 
 Please open an issue describing the user problem, proposed behavior, and verification plan before investing in a substantial implementation.

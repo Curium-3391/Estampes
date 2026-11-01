@@ -123,6 +123,8 @@ Declarative modules (code-free): each capability lists scene operations with `{"
 
 ## Writing a module
 
+A guided walkthrough is in the [module quick start](modules/QUICKSTART.md); [Testing modules](modules/TESTING.md) covers scene operations, permissions, revisions and failure cases. The commands in short:
+
 ```
 node scripts/estampes-module.js init mymodule org.example.mymodule            # or --runtime wasm
 node scripts/estampes-module.js test mymodule/module.json                     # manifest + examples, like an install

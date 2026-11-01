@@ -71,6 +71,8 @@ npm start          # http://localhost:8787/mcp
 | [備份與還原（英文）](../BACKUP-RESTORE.md) | 儲存了什麼、備份、還原、升級與回復、金鑰外洩後怎麼辦 |
 | [疑難排解（英文）](../TROUBLESHOOTING.md) | 連不上伺服器、圖片載入失敗、畫布異常、計算機不可用、模組權限錯誤 |
 | [安全政策（英文）](../../SECURITY.md) | 單一擁有者的安全模型，以及如何私下回報漏洞 |
+| [開發指南（英文）](../DEVELOPMENT.md) | 環境設定、各種測試、程式碼導覽、公開介面與內部實作、入門工作 |
+| [模組快速入門（英文）](../modules/QUICKSTART.md)、[模組測試（英文）](../modules/TESTING.md) | 建立、測試、簽章並安裝模組；宣告式、WebAssembly、http 三種路徑 |
 | [發布流程（英文）](../RELEASE.md) | 給維護者：版本順序、Docker 映像標籤、發布前檢查、回復 |
 | [使用指南（英文）](../USAGE.md) | 在 ChatGPT 裡使用畫布：標記、圖層、縮放、並排比對、匯出 |
 | [工具一覽（英文）](../TOOLS.md) | MCP 工具與 HTTP 端點 |
