@@ -1,0 +1,279 @@
+{
+  "phase": "0.2",
+  "dateUTC": "2026-11-01",
+  "status": "OBSERVED",
+  "baseCommit": "df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd",
+  "productionBase": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "workingBranch": "docs/unified-visual-architecture-phase0-final-gate",
+  "productionFilesChanged": false,
+  "environment": {
+    "node": "v22.23.4",
+    "platform": "linux",
+    "arch": "x64",
+    "sharp": "0.34.5",
+    "vips": "8.17.3",
+    "defaultNode": "v24.19.0",
+    "npm": "11.9.0",
+    "python": "3.12.14",
+    "chromium": "154.0.8037.57",
+    "kernel": "6.18.57",
+    "workspaceFilesystem": "overlayfs",
+    "newDurabilityProfileValidated": false
+  },
+  "runs": [
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- node --test",
+      "exitCode": 0,
+      "results": {
+        "tests": 275,
+        "pass": 275,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "seconds": 129.470078917
+      },
+      "log": "final-gate-logs/node22-tests.log",
+      "bytes": 59689,
+      "sha256": "a8a151f6ac679bc1572be22cb00a4aa5d8784f064121a59bb73db7abbadafc94"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 20,
+        "pass": 20,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "seconds": 0.669312313
+      },
+      "log": "final-gate-logs/contract-tests-first.log",
+      "bytes": 4134,
+      "sha256": "ccb442cc60a909e973e1346f0d28a235b7885c6d1d46088631a1ee0ac61b9006"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "seconds": 0.306683237
+      },
+      "log": "final-gate-logs/contract-tests.log",
+      "bytes": 4597,
+      "sha256": "5f5604451b4da0a673582b2ded2769788c81bfec88095d75c3befa8a6e4b17ae"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "exitCode": 0,
+      "results": {
+        "formalExamples": 9,
+        "illustrativeManifests": 1,
+        "toolExampleSchemas": 7,
+        "productionImplemented": false,
+        "humanApproved": false
+      },
+      "log": "final-gate-logs/examples-first.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "exitCode": 0,
+      "results": {
+        "formalExamples": 9,
+        "illustrativeManifests": 1,
+        "toolExampleSchemas": 7,
+        "productionImplemented": false,
+        "humanApproved": false
+      },
+      "log": "final-gate-logs/examples.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {
+        "markdown": 82,
+        "currentTools": 55,
+        "configVariables": 22
+      },
+      "log": "final-gate-logs/docs-first.log",
+      "bytes": 127,
+      "sha256": "dc9962eb0d855210acdc4fb2fb0b61b6fd9d12333b7617d892c5aee6e54e61ae"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {
+        "markdown": 82,
+        "currentTools": 55,
+        "configVariables": 22
+      },
+      "log": "final-gate-logs/docs.log",
+      "bytes": 127,
+      "sha256": "dc9962eb0d855210acdc4fb2fb0b61b6fd9d12333b7617d892c5aee6e54e61ae"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {
+        "version": "0.20.0",
+        "published": false
+      },
+      "log": "final-gate-logs/release-first.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {
+        "version": "0.20.0",
+        "published": false
+      },
+      "log": "final-gate-logs/release.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": "python -m unittest discover -s cas-service/tests -v",
+      "exitCode": 0,
+      "results": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 6.387,
+        "warnings": [
+          "ResourceWarning: unclosed BufferedReader",
+          "ResourceWarning: unclosed StreamWriter",
+          "asyncio slow asyncTearDown diagnostics"
+        ]
+      },
+      "log": "final-gate-logs/cas-python.log",
+      "bytes": 3688,
+      "sha256": "dba6cc5d89d0fdd0dd8a6fc7bfe85f81876b424cc311c65ef09761abb90eb751"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/capacity-model.mjs",
+      "exitCode": 0,
+      "results": {
+        "classification": "ANALYTICAL_NOT_MEASURED",
+        "scenarios": 3
+      },
+      "log": "final-gate-logs/capacity-model.log",
+      "bytes": 2125,
+      "sha256": "7ea9524ab4ef47d5e54e3a33a2cd11019858888a502519776258e49c9ce3ed6b"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/phase01-counterexamples.mjs",
+      "exitCode": 0,
+      "results": {
+        "classification": "OBSERVED_PHASE01_DOCUMENT_VALIDATOR_COUNTEREXAMPLES_NOT_PRODUCT_BEHAVIOR",
+        "validSmallScaleAccepted": false,
+        "illConditionedMatrixAccepted": true,
+        "importedActiveModuleOwnerAccepted": true
+      },
+      "log": "final-gate-logs/phase01-counterexamples.log",
+      "bytes": 274,
+      "sha256": "085c2e90ab39544f55fa4c0e90f60b531d3a700f2040d300b4cc75c2158aa4db"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {
+        "RFCs": 8,
+        "ADRs": 12,
+        "UVA": 67,
+        "PRs": 23,
+        "RFindings": 6,
+        "independentFindings": 6,
+        "ODs": 6,
+        "productionHashes": 95,
+        "original16DocExpectationsUnchanged": true
+      },
+      "log": "final-gate-logs/consistency-first.log",
+      "bytes": 302,
+      "sha256": "a8691bf7175224aa523bfc99c63ade8279da8895f6a9fbc6cc9df53ffb72962a"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {
+        "RFCs": 8,
+        "ADRs": 12,
+        "UVA": 67,
+        "PRs": 23,
+        "RFindings": 6,
+        "independentFindings": 6,
+        "ODs": 6,
+        "productionHashes": 95,
+        "original16DocExpectationsUnchanged": true
+      },
+      "log": "final-gate-logs/consistency.log",
+      "bytes": 302,
+      "sha256": "a8691bf7175224aa523bfc99c63ade8279da8895f6a9fbc6cc9df53ffb72962a"
+    },
+    {
+      "command": "git diff --exit-code df70d2b -- server.js src public cas-service tests .github Dockerfile compose.yaml package.json package-lock.json scripts",
+      "exitCode": 0,
+      "results": {
+        "productionFilesChanged": false,
+        "existingProductTestsChanged": false
+      },
+      "log": "final-gate-logs/production-integrity.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check df70d2b",
+      "exitCode": 0,
+      "results": {
+        "errors": 0
+      },
+      "log": "final-gate-logs/whitespace.log",
+      "bytes": 97,
+      "sha256": "39d8922ff1e9429becba1cc10a9d14f2d3393de1c39fbcd0f12634c0c04728bd"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node -e 'console.log(JSON.stringify({node:process.version,platform:process.platform,arch:process.arch,sharp:require(\"sharp\").versions.sharp,vips:require(\"sharp\").versions.vips}))'",
+      "exitCode": 0,
+      "results": {
+        "node": "v22.23.4",
+        "platform": "linux",
+        "arch": "x64",
+        "sharp": "0.34.5",
+        "vips": "8.17.3"
+      },
+      "log": "final-gate-logs/toolchain.log",
+      "bytes": 85,
+      "sha256": "51b8d65341ec5abc1f25dfebd8b95eeaaea858cd15b3d384a705648d9ee2e10e"
+    },
+    {
+      "command": "git ls-remote --heads origin main docs/unified-visual-architecture-phase0-review",
+      "exitCode": 0,
+      "results": {
+        "main": "7fb9b73442401fc32a7034888deaf49303e582a6",
+        "phase01": "df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd"
+      },
+      "log": "final-gate-logs/remote-refs.log",
+      "bytes": 156,
+      "sha256": "aa98ba173eedeb6c7830664afb45b96e2a3043493c792dcf8b58616e00354d6c"
+    }
+  ],
+  "repeatedRuns": "Final docs/release/examples were repeated after report corrections; all completed exit 0. First and final logs retained. Full Node suite was run once; unchanged production tests were not repeated without cause. Doc contract tests were re-run after added DAG cases.",
+  "limitations": [
+    "No production feature implementation or user data migration",
+    "67 UVA items are acceptance specifications; docs-only UVA-55 subset executed",
+    "SIGKILL/VM/power-loss/OS fence/new engine capacity/real Host tests not executed",
+    "Capacity model is analytical, not measured",
+    "TS projection inventory is not compiler equivalence proof",
+    "Historical Phase0/0.1 reports/logs and original expectations retained"
+  ],
+  "architectureHumanApproved": false
+}

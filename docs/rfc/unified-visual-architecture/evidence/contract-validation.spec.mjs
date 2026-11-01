@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validatePackage } from './validate-contract-examples.mjs';
-import { validateExample, normalizeRequestId, Provenance, EmbeddedObject, api } from './proposed-contracts.mjs';
+import { validateExample, normalizeRequestId, Provenance, EmbeddedObject, Matrix, CommitRoot, CommitIndexEntry, RecoveryResolver, SnapshotEligibility, NestedSnapshotError, api } from './proposed-contracts.mjs';
 const examples=JSON.parse(readFileSync(new URL('./contract-examples.json',import.meta.url),'utf8'));
 const copy=id=>structuredClone(examples.find(e=>e.id===id));
 const uid=(p,n=1)=>p+':'+String(n).padStart(8,'0')+'-0000-4000-8000-000000000001';
@@ -33,4 +33,52 @@ test('adoption can link a historical source without rewriting its creator',()=>{
  const p=structuredClone(provenance);p.sourceTrust='migrated-local';p.createdBy.publisherFingerprint=null;p.createdBy.ownershipLineageId=null;
  assert.equal(Provenance.safeParse(p).success,false);p.ownership.adoptionEventId=uid('event',9);assert.ok(Provenance.safeParse(p).success);
  assert.equal(p.createdBy.publisherFingerprint,null); // shape validates; actual event authorization remains a runtime gate
+});
+test('external import archives authorship without granting local module ownership',()=>{
+ const p=structuredClone(provenance);p.sourceTrust='imported-unverified';
+ assert.equal(Provenance.safeParse(p).success,false);
+ p.original={sourceSchema:'estampes.document/1',payloadHash:'d'.repeat(64),archiveRef:'migration-raw/1'};
+ p.createdBy={kind:'import',sourceId:'bundle:'+'c'.repeat(64)};p.author='unknown';
+ assert.equal(Provenance.safeParse(p).success,false); // importing signer/lineage is still not a grant
+ p.ownership={kind:'unclaimed-module',moduleId:principal.moduleId,historicalSourceHash:'d'.repeat(64)};
+ assert.ok(Provenance.safeParse(p).success);
+});
+test('affine validation uses the specified condition rather than determinant magnitude',()=>{
+ assert.ok(Matrix.safeParse([1e-7,0,0,0,1e-7,0,0,0,1]).success);
+ assert.equal(Matrix.safeParse([1e10,0,0,0,1e-4,0,0,0,1]).success,false);
+ assert.equal(Matrix.safeParse([1,0,1e7,0,1,1e7,0,0,1]).success,false);
+ assert.ok(Matrix.safeParse([0,-2,10,2,0,20,0,0,1]).success);
+});
+test('commit root requires one closed registry/locator/ledger/authority root set',()=>{
+ const roots=Object.fromEntries(['registry','locator','ledger','commitIndex','retention','authority'].map((k,i)=>[k,String(i).repeat(64)]));
+ const root={schema:'estampes.commit-root/1',storeInstanceId:uid('doc').slice(4),generation:1,commitId:uid('tx'),parentCommitHash:null,roots};
+ assert.ok(CommitRoot.safeParse(root).success);
+ for(const key of Object.keys(roots)){const bad=structuredClone(root);delete bad.roots[key];assert.equal(CommitRoot.safeParse(bad).success,false);}
+ assert.equal(CommitRoot.safeParse({...root,locatorCurrent:'another-pointer'}).success,false);
+ assert.equal(CommitRoot.safeParse({...root,generation:2}).success,false);
+ assert.ok(CommitRoot.safeParse({...root,generation:2,parentCommitHash:'a'.repeat(64)}).success);
+ assert.equal(CommitRoot.safeParse({...root,roots:{...roots,locator:'unverified'}}).success,false);
+});
+test('nested snapshot refusal is typed and contains no child data or raster fallback',()=>{
+ const source=copy('EX-06').arguments.source;
+ const eligibility={supported:false,reason:'NESTED_SNAPSHOT_UNSUPPORTED',source,sourceRevision:4,sourceContentHash:'a'.repeat(64),bindingGraphHash:'b'.repeat(64),blockers:[{...source,kind:'object',id:uid('obj',7)}],redactedBlockerCount:0,alternatives:['live','editable-bundle']};
+ assert.ok(SnapshotEligibility.safeParse(eligibility).success);
+ const error={isError:true,structuredContent:{kind:'estampes.document_error',code:'BLOCKED_DEPENDENCY',message:'Nested source snapshot is unsupported in V1',retryable:false,details:{reason:'NESTED_SNAPSHOT_UNSUPPORTED',operation:'embed.freeze',snapshotEligibility:eligibility}}};
+ assert.ok(NestedSnapshotError.safeParse(error).success);
+ for(const patch of [{supported:true},{blockers:[]},{childTitle:'denied-title'},{alternatives:['rasterize']}])assert.equal(SnapshotEligibility.safeParse({...eligibility,...patch}).success,false);
+ assert.equal(NestedSnapshotError.safeParse({...error,structuredContent:{...error.structuredContent,retryable:true}}).success,false);
+ const supported={...eligibility,supported:true,blockers:[]};delete supported.reason;assert.ok(SnapshotEligibility.safeParse(supported).success);delete supported.sourceContentHash;assert.equal(SnapshotEligibility.safeParse(supported).success,false);
+ const redacted={...eligibility,blockers:[],redactedBlockerCount:1};assert.equal(SnapshotEligibility.safeParse(redacted).success,false);delete redacted.sourceContentHash;assert.ok(SnapshotEligibility.safeParse(redacted).success);
+});
+test('commit membership does not self-reference its enclosing content-addressed root',()=>{
+ const entry={commitId:uid('tx'),generation:1,registryRootHash:'a'.repeat(64),requestKeyDigest:null,payloadHash:'b'.repeat(64),resultHash:'c'.repeat(64),outcome:'committed'};
+ assert.ok(CommitIndexEntry.safeParse(entry).success);
+ assert.equal(CommitIndexEntry.safeParse({...entry,commitRootHash:'d'.repeat(64)}).success,false);
+ const bad={...entry};delete bad.registryRootHash;assert.equal(CommitIndexEntry.safeParse(bad).success,false);
+});
+test('recovery pairing names the locator component without a self-referential commit hash',()=>{
+ const pair={registryRootHash:'a'.repeat(64),logicalClosureHash:'b'.repeat(64),resolverLocatorRootHash:'c'.repeat(64)};
+ assert.ok(RecoveryResolver.safeParse(pair).success);
+ assert.equal(RecoveryResolver.safeParse({...pair,resolverCommitHash:'d'.repeat(64)}).success,false);
+ const bad={...pair};delete bad.resolverLocatorRootHash;assert.equal(RecoveryResolver.safeParse(bad).success,false);
 });

@@ -31,3 +31,13 @@ Status：Proposed risk assessment；不是已發生資料損毀的宣稱。Sever
 | R18 flags/oldbinary/projection造成雙writer | S1 / High | A0–7atomicmanifest、gatedmediator、launcher/ROmountfence、projection獨立tree | UVA-56–58/62 actualbaselinebinary+races | A6/A7readonly、v2backup、新legacyvolume；PR-1B/7A |
 
 ReviewFinding R-01–R-06的狀態見[REVIEW-REMEDIATION](REVIEW-REMEDIATION.md)；risk不是已發生資料事故。GC可回收internalduplicate，不授權刪userhistory。
+
+## Phase 0.2 — Independent Review Risk Updates
+
+| Finding / residual risk | Severity / likelihood | Mitigation | Detection | Recovery / gate |
+| --- | --- | --- | --- | --- |
+| FG-01 redundant24hfullcopy/checkpoint與永久ledger耗quota | S1 / High under sustainedwrites；算術可證、實際bytes未測 | G1/G2、verifiedcheckpoint thinning、perwrite reservation、maintenance admission backpressure；不刪logicalhistory | UVA-64/65 bytescomponent/drainrate，capacity-model analyticalonly | refuse新write保draft/CURRENT；owner明確擴quota/外部backup；PR-1D先於1B |
+| FG-02 rootpair分裂 / starvation | S1 / Medium，Phase0.1未列完整rootrecord | 單CommitRoot六roots、RecoveryCatalog pairing、touchedpagecompare、boundedwriterpause | UVA-63全versionhash/ledgeroracle與kill | A6/verifiedbackup；禁止猜latest；PR-1C/1D |
+| FG-03 Desktop/macOS被誤當Linuxdurable | S1 / High uncertainty，ARMimagebuild不是FS證據 | explicitprofileallowlist、Desktop/APFS預設拒cutover、OSfence而非marker | UVA-66平台/driver/faultprofile，記未測項 | readonly或新memorysession，不續寫原durablestore；PR-1C/1B/7A |
+| FG-04 nestedclone隱式遺失 / denied metadata leak | S1 / Medium，原materialize未定義 | sharedpreflight、typedrefusal、redactedpreview、editablebundle替代 | UVA-67/55 zeroeffects/canary/hash | 保原source，不flatten；新ADR才recursiveclone；PR-6D/6B/6C |
+| FG-05/06 schema通過被誤當權限/產品批准 | S1 / Medium，Matrix/Importshape與文字有落差 | schema反例+wire統一；trusteduseractor缺證據就拒route；每OD分scope簽核 | UVA-55/42/66與人工approvalrecord，diffscope/sourcehash | 不開userwrite/cutover，保provenance；PR-1A/1B/5A |

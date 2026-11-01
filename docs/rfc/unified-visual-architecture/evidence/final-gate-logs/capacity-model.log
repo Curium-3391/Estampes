@@ -1,0 +1,61 @@
+{
+  "classification": "ANALYTICAL_NOT_MEASURED",
+  "assumptions": {
+    "documentBytes": 67108864,
+    "deltaBytesPerCommand": 2048,
+    "tombstoneMaxBytes": 1024,
+    "ackMaxBytes": 65536,
+    "ackDays": 7,
+    "archiveAnchorDeltaBytes": 33554432,
+    "operationalCommands": 1000,
+    "quotaGiB": 10
+  },
+  "limitations": "Component model using fixed assumed sizes. Omits assets, full ACK artifacts, indices, journal, active reader pins, staged/maintenance/backup workspace and variable compression. Not an upper bound, runtime throughput, capacity SLA or measured retention performance. Real full-document replacement can have delta approximately S and is not deduplicated away.",
+  "scenarios": [
+    {
+      "commandsPerDay": 1000,
+      "days": 365,
+      "commands": 365000,
+      "componentsGiB": {
+        "losslessDelta": 0.696182,
+        "permanentTombstones": 0.348091,
+        "fullAckWindow": 0.427246,
+        "archiveAnchorCheckpoints": 1.4375
+      },
+      "modeledPersistentGiB": 2.909019,
+      "previousAllOperationalCheckpointsGiB": 22.8125,
+      "previous24hFullCopyGiB": 62.5,
+      "exceeds10GiBBeforeAssetsPinsStagingAndIndices": false
+    },
+    {
+      "commandsPerDay": 10000,
+      "days": 365,
+      "commands": 3650000,
+      "componentsGiB": {
+        "losslessDelta": 6.961823,
+        "permanentTombstones": 3.480911,
+        "fullAckWindow": 4.272461,
+        "archiveAnchorCheckpoints": 13.9375
+      },
+      "modeledPersistentGiB": 28.652695,
+      "previousAllOperationalCheckpointsGiB": 228.125,
+      "previous24hFullCopyGiB": 625,
+      "exceeds10GiBBeforeAssetsPinsStagingAndIndices": true
+    },
+    {
+      "commandsPerDay": 100000,
+      "days": 365,
+      "commands": 36500000,
+      "componentsGiB": {
+        "losslessDelta": 69.618225,
+        "permanentTombstones": 34.809113,
+        "fullAckWindow": 42.724609,
+        "archiveAnchorCheckpoints": 139.25
+      },
+      "modeledPersistentGiB": 286.401947,
+      "previousAllOperationalCheckpointsGiB": 2281.25,
+      "previous24hFullCopyGiB": 6250,
+      "exceeds10GiBBeforeAssetsPinsStagingAndIndices": true
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "status": "PASS",
+  "formalExamples": [
+    {
+      "id": "EX-01",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-02",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-03",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-04",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-05",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-06",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-07",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-08",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    },
+    {
+      "id": "EX-09",
+      "valid": true,
+      "implemented": false,
+      "humanApproved": false
+    }
+  ],
+  "formalFences": 9,
+  "illustrativeFences": 1,
+  "toolSchemas": 7,
+  "errors": [],
+  "coverage": "Proposed schema shape, strict fields, IDs, selected enums, refs, revisions, lineage shape, affine/snapshot constraints, fence/corpus and sequence consistency. No production validator, runtime authorization, filesystem durability or real Host acceptance proved."
+}

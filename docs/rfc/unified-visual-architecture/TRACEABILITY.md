@@ -50,3 +50,16 @@ TestID欄數字皆為 `UVA-` prefix；區間表示每個case，非單一籠統�
 | R-06 singleauthoritycutover/oldbinary/rollback | AUTHORITY-CUTOVER、RFC006/008、ADR-012 | compat/authoritymediator/deploymentlauncher/ROmount；A0–7、projectionneverauthority、postwriteA7export | UVA-56/57/58/62 | PR-1B / PR-6B / PR-7A；Phase1/6/7 |
 
 測試表新增22cases明列FailureModes/Automation/OwnerPR/Phase，原UVA-01–40仍有效；本輪只有docsvalidator實際執行，未跑不存在的產品feature。
+
+## Phase 0.2 — Independent Findings / Gates
+
+| Finding | Exact contract / proposed work | Acceptance | Blocking PR |
+| --- | --- | --- | --- |
+| FG-01 full-copy grace / checkpoint amplification / starvation | STORAGE-LIFECYCLE G1/G2、archive chain/thinning、quota reservation、quiescent pins與bounded maintenance | UVA-46–50/60/64/65；capacity-model僅算術，真bytes/drainrate未測 | PR-1D / PR-7A；writable PR-1B之前 |
+| FG-02 atomic registry / locator pairing | STORAGE-LIFECYCLE CommitRoot六roots、RecoveryCatalog resolver pair、same-root rebase/CURRENT | UVA-31/49/63；沒有第二個Locator CURRENT | PR-1A schema / PR-1C / PR-1D |
+| FG-03 platform durability overgeneralization | STORAGE-LIFECYCLE platformtable、AUTHORITY-CUTOVER fence/marker、RFC007 | UVA-57/59/66；Linuxconditional、Desktop/APFS defaultrefuse，kill≠powerloss | PR-1C / PR-1B / PR-7A |
+| FG-04 nested snapshot preflight missing | EMBED-CONTRACT eligibility、BLOCKED_DEPENDENCY/reason、noallocation、explicit alternatives、bundleclosure distinction | UVA-54/55/67；source/parent/OCC/auth/cycle+wholefieldroundtrip | PR-6D / PR-6B / PR-6C |
+| FG-05 doc-only schema semantic mismatch | CONTRACTS、proposed-contracts.mjs importedunknown/no moduleowner、matrix condition、newreadprojection schemas | UVA-55；old/newvalidators反例、原16test預期保留 | PR-0B / PR-1A；productionequivalence另驗 |
+| FG-06 wire / current-proposed ambiguity | ANNOTATION-POLICY docOCC route欄名、RFC004 req→cmd、AUTHORITY-CUTOVER Proposedlabel | UVA-55/56/62；R-05不是只比JSONfences | PR-0B / PR-1A / PR-1B |
+
+R-01–06的**最新獨立分類**見FINAL-ARCHITECTURE-GATE B；原REVIEW-REMEDIATION維持Phase0.1歷史證據。67cases/23PR的存在檢查不證明runtime行為，僅UVA-55文件subset已執行。Approval紀錄必有scope/notapproved，Agent不代簽。

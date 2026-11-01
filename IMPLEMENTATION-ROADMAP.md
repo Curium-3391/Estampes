@@ -1,6 +1,6 @@
 # Unified Visual Architecture — Implementation Roadmap
 
-Status：**Proposed / Phase 0.1 review remediation package**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。本次只完成Phase0/0.1規格，不授權Phase1–7。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
+Status：**Proposed / Phase 0.2 final gate review package**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。本次只完成Phase0/0.1/0.2規格，不授權Phase1–7。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
 
 後續Agent先確認新HEAD差異與批准紀錄；已批准架構不重新發散探索；缺失的ownership/ordering/publicbehavior不能猜。每PR附before/after fixture、sourceSHA、實測命令、flag狀態、rollback步驟與publicformat差異。以下為likelyfiles，不代表Phase0已新增這些核心模組。
 
@@ -36,7 +36,7 @@ PR IDs為追蹤識別，不代表字母順序可忽略依賴。Phase1先1A→1C�
 
 ## Phase 0 — Baseline / RFC
 
-Objectives：確認最新main、sourceaudit、設計可驗收契約、舊資料mapping、ADR與reviewgate。Prerequisites：repository access、cleanbranch、safe tempstores。Files：本Roadmap、docs/rfc/unified-visual-architecture全部、`tests/uva-characterization.test.js`。Public interfaces：無production變更。Required tests：npm/docs/release/Python/browserbaseline、兩characterizationcases、researchbenchmark。Acceptance：8RFC/12ADR、62cases、trace/risk/OD、結果不誇大、core零diff。Rollback：revertdocs/testcommit，原資料未動。Dependencies：無。Main risks：把manifest當功能證據、把FakeHost當live、漏掉新main。
+Objectives：確認最新main、sourceaudit、設計可驗收契約、舊資料mapping、ADR與reviewgate。Prerequisites：repository access、cleanbranch、safe tempstores。Files：本Roadmap、docs/rfc/unified-visual-architecture全部、`tests/uva-characterization.test.js`。Public interfaces：無production變更。Required tests：npm/docs/release/Python/browserbaseline、兩characterizationcases、researchbenchmark。Acceptance：8RFC/12ADR、67cases、trace/risk/OD、結果不誇大、core零diff。Rollback：revertdocs/testcommit，原資料未動。Dependencies：無。Main risks：把manifest當功能證據、把FakeHost當live、漏掉新main。
 
 | PR | Deliverable / checkable completion | Exit / review evidence |
 | --- | --- | --- |
@@ -49,10 +49,10 @@ Objectives：獨立identity、單一documentauthority、non-destructivestore與l
 
 | PR | Scope / public contract | Required completion / rollback boundary |
 | --- | --- | --- |
-| PR-1A | strictdocument/scene/ref schemas、UUIDgrammar、legacysetregistry、read-onlyshadowmapper | duplicate/missingIDcases、oneowner/invariants、sourceunchanged、completefieldinventory；無productioncutover |
-| PR-1C | durablecommit/recovery核心；boundedmanifest/pages、intent/fsync/barrier、OSlease、ledger原子同root | depends1A；UVA-49/59與原31–33；逐stagekill、fsyncfailure無ACK；不開productionwriter，維護由1D完成；rollback留shadow |
-| PR-1D | retentionroots/readerpins、losslesshistory、GCquarantine、journal/ledgercompaction、quota/reserve | depends1C；UVA-46–50/60；重建hash/ledgerexact、7天ACK不重apply、GCcrash無loss；rollback關maintenance保root與history、不刪資料 |
-| PR-1B | authority A0–A7、mediatedlegacywrites/adapter、atomiccutover/seal、launcher+OSreadonlymountfence；newtoolsflagged | depends1A/1C/1D；UVA-56–58/62；舊55tools契約不變；oldbinary無法diskwrite；flagoff不換authority；rollback依A7、新寫入先archive |
+| PR-1A | strictdocument/scene/ref schemas、Actor/Owner/Provenance/Embed與CommitRoot projections、UUIDgrammar、legacysetregistry、read-onlyshadowmapper | duplicate/missingIDcases、oneowner/invariants、sourceunchanged、completefieldinventory；UVA-55正反例/九流程與strictschemas一致；不註冊新write API或改現有儲存；無productioncutover |
+| PR-1C | durablecommit/recovery核心；boundedmanifest/pages、intent/fsync/barrier、OSlease、ledger原子同root | depends1A；UVA-49/59/63/66與原31–33；逐stagekill、fsyncfailure無ACK；不開productionwriter，維護由1D完成；rollback留shadow |
+| PR-1D | retentionroots/readerpins、losslesshistory、GCquarantine、journal/ledgercompaction、quota/reserve | depends1C；UVA-46–50/60/63–65；重建hash/ledgerexact、7天ACK不重apply、GCcrash無loss；rollback關maintenance保root與history、不刪資料 |
+| PR-1B | authority A0–A7、mediatedlegacywrites/adapter、atomiccutover/seal、launcher+OSreadonlymountfence；newtoolsflagged | depends1A/1C/1D；UVA-56–58/62/66；舊55tools契約不變；oldbinary無法diskwrite；flagoff不換authority；rollback依A7、新寫入先archive |
 
 ## Phase 2 — Visual Engine Extraction
 
@@ -100,13 +100,13 @@ Objectives：referenceworkspace、v1→v2sidewrite、editablebundle2、graphsepa
 | PR | Scope / public contract | Required completion / rollback boundary |
 | --- | --- | --- |
 | PR-6A | workspace/2refitems+legacyworkspaceadapter、performatmigrationplanner/registry/report | UVA22/24/25、fullleafinventory、previewhash+OCC、copy-on-write；archivelegacyundo而非誤套新rev |
-| PR-6D | embedded-document object/schema/ops、childsoleauthority、editableclone、dependencyvector、auth/cycle、defaultparentediting | depends6A/5A；UVA-51–54/61；同parentrev下child事件更新、noauthleak、snapshot獨立、nestedV1明拒；rollback停embedcreation保doc/refs可read/export |
-| PR-6B | bundle/2export/import+v1reader、newIDtwo-passmapping、surface/nb/interactionextras | depends6D；UVA-54/58/60/61與原07/23/25/27/30/31/36；editablechildclosure+refs/counts/hash/postreloadverify；externalrefunresolved；rollbackarchive驗 |
-| PR-6C | graphseparationpreview+選ink/objects/anchor，5ops、incomingref/CAS/evidenceimpact | depends6B/6D；UVA-54/61與原12/22/24/25；embedCopy/Move/Detach/CAS maps；overlap不自動歸屬、locked拒Move、closure完整、undo保原資料與歷史 |
+| PR-6D | embedded-document object/schema/ops、childsoleauthority、editableclone、dependencyvector、auth/cycle、defaultparentediting | depends6A/5A；UVA-51–54/61/67；同parentrev下child事件更新、noauthleak、snapshot獨立、nestedV1明拒；rollback停embedcreation保doc/refs可read/export |
+| PR-6B | bundle/2export/import+v1reader、newIDtwo-passmapping、surface/nb/interactionextras | depends6D；UVA-54/58/60/61/67與原07/23/25/27/30/31/36；editablechildclosure+refs/counts/hash/postreloadverify；externalrefunresolved；rollbackarchive驗 |
+| PR-6C | graphseparationpreview+選ink/objects/anchor，5ops、incomingref/CAS/evidenceimpact | depends6B/6D；UVA-54/61/67與原12/22/24/25；embedCopy/Move/Detach/CAS maps；overlap不自動歸屬、locked拒Move、closure完整、undo保原資料與歷史 |
 
 ## Phase 7 — Hardening / Release
 
-Objectives：故障、安全、效能與真Host驗收，版本/文件/rollout可操作。Prerequisites：Phase6exit；全部OD批准並核定support期限、測量budgets；實測Host帳號/平台可用。Files：tests/uva-security/recovery/perf、CIoptionalbenchjob、docs/COMPATIBILITY/DEPLOYMENT/TOOLS/RELEASE、Docker/Compose（若必要）、version/URIaliases。Public interfaces：凍結supportedformat/API/ABI版本，noadditionalarchitecture。Required tests：全部UVA-01–62，既有全suite、Python、docs/release、newvolumeCompose+backuprestore。Acceptance：0knownP0/P1、realWeb/Mobile逐平台record、securitynopermissionleak、固定runnerbudgetpass、stagedrelease無forcedmigration。Rollback：旗標+原volume備份、newarchive、read-onlyrecovery；tagrelease需既有maintainer流程，不自動發布。Risks：把fakehost當真、測不完整就release、downgrade丟newgraph。
+Objectives：故障、安全、效能與真Host驗收，版本/文件/rollout可操作。Prerequisites：Phase6exit；全部OD批准並核定support期限、測量budgets；實測Host帳號/平台可用。Files：tests/uva-security/recovery/perf、CIoptionalbenchjob、docs/COMPATIBILITY/DEPLOYMENT/TOOLS/RELEASE、Docker/Compose（若必要）、version/URIaliases。Public interfaces：凍結supportedformat/API/ABI版本，noadditionalarchitecture。Required tests：全部UVA-01–67，既有全suite、Python、docs/release、newvolumeCompose+backuprestore。Acceptance：0knownP0/P1、realWeb/Mobile逐平台record、securitynopermissionleak、固定runnerbudgetpass、stagedrelease無forcedmigration。Rollback：旗標+原volume備份、newarchive、read-onlyrecovery；tagrelease需既有maintainer流程，不自動發布。Risks：把fakehost當真、測不完整就release、downgrade丟newgraph。
 
 | PR | Scope / public contract | Required completion / rollback boundary |
 | --- | --- | --- |
@@ -115,10 +115,21 @@ Objectives：故障、安全、效能與真Host驗收，版本/文件/rollout可
 
 ## Architecture Approval Gate
 
-Phase0完成後停止核心功能工作。Review需核實OD-01/02/03/04/05/06推薦、所有ADR status、migration/fullfields、62casegate、單writerdurability與Host未知。批准最小單位可為Phase1 foundation，但需記明NotApproved範圍；未有批准不建立任何Phase1productionmodule、不改dataformat。
+Phase0完成後停止核心功能工作。Review需核實OD-01/02/03/04/05/06推薦、所有ADR status、migration/fullfields、67casegate、單writerdurability與Host未知。批准最小單位可為Phase1 foundation，但需記明NotApproved範圍；未有批准不建立任何Phase1productionmodule、不改dataformat。
 
 ## Phase 0.1 — Dependency / Approval Updates
 
 20原PR保留識別，新增PR-0B（本輪規格）、PR-1D（維護）、PR-6D（Embed），合計23單位。1A必含R-01Provenance/Actor/Owner與R-04Embed schema；1C不得包成一個全儲存大PR，maintenance另1D；1B只在1D與fence可用才允cutover。2B新增產品政策需OD-02明確批准；6B/6C需6D的editablechild與refmap；7A需真fault/capacity證據，文件schema通過不取代它們。
 
 Phase退出追加：Phase1=UVA-41/42schema+46–50/56–60/62storage/authority；Phase2=UVA-43–45；Phase4=graphedit/anchor/evidence全流程；Phase5=modulegrant/lineage與CASguard；Phase6=UVA-51–54/61、migrationclosure；Phase7=realFS/powerloss/Host。每PR仍需獨立review/explicitdependencies/testableexit/rollback，不在本輪實作任何項目。
+
+## Phase 0.2 — Limited Approval Package / Additional Exit Gates
+
+23個PR識別不變；本輪只修實質缺口，不增加大型implementation PR。最小可請人類批准的是**PR-1A schema/readonly foundation**：OD-01 identity/typedownership與OD-02/06的必要schema部分逐項簽核；同意資料結構不等同同意editing rollout、durable平台或cutover。批准紀錄要列此review commit、allowed paths/API、tests與NotApproved。沒有紀錄仍不能開始1A。
+
+- PR-1C prerequisites：1A退出、OD-01/ADR-010 persistence/backend明確批准；coherent CommitRoot、六roots、RecoveryCatalog resolverpair、fsync/lease/error分類與Linux profile納UVA-63/66；disposable stores故障測試才是1C範圍，不能直接拿使用者volume驗。維護未完成不能開productionwriter。
+- PR-1D prerequisites：1C退出；G1/G2、archive/operationalcheckpoint thinning proof、deadline/quiescent pins、boundedcompaction/backpressure納UVA-64/65；raw capacity/maintenance benchmarks後核准quota/threshold profile，不能因10GiB不夠刪歷史。每stage crash與7dACK/永久ledger oracle不變。
+- PR-1B依1C/1D與UVA-66的實際ROmount/oldbinaryfence證據，且可信user-action actor來源在暴露user-level新write route前必有securityreview；若無可證Host來源只允已認證owner management path或拒該user route。Flags不代替approval或authoritycommit。
+- PR-6D/6B/6C納UVA-67的snapshot eligibility/拒絕/替代與nested bundle roundtrip；undefinedmaterialize API不在實作範圍。PR-7A涵蓋UVA-63–67的長跑/平台重驗，但不得延後Phase1與6的必要前置測試。
+
+最新獨立R-01–06分類、容量/平台證據限制與推薦範圍見[FINAL-ARCHITECTURE-GATE](docs/rfc/unified-visual-architecture/FINAL-ARCHITECTURE-GATE.md)；它不批准任何ADR，不授權Agent自行進Phase1。

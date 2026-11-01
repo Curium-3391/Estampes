@@ -1,6 +1,6 @@
 # Legacy Authority Transition State Machine
 
-Status：PROPOSED；R-06、OD-06、ADR-012。authority是registry中的durablestate，不是featureflag。CURRENT的singleatomicmanifest commit同時發布authorityepoch/aliases/sourcehashseal/documentroots；任何mode內一個set/doc只有一個writer。UVA-56–58/62；PR-1B需此contract和PR-1D維護基礎。
+Status：PROPOSED；R-06、OD-06、ADR-012。以下 registry authority、CURRENT pointer 與 single atomic manifest commit 都是推薦設計，**現有0.20.0沒有這些機制**。推薦由同一 CommitRoot 發布authorityepoch/aliases/sourcehashseal/documentroots，不是featureflag；任何mode內一個set/doc只有一個writer。UVA-56–58/62；PR-1B需此contract和PR-1D維護基礎。
 
 ## State / Reader / Writer / Revision Table
 
@@ -58,3 +58,11 @@ A3 seal前另比較mediator的canonical in-memory state與fresh disk read；原s
 AUTH-1：每alias/closure恰一個authorityepoch writer；AUTH-2：legacyprojection永非readerfallbackauthority；AUTH-3：cutoverroot同commit含aliases、docheads、seal、ledger、mode；AUTH-4：featureflag無transition權；AUTH-5：postwrite退回需v2保全、原volumereadonly；AUTH-6：oldbinary靠OS/launcherfence，不靠認marker假設。
 
 Restart：先storagelease/protocol/mountfence驗證→validateCURRENT+checksum/locator/ledger→讀每closuremode→對未commitcutoverintent保持legacysourceauthority並rollbackprepared；已commit則重建readadapter/deriveprojectionpending、拒所有舊epochjobs→檢seal與aliases→缺證據進A6→按STORAGE-LIFECYCLE完成GC/journalrecovery→只開mode允許的routes。不得在projection故障、flag關閉或newUImount失敗時把舊檔當current。UVA-56–58/62逐情境故障注入、oldbinaryreadonlytest與postwriteexport驗證為exit。
+
+## Phase 0.2 — Root / Platform / Epoch Clarifications
+
+authority payload 是 STORAGE-LIFECYCLE 的同一 `CommitRoot.roots.authority`，registry aliases與sourceSeal、ledger、docheads只由該CommitRoot一起可見。`storage-format.json`是launcher的相容性檢查／保守拒啟提示，不是第二authority；其epoch落後／不符 CURRENT 時只進readonly驗證，不按marker切writer。migration preview也不可只讀marker當root版本。
+
+每個closure的authorityEpoch為正safeinteger，A3→A4、A7→A0及任何重開已凍結writer的A6/A7→A4/A5都提升；A4↔A5僅projection政策不改writer epoch。所有內容命令／asyncattempt在admission捕捉epoch，publish前再比；入列時通過不代表之後通過。late callback、已排隊的legacywrite都不能越過已提升的epoch；A3→A4 gate/drain/原子publish仍不可省略。restart先驗root+fence，再建立新的runtime execution lease，不接舊worker輸出。
+
+已存在0.20.0 Docker `/data` writable volume不提供上述fence；Docker root `read_only`只保護container根檔案系統。平台可執行不代表允許cutover。Desktop/macOS與未知mount依 STORAGE-LIFECYCLE 平台矩陣預設拒V1 durablewriter；native Linux若沒有可測RO source隔離也停A1/A2，不能用 advisory lock對舊binary的不存在配合來過gate。實際部署wrapper/mount變更留PR-1B，這輪不改Docker/Compose。

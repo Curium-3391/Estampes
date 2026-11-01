@@ -55,3 +55,7 @@ Evidence commit / RFC revision:
 | OD-06 | v1adapter＋v2opt-in/sidewrite | 維持；加A0–A7atomiccutover、oldbinaryOS/launcherfence、postwriteA7archive/newlegacyvolume；Embedtypedcontract＋editableclone（ADR-011/012） | cutover/fence部署前提、rollback範圍、snapshot/Copy共享語義、v1支援期限/發布號 | PR-1B / PR-6A / PR-6D / PR-6B / PR-6C / PR-7A / PR-7B |
 
 Maintainer尚未批准任一列。Phase0.1交付不啟動相依PR；最小下一步是以REVIEW-REMEDIATION與ADR-009–012逐項簽核，若改選必同步contract/examples/tests。
+
+## Phase 0.2 — Final Gate Refinements
+
+OD-01推薦不變，但批准內容必含coherent CommitRoot、G1/G2/checkpoint thinning、Linux平台allowlist與10GiB非通用capacity。OD-02完整user-edit、不可變creator、Evidence/guard仍待產品確認；schema批准不自動開啟newpolicy。OD-03/04/05推薦不變，render/Host/CAS退出證據仍須逐階段取得。OD-06需批准nested snapshot V1預檢拒絕與editablebundle替代，以及Desktop/nativeMac預設拒cutover與oldbinaryROfence。六OD的原選項與本輪cost/阻擋PR詳FINAL-ARCHITECTURE-GATE G。尚無Approver/Date；不得從本輪推薦補造批准紀錄。

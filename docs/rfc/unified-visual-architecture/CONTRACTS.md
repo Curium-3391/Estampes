@@ -29,8 +29,8 @@ wire只接requestId與該route版本欄位；server把req:UUIDv4轉cmd:同UUID�
 | layers.create `{sceneId,name}` | idserverassign；opacity/visible defaults1/true、lockedfalse | user/assistant/module僅建立其author/modulelayer；無隱式跨doclayerlookup |
 | layers.update `{sceneId,id,patch}` | patch name/opacity/visible/locked；不接受content或author | user可改所有；assistant/module不改userlock/visibility；legacyassistant layername reuse保持既有route語義 |
 | layers.reorder `{sceneId,order}` | 必須列所有layers恰1次；v2不採legacyorderpartialappend，adapter補成fullorder | user；LLM需explicit可用的usercommand代理路徑，不能自行解除lock |
-| content.move-layer `{sceneId,ref,targetLayerId,index}` | ref在同Scene、index0..length、source/targetlock查；不改geometry | 沿domainownershippolicy；同transaction更新layerId/content，entityrevision+1 |
-| anchors.detach `{sceneId,annotationId,expectedAnchorHash}` | lastResolved存在且valid→docdugeometry；無pose拒UNRESOLVED_ANCHOR | annotationeditpolicy與lock；附explicitconversionhistory，不改evidence原來源 |
+| content.move-layer `{sceneId,ref,targetLayerId,index}` | ref在同Scene、index0..length；annotation ref必需expectedAnnotationRevision、object ref必需expectedObjectRevision；source/targetlock查；不改geometry | 沿domainownershippolicy；同transaction更新layerId/content，entityrevision+1 |
+| anchors.detach `{sceneId,annotationId,expectedAnnotationRevision,expectedAnchorHash}` | lastResolved存在且valid→docdugeometry；無pose拒UNRESOLVED_ANCHOR | annotationeditpolicy與lock；附explicitconversionhistory，不改evidence原來源 |
 | bindings.update `{bindingId,action,expectedBindingHash}` | actions refresh/detach/overwrite/fork/reattach只對該typedbinding；source/targetrevs完整 | CAS/transfercoordinator專用validator；userresolution不得偽裝module，crossdocscope雙方都驗 |
 | document.archive / restore | 無geometrypayload；保content與references | ownerexplicitaction，moduleruntime無archivegrant；docrevision+1；可顯示archivedplaceholder |
 | history.undo / redo `{token}` | history完整before/afterhash；affectedentitiesexpectedrevs/lockchecks | ownactorhistory；user可依explicitowneroperation管理，不能跨widget默默rebase；newrevision與newcommandId |
@@ -65,8 +65,16 @@ retryable只表示同request安全重查或重試的可能，不授權content自
 
 Permission annotation.write.owned只給module新Annotation命令，不允clientpayload擴權。SharedProvenance.author為user/assistant/module/unknown，由createdBy推導；不可變createdBy、獨立ownership及lastEditedBy是正式schema，legacydata按policytable映射。Layers新增module author時由server stamp，legacyresponse維持assistant投影並在metadata保module來源，不以layerauthor授權。
 
-Operation新增annotation.authorize-edit（owner-only、targetRef/allowedActor/allowedPaths/baseAnnotationRevision、最多10min單次lease）、finding.update/review（exactclaimcontext）、embed.create/update/retarget/detach/freeze/delete/enter-edit/undo/redo（依Embed表）；不能混入scene-ops/1或由module任意回user-action。annotation.create必須且只能選layerId或layer:{name}，不能用字串new-user；existingannotation mutation必需expectedAnnotationRevision，relayer/reanchor同樣檢查。所有geometry patch依storedtype完整驗證，不採任意JSONmerge。
+Operation新增annotation.authorize-edit（owner-only、targetRef/allowedActor/allowedPaths/baseAnnotationRevision、最多10min單次lease）、finding.update/review（exactclaimcontext）、embed.create/update/retarget/detach/freeze/delete/enter-edit/undo/redo（依Embed表）；不能混入scene-ops/1或由module任意回user-action。annotation.create必須且只能選layerId或layer:{name}，不能用字串new-user；existingannotation mutation必需expectedAnnotationRevision，relayer/reanchor同樣檢查；history.undo/redo例外採token綁定的affected revision vector逐ref核對，不能以caller傳最新rev覆蓋token的before/afterhash前置條件。所有geometry patch依storedtype完整驗證，不採任意JSONmerge。
 
 版本欄位正式對照：create/open/export使用requestId；create沒有expectedDocRevision因目標尚不存在；open用expectedSurfaceRevision；execute_module新target用expectedDocumentRevision（內部expectedRevision），CAS另加expectedNotebookRevision；edit/read/export doc-scoped使用expectedRevision；embed使用expectedParentRevision/expectedSourceRevision。expectedDocRevision不是合法wire名稱；legacy execute_module expectedRevision仍為scene axis，與newtarget不混傳。Ref回傳包含documentId/sceneId/kind/id，CAS例不自動adopt別moduleplot。
 
 [proposed-contracts.mjs](evidence/proposed-contracts.mjs)是文件專用closedschemas，驗九個正式API流程、Provenance、Embed結構與negativecases，**不是完整productionAPIvalidator**；其他operations依上述文字完整contract由相依PR增加runtimevalidators/tests。可驗證JSON與示意JSON分類由[validator](evidence/validate-contract-examples.mjs)強制；TS是readmodel投影而非compiler-certifiedAPI，型別別名須引用本supplement，不可另寫衝突enum。
+
+## Phase 0.2 — Final Gate Corrections
+
+STORAGE-LIFECYCLE 的 `estampes.commit-root/1`及G1/G2是唯一維護契約；registry/locator/ledger/retention/authority同root，不有第二個 CURRENT。EMBED-CONTRACT 的 snapshotEligibility 是預檢read projection，正式拒絕 `BLOCKED_DEPENDENCY` + reason `NESTED_SNAPSHOT_UNSUPPORTED`；不加入可執行materialize操作。
+
+Matrix condition正式定義為 row-major homogeneous 3×3 的 infinity-norm condition `||M||∞ * ||inverse(M)||∞ <= 1e12`，除非其他type明示不同。affine determinant必非零且inverse finite；不額外以任意abs(det)<1e-12拒合法smallscale，不允高condition matrix藉大det繞過。文件專用Matrix schema現檢查此數值條件；不是Productionvalidator已更新。
+
+外部 import sourceTrust=imported-unverified 時 active createdBy.kind=import、author=unknown、ownership.kind=instance|unclaimed-module，original archive+hash必填；原始module author/signer/lineage完全保存在 original，不在active欄位賦本機module權限。trusted完整備份restore是另一流程，不可把import參數切成migrated-local避規則。Provenance read schema的這些跨欄位約束已納文件validator；真正archive存在與currentgrant仍由runtime查核。

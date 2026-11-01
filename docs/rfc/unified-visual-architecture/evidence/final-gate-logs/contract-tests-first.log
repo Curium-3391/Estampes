@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: all nine proposed examples and classified Markdown fences match
+ok 1 - all nine proposed examples and classified Markdown fences match
+  ---
+  duration_ms: 99.519812
+  type: 'test'
+  ...
+# Subtest: request ID normalization is deterministic and rejects short IDs
+ok 2 - request ID normalization is deterministic and rejects short IDs
+  ---
+  duration_ms: 1.188974
+  type: 'test'
+  ...
+# Subtest: legacy/string layer example is rejected; layer object is valid
+ok 3 - legacy/string layer example is rejected; layer object is valid
+  ---
+  duration_ms: 5.937685
+  type: 'test'
+  ...
+# Subtest: missing required target revision is rejected
+ok 4 - missing required target revision is rejected
+  ---
+  duration_ms: 1.121266
+  type: 'test'
+  ...
+# Subtest: legacy/new revision axes cannot be mixed
+ok 5 - legacy/new revision axes cannot be mixed
+  ---
+  duration_ms: 3.067614
+  type: 'test'
+  ...
+# Subtest: short document and mismatched response reference are rejected
+ok 6 - short document and mismatched response reference are rejected
+  ---
+  duration_ms: 1.295573
+  type: 'test'
+  ...
+# Subtest: caller cannot forge author, actor, ownership or commandId
+ok 7 - caller cannot forge author, actor, ownership or commandId
+  ---
+  duration_ms: 4.367897
+  type: 'test'
+  ...
+# Subtest: module provenance requires consistent author and publisher lineage
+ok 8 - module provenance requires consistent author and publisher lineage
+  ---
+  duration_ms: 5.021954
+  type: 'test'
+  ...
+# Subtest: user editing preserves createdBy and records user as last editor
+ok 9 - user editing preserves createdBy and records user as last editor
+  ---
+  duration_ms: 1.418774
+  type: 'test'
+  ...
+# Subtest: embed requires affine inverse and explicit clip
+ok 10 - embed requires affine inverse and explicit clip
+  ---
+  duration_ms: 1.85105
+  type: 'test'
+  ...
+# Subtest: snapshot embed requires independently identified editable child and origin
+ok 11 - snapshot embed requires independently identified editable child and origin
+  ---
+  duration_ms: 8.053379
+  type: 'test'
+  ...
+# Subtest: CAS example creates owned plot without unsupported adoption input
+ok 12 - CAS example creates owned plot without unsupported adoption input
+  ---
+  duration_ms: 2.000795
+  type: 'test'
+  ...
+# Subtest: invalid operation enum, anchor and unknown capability are rejected
+ok 13 - invalid operation enum, anchor and unknown capability are rejected
+  ---
+  duration_ms: 2.454866
+  type: 'test'
+  ...
+# Subtest: input schemas are strict and do not default extra grants
+ok 14 - input schemas are strict and do not default extra grants
+  ---
+  duration_ms: 0.477728
+  type: 'test'
+  ...
+# Subtest: unknown historical module identity stays unclaimed without fabricating signer or lineage
+ok 15 - unknown historical module identity stays unclaimed without fabricating signer or lineage
+  ---
+  duration_ms: 1.830456
+  type: 'test'
+  ...
+# Subtest: adoption can link a historical source without rewriting its creator
+ok 16 - adoption can link a historical source without rewriting its creator
+  ---
+  duration_ms: 0.679766
+  type: 'test'
+  ...
+# Subtest: external import archives authorship without granting local module ownership
+ok 17 - external import archives authorship without granting local module ownership
+  ---
+  duration_ms: 1.378081
+  type: 'test'
+  ...
+# Subtest: affine validation uses the specified condition rather than determinant magnitude
+ok 18 - affine validation uses the specified condition rather than determinant magnitude
+  ---
+  duration_ms: 0.527795
+  type: 'test'
+  ...
+# Subtest: commit root requires one closed registry/locator/ledger/authority root set
+ok 19 - commit root requires one closed registry/locator/ledger/authority root set
+  ---
+  duration_ms: 5.505617
+  type: 'test'
+  ...
+# Subtest: nested snapshot refusal is typed and contains no child data or raster fallback
+ok 20 - nested snapshot refusal is typed and contains no child data or raster fallback
+  ---
+  duration_ms: 39.136369
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 669.312313

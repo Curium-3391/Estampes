@@ -31,11 +31,32 @@ export const Provenance = z.object({author:z.enum(['user','assistant','module','
  if(p.author==='module' && (p.createdBy.publisherFingerprint===null||p.createdBy.ownershipLineageId===null) && p.ownership.kind!=='unclaimed-module' && !p.ownership.adoptionEventId)c.addIssue({code:'custom',message:'unknown historical lineage needs unclaimed owner or explicit adoption event'});
  if(p.author==='module' && p.ownership.kind==='module' && (p.ownership.moduleId!==p.createdBy.moduleId||(['publisherFingerprint','ownershipLineageId'].some(k=>p.ownership[k]!==p.createdBy[k])&&!p.ownership.adoptionEventId)))c.addIssue({code:'custom',message:'module owner lineage mismatch without explicit adoption event'});
  if(p.sourceTrust==='local' && (!p.createdAt||!p.lastEditedAt))c.addIssue({code:'custom',message:'local provenance requires server timestamps'});
+ if(p.sourceTrust==='imported-unverified' && (p.createdBy.kind!=='import'||p.author!=='unknown'||p.ownership.kind==='module'||!p.original))c.addIssue({code:'custom',message:'external import needs unknown active creator, archived original and no module ownership'});
 });
-export const Matrix = z.array(n).length(9).superRefine((m,c)=>{if(m[6]!==0||m[7]!==0||m[8]!==1||Math.abs(m[0]*m[4]-m[1]*m[3])<1e-12)c.addIssue({code:'custom',message:'non-invertible or non-affine matrix'});});
+export const Matrix = z.array(n).length(9).superRefine((m,c)=>{
+ if(m.length!==9)return;
+ const [a,b,tx,d,e,ty]=m,det=a*e-b*d;
+ if(m[6]!==0||m[7]!==0||m[8]!==1||det===0||!Number.isFinite(det)){
+  c.addIssue({code:'custom',message:'non-invertible or non-affine matrix'});return;
+ }
+ const inv=[e/det,-b/det,(b*ty-e*tx)/det,-d/det,a/det,(d*tx-a*ty)/det,0,0,1];
+ const norm=v=>Math.max(...[0,3,6].map(i=>Math.abs(v[i])+Math.abs(v[i+1])+Math.abs(v[i+2])));
+ const condition=norm(m)*norm(inv);
+ if(!inv.every(Number.isFinite)||!Number.isFinite(condition)||condition>1e12)c.addIssue({code:'custom',message:'matrix infinity-norm condition exceeds 1e12'});
+});
 export const Clip = z.object({space:z.literal('child-document'),x:n,y:n,x2:n,y2:n}).strict().refine(r=>r.x>=0&&r.y>=0&&r.x2>r.x&&r.y2>r.y,'positive child clip required');
 export const EmbeddedObject = z.object({type:z.literal('embedded-document'),id:ids.obj,revision,parent:SceneRef,layerId:local.layer,visibility:z.enum(['public','scratch']),locked:z.boolean(),provenance:Provenance,props:z.object({bindingId:ids.bind,child:SceneRef,mode:z.enum(['live','snapshot']),sourceRevision:revision,snapshotOrigin:SceneRef.extend({revision,contentHash:hash}).strict().optional(),localToDocument:Matrix,clipRegion:Clip,missingTargetPolicy:z.literal('placeholder'),defaultEditTarget:z.literal('parent')}).strict()}).strict().superRefine((e,c)=>{if(e.props.mode==='snapshot'&&(!e.props.snapshotOrigin||e.props.child.documentId===e.props.snapshotOrigin.documentId))c.addIssue({code:'custom',message:'snapshot requires independent clone and origin'});});
 export const permissions = ['document.read.target','scene.write.owned','document.create.graph','document.create.image','document.reference.read','annotation.write.owned','asset.read.selected','cas.compute'];
+// Internal proposed read/persistence projections only; not new callable APIs.
+export const CommitRoot = z.object({schema:z.literal('estampes.commit-root/1'),storeInstanceId:z.string().regex(new RegExp('^'+uuid+'$')),generation:revision,commitId:ids.tx,parentCommitHash:hash.nullable(),roots:z.object({registry:hash,locator:hash,ledger:hash,commitIndex:hash,retention:hash,authority:hash}).strict()}).strict().refine(r=>r.generation===1?r.parentCommitHash===null:r.parentCommitHash!==null,'only initial commit root has null parent');
+export const CommitIndexEntry = z.object({commitId:ids.tx,generation:revision,registryRootHash:hash,requestKeyDigest:hash.nullable(),payloadHash:hash,resultHash:hash,outcome:z.literal('committed')}).strict();
+export const RecoveryResolver = z.object({registryRootHash:hash,logicalClosureHash:hash,resolverLocatorRootHash:hash}).strict();
+export const SnapshotEligibility = z.object({supported:z.boolean(),reason:z.literal('NESTED_SNAPSHOT_UNSUPPORTED').optional(),source:SceneRef,sourceRevision:revision,sourceContentHash:hash.optional(),bindingGraphHash:hash,blockers:z.array(ObjectRef).max(200),redactedBlockerCount:z.number().int().nonnegative().max(200),alternatives:z.array(z.enum(['live','open-source','link-source','explicit-source-edit','editable-bundle'])).min(1).max(5)}).strict().superRefine((v,c)=>{
+ if((v.supported&&!v.sourceContentHash)||(v.redactedBlockerCount>0&&v.sourceContentHash!==undefined))c.addIssue({code:'custom',message:'source hash must be present for supported clone and omitted when redacted'});
+ if(v.blockers.some(b=>b.documentId!==v.source.documentId||b.sceneId!==v.source.sceneId))c.addIssue({code:'custom',message:'blockers must refer to source scene objects'});
+ if(v.supported ? (v.reason!==undefined||v.blockers.length!==0||v.redactedBlockerCount!==0) : (v.reason!=='NESTED_SNAPSHOT_UNSUPPORTED'||v.blockers.length+v.redactedBlockerCount===0))c.addIssue({code:'custom',message:'eligibility reason/blockers inconsistent'});
+});
+export const NestedSnapshotError = z.object({isError:z.literal(true),structuredContent:z.object({kind:z.literal('estampes.document_error'),code:z.literal('BLOCKED_DEPENDENCY'),message:z.string().min(1).max(300),retryable:z.literal(false),details:z.object({reason:z.literal('NESTED_SNAPSHOT_UNSUPPORTED'),operation:z.enum(['embed.create.snapshot','embed.detach','embed.freeze','parent.deep-copy','graph-separation.snapshot']),snapshotEligibility:SnapshotEligibility}).strict()}).strict()}).strict().refine(e=>!e.structuredContent.details.snapshotEligibility.supported,'blocked snapshot cannot claim supported');
 const Range=z.tuple([n,n]).refine(r=>r[1]>r[0]&&r[1]-r[0]<1e12);
 const Point=z.object({x:n,y:n}).strict();
 const style=z.object({pen:z.enum(['pen','highlighter']).optional(),color:z.enum(['gold','blue','red','green','yellow','magenta','cyan','white','black']).optional(),size:z.enum(['fine','thin','medium','thick']).optional()}).strict();

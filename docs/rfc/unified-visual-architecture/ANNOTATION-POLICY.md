@@ -48,7 +48,7 @@ principalId由server分配且跨同owner的widget/session/restart穩定：user�
 
 ## Authorization Matrix
 
-所有新內容 mutation 需 expectedDocumentRevision；對現有 annotation 另需 expectedAnnotationRevision。source/target layer locked 都阻擋 Move/Resize/Restyle/Relayer/Relabel/Delete/Reanchor/Undo/Redo；只有獨立 Finding Review command 依既有政策可附註，不能混帶幾何或樣式。
+所有新內容 mutation 需 Document OCC；wire依CONTRACTS版本對照：edit_visual_document 用 expectedRevision，execute_module 新target用 expectedDocumentRevision，內部統一 expectedRevision；對現有 annotation 另需 expectedAnnotationRevision。source/target layer locked 都阻擋 Move/Resize/Restyle/Relayer/Relabel/Delete/Reanchor/Undo/Redo；只有獨立 Finding Review command 依既有政策可附註，不能混帶幾何或樣式。
 
 | Actor / origin | Create | Geometry / style / label / relayer / delete / anchor | Claim / review | Undo / Redo |
 | --- | --- | --- | --- | --- |

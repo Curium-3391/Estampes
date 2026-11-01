@@ -1,0 +1,5 @@
+
+> estampes@0.20.0 docs:check
+> node scripts/check-docs.mjs
+
+docs:check ok (82 markdown files, 55 tools, 22 config variables).

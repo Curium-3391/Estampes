@@ -1,0 +1,1672 @@
+TAP version 13
+# Subtest: confidence never verifies a claim: every unverified link waits for review
+ok 1 - confidence never verifies a claim: every unverified link waits for review
+  ---
+  duration_ms: 73.019088
+  type: 'test'
+  ...
+# Subtest: evidence regions are checked: inside 0..1, on an image of this view
+ok 2 - evidence regions are checked: inside 0..1, on an image of this view
+  ---
+  duration_ms: 15.717749
+  type: 'test'
+  ...
+# Subtest: a rejected link outlives its marks and cannot be re-proposed without new evidence
+ok 3 - a rejected link outlives its marks and cannot be re-proposed without new evidence
+  ---
+  duration_ms: 44.04353
+  type: 'test'
+  ...
+# Subtest: withdrawing or reversing a rejection forgets it; re-pointing a link clears the verdict
+ok 4 - withdrawing or reversing a rejection forgets it; re-pointing a link clears the verdict
+  ---
+  duration_ms: 29.776432
+  type: 'test'
+  ...
+# Subtest: a note is a claim: new wording starts fresh, a rejected note is refused at that place
+ok 5 - a note is a claim: new wording starts fresh, a rejected note is refused at that place
+  ---
+  duration_ms: 44.418621
+  type: 'test'
+  ...
+# Subtest: rejections are stored with the canvas and come back after a restart
+ok 6 - rejections are stored with the canvas and come back after a restart
+  ---
+  duration_ms: 7.47082
+  type: 'test'
+  ...
+# Subtest: same region: half overlap or the new centre inside the old box
+ok 7 - same region: half overlap or the new centre inside the old box
+  ---
+  duration_ms: 0.275094
+  type: 'test'
+  ...
+# Subtest: plate solving runs as a background job and marks the named objects
+ok 8 - plate solving runs as a background job and marks the named objects
+  ---
+  duration_ms: 123.315984
+  type: 'test'
+  ...
+# Subtest: a failed solve is reported as a result, not an error, and changes nothing
+ok 9 - a failed solve is reported as a result, not an error, and changes nothing
+  ---
+  duration_ms: 49.995593
+  type: 'test'
+  ...
+# Subtest: errors become a failed job with a plain reason
+ok 10 - errors become a failed job with a plain reason
+  ---
+  duration_ms: 279.121716
+  type: 'test'
+  ...
+# Subtest: a job that runs too long is stopped and never applies its result later
+ok 11 - a job that runs too long is stopped and never applies its result later
+  ---
+  duration_ms: 1165.600141
+  type: 'test'
+  ...
+# Subtest: jobs survive a restart as interrupted, and the id format is checked
+ok 12 - jobs survive a restart as interrupted, and the id format is checked
+  ---
+  duration_ms: 1221.305906
+  type: 'test'
+  ...
+# Subtest: the module cannot run unless the user granted its permissions
+ok 13 - the module cannot run unless the user granted its permissions
+  ---
+  duration_ms: 48.32659
+  type: 'test'
+  ...
+# Subtest: job tools return the canvas payload, so the widget shows the photo and not its sample
+ok 14 - job tools return the canvas payload, so the widget shows the photo and not its sample
+  ---
+  duration_ms: 72.086575
+  type: 'test'
+  ...
+# Subtest: marks: bright named stars come first and overlapping labels are skipped
+ok 15 - marks: bright named stars come first and overlapping labels are skipped
+  ---
+  duration_ms: 0.868017
+  type: 'test'
+  ...
+# Subtest: the sky map draws the solved field with no network
+ok 16 - the sky map draws the solved field with no network
+  ---
+  duration_ms: 189.983469
+  type: 'test'
+  ...
+# Subtest: sky geometry: Hammer centre, RA grows to the left, field outline stays near its centre
+ok 17 - sky geometry: Hammer centre, RA grows to the left, field outline stays near its centre
+  ---
+  duration_ms: 1.278329
+  type: 'test'
+  ...
+# Subtest: export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting
+ok 18 - export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting
+  ---
+  duration_ms: 2253.99092
+  type: 'test'
+  ...
+# Subtest: export_workspace_bundle over MCP: signed link downloads a bundle that imports back
+ok 19 - export_workspace_bundle over MCP: signed link downloads a bundle that imports back
+  ---
+  duration_ms: 836.929113
+  type: 'test'
+  ...
+# Subtest: zip: round trip, and unsafe names are refused
+ok 20 - zip: round trip, and unsafe names are refused
+  ---
+  duration_ms: 3.769443
+  type: 'test'
+  ...
+# Subtest: export then import into an empty server: 3 images, 29 marks, same layers, still editable
+ok 21 - export then import into an empty server: 3 images, 29 marks, same layers, still editable
+  ---
+  duration_ms: 152.412307
+  type: 'test'
+  ...
+# Subtest: importing the same bundle twice returns the same workspace and adds nothing
+ok 22 - importing the same bundle twice returns the same workspace and adds nothing
+  ---
+  duration_ms: 104.81861
+  type: 'test'
+  ...
+# Subtest: import onto a server that has the images with other marks never overwrites them
+ok 23 - import onto a server that has the images with other marks never overwrites them
+  ---
+  duration_ms: 95.603475
+  type: 'test'
+  ...
+# Subtest: tampering, wrong format, missing files and bad marks are refused or dropped
+ok 24 - tampering, wrong format, missing files and bad marks are refused or dropped
+  ---
+  duration_ms: 98.356492
+  type: 'test'
+  ...
+# Subtest: a bundle with an out-of-range mark keeps the rest and reports it
+ok 25 - a bundle with an out-of-range mark keeps the rest and reports it
+  ---
+  duration_ms: 108.688708
+  type: 'test'
+  ...
+# [storage] restored imageId=img:cdd7884aea5523cd marks=25
+# [storage] restored imageId=img:7adaeac0f3f67a71 marks=2
+# [storage] restored imageId=img:236cdd18eb31ff52 marks=2
+# Subtest: on disk: import persists the restored canvases and workspace
+ok 26 - on disk: import persists the restored canvases and workspace
+  ---
+  duration_ms: 157.007501
+  type: 'test'
+  ...
+# Subtest: a JPEG exported without stored originals imports under its new id (working copy)
+ok 27 - a JPEG exported without stored originals imports under its new id (working copy)
+  ---
+  duration_ms: 16.770846
+  type: 'test'
+  ...
+# Subtest: same marks but different layer settings are not reused: the bundle keeps its own copy
+ok 28 - same marks but different layer settings are not reused: the bundle keeps its own copy
+  ---
+  duration_ms: 103.766074
+  type: 'test'
+  ...
+# Subtest: canvas pixels include saved handwriting in full and cropped views; source stays blank
+ok 29 - canvas pixels include saved handwriting in full and cropped views; source stays blank
+  ---
+  duration_ms: 284.910218
+  type: 'test'
+  ...
+# Subtest: public Graph pixels update; hidden layers and scratch are excluded, locked layers remain visible
+ok 30 - public Graph pixels update; hidden layers and scratch are excluded, locked layers remain visible
+  ---
+  duration_ms: 725.055507
+  type: 'test'
+  ...
+# Subtest: revision checks cover marks, layer opacity and view visibility; render takes a consistent snapshot
+ok 31 - revision checks cover marks, layer opacity and view visibility; render takes a consistent snapshot
+  ---
+  duration_ms: 47.217081
+  type: 'test'
+  ...
+# Subtest: mixed canvas draws marks over public objects and supports lossless WebP
+ok 32 - mixed canvas draws marks over public objects and supports lossless WebP
+  ---
+  duration_ms: 49.238598
+  type: 'test'
+  ...
+# Subtest: crop coordinates convert back to the full image
+ok 33 - crop coordinates convert back to the full image
+  ---
+  duration_ms: 4.099846
+  type: 'test'
+  ...
+# Subtest: marks persist with stable ids: add, edit, comment, remove
+ok 34 - marks persist with stable ids: add, edit, comment, remove
+  ---
+  duration_ms: 18.910555
+  type: 'test'
+  ...
+# Subtest: verification image shows the crop with and without the marks
+ok 35 - verification image shows the crop with and without the marks
+  ---
+  duration_ms: 52.890929
+  type: 'test'
+  ...
+# Subtest: each send and each GPT drawing call becomes one layer
+ok 36 - each send and each GPT drawing call becomes one layer
+  ---
+  duration_ms: 9.22392
+  type: 'test'
+  ...
+# Subtest: GPT can add a trace about user marks after several rounds; nothing is lost
+ok 37 - GPT can add a trace about user marks after several rounds; nothing is lost
+  ---
+  duration_ms: 8.731426
+  type: 'test'
+  ...
+# Subtest: info cards in a browser: per-module groups, fold, hide and bring back
+ok 38 - info cards in a browser: per-module groups, fold, hide and bring back
+  ---
+  duration_ms: 3733.535542
+  type: 'test'
+  ...
+# Subtest: cas: disabled until the user enables it
+ok 39 - cas: disabled until the user enables it
+  ---
+  duration_ms: 466.95287
+  type: 'test'
+  ...
+# Subtest: cas: exact results come from SymPy, with LaTeX and a typed AST
+ok 40 - cas: exact results come from SymPy, with LaTeX and a typed AST
+  ---
+  duration_ms: 112.006439
+  type: 'test'
+  ...
+# Subtest: cas: bad input is a cell error, the input is kept and nothing executes
+ok 41 - cas: bad input is a cell error, the input is kept and nothing executes
+  ---
+  duration_ms: 15.131388
+  type: 'test'
+  ...
+# Subtest: cas: plot_result draws a semantic function plot and links it to the cell
+ok 42 - cas: plot_result draws a semantic function plot and links it to the cell
+  ---
+  duration_ms: 61.6048
+  type: 'test'
+  ...
+# Subtest: cas: editing upstream makes results and links stale, and a stale result is not plotted
+ok 43 - cas: editing upstream makes results and links stale, and a stale result is not plotted
+  ---
+  duration_ms: 105.11083
+  type: 'test'
+  ...
+# Subtest: cas: conditional, partial and complex results are never plotted as ordinary functions
+ok 44 - cas: conditional, partial and complex results are never plotted as ordinary functions
+  ---
+  duration_ms: 526.160394
+  type: 'test'
+  ...
+# Subtest: cas: revision conflicts and idempotency keys
+ok 45 - cas: revision conflicts and idempotency keys
+  ---
+  duration_ms: 50.864557
+  type: 'test'
+  ...
+# Subtest: cas: notebooks survive a restart of the Core
+ok 46 - cas: notebooks survive a restart of the Core
+  ---
+  duration_ms: 18.731123
+  type: 'test'
+  ...
+# Subtest: cas: with no calculator service the module reports it and Core keeps working
+ok 47 - cas: with no calculator service the module reports it and Core keeps working
+  ---
+  duration_ms: 18.970594
+  type: 'test'
+  ...
+# Subtest: bridge: only real single-variable results become Graph expressions
+ok 48 - bridge: only real single-variable results become Graph expressions
+  ---
+  duration_ms: 1.019473
+  type: 'test'
+  ...
+# Subtest: cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged
+ok 49 - cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged
+  ---
+  duration_ms: 440.726477
+  type: 'test'
+  ...
+# Subtest: claims over MCP: unverified until the user reviews, a rejection refuses the repeat
+ok 50 - claims over MCP: unverified until the user reviews, a rejection refuses the repeat
+  ---
+  duration_ms: 980.93978
+  type: 'test'
+  ...
+# Subtest: image layers retain alpha and reorder across raster, marks and editable Graph copies
+ok 51 - image layers retain alpha and reorder across raster, marks and editable Graph copies
+  ---
+  duration_ms: 156.551609
+  type: 'test'
+  ...
+# Subtest: composition refuses self-copy and rolls back failed layer insertion
+ok 52 - composition refuses self-copy and rolls back failed layer insertion
+  ---
+  duration_ms: 8.775885
+  type: 'test'
+  ...
+# Subtest: transform matrices: quarter turns are exact, singular matrices have no inverse
+ok 53 - transform matrices: quarter turns are exact, singular matrices have no inverse
+  ---
+  duration_ms: 3.894916
+  type: 'test'
+  ...
+# Subtest: fitTransform recovers similarity, affine and homography and reports residuals
+ok 54 - fitTransform recovers similarity, affine and homography and reports residuals
+  ---
+  duration_ms: 1.926612
+  type: 'test'
+  ...
+# Subtest: preview sampling returns exactly the old process_image pixels
+ok 55 - preview sampling returns exactly the old process_image pixels
+  ---
+  duration_ms: 1608.332619
+  type: 'test'
+  ...
+# Subtest: native sampling cuts real source pixels beyond the working copy, EXIF applied
+ok 56 - native sampling cuts real source pixels beyond the working copy, EXIF applied
+  ---
+  duration_ms: 1223.471802
+  type: 'test'
+  ...
+# Subtest: derived view ids are deterministic and recipes rebuild the same pixels
+ok 57 - derived view ids are deterministic and recipes rebuild the same pixels
+  ---
+  duration_ms: 548.606749
+  type: 'test'
+  ...
+# Subtest: coordinates read off a derived view map back exactly, rects under rotation become polygons
+ok 58 - coordinates read off a derived view map back exactly, rects under rotation become polygons
+  ---
+  duration_ms: 489.362772
+  type: 'test'
+  ...
+# Subtest: zoom tiles come from the source file when it is larger than the working copy
+ok 59 - zoom tiles come from the source file when it is larger than the working copy
+  ---
+  duration_ms: 442.911571
+  type: 'test'
+  ...
+# [storage] restored imageId=img:3986680c66f4d2c3 marks=0
+# Subtest: derived view recipes are stored with the image and survive a restart
+ok 60 - derived view recipes are stored with the image and survive a restart
+  ---
+  duration_ms: 900.290524
+  type: 'test'
+  ...
+# Subtest: MCP: native process_image, marking through derivedViewId, inspect_image and get_derived_view
+ok 61 - MCP: native process_image, marking through derivedViewId, inspect_image and get_derived_view
+  ---
+  duration_ms: 3094.790328
+  type: 'test'
+  ...
+# Subtest: engine list reports availability and optional engines degrade to a result, not a crash
+ok 62 - engine list reports availability and optional engines degrade to a result, not a crash
+  ---
+  duration_ms: 50.283534
+  type: 'test'
+  ...
+# Subtest: components return boxes in normalized source coordinates with version and provenance
+ok 63 - components return boxes in normalized source coordinates with version and provenance
+  ---
+  duration_ms: 117.779001
+  type: 'test'
+  ...
+# Subtest: blobs find point sources with sub-pixel centroids
+ok 64 - blobs find point sources with sub-pixel centroids
+  ---
+  duration_ms: 42.997079
+  type: 'test'
+  ...
+# Subtest: lines and circles find strokes and rings, and do not call a square a circle
+ok 65 - lines and circles find strokes and rings, and do not call a square a circle
+  ---
+  duration_ms: 252.458799
+  type: 'test'
+  ...
+# Subtest: custom engines register once, run purely and failures keep one shape
+ok 66 - custom engines register once, run purely and failures keep one shape
+  ---
+  duration_ms: 14.035597
+  type: 'test'
+  ...
+# Subtest: MCP: detect_features lists engines, runs one and refuses a missing image
+ok 67 - MCP: detect_features lists engines, runs one and refuses a missing image
+  ---
+  duration_ms: 724.205684
+  type: 'test'
+  ...
+# Subtest: evidence viewer inline UI is parsable and protocol-ready
+ok 68 - evidence viewer inline UI is parsable and protocol-ready
+  ---
+  duration_ms: 1.692056
+  type: 'test'
+  ...
+# Subtest: evidence viewer actually renders the 3 PNG blocks for user
+ok 69 - evidence viewer actually renders the 3 PNG blocks for user
+  ---
+  duration_ms: 0.197586
+  type: 'test'
+  ...
+# Subtest: preview requires real png blocks and never claims to classify the subject
+ok 70 - preview requires real png blocks and never claims to classify the subject
+  ---
+  duration_ms: 0.246951
+  type: 'test'
+  ...
+# Subtest: expressions: arithmetic, precedence, implicit multiplication, bars and constants
+ok 71 - expressions: arithmetic, precedence, implicit multiplication, bars and constants
+  ---
+  duration_ms: 3.195175
+  type: 'test'
+  ...
+# Subtest: expressions: anything that is not math is refused, never evaluated
+ok 72 - expressions: anything that is not math is refused, never evaluated
+  ---
+  duration_ms: 3.032116
+  type: 'test'
+  ...
+# Subtest: expressions: detects trigonometry for default axes
+ok 73 - expressions: detects trigonometry for default axes
+  ---
+  duration_ms: 0.18308
+  type: 'test'
+  ...
+# Subtest: finding groups: compact rows, detail drilldown, canvas selection and review drafts
+ok 74 - finding groups: compact rows, detail drilldown, canvas selection and review drafts
+  ---
+  duration_ms: 1875.185393
+  type: 'test'
+  ...
+# Subtest: deskew finds the tilt of ruled lines and refuses a blank page
+ok 75 - deskew finds the tilt of ruled lines and refuses a blank page
+  ---
+  duration_ms: 276.231121
+  type: 'test'
+  ...
+# Subtest: rotation by 90 degrees maps marks back exactly; any angle reports invalid corners
+ok 76 - rotation by 90 degrees maps marks back exactly; any angle reports invalid corners
+  ---
+  duration_ms: 18.345894
+  type: 'test'
+  ...
+# Subtest: perspective rectification recovers a flat surface and inverts to the image
+ok 77 - perspective rectification recovers a flat surface and inverts to the image
+  ---
+  duration_ms: 109.525475
+  type: 'test'
+  ...
+# Subtest: extra operators behave: levels stretch, gamma lifts, white balance neutralizes, channel isolates
+ok 78 - extra operators behave: levels stretch, gamma lifts, white balance neutralizes, channel isolates
+  ---
+  duration_ms: 17.301039
+  type: 'test'
+  ...
+# Subtest: auto registration recovers a rotated, scaled copy; mirror needs the flag; unrelated images fail
+ok 79 - auto registration recovers a rotated, scaled copy; mirror needs the flag; unrelated images fail
+  ---
+  duration_ms: 4444.567539
+  type: 'test'
+  ...
+# Subtest: landmark registration fits exactly and reports residuals; too few points fail
+ok 80 - landmark registration fits exactly and reports residuals; too few points fail
+  ---
+  duration_ms: 179.783555
+  type: 'test'
+  ...
+# Subtest: quality metrics tell sharp from blurred, clean from noisy, and flag clipping and casts
+ok 81 - quality metrics tell sharp from blurred, clean from noisy, and flag clipping and casts
+  ---
+  duration_ms: 300.860549
+  type: 'test'
+  ...
+# Subtest: measurements carry uncertainty and never invent units
+ok 82 - measurements carry uncertainty and never invent units
+  ---
+  duration_ms: 1.481773
+  type: 'test'
+  ...
+# Subtest: MCP: assess, rectify, calibrate in the rectified view, measure, register and compare
+ok 83 - MCP: assess, rectify, calibrate in the rectified view, measure, register and compare
+  ---
+  duration_ms: 2763.024594
+  type: 'test'
+  ...
+# Subtest: all ticks round trip
+ok 84 - all ticks round trip
+  ---
+  duration_ms: 0.970208
+  type: 'test'
+  ...
+# Subtest: midpoint mapping
+ok 85 - midpoint mapping
+  ---
+  duration_ms: 0.139737
+  type: 'test'
+  ...
+# Subtest: clamping
+ok 86 - clamping
+  ---
+  duration_ms: 0.396863
+  type: 'test'
+  ...
+# Subtest: invalid inputs
+ok 87 - invalid inputs
+  ---
+  duration_ms: 0.379914
+  type: 'test'
+  ...
+# Subtest: T04/T05: a two-stroke freehand arrow is one unconfirmed direction-arrow candidate
+ok 88 - T04/T05: a two-stroke freehand arrow is one unconfirmed direction-arrow candidate
+  ---
+  duration_ms: 5.34414
+  type: 'test'
+  ...
+# Subtest: the strokes stay separate, unchanged marks in the event; the group is extra metadata
+ok 89 - the strokes stay separate, unchanged marks in the event; the group is extra metadata
+  ---
+  duration_ms: 1.829786
+  type: 'test'
+  ...
+# Subtest: T06: two lines that only cross in their middles are not grouped
+ok 90 - T06: two lines that only cross in their middles are not grouped
+  ---
+  duration_ms: 0.226286
+  type: 'test'
+  ...
+# Subtest: T04 variant: strokes joined end to end without a head are a connected path, not an arrow
+ok 91 - T04 variant: strokes joined end to end without a head are a connected path, not an arrow
+  ---
+  duration_ms: 0.642407
+  type: 'test'
+  ...
+# Subtest: T07: the same marks give the same groups at any resolution or display size
+ok 92 - T07: the same marks give the same groups at any resolution or display size
+  ---
+  duration_ms: 1.240195
+  type: 'test'
+  ...
+# Subtest: T08: the user's no keeps the candidate visible as rejected; the strokes are untouched
+ok 93 - T08: the user's no keeps the candidate visible as rejected; the strokes are untouched
+  ---
+  duration_ms: 2.05951
+  type: 'test'
+  ...
+# Subtest: T09: deleting a member drops the group, including a hand-made one
+ok 94 - T09: deleting a member drops the group, including a hand-made one
+  ---
+  duration_ms: 0.321791
+  type: 'test'
+  ...
+# Subtest: assistant marks and closed loops do not start groups; keys ignore order
+ok 95 - assistant marks and closed loops do not start groups; keys ignore order
+  ---
+  duration_ms: 0.178365
+  type: 'test'
+  ...
+# Subtest: a head drawn as two separate wings is still an arrow; a forward continuation is not
+ok 96 - a head drawn as two separate wings is still an arrow; a forward continuation is not
+  ---
+  duration_ms: 0.878116
+  type: 'test'
+  ...
+# Subtest: acceptance 4: a loop touched by a line stays a group of unknown meaning
+ok 97 - acceptance 4: a loop touched by a line stays a group of unknown meaning
+  ---
+  duration_ms: 0.872471
+  type: 'test'
+  ...
+# Subtest: the canvas records stroke facts, shows candidates and sends the user's verdicts
+ok 98 - the canvas records stroke facts, shows candidates and sends the user's verdicts
+  ---
+  duration_ms: 18.779334
+  type: 'test'
+  ...
+# Subtest: gesture groups over MCP: candidate, user verdict stored, strokes untouched
+ok 99 - gesture groups over MCP: candidate, user verdict stored, strokes untouched
+  ---
+  duration_ms: 1432.802223
+  type: 'test'
+  ...
+# Subtest: access key gates /mcp but not health or version
+ok 100 - access key gates /mcp but not health or version
+  ---
+  duration_ms: 604.683858
+  type: 'test'
+  ...
+# Subtest: rate limit returns 429 and CORS follows the allowlist
+ok 101 - rate limit returns 429 and CORS follows the allowlist
+  ---
+  duration_ms: 501.92748
+  type: 'test'
+  ...
+# Subtest: image tools are discoverable with ChatGPT file params and fail safely
+ok 102 - image tools are discoverable with ChatGPT file params and fail safely
+  ---
+  duration_ms: 886.50841
+  type: 'test'
+  ...
+# Subtest: URL guard accepts public https and rejects SSRF targets
+ok 103 - URL guard accepts public https and rejects SSRF targets
+  ---
+  duration_ms: 8.644415
+  type: 'test'
+  ...
+# Subtest: downloads follow redirects through the guard and enforce the size cap
+ok 104 - downloads follow redirects through the guard and enforce the size cap
+  ---
+  duration_ms: 29.324902
+  type: 'test'
+  ...
+# Subtest: registerImage applies EXIF orientation, rejects non-images and caches by content
+ok 105 - registerImage applies EXIF orientation, rejects non-images and caches by content
+  ---
+  duration_ms: 29.463802
+  type: 'test'
+  ...
+# Subtest: regions map to source pixels and back without drifting
+ok 106 - regions map to source pixels and back without drifting
+  ---
+  duration_ms: 1.110482
+  type: 'test'
+  ...
+# Subtest: process_image crops, upscales and reports the covered source region
+ok 107 - process_image crops, upscales and reports the covered source region
+  ---
+  duration_ms: 207.032298
+  type: 'test'
+  ...
+# Subtest: threshold and edges produce single-channel binary/edge maps
+ok 108 - threshold and edges produce single-channel binary/edge maps
+  ---
+  duration_ms: 83.616041
+  type: 'test'
+  ...
+# Subtest: overlay_grid labels map to correct source coordinates
+ok 109 - overlay_grid labels map to correct source coordinates
+  ---
+  duration_ms: 134.059483
+  type: 'test'
+  ...
+# Subtest: zoom tiles come from native pixels and are never enlarged
+ok 110 - zoom tiles come from native pixels and are never enlarged
+  ---
+  duration_ms: 40.137807
+  type: 'test'
+  ...
+# Subtest: v0.2 uses explicit SVG dimensions, not imaginary DPI or raster pixels
+ok 111 - v0.2 uses explicit SVG dimensions, not imaginary DPI or raster pixels
+  ---
+  duration_ms: 2.701747
+  type: 'test'
+  ...
+# Subtest: v0.2 carries explicit user intent and optional quote without making up a messageId
+ok 112 - v0.2 carries explicit user intent and optional quote without making up a messageId
+  ---
+  duration_ms: 0.848031
+  type: 'test'
+  ...
+# Subtest: without explicit context the message refuses to invent a prior question
+ok 113 - without explicit context the message refuses to invent a prior question
+  ---
+  duration_ms: 0.403446
+  type: 'test'
+  ...
+# Subtest: invalid coordinates, unknown intent or duplicate IDs are rejected
+ok 114 - invalid coordinates, unknown intent or duplicate IDs are rejected
+  ---
+  duration_ms: 0.55325
+  type: 'test'
+  ...
+# Subtest: all intents supported and text limits enforced
+ok 115 - all intents supported and text limits enforced
+  ---
+  duration_ms: 1.191742
+  type: 'test'
+  ...
+# Subtest: free annotation is the default and leaves arrow meaning unspecified
+ok 116 - free annotation is the default and leaves arrow meaning unspecified
+  ---
+  duration_ms: 0.472586
+  type: 'test'
+  ...
+# Subtest: only an explicit point-out makes the arrowhead the target, and the note can still override
+ok 117 - only an explicit point-out makes the arrowhead the target, and the note can still override
+  ---
+  duration_ms: 0.3651
+  type: 'test'
+  ...
+# Subtest: arrow direction uses image pixels, not stretched normalized units
+ok 118 - arrow direction uses image pixels, not stretched normalized units
+  ---
+  duration_ms: 1.427321
+  type: 'test'
+  ...
+# Subtest: without a note the message asks for several readings instead of assuming one
+ok 119 - without a note the message asks for several readings instead of assuming one
+  ---
+  duration_ms: 0.511679
+  type: 'test'
+  ...
+# Subtest: the user renames, reorders, fades and locks layers; GPT reads the edits once
+ok 120 - the user renames, reorders, fades and locks layers; GPT reads the edits once
+  ---
+  duration_ms: 30.798735
+  type: 'test'
+  ...
+# Subtest: a locked layer stops GPT and the user changing its marks, but reset keeps it and notes still attach
+ok 121 - a locked layer stops GPT and the user changing its marks, but reset keeps it and notes still attach
+  ---
+  duration_ms: 8.92215
+  type: 'test'
+  ...
+# Subtest: the user moves and restyles an earlier mark, deletes GPT's, and cannot move GPT's
+ok 122 - the user moves and restyles an earlier mark, deletes GPT's, and cannot move GPT's
+  ---
+  duration_ms: 6.626877
+  type: 'test'
+  ...
+# Subtest: finding recency follows changed evidence without changing layer or ink order
+ok 123 - finding recency follows changed evidence without changing layer or ink order
+  ---
+  duration_ms: 9.284
+  type: 'test'
+  ...
+# Subtest: layer rename re-renders the mounted panel, not detached rows
+ok 124 - layer rename re-renders the mounted panel, not detached rows
+  ---
+  duration_ms: 2.525932
+  type: 'test'
+  ...
+# Subtest: layers in a browser: base image + overlay image + Graph curve, fade and reorder
+ok 125 - layers in a browser: base image + overlay image + Graph curve, fade and reorder
+  ---
+  duration_ms: 3631.852266
+  type: 'test'
+  ...
+# Subtest: marks export as a layered SVG and load back onto the canvas
+ok 126 - marks export as a layered SVG and load back onto the canvas
+  ---
+  duration_ms: 80.897043
+  type: 'test'
+  ...
+# Subtest: ink report gives real widths and flags ink that hides its target
+ok 127 - ink report gives real widths and flags ink that hides its target
+  ---
+  duration_ms: 223.948918
+  type: 'test'
+  ...
+# Subtest: verification draws ink at its real width
+ok 128 - verification draws ink at its real width
+  ---
+  duration_ms: 142.337882
+  type: 'test'
+  ...
+# Subtest: layers survive export and come back as their own layers
+ok 129 - layers survive export and come back as their own layers
+  ---
+  duration_ms: 76.559516
+  type: 'test'
+  ...
+# Subtest: MCP discovers tools, calls show_number_line, and reads its inline UI
+ok 130 - MCP discovers tools, calls show_number_line, and reads its inline UI
+  ---
+  duration_ms: 1240.756538
+  type: 'test'
+  ...
+# Subtest: every bundled example module passes the validator and its own examples
+ok 131 - every bundled example module passes the validator and its own examples
+  ---
+  duration_ms: 1040.890616
+  type: 'test'
+  ...
+# Subtest: author walkthrough: create, test, sign, trust, install, enable, run
+ok 132 - author walkthrough: create, test, sign, trust, install, enable, run
+  ---
+  duration_ms: 3845.193462
+  type: 'test'
+  ...
+# Subtest: modules over MCP: Store, consent, enable, plot sin(x), edit, restart
+ok 133 - modules over MCP: Store, consent, enable, plot sin(x), edit, restart
+  ---
+  duration_ms: 3027.259303
+  type: 'test'
+  ...
+# Subtest: manifest: the bundled Graph manifest is valid for this core
+ok 134 - manifest: the bundled Graph manifest is valid for this core
+  ---
+  duration_ms: 18.093892
+  type: 'test'
+  ...
+# Subtest: manifest: strict, unknown fields and unsafe schemas are refused
+ok 135 - manifest: strict, unknown fields and unsafe schemas are refused
+  ---
+  duration_ms: 11.151213
+  type: 'test'
+  ...
+# Subtest: json schema subset: validates, fills defaults, rejects regex bombs and unbounded input
+ok 136 - json schema subset: validates, fills defaults, rejects regex bombs and unbounded input
+  ---
+  duration_ms: 2.2217
+  type: 'test'
+  ...
+# Subtest: semver ranges
+ok 137 - semver ranges
+  ---
+  duration_ms: 0.488857
+  type: 'test'
+  ...
+# Subtest: declarative templates fill only declared placeholders
+ok 138 - declarative templates fill only declared placeholders
+  ---
+  duration_ms: 0.439091
+  type: 'test'
+  ...
+# Subtest: lifecycle: a model-prepared plan cannot be committed without the consent only the Store has
+ok 139 - lifecycle: a model-prepared plan cannot be committed without the consent only the Store has
+  ---
+  duration_ms: 37.918821
+  type: 'test'
+  ...
+# Subtest: lifecycle: state survives a restart; disabling stops execution but keeps the objects
+ok 140 - lifecycle: state survives a restart; disabling stops execution but keeps the objects
+  ---
+  duration_ms: 45.030162
+  type: 'test'
+  ...
+# Subtest: router: sin(x) then sin(2x) on the same canvas, expected revision enforced, bad input explained
+ok 141 - router: sin(x) then sin(2x) on the same canvas, expected revision enforced, bad input explained
+  ---
+  duration_ms: 57.986927
+  type: 'test'
+  ...
+# Subtest: router: a module that returns something unexpected is refused, not applied
+ok 142 - router: a module that returns something unexpected is refused, not applied
+  ---
+  duration_ms: 39.704201
+  type: 'test'
+  ...
+# Subtest: graph: plot_points and set_axes on a canvas
+ok 143 - graph: plot_points and set_axes on a canvas
+  ---
+  duration_ms: 32.86146
+  type: 'test'
+  ...
+# Subtest: capability profile: network use must be declared, local work must not claim to leave, jobs are not instant, text must match
+ok 144 - capability profile: network use must be declared, local work must not claim to leave, jobs are not instant, text must match
+  ---
+  duration_ms: 35.661839
+  type: 'test'
+  ...
+# Subtest: get_module_capabilities and the catalog carry each capability's profile
+ok 145 - get_module_capabilities and the catalog carry each capability's profile
+  ---
+  duration_ms: 26.112415
+  type: 'test'
+  ...
+# Subtest: OAuth sign-in: discovery, registration, consent with the access key, PKCE, tokens
+ok 146 - OAuth sign-in: discovery, registration, consent with the access key, PKCE, tokens
+  ---
+  duration_ms: 794.325345
+  type: 'test'
+  ...
+# Subtest: an open server (no access key) has no OAuth endpoints
+ok 147 - an open server (no access key) has no OAuth endpoints
+  ---
+  duration_ms: 440.859666
+  type: 'test'
+  ...
+# Subtest: client ID metadata documents: an https client_id is checked against its own redirect URIs
+ok 148 - client ID metadata documents: an https client_id is checked against its own redirect URIs
+  ---
+  duration_ms: 5.970392
+  type: 'test'
+  ...
+# [mcp-sdk] OAuthClientProvider does not implement saveDiscoveryState()/discoveryState(); the SEP-2352 callback-leg authorization-server binding cannot be checked. Implement discoveryState (persist alongside codeVerifier) — see docs/migration/upgrade-to-v2.md §SEP-2352.
+# Subtest: the MCP SDK's own OAuth client signs in end to end
+ok 149 - the MCP SDK's own OAuth client signs in end to end
+  ---
+  duration_ms: 656.616626
+  type: 'test'
+  ...
+# Subtest: package verification: digest, signature, scope, tampering, reserved ids, bad files
+ok 150 - package verification: digest, signature, scope, tampering, reserved ids, bad files
+  ---
+  duration_ms: 28.347653
+  type: 'test'
+  ...
+# Subtest: install needs consent AND the administrator's approval from the server; the chat cannot supply it
+ok 151 - install needs consent AND the administrator's approval from the server; the chat cannot supply it
+  ---
+  duration_ms: 84.954842
+  type: 'test'
+  ...
+# Subtest: installed package: enable, run, restart, lock file
+ok 152 - installed package: enable, run, restart, lock file
+  ---
+  duration_ms: 61.693719
+  type: 'test'
+  ...
+# Subtest: update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup
+ok 153 - update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup
+  ---
+  duration_ms: 41.621965
+  type: 'test'
+  ...
+# Subtest: a package whose own example fails never becomes active; unsigned needs the explicit switch
+ok 154 - a package whose own example fails never becomes active; unsigned needs the explicit switch
+  ---
+  duration_ms: 23.670558
+  type: 'test'
+  ...
+# Subtest: uninstall keeps canvas objects; purge removes stored versions and needs admin
+ok 155 - uninstall keeps canvas objects; purge removes stored versions and needs admin
+  ---
+  duration_ms: 39.013766
+  type: 'test'
+  ...
+# Subtest: purge and install refuse ids that are not module ids (no path traversal)
+ok 156 - purge and install refuse ids that are not module ids (no path traversal)
+  ---
+  duration_ms: 5.355899
+  type: 'test'
+  ...
+# Subtest: a purge plan goes stale when the package is installed before it is confirmed
+ok 157 - a purge plan goes stale when the package is installed before it is confirmed
+  ---
+  duration_ms: 17.101439
+  type: 'test'
+  ...
+# Subtest: a corrupted active version stays visible so it can be rolled back
+ok 158 - a corrupted active version stays visible so it can be rolled back
+  ---
+  duration_ms: 21.146788
+  type: 'test'
+  ...
+# Subtest: a rollback plan goes stale when another update lands first
+ok 159 - a rollback plan goes stale when another update lands first
+  ---
+  duration_ms: 41.224819
+  type: 'test'
+  ...
+# Subtest: an update plan goes stale when a newer version is installed first
+ok 160 - an update plan goes stale when a newer version is installed first
+  ---
+  duration_ms: 30.365174
+  type: 'test'
+  ...
+# Subtest: an install plan goes stale when the package is installed by another plan first
+ok 161 - an install plan goes stale when the package is installed by another plan first
+  ---
+  duration_ms: 9.834704
+  type: 'test'
+  ...
+# Subtest: a failed rollback leaves the running version, lock and record unchanged
+ok 162 - a failed rollback leaves the running version, lock and record unchanged
+  ---
+  duration_ms: 19.966994
+  type: 'test'
+  ...
+# Subtest: updating a failed package keeps a coherent rollback target
+ok 163 - updating a failed package keeps a coherent rollback target
+  ---
+  duration_ms: 31.545957
+  type: 'test'
+  ...
+# Subtest: a WebAssembly module installs, passes its self-test and draws through scene operations
+ok 164 - a WebAssembly module installs, passes its self-test and draws through scene operations
+  ---
+  duration_ms: 166.374949
+  type: 'test'
+  ...
+# Subtest: WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped
+ok 165 - WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped
+  ---
+  duration_ms: 765.584844
+  type: 'test'
+  ...
+# Subtest: WebAssembly packages with imports, no memory maximum or too much memory are refused
+ok 166 - WebAssembly packages with imports, no memory maximum or too much memory are refused
+  ---
+  duration_ms: 12.375474
+  type: 'test'
+  ...
+# Subtest: a WebAssembly module survives a restart
+ok 167 - a WebAssembly module survives a restart
+  ---
+  duration_ms: 159.877929
+  type: 'test'
+  ...
+# Subtest: author tool: init makes a module that passes test, and test catches a broken example
+ok 168 - author tool: init makes a module that passes test, and test catches a broken example
+  ---
+  duration_ms: 668.589409
+  type: 'test'
+  ...
+# Subtest: addresses: only public ones are reachable
+ok 169 - addresses: only public ones are reachable
+  ---
+  duration_ms: 6.489313
+  type: 'test'
+  ...
+# Subtest: an HTTP module installs without any network call, then runs through the egress rules
+ok 170 - an HTTP module installs without any network call, then runs through the egress rules
+  ---
+  duration_ms: 48.144433
+  type: 'test'
+  ...
+# Subtest: egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions
+ok 171 - egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions
+  ---
+  duration_ms: 1.43323
+  type: 'test'
+  ...
+# Subtest: HTTP manifests: host must be named when there are several, secrets must be declared
+ok 172 - HTTP manifests: host must be named when there are several, secrets must be declared
+  ---
+  duration_ms: 4.607799
+  type: 'test'
+  ...
+# Subtest: environment secret names cannot collide between module ids
+ok 173 - environment secret names cannot collide between module ids
+  ---
+  duration_ms: 0.334675
+  type: 'test'
+  ...
+# Subtest: paired marks go to their own image and links join them
+ok 174 - paired marks go to their own image and links join them
+  ---
+  duration_ms: 63.600512
+  type: 'test'
+  ...
+# Subtest: a failed paired call changes neither image nor the links
+ok 175 - a failed paired call changes neither image nor the links
+  ---
+  duration_ms: 21.119566
+  type: 'test'
+  ...
+# Subtest: widget maps each image's coordinates into the side-by-side canvas and back
+ok 176 - widget maps each image's coordinates into the side-by-side canvas and back
+  ---
+  duration_ms: 1.97942
+  type: 'test'
+  ...
+# Subtest: widget lays out a workspace, turns rotated images and maps marks back exactly
+ok 177 - widget lays out a workspace, turns rotated images and maps marks back exactly
+  ---
+  duration_ms: 1.533622
+  type: 'test'
+  ...
+# Subtest: widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict
+ok 178 - widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict
+  ---
+  duration_ms: 0.858326
+  type: 'test'
+  ...
+# Subtest: one call cannot add the same id to both images
+ok 179 - one call cannot add the same id to both images
+  ---
+  duration_ms: 17.698741
+  type: 'test'
+  ...
+# Subtest: a user send on a paired view tells GPT which image each mark is on
+ok 180 - a user send on a paired view tells GPT which image each mark is on
+  ---
+  duration_ms: 4.040239
+  type: 'test'
+  ...
+# Subtest: pdf recognition is cheap and does not need the engine
+ok 181 - pdf recognition is cheap and does not need the engine
+  ---
+  duration_ms: 1.377814
+  type: 'test'
+  ...
+# Subtest: PDF pages render at any dpi with the same normalized layout, labels and a text layer
+ok 182 - PDF pages render at any dpi with the same normalized layout, labels and a text layer
+  ---
+  duration_ms: 225.93739
+  type: 'test'
+  ...
+# Subtest: stored PDFs can be rendered again from their hash
+ok 183 - stored PDFs can be rendered again from their hash
+  ---
+  duration_ms: 3.801502
+  type: 'test'
+  ...
+# Subtest: polylines keep their vertices and expose a bounding box
+ok 184 - polylines keep their vertices and expose a bounding box
+  ---
+  duration_ms: 3.03459
+  type: 'test'
+  ...
+# Subtest: assistant and replayed user polylines resolve with provenance
+ok 185 - assistant and replayed user polylines resolve with provenance
+  ---
+  duration_ms: 1.712128
+  type: 'test'
+  ...
+# Subtest: user polylines become raster events GPT can follow
+ok 186 - user polylines become raster events GPT can follow
+  ---
+  duration_ms: 1.984439
+  type: 'test'
+  ...
+# Subtest: smooth and closed flags survive for freehand curves and loops
+ok 187 - smooth and closed flags survive for freehand curves and loops
+  ---
+  duration_ms: 0.556072
+  type: 'test'
+  ...
+# Subtest: submission separates the focus mark from earlier context marks
+ok 188 - submission separates the focus mark from earlier context marks
+  ---
+  duration_ms: 1.114206
+  type: 'test'
+  ...
+# Subtest: assistant findings (note, status) are kept on marks
+ok 189 - assistant findings (note, status) are kept on marks
+  ---
+  duration_ms: 0.22142
+  type: 'test'
+  ...
+# Subtest: pen style (colour, size, highlighter) is kept and validated
+ok 190 - pen style (colour, size, highlighter) is kept and validated
+  ---
+  duration_ms: 0.673186
+  type: 'test'
+  ...
+# Subtest: one image: layers, marks with provenance, style and findings, nothing host-specific
+ok 191 - one image: layers, marks with provenance, style and findings, nothing host-specific
+  ---
+  duration_ms: 20.440251
+  type: 'test'
+  ...
+# Subtest: a pair: links point from one image's mark to the other's, with review
+ok 192 - a pair: links point from one image's mark to the other's, with review
+  ---
+  duration_ms: 20.322707
+  type: 'test'
+  ...
+# Subtest: a protocol document attached as a marks file restores the matching image's marks
+ok 193 - a protocol document attached as a marks file restores the matching image's marks
+  ---
+  duration_ms: 24.62632
+  type: 'test'
+  ...
+# Subtest: downsized process_image preview reports its actual pixels and preserves precise derived-view mapping
+ok 194 - downsized process_image preview reports its actual pixels and preserves precise derived-view mapping
+  ---
+  duration_ms: 234.026133
+  type: 'test'
+  ...
+# Subtest: render_canvas pixel-to-canvas matrix matches the resized image
+ok 195 - render_canvas pixel-to-canvas matrix matches the resized image
+  ---
+  duration_ms: 208.31819
+  type: 'test'
+  ...
+# Subtest: canvas results stay under host size caps; uploads and slices carry the rest
+ok 196 - canvas results stay under host size caps; uploads and slices carry the rest
+  ---
+  duration_ms: 4267.920706
+  type: 'test'
+  ...
+# Subtest: mountain-right resolves away from tree even when model guesses tree coordinates
+ok 197 - mountain-right resolves away from tree even when model guesses tree coordinates
+  ---
+  duration_ms: 1.705037
+  type: 'test'
+  ...
+# Subtest: sun landmark matches source SVG geometry
+ok 198 - sun landmark matches source SVG geometry
+  ---
+  duration_ms: 0.39406
+  type: 'test'
+  ...
+# Subtest: semantic target must exist in selected scene
+ok 199 - semantic target must exist in selected scene
+  ---
+  duration_ms: 1.766622
+  type: 'test'
+  ...
+# Subtest: previous human marks cannot be silently converted into AI marks
+ok 200 - previous human marks cannot be silently converted into AI marks
+  ---
+  duration_ms: 0.278984
+  type: 'test'
+  ...
+# Subtest: free coordinates are retained but never called semantically grounded
+ok 201 - free coordinates are retained but never called semantically grounded
+  ---
+  duration_ms: 0.382423
+  type: 'test'
+  ...
+# Subtest: replayed human annotations preserve user author, but provenance is unverified
+ok 202 - replayed human annotations preserve user author, but provenance is unverified
+  ---
+  duration_ms: 0.279833
+  type: 'test'
+  ...
+# Subtest: all built-in scene anchors use normalized bounded coordinates
+ok 203 - all built-in scene anchors use normalized bounded coordinates
+  ---
+  duration_ms: 0.425671
+  type: 'test'
+  ...
+# Subtest: scene ops: create with refs, ids assigned by the core, provenance recorded
+ok 204 - scene ops: create with refs, ids assigned by the core, provenance recorded
+  ---
+  duration_ms: 13.852537
+  type: 'test'
+  ...
+# Subtest: scene ops: all or nothing, with a pointed error
+ok 205 - scene ops: all or nothing, with a pointed error
+  ---
+  duration_ms: 2.076323
+  type: 'test'
+  ...
+# Subtest: scene ops: a module changes only its own objects; the user changes anything
+ok 206 - scene ops: a module changes only its own objects; the user changes anything
+  ---
+  duration_ms: 11.828192
+  type: 'test'
+  ...
+# Subtest: scene ops: optimistic concurrency, in-use frames, locked layers
+ok 207 - scene ops: optimistic concurrency, in-use frames, locked layers
+  ---
+  duration_ms: 3.823626
+  type: 'test'
+  ...
+# Subtest: scene ops: scratch objects are not drawn for the user until published
+ok 208 - scene ops: scratch objects are not drawn for the user until published
+  ---
+  duration_ms: 5.282199
+  type: 'test'
+  ...
+# Subtest: scene ops: objects survive a round trip through storage form and re-render the same
+ok 209 - scene ops: objects survive a round trip through storage form and re-render the same
+  ---
+  duration_ms: 5.968033
+  type: 'test'
+  ...
+# Subtest: renderer: a plot of sin(x) is one smooth curve through the right points; tan breaks at asymptotes
+ok 210 - renderer: a plot of sin(x) is one smooth curve through the right points; tan breaks at asymptotes
+  ---
+  duration_ms: 12.577966
+  type: 'test'
+  ...
+# Subtest: plot labels: Core edits follow auto expressions and preserve custom names
+ok 211 - plot labels: Core edits follow auto expressions and preserve custom names
+  ---
+  duration_ms: 26.867702
+  type: 'test'
+  ...
+# Subtest: plot labels: legacy formula-looking and empty labels stay custom after restore
+ok 212 - plot labels: legacy formula-looking and empty labels stay custom after restore
+  ---
+  duration_ms: 8.303594
+  type: 'test'
+  ...
+# Subtest: deleted axes and plots restore together with original IDs, labels and lock checks
+ok 213 - deleted axes and plots restore together with original IDs, labels and lock checks
+  ---
+  duration_ms: 47.420398
+  type: 'test'
+  ...
+# Subtest: a required key is generated once, saved with mode 600 and reused; an explicit key or opt-out wins
+ok 214 - a required key is generated once, saved with mode 600 and reused; an explicit key or opt-out wins
+  ---
+  duration_ms: 13.061635
+  type: 'test'
+  ...
+# Subtest: X-Forwarded-For counts only behind the number of proxies the operator trusts
+ok 215 - X-Forwarded-For counts only behind the number of proxies the operator trusts
+  ---
+  duration_ms: 0.341577
+  type: 'test'
+  ...
+# Subtest: download links are signed per image and file when a key exists
+ok 216 - download links are signed per image and file when a key exists
+  ---
+  duration_ms: 1.321226
+  type: 'test'
+  ...
+# Subtest: the Docker defaults start a closed server and keep its key across restarts
+ok 217 - the Docker defaults start a closed server and keep its key across restarts
+  ---
+  duration_ms: 1236.119707
+  type: 'test'
+  ...
+# [storage] restored imageId=img:7a98620bb4bcad23 marks=2
+# Subtest: a canvas survives the memory cache being emptied (restart or eviction)
+ok 218 - a canvas survives the memory cache being emptied (restart or eviction)
+  ---
+  duration_ms: 34.731834
+  type: 'test'
+  ...
+# [storage] restored imageId=img:36ae3ced8386e509 marks=1
+# [storage] restored imageId=img:d52861abd38dc641 marks=1
+# Subtest: paired links and the user's review are stored with the left image
+ok 219 - paired links and the user's review are stored with the left image
+  ---
+  duration_ms: 24.636383
+  type: 'test'
+  ...
+# Subtest: without a storage dir nothing touches the disk and unknown ids still fail clearly
+ok 220 - without a storage dir nothing touches the disk and unknown ids still fail clearly
+  ---
+  duration_ms: 10.416186
+  type: 'test'
+  ...
+# Subtest: manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook
+ok 221 - manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook
+  ---
+  duration_ms: 1459.548658
+  type: 'test'
+  ...
+# Subtest: browser: the widget opened by manage_surface_panels shows the calculator with the model's cell
+ok 222 - browser: the widget opened by manage_surface_panels shows the calculator with the model's cell
+  ---
+  duration_ms: 2935.172709
+  type: 'test'
+  ...
+# Subtest: browser: with the calculator alone, the launcher offers the Graph canvas and brings it back
+ok 223 - browser: with the calculator alone, the launcher offers the Graph canvas and brings it back
+  ---
+  duration_ms: 3224.360722
+  type: 'test'
+  ...
+# Subtest: link refresh: stale plots are recomputed and redrawn, manually and automatically
+ok 224 - link refresh: stale plots are recomputed and redrawn, manually and automatically
+  ---
+  duration_ms: 2093.053777
+  type: 'test'
+  ...
+# Subtest: layout: defaults put the viewport left and companions right; phones get tabs
+ok 225 - layout: defaults put the viewport left and companions right; phones get tabs
+  ---
+  duration_ms: 6.116724
+  type: 'test'
+  ...
+# Subtest: layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size
+ok 226 - layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size
+  ---
+  duration_ms: 0.418604
+  type: 'test'
+  ...
+# Subtest: layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing
+ok 227 - layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing
+  ---
+  duration_ms: 3.128345
+  type: 'test'
+  ...
+# Subtest: layout: a stored layout is reconciled with the panel list and profiles do not touch each other
+ok 228 - layout: a stored layout is reconciled with the panel list and profiles do not touch each other
+  ---
+  duration_ms: 1.118033
+  type: 'test'
+  ...
+# Subtest: panel descriptors: strict, bound to real capabilities, inert when the kind is unknown
+ok 229 - panel descriptors: strict, bound to real capabilities, inert when the kind is unknown
+  ---
+  duration_ms: 17.789969
+  type: 'test'
+  ...
+# Subtest: surface over MCP: panels, calculator, plot, layouts per profile, restart
+ok 230 - surface over MCP: panels, calculator, plot, layouts per profile, restart
+  ---
+  duration_ms: 2930.208598
+  type: 'test'
+  ...
+# Subtest: the quick tunnel address is read from cloudflared's metrics and checked
+ok 231 - the quick tunnel address is read from cloudflared's metrics and checked
+  ---
+  duration_ms: 1.656676
+  type: 'test'
+  ...
+# Subtest: the watcher reports the address once and survives a missing tunnel
+ok 232 - the watcher reports the address once and survives a missing tunnel
+  ---
+  duration_ms: 3313.195429
+  type: 'test'
+  ...
+# Subtest: unified canvas contains all views without a second tool call
+ok 233 - unified canvas contains all views without a second tool call
+  ---
+  duration_ms: 5.466117
+  type: 'test'
+  ...
+# Subtest: context is optional; drawing and submission require no menu completion
+ok 234 - context is optional; drawing and submission require no menu completion
+  ---
+  duration_ms: 0.319772
+  type: 'test'
+  ...
+# Subtest: crop stays inside the source and preserves original aspect
+ok 235 - crop stays inside the source and preserves original aspect
+  ---
+  duration_ms: 0.967855
+  type: 'test'
+  ...
+# Subtest: arrows zoom around the arrowhead, not the tail
+ok 236 - arrows zoom around the arrowhead, not the tail
+  ---
+  duration_ms: 0.161306
+  type: 'test'
+  ...
+# Subtest: photo canvases crop in their own aspect ratio
+ok 237 - photo canvases crop in their own aspect ratio
+  ---
+  duration_ms: 0.864237
+  type: 'test'
+  ...
+# Subtest: real photos render from widget-only _meta and processed views get their own tabs
+ok 238 - real photos render from widget-only _meta and processed views get their own tabs
+  ---
+  duration_ms: 0.437871
+  type: 'test'
+  ...
+# Subtest: re-delivered host data does not reset the chosen tab or unsent marks
+ok 239 - re-delivered host data does not reset the chosen tab or unsent marks
+  ---
+  duration_ms: 0.389486
+  type: 'test'
+  ...
+# Subtest: only new marks are focus; sent marks become context and fade
+ok 240 - only new marks are focus; sent marks become context and fade
+  ---
+  duration_ms: 0.409108
+  type: 'test'
+  ...
+# Subtest: GPT notes and status appear beside their marks
+ok 241 - GPT notes and status appear beside their marks
+  ---
+  duration_ms: 0.548003
+  type: 'test'
+  ...
+# Subtest: new user marks continue numbering after re-presented ones
+ok 242 - new user marks continue numbering after re-presented ones
+  ---
+  duration_ms: 0.601055
+  type: 'test'
+  ...
+# Subtest: users pick colour, size and a translucent highlighter
+ok 243 - users pick colour, size and a translucent highlighter
+  ---
+  duration_ms: 0.575387
+  type: 'test'
+  ...
+# Subtest: undo and redo step through marks, including a clear
+ok 244 - undo and redo step through marks, including a clear
+  ---
+  duration_ms: 1.4916
+  type: 'test'
+  ...
+# Subtest: a late tool input never replaces the applied result
+ok 245 - a late tool input never replaces the applied result
+  ---
+  duration_ms: 0.228631
+  type: 'test'
+  ...
+# Subtest: missing pixels are reloaded and the verification image has its own tab
+ok 246 - missing pixels are reloaded and the verification image has its own tab
+  ---
+  duration_ms: 0.790641
+  type: 'test'
+  ...
+# Subtest: provenance colors are distinct from viewer inspection marker
+ok 247 - provenance colors are distinct from viewer inspection marker
+  ---
+  duration_ms: 0.186859
+  type: 'test'
+  ...
+# Subtest: zoom keeps the point under the pointer and clamps to the photo
+ok 248 - zoom keeps the point under the pointer and clamps to the photo
+  ---
+  duration_ms: 0.713567
+  type: 'test'
+  ...
+# Subtest: pinch, wheel and pan never draw; labels and drawing tolerances follow the zoom
+ok 249 - pinch, wheel and pan never draw; labels and drawing tolerances follow the zoom
+  ---
+  duration_ms: 0.567935
+  type: 'test'
+  ...
+# Subtest: layers can be hidden without losing marks; unsent marks always show
+ok 250 - layers can be hidden without losing marks; unsent marks always show
+  ---
+  duration_ms: 0.427402
+  type: 'test'
+  ...
+# Subtest: pick a photo in the canvas: upload in slices, preview then full image, model told
+ok 251 - pick a photo in the canvas: upload in slices, preview then full image, model told
+  ---
+  duration_ms: 5804.676002
+  type: 'test'
+  ...
+# Subtest: UVA characterization: changing axes reprojects frame shapes but leaves normalized user ink unchanged
+ok 252 - UVA characterization: changing axes reprojects frame shapes but leaves normalized user ink unchanged
+  ---
+  duration_ms: 17.225206
+  type: 'test'
+  ...
+# Subtest: UVA characterization: storage form retains rich ink, empty locked layers, gesture decisions and deleted objects
+ok 253 - UVA characterization: storage form retains rich ink, empty locked layers, gesture decisions and deleted objects
+  ---
+  duration_ms: 2.282804
+  type: 'test'
+  ...
+# Subtest: M0.4.3 uses the exact widget's scene artwork, not a separate semantic object catalog
+ok 254 - M0.4.3 uses the exact widget's scene artwork, not a separate semantic object catalog
+  ---
+  duration_ms: 3.043216
+  type: 'test'
+  ...
+# Subtest: M0.4.3 returns genuine PNG bytes for original, blue-focus view and crop
+ok 255 - M0.4.3 returns genuine PNG bytes for original, blue-focus view and crop
+  ---
+  duration_ms: 64.974063
+  type: 'test'
+  ...
+# Subtest: Arrow crop is around the arrowhead, NOT the tail
+ok 256 - Arrow crop is around the arrowhead, NOT the tail
+  ---
+  duration_ms: 0.322232
+  type: 'test'
+  ...
+# Subtest: Reversed rectangle coordinates and near-edge point are handled
+ok 257 - Reversed rectangle coordinates and near-edge point are handled
+  ---
+  duration_ms: 0.260579
+  type: 'test'
+  ...
+# Subtest: Reject arbitrary URLs, unknown image IDs, wrong revisions or invalid geometry
+ok 258 - Reject arbitrary URLs, unknown image IDs, wrong revisions or invalid geometry
+  ---
+  duration_ms: 0.809509
+  type: 'test'
+  ...
+# Subtest: M0.4 embedded canvas JavaScript parses
+ok 259 - M0.4 embedded canvas JavaScript parses
+  ---
+  duration_ms: 4.945204
+  type: 'test'
+  ...
+# Subtest: M0.4 separates media, AI overlays and human overlays
+ok 260 - M0.4 separates media, AI overlays and human overlays
+  ---
+  duration_ms: 0.787286
+  type: 'test'
+  ...
+# Subtest: M0.4 tools and message bridge are both present
+ok 261 - M0.4 tools and message bridge are both present
+  ---
+  duration_ms: 1.176929
+  type: 'test'
+  ...
+# Subtest: M0.4 uses fixed local scenes; no arbitrary image URL fetch
+ok 262 - M0.4 uses fixed local scenes; no arbitrary image URL fetch
+  ---
+  duration_ms: 1.204665
+  type: 'test'
+  ...
+# Subtest: M0.3 widget JavaScript parses
+ok 263 - M0.3 widget JavaScript parses
+  ---
+  duration_ms: 1.871818
+  type: 'test'
+  ...
+# Subtest: M0.3 widget has separate validation and chat paths
+ok 264 - M0.3 widget has separate validation and chat paths
+  ---
+  duration_ms: 0.420249
+  type: 'test'
+  ...
+# Subtest: workbench in a browser: Graph + calculator side by side, drag, mobile tabs
+ok 265 - workbench in a browser: Graph + calculator side by side, drag, mobile tabs
+  ---
+  duration_ms: 14428.945688
+  type: 'test'
+  ...
+# Subtest: workspaces over MCP: preview, commit, retry, read back, undo
+ok 266 - workspaces over MCP: preview, commit, retry, read back, undo
+  ---
+  duration_ms: 2288.202126
+  type: 'test'
+  ...
+# Subtest: legacy adapter: a single and a paired canvas read as workspaces without changes
+ok 267 - legacy adapter: a single and a paired canvas read as workspaces without changes
+  ---
+  duration_ms: 111.168647
+  type: 'test'
+  ...
+# Subtest: merge B into A: 3 images, 29 editable marks, 9 layer instances; A and B untouched (PORT-01, MC-05..MC-09)
+ok 268 - merge B into A: 3 images, 29 editable marks, 9 layer instances; A and B untouched (PORT-01, MC-05..MC-09)
+  ---
+  duration_ms: 68.89634
+  type: 'test'
+  ...
+# Subtest: a stale preview is refused and a failed change leaves documents alone
+ok 269 - a stale preview is refused and a failed change leaves documents alone
+  ---
+  duration_ms: 74.579956
+  type: 'test'
+  ...
+# Subtest: split with copy: the copy changes independently and remembers its source (PORT-02, PORT-03)
+ok 270 - split with copy: the copy changes independently and remembers its source (PORT-02, PORT-03)
+  ---
+  duration_ms: 82.418191
+  type: 'test'
+  ...
+# Subtest: move then undo: items return, nothing is deleted (PORT-05, PORT-17)
+ok 271 - move then undo: items return, nothing is deleted (PORT-05, PORT-17)
+  ---
+  duration_ms: 58.529248
+  type: 'test'
+  ...
+# Subtest: links join marks across items and are shared with paired views
+ok 272 - links join marks across items and are shared with paired views
+  ---
+  duration_ms: 60.059848
+  type: 'test'
+  ...
+# [storage] restored imageId=img:cdd7884aea5523cd marks=25
+# [storage] restored imageId=img:236cdd18eb31ff52 marks=2
+# [storage] restored imageId=img:7adaeac0f3f67a71 marks=2
+# Subtest: workspaces, copies and links survive a restart with storage (PORT-12)
+ok 273 - workspaces, copies and links survive a restart with storage (PORT-12)
+  ---
+  duration_ms: 302.99963
+  type: 'test'
+  ...
+# Subtest: review fixes: retry after a stale preview, annotation changes stale a preview, successive undo, duplicate picks
+ok 274 - review fixes: retry after a stale preview, annotation changes stale a preview, successive undo, duplicate picks
+  ---
+  duration_ms: 125.440187
+  type: 'test'
+  ...
+# zoom burst ms: 1851 {"same":true,"renders":0}
+# Subtest: browser: a burst of wheel zooms triggers only a few full renders
+ok 275 - browser: a burst of wheel zooms triggers only a few full renders
+  ---
+  duration_ms: 4707.687825
+  type: 'test'
+  ...
+1..275
+# tests 275
+# suites 0
+# pass 275
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 129470.078917

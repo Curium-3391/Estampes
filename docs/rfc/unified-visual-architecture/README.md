@@ -1,6 +1,6 @@
-# Unified Visual Architecture — Phase 0 / 0.1
+# Unified Visual Architecture — Phase 0 / 0.1 / 0.2
 
-狀態：**PROPOSED / READY FOR HUMAN APPROVAL / 尚未 Approved**。調查日期：2026-11-01 UTC。實作事實固定於 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本 `0.20.0`。本目錄不是已實作功能的說明，也不授權 Phase 1–7。
+狀態：**PROPOSED / 僅準備有限 PR-1A 人類批准 / 尚未 Approved**。調查日期：2026-11-01 UTC。實作事實固定於 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本 `0.20.0`。本目錄不是已實作功能的說明，也不授權 Phase 1–7。
 
 ## 閱讀與決策權限
 
@@ -65,3 +65,7 @@ Current Implementation：見 AUDIT。Proposed Architecture：見 RFC。Open Deci
 | [Review execution manifest](evidence/review-execution-manifest.json) | 本輪命令/環境/exit/results/loghash；舊Phase0logs不覆寫 |
 
 測試規格62cases、Roadmap23PRunits；補充文件不改核心方向或自動批准。主要RFC與CONTRACTS已逐項整合新契約。
+
+## Phase 0.2 — Independent Final Gate
+
+最新審查：[FINAL-ARCHITECTURE-GATE](FINAL-ARCHITECTURE-GATE.md)。前次報告保持歷史原文；本輪修正G1/G2與checkpoint容量、coherent roots、平台durability、nested snapshot預檢、doc-onlyschema反例及wire名稱。當前67cases/23PRunits；Node/文件/範例check只證明已執行範圍，不等於人類批准或未實作功能驗收。尚未開始Phase1。

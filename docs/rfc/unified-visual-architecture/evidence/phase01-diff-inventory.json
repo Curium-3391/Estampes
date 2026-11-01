@@ -1,0 +1,388 @@
+{
+  "from": "b42e6afc7ca78b280ad522a93e111ba2ef407cd7",
+  "to": "df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd",
+  "files": 47,
+  "added": 4521,
+  "removed": 125,
+  "completeGitBinaryDiffBytes": 352968,
+  "completeGitBinaryDiffSha256": "06ab10320f7cf13aa1faaffa7f885deb4258962d4d56747282af456ffad6a668",
+  "scope": "All 47 files including previous schemas/examples and immutable execution evidence; counts/hashes do not imply runtime behavior coverage.",
+  "entries": [
+    {
+      "path": "IMPLEMENTATION-ROADMAP.md",
+      "added": 29,
+      "removed": 18,
+      "phase01Bytes": 16173,
+      "phase01Sha256": "4a0036b6f8a2597071ce331a11bf8434da56f3a4bd2b4f95edfd71cdfb641f6c",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/ANNOTATION-POLICY.md",
+      "added": 106,
+      "removed": 0,
+      "phase01Bytes": 15487,
+      "phase01Sha256": "c4ec7ebafad1aac6e7ec2610f58d3dd1434d309498aca252d43fb5541ad10349",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/AUTHORITY-CUTOVER.md",
+      "added": 60,
+      "removed": 0,
+      "phase01Bytes": 9710,
+      "phase01Sha256": "45f8bb9adcb9469ada046529c1277029efa81dd6ec39bf9bed139f1f5fb3a3e5",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/CONTRACTS.md",
+      "added": 21,
+      "removed": 9,
+      "phase01Bytes": 14562,
+      "phase01Sha256": "28d549a1e2d126e6c9200afc5c31beb1bc43eaee697ff29dfd4c837862c34a95",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/EMBED-CONTRACT.md",
+      "added": 82,
+      "removed": 0,
+      "phase01Bytes": 10739,
+      "phase01Sha256": "7661694dfa476f4be0d2f7bc76d0b269f4b05e55f342c759729b4d7d768267f0",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/HOST-ACCEPTANCE.md",
+      "added": 6,
+      "removed": 0,
+      "phase01Bytes": 3416,
+      "phase01Sha256": "0ef8c124ade4ddeddb2aaf2b8e5e36ebc9ca2e138bda7ce0cdea4dd1f3583282",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md",
+      "added": 16,
+      "removed": 1,
+      "phase01Bytes": 7656,
+      "phase01Sha256": "60bbba6e0fee8cf5f042a1d813fc32780376186047bc2ba31ca9dab9b636ce5f",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/README.md",
+      "added": 27,
+      "removed": 3,
+      "phase01Bytes": 6289,
+      "phase01Sha256": "bcb5c8239ff82f56c70ae8b0c4322db7d8622f291b3557ecf712286ef3b2250f",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/REVIEW-REMEDIATION.md",
+      "added": 131,
+      "removed": 0,
+      "phase01Bytes": 13790,
+      "phase01Sha256": "28f28aa49e2f0bb653b5787d6e9edfea3a2be5b742a75c2331d57512debea935",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-001.md",
+      "added": 6,
+      "removed": 0,
+      "phase01Bytes": 9757,
+      "phase01Sha256": "25de5aa0520a56559b53a16c4587b39a77b3cf8c30239af7a5c13e3e07bf3cf2",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-002.md",
+      "added": 19,
+      "removed": 16,
+      "phase01Bytes": 11207,
+      "phase01Sha256": "a5ae0ff23076337efa29bd3d617d2a4c69611ecb4952131afde7c2164d7d69c8",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-003.md",
+      "added": 6,
+      "removed": 2,
+      "phase01Bytes": 13449,
+      "phase01Sha256": "67da4e5e1666b0a7b04db9661d12c070801ce785f49126d6d1bc97d600e87fc0",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-004.md",
+      "added": 6,
+      "removed": 0,
+      "phase01Bytes": 10194,
+      "phase01Sha256": "5a1bca03edddec35cf9159ed696f9d235ef2551fa44408884a4301071a9dee1d",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "added": 595,
+      "removed": 28,
+      "phase01Bytes": 26800,
+      "phase01Sha256": "a588ceb8f149d715e18205170bd2d9245ceab764d8ebe365428d7b97cea72016",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-006.md",
+      "added": 19,
+      "removed": 5,
+      "phase01Bytes": 21808,
+      "phase01Sha256": "9721507fa490e41d37559e24cf294341d087b2c86ab56e47577f9f548aa0df85",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-007.md",
+      "added": 7,
+      "removed": 1,
+      "phase01Bytes": 12390,
+      "phase01Sha256": "4e0afbef11c52a848076b68be4fb1e94c194ca5830fc4dde76fd35140b08dd99",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RFC-008.md",
+      "added": 10,
+      "removed": 4,
+      "phase01Bytes": 6748,
+      "phase01Sha256": "67d2dd0ea5ab89d96e2a740ebb161a52221a217f4cd078af92fb9d1baa80cdcd",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/RISK-REGISTER.md",
+      "added": 13,
+      "removed": 0,
+      "phase01Bytes": 5743,
+      "phase01Sha256": "8e48b8dbf4e8af0399e96f44faa13cd58d10a17b1848eb39aea94594966b9d39",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/STORAGE-LIFECYCLE.md",
+      "added": 95,
+      "removed": 0,
+      "phase01Bytes": 15647,
+      "phase01Sha256": "ea394e8dd421e1d985558959ba60471a58f39fa5131171e973015c3d4b28478b",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/TEST-MATRIX.md",
+      "added": 29,
+      "removed": 0,
+      "phase01Bytes": 30985,
+      "phase01Sha256": "f1218e9475caa4844f49d619317f09f0ef6b91c3c2347eff70e88f0d566906a3",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/TRACEABILITY.md",
+      "added": 13,
+      "removed": 0,
+      "phase01Bytes": 8751,
+      "phase01Sha256": "4b023e53fa2f8eb2b159a5df08eeb782bb032554dfd9fc858e25eaa06215dd43",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-001.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1772,
+      "phase01Sha256": "d59d92a50a429d15c4af1bf117ac18628fd3fc31bc61f8d02113ea204cb7bbec",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-002.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1918,
+      "phase01Sha256": "b13989578593a524b306bf7ddb7dce1b04424eff9a428d70a99b2a0452f88715",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-003.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1918,
+      "phase01Sha256": "a06792a57b3e9a2b317ad91adcbb0d436396ce1dacf8d187d8d7cd19a2c0bfdb",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-004.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1862,
+      "phase01Sha256": "560231f30219320de0eaf5bba3d2770cee7f207bbba709d54b11f4f49a25377d",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-005.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1875,
+      "phase01Sha256": "f1ac40ad331a08cafce8491eed2bc48edb257b39ad084e1ababc6661ba24c631",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-006.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1826,
+      "phase01Sha256": "0300125702ffd4f43a077aae8df1dcb5785ae6478e44456edffb6f0f0cef6a44",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-007.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1924,
+      "phase01Sha256": "1f89aa654cedeeb8a34dcf1d4aeb97c2f3cd819463b2fd7edc57b37abecc2d85",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-008.md",
+      "added": 4,
+      "removed": 0,
+      "phase01Bytes": 1943,
+      "phase01Sha256": "669e9dc2b0aa115da8e1eafa6f8fed5bd5ce93271fe8cbd9e81a1030b5235824",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-009.md",
+      "added": 31,
+      "removed": 0,
+      "phase01Bytes": 1522,
+      "phase01Sha256": "5f228f613dc2d6a0fe57ead3937506edb590411b13385b38c37bce7c09892207",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-010.md",
+      "added": 31,
+      "removed": 0,
+      "phase01Bytes": 1523,
+      "phase01Sha256": "819bbbc72d481da21101094e9b7a2cfa1e3e976ceb068e192cace2e21f433e70",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-011.md",
+      "added": 31,
+      "removed": 0,
+      "phase01Bytes": 1496,
+      "phase01Sha256": "fb94650546eac04c8ecce89b03ebe76cc0c8944e5ff90871d29d1200232c0f4e",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/adr/ADR-012.md",
+      "added": 31,
+      "removed": 0,
+      "phase01Bytes": 1532,
+      "phase01Sha256": "1116b3ac53fff43f4e6f8d0045bb52d98e9b87431376f457ee7e7f971b888c7b",
+      "reviewClass": "normative-proposed-contract-or-plan"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "added": 52,
+      "removed": 38,
+      "phase01Bytes": 5254,
+      "phase01Sha256": "bb944538d5ceb84ea6d81bf63315446a334869d99ed2dc6af1d5c631c64e0978",
+      "reviewClass": "documentation-validator-or-corpus"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/contract-examples.json",
+      "added": 499,
+      "removed": 0,
+      "phase01Bytes": 16266,
+      "phase01Sha256": "f5fe132c8dff804ff6f8c126caf7fbebb28315c63054987e566b7300002c0835",
+      "reviewClass": "documentation-validator-or-corpus"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/contract-inventory.json",
+      "added": 204,
+      "removed": 0,
+      "phase01Bytes": 5749,
+      "phase01Sha256": "91d79cf049804816cb58a5ce6101602d53e3800456bbffb5410f9fd211076810",
+      "reviewClass": "documentation-validator-or-corpus"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "added": 36,
+      "removed": 0,
+      "phase01Bytes": 6112,
+      "phase01Sha256": "9f4924ae5c99d938db2e64a04091ccc399f2898454492c600ddc56c699241400",
+      "reviewClass": "documentation-validator-or-corpus"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/proposed-contracts.mjs",
+      "added": 97,
+      "removed": 0,
+      "phase01Bytes": 15610,
+      "phase01Sha256": "8f81ecc5da210580c0e9c35332dffe2c4215f2c3ad6a262d70319a8096c81ce4",
+      "reviewClass": "documentation-validator-or-corpus"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-execution-manifest.json",
+      "added": 158,
+      "removed": 0,
+      "phase01Bytes": 5187,
+      "phase01Sha256": "30827c8683f22d900f3a32074109587d4a8087b494e2108450cab5e43d3c8de7",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/consistency-final.log",
+      "added": 1,
+      "removed": 0,
+      "phase01Bytes": 178,
+      "phase01Sha256": "31a703ca1fa76dc94b05a08c58176b4ca1ee2f81c8786e4172b0d041915a2476",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/contract-tests-final.log",
+      "added": 106,
+      "removed": 0,
+      "phase01Bytes": 3232,
+      "phase01Sha256": "2ac50c7e44fef5dc0c04231fa03fc1218009b1859aecebc90dd3f089054a3405",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/contract-tests-first.log",
+      "added": 94,
+      "removed": 0,
+      "phase01Bytes": 2779,
+      "phase01Sha256": "ef5c842b4adfbe5b2669970f0dfcd44eb87c4b4a9d8e19af033922ad0dbe871b",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/docs-final.log",
+      "added": 5,
+      "removed": 0,
+      "phase01Bytes": 127,
+      "phase01Sha256": "b1e87abedff2cc0e81113adec9ff03c84d2f89d90d700bf30126ddea5cda9658",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/examples-final.log",
+      "added": 64,
+      "removed": 0,
+      "phase01Bytes": 1419,
+      "phase01Sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/npm-test-node22.log",
+      "added": 1676,
+      "removed": 0,
+      "phase01Bytes": 59732,
+      "phase01Sha256": "ae572cda27c6cf71b0ea9379c9eaeb84a82d7519cf3cf6165dfc0152030e08e7",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/review-logs/release-final.log",
+      "added": 6,
+      "removed": 0,
+      "phase01Bytes": 188,
+      "phase01Sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+      "reviewClass": "historical-execution-evidence"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "added": 71,
+      "removed": 0,
+      "phase01Bytes": 6164,
+      "phase01Sha256": "878a6af90bf0fd1141dd47d6da23bc530b29d512a8f7539220aaaeb96e3d9737",
+      "reviewClass": "documentation-validator-or-corpus"
+    }
+  ]
+}

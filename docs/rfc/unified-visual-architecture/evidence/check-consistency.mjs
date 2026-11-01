@@ -1,4 +1,4 @@
-// Phase 0/0.1 documentation checks only. No production imports or mutations.
+// Phase 0/0.1/0.2 documentation checks only. No production imports or mutations.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -17,8 +17,8 @@ for(let i=1;i<=12;i++){
 }
 const matrix=read(join(dir,'TEST-MATRIX.md'));
 const cases=[...matrix.matchAll(/^\| (UVA-\d{2})\b/gm)].map(m=>m[1]);
-check(cases.length===62&&new Set(cases).size===62,'62 unique UVA cases required; old 40 cannot disappear');
-for(let i=1;i<=62;i++)check(cases.includes(`UVA-${String(i).padStart(2,'0')}`),`missing UVA ${i}`);
+check(cases.length===67&&new Set(cases).size===67,'67 unique UVA cases required; old 62 cannot disappear');
+for(let i=1;i<=67;i++)check(cases.includes(`UVA-${String(i).padStart(2,'0')}`),`missing UVA ${i}`);
 const roadmap=read(join(root,'IMPLEMENTATION-ROADMAP.md'));
 const prs=new Set([...roadmap.matchAll(/^\| (PR-[0-7][A-D])\s*\|/gm)].map(m=>m[1]));
 check(prs.size===23,'23 defined PR units required');
@@ -26,6 +26,19 @@ const docs=[...collect(dir),join(root,'IMPLEMENTATION-ROADMAP.md')];
 const od=read(join(dir,'OPEN-DECISIONS.md'));
 for(let i=1;i<=6;i++)check(od.includes(`## OD-${String(i).padStart(2,'0')}`),`missing OD ${i}`);
 const report=read(join(dir,'REVIEW-REMEDIATION.md'));
+const finalReport=read(join(dir,'FINAL-ARCHITECTURE-GATE.md'));
+for(const heading of 'ABCDEFGHIJ')check(finalReport.includes(`## ${heading}. `),`missing final gate section ${heading}`);
+check(!finalReport.includes('VERIFICATION_RESULTS_PENDING'),'final verification table unfinished');
+const finalStatuses=['VERIFIED — SPECIFICATION COMPLETE','ACCEPTED WITH CONDITIONS','REQUIRES SPECIFICATION CHANGE','BLOCKED'];
+for(let i=1;i<=6;i++){
+ const id=`R-${String(i).padStart(2,'0')}`;
+ const section=finalReport.split(`### ${id} — `)[1]?.split('\n### ')[0]?.split('\n## ')[0]??'';
+ check(section.length>500,`independent review incomplete: ${id}`);
+ check(finalStatuses.includes(section.match(/^Classification: (.+)$/m)?.[1]),`invalid independent classification: ${id}`);
+}
+const recommendations=[...finalReport.matchAll(/^Recommendation: (.+)$/gm)];
+check(recommendations.length===1&&['READY FOR HUMAN APPROVAL','READY FOR LIMITED PHASE 1A APPROVAL','SPECIFICATION REMEDIATION REQUIRED','ARCHITECTURE BLOCKED'].includes(recommendations[0]?.[1]),'final gate must choose exactly one permitted recommendation');
+for(let i=1;i<=6;i++)check(finalReport.includes(`| FG-${String(i).padStart(2,'0')} |`),`missing independent FG ${i}`);
 const statuses=['RESOLVED — SPECIFICATION COMPLETE','PARTIALLY RESOLVED','OPEN — HUMAN DECISION REQUIRED','BLOCKED — MISSING EVIDENCE'];
 for(let i=1;i<=6;i++){
  const id=`R-${String(i).padStart(2,'0')}`;
@@ -36,11 +49,11 @@ for(let i=1;i<=6;i++){
 for(const p of docs){const s=read(p);
  for(const m of s.matchAll(/\bPR-[0-7][A-D]\b/g))check(prs.has(m[0]),`${p} undefined ${m[0]}`);
  for(const m of s.matchAll(/\bUVA-(\d{2})\b/g))check(cases.includes(m[0]),`${p} undefined ${m[0]}`);
- for(const [kind,max,digits] of [['RFC',8,3],['ADR',12,3],['OD',6,2],['R',6,2]])for(const m of s.matchAll(new RegExp('\\b'+kind+'-(\\d{'+digits+'})\\b','g')))check(+m[1]>=1&&+m[1]<=max,`${p} undefined ${m[0]}`);
+ for(const [kind,max,digits] of [['RFC',8,3],['ADR',12,3],['OD',6,2],['R',6,2],['FG',6,2]])for(const m of s.matchAll(new RegExp('\\b'+kind+'-(\\d{'+digits+'})\\b','g')))check(+m[1]>=1&&+m[1]<=max,`${p} undefined ${m[0]}`);
 }
 const inventory=JSON.parse(read(join(dir,'evidence/source-index.json')));
 for(const f of inventory.files)check(createHash('sha256').update(readFileSync(join(root,f.path))).digest('hex')===f.sha256,`production/config modified: ${f.path}`);
-for(const manifest of ['execution-manifest.json','review-execution-manifest.json']){
+for(const manifest of ['execution-manifest.json','review-execution-manifest.json','final-gate-execution-manifest.json'].filter(n=>existsSync(join(dir,'evidence',n)))){
  const data=JSON.parse(read(join(dir,'evidence',manifest)));
  for(const run of data.runs){if(!run.log)continue;const bytes=readFileSync(join(dir,'evidence',run.log));check(bytes.length===run.bytes&&createHash('sha256').update(bytes).digest('hex')===run.sha256,`log integrity: ${run.log}`);}
 }
@@ -52,10 +65,16 @@ for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/r
 for(const p of ['tests/uva-characterization.test.js','docs/rfc/unified-visual-architecture/BASELINE.md','docs/rfc/unified-visual-architecture/evidence/source-index.json','docs/rfc/unified-visual-architecture/evidence/execution-manifest.json']){
  const original=execFileSync('git',['show',base+':'+p],{cwd:root});check(original.equals(readFileSync(join(root,p))),`historical baseline changed: ${p}`);
 }
+const reviewBase='df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd';
+for(const p of ['docs/rfc/unified-visual-architecture/REVIEW-REMEDIATION.md','docs/rfc/unified-visual-architecture/evidence/review-execution-manifest.json','docs/rfc/unified-visual-architecture/evidence/contract-examples.json'])check(execFileSync('git',['show',reviewBase+':'+p],{cwd:root}).equals(readFileSync(join(root,p))),`Phase 0.1 historical report/log manifest/formal corpus changed: ${p}`);
+const oldTest=execFileSync('git',['show',reviewBase+':docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs'],{cwd:root,encoding:'utf8'});
+check(read(join(dir,'evidence/contract-validation.spec.mjs')).includes(oldTest.slice(oldTest.indexOf("test('"))),'original 16 documentation test bodies/expectations changed');
 const exampleResult=validatePackage();for(const e of exampleResult.errors)errors.push('example: '+e);
 // Detect the concrete contradictions from review, not only link existence.
 check(read(join(dir,'RFC-002.md')).includes('provenance: AnnotationProvenance;'),'RFC002 must share full provenance type');
 check(!read(join(dir,'CONTRACTS.md')).includes('usermove/restyle僅ownmarks'),'old policy incorrectly applied to Unified');
 check(!read(join(dir,'RFC-006.md')).includes('完整manifest copy-on-write優先'),'unbounded full root manifest remains');
+check(!read(join(dir,'STORAGE-LIFECYCLE.md')).includes('4. grace至少24h'),'blanket full-copy quarantine remains');
+check(!read(join(dir,'RFC-004.md')).includes('Mutation required `{commandId'),'wire accepts internal commandId');
 if(errors.length){process.stderr.write(errors.join('\n')+'\n');process.exitCode=1;}
-else process.stdout.write(`Phase 0.1 consistency: 8 RFCs, 12 ADRs, 62 cases, ${prs.size} PR units, 6 findings, OD-01..06; 95 production/config hashes and historical baseline unchanged; 9 formal examples validated.\n`);
+else process.stdout.write(`Phase 0.2 consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; final recommendation is not human approval.\n`);

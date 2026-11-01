@@ -1,0 +1,7 @@
+{
+  "classification": "OBSERVED_PHASE01_DOCUMENT_VALIDATOR_COUNTEREXAMPLES_NOT_PRODUCT_BEHAVIOR",
+  "base": "df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd",
+  "validSmallScaleAccepted": false,
+  "illConditionedMatrixAccepted": true,
+  "importedActiveModuleOwnerAccepted": true
+}
