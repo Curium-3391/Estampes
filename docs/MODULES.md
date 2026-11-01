@@ -2,7 +2,7 @@
 
 Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
-Status: this page describes what is implemented in 0.17.0 (the contract, the built-in Graph and CAS modules ([CAS](CAS.md)), the Store, managed packages and the WebAssembly runtime). Adapters are planned and marked below.
+Status: this page describes what is implemented in 0.19.5 (the contract, capability profiles, the built-in Graph, calculator ([CAS](CAS.md)) and plate-solving modules, the Store, managed packages, declarative, WebAssembly and http modules, background jobs, info cards, and panels in the workbench). Not implemented: an OCR module, and anything marked planned or "still to come" below. Section headings that name a version say when the feature arrived, not the current state. Live-ChatGPT testing of the newer parts is recorded in the [changelog](../CHANGELOG.md) and each feature's page; where a page says it was not executed, it was not.
 
 ## How it fits together
 
@@ -185,6 +185,7 @@ Each phase is its own change and keeps the rules above.
 2. Managed packages: signed packages, a version lock file, transactional install, rollback and administrator approval separate from the connector key (0.12.0). Not planned: arbitrary npm packages, shell commands, access to the Docker socket, packages fetched from arbitrary URLs.
 3. An isolated WebAssembly runtime with time, memory and output limits (0.13.0).
 4. Author tools (0.14.0), the controlled network path for adapters (0.15.0), image upload, background jobs and the Astrometry.net plate-solving module (0.16.0). Still to come: an OCR module.
+5. The SymPy calculator module (0.17.0), surfaces and panels (0.18.0), and the workbench with its calculator windows (0.19.x).
 
 ## Direct Canvas editing and deletion recovery
 
