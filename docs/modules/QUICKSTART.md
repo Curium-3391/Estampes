@@ -102,11 +102,12 @@ Without ChatGPT, `tests/module-authoring.test.js` drives exactly this sequence o
 `node scripts/estampes-module.js init mymodule org.example.mymodule --runtime wasm` writes the manifest and a README; you provide `module.wasm`. The ABI (`estampes.wasm/1`: export `memory`, `alloc`, `handle`) is in [Modules](../MODULES.md#webassembly-modules). The example is complete and reproducible. With clang and `wasm-ld`:
 
 ```sh
-cd examples/modules/wasm-hello
-clang --target=wasm32 -O2 -nostdlib -ffreestanding -Wl,--no-entry -Wl,--export=alloc -Wl,--export=handle \
-  -Wl,--initial-memory=262144 -Wl,--max-memory=1048576 -o hello.wasm hello.c
-node ../../../scripts/estampes-module.js test module.json
+(cd examples/modules/wasm-hello && clang --target=wasm32 -O2 -nostdlib -ffreestanding -Wl,--no-entry -Wl,--export=alloc -Wl,--export=handle \
+  -Wl,--initial-memory=262144 -Wl,--max-memory=1048576 -o hello.wasm hello.c)
+node scripts/estampes-module.js test examples/modules/wasm-hello/module.json
 ```
+
+(The build runs in a subshell, so the next commands still start from the repository root.)
 
 The rebuilt `hello.wasm` was byte-identical to the one in the repository. The `wasm` file must be added to the package with `--file`:
 
