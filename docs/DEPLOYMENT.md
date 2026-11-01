@@ -39,7 +39,7 @@ The second command prints the ChatGPT connector URL, e.g. `https://calm-words-he
 - Stop: `docker compose down`. **`docker compose down -v` deletes all stored images and marks.**
 - Backup: the volume `estampes_estampes-data` holds everything, e.g. `docker run --rm -v estampes_estampes-data:/data -v "$PWD":/backup busybox tar czf /backup/estampes.tgz /data`.
 - The container runs as the unprivileged `node` user (uid 1000) with a read-only filesystem except `/data` and a 64 MB `/tmp`, no Linux capabilities, `no-new-privileges` and at most 256 processes, and restarts on failure (`restart: unless-stopped`).
-- Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` (`latest` from `main`, `X.Y.Z` from `vX.Y.Z` tags). To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:latest`. A new GHCR package is private until its visibility is changed in the package settings.
+- Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` only when a `vX.Y.Z` tag is pushed: `X.Y.Z`, `latest` (the newest stable release) and `sha-<short>`; nothing is published for `main` or pull requests. To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z` (pin a version; `latest` moves). A GHCR package is private until its owner makes it public in the package settings, so an anonymous pull can fail; building locally always works. See [Releasing](RELEASE.md).
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
 
 ### Calculator container and optional PDF support
@@ -133,7 +133,7 @@ Invalid values fall back to the default and are reported in the log at startup.
 
 ## Releasing a new version
 
-`package.json` `version` is the single source of truth. `/version`, the MCP server version, the version shown in the widgets and the versioned `ui://estampes/visual-surface-vXYZ.html` / `visual-evidence-vXYZ.html` URIs are all derived from it. To release, bump `version` (and run `npm install` to update the lockfile), then add the previous tag to `LEGACY_VISUAL_URIS` / `LEGACY_EVIDENCE_URIS` in `server.js` so saved conversations keep resolving. Pushing a `vX.Y.Z` tag publishes the matching multi-arch image.
+`package.json` `version` is the single source of truth. `/version`, the MCP server version, the version shown in the widgets and the versioned `ui://estampes/visual-surface-vXYZ.html` / `visual-evidence-vXYZ.html` URIs are all derived from it. To release, bump `version` (and run `npm install` to update the lockfile), then add the previous tag to `LEGACY_VISUAL_URIS` / `LEGACY_EVIDENCE_URIS` in `server.js` so saved conversations keep resolving. Pushing a `vX.Y.Z` tag publishes the matching multi-arch image. The full order, the pre-release check (`npm run release:check`), failure handling and rollback are in [Releasing](RELEASE.md).
 
 ## Caveats
 

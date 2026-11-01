@@ -65,6 +65,7 @@ npm start          # http://localhost:8787/mcp
 | 文件 | 內容 |
 | --- | --- |
 | [部署](../DEPLOYMENT.md) | Docker、Heroku、Render、連接 ChatGPT、環境變數、儲存內容 |
+| [發布流程（英文）](../RELEASE.md) | 給維護者：版本順序、Docker 映像標籤、發布前檢查、回復 |
 | [使用指南（英文）](../USAGE.md) | 在 ChatGPT 裡使用畫布：標記、圖層、縮放、並排比對、匯出 |
 | [工具一覽（英文）](../TOOLS.md) | MCP 工具與 HTTP 端點 |
 | [影像管線（英文）](../IMAGE-PIPELINE.md) | 原檔、衍生檢視、精確的座標轉換、PDF 頁面、分析引擎 |

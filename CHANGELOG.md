@@ -5,6 +5,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Release: the Docker workflow now really tags `latest` (stable `v*` tags only; the old `is_default_branch` condition was never true for a tag push) and runs a new pre-release check first. New `docs/RELEASE.md` and `npm run release:check` (`scripts/check-release.mjs`); DEPLOYMENT and README describe the tags that are actually produced.
 - Docs consistency: WORKBENCH no longer says `.estampes` cannot carry notebooks and surfaces; USAGE separates working copy, detail tile and interpolated zoom; the surface/notebook bundle section moved under bundles in WORKSPACES; MODULES states what 0.19.5 implements; the two 0.10.0 entries are one release; zh-TW index de-duplicated and completed; CONTRIBUTING describes the project's real maturity.
 - Docs: README, the Chinese guide, ARCHITECTURE, TOOLS, DEPLOYMENT and VISION brought up to date (all docs indexed, modules, calculator container, surface tools, `ESTAMPES_ADMIN_KEY`, `ESTAMPES_MODULE_ALLOW_UNSIGNED`).
 - **Capability profile.** Besides its input schema, a capability can describe when to use it and when not to, input limits, cost (latency, resources, billing), data flow, how far to trust the result and how to check it, and what to do when it fails. The model reads it through `get_module_capabilities` and the Store shows it; network capabilities must declare what they send, and the text may be translated (`profileI18n`) but not the cost or data flow. Filled in for Graph, plate solving and the example OCR adapter.
