@@ -2080,6 +2080,7 @@ function makeServer() {
         output: z.object({ width: z.number(), height: z.number(), mimeType: z.string(), scale: z.number() }),
         derivedViewId: z.string().optional(),
         derivedView: DerivedViewSchema.optional(),
+        delivery: z.record(z.string(), z.unknown()).optional(),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },

@@ -36,7 +36,10 @@ function describeDelivery(result, images) {
   const delivery = { original, delivered, mimeType: "image/jpeg",
     coordinates: resized ? "preview pixels differ from stored source/view pixels" : "same dimensions" };
   if (structuredContent && typeof structuredContent === "object") {
-    structuredContent = { ...structuredContent, delivery };
+    // Do not inject unknown keys into tools with strict MCP output schemas
+    // (notably present_visual). Only coordinate-bearing results own delivery.
+    if (["estampes.canvas_render", "estampes.processed_image", "estampes.derived_view"].includes(structuredContent.kind))
+      structuredContent = { ...structuredContent, delivery };
     if (structuredContent.kind === "estampes.canvas_render") {
       const mapping = structuredContent.mapping?.pixelToCanvasNormalized;
       structuredContent.output = { ...structuredContent.output,
