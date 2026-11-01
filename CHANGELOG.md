@@ -20,6 +20,16 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - Retention sweep also removes stored PDF documents past `ESTAMPES_STORAGE_RETENTION_DAYS`; the PDF renderer passes pdf.js its bundled standard fonts so text in PDFs that do not embed fonts is drawn.
 - Docs: `get_module_job` in TOOLS.md; DEPLOYMENT.md and MODULES.md explain running `estampes-module.js` inside the container (or with `ESTAMPES_STORAGE_DIR`) and the plate-solving test steps.
 
+## 0.20.0 — Works in Claude
+
+- **Sign in with OAuth.** Hosts that connect remote MCP servers with OAuth (Claude's custom connectors, Claude Code) now get a sign-in page on your own server: type the access key once and the host receives a token. OAuth 2.1 with PKCE (S256), dynamic client registration, client ID metadata documents and refresh tokens; tokens are signed with a key derived from the access key, so changing the key signs every client out. The `?key=` URL and `Authorization: Bearer <key>` keep working. Endpoints exist only when the server has a key. See [Connecting Claude](docs/DEPLOYMENT.md#connecting-claude).
+- **Upload from the canvas.** A 選擇圖片／拍照 button in the canvas picks a file or takes a photo and sends it to the server in slices (`upload_visual_image`, app-only), then shows its canvas and tells the model the new `imageId`. `present_visual` with `upload: true` opens an empty canvas for it. For hosts that do not pass chat attachments to tools, such as Claude; works in ChatGPT too. Photos over 6 MB or 4096 px are re-encoded in the browser at 4096 px.
+- **Results fit host size caps.** Every tool result stays under `ESTAMPES_MAX_RESULT_CHARS` (default 145,000; claude.ai drops results above about 150,000): images the model sees are re-encoded as JPEG and reduced to fit. The canvas gets a budgeted preview inline and loads the full display image and deferred processed views in slices (`load_visual_pixels`, app-only); zoom tiles shrink to fit.
+- **Host-neutral wording.** The canvas, layer names (`AI · 第1次`), exported SVG layers and tool descriptions say AI instead of GPT/ChatGPT. Existing layer names and saved marks are unchanged.
+- The canvas and Store declare `availableDisplayModes` in `ui/initialize`, so hosts allow full screen.
+- 401 responses carry `WWW-Authenticate: Bearer resource_metadata=…` for OAuth discovery.
+- Tests: `tests/oauth.test.js`, `tests/result-budget.test.js`.
+
 ## 0.19.8 — Smoother zoom and pan
 
 - Zooming or panning a photo used to rebuild the whole scene on every frame: the photo was re-created (and its data URL decoded again) and every mark, layer list and panel was redrawn, dozens of times a second. Now the camera only moves the viewBox; the photo element is reused, and the full render runs at most every 140 ms while the camera moves (marks keep their on-screen size), plus once when it stops. A 40-event wheel burst went from 80 scene rebuilds to none.

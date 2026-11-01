@@ -15,6 +15,6 @@ test("M0.3 widget has separate validation and chat paths",()=>{
   assert.match(html,/record_number_line_selection/);
   assert.match(html,/request\("tools\/call"/);
   assert.match(html,/request\("ui\/message"/);
-  assert.match(html,/工具驗證失敗，改嘗試直接傳給 GPT/);
+  assert.match(html,/工具驗證失敗，改嘗試直接傳給 AI/);
   assert.match(html,/v0\.3\.1/);
 });

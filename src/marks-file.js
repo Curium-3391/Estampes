@@ -34,7 +34,7 @@ export function exportMarksSvg(entry, marks, layers = []) {
   const groups = [
     ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity, l.id)),
     layer("estampes-user", "使用者", marks.filter((m) => m.author === "user" && !known.has(m.layer))),
-    layer("estampes-gpt", "GPT", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
+    layer("estampes-gpt", "AI", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
   ].filter(Boolean).join("\n");
   const payload = JSON.stringify({ format: MARKS_FORMAT, version: 2, imageId: entry.imageId, width: W, height: H,
     layers: layers.map(({ id, author, name, locked, opacity }) => ({ id, author, name,

@@ -143,7 +143,7 @@ function renderPlan(){
  const p=plan,box=el("div");
  box.append(el("div",{className:"row"},el("button",{textContent:"← 返回",onclick:()=>{plan=null;render();}}),el("h3",{textContent:"確認："+(ACTION[p.action]??p.action)+" "+(p.name||p.module)})));
  const dl=el("dl");const add=(k,v)=>{if(v)dl.append(el("dt",{textContent:k}),el("dd",{textContent:text(v)}));};
- add("模組",p.module);add("版本",(p.fromVersion&&p.fromVersion!==p.toVersion?p.fromVersion+" → ":"")+(p.toVersion||""));add("風險",RISK[p.risk]);add("提出者",p.requestedBy==="model"?"GPT 提出，等你決定":"你在商店按的");
+ add("模組",p.module);add("版本",(p.fromVersion&&p.fromVersion!==p.toVersion?p.fromVersion+" → ":"")+(p.toVersion||""));add("風險",RISK[p.risk]);add("提出者",p.requestedBy==="model"?"AI 提出，等你決定":"你在商店按的");
  add("有效期限",new Date(p.expiresAt).toLocaleTimeString());box.append(dl);
  if(p.permissions.added.length){box.append(el("h3",{textContent:"新增的權限"}));for(const q of p.permissions.added)box.append(el("div",{className:"perm"},badge(RISK[q.risk]??q.risk,q.risk),el("span",{textContent:q.zh}),el("code",{textContent:q.id})));}
  if(p.permissions.removed.length)box.append(el("p",{className:"muted",textContent:"收回的權限："+p.permissions.removed.join("、")}));
@@ -244,7 +244,7 @@ let seenOutput=null;
 const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput||o.toolOutput===seenOutput)return;seenOutput=o.toolOutput;applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
 window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
 render();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-module-store",version:"__ESTAMPES_VERSION__"},appCapabilities:{},protocolVersion:"2026-01-26"});
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-module-store",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen"]},protocolVersion:"2026-01-26"});
  notify("ui/notifications/initialized",{});ready=true;status.textContent="";
  if(pendingDetail){openDetail(pendingDetail);pendingDetail=null;}else{await refresh();}
  if(tab==="activity")loadActivity();}

@@ -497,7 +497,7 @@ async function plotCell(p,c,link){
   const r=await wbCall("surface_cas",{imageId:canvas,capability:"plot_result",params});
   if(Array.isArray(r.objects)){setObjects(r.objects);render();}
   setMsg(st,link?"已更新 Graph 上的圖形 "+link.object+"。":"已畫在 Graph："+(r.data?.expression??""),"");
-  status.textContent="計算機的結果已畫成可編輯的函數圖；GPT 下一次讀取畫布時會看到。";
+  status.textContent="計算機的結果已畫成可編輯的函數圖；AI 下一次讀取畫布時會看到。";
   await wbRefresh();
  }catch(err){setMsg(st,"沒有畫出圖：" + String(err.message||err),"error");}
 }

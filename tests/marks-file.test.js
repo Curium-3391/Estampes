@@ -24,7 +24,7 @@ test("marks export as a layered SVG and load back onto the canvas", async () => 
   });
   const svg = exportMarksSvg(entry, canvasMarks(entry));
   assert.match(svg, /inkscape:label="使用者"/);
-  assert.match(svg, /inkscape:label="GPT"/);
+  assert.match(svg, /inkscape:label="AI"/);
   assert.match(svg, /A &lt;&amp;&gt; B/);
   assert.doesNotMatch(svg, /<script/i);
   // The SVG is a valid image of the right size.
@@ -80,7 +80,7 @@ test("layers survive export and come back as their own layers", async () => {
   const svg = exportMarksSvg(entry, canvasMarks(entry), canvasLayers(entry));
   assert.match(svg, /inkscape:label="第一輪 &lt;檢查&gt;"/);
   assert.match(svg, /inkscape:label="你 · 第1次"/);
-  assert.doesNotMatch(svg, /inkscape:label="GPT"/);
+  assert.doesNotMatch(svg, /inkscape:label="AI"/);
   const parsed = parseMarksFile(Buffer.from(svg));
   assert.deepEqual(parsed.layers.map(l => l.name), ["第一輪 <檢查>", "你 · 第1次"]);
 
@@ -89,5 +89,5 @@ test("layers survive export and come back as their own layers", async () => {
   other.marks = new Map(); other.layers = [];
   applyCanvasChanges(other, { annotations: [{ id: "x", type: "point", x: .5, y: .5 }], resolve: resolveCoordinateAnnotation });
   importMarks(other, parsed.marks, { layers: parsed.layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation });
-  assert.deepEqual(canvasLayers(other).map(l => [l.id, l.name, l.count]), [["L1", "GPT · 第1次", 1], ["L2", "第一輪 <檢查>", 1], ["L3", "你 · 第1次", 1]]);
+  assert.deepEqual(canvasLayers(other).map(l => [l.id, l.name, l.count]), [["L1", "AI · 第1次", 1], ["L2", "第一輪 <檢查>", 1], ["L3", "你 · 第1次", 1]]);
 });

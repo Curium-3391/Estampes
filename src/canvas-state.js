@@ -18,7 +18,7 @@ export function canvasMarks(entry) {
 // each GPT drawing call starts one, unless GPT names an existing layer.
 // A mark carries its layer id; the widget shows or hides whole layers.
 const layersOf = (entry) => (entry.layers ??= []);
-const AUTHOR_NAME = { user: "你", assistant: "GPT" };
+const AUTHOR_NAME = { user: "你", assistant: "AI" };
 
 function newLayer(entry, author, name) {
   const layers = layersOf(entry);
@@ -259,7 +259,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
     marks.forEach((edit, i) => {
       const old = state.get(edit.id);
       if (!old) throw fail("marks", i, edit.id, "no such mark");
-      if (old.author !== "user") throw fail("marks", i, edit.id, "only your own marks can be moved or restyled; GPT's marks can be deleted");
+      if (old.author !== "user") throw fail("marks", i, edit.id, "only your own marks can be moved or restyled; the AI's marks can be deleted");
       if (markLocked(entry, old)) throw fail("marks", i, edit.id, "its layer is locked");
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }

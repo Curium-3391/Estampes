@@ -19,8 +19,8 @@ button:disabled{opacity:.5}
 <path d="M35 70 l10 -5v10z M525 70 l-10 -5v10z" fill="currentColor"/>
 <g id="ticks"></g>
 <g id="assistant"></g><g id="user"></g></svg>
-<div class="controls"><span id="selection">尚未選取</span><button id="send" class="primary" disabled>傳給 GPT</button><button id="reset">清除我的標註</button></div>
-<p id="status" class="muted" aria-live="polite">正在連接 ChatGPT…</p>
+<div class="controls"><span id="selection">尚未選取</span><button id="send" class="primary" disabled>傳給 AI</button><button id="reset">清除我的標註</button></div>
+<p id="status" class="muted" aria-live="polite">正在連接對話…</p>
 </main>
 <script type="module">
 const NS="http://www.w3.org/2000/svg", svg=document.querySelector("#line");
@@ -38,7 +38,7 @@ marker(assistant,target,"#d5a054","AI");
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
 function request(method,params){return new Promise((resolve,reject)=>{const id=++rpcId;requests.set(id,{resolve,reject});window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");setTimeout(()=>{if(requests.has(id)){requests.delete(id);reject(Error("Host did not answer"))}},10000)})}
 window.addEventListener("message",event=>{if(event.source!==window.parent)return;const msg=event.data;if(msg?.jsonrpc!=="2.0")return;if(typeof msg.id==="number"){const p=requests.get(msg.id);if(!p)return;requests.delete(msg.id);msg.error?p.reject(msg.error):p.resolve(msg.result);return}if(msg.method==="ui/notifications/tool-result")fromTool(msg.params);if(msg.method==="ui/notifications/tool-input"){const n=msg.params?.arguments?.target;if(Number.isInteger(n)&&n>=-4&&n<=4){target=n;marker(assistant,target,"#d5a054","AI");}}});
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-number-line",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"});notify("ui/notifications/initialized",{});ready=true;send.disabled=selected===null;status.textContent="已連接。可以點選刻度並傳給 GPT。";}catch(err){status.textContent="尚未連上 ChatGPT："+String(err.message||err);}})();
+(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-number-line",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"});notify("ui/notifications/initialized",{});ready=true;send.disabled=selected===null;status.textContent="已連接。可以點選刻度並傳給 AI。";}catch(err){status.textContent="尚未連上對話："+String(err.message||err);}})();
 send.addEventListener("click",async()=>{
  if(!ready||selected===null)return;
  const value=selected;
@@ -77,8 +77,8 @@ send.addEventListener("click",async()=>{
  // Step 2: Send actual user intent to the model. This is independent
  // of server validation; a tools/call result is NOT itself a user message.
  status.textContent=validationOk
-   ?"座標已驗證，正在送入 GPT 對話…"
-   :"工具驗證失敗，改嘗試直接傳給 GPT…";
+   ?"座標已驗證，正在送入 AI 對話…"
+   :"工具驗證失敗，改嘗試直接傳給 AI…";
  try {
    const result=await request("ui/message",{
      role:"user",

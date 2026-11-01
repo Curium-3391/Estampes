@@ -267,6 +267,32 @@ export async function displayImage(entry) {
   return entry.display;
 }
 
+// The canvas photo as it travels inside a tool result. Hosts cap result
+// size (claude.ai at about 150,000 characters for the whole result), so when
+// the display JPEG's base64 is over maxChars, a smaller preview goes instead
+// and the widget fetches the full display image in slices
+// (load_visual_pixels). Returns base64 data and full=false for a preview.
+const PREVIEW_SIDES = [1100, 900, 720, 560, 440, 340, 260];
+export async function widgetImage(entry, maxChars) {
+  const shown = await displayImage(entry);
+  const b64 = shown.data.toString("base64");
+  if (b64.length <= maxChars) return { mimeType: shown.mimeType, data: b64, width: shown.width, height: shown.height, full: true };
+  entry.previews ??= new Map();
+  if (!entry.previews.has(maxChars)) {
+    entry.previews.set(maxChars, (async () => {
+      let out = null;
+      for (const side of PREVIEW_SIDES) {
+        const { data, info } = await sharp(shown.data).resize({ width: side, height: side, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: side > 600 ? 70 : 64 }).toBuffer({ resolveWithObject: true });
+        out = { mimeType: "image/jpeg", data: data.toString("base64"), width: info.width, height: info.height, full: false };
+        if (out.data.length <= maxChars) break;
+      }
+      return out;
+    })().catch((error) => { entry.previews.delete(maxChars); throw error; }));
+  }
+  return entry.previews.get(maxChars);
+}
+
 // Keep widget payloads small: ChatGPT drops the widget's data when a tool
 // result gets too big, so large processed views become modest JPEGs.
 export const VIEW_LONG_SIDE = 1200;
