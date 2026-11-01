@@ -73,3 +73,7 @@ Current Implementation：見 AUDIT。Proposed Architecture：見 RFC。Open Deci
 ## PR-1A — Limited Implementation
 
 授權範圍與來源：[PR-1A-AUTHORIZATION](PR-1A-AUTHORIZATION.md)；實際介面：[PR-1A-SCHEMA-CONTRACT](PR-1A-SCHEMA-CONTRACT.md)；實測與退出矩陣：[PR-1A-IMPLEMENTATION-REPORT](PR-1A-IMPLEMENTATION-REPORT.md)。早期report保留原bytes，不能把Phase0歷史結論當今天的實作狀態。本次只增加隔離schemas/pure helpers/read-only mapper與tests，沒有新工具或writer啟用。
+
+## PR-1A review / PR-1C authorization
+
+[有限授權](PR-1C-AUTHORIZATION.md)、[F-01/F-02 remediation report](PR-1A-REMEDIATION-REPORT.md)。此為PR-1A之後的新維護者授權，歷史停止紀錄不改寫；1D/1B、部署與真正cutover仍pending。

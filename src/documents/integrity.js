@@ -3,7 +3,9 @@ import { parseVisualDocument } from "./schema.js";
 import { assertEmbedBinding } from "./embed-schema.js";
 import { canonicalJson } from "./validation.js";
 import { parseRef, refKey } from "./references.js";
-import { DocumentValidationError, assertJson } from "./validation.js";
+import { DocumentValidationError, assertJson, bounded, ContentHashSchema, RevisionSchema, hashJson, parse } from "./validation.js";
+import { z } from "zod";
+import { DocumentIdSchema, UUIDSchema } from "./identity.js";
 
 function indexDocuments(input) {
   assertJson(input);
@@ -29,16 +31,33 @@ export function resolveReference(documents, reference) {
   if (!target) throw new DocumentValidationError("UNRESOLVED_REFERENCE", "Reference does not resolve in supplied snapshots");
   return target; // fresh parsed data, never an authoritative mutable object
 }
-export function validateDocumentReferences(input) {
+function analyzeReferences(input, mode) {
   const { documents, index } = indexDocuments(input);
   const edges = new Map(documents.map(d => [d.id, new Set()]));
-  const requireRef = ref => {
-    if (!find(index, ref)) throw new DocumentValidationError("UNRESOLVED_REFERENCE", "Reference does not resolve with its declared kind");
+  const missingDependencies = [];
+  const missing = (ref, required, reason) => {
+    missingDependencies.push({ target: structuredClone(ref), required, reason });
+    // Partial means absent external Documents, never malformed supplied data.
+    if (required && (mode !== "partial" || index.has(ref.documentId))) {
+      throw new DocumentValidationError("UNRESOLVED_REFERENCE", "Required dependency is absent from the declared snapshots");
+    }
   };
-  const requireScene = ref => {
+  const requireRef = (ref, required = true, reason = "active") => {
+    const target = find(index, ref);
+    if (!target) missing(ref, required, reason);
+    return target;
+  };
+  const requireScene = (ref, required = true, reason = "active") => {
     const scene = index.get(ref.documentId)?.scenes.find(s => s.id === ref.sceneId);
-    if (!scene) throw new DocumentValidationError("UNRESOLVED_REFERENCE", "Child Scene does not resolve");
+    if (!scene) missing(ref, required, reason);
     return scene;
+  };
+  const checkFinding = finding => {
+    for (const e of finding?.evidence ?? []) if (e.source?.kind === "document") {
+      const active = e.applicability !== "historical" && e.applicability !== "stale";
+      requireRef(e.source.ref, active, active ? "active-evidence" : "historical");
+    }
+    for (const source of finding?.claimContext?.sourceRevisionVector ?? []) requireRef(source.ref, false, "historical-context");
   };
   const canonicalBindings = new Map();
   for (const d of documents) {
@@ -56,25 +75,36 @@ export function validateDocumentReferences(input) {
         const child = requireScene(o.props.child);
         // Clip may outlive a later child resize; sourceRevision records the
         // capture, not a constraint on current live child revision.
-        if (((o.props.mode === "snapshot" && index.get(o.props.child.documentId).revision === 1) || (o.props.mode === "live" && index.get(o.props.child.documentId).revision === o.props.sourceRevision)) &&
+        if (child && ((o.props.mode === "snapshot" && index.get(o.props.child.documentId).revision === 1) || (o.props.mode === "live" && index.get(o.props.child.documentId).revision === o.props.sourceRevision)) &&
           (o.props.clipRegion.x2 > child.extent.width || o.props.clipRegion.y2 > child.extent.height)) {
           throw new DocumentValidationError("OUT_OF_BOUNDS", "Clip exceeds the captured child extent");
         }
-      }
+      } else requireScene(o.props.child, false, "explicitly-unresolved");
     }
     for (const b of d.bindings) {
-      if (b.kind === "relation" && (b.status === undefined || b.status === "fresh")) { requireRef(b.from); requireRef(b.to); }
-      if (b.kind === "cas-plot" && ["fresh","stale","recomputing","conflict"].includes(b.state)) {
-        requireRef(b.target);
-        if (find(index, b.target).type !== "function-plot") throw new DocumentValidationError("INTEGRITY_ERROR", "CAS target is not a function plot");
+      checkFinding(b.finding);
+      if (b.kind === "relation") {
+        const active = b.status === undefined || b.status === "fresh";
+        requireRef(b.from, active, active ? "active" : "explicitly-unresolved");
+        requireRef(b.to, active, active ? "active" : "explicitly-unresolved");
       }
+      if (b.kind === "cas-plot" && ["fresh","stale","recomputing","conflict"].includes(b.state)) {
+        const target = requireRef(b.target);
+        if (target && target.type !== "function-plot") throw new DocumentValidationError("INTEGRITY_ERROR", "CAS target is not a function plot");
+      }
+      if (b.kind === "cas-plot" && !["fresh","stale","recomputing","conflict"].includes(b.state)) requireRef(b.target, false, "explicitly-unresolved");
       if (b.kind === "embed") {
-        requireRef(b.parentObject);
-        assertEmbedBinding(find(index,b.parentObject),b);
+        const parent = requireRef(b.parentObject);
+        if (parent) assertEmbedBinding(parent,b);
       }
     }
     for (const s of d.scenes) for (const entity of [...s.annotations, ...s.objects]) {
-      for (const e of entity.finding?.evidence ?? entity.evidence ?? []) if (e.source && typeof e.source === "object" && e.source.kind === "document" && e.applicability !== "historical" && e.applicability !== "stale") requireRef(e.source.ref);
+      checkFinding(entity.finding);
+      for (const e of entity.evidence ?? []) if (e.source && typeof e.source === "object" && e.source.kind === "document") {
+        const active = e.applicability !== "historical" && e.applicability !== "stale";
+        requireRef(e.source.ref, active, active ? "active-evidence" : "historical");
+      }
+      if (entity.provenance.derivedFrom) requireRef(entity.provenance.derivedFrom, false, "historical");
     }
   }
   for (const start of edges.keys()) {
@@ -86,6 +116,31 @@ export function validateDocumentReferences(input) {
       for (const child of edges.get(id) ?? []) work.push({ id: child, path: [...path, id] });
     }
   }
-  return documents;
+  return { documents, missingDependencies, authorizationChecked: false, binaryAssetsChecked: false };
+}
+
+// Compatibility API: still requires active targets in the supplied snapshots.
+// It does not prove a complete repository snapshot. Prefer the explicit APIs.
+export function validateDocumentReferences(input) { return analyzeReferences(input, "supplied").documents; }
+export function validatePartialDocumentSnapshots(input) {
+  return { ...analyzeReferences(input, "partial"), scope: "partial-document-snapshots", completeClosure: false };
+}
+export const DocumentClosureManifestSchema = bounded(z.object({ schema: z.literal("estampes.document-closure/1"),
+  storeInstanceId: UUIDSchema, generation: RevisionSchema,
+  documents: z.array(z.object({ documentId: DocumentIdSchema, revision: RevisionSchema, contentHash: ContentHashSchema }).strict()),
+}).strict());
+export function validateCompleteDocumentClosure(input, declaration) {
+  const manifest = parse(DocumentClosureManifestSchema, declaration), { documents } = indexDocuments(input);
+  const declared = new Map();
+  for (const item of manifest.documents) {
+    if (declared.has(item.documentId)) throw new DocumentValidationError("INTEGRITY_ERROR", "Duplicate closure declaration");
+    declared.set(item.documentId, item);
+  }
+  if (declared.size !== documents.length) throw new DocumentValidationError("INTEGRITY_ERROR", "Closure declaration differs from supplied Document set");
+  for (const d of documents) {
+    const expected = declared.get(d.id);
+    if (!expected || expected.revision !== d.revision || expected.contentHash !== hashJson(d)) throw new DocumentValidationError("INTEGRITY_ERROR", "Closure revision or content hash differs");
+  }
+  return { ...analyzeReferences(documents, "complete"), scope: "declared-complete-document-closure", completeClosure: true, declaration: manifest };
 }
 export { refKey };

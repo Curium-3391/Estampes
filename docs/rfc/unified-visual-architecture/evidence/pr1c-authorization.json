@@ -1,0 +1,24 @@
+{
+  "schema": "estampes.architecture-authorization/1",
+  "source": "explicit-maintainer-user-instruction",
+  "clientDate": "2026-11-02",
+  "clientTimezone": "Asia/Taipei",
+  "requestSha256": "433aace154299f3742a006a490251a5b13bfaf677368cc1cd744e18dde66cf75",
+  "evidenceBaseCommit": "7eae7f5748a4c264a7dc996b07f005f95e34ff37",
+  "authorizedPrs": [
+    "PR-1A-remediation",
+    "PR-1C"
+  ],
+  "scope": "isolated-coordinator-journal-generations-recovery-only",
+  "notAuthorized": [
+    "PR-1D",
+    "PR-1B",
+    "migration",
+    "runtime tool activation",
+    "production cutover",
+    "deployment changes",
+    "push",
+    "merge",
+    "release"
+  ]
+}

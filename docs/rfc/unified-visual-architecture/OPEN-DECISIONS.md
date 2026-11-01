@@ -1,5 +1,7 @@
 # Open Decisions / Architecture Approval Gate
 
+最新追加：維護者授權PR-1A F-01/F-02 remediation與隔離PR-1C backend／tests，見[PR-1C-AUTHORIZATION](PR-1C-AUTHORIZATION.md)。不授權1D/1B／cutover／migration／全部OD-01；早期限制為歷史紀錄。
+
 最新授權：2026-11-02維護者明確批准 **OD-01/02/06 的 PR-1A schema／唯讀shadow子集**，見[PR-1A-AUTHORIZATION](PR-1A-AUTHORIZATION.md)。不等於整個OD或ADR批准；本文較早的「尚無批准」屬Phase0歷史紀錄，其他產品／部署／後續PR gate保持pending。
 
 

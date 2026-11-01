@@ -83,7 +83,16 @@ if(existsSync(authorizationPath)){
   check(!atBase,`PR-1A may only add isolated production/test files: ${p}`);
  }
 }
-for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p)),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
+const pr1cAuthorizationPath=join(dir,'evidence/pr1c-authorization.json');
+const reviewPaths=new Set(['src/documents/integrity.js','src/documents/legacy-shadow.js','tests/documents-review.test.js']);
+let pr1cAuthorized=false;
+if(existsSync(pr1cAuthorizationPath)){
+ const a=JSON.parse(read(pr1cAuthorizationPath));
+ check(a.source==='explicit-maintainer-user-instruction'&&a.evidenceBaseCommit==='7eae7f5748a4c264a7dc996b07f005f95e34ff37'&&a.scope==='isolated-coordinator-journal-generations-recovery-only','invalid limited PR-1C authorization');
+ check(a.authorizedPrs.includes('PR-1C')&&existsSync(join(dir,'PR-1C-AUTHORIZATION.md')),'missing PR-1C authorization scope');
+ pr1cAuthorized=true;
+}
+for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p))||(pr1cAuthorized&&reviewPaths.has(p)),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
 // The original audit and logs remain historical evidence, not rewritten results.
 for(const p of ['tests/uva-characterization.test.js','docs/rfc/unified-visual-architecture/BASELINE.md','docs/rfc/unified-visual-architecture/evidence/source-index.json','docs/rfc/unified-visual-architecture/evidence/execution-manifest.json']){
  const original=execFileSync('git',['show',base+':'+p],{cwd:root});check(original.equals(readFileSync(join(root,p))),`historical baseline changed: ${p}`);
@@ -100,4 +109,4 @@ check(!read(join(dir,'RFC-006.md')).includes('完整manifest copy-on-write優先
 check(!read(join(dir,'STORAGE-LIFECYCLE.md')).includes('4. grace至少24h'),'blanket full-copy quarantine remains');
 check(!read(join(dir,'RFC-004.md')).includes('Mutation required `{commandId'),'wire accepts internal commandId');
 if(errors.length){process.stderr.write(errors.join('\n')+'\n');process.exitCode=1;}
-else process.stdout.write(`Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; ${pr1aAuthorized?'limited PR-1A additions authorized; later PRs remain pending':'final recommendation is not human approval'}.\n`);
+else process.stdout.write(`Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; ${pr1cAuthorized?'limited PR-1A remediation / PR-1C authorized; PR-1D / PR-1B remain pending':pr1aAuthorized?'limited PR-1A additions authorized; later PRs remain pending':'final recommendation is not human approval'}.\n`);

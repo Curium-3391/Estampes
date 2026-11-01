@@ -40,7 +40,9 @@ export function mapLegacyCanvas(input, contextInput) {
   const unknown = (record, keys, prefix) => { for (const k of Object.keys(record)) if (!keys.has(k)) archive([...prefix, k]); };
   const finish = document => ({ status: document ? "mapped" : "blocked", document,
     sidecars: [{ archiveRef, sourceSchema: "canvas.json/version:1", payloadHash: sourceHash, payload: source }],
-    report: { authoritative: false, writesPerformed: false, sourceHash, sourceHashKind: "canonical-json/sha256",
+    report: { authoritative: false, writesPerformed: false, mapped: Boolean(document), migrationCompleted: false,
+      recoveryScope: "json-record-only", originalFileBytesVerified: false, binaryAssetsVerified: false,
+      sourceHash, sourceHashKind: "canonical-json/sha256",
       sourceStoreId: ctx.sourceStoreId, sourceCounts: { objects: Array.isArray(source?.objects) ? source.objects.length : 0,
         annotations: Array.isArray(source?.marks) ? source.marks.length : 0, layers: Array.isArray(source?.layers) ? source.layers.length : 0 },
       projectedCounts: document ? { objects: document.scenes[0].objects.length, annotations: document.scenes[0].annotations.length, layers: document.scenes[0].layers.length } : null,
