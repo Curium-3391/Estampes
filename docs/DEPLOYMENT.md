@@ -26,7 +26,7 @@ docker compose --profile tunnel up -d
 docker compose logs estampes | grep tunnel
 ```
 
-The second command prints the ChatGPT connector URL, e.g. `https://calm-words-here.trycloudflare.com/mcp?key=…`; paste it into ChatGPT as a custom MCP server (No authentication). It uses a Cloudflare quick tunnel: no account, no router or firewall changes, nothing listening on your network. The address changes every time the `tunnel` container restarts (then update the connector in ChatGPT), Cloudflare gives it no uptime guarantee, and the log line contains your key, so keep the log to yourself. Stop it with `docker compose --profile tunnel down`.
+The second command prints the ChatGPT connector URL, e.g. `https://calm-words-here.trycloudflare.com/mcp?key=…`; paste it into ChatGPT as a custom MCP server (No authentication). It uses a Cloudflare quick tunnel: no account, no router or firewall changes, nothing listening on your network. The address changes every time the `tunnel` container restarts (then update the connector in ChatGPT), Cloudflare gives it no uptime guarantee, and the log line contains your key, so keep the log to yourself. Stop it with `docker compose --profile tunnel down`. The compose file sets `ESTAMPES_TUNNEL_METRICS` (the tunnel container's metrics address) so the server can find the address the tunnel was given and print the connector URL; leave it unset when you use another way to publish the server.
 
 ### Details
 

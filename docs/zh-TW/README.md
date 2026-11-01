@@ -74,6 +74,7 @@ npm start          # http://localhost:8787/mcp
 | [開發指南（英文）](../DEVELOPMENT.md) | 環境設定、各種測試、程式碼導覽、公開介面與內部實作、入門工作 |
 | [模組快速入門（英文）](../modules/QUICKSTART.md)、[模組測試（英文）](../modules/TESTING.md) | 建立、測試、簽章並安裝模組；宣告式、WebAssembly、http 三種路徑 |
 | [發布流程（英文）](../RELEASE.md) | 給維護者：版本順序、Docker 映像標籤、發布前檢查、回復 |
+| [文件維護（英文）](../DOCUMENTATION-MAINTENANCE.md) | 給貢獻者：`npm run docs:check` 檢查什麼、改程式時要同步更新哪份文件 |
 | [使用指南（英文）](../USAGE.md) | 在 ChatGPT 裡使用畫布：標記、圖層、縮放、並排比對、匯出 |
 | [工具一覽（英文）](../TOOLS.md) | MCP 工具與 HTTP 端點 |
 | [影像管線（英文）](../IMAGE-PIPELINE.md) | 原檔、衍生檢視、精確的座標轉換、PDF 頁面、分析引擎 |

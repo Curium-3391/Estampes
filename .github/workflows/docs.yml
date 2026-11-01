@@ -1,0 +1,30 @@
+name: Docs checks
+# The main workflow ignores documentation-only changes. This one is deliberately
+# tiny (no npm install, no Docker): it runs the documentation checker only.
+on:
+  push:
+    paths:
+      - '**/*.md'
+      - 'docs/**'
+      - 'examples/**'
+      - 'scripts/check-docs.mjs'
+      - 'scripts/docs-allowlist.json'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'docs/**'
+      - 'examples/**'
+      - 'scripts/check-docs.mjs'
+      - 'scripts/docs-allowlist.json'
+      - '.github/workflows/docs.yml'
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check-docs.mjs

@@ -85,7 +85,7 @@ Everything else (the files under `src/`, the widget's internal messages, `server
 
 - **Reproduce a bug as a test.** Most behaviours have a small test file; add a failing case next to it first.
 - **Add a missing test case** for an edge in coordinate transforms, protocol parsing or bundle import.
-- **Improve a document**: run the commands in it; fix any that do not behave as written.
+- **Improve a document**: run the commands in it; fix any that do not behave as written, then run `npm run docs:check` ([Documentation maintenance](DOCUMENTATION-MAINTENANCE.md)).
 - **Write a module** with the [module quick start](modules/QUICKSTART.md) and offer it as an example.
 - **Live-host test**: run a feature in real ChatGPT and report what you saw, with the version and client; this is the largest gap in [Compatibility](COMPATIBILITY.md).
 
