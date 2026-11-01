@@ -228,9 +228,18 @@ export const findView = (entry, id) => entry.derivedViews?.get(id) ?? null;
 
 // Model coordinates read off a derived view -> normalized canvas frame.
 // units "pixels" (default) or "normalized" (0..1 of the view).
-export function frameFromView(record, units = "pixels") {
+export function frameFromView(record, units = "pixels", deliveredSize = null) {
   const m = record.coordinateMapping?.derivedToNormalized;
   if (!m) throw new Error("Derived view " + record.derivedViewId + " has no invertible mapping back to the image");
   const { width, height } = record.pixelDimensions;
-  return { matrix: units === "normalized" ? chain(scale(width, height), m) : m };
+  if (units === "normalized") return { matrix: chain(scale(width, height), m) };
+  if (deliveredSize) {
+    const { width: w, height: h } = deliveredSize;
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0)
+      throw new Error("Delivered view dimensions must be positive finite pixels");
+    // Image budgets may downsample the model-facing preview without changing
+    // the stored derived-view record. Use the actual pixels the model saw.
+    return { matrix: chain(scale(width / w, height / h), m) };
+  }
+  return { matrix: m };
 }

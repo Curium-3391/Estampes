@@ -73,6 +73,10 @@ The scientific calculator runs SymPy in a **separate container** (`cas-service/`
 
 `public/visual-surface.html` is a single self-contained page (no build step) served as an MCP Apps resource whose `ui://` URI contains the package version, so a release invalidates ChatGPT's cached copy. It draws the image and marks as SVG, supports zoom and pan with native-resolution tiles, drawing and selecting, undo/redo, layers, processed-image tabs and the paired view, and talks to the host through the MCP Apps bridge. Since 0.19 it is a workbench: the canvas and the calculator are panels you can move, resize, dock and minimise inside the same widget, with one layout per device profile ([Workbench](WORKBENCH.md), [Surfaces](SURFACES.md)). The Store is a separate widget. `number-line.html` and `visual-evidence.html` are the demo and legacy widgets.
 
+## Extending Estampes
+
+The public extension surface is the module manifest and package format, the scene operations and object types, the MCP tools and HTTP endpoints, and the data formats (`estampes.visual/2`, `estampes.workspace/1`, `estampes.bundle/1`). Everything under `src/` and the widget internals can change in any release; modules never import them. Details and a code tour: [Development guide](DEVELOPMENT.md#public-extension-interfaces-versus-internals).
+
 ## Constraints that shaped the design
 
 - Plugins cannot draw over images ChatGPT itself displays, so images are shown in Estampes's own canvas.

@@ -55,5 +55,26 @@ test("link refresh: stale plots are recomputed and redrawn, manually and automat
     const gone = await cas("define", { name: "f", params: ["x"], text: "7*x^2" });
     assert.equal(gone.structuredContent.refresh.failed.length, 1);
     assert.equal(gone.structuredContent.refresh.failed[0].object, objectId);
+
+    // Turning auto-refresh on redraws plots that were already stale; the model's own
+    // changes (execute_module) trigger it too, and so do plots on another canvas.
+    await cas("set_options", { autoRefresh: false });
+    const other = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const otherId = (JSON.stringify(other.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+    const calc2 = await cas("calculate", { operation: "differentiate", text: "f(x)", variable: "x" });
+    const cell2 = calc2.structuredContent.data.cell.cellId;
+    await cas("plot_result", { cell: cell2 });
+    await s.call("surface_cas", { imageId: otherId, capability: "plot_result", params: { notebook: nb, cell: cell2 } });
+    await cas("define", { name: "f", params: ["x"], text: "11*x^2" });
+    const turnedOn = await cas("set_options", { autoRefresh: true });
+    assert.ok(turnedOn.structuredContent.refresh.updated.length >= 2, "enabling it redraws the plots that were waiting, on both canvases");
+    assert.equal(turnedOn.structuredContent.refresh.remaining, 0);
+    const onOther = (await s.call("get_surface_state", { imageId: otherId })).structuredContent;
+    assert.ok(onOther, "the other canvas still has a surface");
+    const viaModel = await s.call("execute_module", { module: "org.estampes.cas", capability: "define", params: { notebook: nb, name: "f", params: ["x"], text: "13*x^2", by: "model" } });
+    assert.ok(!viaModel.isError, JSON.stringify(viaModel.content));
+    assert.match(viaModel.content[0].text, /Auto-refresh: recomputed \d+ cell\(s\), redrew \d+ Graph plot/, "the model's change is followed up too");
+    const book = (await cas("get_notebook", { full: true })).structuredContent.data;
+    assert.ok(book.cells.every((c) => c.state === "fresh" && (c.links ?? []).every((l) => l.status === "fresh" || l.status === "removed")), "nothing is left stale after a model-side change");
   } finally { await s.close(); }
 });

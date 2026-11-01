@@ -61,6 +61,7 @@ import { createSurfaceStore } from "./src/surface/store.js";
 import { createSurfaceService } from "./src/surface/service.js";
 import { inlineWorkbench } from "./src/surface/widget-source.js";
 import { collectBundleExtras, installBundleExtras } from "./src/surface/bundle-extras.js";
+import { autoRefresh } from "./src/surface/refresh.js";
 import { registerSurfaceTools } from "./src/surface/mcp-tools.js";
 import { configure as configureCas, casStatus, notebookStore } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
@@ -86,10 +87,10 @@ const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
-const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195"]
+const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197","v0198"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
   .filter(uri => uri !== VISUAL_URI);
-const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195"]
+const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197","v0198"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
 const loadWidget = (file) =>
@@ -256,7 +257,7 @@ function resolveFrame(frame, left, right) {
   const entry = (frame.side ?? "left") === "right" ? right : left;
   const record = entry && findView(entry, frame.derivedViewId);
   if (!record) throw new Error("coordinateFrame.derivedViewId " + frame.derivedViewId + " is not a processed view of the " + (frame.side ?? "left") + " image; call process_image on that image first");
-  return { ...frameFromView(record, frame.units), ...(frame.side ? { side: frame.side } : {}) };
+  return { ...frameFromView(record, frame.units, frame.width && frame.height ? { width: frame.width, height: frame.height } : null), ...(frame.side ? { side: frame.side } : {}) };
 }
 // Registrations stay in memory (bounded) across requests: each MCP request
 // builds its own server object, so this lives at module level. The same
@@ -541,7 +542,7 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
     if (!target) throw new Error("coordinateFrame.item " + coordinateFrame.item + " is not an item of " + workspaceId);
     const record = findView(target.entry, coordinateFrame.derivedViewId);
     if (!record) throw new Error("coordinateFrame.derivedViewId " + coordinateFrame.derivedViewId + " is not a processed view of " + target.id + "; call process_image on that image first");
-    coordinateFrame = { ...frameFromView(record, coordinateFrame.units), item: target.id };
+    coordinateFrame = { ...frameFromView(record, coordinateFrame.units, coordinateFrame.width && coordinateFrame.height ? { width: coordinateFrame.width, height: coordinateFrame.height } : null), item: target.id };
   }
   const refused = [];
   // remove entries may be "wi-2:g1" to name the item.
@@ -2012,7 +2013,7 @@ function makeServer() {
       "derivedViewId " + record.derivedViewId + ". The next block is the result, " + out.width + "x" + out.height + " px" +
       (ev.warnings.length ? ". Caveats: " + ev.warnings.join("; ") : "") +
       ". To mark something you see in it, call present_visual with coordinateFrame {derivedViewId: " + JSON.stringify(record.derivedViewId) +
-      "} and pixel coordinates from this image (older form: {region: " + JSON.stringify(out.region) + ", width: " + out.width + ", height: " + out.height + "}).";
+      "} and pixel coordinates from this image. If the host result budget resizes it, include width and height from the delivered image in coordinateFrame (older form: {region: " + JSON.stringify(out.region) + ", width: " + out.width + ", height: " + out.height + "}).";
   };
   // What the model gets about a view: everything except the step list.
   const viewSummary = (record) => {
@@ -2459,6 +2460,12 @@ function makeServer() {
   registerModuleTools(server, {
     host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
     ensureImage, saveCanvas, canvasLayers,
+    // The model changed a calculator notebook that has auto-refresh on: redraw its linked plots, like the panel does for the user.
+    afterRun: async ({ module, capability, params, run }) => {
+      if (module !== "org.estampes.cas") return null;
+      const r = await autoRefresh({ host: moduleHost, notebooks: notebookStore(), capability, notebookId: params.notebook ?? run.data?.notebookId });
+      return r ? "Auto-refresh: recomputed " + r.recomputed.length + " cell(s), redrew " + r.updated.length + " Graph plot(s)" + (r.failed.length ? ", " + r.failed.length + " could not be updated (" + r.failed.map((f) => f.reason).slice(0, 2).join("; ") + ")" : "") + (r.remaining ? ", " + r.remaining + " cell(s) still stale" : "") + "." : null;
+    },
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
@@ -2523,10 +2530,20 @@ const oauth = createOAuth({ getKey: () => ACCESS_KEY,
 function requestOrigin(req) {
   if (config.publicUrl) return config.publicUrl.replace(/\/+$/, "");
   const fwd = (name) => config.trustProxy > 0 ? String(req.headers[name] ?? "").split(",")[0].trim() : "";
-  const proto = fwd("x-forwarded-proto") || "http";
-  const host = fwd("x-forwarded-host") || String(req.headers.host ?? "").trim();
-  if (/^[a-z0-9.:[\]-]+$/i.test(host) && /^https?$/.test(proto)) return proto + "://" + host;
-  return tunnelOrigin || seenOrigin;
+  const forwardedProto = fwd("x-forwarded-proto");
+  const forwardedHost = fwd("x-forwarded-host");
+  if (forwardedProto === "https" && /^[a-z0-9.:[\]-]+$/i.test(forwardedHost)) {
+    return "https://" + forwardedHost;
+  }
+  // A quick tunnel terminates TLS outside the container. Never downgrade
+  // a known public HTTPS origin to an internal HTTP forwarded Host.
+  if (tunnelOrigin) return tunnelOrigin.replace(/\/+$/, "");
+  if (forwardedProto === "http" && /^[a-z0-9.:[\]-]+$/i.test(forwardedHost)) {
+    return "http://" + forwardedHost;
+  }
+  const host = String(req.headers.host ?? "").trim();
+  if (/^[a-z0-9.:[\]-]+$/i.test(host)) return "http://" + host;
+  return seenOrigin;
 }
 
 async function handleOAuth(req, res, url) {

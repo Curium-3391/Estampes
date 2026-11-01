@@ -8,15 +8,13 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { widgetObjects, sceneRevision } from "../scene/scene-ops.js";
 import { cellSummary } from "../cas/notebooks.js";
 import { SurfaceError } from "./store.js";
-import { refreshLinks } from "./refresh.js";
+import { refreshLinks, autoRefresh } from "./refresh.js";
 
 const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/);
 const WorkspaceIdSchema = z.string().regex(/^ws:[0-9a-f]{16}$/);
 const Where = { imageId: ImageIdSchema.optional(), workspaceId: WorkspaceIdSchema.optional() };
 const CAS = "org.estampes.cas";
 const CAS_CAPABILITIES = ["calculate", "define", "get_notebook", "recompute", "plot_result", "set_options", "refresh_links"];
-// Capabilities after which a notebook with autoRefresh redraws its linked plots.
-const AUTO_REFRESH_AFTER = new Set(["calculate", "define", "recompute"]);
 
 const keyOf = ({ imageId, workspaceId }) => {
   if (!imageId && !workspaceId) throw new SurfaceError("give imageId or workspaceId");
@@ -95,20 +93,16 @@ export function registerSurfaceTools(server, deps) {
         });
       }
       const notebookId = params.notebook ?? out?.data?.notebookId;
-      if (imageId && notebookId && (capability === "refresh_links" || AUTO_REFRESH_AFTER.has(capability))) {
-        const store = deps.notebooks();
-        if (store && (capability === "refresh_links" || (await store.get(notebookId)).autoRefresh)) {
-          refreshed = await refreshLinks({ host, notebooks: store, notebookId, imageId });
-        }
-      }
+      if (notebookId && capability === "refresh_links") refreshed = await refreshLinks({ host, notebooks: deps.notebooks(), notebookId, imageId: imageId ?? null });
+      else if (notebookId) refreshed = await autoRefresh({ host, notebooks: deps.notebooks(), capability, notebookId, imageId: imageId ?? null });
       const entry = refreshed?.entry ?? out?.entry;
       const changed = refreshed?.updated.length || out?.scene.created.length || out?.scene.updated.length;
       const summary = out?.summary ?? (refreshed ? "Graph links refreshed" : capability + " done");
       return {
-        content: [{ type: "text", text: summary + (refreshed ? " (updated " + refreshed.updated.length + " plot(s)" + (refreshed.failed.length ? ", " + refreshed.failed.length + " could not be updated" : "") + ")" : "") }],
+        content: [{ type: "text", text: summary + (refreshed ? " (updated " + refreshed.updated.length + " plot(s)" + (refreshed.failed.length ? ", " + refreshed.failed.length + " could not be updated" : "") + (refreshed.remaining ? ", " + refreshed.remaining + " cell(s) still stale" : "") + ")" : "") }],
         structuredContent: {
           kind: "estampes.surface_cas", capability, summary, data: out?.data ?? {},
-          ...(refreshed ? { refresh: { recomputed: refreshed.recomputed, updated: refreshed.updated, failed: refreshed.failed } } : {}),
+          ...(refreshed ? { refresh: { recomputed: refreshed.recomputed, updated: refreshed.updated, failed: refreshed.failed, remaining: refreshed.remaining } } : {}),
           ...(changed && entry ? { objects: widgetObjects(entry), sceneRevision: sceneRevision(entry), created: out?.scene.created ?? [], updated: out?.scene.updated ?? [] } : {}),
         },
       };
@@ -175,7 +169,10 @@ export function registerSurfaceTools(server, deps) {
       if (imageId) entry = await ensureImage(imageId);
       else if (!workspaceId) { entry = await host.canvases.create({}); await host.canvases.save(entry, { tool: "manage_surface_panels", author: "module", changed: [] }); made = true; }
       const op = action === "open" ? { op: "open-panel", module, panel, ...(notebook ? { notebook } : {}) } : { op: "close-panel", panelId };
-      let view = await service.apply(keyOf({ imageId: entry?.imageId, workspaceId }), { ops: [op] });
+      // Asking again for a panel that is already open shows it; a second
+      // window is something the user opens from the launcher.
+      const already = action === "open" && !notebook && !made && (await service.state(keyOf({ imageId: entry?.imageId, workspaceId }))).panels.some((p) => p.open && p.module === module && p.panel === panel);
+      let view = already ? await service.state(keyOf({ imageId: entry?.imageId, workspaceId })) : await service.apply(keyOf({ imageId: entry?.imageId, workspaceId }), { ops: [op] });
       // No canvas was asked for: nothing is shown behind the new panel. The
       // panel fills the workbench (the blank canvas stays one click away).
       if (made && action === "open") {

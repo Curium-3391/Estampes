@@ -2,7 +2,7 @@
 
 **Point at the same image, together with AI, without leaving the conversation.**
 
-[繁體中文說明](docs/zh-TW/README.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
+[繁體中文說明](docs/zh-TW/README.md) · [Quick start](docs/QUICKSTART.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
 Estampes is an open-source plugin for ChatGPT and Claude: an MCP server with MCP Apps widgets that shows your picture as a shared canvas inside the chat. The AI draws on the original image, you draw back on the same canvas, and both sides refer to the same marks across turns. It works with any image (photos, scans, handwriting, book pages, diagrams, maps, drawings), and **each person runs their own server**.
 
@@ -55,7 +55,17 @@ npm start          # http://localhost:8787/mcp
 
 | Document | Contents |
 | --- | --- |
+| [Quick start](docs/QUICKSTART.md) | First deployment to first mark, with what to expect at each step and what to do when it fails |
+| [Tutorials](docs/tutorials/README.md) | Annotate a photo, analyse a PDF page, plate-solve a sky photo; sample material you can generate |
+| [Compatibility](docs/COMPATIBILITY.md) | Which clients, platforms and optional features have been tested, and how |
 | [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT and Claude, environment variables, what is stored |
+| [Backup and restore](docs/BACKUP-RESTORE.md) | What is stored, back up, restore, upgrade and roll back, rotate keys after a leak (round trip verified by a script) |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Server unreachable, image will not load, broken widget, calculator down, module permission errors |
+| [Security policy](SECURITY.md) | Single-owner security model and how to report a vulnerability privately |
+| [Development guide](docs/DEVELOPMENT.md) | Set up, run every kind of test, code tour, public interfaces versus internals, first tasks |
+| [Module quick start](docs/modules/QUICKSTART.md) · [Testing modules](docs/modules/TESTING.md) | Build, test, sign and install a module; declarative, WebAssembly and http paths |
+| [Releasing](docs/RELEASE.md) | For maintainers: version order, Docker image tags, pre-release check, rollback |
+| [Documentation maintenance](docs/DOCUMENTATION-MAINTENANCE.md) | For contributors: `npm run docs:check`, what it checks, which document to update with which change |
 | [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
 | [Image pipeline](docs/IMAGE-PIPELINE.md) | Source files, derived views, exact coordinate transforms, PDF pages, analysis engines |

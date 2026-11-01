@@ -26,7 +26,7 @@ docker compose --profile tunnel up -d
 docker compose logs estampes | grep tunnel
 ```
 
-The second command prints the ChatGPT connector URL, e.g. `https://calm-words-here.trycloudflare.com/mcp?key=…`; paste it into ChatGPT as a custom MCP server (No authentication). It uses a Cloudflare quick tunnel: no account, no router or firewall changes, nothing listening on your network. The address changes every time the `tunnel` container restarts (then update the connector in ChatGPT), Cloudflare gives it no uptime guarantee, and the log line contains your key, so keep the log to yourself. Stop it with `docker compose --profile tunnel down`.
+The second command prints the ChatGPT connector URL, e.g. `https://calm-words-here.trycloudflare.com/mcp?key=…`; paste it into ChatGPT as a custom MCP server (No authentication). It uses a Cloudflare quick tunnel: no account, no router or firewall changes, nothing listening on your network. The address changes every time the `tunnel` container restarts (then update the connector in ChatGPT), Cloudflare gives it no uptime guarantee, and the log line contains your key, so keep the log to yourself. Stop it with `docker compose --profile tunnel down`. The compose file sets `ESTAMPES_TUNNEL_METRICS` (the tunnel container's metrics address) so the server can find the address the tunnel was given and print the connector URL; leave it unset when you use another way to publish the server.
 
 ### Details
 
@@ -35,11 +35,11 @@ The second command prints the ChatGPT connector URL, e.g. `https://calm-words-he
 - **Only this machine by default.** compose publishes on `127.0.0.1:8787`. Put a reverse proxy or tunnel with https in front (it runs on the same machine), or set `ESTAMPES_BIND=0.0.0.0` to open the port to the network. Behind a proxy, set `ESTAMPES_TRUST_PROXY=1` (one proxy) so rate limiting sees real client addresses.
 - Logs: `docker compose logs -f`. Set `ESTAMPES_LOG_FORMAT=json` for one JSON object per line. Docker keeps 3 × 10 MB of logs.
 - **Module commands.** `scripts/estampes-module.js` (set API keys, approve plans, sign packages) defaults to the container's storage `/data`, so run it inside the container: `echo "$KEY" | docker compose exec -T estampes node scripts/estampes-module.js secret set <moduleId> <name>`. Outside Docker, set `ESTAMPES_STORAGE_DIR` to your storage folder and run `npm install` first.
-- Update: `git pull && docker compose up -d --build`. The data volume is kept.
+- Update: take a backup, then `git pull && docker compose up -d --build`. The data volume is kept; start a new ChatGPT conversation afterwards ([Upgrade](BACKUP-RESTORE.md#upgrade)).
 - Stop: `docker compose down`. **`docker compose down -v` deletes all stored images and marks.**
-- Backup: the volume `estampes_estampes-data` holds everything, e.g. `docker run --rm -v estampes_estampes-data:/data -v "$PWD":/backup busybox tar czf /backup/estampes.tgz /data`.
+- Backup and restore: the volume `estampes_estampes-data` holds everything, including your keys. Stop the server, archive the volume, and restore into a new volume; the full procedure, what a backup contains, upgrade and rollback rules and what to do when a key leaks are in [Backup and restore](BACKUP-RESTORE.md). Problems: [Troubleshooting](TROUBLESHOOTING.md).
 - The container runs as the unprivileged `node` user (uid 1000) with a read-only filesystem except `/data` and a 64 MB `/tmp`, no Linux capabilities, `no-new-privileges` and at most 256 processes, and restarts on failure (`restart: unless-stopped`).
-- Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` (`latest` from `main`, `X.Y.Z` from `vX.Y.Z` tags). To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:latest`. A new GHCR package is private until its visibility is changed in the package settings.
+- Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` only when a `vX.Y.Z` tag is pushed: `X.Y.Z`, `latest` (the newest stable release) and `sha-<short>`; nothing is published for `main` or pull requests. To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z` (pin a version; `latest` moves). A GHCR package is private until its owner makes it public in the package settings, so an anonymous pull can fail; building locally always works. See [Releasing](RELEASE.md).
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
 
 ### Calculator container and optional PDF support
@@ -152,12 +152,13 @@ Invalid values fall back to the default and are reported in the log at startup.
 
 ## Releasing a new version
 
-`package.json` `version` is the single source of truth. `/version`, the MCP server version, the version shown in the widgets and the versioned `ui://estampes/visual-surface-vXYZ.html` / `visual-evidence-vXYZ.html` URIs are all derived from it. To release, bump `version` (and run `npm install` to update the lockfile), then add the previous tag to `LEGACY_VISUAL_URIS` / `LEGACY_EVIDENCE_URIS` in `server.js` so saved conversations keep resolving. Pushing a `vX.Y.Z` tag publishes the matching multi-arch image.
+`package.json` `version` is the single source of truth. `/version`, the MCP server version, the version shown in the widgets and the versioned `ui://estampes/visual-surface-vXYZ.html` / `visual-evidence-vXYZ.html` URIs are all derived from it. To release, bump `version` (and run `npm install` to update the lockfile), then add the previous tag to `LEGACY_VISUAL_URIS` / `LEGACY_EVIDENCE_URIS` in `server.js` so saved conversations keep resolving. Pushing a `vX.Y.Z` tag publishes the matching multi-arch image. The full order, the pre-release check (`npm run release:check`), failure handling and rollback are in [Releasing](RELEASE.md).
 
 ## Caveats
 
 - Render free services sleep when idle; the first request after a pause can take tens of seconds.
-- The access key is a shared secret in a URL, not per-user auth. Anyone with the connector URL can call the server. Add OAuth before any public distribution.
+- The security model (single owner, one shared key, what the server fetches, what modules may do) is summarised in [SECURITY.md](../SECURITY.md); vulnerabilities are reported privately there.
+- Authentication uses one shared owner key, not individual accounts. ChatGPT can use a key-bearing connector URL; OAuth-compatible clients can sign in using the owner key and keep a token. Protect the key, connector URL, and backups.
 - `/export/<hash>/…` download links carry a signature (`?sig=`) derived from the access key; without a key they are open and protected only by the image hash.
 - CORS stays `*` by default so browser tools work; every `/mcp` call still needs the key.
 - The rate limiter is in memory and per instance; it resets on restart.

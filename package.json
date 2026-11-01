@@ -9,7 +9,9 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "release:check": "node scripts/check-release.mjs",
+    "docs:check": "node scripts/check-docs.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",

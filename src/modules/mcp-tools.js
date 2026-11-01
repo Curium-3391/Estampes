@@ -124,6 +124,8 @@ export function registerModuleTools(server, deps) {
     try {
       const run = await host.router.execute({ module, capability, params, canvas, newCanvas, expectedRevision, visibility, layer });
       const { entry, scene } = run;
+      // A module can ask to be followed up (the calculator redraws its linked plots); a failure there never hides the run itself.
+      const followUp = run.job || !deps.afterRun ? "" : await Promise.resolve(deps.afterRun({ module, capability, params, run })).then((n) => (n ? " " + n : ""), () => "");
       if (run.job) {
         return { content: [{ type: "text", text: module + " " + capability + " is running in the background as " + run.job.id + (entry ? " on canvas " + entry.imageId : "") +
           ". It can take minutes. Call get_module_job with this id (waitSeconds up to 25) until its status is done or failed; the result lands on the canvas when it is done. Tell the user it is running." }],
@@ -134,7 +136,7 @@ export function registerModuleTools(server, deps) {
         const panels = host.registry.get(module)?.manifest.panels ?? [];
         const hint = panels.length ? " This result is not on a canvas, so the user sees nothing yet. To show it, call manage_surface_panels (action open, module " + module + ", panel " + panels[0].id +
           (run.data?.notebookId ? ", notebook " + run.data.notebookId : "") + ") with the imageId of the canvas they are looking at; omit imageId for a blank canvas." : "";
-        return { content: [{ type: "text", text: module + " " + capability + ": " + (run.summary ?? "done") + (run.data !== undefined ? " " + JSON.stringify(run.data) : "") + hint }],
+        return { content: [{ type: "text", text: module + " " + capability + ": " + (run.summary ?? "done") + (run.data !== undefined ? " " + JSON.stringify(run.data) : "") + hint + followUp }],
           structuredContent: { kind: "estampes.module_result", module, capability, ...(run.data !== undefined ? { data: run.data } : {}) } };
       }
       const objects = renderedObjects(entry).map(compactObject);
@@ -145,7 +147,7 @@ export function registerModuleTools(server, deps) {
         (scene.created.length ? "Created " + scene.created.join(", ") + ". " : "") + (scene.updated.length ? "Updated " + scene.updated.join(", ") + ". " : "") +
         (scene.deleted.length ? "Deleted " + scene.deleted.join(", ") + ". " : "") +
         (scene.notes?.length ? "WARNINGS: " + scene.notes.map((n) => n.id + ": " + n.note).join("; ") + ". " : "") +
-        "Scene revision " + scene.revision + ". Objects on the canvas: " + JSON.stringify(objects) +
+        "Scene revision " + scene.revision + ". Objects on the canvas: " + JSON.stringify(objects) + followUp +
         (shot ? ". The next image is a PREVIEW of the canvas" + (objects.some((o) => o.visibility === "scratch") ? " (scratch objects included, faded; the user does not see them)" : "") + "." : "");
       return logSizes("execute_module", {
         content: [{ type: "text", text }, ...(shot ? [{ type: "image", data: shot.data.toString("base64"), mimeType: shot.mimeType }] : [])],
