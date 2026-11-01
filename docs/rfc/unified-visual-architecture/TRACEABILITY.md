@@ -37,3 +37,16 @@ Status：Proposed；Code欄先列CURRENT依據，箭頭後是Proposedboundedchan
 | 13/14 approvalgate/report/evidenceboundaries | OPENDECISIONS/BASELINE | baselineSHA+gitbranch/status+testlogs | noPhase1beforeapproval | gateaudit | 0：0A |
 
 TestID欄數字皆為 `UVA-` prefix；區間表示每個case，非單一籠統測試。工程驗收需逐casepass，traceability不代替測試結果。
+
+## Phase 0.1 — Review Finding Traceability
+
+| Finding / requirement | Formal contract / ADR | Proposed files / migration rule | Cases | Owning PR / phase gate |
+| --- | --- | --- | --- | --- |
+| R-01 moduleauthorship/actor/owner/currentgrants | ANNOTATION-POLICY、RFC002/005、CONTRACTS、ADR-009 | documents/schema/authorization；legacyauthor保原、layer.module不推creator、importunclaimedowner | UVA-41/42/55 | PR-1A / PR-2A / PR-5A；Phase1schema/Phase2/5runtime |
+| R-02 usereditAI/moduleink＋原provenance/Evidence | ANNOTATION-POLICY、RFC003/004、ADR-009、OD-02 | annotationcommands/claimcontext/history/guard；oldAPIonly-own、新APIunified/1 | UVA-43/44/45 | PR-2B / PR-4B / PR-5A；Phase2/4/5 |
+| R-03 roots/GC/journal/ledger/durability/capacity | STORAGE-LIFECYCLE、RFC006/007、ADR-010 | persistence/coordinator/retention/compaction；losslesslogicalhistory、7dACK永久tombstone、quota/fsync | UVA-46/47/48/49/50/59/60 | PR-1C / PR-1D / PR-7A；Phase1writerexit/7hardening |
+| R-04 embeddedtypedobject/childauthority/livecache/auth | EMBED-CONTRACT、RFC002/003/004/005/006、ADR-011 | scene/embeddedtrustedrenderer/refresolver；snapshotneweditableDoc、Copy/Move/refmaps、CAStruechild | UVA-51/52/53/54/61 | PR-6D / PR-6B / PR-6C；Phase6 |
+| R-05 nineformalAPI/IDs/revision/op/permissionconsistency | RFC005、CONTRACTS、evidence/proposed-contracts.mjs | doc-onlyvalidator/corpus/negativecases；noProductionValidator/APImutation | UVA-55 | PR-0B / PR-1A；Phase0.1+productionequivalencePhase1 |
+| R-06 singleauthoritycutover/oldbinary/rollback | AUTHORITY-CUTOVER、RFC006/008、ADR-012 | compat/authoritymediator/deploymentlauncher/ROmount；A0–7、projectionneverauthority、postwriteA7export | UVA-56/57/58/62 | PR-1B / PR-6B / PR-7A；Phase1/6/7 |
+
+測試表新增22cases明列FailureModes/Automation/OwnerPR/Phase，原UVA-01–40仍有效；本輪只有docsvalidator實際執行，未跑不存在的產品feature。

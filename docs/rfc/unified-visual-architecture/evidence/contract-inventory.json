@@ -1,0 +1,204 @@
+{
+  "scope": "RFC001-008, ADR001-012, CONTRACTS, Roadmap, authoritative schema supplements",
+  "jsonValidation": "all formal JSON via validate-contract-examples.mjs",
+  "typescriptLimitation": "lexical inventory + cross-document review; not TypeScript compiler or production schema equivalence proof",
+  "fences": [
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-002.md",
+      "line": 11,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "DocumentId",
+        "SceneId",
+        "ViewportId",
+        "PanelId",
+        "Ref",
+        "AssetRef",
+        "VisualDocument",
+        "Scene",
+        "Layer"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-002.md",
+      "line": 53,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "Annotation",
+        "Evidence"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-002.md",
+      "line": 91,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "ReferenceBinding"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-002.md",
+      "line": 102,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-003.md",
+      "line": 25,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "Anchor",
+        "ViewportOverlay"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-003.md",
+      "line": 51,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "RenderRequest",
+        "RenderPlan"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-004.md",
+      "line": 21,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "SurfaceV2",
+        "PanelRecord",
+        "ViewportRecord"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 10,
+      "language": "json",
+      "classification": "ILLUSTRATIVE_ONLY",
+      "exampleId": "ILLUSTRATIVE-MANIFEST",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 154,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-01",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 181,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-02",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 213,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-03",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 282,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-04",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 343,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-05",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 384,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-06",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 459,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-07",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 512,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-08",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/RFC-005.md",
+      "line": 628,
+      "language": "json",
+      "classification": "FORMAL_PROPOSED_JSON",
+      "exampleId": "EX-09",
+      "declaredTypes": []
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/ANNOTATION-POLICY.md",
+      "line": 17,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "Principal",
+        "ActorContext",
+        "Ownership",
+        "AnnotationProvenance"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/ANNOTATION-POLICY.md",
+      "line": 90,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "ClaimContext",
+        "ContextVerification"
+      ]
+    },
+    {
+      "file": "docs/rfc/unified-visual-architecture/EMBED-CONTRACT.md",
+      "line": 7,
+      "language": "ts",
+      "classification": "READ_MODEL_PROJECTION_MANUALLY_CROSS_REVIEWED",
+      "exampleId": null,
+      "declaredTypes": [
+        "EmbeddedDocumentObject",
+        "EmbedBinding",
+        "ResolvedEmbed"
+      ]
+    }
+  ]
+}

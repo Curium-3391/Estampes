@@ -17,3 +17,9 @@ Status：**Proposed / NOT RUN**。Current本次只有FakeHostbrowser與MCPclient
 | UVA-40 CSP/delivery | 實際CSP與sandbox；大圖片preview/chunks；missing_metafallback（若可合法重現）；toolinput/resultordering | 無外部script依賴，chunks驗hash，不聲稱Host保證ordering | NOT RUN |
 
 重現工具結果重送/丟_meta若真Host無法控制，先記真實觀察範圍，FakeHost的故障注入證據另列，不把未觸發分支寫pass。任何case blocked需註原因與後續最小動作；releasegate不得用人工勾選代替觀察。真Host不可測時可提交candidate供review，但相關client維持Not tested且不得解除該platformgate。
+
+## Phase 0.1 — Additional Live Acceptance Steps
+
+仍為NOT RUN；在UVA-38/39真Host腳本追加：user選AI/module Annotation逐項Move/Resize/Restyle/Relayer/Relabel/Delete/Undo/Redo，讀server的createdBy/lastEditedBy、Evidence applicability與current/historical Verification；geometry改動後必stale，color/presentationlabel不誤使Findingstale，LLM隨後修改受userguard阻擋。legacy工具行為另驗不變；不是以clientauthor字段賦權。
+
+Embed：在parent預設畫一筆，serverref必指parent；explicit「編輯來源」後再畫，ref必指child；childcommit使兩parentviewport更新但parentcontentrev不偽增；childarchive/revokeread顯placeholder無快取內容洩漏。關newfeatureflag只影響入口，不刪已存doc/解除authorityfence。每平台都需觀察，不以FakeHost證明。

@@ -1,0 +1,499 @@
+[
+  {
+    "id": "EX-01",
+    "title": "Create Graph Document",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "create_visual_document",
+    "arguments": {
+      "requestId": "req:00000001-0000-4000-8000-000000000001",
+      "kind": "graph",
+      "title": "Graph A",
+      "extent": {
+        "width": 1600,
+        "height": 1000
+      }
+    },
+    "response": {
+      "resultId": "event:00000001-0000-4000-8000-000000000001",
+      "commitId": "tx:00000001-0000-4000-8000-000000000001",
+      "replayed": false,
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "revision": 1,
+      "assetCount": 0
+    }
+  },
+  {
+    "id": "EX-02",
+    "title": "Open Graph Panel",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "open_visual_panel",
+    "arguments": {
+      "requestId": "req:00000002-0000-4000-8000-000000000001",
+      "surfaceId": "sf:0123456789abcdef",
+      "target": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001"
+      },
+      "viewerKind": "graph",
+      "newViewport": true,
+      "expectedSurfaceRevision": 3
+    },
+    "response": {
+      "resultId": "event:00000002-0000-4000-8000-000000000001",
+      "commitId": "tx:00000002-0000-4000-8000-000000000001",
+      "replayed": false,
+      "panelId": "panel:00000001-0000-4000-8000-000000000001",
+      "viewportId": "vp:00000001-0000-4000-8000-000000000001",
+      "surfaceRevision": 4,
+      "target": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "id": "EX-03",
+    "title": "Plot Function",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "execute_module",
+    "arguments": {
+      "requestId": "req:00000003-0000-4000-8000-000000000001",
+      "module": "org.estampes.graph",
+      "capability": "plot_function",
+      "target": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001"
+      },
+      "params": {
+        "expression": "sin(x)",
+        "newAxes": {
+          "xRange": [
+            -10,
+            10
+          ],
+          "yRange": [
+            -10,
+            10
+          ]
+        }
+      },
+      "expectedDocumentRevision": 1
+    },
+    "response": {
+      "resultId": "event:00000003-0000-4000-8000-000000000001",
+      "commitId": "tx:00000003-0000-4000-8000-000000000001",
+      "replayed": false,
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "revision": 2,
+      "created": [
+        {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000001-0000-4000-8000-000000000001"
+        },
+        {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000002-0000-4000-8000-000000000001"
+        }
+      ],
+      "updated": [],
+      "refs": {
+        "axes": {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000001-0000-4000-8000-000000000001"
+        },
+        "plot": {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000002-0000-4000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "id": "EX-04",
+    "title": "Add User Annotation",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "edit_visual_document",
+    "arguments": {
+      "requestId": "req:00000004-0000-4000-8000-000000000001",
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "expectedRevision": 2,
+      "operations": [
+        {
+          "op": "annotation.create",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "layer": {
+            "name": "User ink"
+          },
+          "type": "polyline",
+          "anchor": {
+            "space": "document"
+          },
+          "geometry": {
+            "points": [
+              {
+                "x": 400,
+                "y": 300
+              },
+              {
+                "x": 450,
+                "y": 320
+              }
+            ],
+            "smooth": true
+          },
+          "style": {
+            "pen": "pen",
+            "color": "blue"
+          }
+        }
+      ]
+    },
+    "response": {
+      "resultId": "event:00000004-0000-4000-8000-000000000001",
+      "commitId": "tx:00000004-0000-4000-8000-000000000001",
+      "replayed": false,
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "revision": 3,
+      "created": [
+        {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "annotation",
+          "id": "ann:00000001-0000-4000-8000-000000000001"
+        }
+      ],
+      "updated": []
+    }
+  },
+  {
+    "id": "EX-05",
+    "title": "Update Graph Object",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "execute_module",
+    "arguments": {
+      "requestId": "req:00000005-0000-4000-8000-000000000001",
+      "module": "org.estampes.graph",
+      "capability": "update_plot",
+      "target": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001"
+      },
+      "params": {
+        "object": "obj:00000002-0000-4000-8000-000000000001",
+        "expression": "sin(2*x)"
+      },
+      "expectedDocumentRevision": 3
+    },
+    "response": {
+      "resultId": "event:00000005-0000-4000-8000-000000000001",
+      "commitId": "tx:00000005-0000-4000-8000-000000000001",
+      "replayed": false,
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "revision": 4,
+      "created": [],
+      "updated": [
+        {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000002-0000-4000-8000-000000000001"
+        }
+      ],
+      "refs": {}
+    }
+  },
+  {
+    "id": "EX-06",
+    "title": "Embed Graph in Image",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "embed_visual_document",
+    "arguments": {
+      "requestId": "req:00000006-0000-4000-8000-000000000001",
+      "parent": {
+        "documentId": "doc:00000002-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000002-0000-4000-8000-000000000001"
+      },
+      "source": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001"
+      },
+      "mode": "live",
+      "layer": {
+        "name": "Embedded Graph"
+      },
+      "localToDocument": [
+        0.4,
+        0,
+        100,
+        0,
+        0.4,
+        80,
+        0,
+        0,
+        1
+      ],
+      "clipRegion": {
+        "space": "child-document",
+        "x": 0,
+        "y": 0,
+        "x2": 1600,
+        "y2": 1000
+      },
+      "expectedSourceRevision": 4,
+      "expectedParentRevision": 9
+    },
+    "response": {
+      "resultId": "event:00000006-0000-4000-8000-000000000001",
+      "commitId": "tx:00000006-0000-4000-8000-000000000001",
+      "replayed": false,
+      "parent": {
+        "documentId": "doc:00000002-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000002-0000-4000-8000-000000000001",
+        "revision": 10
+      },
+      "child": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+        "revision": 4
+      },
+      "embedRef": {
+        "documentId": "doc:00000002-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000002-0000-4000-8000-000000000001",
+        "kind": "object",
+        "id": "obj:00000004-0000-4000-8000-000000000001"
+      },
+      "bindingId": "bind:00000001-0000-4000-8000-000000000001",
+      "dependencyRevisionVector": [
+        {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "revision": 4,
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "sharedEditing": true
+    }
+  },
+  {
+    "id": "EX-07",
+    "title": "Link CAS Cell to New CAS-owned Plot",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "execute_module",
+    "arguments": {
+      "requestId": "req:00000007-0000-4000-8000-000000000001",
+      "module": "org.estampes.cas",
+      "capability": "plot_result",
+      "target": {
+        "documentId": "doc:00000001-0000-4000-8000-000000000001",
+        "sceneId": "scene:00000001-0000-4000-8000-000000000001"
+      },
+      "params": {
+        "notebook": "nb:0123456789ab",
+        "cell": "cell:0123456789ab",
+        "frame": "obj:00000001-0000-4000-8000-000000000001",
+        "linkPolicy": "pause-on-user-edit"
+      },
+      "expectedDocumentRevision": 4,
+      "expectedNotebookRevision": 6
+    },
+    "response": {
+      "resultId": "event:00000007-0000-4000-8000-000000000001",
+      "commitId": "tx:00000007-0000-4000-8000-000000000001",
+      "replayed": false,
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "revision": 5,
+      "notebookRevision": 7,
+      "bindingId": "bind:00000002-0000-4000-8000-000000000001",
+      "created": [
+        {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000003-0000-4000-8000-000000000001"
+        }
+      ],
+      "updated": [],
+      "refs": {
+        "plot": {
+          "documentId": "doc:00000001-0000-4000-8000-000000000001",
+          "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+          "kind": "object",
+          "id": "obj:00000003-0000-4000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "id": "EX-08",
+    "title": "Read Graph for LLM",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "read_visual_document",
+    "arguments": {
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "expectedRevision": 5,
+      "include": "summary-and-render",
+      "hiddenLayerIds": []
+    },
+    "response": {
+      "resultId": "event:00000008-0000-4000-8000-000000000001",
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+      "revision": 5,
+      "objects": [
+        {
+          "ref": {
+            "documentId": "doc:00000001-0000-4000-8000-000000000001",
+            "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+            "kind": "object",
+            "id": "obj:00000001-0000-4000-8000-000000000001"
+          },
+          "type": "axes-2d"
+        },
+        {
+          "ref": {
+            "documentId": "doc:00000001-0000-4000-8000-000000000001",
+            "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+            "kind": "object",
+            "id": "obj:00000002-0000-4000-8000-000000000001"
+          },
+          "type": "function-plot",
+          "expression": "sin(2*x)"
+        },
+        {
+          "ref": {
+            "documentId": "doc:00000001-0000-4000-8000-000000000001",
+            "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+            "kind": "object",
+            "id": "obj:00000003-0000-4000-8000-000000000001"
+          },
+          "type": "function-plot",
+          "expression": "2*x"
+        }
+      ],
+      "annotations": [
+        {
+          "ref": {
+            "documentId": "doc:00000001-0000-4000-8000-000000000001",
+            "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+            "kind": "annotation",
+            "id": "ann:00000001-0000-4000-8000-000000000001"
+          },
+          "anchor": {
+            "space": "document"
+          },
+          "verification": "unverified"
+        }
+      ],
+      "render": {
+        "revision": 5,
+        "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "included": {
+          "objects": [
+            {
+              "documentId": "doc:00000001-0000-4000-8000-000000000001",
+              "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+              "kind": "object",
+              "id": "obj:00000001-0000-4000-8000-000000000001"
+            },
+            {
+              "documentId": "doc:00000001-0000-4000-8000-000000000001",
+              "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+              "kind": "object",
+              "id": "obj:00000002-0000-4000-8000-000000000001"
+            },
+            {
+              "documentId": "doc:00000001-0000-4000-8000-000000000001",
+              "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+              "kind": "object",
+              "id": "obj:00000003-0000-4000-8000-000000000001"
+            }
+          ],
+          "annotations": [
+            {
+              "documentId": "doc:00000001-0000-4000-8000-000000000001",
+              "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+              "kind": "annotation",
+              "id": "ann:00000001-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        "dependencyRevisionVector": [
+          {
+            "documentId": "doc:00000001-0000-4000-8000-000000000001",
+            "sceneId": "scene:00000001-0000-4000-8000-000000000001",
+            "revision": 5,
+            "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      },
+      "bindingStates": [
+        {
+          "bindingId": "bind:00000002-0000-4000-8000-000000000001",
+          "status": "fresh"
+        }
+      ],
+      "truncated": false
+    }
+  },
+  {
+    "id": "EX-09",
+    "title": "Export Editable Graph",
+    "classification": "VALID_AGAINST_PROPOSED_SCHEMA",
+    "approval": "REQUIRES_HUMAN_DECISION",
+    "implementation": "NOT_YET_IMPLEMENTED",
+    "tool": "export_visual_document",
+    "arguments": {
+      "requestId": "req:00000009-0000-4000-8000-000000000001",
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "format": "estampes.bundle/2",
+      "expectedRevision": 5,
+      "includeEditable": true
+    },
+    "response": {
+      "resultId": "event:00000009-0000-4000-8000-000000000001",
+      "commitId": "tx:00000009-0000-4000-8000-000000000001",
+      "replayed": false,
+      "documentId": "doc:00000001-0000-4000-8000-000000000001",
+      "revision": 5,
+      "downloadUrl": "https://example.invalid/exports/graph.estampes",
+      "format": "estampes.bundle/2",
+      "counts": {
+        "documents": 1,
+        "scenes": 1,
+        "objects": 3,
+        "annotations": 1
+      },
+      "lossReport": []
+    }
+  }
+]

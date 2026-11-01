@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: all nine proposed examples and classified Markdown fences match
+ok 1 - all nine proposed examples and classified Markdown fences match
+  ---
+  duration_ms: 104.643605
+  type: 'test'
+  ...
+# Subtest: request ID normalization is deterministic and rejects short IDs
+ok 2 - request ID normalization is deterministic and rejects short IDs
+  ---
+  duration_ms: 0.689015
+  type: 'test'
+  ...
+# Subtest: legacy/string layer example is rejected; layer object is valid
+ok 3 - legacy/string layer example is rejected; layer object is valid
+  ---
+  duration_ms: 2.780234
+  type: 'test'
+  ...
+# Subtest: missing required target revision is rejected
+ok 4 - missing required target revision is rejected
+  ---
+  duration_ms: 0.763245
+  type: 'test'
+  ...
+# Subtest: legacy/new revision axes cannot be mixed
+ok 5 - legacy/new revision axes cannot be mixed
+  ---
+  duration_ms: 0.728053
+  type: 'test'
+  ...
+# Subtest: short document and mismatched response reference are rejected
+ok 6 - short document and mismatched response reference are rejected
+  ---
+  duration_ms: 3.702143
+  type: 'test'
+  ...
+# Subtest: caller cannot forge author, actor, ownership or commandId
+ok 7 - caller cannot forge author, actor, ownership or commandId
+  ---
+  duration_ms: 2.375853
+  type: 'test'
+  ...
+# Subtest: module provenance requires consistent author and publisher lineage
+ok 8 - module provenance requires consistent author and publisher lineage
+  ---
+  duration_ms: 3.651801
+  type: 'test'
+  ...
+# Subtest: user editing preserves createdBy and records user as last editor
+ok 9 - user editing preserves createdBy and records user as last editor
+  ---
+  duration_ms: 0.77786
+  type: 'test'
+  ...
+# Subtest: embed requires affine inverse and explicit clip
+ok 10 - embed requires affine inverse and explicit clip
+  ---
+  duration_ms: 0.889121
+  type: 'test'
+  ...
+# Subtest: snapshot embed requires independently identified editable child and origin
+ok 11 - snapshot embed requires independently identified editable child and origin
+  ---
+  duration_ms: 2.914685
+  type: 'test'
+  ...
+# Subtest: CAS example creates owned plot without unsupported adoption input
+ok 12 - CAS example creates owned plot without unsupported adoption input
+  ---
+  duration_ms: 1.074594
+  type: 'test'
+  ...
+# Subtest: invalid operation enum, anchor and unknown capability are rejected
+ok 13 - invalid operation enum, anchor and unknown capability are rejected
+  ---
+  duration_ms: 1.337351
+  type: 'test'
+  ...
+# Subtest: input schemas are strict and do not default extra grants
+ok 14 - input schemas are strict and do not default extra grants
+  ---
+  duration_ms: 0.259955
+  type: 'test'
+  ...
+# Subtest: unknown historical module identity stays unclaimed without fabricating signer or lineage
+ok 15 - unknown historical module identity stays unclaimed without fabricating signer or lineage
+  ---
+  duration_ms: 0.988547
+  type: 'test'
+  ...
+# Subtest: adoption can link a historical source without rewriting its creator
+ok 16 - adoption can link a historical source without rewriting its creator
+  ---
+  duration_ms: 1.140004
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 538.970494

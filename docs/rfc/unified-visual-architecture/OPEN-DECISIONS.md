@@ -8,7 +8,7 @@ Evidence：imageIdOf derives bytes；blank-canvas製造隨機PNG；saveCanvas pe
 
 ## OD-02 — Marks Domain / Anchoring Default
 
-Evidence：Canvas claims/userownership不同於SceneObjects；frameOf已有worldmapping，但normalizedmarks不隨axesrange移動。選項A全統一object（高遷移成本、metadata/permission風險）；B雙domain+共用Contract（中成本、需typeddispatch）；C逐Viewer平行inkengine（短期快、長期不相容）。**推薦B**。Graph default documentanchor；world/object由explicit選擇（ADR002/004）。另一合理default為worldink（axesrange會移），但未標frame時多axes歧義且舊marks行為改變；不得兩者間自行推斷。阻擋PR-2A/2B/4B，UVA-05/07/09/12。人類需批准預設錨定、invalid保留、whole-markeraser與AI/user既有編輯界線。
+Evidence：Canvas claims/userownership不同於SceneObjects；frameOf已有worldmapping，但normalizedmarks不隨axesrange移動。選項A全統一object（高遷移成本、metadata/permission風險）；B雙domain+共用Contract（中成本、需typeddispatch）；C逐Viewer平行inkengine（短期快、長期不相容）。**推薦B**。Graph default documentanchor；world/object由explicit選擇（ADR002/004）。另一合理default為worldink（axesrange會移），但未標frame時多axes歧義且舊marks行為改變；不得兩者間自行推斷。阻擋PR-2A/2B/4B，UVA-05/07/09/12。人類需批准預設錨定、invalid保留、whole-markeraser、Legacy/Unified分離的AI/module Annotation完整userediting、Evidence transition與userguard。
 
 ## OD-03 — Rendering Compatibility Profile
 
@@ -40,3 +40,18 @@ Evidence commit / RFC revision:
 ```
 
 目前：**尚無批准紀錄**。最小下一步為review本套RFC，對OD-01/02及相依ADR明確批准或改選；不是直接執行Phase1。Stage-local選項可分批批准，但不可默認沉默等於批准。
+
+## Phase 0.1 — Original / Revised Recommendations
+
+原則性支持不等於正式批准。六項Finding的規格已完成，Architecture Gate可提交人類審查；下面仍全部RequiresHumanApproval，不能從文件檢查pass推成Approved。
+
+| Decision | Original recommendation | Revised recommendation / reason | Human approval still required | Blocking PRs |
+| --- | --- | --- | --- | --- |
+| OD-01 | UUIDDoc+legacyalias+stagedroot | 維持；加root/pin/history保留、InternalGC/compaction、7天ACK＋永久tombstone、quota/reserve、fsyncbarrier、unsupportedFS拒writer（ADR-010） | durability前提、retention/GC/capacitydefaults與單writer部署契約 | PR-1A / PR-1C / PR-1D / PR-1B |
+| OD-02 | dualdomain/docanchor；沿legacyuseronly-own | dualdomain/docanchor不變；新Principal/Owner/Grant分離；**Legacy兼容＋Unifieduser可完整編輯AI/moduleAnnotation**；保createdBy、stalecontext/guard/Undo（ADR-009） | 新產品editingmatrix、moduleauthorship/lineage、label非claim語義、Evidence/Verification transition必維護者確認 | PR-1A / PR-2A / PR-2B / PR-4B / PR-5A |
+| OD-03 | sharedplan＋legacy/unifiedprofiles | 維持；含moduleauthorbadge、staleverification與embeddependencyvector；失效/拒權placeholder不得誤認fresh | 視覺profiles與badge/placeholder呈現政策 | PR-2C / PR-6D |
+| OD-04 | app-onlypoll+localreducer | 維持；加parentdependencytoken（childupdate不偽改parentrev）、authorizationscope失效與explicitchildedit；真Host仍未驗 | transport/pollbudget與host/platform支持；useractioncapability可信Host邊界 | PR-3B / PR-6D / PR-7B |
+| OD-05 | CASpause-on-user-edit | 維持；Annotation採相同防覆寫理念但有獨立guard/one-shoteditpermission，不混成CASbinding；CASembed指真childObject | signature範圍、Detach/Overwrite/Fork、Annotationguard單次lease政策 | PR-2B / PR-5A / PR-5B / PR-6D |
+| OD-06 | v1adapter＋v2opt-in/sidewrite | 維持；加A0–A7atomiccutover、oldbinaryOS/launcherfence、postwriteA7archive/newlegacyvolume；Embedtypedcontract＋editableclone（ADR-011/012） | cutover/fence部署前提、rollback範圍、snapshot/Copy共享語義、v1支援期限/發布號 | PR-1B / PR-6A / PR-6D / PR-6B / PR-6C / PR-7A / PR-7B |
+
+Maintainer尚未批准任一列。Phase0.1交付不啟動相依PR；最小下一步是以REVIEW-REMEDIATION與ADR-009–012逐項簽核，若改選必同步contract/examples/tests。

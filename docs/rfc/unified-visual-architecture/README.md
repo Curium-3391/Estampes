@@ -1,6 +1,6 @@
-# Unified Visual Architecture — Phase 0
+# Unified Visual Architecture — Phase 0 / 0.1
 
-狀態：**PROPOSED / READY WITH BLOCKERS / Architecture Approval Required**。調查日期：2026-11-01 UTC。實作事實固定於 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本 `0.20.0`。本目錄不是已實作功能的說明，也不授權 Phase 1–7。
+狀態：**PROPOSED / READY FOR HUMAN APPROVAL / 尚未 Approved**。調查日期：2026-11-01 UTC。實作事實固定於 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本 `0.20.0`。本目錄不是已實作功能的說明，也不授權 Phase 1–7。
 
 ## 閱讀與決策權限
 
@@ -38,6 +38,30 @@ ADR： [01 Identity](adr/ADR-001.md)、[02 Marks](adr/ADR-002.md)、[03 Viewport
 
 文件以 `INV-*`、`UVA-*`、`PR-*`、`OD-*` 交叉追蹤。新增型別、函數、工具與路徑均明示 Proposed；既有路徑以 AUDIT 與 source index 核實。Contract Appendix 是八份 RFC 的共用validation細則，有矛盾時更新兩者並重審，不由實作者挑一個猜。後續 Agent 必須先核對實作 SHA；若 main 有更新，重做差異審查，不能把本次觀察直接套到新版本。
 
-Architecture Approval Gate 的審查輸入為全部八份 RFC、八份 ADR、遷移演算法、測試矩陣、基線與 Open Decisions。批准前禁止建立正式 DocumentStore、修改核心 API 或執行資料遷移。批准後依 Roadmap 開始 PR-1A；不能跳到 Graph 視窗。
+Architecture Approval Gate 的審查輸入為全部八份 RFC、十二份 ADR、遷移演算法、測試矩陣、基線與 Open Decisions。批准前禁止建立正式 DocumentStore、修改核心 API 或執行資料遷移。批准後依 Roadmap 開始 PR-1A；不能跳到 Graph 視窗。
 
 Current Implementation：見 AUDIT。Proposed Architecture：見 RFC。Open Decision：見 OD 清單。Future Extension：協作 CRDT、跨 server reference、自訂可執行 Viewer、Scene 共享寫入均排除。
+
+## Phase 0.1 — Review Remediation Deliverables
+
+本輪R-01–06規格修訂已完成，未進Phase1，所有政策仍待維護者批准：
+
+| 文件 | 用途 |
+| --- | --- |
+| [REVIEW-REMEDIATION](REVIEW-REMEDIATION.md) | 六Finding逐欄resolution、兼容/遷移/安全/test/PRimpact與residualrisks |
+| [ANNOTATION-POLICY](ANNOTATION-POLICY.md) | R-01/02 actor/author/owner/grants與UnifiedAIediting/Evidenceguard/Undo |
+| [STORAGE-LIFECYCLE](STORAGE-LIFECYCLE.md) | R-03 retention/GC/compaction/quota/fsync/durability/recovery |
+| [EMBED-CONTRACT](EMBED-CONTRACT.md) | R-04 persistentembed/operations/refs/auth/cache/editableclone |
+| [AUTHORITY-CUTOVER](AUTHORITY-CUTOVER.md) | R-06 A0–A7authority、oldbinaryfencing與postwrite回退 |
+| [ADR-009](adr/ADR-009.md) | Authorship與UnifiedUserEditing補充原ADR002/004/005 |
+| [ADR-010](adr/ADR-010.md) | InternalGC/compaction/durability補充ADR007 |
+| [ADR-011](adr/ADR-011.md) | Embedchildauthority/snapshot補充ADR003/006 |
+| [ADR-012](adr/ADR-012.md) | Cutover/fencing補充ADR001/007/008 |
+| [Proposed schemas](evidence/proposed-contracts.mjs) | 文件專用closedschemas，無productionimports/APIregistration |
+| [Formal examples](evidence/contract-examples.json) | 九個合法IDs/Refs的完整API流程，未實作/待批准標記 |
+| [Contract inventory](evidence/contract-inventory.json) | 全部正式JSON與TS投影範例位置及驗證分類，未宣稱TS編譯證明 |
+| [Example validator](evidence/validate-contract-examples.mjs) | corpus/Markdownfences/schema與sequence一致性 |
+| [Validation tests](evidence/contract-validation.spec.mjs) | 正負範例、偽actor、layer/ID/revision/ref/embed/lineage驗證 |
+| [Review execution manifest](evidence/review-execution-manifest.json) | 本輪命令/環境/exit/results/loghash；舊Phase0logs不覆寫 |
+
+測試規格62cases、Roadmap23PRunits；補充文件不改核心方向或自動批准。主要RFC與CONTRACTS已逐項整合新契約。

@@ -1,0 +1,158 @@
+{
+  "phase": "0.1",
+  "dateUTC": "2026-11-01",
+  "status": "OBSERVED",
+  "baseCommit": "b42e6afc7ca78b280ad522a93e111ba2ef407cd7",
+  "mainCommit": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "workingBranch": "docs/unified-visual-architecture-phase0-review",
+  "productionFilesChanged": false,
+  "environment": {
+    "node": "v22.23.4",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "python": "3.12.14",
+  "chromium": "154.0.8037.57",
+  "defaultNode": "24.19.0",
+  "runs": [
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "results": {
+        "tests": 275,
+        "pass": 275,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "seconds": 125.229042
+      },
+      "log": "review-logs/npm-test-node22.log",
+      "bytes": 59732,
+      "sha256": "ae572cda27c6cf71b0ea9379c9eaeb84a82d7519cf3cf6165dfc0152030e08e7"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 14,
+        "pass": 14,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 2.423305
+      },
+      "log": "review-logs/contract-tests-first.log",
+      "bytes": 2779,
+      "sha256": "ef5c842b4adfbe5b2669970f0dfcd44eb87c4b4a9d8e19af033922ad0dbe871b"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 0.5389704940000001
+      },
+      "log": "review-logs/contract-tests-final.log",
+      "bytes": 3232,
+      "sha256": "2ac50c7e44fef5dc0c04231fa03fc1218009b1859aecebc90dd3f089054a3405"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {
+        "markdownFiles": 81,
+        "tools": 55,
+        "configVariables": 22
+      },
+      "log": "review-logs/docs-final.log",
+      "bytes": 127,
+      "sha256": "b1e87abedff2cc0e81113adec9ff03c84d2f89d90d700bf30126ddea5cda9658"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {
+        "version": "0.20.0"
+      },
+      "log": "review-logs/release-final.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "exitCode": 0,
+      "results": {
+        "formal": 9,
+        "valid": 9,
+        "illustrativeManifest": 1,
+        "implemented": false,
+        "approved": false
+      },
+      "log": "review-logs/examples-final.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": "node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {
+        "RFCs": 8,
+        "ADRs": 12,
+        "UVACases": 62,
+        "PRUnits": 23,
+        "Findings": 6,
+        "unchangedSourceFiles": 95
+      },
+      "log": "review-logs/consistency-final.log",
+      "bytes": 178,
+      "sha256": "31a703ca1fa76dc94b05a08c58176b4ca1ee2f81c8786e4172b0d041915a2476"
+    }
+  ],
+  "intermediateFindings": [
+    "Initial git diff --check detected one trailing blank line at RFC-007 EOF; corrected; final whitespace check passed."
+  ],
+  "notRun": [
+    "Real ChatGPT Web/Mobile/MCP Host/CSP",
+    "Docker/RO mount old-binary fencing",
+    "Product GC/compaction/cutover/storage fault/power-loss tests: proposed feature not implemented",
+    "Independent Python unittest rerun (Phase 0 result retained separately)",
+    "Performance benchmark rerun"
+  ],
+  "scopeLimitation": "Documentation schema validation does not prove runtime authorization, storage durability or human approval.",
+  "artifacts": [
+    {
+      "path": "proposed-contracts.mjs",
+      "sha256": "8f81ecc5da210580c0e9c35332dffe2c4215f2c3ad6a262d70319a8096c81ce4"
+    },
+    {
+      "path": "validate-contract-examples.mjs",
+      "sha256": "878a6af90bf0fd1141dd47d6da23bc530b29d512a8f7539220aaaeb96e3d9737"
+    },
+    {
+      "path": "contract-examples.json",
+      "sha256": "f5fe132c8dff804ff6f8c126caf7fbebb28315c63054987e566b7300002c0835"
+    },
+    {
+      "path": "contract-inventory.json",
+      "sha256": "91d79cf049804816cb58a5ce6101602d53e3800456bbffb5410f9fd211076810"
+    },
+    {
+      "path": "contract-validation.spec.mjs",
+      "sha256": "9f4924ae5c99d938db2e64a04091ccc399f2898454492c600ddc56c699241400"
+    },
+    {
+      "path": "check-consistency.mjs",
+      "sha256": "bb944538d5ceb84ea6d81bf63315446a334869d99ed2dc6af1d5c631c64e0978"
+    }
+  ],
+  "counts": {
+    "findingsSpecificationComplete": 6,
+    "formalExamplesValid": 9,
+    "illustrativeFragments": 1,
+    "testCasesSpecified": 62,
+    "PRUnits": 23,
+    "newADRs": 4
+  }
+}

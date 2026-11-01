@@ -18,3 +18,16 @@ Status：Proposed risk assessment；不是已發生資料損毀的宣稱。Sever
 | R12 Dual writer / rollback divergence | S1 | Medium；legacy/newstores若各寫成雙權威 | oneauthoritymode+writerlock、legacywritesadapteronly | UVA-31–33；secondwriter+afternewwritesrollback | freeze+v2archive、restore獨立backupvolume，Persistenceowner，Phase1/7 |
 
 所有High風險必須在對應PR有deterministiccase與recovery證據，不能只用render截圖解除。實作遇未分類dataloss、跨權限context或無法enumerateincomingrefs，停在plan/error並更新ADR；不得藉featureflag默默忽略資料。
+
+## Phase 0.1 — Additional Review Risks
+
+| Risk | Severity / likelihood | Mitigation | Detection | Recovery / gate |
+| --- | --- | --- | --- | --- |
+| R13 modulecreator/owner混淆或reinstall劫持 | S1 / High | Principal/Owner/signerlineage/currentgrantintersection、importunclaimed | UVA-41/42；forgedactor與keyrotationcases | revokelease保data；PR-2A/5A |
+| R14 userAIedit抹evidence或LLM覆手改 | S1 / High | createdByimmutable、claimcontextstale、reviewhistory、userguard、exactUndo | UVA-43–45 transitioncrossproduct | preserveoldgeometry/claim、explicitfork/lease；PR-2B/4B |
+| R15 GC/compaction刪liveversion/ACKledger | S1 / High | rootedpins、losslesshistory、quarantine、7dACK永久tombstone、locatoratomicpublish | UVA-46–49/60 crash/pin/hash/ledgeroracle | restorequarantine/readonlybackup，不applytwice；PR-1D |
+| R16 fullgeneration/manifest磁碟爆量與falseACK | S1 / High | Δgrowthmodel、boundedroot/pages、quota/reserve/reservations、fsyncbarrier | UVA-50/59 ENOSPC/fullrewrite/repeatedhandwriting | refusewrite保draft、readonlyrecovery/export；PR-1C/1D/7A |
+| R17 Embed雙authority/循環/cache洩權 | S1 / High | typedobject/binding、childsoleauthority、editableclone、globalcyclecheck、authvector | UVA-51–54/61 concurrentcycle/revocation/CASrefs | placeholder、rejectpartialimport、keeporiginalchild；PR-6D |
+| R18 flags/oldbinary/projection造成雙writer | S1 / High | A0–7atomicmanifest、gatedmediator、launcher/ROmountfence、projection獨立tree | UVA-56–58/62 actualbaselinebinary+races | A6/A7readonly、v2backup、新legacyvolume；PR-1B/7A |
+
+ReviewFinding R-01–R-06的狀態見[REVIEW-REMEDIATION](REVIEW-REMEDIATION.md)；risk不是已發生資料事故。GC可回收internalduplicate，不授權刪userhistory。
