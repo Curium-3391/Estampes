@@ -57,7 +57,7 @@ docker compose config -q       # compose file parses (needs Docker)
 
 - `package.json` and `package-lock.json` disagree,
 - the newest `## X.Y.Z` heading in `CHANGELOG.md` is not the package version,
-- the previous release's URI tag is missing from `LEGACY_VISUAL_URIS`, or the current one is already listed,
+- the previous release's URI tag is missing from `LEGACY_VISUAL_URIS` or `LEGACY_EVIDENCE_URIS`, or the current one is already listed,
 - a tag argument is given and is not `v<package version>`,
 - `docker.yml` could be triggered by anything other than a pushed `v*` tag, or still relies on `is_default_branch`.
 

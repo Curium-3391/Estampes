@@ -37,7 +37,7 @@ for (const name of ["LEGACY_VISUAL_URIS", "LEGACY_EVIDENCE_URIS"]) {
   if (!uris) { bad(`server.js: ${name} not found`); continue; }
   if (uris.includes(uriTag(version))) bad(`server.js: ${name} already lists ${uriTag(version)}, the current version`);
   const previous = headings[1];
-  if (previous && name === "LEGACY_VISUAL_URIS" && !uris.includes(uriTag(previous))) {
+  if (previous && !uris.includes(uriTag(previous))) {
     bad(`server.js: ${name} is missing ${uriTag(previous)} (the previous release ${previous}); saved conversations would stop resolving`);
   }
 }
