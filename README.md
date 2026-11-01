@@ -2,7 +2,7 @@
 
 **Point at the same image, together with AI, without leaving the conversation.**
 
-[繁體中文說明](docs/zh-TW/README.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
+[繁體中文說明](docs/zh-TW/README.md) · [Quick start](docs/QUICKSTART.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
 Estampes is an open-source ChatGPT plugin: an MCP server with MCP Apps widgets that shows your picture as a shared canvas inside the chat. GPT draws on the original image, you draw back on the same canvas, and both sides refer to the same marks across turns. It works with any image (photos, scans, handwriting, book pages, diagrams, maps, drawings), and **each person runs their own server**.
 
@@ -53,6 +53,9 @@ npm start          # http://localhost:8787/mcp
 
 | Document | Contents |
 | --- | --- |
+| [Quick start](docs/QUICKSTART.md) | First deployment to first mark, with what to expect at each step and what to do when it fails |
+| [Tutorials](docs/tutorials/README.md) | Annotate a photo, analyse a PDF page, plate-solve a sky photo; sample material you can generate |
+| [Compatibility](docs/COMPATIBILITY.md) | Which clients, platforms and optional features have been tested, and how |
 | [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
 | [Releasing](docs/RELEASE.md) | For maintainers: version order, Docker image tags, pre-release check, rollback |
 | [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
