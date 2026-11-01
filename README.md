@@ -57,6 +57,9 @@ npm start          # http://localhost:8787/mcp
 | [Tutorials](docs/tutorials/README.md) | Annotate a photo, analyse a PDF page, plate-solve a sky photo; sample material you can generate |
 | [Compatibility](docs/COMPATIBILITY.md) | Which clients, platforms and optional features have been tested, and how |
 | [Deployment](docs/DEPLOYMENT.md) | Docker, tunnel, Heroku, Render, connecting ChatGPT, environment variables, what is stored |
+| [Backup and restore](docs/BACKUP-RESTORE.md) | What is stored, back up, restore, upgrade and roll back, rotate keys after a leak (round trip verified by a script) |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Server unreachable, image will not load, broken widget, calculator down, module permission errors |
+| [Security policy](SECURITY.md) | Single-owner security model and how to report a vulnerability privately |
 | [Releasing](docs/RELEASE.md) | For maintainers: version order, Docker image tags, pre-release check, rollback |
 | [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |

@@ -68,6 +68,9 @@ npm start          # http://localhost:8787/mcp
 | [教學（英文）](../tutorials/README.md) | 標註照片、分析 PDF 頁面、解算星空照片；可自行產生的範例素材 |
 | [相容性（英文）](../COMPATIBILITY.md) | 哪些客戶端、平台與選用功能被測過，以及怎麼測的 |
 | [部署](../DEPLOYMENT.md) | Docker、Heroku、Render、連接 ChatGPT、環境變數、儲存內容 |
+| [備份與還原（英文）](../BACKUP-RESTORE.md) | 儲存了什麼、備份、還原、升級與回復、金鑰外洩後怎麼辦 |
+| [疑難排解（英文）](../TROUBLESHOOTING.md) | 連不上伺服器、圖片載入失敗、畫布異常、計算機不可用、模組權限錯誤 |
+| [安全政策（英文）](../../SECURITY.md) | 單一擁有者的安全模型，以及如何私下回報漏洞 |
 | [發布流程（英文）](../RELEASE.md) | 給維護者：版本順序、Docker 映像標籤、發布前檢查、回復 |
 | [使用指南（英文）](../USAGE.md) | 在 ChatGPT 裡使用畫布：標記、圖層、縮放、並排比對、匯出 |
 | [工具一覽（英文）](../TOOLS.md) | MCP 工具與 HTTP 端點 |

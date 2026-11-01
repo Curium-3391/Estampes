@@ -35,9 +35,9 @@ The second command prints the ChatGPT connector URL, e.g. `https://calm-words-he
 - **Only this machine by default.** compose publishes on `127.0.0.1:8787`. Put a reverse proxy or tunnel with https in front (it runs on the same machine), or set `ESTAMPES_BIND=0.0.0.0` to open the port to the network. Behind a proxy, set `ESTAMPES_TRUST_PROXY=1` (one proxy) so rate limiting sees real client addresses.
 - Logs: `docker compose logs -f`. Set `ESTAMPES_LOG_FORMAT=json` for one JSON object per line. Docker keeps 3 × 10 MB of logs.
 - **Module commands.** `scripts/estampes-module.js` (set API keys, approve plans, sign packages) defaults to the container's storage `/data`, so run it inside the container: `echo "$KEY" | docker compose exec -T estampes node scripts/estampes-module.js secret set <moduleId> <name>`. Outside Docker, set `ESTAMPES_STORAGE_DIR` to your storage folder and run `npm install` first.
-- Update: `git pull && docker compose up -d --build`. The data volume is kept.
+- Update: take a backup, then `git pull && docker compose up -d --build`. The data volume is kept; start a new ChatGPT conversation afterwards ([Upgrade](BACKUP-RESTORE.md#upgrade)).
 - Stop: `docker compose down`. **`docker compose down -v` deletes all stored images and marks.**
-- Backup: the volume `estampes_estampes-data` holds everything, e.g. `docker run --rm -v estampes_estampes-data:/data -v "$PWD":/backup busybox tar czf /backup/estampes.tgz /data`.
+- Backup and restore: the volume `estampes_estampes-data` holds everything, including your keys. Stop the server, archive the volume, and restore into a new volume; the full procedure, what a backup contains, upgrade and rollback rules and what to do when a key leaks are in [Backup and restore](BACKUP-RESTORE.md). Problems: [Troubleshooting](TROUBLESHOOTING.md).
 - The container runs as the unprivileged `node` user (uid 1000) with a read-only filesystem except `/data` and a 64 MB `/tmp`, no Linux capabilities, `no-new-privileges` and at most 256 processes, and restarts on failure (`restart: unless-stopped`).
 - Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` only when a `vX.Y.Z` tag is pushed: `X.Y.Z`, `latest` (the newest stable release) and `sha-<short>`; nothing is published for `main` or pull requests. To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z` (pin a version; `latest` moves). A GHCR package is private until its owner makes it public in the package settings, so an anonymous pull can fail; building locally always works. See [Releasing](RELEASE.md).
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
@@ -138,6 +138,7 @@ Invalid values fall back to the default and are reported in the log at startup.
 ## Caveats
 
 - Render free services sleep when idle; the first request after a pause can take tens of seconds.
+- The security model (single owner, one shared key, what the server fetches, what modules may do) is summarised in [SECURITY.md](../SECURITY.md); vulnerabilities are reported privately there.
 - The access key is a shared secret in a URL, not per-user auth. Anyone with the connector URL can call the server. Add OAuth before any public distribution.
 - `/export/<hash>/…` download links carry a signature (`?sig=`) derived from the access key; without a key they are open and protected only by the image hash.
 - CORS stays `*` by default so browser tools work; every `/mcp` call still needs the key.

@@ -64,6 +64,8 @@ Estampes only transforms pixels and keeps coordinates honest. **What is in the p
 
 ## Troubleshooting
 
+For server, connector, widget, calculator and module problems see [Troubleshooting](TROUBLESHOOTING.md). Quick answers:
+
 | Symptom | What to try |
 | --- | --- |
 | ChatGPT does not offer the tools after you changed the server | Refresh the connector, then start a **new conversation**. |
