@@ -183,15 +183,15 @@ const lock = exists("package-lock.json") ? JSON.parse(read("package-lock.json"))
 if (lock && (lock.version !== pkg.version || lock.packages?.[""]?.version !== pkg.version)) report("package-lock.json", 1, "version", `lockfile version ${lock.version}/${lock.packages?.[""]?.version} differs from package.json ${pkg.version}`);
 {
   const cl = parsed.get("CHANGELOG.md").lines;
-  const idx = cl.findIndex((l) => /^##\s+\[?v?\d+\.\d+\.\d+/.test(l));
-  const head = idx >= 0 ? cl[idx].match(/(\d+\.\d+\.\d+)/)[1] : null;
+  const idx = cl.findIndex((l) => /^##\s+\[?v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/.test(l));
+  const head = idx >= 0 ? cl[idx].match(/^##\s+\[?v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/)[1] : null;
   if (head !== pkg.version) report("CHANGELOG.md", idx + 1 || 1, "version", `newest released heading is ${head}, package.json is ${pkg.version}`);
 }
 // Image tags: a concrete X.Y.Z tag of our own image must be the current version.
 for (const f of mdFiles.filter(isCurrentDoc)) {
   if (f === "CHANGELOG.md") continue;
   parsed.get(f).lines.forEach((raw, i) => {
-    for (const m of raw.matchAll(/ghcr\.io\/[\w.-]+\/estampes:v?(\d+\.\d+\.\d+)\b/gi)) {
+    for (const m of raw.matchAll(/ghcr\.io\/[\w.-]+\/estampes:v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?![\w.-])/gi)) {
       if (m[1] !== pkg.version && !raw.includes("docs:check-ignore")) report(f, i + 1, "version", `image tag ${m[1]} is not the current version ${pkg.version}`);
     }
   });
