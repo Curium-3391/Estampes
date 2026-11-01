@@ -63,6 +63,7 @@ npm start          # http://localhost:8787/mcp
 | [Development guide](docs/DEVELOPMENT.md) | Set up, run every kind of test, code tour, public interfaces versus internals, first tasks |
 | [Module quick start](docs/modules/QUICKSTART.md) · [Testing modules](docs/modules/TESTING.md) | Build, test, sign and install a module; declarative, WebAssembly and http paths |
 | [Releasing](docs/RELEASE.md) | For maintainers: version order, Docker image tags, pre-release check, rollback |
+| [Documentation maintenance](docs/DOCUMENTATION-MAINTENANCE.md) | For contributors: `npm run docs:check`, what it checks, which document to update with which change |
 | [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
 | [Image pipeline](docs/IMAGE-PIPELINE.md) | Source files, derived views, exact coordinate transforms, PDF pages, analysis engines |
