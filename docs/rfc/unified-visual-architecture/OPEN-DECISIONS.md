@@ -1,5 +1,8 @@
 # Open Decisions / Architecture Approval Gate
 
+最新授權：2026-11-02維護者明確批准 **OD-01/02/06 的 PR-1A schema／唯讀shadow子集**，見[PR-1A-AUTHORIZATION](PR-1A-AUTHORIZATION.md)。不等於整個OD或ADR批准；本文較早的「尚無批准」屬Phase0歷史紀錄，其他產品／部署／後續PR gate保持pending。
+
+
 Status：**HUMAN DECISION REQUIRED / READY WITH BLOCKERS**。所有推薦是Proposed，CURRENT證據在AUDIT，不能由後續Agent自行視為approved。這些問題不妨礙完成Phase0設計；在相依PR之前簽核，不提前寫入正式產品。Phase0沒有核心程式修改或資料遷移。
 
 ## OD-01 — Document Identity / Persistence Authority

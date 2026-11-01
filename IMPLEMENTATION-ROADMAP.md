@@ -1,6 +1,6 @@
 # Unified Visual Architecture — Implementation Roadmap
 
-Status：**Proposed / Phase 0.2 final gate review package**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。本次只完成Phase0/0.1/0.2規格，不授權Phase1–7。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
+Status：**PR-1A有限實作授權；其餘PR仍Proposed**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。Phase0/0.1/0.2是歷史設計基線；最新維護者授權僅PR-1A，見PR-1A-AUTHORIZATION；不授權1C/1D/1B與後續階段。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
 
 後續Agent先確認新HEAD差異與批准紀錄；已批准架構不重新發散探索；缺失的ownership/ordering/publicbehavior不能猜。每PR附before/after fixture、sourceSHA、實測命令、flag狀態、rollback步驟與publicformat差異。以下為likelyfiles，不代表Phase0已新增這些核心模組。
 
@@ -133,3 +133,7 @@ Phase退出追加：Phase1=UVA-41/42schema+46–50/56–60/62storage/authority�
 - PR-6D/6B/6C納UVA-67的snapshot eligibility/拒絕/替代與nested bundle roundtrip；undefinedmaterialize API不在實作範圍。PR-7A涵蓋UVA-63–67的長跑/平台重驗，但不得延後Phase1與6的必要前置測試。
 
 最新獨立R-01–06分類、容量/平台證據限制與推薦範圍見[FINAL-ARCHITECTURE-GATE](docs/rfc/unified-visual-architecture/FINAL-ARCHITECTURE-GATE.md)；它不批准任何ADR，不授權Agent自行進Phase1。
+
+## PR-1A — Actual implementation / stop boundary
+
+[有限授權](docs/rfc/unified-visual-architecture/PR-1A-AUTHORIZATION.md)允許10個隔離schema/helper modules與2個聚焦tests及fixture；實際exports／限制見[Schema Contract](docs/rfc/unified-visual-architecture/PR-1A-SCHEMA-CONTRACT.md)，實測狀態以[Implementation Report](docs/rfc/unified-visual-architecture/PR-1A-IMPLEMENTATION-REPORT.md)為準。PR-1A不啟用production Doc writer、module grant、GraphViewer或migration；既有source/config不變。完成本PR後停止，PR-1C即使依賴schema已具備也仍須維護者另行授權／審查。

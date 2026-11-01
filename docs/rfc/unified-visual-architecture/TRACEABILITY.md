@@ -63,3 +63,15 @@ TestID欄數字皆為 `UVA-` prefix；區間表示每個case，非單一籠統�
 | FG-06 wire / current-proposed ambiguity | ANNOTATION-POLICY docOCC route欄名、RFC004 req→cmd、AUTHORITY-CUTOVER Proposedlabel | UVA-55/56/62；R-05不是只比JSONfences | PR-0B / PR-1A / PR-1B |
 
 R-01–06的**最新獨立分類**見FINAL-ARCHITECTURE-GATE B；原REVIEW-REMEDIATION維持Phase0.1歷史證據。67cases/23PR的存在檢查不證明runtime行為，僅UVA-55文件subset已執行。Approval紀錄必有scope/notapproved，Agent不代簽。
+
+## PR-1A — Implemented subset / evidence boundary
+
+| Requirement | CURRENT isolated code / tests | Actual coverage / future gate |
+| --- | --- | --- |
+| ID/owner/dualmodels | documents/{identity,references,schema,integrity}.js；documents-foundation.test.js | UVA-01/03結構subset；create/store/commands仍PR-1B/2A |
+| Creator/Actor/import/ownership | documents/{provenance,input-schema}.js；production anti-forgery tests | UVA-28/42/55 schema/helper subset；runtimeauth/Host未驗 |
+| Canonical Embed / root | documents/embed-schema.js、persistence/commit-root-schema.js | staticstructures已實作；UVA-51–54/63/67的runtime/fault未做，仍PR-6D/1C |
+| Pure compatibility | documents/legacy-shadow.js；documents-shadow.test.js | UVA-24/27唯讀subset；fullmigration/PNGintake still PR-6A/6B |
+| Scope/approval/integrity | PR-1A-AUTHORIZATION、pr1a-authorization.json、consistency exact13newpaths、原95hash | explicitlimitedhumanapproval；既有production/tests不改；laterOD/PR未解鎖 |
+
+實際results/loghash與counterexamples見[PR-1A-IMPLEMENTATION-REPORT](PR-1A-IMPLEMENTATION-REPORT.md)及executionmanifest；originalPhase0reports為歷史，不能拿當新功能已實作證據。

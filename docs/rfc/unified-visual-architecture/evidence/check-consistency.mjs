@@ -1,4 +1,4 @@
-// Phase 0/0.1/0.2 documentation checks only. No production imports or mutations.
+// Architecture evidence and limited PR-1A scope checks. No production imports or mutations.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -53,14 +53,37 @@ for(const p of docs){const s=read(p);
 }
 const inventory=JSON.parse(read(join(dir,'evidence/source-index.json')));
 for(const f of inventory.files)check(createHash('sha256').update(readFileSync(join(root,f.path))).digest('hex')===f.sha256,`production/config modified: ${f.path}`);
-for(const manifest of ['execution-manifest.json','review-execution-manifest.json','final-gate-execution-manifest.json'].filter(n=>existsSync(join(dir,'evidence',n)))){
+for(const manifest of ['execution-manifest.json','review-execution-manifest.json','final-gate-execution-manifest.json','pr1a-execution-manifest.json'].filter(n=>existsSync(join(dir,'evidence',n)))){
  const data=JSON.parse(read(join(dir,'evidence',manifest)));
  for(const run of data.runs){if(!run.log)continue;const bytes=readFileSync(join(dir,'evidence',run.log));check(bytes.length===run.bytes&&createHash('sha256').update(bytes).digest('hex')===run.sha256,`log integrity: ${run.log}`);}
 }
 const base='b42e6afc7ca78b280ad522a93e111ba2ef407cd7';
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim().split('\n').filter(Boolean);
 const paths=new Set([...git('diff','--name-only',base),...git('ls-files','--others','--exclude-standard')]);
-for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/'),`outside Phase 0.1 scope: ${p}`);
+// The maintainer's new PR-1A instruction authorizes additions only. Do not
+// weaken the historical hash checks or let an editable manifest expand scope.
+const pr1aPaths=new Set([
+ 'src/documents/validation.js','src/documents/identity.js','src/documents/references.js',
+ 'src/documents/provenance.js','src/documents/embed-schema.js','src/documents/schema.js',
+ 'src/documents/integrity.js','src/documents/input-schema.js','src/documents/legacy-shadow.js',
+ 'src/persistence/commit-root-schema.js','tests/documents-foundation.test.js',
+ 'tests/documents-shadow.test.js','tests/fixtures/uva-pr1a.mjs',
+]);
+const authorizationPath=join(dir,'evidence/pr1a-authorization.json');
+let pr1aAuthorized=false;
+if(existsSync(authorizationPath)){
+ const a=JSON.parse(read(authorizationPath));
+ check(a.source==='explicit-maintainer-user-instruction'&&a.authorizedPr==='PR-1A'&&a.scope==='schema-and-read-only-shadow-only','invalid limited PR-1A authorization record');
+ check(a.evidenceBaseCommit==='1fc6de91d1618e57a492eee1059c54d0bb0f735d','unexpected PR-1A evidence baseline');
+ check(a.authorizedProductionAndTestPaths.length===pr1aPaths.size&&a.authorizedProductionAndTestPaths.every(p=>pr1aPaths.has(p)),'PR-1A record attempts to expand the approved file list');
+ check(existsSync(join(dir,'PR-1A-AUTHORIZATION.md')),'limited human authorization text missing');
+ pr1aAuthorized=true;
+ for(const p of pr1aPaths){
+  const atBase=execFileSync('git',['ls-tree','--name-only',a.evidenceBaseCommit,'--',p],{cwd:root,encoding:'utf8'}).trim();
+  check(!atBase,`PR-1A may only add isolated production/test files: ${p}`);
+ }
+}
+for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p)),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
 // The original audit and logs remain historical evidence, not rewritten results.
 for(const p of ['tests/uva-characterization.test.js','docs/rfc/unified-visual-architecture/BASELINE.md','docs/rfc/unified-visual-architecture/evidence/source-index.json','docs/rfc/unified-visual-architecture/evidence/execution-manifest.json']){
  const original=execFileSync('git',['show',base+':'+p],{cwd:root});check(original.equals(readFileSync(join(root,p))),`historical baseline changed: ${p}`);
@@ -77,4 +100,4 @@ check(!read(join(dir,'RFC-006.md')).includes('完整manifest copy-on-write優先
 check(!read(join(dir,'STORAGE-LIFECYCLE.md')).includes('4. grace至少24h'),'blanket full-copy quarantine remains');
 check(!read(join(dir,'RFC-004.md')).includes('Mutation required `{commandId'),'wire accepts internal commandId');
 if(errors.length){process.stderr.write(errors.join('\n')+'\n');process.exitCode=1;}
-else process.stdout.write(`Phase 0.2 consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; final recommendation is not human approval.\n`);
+else process.stdout.write(`Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; ${pr1aAuthorized?'limited PR-1A additions authorized; later PRs remain pending':'final recommendation is not human approval'}.\n`);

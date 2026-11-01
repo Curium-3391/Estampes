@@ -1,0 +1,186 @@
+TAP version 13
+# Subtest: PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+ok 1 - PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+  ---
+  duration_ms: 6.412058
+  type: 'test'
+  ...
+# Subtest: asset aliases validate full SHA and cannot become Document identities
+ok 2 - asset aliases validate full SHA and cannot become Document identities
+  ---
+  duration_ms: 3.118872
+  type: 'test'
+  ...
+# Subtest: legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+ok 3 - legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+  ---
+  duration_ms: 3.068632
+  type: 'test'
+  ...
+# Subtest: import identity tables reject source/target collisions without conflating different domains
+ok 4 - import identity tables reject source/target collisions without conflating different domains
+  ---
+  duration_ms: 5.602403
+  type: 'test'
+  ...
+# Subtest: graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+ok 5 - graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+  ---
+  duration_ms: 24.855087
+  type: 'test'
+  ...
+# Subtest: scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+ok 6 - scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+  ---
+  duration_ms: 67.455383
+  type: 'test'
+  ...
+# Subtest: strict read records preserve opacity zero, precision, locking and reject unknown fields
+ok 7 - strict read records preserve opacity zero, precision, locking and reject unknown fields
+  ---
+  duration_ms: 14.587493
+  type: 'test'
+  ...
+# Subtest: duplicates and all layer membership inconsistencies are rejected
+ok 8 - duplicates and all layer membership inconsistencies are rejected
+  ---
+  duration_ms: 10.016526
+  type: 'test'
+  ...
+# Subtest: frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+ok 9 - frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+  ---
+  duration_ms: 7.21673
+  type: 'test'
+  ...
+# Subtest: finite geometry and normalized bounds reject invalid coordinates without clamping
+ok 10 - finite geometry and normalized bounds reject invalid coordinates without clamping
+  ---
+  duration_ms: 1.985708
+  type: 'test'
+  ...
+# Subtest: imported authors remain unknown with complete original source, never active module owners
+ok 11 - imported authors remain unknown with complete original source, never active module owners
+  ---
+  duration_ms: 1.39629
+  type: 'test'
+  ...
+# Subtest: unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+ok 12 - unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+  ---
+  duration_ms: 0.562498
+  type: 'test'
+  ...
+# Subtest: creator/source history and sticky user audit cannot be overwritten
+ok 13 - creator/source history and sticky user audit cannot be overwritten
+  ---
+  duration_ms: 1.329662
+  type: 'test'
+  ...
+# Subtest: trusted actor shape and grant intersection are not caller-granted permissions
+ok 14 - trusted actor shape and grant intersection are not caller-granted permissions
+  ---
+  duration_ms: 1.58688
+  type: 'test'
+  ...
+# Subtest: production wire schemas accept formal EX-04 but reject forged actor fields at every level
+ok 15 - production wire schemas accept formal EX-04 but reject forged actor fields at every level
+  ---
+  duration_ms: 13.588117
+  type: 'test'
+  ...
+# Subtest: existing-annotation input uses entity OCC and validates geometry against stored type
+ok 16 - existing-annotation input uses entity OCC and validates geometry against stored type
+  ---
+  duration_ms: 1.433729
+  type: 'test'
+  ...
+# Subtest: Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+ok 17 - Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+  ---
+  duration_ms: 1.659632
+  type: 'test'
+  ...
+# Subtest: embed object and canonical binding agree, child is authoritative and independently identified
+not ok 18 - embed object and canonical binding agree, child is authoritative and independently identified
+  ---
+  duration_ms: 8.444568
+  type: 'test'
+  location: '/workspace/Estampes/tests/documents-foundation.test.js:136:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    fail (file:///workspace/Estampes/tests/documents-foundation.test.js:15:35)
+    TestContext.<anonymous> (file:///workspace/Estampes/tests/documents-foundation.test.js:139:203)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: fresh cross-document targets must exist; unresolved materialized status never grants access
+ok 19 - fresh cross-document targets must exist; unresolved materialized status never grants access
+  ---
+  duration_ms: 7.397722
+  type: 'test'
+  ...
+# Subtest: embed cycles and depth are checked on supplied after-state snapshots
+ok 20 - embed cycles and depth are checked on supplied after-state snapshots
+  ---
+  duration_ms: 12.788489
+  type: 'test'
+  ...
+# Subtest: snapshot refusal uses closed redacted projections and cannot imply raster success
+ok 21 - snapshot refusal uses closed redacted projections and cannot imply raster success
+  ---
+  duration_ms: 3.535021
+  type: 'test'
+  ...
+# Subtest: six-root CommitRoot cannot use missing/extra/self-referential descriptors
+ok 22 - six-root CommitRoot cannot use missing/extra/self-referential descriptors
+  ---
+  duration_ms: 3.764669
+  type: 'test'
+  ...
+# Subtest: CURRENT checksum is canonical, excludes itself and matches exactly one root
+ok 23 - CURRENT checksum is canonical, excludes itself and matches exactly one root
+  ---
+  duration_ms: 1.406918
+  type: 'test'
+  ...
+# Subtest: recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+ok 24 - recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+  ---
+  duration_ms: 2.284609
+  type: 'test'
+  ...
+# Subtest: adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+ok 25 - adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+  ---
+  duration_ms: 1.492578
+  type: 'test'
+  ...
+# Subtest: JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+ok 26 - JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+  ---
+  duration_ms: 65.086317
+  type: 'test'
+  ...
+# Subtest: 95 pre-existing production/config files still match the verified baseline
+ok 27 - 95 pre-existing production/config files still match the verified baseline
+  ---
+  duration_ms: 6.717571
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 26
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 481.584561

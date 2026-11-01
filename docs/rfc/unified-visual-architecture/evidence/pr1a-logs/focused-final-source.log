@@ -1,0 +1,328 @@
+TAP version 13
+# Subtest: PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+ok 1 - PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+  ---
+  duration_ms: 9.270321
+  type: 'test'
+  ...
+# Subtest: asset aliases validate full SHA and cannot become Document identities
+ok 2 - asset aliases validate full SHA and cannot become Document identities
+  ---
+  duration_ms: 5.397426
+  type: 'test'
+  ...
+# Subtest: legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+ok 3 - legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+  ---
+  duration_ms: 15.236713
+  type: 'test'
+  ...
+# Subtest: import identity tables reject source/target collisions without conflating different domains
+ok 4 - import identity tables reject source/target collisions without conflating different domains
+  ---
+  duration_ms: 8.888823
+  type: 'test'
+  ...
+# Subtest: graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+ok 5 - graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+  ---
+  duration_ms: 47.062383
+  type: 'test'
+  ...
+# Subtest: scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+ok 6 - scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+  ---
+  duration_ms: 279.582364
+  type: 'test'
+  ...
+# Subtest: strict read records preserve opacity zero, precision, locking and reject unknown fields
+ok 7 - strict read records preserve opacity zero, precision, locking and reject unknown fields
+  ---
+  duration_ms: 25.944276
+  type: 'test'
+  ...
+# Subtest: duplicates and all layer membership inconsistencies are rejected
+ok 8 - duplicates and all layer membership inconsistencies are rejected
+  ---
+  duration_ms: 13.914139
+  type: 'test'
+  ...
+# Subtest: frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+ok 9 - frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+  ---
+  duration_ms: 12.331558
+  type: 'test'
+  ...
+# Subtest: finite geometry and normalized bounds reject invalid coordinates without clamping
+ok 10 - finite geometry and normalized bounds reject invalid coordinates without clamping
+  ---
+  duration_ms: 8.686038
+  type: 'test'
+  ...
+# Subtest: imported authors remain unknown with complete original source, never active module owners
+ok 11 - imported authors remain unknown with complete original source, never active module owners
+  ---
+  duration_ms: 39.837036
+  type: 'test'
+  ...
+# Subtest: unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+ok 12 - unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+  ---
+  duration_ms: 5.418299
+  type: 'test'
+  ...
+# Subtest: creator/source history and sticky user audit cannot be overwritten
+ok 13 - creator/source history and sticky user audit cannot be overwritten
+  ---
+  duration_ms: 2.444629
+  type: 'test'
+  ...
+# Subtest: trusted actor shape and grant intersection are not caller-granted permissions
+ok 14 - trusted actor shape and grant intersection are not caller-granted permissions
+  ---
+  duration_ms: 2.055561
+  type: 'test'
+  ...
+# Subtest: production wire schemas accept formal EX-04 but reject forged actor fields at every level
+ok 15 - production wire schemas accept formal EX-04 but reject forged actor fields at every level
+  ---
+  duration_ms: 31.728188
+  type: 'test'
+  ...
+# Subtest: existing-annotation input uses entity OCC and validates geometry against stored type
+ok 16 - existing-annotation input uses entity OCC and validates geometry against stored type
+  ---
+  duration_ms: 1.819495
+  type: 'test'
+  ...
+# Subtest: Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+ok 17 - Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+  ---
+  duration_ms: 2.09434
+  type: 'test'
+  ...
+# Subtest: embed object and canonical binding agree, child is authoritative and independently identified
+ok 18 - embed object and canonical binding agree, child is authoritative and independently identified
+  ---
+  duration_ms: 57.648063
+  type: 'test'
+  ...
+# Subtest: fresh cross-document targets must exist; unresolved materialized status never grants access
+ok 19 - fresh cross-document targets must exist; unresolved materialized status never grants access
+  ---
+  duration_ms: 10.235701
+  type: 'test'
+  ...
+# Subtest: embed cycles and depth are checked on supplied after-state snapshots
+ok 20 - embed cycles and depth are checked on supplied after-state snapshots
+  ---
+  duration_ms: 44.379567
+  type: 'test'
+  ...
+# Subtest: snapshot refusal uses closed redacted projections and cannot imply raster success
+ok 21 - snapshot refusal uses closed redacted projections and cannot imply raster success
+  ---
+  duration_ms: 41.556363
+  type: 'test'
+  ...
+# Subtest: six-root CommitRoot cannot use missing/extra/self-referential descriptors
+ok 22 - six-root CommitRoot cannot use missing/extra/self-referential descriptors
+  ---
+  duration_ms: 6.673227
+  type: 'test'
+  ...
+# Subtest: CURRENT checksum is canonical, excludes itself and matches exactly one root
+ok 23 - CURRENT checksum is canonical, excludes itself and matches exactly one root
+  ---
+  duration_ms: 1.148507
+  type: 'test'
+  ...
+# Subtest: recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+ok 24 - recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+  ---
+  duration_ms: 6.020635
+  type: 'test'
+  ...
+# Subtest: adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+ok 25 - adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+  ---
+  duration_ms: 1.296818
+  type: 'test'
+  ...
+# Subtest: JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+ok 26 - JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+  ---
+  duration_ms: 168.347607
+  type: 'test'
+  ...
+# Subtest: 95 pre-existing production/config files still match the verified baseline
+ok 27 - 95 pre-existing production/config files still match the verified baseline
+  ---
+  duration_ms: 16.538897
+  type: 'test'
+  ...
+# Subtest: removed annotation anchors retain invalid references only with explicit matching tombstones
+ok 28 - removed annotation anchors retain invalid references only with explicit matching tombstones
+  ---
+  duration_ms: 12.005791
+  type: 'test'
+  ...
+# Subtest: interaction/gesture references and canonical axes associations are checked
+ok 29 - interaction/gesture references and canonical axes associations are checked
+  ---
+  duration_ms: 13.262916
+  type: 'test'
+  ...
+# Subtest: binding UUID collisions across parent Documents cannot create two canonical records
+ok 30 - binding UUID collisions across parent Documents cannot create two canonical records
+  ---
+  duration_ms: 4.947331
+  type: 'test'
+  ...
+# Subtest: repeated embed edges cannot amplify bounded traversal exponentially
+ok 31 - repeated embed edges cannot amplify bounded traversal exponentially
+  ---
+  duration_ms: 275.928827
+  type: 'test'
+  ...
+# Subtest: external provenance profile cannot be self-promoted and import evidence never becomes current verification
+ok 32 - external provenance profile cannot be self-promoted and import evidence never becomes current verification
+  ---
+  duration_ms: 3.3652
+  type: 'test'
+  ...
+# Subtest: mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+ok 33 - mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+  ---
+  duration_ms: 4.500858
+  type: 'test'
+  ...
+# Subtest: arbitrary JSON metadata in parsed records is detached from its input snapshot
+ok 34 - arbitrary JSON metadata in parsed records is detached from its input snapshot
+  ---
+  duration_ms: 0.723769
+  type: 'test'
+  ...
+# Subtest: PR-1A / UVA-24: legacy shadow is pure, deterministic and round-trips geometry, layers and rich claims
+ok 35 - PR-1A / UVA-24: legacy shadow is pure, deterministic and round-trips geometry, layers and rich claims
+  ---
+  duration_ms: 81.312813
+  type: 'test'
+  ...
+# Subtest: legacy creators do not borrow layer.module or fabricate actor identities/timestamps
+ok 36 - legacy creators do not borrow layer.module or fabricate actor identities/timestamps
+  ---
+  duration_ms: 21.854501
+  type: 'test'
+  ...
+# Subtest: external import keeps full original claims but cannot activate local module owners or verification
+ok 37 - external import keeps full original claims but cannot activate local module owners or verification
+  ---
+  duration_ms: 8.326841
+  type: 'test'
+  ...
+# Subtest: legacy edited geometry conservatively stales current Evidence without erasing review
+ok 38 - legacy edited geometry conservatively stales current Evidence without erasing review
+  ---
+  duration_ms: 8.142192
+  type: 'test'
+  ...
+# Subtest: unknown fields at each level remain recoverable with an explicit archive report
+ok 39 - unknown fields at each level remain recoverable with an explicit archive report
+  ---
+  duration_ms: 6.63123
+  type: 'test'
+  ...
+# Subtest: historical intent, rejected claims, old undo and unsupported gestures are archived, not invented
+ok 40 - historical intent, rejected claims, old undo and unsupported gestures are archived, not invented
+  ---
+  duration_ms: 11.410878
+  type: 'test'
+  ...
+# Subtest: unlayered fallback is an explicit allocated identity; bad references are not auto-repaired
+ok 41 - unlayered fallback is an explicit allocated identity; bad references are not auto-repaired
+  ---
+  duration_ms: 20.74036
+  type: 'test'
+  ...
+# Subtest: duplicate domain IDs, missing axes and unsupported objects block without dropping source entities
+ok 42 - duplicate domain IDs, missing axes and unsupported objects block without dropping source entities
+  ---
+  duration_ms: 12.375469
+  type: 'test'
+  ...
+# Subtest: legacy raster objects require verified asset intake instead of fake conversion or flattening
+ok 43 - legacy raster objects require verified asset intake instead of fake conversion or flattening
+  ---
+  duration_ms: 1.272834
+  type: 'test'
+  ...
+# Subtest: explicit link mappings preserve direction and claim source; external targets stay unresolved
+ok 44 - explicit link mappings preserve direction and claim source; external targets stay unresolved
+  ---
+  duration_ms: 11.539778
+  type: 'test'
+  ...
+# Subtest: derivedFrom is remapped only through the explicit namespaced allocation table
+ok 45 - derivedFrom is remapped only through the explicit namespaced allocation table
+  ---
+  duration_ms: 11.534164
+  type: 'test'
+  ...
+# Subtest: missing observer/source never becomes fabricated tool evidence
+ok 46 - missing observer/source never becomes fabricated tool evidence
+  ---
+  duration_ms: 2.945578
+  type: 'test'
+  ...
+# Subtest: invalid coordinates, schemas and malformed records fail explicitly, never clamp or discard
+ok 47 - invalid coordinates, schemas and malformed records fail explicitly, never clamp or discard
+  ---
+  duration_ms: 15.604041
+  type: 'test'
+  ...
+# Subtest: fork identity and coordinate transforms use caller context, not image pixels as Document identity
+ok 48 - fork identity and coordinate transforms use caller context, not image pixels as Document identity
+  ---
+  duration_ms: 7.487841
+  type: 'test'
+  ...
+# Subtest: UVA-27 subset: actual legacy serialization and legacy AI editing restrictions remain unchanged
+ok 49 - UVA-27 subset: actual legacy serialization and legacy AI editing restrictions remain unchanged
+  ---
+  duration_ms: 12.231666
+  type: 'test'
+  ...
+# Subtest: mapping contexts cannot accidentally resolve a local source in another store namespace
+ok 50 - mapping contexts cannot accidentally resolve a local source in another store namespace
+  ---
+  duration_ms: 1.034265
+  type: 'test'
+  ...
+# Subtest: malformed optional containers and null link entries produce reports instead of TypeErrors
+ok 51 - malformed optional containers and null link entries produce reports instead of TypeErrors
+  ---
+  duration_ms: 17.513281
+  type: 'test'
+  ...
+# Subtest: unsupported provenance metadata and malformed historical times are explicitly archived
+ok 52 - unsupported provenance metadata and malformed historical times are explicitly archived
+  ---
+  duration_ms: 6.545923
+  type: 'test'
+  ...
+# Subtest: same short alias with different full hashes blocks instead of last-wins asset substitution
+ok 53 - same short alias with different full hashes blocks instead of last-wins asset substitution
+  ---
+  duration_ms: 1.157067
+  type: 'test'
+  ...
+1..53
+# tests 53
+# suites 0
+# pass 53
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2244.137625

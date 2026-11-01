@@ -1,10 +1,10 @@
-# Unified Visual Architecture — Phase 0 / 0.1 / 0.2
+# Unified Visual Architecture — Phase 0 / 0.1 / 0.2 / PR-1A
 
-狀態：**PROPOSED / 僅準備有限 PR-1A 人類批准 / 尚未 Approved**。調查日期：2026-11-01 UTC。實作事實固定於 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本 `0.20.0`。本目錄不是已實作功能的說明，也不授權 Phase 1–7。
+狀態：**PR-1A有限子集已獲維護者授權；後續architecture/runtime/deployment仍pending**。歷史調查日期：2026-11-01 UTC，production baseline為 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本仍 `0.20.0`。Phase 0–0.2文件保留設計及審查歷史；PR-1A的隔離實作、實測及授權範圍另見下方專節，不代表後續Phase 1–7已獲准。
 
 ## 閱讀與決策權限
 
-程式碼決定 Current Implementation；執行紀錄決定 Observed；文件與 Changelog 表示歷史意圖；下列 RFC、ADR 的 Decision 都是 Proposed recommendation，尚未經人類批准。使用者本次限制優先於本文件。Open Decision 必須在相依 PR 前簽核；Future Extension 不屬本輪交付。不因 Agent 推薦就成為 Approved。
+程式碼決定 Current Implementation；執行紀錄決定 Observed；文件與 Changelog 表示歷史意圖；下列 RFC、ADR 的 Decision 原為 Proposed recommendation；僅PR-1A必要子集已依新維護者授權批准，詳見[有限授權紀錄](PR-1A-AUTHORIZATION.md)，其餘仍未批准。使用者本次限制優先於本文件。Open Decision 必須在相依 PR 前簽核；Future Extension 不屬本輪交付。不因 Agent 推薦就成為 Approved。
 
 | 文件 | 用途 |
 | --- | --- |
@@ -69,3 +69,7 @@ Current Implementation：見 AUDIT。Proposed Architecture：見 RFC。Open Deci
 ## Phase 0.2 — Independent Final Gate
 
 最新審查：[FINAL-ARCHITECTURE-GATE](FINAL-ARCHITECTURE-GATE.md)。前次報告保持歷史原文；本輪修正G1/G2與checkpoint容量、coherent roots、平台durability、nested snapshot預檢、doc-onlyschema反例及wire名稱。當前67cases/23PRunits；Node/文件/範例check只證明已執行範圍，不等於人類批准或未實作功能驗收。尚未開始Phase1。
+
+## PR-1A — Limited Implementation
+
+授權範圍與來源：[PR-1A-AUTHORIZATION](PR-1A-AUTHORIZATION.md)；實際介面：[PR-1A-SCHEMA-CONTRACT](PR-1A-SCHEMA-CONTRACT.md)；實測與退出矩陣：[PR-1A-IMPLEMENTATION-REPORT](PR-1A-IMPLEMENTATION-REPORT.md)。早期report保留原bytes，不能把Phase0歷史結論當今天的實作狀態。本次只增加隔離schemas/pure helpers/read-only mapper與tests，沒有新工具或writer啟用。

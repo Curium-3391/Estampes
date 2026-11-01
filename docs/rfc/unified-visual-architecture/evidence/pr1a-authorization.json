@@ -1,0 +1,42 @@
+{
+  "schema": "estampes.architecture-authorization/1",
+  "source": "explicit-maintainer-user-instruction",
+  "clientDate": "2026-11-02",
+  "clientTimezone": "Asia/Taipei",
+  "requestSha256": "6e51c6f56ad8adb87f123f0422f066ed5d1b16870331e3ea7783b33127124f09",
+  "evidenceBaseCommit": "1fc6de91d1618e57a492eee1059c54d0bb0f735d",
+  "authorizedPr": "PR-1A",
+  "scope": "schema-and-read-only-shadow-only",
+  "authorizedProductionAndTestPaths": [
+    "src/documents/embed-schema.js",
+    "src/documents/identity.js",
+    "src/documents/input-schema.js",
+    "src/documents/integrity.js",
+    "src/documents/legacy-shadow.js",
+    "src/documents/provenance.js",
+    "src/documents/references.js",
+    "src/documents/schema.js",
+    "src/documents/validation.js",
+    "src/persistence/commit-root-schema.js",
+    "tests/documents-foundation.test.js",
+    "tests/documents-shadow.test.js",
+    "tests/fixtures/uva-pr1a.mjs"
+  ],
+  "partialDecisions": [
+    "OD-01",
+    "OD-02",
+    "OD-06"
+  ],
+  "notAuthorized": [
+    "PR-1B",
+    "PR-1C",
+    "PR-1D",
+    "Phase 2",
+    "writable tools",
+    "runtime privileges",
+    "data migration",
+    "deployment changes",
+    "release",
+    "push PR-1A"
+  ]
+}

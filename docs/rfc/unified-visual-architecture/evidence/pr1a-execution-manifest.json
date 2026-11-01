@@ -1,0 +1,258 @@
+{
+  "status": "OBSERVED",
+  "stage": "PR-1A implementation isolated and pre-merge validation",
+  "baseCommit": "1fc6de91d1618e57a492eee1059c54d0bb0f735d",
+  "workingBranch": "feat/unified-visual-architecture-pr1a",
+  "environment": {
+    "testNode": "22.23.4",
+    "defaultNode": "24.19.0",
+    "npm": "11.9.0",
+    "python": "3.12.14",
+    "chromium": "154.0.8037.57",
+    "sharp": "0.34.5",
+    "libvips": "8.17.3",
+    "zod": "4.6.7",
+    "os": "Linux x64 kernel 6.18.57; container overlay filesystem",
+    "clientDate": "2026-11-02",
+    "clientTimezone": "Asia/Taipei"
+  },
+  "runs": [
+    {
+      "command": "env -u ESTAMPES_STORAGE_DIR -u ESTAMPES_ACCESS_KEY CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- npm test",
+      "exitCode": 0,
+      "results": {
+        "tests": 328,
+        "pass": 328,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 131389.889668
+      },
+      "log": "pr1a-logs/node22-final-source.log",
+      "bytes": 72630,
+      "sha256": "fca948fd2d0d359c730dc3d91046434585bfdeac09a97f5267530df75c354485"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/documents-foundation.test.js tests/documents-shadow.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 53,
+        "pass": 53,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 2244.137625
+      },
+      "log": "pr1a-logs/focused-final-source.log",
+      "bytes": 12961,
+      "sha256": "0be99e061ad234bd78ef2b8b91f6b3e94dfed4d5678196c6117d15fc7e16054c"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "durationMs": 287.809806
+      },
+      "log": "pr1a-logs/proposed-contract-final.log",
+      "bytes": 4600,
+      "sha256": "ddc1468fdea1ce6b7b60b48c4c1e1882f30697190f694060be6c33630faca074"
+    },
+    {
+      "command": "python -m unittest discover -s cas-service/tests -v",
+      "exitCode": 0,
+      "results": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skip": 0,
+        "seconds": 6.24,
+        "warnings": [
+          "ResourceWarning: unclosed BufferedReader/StreamWriter",
+          "asyncio slow asyncTearDown diagnostics"
+        ]
+      },
+      "log": "pr1a-logs/cas-python.log",
+      "bytes": 3688,
+      "sha256": "399f4f0b5d92121c9478d96198731a9f712ef2e564d694f0c21323a083db98bf"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "exitCode": 0,
+      "results": {
+        "status": "PASS",
+        "formalExamples": 9,
+        "formalFences": 9,
+        "illustrativeFences": 1,
+        "toolSchemas": 7,
+        "errors": []
+      },
+      "log": "pr1a-logs/examples-final.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": "git ls-remote --heads origin main docs/unified-visual-architecture-phase0-final-gate",
+      "exitCode": 0,
+      "results": {
+        "main": "7fb9b73442401fc32a7034888deaf49303e582a6",
+        "phase02": "1fc6de91d1618e57a492eee1059c54d0bb0f735d"
+      },
+      "log": "pr1a-logs/remote-refs.log",
+      "bytes": 160,
+      "sha256": "1ad5293b2889a4184c28c20db53ff6d6576fe7cc1d3de42dbcd3cf13d20cb617"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {
+        "output": "> estampes@0.20.0 docs:check\n> node scripts/check-docs.mjs\n\ndocs:check ok (85 markdown files, 55 tools, 22 config variables)."
+      },
+      "log": "pr1a-logs/docs-check.log",
+      "bytes": 127,
+      "sha256": "7e4d2b5a554fd8c8dd29d7bcfaff41196e5cde84674c9223b321e3e3cf18d1f8"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {
+        "output": "> estampes@0.20.0 release:check\n> node scripts/check-release.mjs\n\nRelease 0.20.0 looks consistent.\nPushing tag v0.20.0 would publish ghcr.io/<owner>/estampes: 0.20.0, latest, sha-<short>"
+      },
+      "log": "pr1a-logs/release-check.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {
+        "output": "Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, 23 PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; limited PR-1A additions authorized; later PRs remain pending."
+      },
+      "log": "pr1a-logs/consistency.log",
+      "bytes": 336,
+      "sha256": "bfa9016f073e560ca38d7ff5afb1dfe8e02d1876bdb8d61d350839333ef78aba"
+    },
+    {
+      "command": "git diff --check 1fc6de91d1618e57a492eee1059c54d0bb0f735d",
+      "exitCode": 0,
+      "results": {
+        "output": ""
+      },
+      "log": "pr1a-logs/whitespace.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "supportingArtifacts": [
+    {
+      "log": "pr1a-logs/toolchain.log",
+      "bytes": 99,
+      "sha256": "d165ee1b6a7a645082f473bd9d4214165fbab84e55e1b5b35dba9bdcfc27dfc2",
+      "classification": "TOOLCHAIN"
+    },
+    {
+      "log": "pr1a-logs/foundation-first.log",
+      "bytes": 7292,
+      "sha256": "c0abcdb1d76265ba0c745ef502f49989373291524afd0ed807b817a78e4e3afe",
+      "classification": "DEVELOPMENT_FAILURE_FIXED_WITHOUT_WEAKENING_EXPECTATIONS"
+    },
+    {
+      "log": "pr1a-logs/focused-final.log",
+      "bytes": 13150,
+      "sha256": "df55ee7c9f5db45b7c97cc9116a1d1e4005cb632f155d1ba0b12141fb77c6025",
+      "classification": "DEVELOPMENT_FAILURE_FIXED_WITHOUT_WEAKENING_EXPECTATIONS"
+    }
+  ],
+  "newCodeTestFileHashes": [
+    {
+      "path": "src/documents/embed-schema.js",
+      "bytes": 5392,
+      "sha256": "85f3427282080c6765db236d859510d49b68802dc0b65bcbc69dbbcb8e2ac7a6"
+    },
+    {
+      "path": "src/documents/identity.js",
+      "bytes": 3557,
+      "sha256": "7322133c7d0802b9f67a0c21e2a61bf5da1a77f2914a9c959a40081e41e2a198"
+    },
+    {
+      "path": "src/documents/input-schema.js",
+      "bytes": 2829,
+      "sha256": "9cae54e2d4a0b8c177a346934536a4ba64ab77a00b8db5f40818cb9634494420"
+    },
+    {
+      "path": "src/documents/integrity.js",
+      "bytes": 5189,
+      "sha256": "6cf9bda8e635aebc6db75cc228c8be7a413938a83e07291e866ca47169ca45dc"
+    },
+    {
+      "path": "src/documents/legacy-shadow.js",
+      "bytes": 19441,
+      "sha256": "8a8684cbf448fd8d2edaf81f9831a294f95f98725f549a4e874f6adac2fac755"
+    },
+    {
+      "path": "src/documents/provenance.js",
+      "bytes": 6814,
+      "sha256": "3bf7e990da213f436d081573cb25d4eb176329b7ec9083f7685a6a8bd47111ef"
+    },
+    {
+      "path": "src/documents/references.js",
+      "bytes": 2899,
+      "sha256": "fa2743024609380221316882bb491e1e406e4e98f243b2a0d80760b4392537ce"
+    },
+    {
+      "path": "src/documents/schema.js",
+      "bytes": 19634,
+      "sha256": "e7f1379a2be0fb33fe32a0b3455618454774a7a82b0ec80953f05d65751ede84"
+    },
+    {
+      "path": "src/documents/validation.js",
+      "bytes": 5149,
+      "sha256": "10bfd506b5fb4be7aeeadfaa9dca5ec1b6cf6751fa2374b98471224779e89f93"
+    },
+    {
+      "path": "src/persistence/commit-root-schema.js",
+      "bytes": 4460,
+      "sha256": "2d60a243e64d0c817138426f1f16f6387fd05d0b918f89310eda7a484e2cd328"
+    },
+    {
+      "path": "tests/documents-foundation.test.js",
+      "bytes": 25510,
+      "sha256": "36b3ba1511973dc08cd3abc093b1ecdbf182950e0bec4a802d31aa6c43c46504"
+    },
+    {
+      "path": "tests/documents-shadow.test.js",
+      "bytes": 14641,
+      "sha256": "f132092a66e55f4e89bd4fb457ba9bbe7cc9642ac7eb064d98848d040369a1e8"
+    },
+    {
+      "path": "tests/fixtures/uva-pr1a.mjs",
+      "bytes": 5342,
+      "sha256": "004101be7bf056c42d4216303c477939f5fe967a6eabdbb51a83b17b0eb4b87f"
+    }
+  ],
+  "developmentHistory": {
+    "syntaxSmoke": "Missing parenthesis corrected before formal test suites.",
+    "firstFoundation": "27 tests: 26 pass, 1 fixture aliasing failure; fixture deep copies fixed, rejection expectation retained.",
+    "focusedStress": "50 tests: 49 pass, 1 fixture reused binding ID; corrected fixture allocation, duplicate validation retained.",
+    "earlierPassingRuns": "Focused suites passed at 42/48/51/52/53 cases; full suite passed at 326 and 328 cases before final source review. Final source full 328 and focused 53 rerun are authoritative above.",
+    "changedExistingTestExpectations": false
+  },
+  "limits": [
+    "No new runtime tool registration or writable document commands",
+    "No DocumentStore/writer/GC/cutover/durability/fault injection executed",
+    "No user storage migration or modification",
+    "No real Host/OS power-loss/cross-platform/performance acceptance",
+    "67 UVA cases remain full future specifications; only documented applicable subsets implemented",
+    "Pure metadata/schema validation is not authentication, asset byte verification or durable ACK",
+    "No merge, release, PR-1A push or subsequent PR authorization"
+  ],
+  "limitedHumanAuthorization": "PR-1A-AUTHORIZATION.md; OD-01/02/06 necessary subset only",
+  "entireArchitectureApproved": false
+}

@@ -111,3 +111,18 @@ Status：以下均為 Proposed product acceptance，尚未執行；UVA-55文件�
 | UVA-65 Pins/jobs/compaction starvation | 16readers64MiB不同版本+同檔共享、64sessions限額；10minjob/30minbackup；sustainedwrites | exceed1GiB union；jobdeadline whileFDactive；two compaction conflicts；backupcancel/renew/diskfull；lateoutputafterepochchange | 拒新pins，活FD先quiesce才release；暫停newcommits完成有界maintenance；backup固定closure驗完整才complete；lateoutput拒 | no prematureunpin/historyloss；drafts不丟；sharedphysicalhash只計一次；backup空間預訂 | stuckworker→隔離等待FD關閉，不回收活檔；noreserve readonly；大型backup需明確調budget/offline | F/P controllableworkers+FD checks+clock+MCP load；tests/uva-retention.test.js；tests/uva-capacity.test.js | PR-1D / PR-7A | 1 / 7 |
 | UVA-66 Deployment durability / fencing profiles | exactplatform/kernel/fs/driver/device記錄；Linuxnative/Enginelocalvolume/bind、DesktopARMnamed/bind、APFS/unknown；baselinebinary | startup profile/probe；locksecondwriter/crashrelease；file/dirfsyncfault；same/crossdevrename；oldbinarydirectwrite；containerkill另列VM/hostfault | conditionalLinux只有profile+probe+requiredfault evidence才能durable；Desktop/macOS/unknown預設拒V1durable；ROsource防diskmutation；no falseACK | 未驗平台不標validated；marker不當fence；sameCommitRoot與epoch；nativeARM可build不等於FSvalid | absentflock/dirfsync、sharingdriverunknown、marker/rootepochdrift→readonly/refuse；SIGKILL不可冒powerloss | F disposablemount/container/VM:blockfault，actualbaselinebinary+filehash；tests/uva-durability.test.js；tests/uva-writer-fence.test.js | PR-1C / PR-1B / PR-7A | 1 / 7 |
 | UVA-67 Nested snapshot preflight / alternatives | sourceScene有hidden/scratch/live/snapshot embed，另source無embed；grant可拒；parent/source revisions | previewcreate/detach/freeze/deepcopy/separation；sourcepreview後新增embed；live選項；export/import nestededitableclosure；deniedsource | unsupported→BLOCKED_DEPENDENCY/reason、preview清楚；無allocation/halfclone；STALE_PLAN repreview；live共享顯示；普通bundleclosure可roundtrip | no raster/secondauthority；zero refusedcontent effects；unknownchildmetadata不洩漏；CAS維持真childRef | missinggrant→FORBIDDEN；graphchangedrecheck；immutable historicalsource不改；undefinedmaterialize不可呼叫 | U/M/B parameterizedpolicy+barriers+wholefieldhashes；tests/uva-embed-bundle.test.js；docs schema negatives in UVA-55 | PR-6D / PR-6B / PR-6C | 6 |
+
+## PR-1A — Actual subset coverage (limited authorization)
+
+[Implementation Report](PR-1A-IMPLEMENTATION-REPORT.md)列實際命令與結果；以下不是整個UVA完成宣稱。production paths已新增但未接入runtime；未實作futurecase不列pass／skip。
+
+| Applicable subset | Actual tests / code | Still required for full case |
+| --- | --- | --- |
+| Identity (UVA-01) | documents-foundation：typedUUID/legacy scopes/AssetRef syntax/namespace/collisions、asset-free Graph model | Store lifecycle／real create／zeroassetwrites spy |
+| Scene (UVA-03) | production Doc/Scene/Layer/props/refs、duplicate/owner/cycle/membership | applycommands／locks／atomicrollback |
+| Shadow (UVA-24) | documents-shadow：pure immutableinput、richfields/sidecar/determinism、block unsupported/invalid/collisions | migrationplan／sidewrite／commit／diskreload |
+| Legacy (UVA-27) | existing275suite保持、95hash、actualserializer与legacyAIeditrestriction | newadapter／v2response／format／ABI integration |
+| Security shapes (UVA-28, UVA-42) | actor spoof拒、modulelineage/importunknown/effectivegrants descriptors與purehelpers | actualauth/grantregistry/currentlease/Hostaction／latejob |
+| Contracts (UVA-55) | proposed22tests/9examples與applicable production wire/Provenance/Matrix/CommitRoot negatives | fullnewtools/APIvalidators/dispatch runtime |
+
+其他UVA-41–67相關Schema只提供prerequisite，沒有把GC/Embed/Authority/Host acceptance標Completed。舊67個case定義與Priority保留。

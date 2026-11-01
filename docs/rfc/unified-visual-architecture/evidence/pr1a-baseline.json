@@ -1,0 +1,123 @@
+{
+  "status": "OBSERVED",
+  "productionBaseline": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "baseCommit": "1fc6de91d1618e57a492eee1059c54d0bb0f735d",
+  "workingBranch": "feat/unified-visual-architecture-pr1a",
+  "version": "0.20.0",
+  "ancestryVerified": [
+    "7fb9b73442401fc32a7034888deaf49303e582a6",
+    "b42e6afc7ca78b280ad522a93e111ba2ef407cd7",
+    "df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd",
+    "1fc6de91d1618e57a492eee1059c54d0bb0f735d"
+  ],
+  "mainDriftAtFetch": false,
+  "initialWorkingTreeClean": true,
+  "initialCleanlinessEvidence": "Observed git status before branch creation; no reset/rebase/force used.",
+  "phase02PushVerified": true,
+  "remoteRefsLog": "pr1a-logs/remote-refs.log",
+  "requiredArchitectureDocumentsPresentAtBase": [
+    "FINAL-ARCHITECTURE-GATE.md",
+    "RFC-001.md",
+    "RFC-002.md",
+    "RFC-003.md",
+    "RFC-004.md",
+    "RFC-005.md",
+    "RFC-006.md",
+    "RFC-007.md",
+    "RFC-008.md",
+    "CONTRACTS.md",
+    "ANNOTATION-POLICY.md",
+    "STORAGE-LIFECYCLE.md",
+    "EMBED-CONTRACT.md",
+    "AUTHORITY-CUTOVER.md",
+    "OPEN-DECISIONS.md",
+    "TEST-MATRIX.md",
+    "TRACEABILITY.md",
+    "RISK-REGISTER.md",
+    "adr/ADR-001.md",
+    "adr/ADR-002.md",
+    "adr/ADR-003.md",
+    "adr/ADR-004.md",
+    "adr/ADR-005.md",
+    "adr/ADR-006.md",
+    "adr/ADR-007.md",
+    "adr/ADR-008.md",
+    "adr/ADR-009.md",
+    "adr/ADR-010.md",
+    "adr/ADR-011.md",
+    "adr/ADR-012.md"
+  ],
+  "preExistingSourceConfigHashesVerified": 95,
+  "preExistingSourceConfigChanges": [],
+  "preExistingProductTestChanges": [],
+  "newIsolatedCodeAndTestFiles": [
+    {
+      "path": "src/documents/embed-schema.js",
+      "bytes": 5392,
+      "sha256": "85f3427282080c6765db236d859510d49b68802dc0b65bcbc69dbbcb8e2ac7a6"
+    },
+    {
+      "path": "src/documents/identity.js",
+      "bytes": 3557,
+      "sha256": "7322133c7d0802b9f67a0c21e2a61bf5da1a77f2914a9c959a40081e41e2a198"
+    },
+    {
+      "path": "src/documents/input-schema.js",
+      "bytes": 2829,
+      "sha256": "9cae54e2d4a0b8c177a346934536a4ba64ab77a00b8db5f40818cb9634494420"
+    },
+    {
+      "path": "src/documents/integrity.js",
+      "bytes": 5189,
+      "sha256": "6cf9bda8e635aebc6db75cc228c8be7a413938a83e07291e866ca47169ca45dc"
+    },
+    {
+      "path": "src/documents/legacy-shadow.js",
+      "bytes": 19441,
+      "sha256": "8a8684cbf448fd8d2edaf81f9831a294f95f98725f549a4e874f6adac2fac755"
+    },
+    {
+      "path": "src/documents/provenance.js",
+      "bytes": 6814,
+      "sha256": "3bf7e990da213f436d081573cb25d4eb176329b7ec9083f7685a6a8bd47111ef"
+    },
+    {
+      "path": "src/documents/references.js",
+      "bytes": 2899,
+      "sha256": "fa2743024609380221316882bb491e1e406e4e98f243b2a0d80760b4392537ce"
+    },
+    {
+      "path": "src/documents/schema.js",
+      "bytes": 19634,
+      "sha256": "e7f1379a2be0fb33fe32a0b3455618454774a7a82b0ec80953f05d65751ede84"
+    },
+    {
+      "path": "src/documents/validation.js",
+      "bytes": 5149,
+      "sha256": "10bfd506b5fb4be7aeeadfaa9dca5ec1b6cf6751fa2374b98471224779e89f93"
+    },
+    {
+      "path": "src/persistence/commit-root-schema.js",
+      "bytes": 4460,
+      "sha256": "2d60a243e64d0c817138426f1f16f6387fd05d0b918f89310eda7a484e2cd328"
+    },
+    {
+      "path": "tests/documents-foundation.test.js",
+      "bytes": 25510,
+      "sha256": "36b3ba1511973dc08cd3abc093b1ecdbf182950e0bec4a802d31aa6c43c46504"
+    },
+    {
+      "path": "tests/documents-shadow.test.js",
+      "bytes": 14641,
+      "sha256": "f132092a66e55f4e89bd4fb457ba9bbe7cc9642ac7eb064d98848d040369a1e8"
+    },
+    {
+      "path": "tests/fixtures/uva-pr1a.mjs",
+      "bytes": 5342,
+      "sha256": "004101be7bf056c42d4216303c477939f5fe967a6eabdbb51a83b17b0eb4b87f"
+    }
+  ],
+  "runtimeActivated": false,
+  "dataMigrated": false,
+  "pr1aPushed": false
+}
