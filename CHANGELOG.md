@@ -5,6 +5,12 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Docs: `npm run docs:check` (`scripts/check-docs.mjs`, no install, no Docker) checks local links and anchors, duplicate headings and index entries, tool names against the registered tools, `ESTAMPES_*` names against the code, versions and image tags, statements known to be stale, and shell examples. Runs in `node-tests` and in a new light docs-only workflow; `docs/DOCUMENTATION-MAINTENANCE.md` explains it. It found and fixed an undocumented `ESTAMPES_TUNNEL_METRICS`.
+- Docs: `docs/DEVELOPMENT.md` (setup, tests, code tour, public interfaces versus internals), `docs/modules/QUICKSTART.md` and `docs/modules/TESTING.md` (declarative, WebAssembly and http paths). New `tests/module-authoring.test.js` runs the author walkthrough for real (init, test, sign, trust, install with administrator approval, enable, run, refused input) and every bundled example module.
+- Docs: `SECURITY.md` (single-owner security model, private vulnerability reporting), `docs/BACKUP-RESTORE.md` (what is stored, backup, restore into a new volume, upgrade, rollback, key rotation and leak response) and `docs/TROUBLESHOOTING.md`. New `scripts/verify-backup-restore.mjs` packs a storage folder with `tar`, restores it into another and compares what two servers report (canvases, marks, links, workspaces, module state, calculator notebooks). The Docker commands themselves were not run.
+- Docs: `docs/QUICKSTART.md`, `docs/tutorials/` (annotate a photo, analyse a PDF page, plate-solve a sky photo, each with a success and a failure path) and `docs/COMPATIBILITY.md` (what is tested where; automated passes are not live ChatGPT tests). New `scripts/make-sample-material.mjs` writes the sample board image and two-page PDF the tutorials use.
+- Release: the Docker workflow now really tags `latest` (stable `v*` tags only; the old `is_default_branch` condition was never true for a tag push) and runs a new pre-release check first. New `docs/RELEASE.md` and `npm run release:check` (`scripts/check-release.mjs`); DEPLOYMENT and README describe the tags that are actually produced.
+- Docs consistency: WORKBENCH no longer says `.estampes` cannot carry notebooks and surfaces; USAGE separates working copy, detail tile and interpolated zoom; the surface/notebook bundle section moved under bundles in WORKSPACES; MODULES states what 0.19.5 implements; the two 0.10.0 entries are one release; zh-TW index de-duplicated and completed; CONTRIBUTING describes the project's real maturity.
 - Docs: README, the Chinese guide, ARCHITECTURE, TOOLS, DEPLOYMENT and VISION brought up to date (all docs indexed, modules, calculator container, surface tools, `ESTAMPES_ADMIN_KEY`, `ESTAMPES_MODULE_ALLOW_UNSIGNED`).
 - **Capability profile.** Besides its input schema, a capability can describe when to use it and when not to, input limits, cost (latency, resources, billing), data flow, how far to trust the result and how to check it, and what to do when it fails. The model reads it through `get_module_capabilities` and the Store shows it; network capabilities must declare what they send, and the text may be translated (`profileI18n`) but not the cost or data flow. Filled in for Graph, plate solving and the example OCR adapter.
 - **Info cards.** A new scene object `info-card` (title, label/value rows, optional https links) shown beside the canvas, not on the picture. The widget groups cards by module; each folds open and closed, starts folded, can be hidden by the module (`shown: false`) or the user, and hidden cards are listed so they can be brought back.
@@ -124,7 +130,11 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 - `render_pdf_page`: render one physical PDF page at 36–600 dpi as an ordinary image, with the printed page label, optional embedded text boxes (no OCR needed), and storage of the PDF so a page can be rendered again by hash. Optional: needs `pdfjs-dist` and `@napi-rs/canvas` (`--build-arg ESTAMPES_WITH_PDF=1` for Docker); without them the tool reports it is unavailable. See [PDF pages](docs/IMAGE-PIPELINE.md#pdf-pages).
 
-## 0.10.0 — Modules and the Store
+## 0.10.0 — Modules and the Store, geometry, registration and measurement
+
+The 0.10.0 release combined two changes that were developed on separate branches (the modules branch was numbered 0.9.0 until it was merged and released as 0.10.0). No git tags exist yet, so the version history here follows `package.json` at each merge.
+
+### Modules and the Store
 
 - **Module system, phase 0 and 1.** A module is described by an `estampes.module/1` manifest (capabilities with strict input schemas, permissions, limits) and returns *scene operations* instead of drawing: `object.create`, `object.update`, `object.delete`, `object.publish`. The core validates every batch, applies it all or nothing, assigns ids, records provenance and bumps a per-canvas scene revision. Modules change only their own objects; the user can change anything. See [Modules](docs/MODULES.md).
 - **Scene objects** keep their meaning instead of becoming pixels: `axes-2d`, `function-plot` (expression, domain, frame) and generic `shape`. A trusted renderer turns them into drawing primitives for the canvas, the layered SVG export and the preview image. Objects are saved in `canvas.json`, appear in `get_visual_state` (`objects`, `sceneRevisions`) and live in their own layers.
@@ -133,7 +143,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 - **Estampes Store** (`open_module_store`): an MCP Apps widget with browse, search, detail, permission preview, enable and disable, and an activity tab. Enabling needs a plan the user confirms in the widget (a consent token the model never sees); everything is audited in `<storage>/modules/audit.jsonl`, and module state in `registry.json`.
 - Five fixed model tools (`open_module_store`, `list_modules`, `get_module_capabilities`, `execute_module`, `prepare_module_change`), so enabling a module never changes the tool list. Blank canvases are ordinary images, so storage, export and zoom work unchanged.
 
-## 0.10.0 — Geometry, registration, quality and measurement
+### Geometry, registration, quality and measurement
 
 - `process_image` / `views` `geometry`: rotate, flip, pad, deskew, four-point perspective rectification and polygon mask, each with an exact matrix and a validity fraction. Marks read off a rotated or rectified view map back through `derivedViewId`.
 - New operators: `gamma`, `levels`, `white_balance`, `channel` (RGB, HSV, Lab), `flat_field`, `morphology`, `canny`.
