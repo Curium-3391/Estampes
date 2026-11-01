@@ -1,6 +1,8 @@
 name: Docker image
-# Builds linux/amd64 + linux/arm64 on every PR (no push) and publishes
-# ghcr.io/<owner>/estampes on main and on v* tags.
+# Runs only when a v* tag is pushed (see docs/RELEASE.md): checks the release
+# metadata, smoke-tests the compose stack, then publishes the multi-arch image
+# ghcr.io/<owner>/estampes as X.Y.Z, latest (stable tags only) and sha-<short>.
+# Ordinary pushes and pull requests run the tests in m0.yml, not this workflow.
 on:
   push:
     tags: ['v*']
@@ -8,8 +10,17 @@ permissions:
   contents: read
   packages: write
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check-release.mjs "$GITHUB_REF_NAME"
   smoke:
     runs-on: ubuntu-latest
+    needs: verify
     steps:
       - uses: actions/checkout@v4
       - name: Build and start with compose
@@ -67,9 +78,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/estampes
+          flavor: latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
             type=sha
       - if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
