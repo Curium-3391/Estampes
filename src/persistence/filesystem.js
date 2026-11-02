@@ -75,9 +75,9 @@ export class ManagedFiles {
     await this.syncDirectory(dirname(this.path(name)),label);
   }
   async info(name){
-    const path=this.path(name),st=await lstat(path);if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Physical entry crosses managed device");integrity(st.isFile()&&!st.isSymbolicLink(),"Managed physical entry is not a regular file");
+    const path=this.path(name),st=await lstat(path,{bigint:true});if(st.dev!==(await lstat(this.root,{bigint:true})).dev)fail("UNSUPPORTED_STORAGE","Physical entry crosses managed device");integrity(st.isFile()&&!st.isSymbolicLink(),"Managed physical entry is not a regular file");
     let dir=dirname(path);while(dir!==this.root){const p=await lstat(dir);integrity(p.isDirectory()&&!p.isSymbolicLink(),"Unsafe physical parent");dir=dirname(dir);}
-    return {bytes:st.size,allocatedBytes:st.blocks*512,dev:st.dev,ino:st.ino};
+    return {bytes:Number(st.size),allocatedBytes:Number(st.blocks*512n),dev:String(st.dev),ino:String(st.ino),mtimeNs:String(st.mtimeNs),ctimeNs:String(st.ctimeNs)};
   }
   async digest(name){
     const info=await this.info(name),fd=await open(this.path(name),"r"),hash=createHash("sha256"),buffer=Buffer.alloc(4*1024*1024);let offset=0;

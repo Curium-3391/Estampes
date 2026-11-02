@@ -1,6 +1,7 @@
 // Internal storage coordinator. Accepts already-domain-validated snapshots;
 // never registers a tool, authorizes a host action or mutates the legacy store.
 import { randomUUID, createHash } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { parse, canonicalJson, hashJson, RevisionSchema } from "../documents/validation.js";
 import { createId, normalizeRequestId } from "../documents/identity.js";
 import { ActorContextSchema, assertCreatorUnchanged } from "../documents/provenance.js";
@@ -8,7 +9,7 @@ import { parseCommitRoot } from "./commit-root-schema.js";
 import { ManagedFiles, StagingPlan } from "./filesystem.js";
 import { PageStore } from "./pages.js";
 import { IntentJournal } from "./journal.js";
-import { CommitCommandSchema, FormatSchema, AckSchema, LedgerEntrySchema, replayLedgerEntry, loadCommitted, verifyPreparedClosure, storeDocument, versionPath, closure, logicalClosureHash } from "./records.js";
+import { CommitCommandSchema, FormatSchema, AckSchema, LedgerEntrySchema, VerificationCache, replayLedgerEntry, loadCommitted, verifyPreparedClosure, storeDocument, versionPath, closure, logicalClosureHash } from "./records.js";
 import { assertOwnedWriterLease, inspectPlatform } from "./platform.js";
 import { LifecycleManager } from "./lifecycle.js";
 import { initialPolicy, policyOf, DAY } from "./lifecycle-state.js";
@@ -39,7 +40,7 @@ function checkRevisions(before,after){
   }
 }
 export class CommitCoordinator {
-  constructor(files,platform){this.files=files;this.platform=platform;this.journal=new IntentJournal(files);this.state="opening";this.current=null;this.queue=Promise.resolve();this.seen=new Map();this.recoveryReport=[];this.lifecycle=null;}
+  constructor(files,platform){this.files=files;this.platform=platform;this.journal=new IntentJournal(files);this.state="opening";this.current=null;this.queue=Promise.resolve();this.seen=new Map();this.recoveryReport=[];this.lifecycle=null;this.verification=new VerificationCache();this.performance={open:null,transactions:[]};}
   async open(options){
     if(this.state!=="opening")fail("INVALID_INPUT","Coordinator can only be opened once");
     this.platform=await inspectPlatform(this.files.root,this.platform.profile,this.platform.purpose);
@@ -56,7 +57,7 @@ export class CommitCoordinator {
         this.format=parse(FormatSchema,await this.files.json("storage-format.json",4096));
         integrity(this.format.profile===this.platform.profile,"Stored profile differs; test stores cannot be promoted to durable");
         await LifecycleManager.recoverPhysical(this.files);
-        this.current=await loadCommitted(this.files);integrity(this.current.root.storeInstanceId===this.format.storeInstanceId,"Store namespace differs from CURRENT");
+        const verifyStarted=performance.now();this.current=await loadCommitted(this.files,{cache:this.verification,metrics:this.performance});this.performance.open={verifyCommittedMs:performance.now()-verifyStarted};integrity(this.current.root.storeInstanceId===this.format.storeInstanceId,"Store namespace differs from CURRENT");
         if(this.current.lifecycle||options.lifecycle||this.format.lifecycle)this.installLifecycle(this.current.lifecycle?.options??options.lifecycle??this.format.lifecycle,options.testClockMs);
         if(await this.files.exists("restore-restriction.json")){this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:"RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF"};return this;}
         // Re-establish all file/directory barriers after an interrupted publish.
@@ -77,7 +78,7 @@ export class CommitCoordinator {
     const result=this.queue.then(run);this.queue=result.catch(()=>{});return result;
   }
   snapshot(){if(!this.current)fail("RECOVERY_REQUIRED","No verified committed snapshot is available");return structuredClone({root:this.current.root,envelope:this.current.envelope,documents:this.current.documents,authority:this.current.authority,state:this.state});}
-  diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null};}
+  diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null,performance:structuredClone(this.performance)};}
   commit(input,actorInput,expectedEpoch){
     // Parse/copy immediately, before queueing; caller changes cannot alter a pending command.
     const command=parse(CommitCommandSchema,input),actor=parse(ActorContextSchema,actorInput);parse(RevisionSchema,expectedEpoch);
@@ -95,6 +96,7 @@ export class CommitCoordinator {
     const result=this.queue.then(run);this.queue=result.catch(()=>{});return result;
   }
   async #publish(command,request,mode,maintenance=null){
+    const transactionStarted=performance.now(),timings={mode};let stageStarted=transactionStarted;
     const before=this.current,generation=(before?.root.generation??0)+1,commitId=createId("tx"),acceptedAt=new Date(this.lifecycle?this.lifecycle.acceptedTime():Date.now()).toISOString(),plan=new StagingPlan(this.files),pages=new PageStore(this.files,plan);
     const registry=new Map(before?.indices.registry??[]),documentMap=new Map((before?.documents??[]).map(d=>[d.id,d])),registryChanges=new Map(),locatorChanges=new Map(),after=[];
     let intentWritten=false,publicationAttempted=false,reservation=null;
@@ -173,20 +175,27 @@ export class CommitCoordinator {
         if(mode==="maintenance")integrity(plan.bytes<=32*1024**2&&plan.records.size<=128,"Maintenance batch exceeds bounded work budget");
         reservation=await this.lifecycle.reserve(commitId,plan.allocationEstimate()+Buffer.byteLength(canonicalJson(intent))+128*1024,mode!=="content",retentionChanges);
       }else await this.files.preflight(plan.bytes+Buffer.byteLength(canonicalJson(intent))+128*1024,this.format.quotaBytes,Math.max(64*1024*1024,Math.ceil(this.format.quotaBytes*0.01)));
+      timings.buildAndPreflightMs=performance.now()-stageStarted;stageStarted=performance.now();
       await this.files.point("before-intent");await this.journal.intent(intent);intentWritten=true;
       if(request)this.seen.set(request.digest,payloadHash);
       await this.files.point("after-intent-durable");
       await plan.flush(record=>record.label!=="root");await this.files.point("after-staged-writes");
       await plan.flush(record=>record.label==="root");await this.journal.prepare({schema:"estampes.prepared/1",commitId,generation,rootHash});
+      timings.stageAndPrepareMs=performance.now()-stageStarted;stageStarted=performance.now();
       await this.files.point("after-prepared");
-      await verifyPreparedClosure(this.files,envelope);
+      const prepared=await verifyPreparedClosure(this.files,envelope,{cache:this.verification,metrics:this.performance});
+      timings.candidateVerificationMs=performance.now()-stageStarted;stageStarted=performance.now();
       if(before&&canonicalJson(await this.files.json("visual-registry/CURRENT.json",64*1024))!==canonicalJson(before.envelope))fail("INTEGRITY_ERROR","CURRENT changed during preparation",{storageIntegrity:true});
       publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current");
       await this.files.point("after-publication-durable");
-      const committed=await loadCommitted(this.files);integrity(committed.envelope.rootHash===rootHash,"Published root changed under writer lease");
-      await this.journal.outcome(commitId,member);this.current=committed;
+      timings.currentPublicationMs=performance.now()-stageStarted;stageStarted=performance.now();
+      const selected=await this.files.json("visual-registry/CURRENT.json",64*1024);integrity(canonicalJson(selected)===canonicalJson(envelope),"Published CURRENT differs from prepared envelope");
+      for(const [path,record]of plan.records){const digest=await this.files.digest(path);integrity(digest.bytes===record.bytes.length&&digest.hash===hashJsonBytes(record.bytes),"Published staged file changed after candidate verification");}
+      integrity(prepared.envelope.rootHash===rootHash,"Published root changed under writer lease");
+      await this.journal.outcome(commitId,member);this.current=prepared;
+      timings.postPublicationMs=performance.now()-stageStarted;timings.totalMs=performance.now()-transactionStarted;this.performance.transactions.push(timings);if(this.performance.transactions.length>64)this.performance.transactions.shift();
       await this.files.point("before-ack");
-      return {ack,replayed:false,...(maintenance?{result:maintenanceResult,envelope:committed.envelope}:{})};
+      return {ack,replayed:false,...(maintenance?{result:maintenanceResult,envelope:prepared.envelope}:{})};
     }catch(e){
       if(publicationAttempted||e.barrier||e.details?.storageIntegrity||["EIO","EROFS","EACCES"].includes(e.code)){
         this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:e.code??"IO_ERROR",message:String(e.message).slice(0,300)};
