@@ -1,0 +1,61 @@
+TAP version 13
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 1 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 26.1844
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 2 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 12.677775
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+not ok 3 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 2793.12943
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/persistence-platform.test.js:25:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    PersistenceError: Cannot start OS lease backend
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (file:///home/estampes/projects/Estampes/tests/persistence-platform.test.js:27:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 4 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 2310.79969
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 5 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 2590.835948
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 6 - native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+  ---
+  duration_ms: 2220.296273
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 5
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10401.085247

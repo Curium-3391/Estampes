@@ -1,0 +1,161 @@
+{
+  "initialToolIdentity": "uid=0(root); no tests/npm/git writes run as root",
+  "executingUid": 1001,
+  "temporaryRoot": "/tmp/estampes-pr1c-native-x8qc79vm",
+  "environmentOverrides": {
+    "PATH": "Node 22.23.4 + optional Python venv",
+    "TMPDIR": "/tmp/estampes-pr1c-native-x8qc79vm/tmp",
+    "ESTAMPES_*": "inherited values removed; STORAGE_DIR and ACCESS_KEY empty; STORAGE_RETENTION_DAYS=0"
+  },
+  "checks": [
+    {
+      "command": [
+        "id"
+      ],
+      "exitCode": 0,
+      "output": "uid=1001(estampes) gid=1001(estampes) groups=1001(estampes),27(sudo),100(users)\n"
+    },
+    {
+      "command": [
+        "uname",
+        "-a"
+      ],
+      "exitCode": 0,
+      "output": "Linux DESKTOP-49V0ECD 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux\n"
+    },
+    {
+      "command": [
+        "cat",
+        "/etc/os-release"
+      ],
+      "exitCode": 0,
+      "output": "PRETTY_NAME=\"Ubuntu 24.04.1 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.1 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n"
+    },
+    {
+      "command": [
+        "node",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "v22.23.4\n"
+    },
+    {
+      "command": [
+        "npm",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "10.9.9\n"
+    },
+    {
+      "command": [
+        "findmnt",
+        "-T",
+        "/home/estampes/projects/Estampes"
+      ],
+      "exitCode": 0,
+      "output": "TARGET SOURCE   FSTYPE OPTIONS\n/      /dev/sdd ext4   rw,relatime,discard,errors=remount-ro,data=ordered\n"
+    },
+    {
+      "command": [
+        "findmnt",
+        "-T",
+        "/tmp/estampes-pr1c-native-x8qc79vm/tmp"
+      ],
+      "exitCode": 0,
+      "output": "TARGET SOURCE   FSTYPE OPTIONS\n/      /dev/sdd ext4   rw,relatime,discard,errors=remount-ro,data=ordered\n"
+    },
+    {
+      "command": [
+        "stat",
+        "-c",
+        "%U %u %a %d %n",
+        "/tmp/estampes-pr1c-native-x8qc79vm",
+        "/tmp/estampes-pr1c-native-x8qc79vm/tmp"
+      ],
+      "exitCode": 0,
+      "output": "estampes 1001 700 2096 /tmp/estampes-pr1c-native-x8qc79vm\nestampes 1001 700 2096 /tmp/estampes-pr1c-native-x8qc79vm/tmp\n"
+    },
+    {
+      "command": [
+        "flock",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "flock from util-linux 2.39.3\n"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "output": "5549f10586dc17e0a802c42dd6c37ebaa70ad80a\n"
+    },
+    {
+      "command": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "exitCode": 0,
+      "output": "codex/pr1c-native-ext4-acceptance\n"
+    },
+    {
+      "command": [
+        "git",
+        "show-ref"
+      ],
+      "exitCode": 0,
+      "output": "5549f10586dc17e0a802c42dd6c37ebaa70ad80a refs/heads/codex/pr1c-native-ext4-acceptance\n5549f10586dc17e0a802c42dd6c37ebaa70ad80a refs/heads/feat/unified-visual-architecture-pr1c\n7fb9b73442401fc32a7034888deaf49303e582a6 refs/remotes/origin/HEAD\n39fe94c8fa2ecdd32f83a6c913ebacf935aa2104 refs/remotes/origin/backup/pr60-before-resolution-20261101\n96379d97e02aaa1557fd14790121e90aeccf2e41 refs/remotes/origin/ci/skip-docs-and-release-only-docker\na00ed0b614423a1209a3342b031e2ce3b57f2389 refs/remotes/origin/claude/project-thread-3py4sq\nb7eca77a2a431d2d499b42d38370de4de55b87d5 refs/remotes/origin/claude/project-thread-7zqv2t\n61472bd0520c5d787d4aeea7f53ba12ce480099a refs/remotes/origin/claude/project-thread-ap65nc\n063da56163b79848f3ec9676a9e6abb5883ea208 refs/remotes/origin/claude/project-thread-bpo37x\nae28a6c198d1bdaa7ef3295d708582d00b1bcdd0 refs/remotes/origin/claude/project-thread-enxasj\n3335471432b52023a16b05d4a11349c2741ce2c5 refs/remotes/origin/claude/project-thread-ilbo4l\n53b471137554b2ceeabc35e8292c24be26081190 refs/remotes/origin/claude/project-thread-u5km1b\nabf18b632db76081203138d55c9527d1ed86e928 refs/remotes/origin/claude/project-thread-uokw5t\n0874123027262304b62fb641fb158038fb6f8fea refs/remotes/origin/claude/project-thread-y9jvtd\nb42e6afc7ca78b280ad522a93e111ba2ef407cd7 refs/remotes/origin/docs/unified-visual-architecture-phase0\n1fc6de91d1618e57a492eee1059c54d0bb0f735d refs/remotes/origin/docs/unified-visual-architecture-phase0-final-gate\ndf70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd refs/remotes/origin/docs/unified-visual-architecture-phase0-review\n13fde0dd0bd31cbb878065e36070ec6795d9656c refs/remotes/origin/feat/m047-unified-visual-canvas\n7eae7f5748a4c264a7dc996b07f005f95e34ff37 refs/remotes/origin/feat/unified-visual-architecture-pr1a\n5549f10586dc17e0a802c42dd6c37ebaa70ad80a refs/remotes/origin/feat/unified-visual-architecture-pr1c\nb22949aad36a7b83f4312e968684b9bdf35bf582 refs/remotes/origin/fix/canvas-composite-reads-label-modes\n03dba7a2e256fa1b1d5113ce16edd965e0d780ae refs/remotes/origin/fix/grouped-finding-reviews\n5d27c73da5c33bc49562db58f68ff2fc2dea24e8 refs/remotes/origin/fix/m046-blind-grounding\nb900141078eefa037e1e72198cf95257fb34f32e refs/remotes/origin/fix/mcp-visual-viewer-v045\n12b973726f52913bb63866ff945766e9260db458 refs/remotes/origin/fix/unified-layer-evidence\n7fb9b73442401fc32a7034888deaf49303e582a6 refs/remotes/origin/main\n"
+    },
+    {
+      "command": [
+        "node",
+        "--input-type=module",
+        "-",
+        "/tmp/estampes-pr1c-native-x8qc79vm/tmp"
+      ],
+      "script": "import {mkdtemp,rm} from \"node:fs/promises\"; import {join} from \"node:path\"; import {inspectPlatform} from \"./src/persistence/platform.js\";\nconst root=await mkdtemp(join(process.argv[2],\"estampes-pr1c-probe-\")); try { console.log(JSON.stringify(await inspectPlatform(root,\"linux-local-durable\",\"isolated-pr1c-testing\"))); } finally { await rm(root,{recursive:true,force:true}); }\n",
+      "exitCode": 0,
+      "output": "{\"platform\":\"linux\",\"profile\":\"linux-local-durable\",\"fsType\":\"0xef53\",\"device\":2096,\"durability\":\"durable\",\"purpose\":\"isolated-pr1c-testing\"}\n"
+    }
+  ],
+  "optionalDependencies": {
+    "sharp": "0.34.5",
+    "zod": "4.6.7",
+    "hono": "4.13.14",
+    "jose": "6.2.14",
+    "playwright-core": "1.56.1",
+    "pdfjs-dist": "4.10.38",
+    "@napi-rs/canvas": "1.1.0"
+  },
+  "python": {
+    "version": "Python 3.12.3",
+    "sympy": "1.14.0",
+    "mpmath": "1.3.0",
+    "venv": "/tmp/estampes-pr1c-native-x8qc79vm/venv"
+  },
+  "browser": {
+    "path": "/tmp/estampes-pr1c-native-x8qc79vm/browsers/chromium-1194/chrome-linux/chrome",
+    "version": "Chromium 141.0.7390.37",
+    "sharedLibraries": "Ubuntu .deb files downloaded and extracted under disposable root; no system packages installed",
+    "LD_LIBRARY_PATH": "/tmp/estampes-pr1c-native-x8qc79vm/browser-libs/extracted/usr/lib/x86_64-linux-gnu"
+  },
+  "setupNotes": [
+    "Initial root shell lacked Node/npm on PATH and Git refused dubious ownership; switched to the existing owner estampes and its installed NVM Node 22. No safe.directory exception added.",
+    "npm ci exited 0 before baseline tests; log retained. npm audit reported 1 high severity issue; no audit fix applied.",
+    "python3 -m venv initially exited 1 because ensurepip is unavailable; used system pip --python to populate disposable venv successfully.",
+    "Optional npm install temporarily advanced hono/jose; restored exact lock versions before final full test. All installed lock-listed package versions checked equal; package.json and package-lock.json unchanged."
+  ],
+  "sourceHashes": {
+    "src/persistence/records.js": "ef745d334437179905f1ebadcbb763a5930d547915ff7c523bd83b0b866a5c2c",
+    "tests/persistence-transactions.test.js": "e1b3c0cd81ab6f58385191370a75d0d6d7ffa274e9f5db2f859f9a0f3f544a41",
+    "package.json": "b4af79ef4b60e66c42474f2947ced91e9b6d5b289e8874cbb009d3b6d0e831c9",
+    "package-lock.json": "2f3d9804c0a39f0900ff8b44e81f77ed651468910ccd2a59bf00733286a6a95c"
+  },
+  "testedCodeCommit": "1684335e7e463a0ea5bb1a560ed6565ef42299ae",
+  "existingRefsUnchanged": true,
+  "disposableArtifactsCleaned": true
+}

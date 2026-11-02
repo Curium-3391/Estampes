@@ -1,0 +1,11 @@
+--- a/src/persistence/records.js
++++ b/src/persistence/records.js
+@@ -55,7 +55,7 @@
+   }
+   const materialize=registry=>{
+     const documents=[],bindings=new Map();
+-    for(const [key,value]of registry)if(key.startsWith("binding:")){const b=parse(ReferenceBindingSchema,value);integrity(key==="binding:"+b.id,"Canonical binding key mismatch");bindings.set(b.id,b);}
++    for(const [key,value]of indices.registry)if(key.startsWith("binding:")){const b=parse(ReferenceBindingSchema,value);integrity(key==="binding:"+b.id,"Canonical binding key mismatch");bindings.set(b.id,b);}
+     for(const [key,value]of registry){
+       if(key.startsWith("entity:")){
+         const ref=parse(LogicalRevisionRefSchema,value);integrity(key==="entity:"+ref.entityId&&ref.storeInstanceId===root.storeInstanceId,"Registry identity mismatch");

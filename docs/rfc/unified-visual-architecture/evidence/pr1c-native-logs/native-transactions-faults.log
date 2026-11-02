@@ -1,0 +1,376 @@
+TAP version 13
+# Subtest: SIGKILL / before-intent preserves one whole root and at most one retry effect
+ok 1 - SIGKILL / before-intent preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1045.073787
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+ok 2 - SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 956.266663
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+ok 3 - SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1023.087262
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+ok 4 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1014.221354
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+ok 5 - SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1051.186488
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+ok 6 - SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1014.774746
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+ok 7 - SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1045.321745
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+ok 8 - SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1091.565928
+  type: 'test'
+  ...
+# Subtest: SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+ok 9 - SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1131.733345
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-prepared preserves one whole root and at most one retry effect
+ok 10 - SIGKILL / after-prepared preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1104.43712
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+ok 11 - SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 5150.283303
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+ok 12 - SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 2832.253954
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+ok 13 - SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 9010.23297
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+ok 14 - SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1017.880413
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-ack preserves one whole root and at most one retry effect
+ok 15 - SIGKILL / before-ack preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1044.266021
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+ok 16 - fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 968.744788
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+ok 17 - fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 936.623688
+  type: 'test'
+  ...
+# Subtest: fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+ok 18 - fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1240.197653
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+ok 19 - fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1077.122929
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+ok 20 - fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 994.956046
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+ok 21 - fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1030.225162
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+ok 22 - fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1039.779487
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+ok 23 - fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1080.343453
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+ok 24 - fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1012.659079
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+ok 25 - fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1078.306162
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+ok 26 - fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 984.635296
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+ok 27 - fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1008.142845
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+ok 28 - fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1105.121596
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+ok 29 - ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1061.358829
+  type: 'test'
+  ...
+# Subtest: ENOSPC / staged.before-write retains committed data and recovers without a second effect
+ok 30 - ENOSPC / staged.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1005.701029
+  type: 'test'
+  ...
+# Subtest: ENOSPC / root.before-write retains committed data and recovers without a second effect
+ok 31 - ENOSPC / root.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1089.481521
+  type: 'test'
+  ...
+# Subtest: ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+ok 32 - ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1072.470662
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-write retains committed data and recovers without a second effect
+ok 33 - ENOSPC / current.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1094.933395
+  type: 'test'
+  ...
+# Subtest: EXDEV / staged.before-rename retains committed data and recovers without a second effect
+ok 34 - EXDEV / staged.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 969.710038
+  type: 'test'
+  ...
+# Subtest: EXDEV / current.before-rename retains committed data and recovers without a second effect
+ok 35 - EXDEV / current.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1103.820203
+  type: 'test'
+  ...
+# Subtest: ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+ok 36 - ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+  ---
+  duration_ms: 1003.703796
+  type: 'test'
+  ...
+# Subtest: corrupt CURRENT enters read-only recovery without guessing an older root
+ok 37 - corrupt CURRENT enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 743.592114
+  type: 'test'
+  ...
+# Subtest: corrupt root enters read-only recovery without guessing an older root
+ok 38 - corrupt root enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 742.891413
+  type: 'test'
+  ...
+# Subtest: corrupt registry-page enters read-only recovery without guessing an older root
+ok 39 - corrupt registry-page enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 732.276414
+  type: 'test'
+  ...
+# Subtest: corrupt generation enters read-only recovery without guessing an older root
+ok 40 - corrupt generation enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 791.40398
+  type: 'test'
+  ...
+# Subtest: corrupt intent enters read-only recovery without guessing an older root
+ok 41 - corrupt intent enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 825.592346
+  type: 'test'
+  ...
+# Subtest: corrupt outcome enters read-only recovery without guessing an older root
+ok 42 - corrupt outcome enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 808.737779
+  type: 'test'
+  ...
+# Subtest: mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+ok 43 - mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+  ---
+  duration_ms: 770.131447
+  type: 'test'
+  ...
+# Subtest: an aborted prepared generation is never adopted, even when its staged file is corrupt
+ok 44 - an aborted prepared generation is never adopted, even when its staged file is corrupt
+  ---
+  duration_ms: 936.371146
+  type: 'test'
+  ...
+# Subtest: interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+ok 45 - interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+  ---
+  duration_ms: 1578.69396
+  type: 'test'
+  ...
+# Subtest: recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+ok 46 - recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+  ---
+  duration_ms: 775.43583
+  type: 'test'
+  ...
+# Subtest: reused orphan generation bytes must pass file/directory barriers again before publication
+ok 47 - reused orphan generation bytes must pass file/directory barriers again before publication
+  ---
+  duration_ms: 1443.648702
+  type: 'test'
+  ...
+# Subtest: committed metadata tamper detected during a live write fences the writer before any ACK
+ok 48 - committed metadata tamper detected during a live write fences the writer before any ACK
+  ---
+  duration_ms: 356.501565
+  type: 'test'
+  ...
+# Subtest: SIGKILL during recovery outcome repair is idempotent on the next restart
+ok 49 - SIGKILL during recovery outcome repair is idempotent on the next restart
+  ---
+  duration_ms: 1464.304044
+  type: 'test'
+  ...
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 50 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 1146.249953
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 51 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 512.162381
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 52 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 1062.291628
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 53 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 572.476297
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 54 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 1170.819462
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 55 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 1238.71357
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 56 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 576.330056
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 57 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 729.90188
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 58 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 1678.338743
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 59 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 533.010406
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 60 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 573.729839
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+ok 61 - historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+  ---
+  duration_ms: 6115.399007
+  type: 'test'
+  ...
+1..61
+# tests 61
+# suites 0
+# pass 61
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 63648.103659

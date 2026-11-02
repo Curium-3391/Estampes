@@ -1,0 +1,154 @@
+TAP version 13
+# Subtest: package verification: digest, signature, scope, tampering, reserved ids, bad files
+ok 1 - package verification: digest, signature, scope, tampering, reserved ids, bad files
+  ---
+  duration_ms: 22.923816
+  type: 'test'
+  ...
+# Subtest: install needs consent AND the administrator's approval from the server; the chat cannot supply it
+ok 2 - install needs consent AND the administrator's approval from the server; the chat cannot supply it
+  ---
+  duration_ms: 62.745741
+  type: 'test'
+  ...
+# Subtest: installed package: enable, run, restart, lock file
+ok 3 - installed package: enable, run, restart, lock file
+  ---
+  duration_ms: 57.070749
+  type: 'test'
+  ...
+# Subtest: update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup
+ok 4 - update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup
+  ---
+  duration_ms: 52.238908
+  type: 'test'
+  ...
+# Subtest: a package whose own example fails never becomes active; unsigned needs the explicit switch
+ok 5 - a package whose own example fails never becomes active; unsigned needs the explicit switch
+  ---
+  duration_ms: 37.422733
+  type: 'test'
+  ...
+# Subtest: uninstall keeps canvas objects; purge removes stored versions and needs admin
+ok 6 - uninstall keeps canvas objects; purge removes stored versions and needs admin
+  ---
+  duration_ms: 48.0205
+  type: 'test'
+  ...
+# Subtest: purge and install refuse ids that are not module ids (no path traversal)
+ok 7 - purge and install refuse ids that are not module ids (no path traversal)
+  ---
+  duration_ms: 6.823758
+  type: 'test'
+  ...
+# Subtest: a purge plan goes stale when the package is installed before it is confirmed
+ok 8 - a purge plan goes stale when the package is installed before it is confirmed
+  ---
+  duration_ms: 33.339808
+  type: 'test'
+  ...
+# Subtest: a corrupted active version stays visible so it can be rolled back
+ok 9 - a corrupted active version stays visible so it can be rolled back
+  ---
+  duration_ms: 44.142908
+  type: 'test'
+  ...
+# Subtest: a rollback plan goes stale when another update lands first
+ok 10 - a rollback plan goes stale when another update lands first
+  ---
+  duration_ms: 48.261492
+  type: 'test'
+  ...
+# Subtest: an update plan goes stale when a newer version is installed first
+ok 11 - an update plan goes stale when a newer version is installed first
+  ---
+  duration_ms: 39.6748
+  type: 'test'
+  ...
+# Subtest: an install plan goes stale when the package is installed by another plan first
+ok 12 - an install plan goes stale when the package is installed by another plan first
+  ---
+  duration_ms: 19.714108
+  type: 'test'
+  ...
+# Subtest: a failed rollback leaves the running version, lock and record unchanged
+ok 13 - a failed rollback leaves the running version, lock and record unchanged
+  ---
+  duration_ms: 38.824959
+  type: 'test'
+  ...
+# Subtest: updating a failed package keeps a coherent rollback target
+ok 14 - updating a failed package keeps a coherent rollback target
+  ---
+  duration_ms: 56.949566
+  type: 'test'
+  ...
+# Subtest: a WebAssembly module installs, passes its self-test and draws through scene operations
+ok 15 - a WebAssembly module installs, passes its self-test and draws through scene operations
+  ---
+  duration_ms: 142.689158
+  type: 'test'
+  ...
+# Subtest: WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped
+ok 16 - WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped
+  ---
+  duration_ms: 731.168988
+  type: 'test'
+  ...
+# Subtest: WebAssembly packages with imports, no memory maximum or too much memory are refused
+ok 17 - WebAssembly packages with imports, no memory maximum or too much memory are refused
+  ---
+  duration_ms: 10.934824
+  type: 'test'
+  ...
+# Subtest: a WebAssembly module survives a restart
+ok 18 - a WebAssembly module survives a restart
+  ---
+  duration_ms: 143.312675
+  type: 'test'
+  ...
+# Subtest: author tool: init makes a module that passes test, and test catches a broken example
+ok 19 - author tool: init makes a module that passes test, and test catches a broken example
+  ---
+  duration_ms: 590.675247
+  type: 'test'
+  ...
+# Subtest: addresses: only public ones are reachable
+ok 20 - addresses: only public ones are reachable
+  ---
+  duration_ms: 5.229859
+  type: 'test'
+  ...
+# Subtest: an HTTP module installs without any network call, then runs through the egress rules
+ok 21 - an HTTP module installs without any network call, then runs through the egress rules
+  ---
+  duration_ms: 51.999383
+  type: 'test'
+  ...
+# Subtest: egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions
+ok 22 - egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions
+  ---
+  duration_ms: 3.003184
+  type: 'test'
+  ...
+# Subtest: HTTP manifests: host must be named when there are several, secrets must be declared
+ok 23 - HTTP manifests: host must be named when there are several, secrets must be declared
+  ---
+  duration_ms: 3.797383
+  type: 'test'
+  ...
+# Subtest: environment secret names cannot collide between module ids
+ok 24 - environment secret names cannot collide between module ids
+  ---
+  duration_ms: 0.316891
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2500.002073

@@ -1,0 +1,46 @@
+{
+  "source": "workspace current source; src and node_modules symlinked without modification",
+  "root": "/tmp/estampes-pr1c-native-x8qc79vm/native-harness",
+  "transforms": {
+    "tests/fixtures/uva-pr1a.mjs": {
+      "replacements": [
+        [
+          "persistence: \"memory\"",
+          "persistence: \"durable\""
+        ]
+      ],
+      "sha256": "9ad83ded2f581de9884ce1037dac2ee191386bf308f52c9ff2bfe696650de15b"
+    },
+    "tests/fixtures/uva-persistence.mjs": {
+      "replacements": [
+        [
+          "profile:\"linux-process-crash-test\"",
+          "profile:\"linux-local-durable\""
+        ]
+      ],
+      "sha256": "5186cfb7104bc5fcbd82ad1c13765f90f1cf80123aeb2e97efd6e5f547ac2791"
+    },
+    "tests/persistence-transactions.test.js": {
+      "replacements": [
+        [
+          "first.ack.durability,\"process-crash-test\"",
+          "first.ack.durability,\"durable\""
+        ],
+        [
+          "[\"linux-process-crash-test\",\"linux-local-durable\"]",
+          "[\"linux-local-durable\"]"
+        ]
+      ],
+      "sha256": "4f1bac1543c32633d6ff163723b0e4d0f4c9fee0cbb56de7b07d9f641b238295"
+    },
+    "tests/persistence-faults.test.js": {
+      "replacements": [
+        [
+          "profile:\"linux-process-crash-test\"",
+          "profile:\"linux-local-durable\""
+        ]
+      ],
+      "sha256": "cff6f98304588959ee6adc19fbdec7bfcfc9149c413af6a328dd7906ad446870"
+    }
+  }
+}
