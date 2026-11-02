@@ -1,0 +1,61 @@
+{
+  "schema": "estampes.pr1d-remediation-source-seal/1",
+  "implementationCommit": "b163a859af93ea814c82f0e02e20da27c407bfad",
+  "paths": [
+    {
+      "path": "src/persistence/backup.js",
+      "bytes": 15258,
+      "sha256": "ddd5a05e32d7b884dc0b182a29e1cfed056cdab5804266812aabbdfc57abfb42"
+    },
+    {
+      "path": "src/persistence/coordinator.js",
+      "bytes": 23009,
+      "sha256": "df0fac2b41f164a08a6011090c265f9f58e70030e6dd02e7ee85ee50a2f194c7"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "bytes": 9740,
+      "sha256": "57d97a09411f93f9b8b9ddd2458b1939d0579c2117ef7c5b0fc9f92e243b6296"
+    },
+    {
+      "path": "src/persistence/gc.js",
+      "bytes": 14507,
+      "sha256": "32e920ecb01985aea753790a460e8181566a9e3e04218d65ca86e823b6bcce5a"
+    },
+    {
+      "path": "src/persistence/journal.js",
+      "bytes": 5343,
+      "sha256": "bf9a699bed182e37325594aa0e7c78dcd26ce510ac79567e5196c2819a876858"
+    },
+    {
+      "path": "src/persistence/lifecycle-state.js",
+      "bytes": 4153,
+      "sha256": "1a8a576fbf0fa1affee8cdd97b8772f56df84e5c79cd6a36d25365aad8ab5d19"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "bytes": 18319,
+      "sha256": "0f311bba0eb9ba0b3759d6b9a4a2bf7d8ea614eaaf811b56c4884cf2310afc27"
+    },
+    {
+      "path": "src/persistence/temporary-attribution.js",
+      "bytes": 6038,
+      "sha256": "df81921fdabb848993d1c94491e159e9eaede94c4774007d4b2c3abf4baf5690"
+    },
+    {
+      "path": "tests/persistence-performance.test.js",
+      "bytes": 2335,
+      "sha256": "dd166d69547460a471b298a6ec14fcd59fe656e96c8a40de06887f9df0205a9e"
+    },
+    {
+      "path": "tests/persistence-temporary-attribution.test.js",
+      "bytes": 6489,
+      "sha256": "c57bf2cd16555c3c3f37dd919a7f592befed8b27307f86cfc3e3b8dedfc22ac0"
+    },
+    {
+      "path": "tests/persistence-transactions.test.js",
+      "bytes": 12257,
+      "sha256": "536bef5012c7f4d11541bef557175729a84fc78e630042eeb1d15000f62d12a1"
+    }
+  ]
+}

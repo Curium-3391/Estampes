@@ -1,0 +1,23 @@
+{
+  "source": "explicit-maintainer-user-instruction",
+  "authorizedPr": "PR-1D-REMEDIATION",
+  "evidenceBaseCommit": "322038b4b6e24fef0210fc04781e87181f879d8c",
+  "scope": "performance-temporary-attribution-recovery-long-history-only",
+  "authorizedProductionAndTestPaths": [
+    "src/persistence/backup.js",
+    "src/persistence/coordinator.js",
+    "src/persistence/filesystem.js",
+    "src/persistence/gc.js",
+    "src/persistence/journal.js",
+    "src/persistence/lifecycle-state.js",
+    "src/persistence/records.js",
+    "src/persistence/temporary-attribution.js",
+    "tests/persistence-performance.test.js",
+    "tests/persistence-temporary-attribution.test.js",
+    "tests/persistence-transactions.test.js"
+  ],
+  "activation": false,
+  "pr1bAuthorized": false,
+  "migrationAuthorized": false,
+  "pushAuthorized": false
+}

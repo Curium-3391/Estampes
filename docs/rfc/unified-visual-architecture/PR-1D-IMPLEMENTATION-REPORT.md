@@ -2,6 +2,8 @@
 
 Status: **IMPLEMENTATION BLOCKED**. Implementation is preserved for engineering review; production activation, migration, push, merge and PR-1B are not authorized. Current new-code native acceptance and full capacity/performance qualification remain open. This is not Architecture Approval and does not replace earlier reports.
 
+Remediation note (2026-11-02): durable atomic-temporary attribution/G2 drain and an integrity-preserving verification cache are now implemented on the separate remediation branch. The original observations below remain historical evidence. Current measurements, fault results and remaining blockers are in [PR-1D-REMEDIATION-REPORT](PR-1D-REMEDIATION-REPORT.md); status remains **IMPLEMENTATION BLOCKED**.
+
 ## 1. Git baseline and exact implementation commits
 
 | Item | Observed value |

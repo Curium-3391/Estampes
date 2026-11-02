@@ -103,3 +103,12 @@ R-01–06的**最新獨立分類**見FINAL-ARCHITECTURE-GATE B；原REVIEW-REMED
 | Scope and historical integrity | PR-1D-AUTHORIZATION, evidence/pr1d-authorization.json, narrow consistency allowlist; old tests/native/95 hashes unchanged | PR-1D isolated authorization only; no activation/migration/push/PR-1B |
 
 [Implementation report](PR-1D-IMPLEMENTATION-REPORT.md) is the current observed evidence boundary. It does not rewrite earlier blocked findings and does not mark the full UVA cases complete.
+
+### PR-1D remediation trace
+
+| Finding / gate | Implementation evidence | Test / remaining gate |
+| --- | --- | --- |
+| repeated historical reconstruction | `records.js` VerificationCache + physical invalidation; coordinator candidate verify + staged post-publish check | `persistence-performance.test.js`; 8 MiB RSS and 1000 history remain blocked |
+| random atomic temporary attribution | `temporary-attribution.js`; pre-create claim, server owner, exact hash/path, retention classification | `persistence-temporary-attribution.test.js`; unknown/conflict fail RO; native test unexecuted |
+| orphan drain | temporary recovery record → committed G2 plan → 24h quarantine/re-mark/unlink | pre-rename SIGKILL/G2 test; no suffix-only deletion |
+| long history | `pr1d-long-history-benchmark.mjs` + 100-command raw artifact | 100 executed; 1000/checkpoint not executed and blocks exit |

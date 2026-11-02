@@ -1,0 +1,42 @@
+{
+  "schema": "estampes.pr1d-remediation-evidence/1",
+  "date": "2026-11-02",
+  "baseCommit": "322038b4b6e24fef0210fc04781e87181f879d8c",
+  "performanceCommit": "3d71254fc7aad34faf4886f76d2bec4746fd8059",
+  "temporaryRecoveryCommit": "b163a859af93ea814c82f0e02e20da27c407bfad",
+  "branch": "fix/unified-visual-architecture-pr1d-remediation",
+  "environment": {
+    "testNode": "v22.23.4",
+    "shellNode": "v24.19.0",
+    "npm": "11.9.0",
+    "workspaceFilesystem": "overlay",
+    "disposableFilesystem": "tmpfs",
+    "nativeExt4OrXfsAvailable": false
+  },
+  "artifacts": [
+    {"path": "pr1d-remediation-before.json", "sha256": "da93c91283bab6babd19fda78efe1bd403d732cfc6e25591b9f2f977876e1fd4", "source": "322038b4b6e24fef0210fc04781e87181f879d8c"},
+    {"path": "pr1d-remediation-after.json", "sha256": "c67e301877880cb7b0030afe7a47d1b174534523052cc0f1c1cb7d8fa976209d", "source": "b163a859af93ea814c82f0e02e20da27c407bfad"},
+    {"path": "pr1d-remediation-history-100.json", "sha256": "b949fafb2b05702154046375ff8f8302ccba2ac77170ec7b0a7a94c7903fca2c", "source": "remediation worktree; performance/transaction paths identical to b163a859af93ea814c82f0e02e20da27c407bfad"},
+    {"path": "pr1d-long-history-benchmark.mjs", "sha256": "7192ebb7365f43934f187b57000172ce1084a0683ed8567c9472e196355c1678"}
+  ],
+  "commands": {
+    "beforeAfter": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/pr1d-capacity-benchmark.mjs",
+    "history100": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/pr1d-long-history-benchmark.mjs 100",
+    "history1000": "NOT EXECUTED — 100-command run demonstrated superlinear cost and near-startup-timeout recovery"
+  },
+  "validation": {
+    "docsCheck": {"status": "PASS", "exitCode": 0, "markdownFiles": 93, "tools": 55, "configVariables": 22},
+    "releaseCheck": {"status": "PASS", "exitCode": 0},
+    "consistencyCheck": {"status": "PASS", "exitCode": 0},
+    "contractExamples": {"status": "PASS", "exitCode": 0, "passed": 9, "total": 9},
+    "relevantNodeTests": {"status": "PASS_WITH_SKIP", "exitCode": 0, "passed": 54, "failed": 0, "skipped": 1, "skipReason": "native ext4/XFS unavailable"},
+    "fullNode22Suite": {"status": "ENVIRONMENT_DEPENDENCY_FAILURE", "exitCode": 1, "total": 449, "passed": 440, "failed": 7, "skipped": 2, "failureReason": "Playwright Chromium executable unavailable"},
+    "playwrightInstall": {"status": "FAIL", "exitCode": 1, "reason": "cdn.playwright.dev returned 403 Domain forbidden"}
+  },
+  "claims": {
+    "nativeDurability": "NOT TESTED",
+    "powerLoss": "NOT TESTED",
+    "productionSla": "NOT ESTABLISHED",
+    "finalStatus": "IMPLEMENTATION BLOCKED"
+  }
+}
