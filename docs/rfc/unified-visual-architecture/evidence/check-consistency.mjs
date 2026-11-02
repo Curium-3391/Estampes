@@ -115,8 +115,12 @@ if(existsSync(remediationRecord)){
  check(existsSync(join(dir,'PR-1D-REMEDIATION-AUTHORIZATION.md')),'missing PR-1D remediation instruction boundary');pr1dRemediationAuthorized=true;
  const seal=JSON.parse(read(join(dir,'evidence/pr1d-remediation-source-seal.json')));check(seal.implementationCommit==='b163a859af93ea814c82f0e02e20da27c407bfad','unexpected remediation implementation commit');
  check(seal.paths.length===pr1dRemediationPaths.size&&seal.paths.every(f=>pr1dRemediationPaths.has(f.path))&&new Set(seal.paths.map(f=>f.path)).size===pr1dRemediationPaths.size,'remediation source seal differs from fixed scope');
- for(const f of seal.paths){const bytes=readFileSync(join(root,f.path));check(bytes.length===f.bytes&&createHash('sha256').update(bytes).digest('hex')===f.sha256,`remediation source seal mismatch: ${f.path}`);check(execFileSync('git',['show',seal.implementationCommit+':'+f.path],{cwd:root}).equals(bytes),`remediation source differs from implementation commit: ${f.path}`);}
+ for(const f of seal.paths){const bytes=execFileSync('git',['show',seal.implementationCommit+':'+f.path],{cwd:root});check(bytes.length===f.bytes&&createHash('sha256').update(bytes).digest('hex')===f.sha256,`historical remediation source seal mismatch: ${f.path}`);}
 }
+const pr1dNativePaths=new Set(['src/persistence/gc.js','src/persistence/lifecycle-state.js','src/persistence/lease.js','src/persistence/records.js','src/persistence/temporary-attribution.js','tests/fixtures/delayed-spawn-preload.mjs','tests/persistence-performance.test.js','tests/persistence-platform.test.js','tests/persistence-temporary-attribution.test.js']);
+let pr1dNativeAuthorized=false;const nativeRecord=join(dir,'evidence/pr1d-native-findings-authorization.json');
+if(existsSync(nativeRecord)){const a=JSON.parse(read(nativeRecord));check(a.source==='explicit-maintainer-user-instruction'&&a.authorizedPr==='PR-1D-NATIVE-FINDINGS'&&a.evidenceBaseCommit==='05913e926aa07a528815a5f3f3d2078c108e8833','invalid native findings authorization');check(a.authorizedProductionAndTestPaths.length===pr1dNativePaths.size&&a.authorizedProductionAndTestPaths.every(p=>pr1dNativePaths.has(p)),'native findings scope mismatch');check(a.activation===false&&a.pr1bAuthorized===false&&a.migrationAuthorized===false&&a.pushAuthorized===true,'native findings authorization boundary mismatch');pr1dNativeAuthorized=true;
+ const seal=JSON.parse(read(join(dir,'evidence/pr1d-native-findings-source-seal.json')));check(/^[0-9a-f]{40}$/.test(seal.implementationCommit)&&seal.paths.length===pr1dNativePaths.size&&seal.paths.every(f=>pr1dNativePaths.has(f.path)),'invalid native findings source seal');for(const f of seal.paths){const bytes=readFileSync(join(root,f.path));check(bytes.length===f.bytes&&createHash('sha256').update(bytes).digest('hex')===f.sha256&&execFileSync('git',['show',seal.implementationCommit+':'+f.path],{cwd:root}).equals(bytes),`native findings source seal mismatch: ${f.path}`);}}
 let pr1dAuthorized=false;
 const pr1dRecord=join(dir,'evidence/pr1d-authorization.json');
 if(existsSync(pr1dRecord)){
@@ -126,7 +130,7 @@ if(existsSync(pr1dRecord)){
  check(a.activation===false&&a.pr1bAuthorized===false&&a.migrationAuthorized===false&&a.pushAuthorized===false,'PR-1D activation/continuation exceeds authorization');
  check(existsSync(join(dir,'PR-1D-AUTHORIZATION.md')),'missing limited PR-1D instruction record');
  pr1dAuthorized=true;
- for(const p of new Set([...git('diff','--name-only',approvedBase),...git('ls-files','--others','--exclude-standard')]))check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||pr1dPaths.has(p)||(pr1dRemediationAuthorized&&pr1dRemediationPaths.has(p)),`outside isolated PR-1D scope: ${p}`);
+ for(const p of new Set([...git('diff','--name-only',approvedBase),...git('ls-files','--others','--exclude-standard')]))check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||pr1dPaths.has(p)||(pr1dRemediationAuthorized&&pr1dRemediationPaths.has(p))||(pr1dNativeAuthorized&&pr1dNativePaths.has(p)),`outside isolated PR-1D scope: ${p}`);
  const sealPath=join(dir,'evidence/pr1d-source-seal.json');
  if(existsSync(sealPath)){
   const seal=JSON.parse(read(sealPath));check(/^[0-9a-f]{40}$/.test(seal.implementationCommit),'invalid implementation source commit');
@@ -139,7 +143,8 @@ if(existsSync(pr1dRecord)){
   if(pr1dRemediationAuthorized&&p==='tests/persistence-transactions.test.js'){
    const old=before.toString(),current=after.toString(),testNames=[...old.matchAll(/test\("([^"]+)"/g)].map(m=>m[1]);check(testNames.every(name=>current.includes(`test("${name}"`)),'remediation removed an existing transaction test');
    check((current.match(/assert\./g)??[]).length>=(old.match(/assert\./g)??[]).length,'remediation weakened transaction assertions');
-  }else check(before.equals(after),`pre-PR-1D test/native/guard evidence changed: ${p}`);
+  }else if(pr1dNativeAuthorized&&pr1dNativePaths.has(p)){const old=before.toString(),current=after.toString(),testNames=[...old.matchAll(/test\("([^"]+)"/g)].map(m=>m[1]);check(testNames.every(name=>current.includes(`test("${name}"`)),'native remediation removed an existing test');check((current.match(/assert\./g)??[]).length>=(old.match(/assert\./g)??[]).length,'native remediation weakened test assertions');}
+  else check(before.equals(after),`pre-PR-1D test/native/guard evidence changed: ${p}`);
  }
 }
 const pr1cAuthorizationPath=join(dir,'evidence/pr1c-authorization.json');
@@ -159,9 +164,9 @@ if(existsSync(pr1cAuthorizationPath)){
  pr1cAuthorized=true;
  for(const p of persistencePaths)check(!execFileSync('git',['ls-tree','--name-only',a.evidenceBaseCommit,'--',p],{cwd:root,encoding:'utf8'}).trim(),`PR-1C must add isolated files: ${p}`);
  const sincePr1a=new Set([...git('diff','--name-only',a.evidenceBaseCommit),...git('ls-files','--others','--exclude-standard')]);
- for(const p of sincePr1a)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||reviewPaths.has(p)||persistencePaths.has(p)||(pr1dAuthorized&&pr1dPaths.has(p))||(pr1dRemediationAuthorized&&pr1dRemediationPaths.has(p)),`outside PR-1A remediation / PR-1C scope: ${p}`);
+ for(const p of sincePr1a)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||reviewPaths.has(p)||persistencePaths.has(p)||(pr1dAuthorized&&pr1dPaths.has(p))||(pr1dRemediationAuthorized&&pr1dRemediationPaths.has(p))||(pr1dNativeAuthorized&&pr1dNativePaths.has(p)),`outside PR-1A remediation / PR-1C scope: ${p}`);
 }
-for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p))||(pr1cAuthorized&&(reviewPaths.has(p)||persistencePaths.has(p)))||(pr1dAuthorized&&pr1dPaths.has(p))||(pr1dRemediationAuthorized&&pr1dRemediationPaths.has(p)),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
+for(const p of paths)check(p==='IMPLEMENTATION-ROADMAP.md'||p.startsWith('docs/rfc/unified-visual-architecture/')||(pr1aAuthorized&&pr1aPaths.has(p))||(pr1cAuthorized&&(reviewPaths.has(p)||persistencePaths.has(p)))||(pr1dAuthorized&&pr1dPaths.has(p))||(pr1dRemediationAuthorized&&pr1dRemediationPaths.has(p))||(pr1dNativeAuthorized&&pr1dNativePaths.has(p)),`outside approved Phase 0 / limited PR-1A scope: ${p}`);
 // The original audit and logs remain historical evidence, not rewritten results.
 for(const p of ['tests/uva-characterization.test.js','docs/rfc/unified-visual-architecture/BASELINE.md','docs/rfc/unified-visual-architecture/evidence/source-index.json','docs/rfc/unified-visual-architecture/evidence/execution-manifest.json']){
  const original=execFileSync('git',['show',base+':'+p],{cwd:root});check(original.equals(readFileSync(join(root,p))),`historical baseline changed: ${p}`);
@@ -178,4 +183,4 @@ check(!read(join(dir,'RFC-006.md')).includes('完整manifest copy-on-write優先
 check(!read(join(dir,'STORAGE-LIFECYCLE.md')).includes('4. grace至少24h'),'blanket full-copy quarantine remains');
 check(!read(join(dir,'RFC-004.md')).includes('Mutation required `{commandId'),'wire accepts internal commandId');
 if(errors.length){process.stderr.write(errors.join('\n')+'\n');process.exitCode=1;}
-else process.stdout.write(`Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; ${pr1dAuthorized?'isolated PR-1D authorized; existing tests/native evidence preserved; activation, PR-1B and push remain unauthorized':pr1cAuthorized?'limited PR-1A remediation / PR-1C authorized; PR-1D / PR-1B remain pending':pr1aAuthorized?'limited PR-1A additions authorized; later PRs remain pending':'final recommendation is not human approval'}.\n`);
+else process.stdout.write(`Architecture consistency: 8 RFCs, 12 ADRs, 67 cases, ${prs.size} PR units, 6 findings, 6 independent FG findings, OD-01..06; 95 pre-existing production/config hashes, historical baseline/reports and original 16 documentation test expectations unchanged; 9 formal examples validated; ${pr1dNativeAuthorized?'PR-1D native findings remediation and branch push authorized; activation and PR-1B remain unauthorized':pr1dAuthorized?'isolated PR-1D authorized; existing tests/native evidence preserved; activation, PR-1B and push remain unauthorized':pr1cAuthorized?'limited PR-1A remediation / PR-1C authorized; PR-1D / PR-1B remain pending':pr1aAuthorized?'limited PR-1A additions authorized; later PRs remain pending':'final recommendation is not human approval'}.\n`);

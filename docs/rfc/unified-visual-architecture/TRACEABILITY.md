@@ -112,3 +112,12 @@ R-01–06的**最新獨立分類**見FINAL-ARCHITECTURE-GATE B；原REVIEW-REMED
 | random atomic temporary attribution | `temporary-attribution.js`; pre-create claim, server owner, exact hash/path, retention classification | `persistence-temporary-attribution.test.js`; unknown/conflict fail RO; native test unexecuted |
 | orphan drain | temporary recovery record → committed G2 plan → 24h quarantine/re-mark/unlink | pre-rename SIGKILL/G2 test; no suffix-only deletion |
 | long history | `pr1d-long-history-benchmark.mjs` + 100-command raw artifact | 100 executed; 1000/checkpoint not executed and blocks exit |
+
+### PR-1D native findings remediation trace
+
+| Finding | Contract / implementation | Evidence |
+| --- | --- | --- |
+| H-01 | immutable prepared Root + committed membership proves superseded CURRENT publication | UVA-63 subset; `tests/persistence-temporary-attribution.test.js` |
+| H-02 | GC plan owns exact recovery descriptor; durable unlink intent precedes deletion | UVA-47/49 subset; GC crash matrix |
+| M-02 | child exit 73 outranks startup IPC EPIPE | UVA-66 subset; `tests/persistence-platform.test.js` |
+| M-01 | 4 MiB proof budget, shared fingerprints, eviction means reverify | UVA-64 subset; 25/50/100 artifacts |

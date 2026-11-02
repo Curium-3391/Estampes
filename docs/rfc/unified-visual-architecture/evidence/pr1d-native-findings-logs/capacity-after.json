@@ -1,0 +1,97 @@
+{
+  "node": "v22.23.4",
+  "platform": "linux",
+  "profile": "linux-process-crash-test",
+  "temporaryMount": "tmpfs",
+  "results": [
+    {
+      "name": "title-edits-128KiB",
+      "bytes": 131072,
+      "commands": 12,
+      "initialBytes": 131867,
+      "naiveSnapshotBytes": 1582465,
+      "logicalVersions": 12,
+      "fullVersions": 1,
+      "deltaVersions": 11,
+      "usage": {
+        "logicalBytes": 346348,
+        "allocatedBytes": 1433600,
+        "files": 308
+      },
+      "peakWorkerRssKiB": 165964,
+      "latencyMs": {
+        "min": 600.8416459999999,
+        "p50": 711.8064140000006,
+        "max": 963.9809179999999
+      },
+      "notes": "Physical allocated usage includes journal and metadata. No native/power-loss or full UVA-64/65 SLA claim."
+    },
+    {
+      "name": "title-edits-1MiB",
+      "bytes": 1048576,
+      "commands": 8,
+      "initialBytes": 1049371,
+      "naiveSnapshotBytes": 8395003,
+      "logicalVersions": 8,
+      "fullVersions": 1,
+      "deltaVersions": 7,
+      "usage": {
+        "logicalBytes": 1178441,
+        "allocatedBytes": 1875968,
+        "files": 196
+      },
+      "peakWorkerRssKiB": 213000,
+      "latencyMs": {
+        "min": 1439.8875019999996,
+        "p50": 2323.983204,
+        "max": 3198.6292189999986
+      },
+      "notes": "Physical allocated usage includes journal and metadata. No native/power-loss or full UVA-64/65 SLA claim."
+    },
+    {
+      "name": "title-edits-8MiB",
+      "bytes": 8388608,
+      "commands": 4,
+      "initialBytes": 8389403,
+      "naiveSnapshotBytes": 33557627,
+      "logicalVersions": 4,
+      "fullVersions": 1,
+      "deltaVersions": 3,
+      "usage": {
+        "logicalBytes": 8448424,
+        "allocatedBytes": 8798208,
+        "files": 98
+      },
+      "peakWorkerRssKiB": 528268,
+      "latencyMs": {
+        "min": 8619.311218999996,
+        "p50": 11858.123227000004,
+        "max": 13103.500102000005
+      },
+      "notes": "Physical allocated usage includes journal and metadata. No native/power-loss or full UVA-64/65 SLA claim."
+    },
+    {
+      "name": "handwriting-64-points",
+      "strokes": 12,
+      "commands": 8,
+      "initialBytes": 25969,
+      "naiveSnapshotBytes": 889867,
+      "logicalVersions": 8,
+      "fullVersions": 1,
+      "deltaVersions": 7,
+      "usage": {
+        "logicalBytes": 327211,
+        "allocatedBytes": 1015808,
+        "files": 194
+      },
+      "peakWorkerRssKiB": 151056,
+      "latencyMs": {
+        "min": 649.1705940000102,
+        "p50": 1762.3949129999964,
+        "max": 3133.599681000007
+      },
+      "notes": "Physical allocated usage includes journal and metadata. No native/power-loss or full UVA-64/65 SLA claim."
+    }
+  ],
+  "limits": "Small real workloads only. 100k-stroke, 10GiB fill, 64-reader and 1000-command checkpoint capacity gates remain unexecuted."
+}

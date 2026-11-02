@@ -53,3 +53,7 @@ ReviewFinding R-01–R-06的狀態見[REVIEW-REMEDIATION](REVIEW-REMEDIATION.md)
 | FG-03 native evidence misuse | Current mounts have no ext4/XFS; mandatory new-code probe refuses tmpfs, exit 2; historical WSL2 PR-1C results do not test PR-1D | Native guard and all old acceptance evidence bytewise preserved; separate current/native/power-loss labels | Native rerun required; no durable profile promotion, no deployment or cutover |
 
 These are evidence updates to existing risks, not human approval, new architecture authority or permission to delete user history.
+
+### PR-1D native findings remediation (2026-11-03)
+
+H-01/H-02 與 lease EPIPE 已有 process-crash permanent regressions；native ext4 reacceptance仍未在本環境執行。M-01 process-local proof metadata已有 4 MiB hard budget及去重 fingerprints，但 100-command cold open 29.91s、8 MiB RSS 528,268 KiB，故 performance/native gate仍為 blocked。

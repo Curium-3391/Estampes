@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+not ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 2462.181466
+  type: 'test'
+  location: '/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:28:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":false,"claimId":"cecc38d8-f621-41a2-9558-30c25b2843f4","currentGeneration":3,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+not ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 2132.709664
+  type: 'test'
+  location: '/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:28:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":true,"claimId":"8fb138df-69e6-4241-bb2c-dcb7b6428bf2","currentGeneration":4,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+not ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+  ---
+  duration_ms: 1.572103
+  type: 'test'
+  location: '/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: 'Durable profile requires an approved local ext4/XFS mount'
+  code: 'UNSUPPORTED_STORAGE'
+  name: 'PersistenceError'
+  stack: |-
+    fail (file:///workspace/Estampes/src/persistence/errors.js:6:57)
+    inspectPlatform (file:///workspace/Estampes/src/persistence/platform.js:15:56)
+    async openIsolatedStore (file:///workspace/Estampes/src/persistence/lease.js:13:3)
+    async lifecycleFixture (file:///workspace/Estampes/tests/fixtures/uva-lifecycle.mjs:8:243)
+    async TestContext.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:9:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+not ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+  ---
+  duration_ms: 2.436025
+  type: 'test'
+  location: '/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: 'Durable profile requires an approved local ext4/XFS mount'
+  code: 'UNSUPPORTED_STORAGE'
+  name: 'PersistenceError'
+  stack: |-
+    fail (file:///workspace/Estampes/src/persistence/errors.js:6:57)
+    inspectPlatform (file:///workspace/Estampes/src/persistence/platform.js:15:56)
+    async openIsolatedStore (file:///workspace/Estampes/src/persistence/lease.js:13:3)
+    async lifecycleFixture (file:///workspace/Estampes/tests/fixtures/uva-lifecycle.mjs:8:243)
+    async TestContext.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:9:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5083.576216

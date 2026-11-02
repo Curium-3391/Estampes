@@ -163,3 +163,10 @@ This appendix supersedes only the earlier “PR-1D not yet implemented/authorize
 | Subset UVA-65 | actual FD pin union, configured count/bytes, active-read expiry/quiescence, concurrent snapshot reads, backup deadline release | default 64-session/1 GiB stress, real device/Host integration remain unexecuted |
 
 New tests run against disposable stores using the real implementation, with explicit `linux-process-crash-test` ACKs. Historical/native tests and their expectations are unchanged. Mandatory native positive acceptance is BLOCKED, not simulated or silently converted to a pass.
+
+### Native findings permanent regressions
+
+- UVA-63 subset：superseded CURRENT claim，以 prepared Root、CommitIndex membership及 exact envelope hash/bytes證明歷史 publication；涵蓋零／多個後續 commit及 ACK replay。
+- UVA-47/49 subset：temporary GC disposition、durable unlink intent、quarantine前／rename後／unlink後 crash、repeated GC。
+- UVA-66 subset：真 `/usr/bin/flock` contention加 parent callback delay，exit 73不得誤分類為 unsupported storage。
+- UVA-64 subset：proof metadata budget、fingerprint dedup、eviction revalidation、live tamper fencing、25/50/100 history diagnostics。

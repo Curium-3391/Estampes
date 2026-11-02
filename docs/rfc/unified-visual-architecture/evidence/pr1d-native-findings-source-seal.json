@@ -1,0 +1,51 @@
+{
+  "schema": "estampes.pr1d-native-findings-source-seal/1",
+  "implementationCommit": "41c34d865e10f40dfba2f23aa9b8cfd871509c67",
+  "paths": [
+    {
+      "path": "src/persistence/gc.js",
+      "bytes": 15721,
+      "sha256": "8ccd38ae2bfdb45b756f2caf49aae4b9428b885fbcfb4d7573a19de84a318ba2"
+    },
+    {
+      "path": "src/persistence/lifecycle-state.js",
+      "bytes": 4216,
+      "sha256": "d848b54b939b5d6a31b91e50afe0e81b264f7d1b43395d11f06eef6e9788dcf1"
+    },
+    {
+      "path": "src/persistence/lease.js",
+      "bytes": 4098,
+      "sha256": "a083048878df518f0a98485a87bf8aaf3307bca0acffe807210c1d9e05dccdc5"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "bytes": 21545,
+      "sha256": "f973dafb7f7f71863ee488a4ba5dc988b989000934efb47ab1f88c0f4f848c4f"
+    },
+    {
+      "path": "src/persistence/temporary-attribution.js",
+      "bytes": 10482,
+      "sha256": "1f5145bcf55f0f71fe8ce2aa8d7ff8e1c4a601010af24f08a28363e01f11ce5c"
+    },
+    {
+      "path": "tests/fixtures/delayed-spawn-preload.mjs",
+      "bytes": 541,
+      "sha256": "d7f0db5b240224d2f83a811e335e726d190ec4c158bcb51a1f23b7d89462e5e7"
+    },
+    {
+      "path": "tests/persistence-performance.test.js",
+      "bytes": 4188,
+      "sha256": "d8542409555ba9656fe093f7ee7db116e13a417f21ea49ca5bd937668084e167"
+    },
+    {
+      "path": "tests/persistence-platform.test.js",
+      "bytes": 5655,
+      "sha256": "a33fc0123fb7b85093f7eee7bdc195f97fb4ce1d924fc21fb69bf93704422b53"
+    },
+    {
+      "path": "tests/persistence-temporary-attribution.test.js",
+      "bytes": 10078,
+      "sha256": "268f91c93878b17111273e4e08d563f04b3f0ee2c607d4821b598a03e03bf22d"
+    }
+  ]
+}

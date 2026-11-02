@@ -1,0 +1,62 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 2246.020197
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":false,"claimId":"6af399a3-3212-487f-8e4f-a72ab403c565","currentGeneration":4,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 2862.473804
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":true,"claimId":"aa6cb3fe-267b-4ea0-a985-c5261e92ecb1","currentGeneration":5,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+not ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+  ---
+  duration_ms: 2.198976
+  type: 'test'
+  location: '/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: 'Durable profile requires an approved local ext4/XFS mount'
+  code: 'UNSUPPORTED_STORAGE'
+  name: 'PersistenceError'
+  stack: |-
+    fail (file:///workspace/Estampes/src/persistence/errors.js:6:57)
+    inspectPlatform (file:///workspace/Estampes/src/persistence/platform.js:15:56)
+    async openIsolatedStore (file:///workspace/Estampes/src/persistence/lease.js:13:3)
+    async lifecycleFixture (file:///workspace/Estampes/tests/fixtures/uva-lifecycle.mjs:8:243)
+    async TestContext.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:9:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+not ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+  ---
+  duration_ms: 4.959887
+  type: 'test'
+  location: '/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: 'Durable profile requires an approved local ext4/XFS mount'
+  code: 'UNSUPPORTED_STORAGE'
+  name: 'PersistenceError'
+  stack: |-
+    fail (file:///workspace/Estampes/src/persistence/errors.js:6:57)
+    inspectPlatform (file:///workspace/Estampes/src/persistence/platform.js:15:56)
+    async openIsolatedStore (file:///workspace/Estampes/src/persistence/lease.js:13:3)
+    async lifecycleFixture (file:///workspace/Estampes/tests/fixtures/uva-lifecycle.mjs:8:243)
+    async TestContext.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:9:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5473.532794

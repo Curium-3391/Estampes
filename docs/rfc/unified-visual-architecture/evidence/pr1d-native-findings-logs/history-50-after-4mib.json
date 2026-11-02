@@ -1,0 +1,551 @@
+{
+  "node": "v22.23.4",
+  "profile": "linux-process-crash-test",
+  "filesystem": "tmpfs",
+  "commands": 50,
+  "initialOpenMs": 1291.801329,
+  "recoveryOpenMs": 11910.351572,
+  "peakWorkerRssKiB": 169564,
+  "usage": {
+    "logicalBytes": 1777477,
+    "allocatedBytes": 8646656,
+    "files": 2018
+  },
+  "latencyMs": {
+    "min": 153.80770799999982,
+    "p50": 1243.8570569999938,
+    "p95": 4705.455453999999,
+    "max": 12247.048716000001,
+    "total": 83311.13186100007
+  },
+  "before": {
+    "generation": 51,
+    "documents": 1,
+    "performance": {
+      "open": null,
+      "transactions": [
+        {
+          "mode": "genesis",
+          "buildAndPreflightMs": 17.818988999999874,
+          "stageAndPrepareMs": 63.846373000000085,
+          "candidateVerificationMs": 18.94652599999995,
+          "currentPublicationMs": 2.6204720000000634,
+          "postPublicationMs": 39.871871000000056,
+          "totalMs": 143.14368799999988
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 31.542580000000044,
+          "stageAndPrepareMs": 82.00900000000001,
+          "candidateVerificationMs": 58.78146600000014,
+          "currentPublicationMs": 3.5915580000000773,
+          "postPublicationMs": 44.17465600000014,
+          "totalMs": 220.11091599999986
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 37.76161400000001,
+          "stageAndPrepareMs": 49.66738099999998,
+          "candidateVerificationMs": 26.94202199999995,
+          "currentPublicationMs": 1.8303869999999733,
+          "postPublicationMs": 35.308401,
+          "totalMs": 151.5184260000001
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 65.21875399999999,
+          "stageAndPrepareMs": 267.0914170000001,
+          "candidateVerificationMs": 70.05729199999973,
+          "currentPublicationMs": 8.914182999999866,
+          "postPublicationMs": 48.55601699999988,
+          "totalMs": 459.8483060000001
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 68.3841110000003,
+          "stageAndPrepareMs": 105.33591300000035,
+          "candidateVerificationMs": 86.25510799999984,
+          "currentPublicationMs": 5.625107999999727,
+          "postPublicationMs": 56.686003000000255,
+          "totalMs": 322.3123220000002
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 72.93467699999974,
+          "stageAndPrepareMs": 221.84581499999967,
+          "candidateVerificationMs": 264.4710319999999,
+          "currentPublicationMs": 401.6311639999999,
+          "postPublicationMs": 619.5360879999998,
+          "totalMs": 1580.4823569999999
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 99.27501700000039,
+          "stageAndPrepareMs": 115.60252000000037,
+          "candidateVerificationMs": 675.6955360000002,
+          "currentPublicationMs": 3.6267440000001443,
+          "postPublicationMs": 671.7256509999997,
+          "totalMs": 1565.939092
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 560.4266079999998,
+          "stageAndPrepareMs": 261.97427100000004,
+          "candidateVerificationMs": 309.77025200000026,
+          "currentPublicationMs": 34.228462999999465,
+          "postPublicationMs": 94.11360199999945,
+          "totalMs": 1260.5251339999995
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 105.09590899999966,
+          "stageAndPrepareMs": 147.91692899999998,
+          "candidateVerificationMs": 138.11136699999952,
+          "currentPublicationMs": 13.97852899999998,
+          "postPublicationMs": 57.314446000000316,
+          "totalMs": 462.42545299999983
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 69.96579500000007,
+          "stageAndPrepareMs": 133.7886640000006,
+          "candidateVerificationMs": 324.5611799999997,
+          "currentPublicationMs": 4.1632470000004105,
+          "postPublicationMs": 443.572830000001,
+          "totalMs": 976.0864279999996
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 58.67471000000114,
+          "stageAndPrepareMs": 68.43796199999997,
+          "candidateVerificationMs": 4280.940103999999,
+          "currentPublicationMs": 9.154615999999805,
+          "postPublicationMs": 281.84095400000115,
+          "totalMs": 4699.149226000001
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 4273.729938999999,
+          "stageAndPrepareMs": 2748.657963999998,
+          "candidateVerificationMs": 5154.056790999999,
+          "currentPublicationMs": 4.054717999999411,
+          "postPublicationMs": 58.84785099999863,
+          "totalMs": 12239.377152
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 477.61610799999835,
+          "stageAndPrepareMs": 589.2120179999984,
+          "candidateVerificationMs": 4032.673802000001,
+          "currentPublicationMs": 3.4027230000028794,
+          "postPublicationMs": 744.0756550000006,
+          "totalMs": 5846.992962
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 650.1023259999965,
+          "stageAndPrepareMs": 86.73616799999945,
+          "candidateVerificationMs": 240.42325500000152,
+          "currentPublicationMs": 7.3578919999999925,
+          "postPublicationMs": 132.60075199999847,
+          "totalMs": 1117.2284239999972
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 128.5826679999991,
+          "stageAndPrepareMs": 65.48007000000143,
+          "candidateVerificationMs": 261.5825650000006,
+          "currentPublicationMs": 2.183125999999902,
+          "postPublicationMs": 112.40875700000106,
+          "totalMs": 570.2438710000024
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 95.62170300000435,
+          "stageAndPrepareMs": 97.4922299999962,
+          "candidateVerificationMs": 173.48682700000063,
+          "currentPublicationMs": 0.9740250000031665,
+          "postPublicationMs": 125.81537699999899,
+          "totalMs": 493.3966100000034
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 261.2893650000042,
+          "stageAndPrepareMs": 79.8731340000013,
+          "candidateVerificationMs": 232.38834599999973,
+          "currentPublicationMs": 2.5718370000031427,
+          "postPublicationMs": 157.11317400000553,
+          "totalMs": 733.2432990000016
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 186.8317640000023,
+          "stageAndPrepareMs": 255.3772949999984,
+          "candidateVerificationMs": 463.91740199999913,
+          "currentPublicationMs": 143.80825700000423,
+          "postPublicationMs": 174.45644000000175,
+          "totalMs": 1224.399691000006
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 148.03196600000228,
+          "stageAndPrepareMs": 119.17680400000245,
+          "candidateVerificationMs": 438.6624010000014,
+          "currentPublicationMs": 5.08156500000041,
+          "postPublicationMs": 145.05333200000314,
+          "totalMs": 856.0137529999993
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 179.6002329999974,
+          "stageAndPrepareMs": 68.28545699999813,
+          "candidateVerificationMs": 402.237083,
+          "currentPublicationMs": 5.435035999995307,
+          "postPublicationMs": 155.02890399999887,
+          "totalMs": 810.5938409999944
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 87.90684899999906,
+          "stageAndPrepareMs": 234.0022339999996,
+          "candidateVerificationMs": 455.17478100000153,
+          "currentPublicationMs": 10.538840999994136,
+          "postPublicationMs": 112.37889400000131,
+          "totalMs": 900.0098760000037
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 177.12009399999806,
+          "stageAndPrepareMs": 69.28733400000056,
+          "candidateVerificationMs": 218.15450400000555,
+          "currentPublicationMs": 1.8758239999951911,
+          "postPublicationMs": 114.62074600000051,
+          "totalMs": 581.0683270000009
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 118.37956699999631,
+          "stageAndPrepareMs": 68.61574300000211,
+          "candidateVerificationMs": 326.9871420000054,
+          "currentPublicationMs": 3.3807119999983115,
+          "postPublicationMs": 116.99014700000407,
+          "totalMs": 634.3622539999997
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 256.4320500000031,
+          "stageAndPrepareMs": 130.7048319999958,
+          "candidateVerificationMs": 578.3731619999962,
+          "currentPublicationMs": 4.634941999996954,
+          "postPublicationMs": 155.9229570000025,
+          "totalMs": 1126.0769789999977
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 397.41317600000184,
+          "stageAndPrepareMs": 200.79110600000422,
+          "candidateVerificationMs": 654.7477819999986,
+          "currentPublicationMs": 5.535430000003544,
+          "postPublicationMs": 136.52045199999702,
+          "totalMs": 1395.016840999997
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 209.00962099999742,
+          "stageAndPrepareMs": 199.01048699999956,
+          "candidateVerificationMs": 842.125178000002,
+          "currentPublicationMs": 144.21321900000476,
+          "postPublicationMs": 143.29179699999804,
+          "totalMs": 1537.7161209999977
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 221.7804230000038,
+          "stageAndPrepareMs": 105.80062899999757,
+          "candidateVerificationMs": 441.63520199999766,
+          "currentPublicationMs": 2.646512999999686,
+          "postPublicationMs": 165.51261800000066,
+          "totalMs": 937.3848140000046
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 229.02140700000018,
+          "stageAndPrepareMs": 152.22024100000272,
+          "candidateVerificationMs": 489.4155729999984,
+          "currentPublicationMs": 2.5581989999991492,
+          "postPublicationMs": 248.83985799999937,
+          "totalMs": 1122.0641190000024
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 216.10385900000256,
+          "stageAndPrepareMs": 138.2282819999964,
+          "candidateVerificationMs": 773.8674940000055,
+          "currentPublicationMs": 3.39026400000148,
+          "postPublicationMs": 104.64330500000506,
+          "totalMs": 1236.243236000002
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 169.25938899999892,
+          "stageAndPrepareMs": 126.40292500000214,
+          "candidateVerificationMs": 615.5406960000037,
+          "currentPublicationMs": 7.110654999996768,
+          "postPublicationMs": 305.5462439999974,
+          "totalMs": 1223.8690979999956
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 168.9582259999952,
+          "stageAndPrepareMs": 165.28735199999937,
+          "candidateVerificationMs": 727.7293859999991,
+          "currentPublicationMs": 5.359463000000687,
+          "postPublicationMs": 186.4959150000068,
+          "totalMs": 1253.8383529999992
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 218.66605899999558,
+          "stageAndPrepareMs": 168.63203000000067,
+          "candidateVerificationMs": 518.4226879999987,
+          "currentPublicationMs": 3.872897000001103,
+          "postPublicationMs": 189.1125269999975,
+          "totalMs": 1098.7170130000013
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 218.7546169999987,
+          "stageAndPrepareMs": 134.02612700000464,
+          "candidateVerificationMs": 805.8037949999998,
+          "currentPublicationMs": 3.502667000000656,
+          "postPublicationMs": 136.36865000000398,
+          "totalMs": 1298.4648349999989
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 188.59728000000177,
+          "stageAndPrepareMs": 71.15753499999846,
+          "candidateVerificationMs": 939.3971319999982,
+          "currentPublicationMs": 8.224194000002171,
+          "postPublicationMs": 232.23197699999582,
+          "totalMs": 1439.6170669999992
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 302.28852399999596,
+          "stageAndPrepareMs": 96.34787199999846,
+          "candidateVerificationMs": 522.9402629999968,
+          "currentPublicationMs": 4.677485000000161,
+          "postPublicationMs": 329.6074790000057,
+          "totalMs": 1255.8712029999951
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 227.28011900000274,
+          "stageAndPrepareMs": 173.32094900000084,
+          "candidateVerificationMs": 649.6261159999995,
+          "currentPublicationMs": 4.587540000000445,
+          "postPublicationMs": 168.82714600000327,
+          "totalMs": 1223.6510689999996
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 476.5991340000037,
+          "stageAndPrepareMs": 248.27638399999705,
+          "candidateVerificationMs": 1075.4408810000023,
+          "currentPublicationMs": 2.5395120000030147,
+          "postPublicationMs": 170.97501600000396,
+          "totalMs": 1973.8402019999994
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 350.956517000006,
+          "stageAndPrepareMs": 200.36996499999805,
+          "candidateVerificationMs": 942.1648029999997,
+          "currentPublicationMs": 3.5715520000012475,
+          "postPublicationMs": 211.85160000000178,
+          "totalMs": 1708.9227760000067
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 934.9572009999974,
+          "stageAndPrepareMs": 192.13483099999576,
+          "candidateVerificationMs": 1327.5748720000047,
+          "currentPublicationMs": 9.55672400000185,
+          "postPublicationMs": 405.4948560000048,
+          "totalMs": 2869.727455
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 322.44852700000047,
+          "stageAndPrepareMs": 201.95413199999894,
+          "candidateVerificationMs": 1303.098149000005,
+          "currentPublicationMs": 3.5724459999983083,
+          "postPublicationMs": 271.57277999999496,
+          "totalMs": 2102.657220999994
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 314.5671750000038,
+          "stageAndPrepareMs": 172.04596300000412,
+          "candidateVerificationMs": 1182.457229000007,
+          "currentPublicationMs": 3.621058999997331,
+          "postPublicationMs": 190.6024929999985,
+          "totalMs": 1863.3045679999996
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 403.1861249999929,
+          "stageAndPrepareMs": 227.33685799999512,
+          "candidateVerificationMs": 1124.4896420000005,
+          "currentPublicationMs": 5.800199000004795,
+          "postPublicationMs": 183.3392840000015,
+          "totalMs": 1944.1698469999974
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 336.5507360000047,
+          "stageAndPrepareMs": 136.76210600000923,
+          "candidateVerificationMs": 585.0241079999978,
+          "currentPublicationMs": 2.3136579999991227,
+          "postPublicationMs": 146.68057900000713,
+          "totalMs": 1207.3434249999991
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 471.1532270000025,
+          "stageAndPrepareMs": 234.9181399999943,
+          "candidateVerificationMs": 1304.6140490000107,
+          "currentPublicationMs": 7.076472000000649,
+          "postPublicationMs": 162.13183800000115,
+          "totalMs": 2179.904746999993
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 246.18196999999054,
+          "stageAndPrepareMs": 95.49501599998621,
+          "candidateVerificationMs": 757.7013210000005,
+          "currentPublicationMs": 2.9858390000008512,
+          "postPublicationMs": 169.74140400000033,
+          "totalMs": 1272.1170619999903
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 211.44857600000978,
+          "stageAndPrepareMs": 146.7419130000053,
+          "candidateVerificationMs": 1749.2925709999981,
+          "currentPublicationMs": 3.0271490000013728,
+          "postPublicationMs": 196.2022169999982,
+          "totalMs": 2306.724595000007
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 236.33483900000283,
+          "stageAndPrepareMs": 85.59745899999689,
+          "candidateVerificationMs": 465.9036909999995,
+          "currentPublicationMs": 1.518435000005411,
+          "postPublicationMs": 147.48085900000297,
+          "totalMs": 936.8473609999928
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 210.72934000000532,
+          "stageAndPrepareMs": 116.73162700000103,
+          "candidateVerificationMs": 654.9928440000076,
+          "currentPublicationMs": 2.807671999995364,
+          "postPublicationMs": 175.5790730000008,
+          "totalMs": 1160.852030000009
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 522.5037220000086,
+          "stageAndPrepareMs": 176.5211699999927,
+          "candidateVerificationMs": 2156.3269560000044,
+          "currentPublicationMs": 0.9792790000064997,
+          "postPublicationMs": 138.50111800000013,
+          "totalMs": 2994.840810000009
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 415.9489900000044,
+          "stageAndPrepareMs": 305.01035499999125,
+          "candidateVerificationMs": 2546.1101259999996,
+          "currentPublicationMs": 2.2925390000018524,
+          "postPublicationMs": 186.89551700001175,
+          "totalMs": 3456.2656720000086
+        },
+        {
+          "mode": "content",
+          "buildAndPreflightMs": 571.5164619999996,
+          "stageAndPrepareMs": 118.64407400001073,
+          "candidateVerificationMs": 426.44528600000194,
+          "currentPublicationMs": 1.821989999996731,
+          "postPublicationMs": 141.01357399999688,
+          "totalMs": 1259.4519589999982
+        }
+      ],
+      "verification": {
+        "snapshotLoads": 51,
+        "versionHits": 1325,
+        "versionMisses": 50,
+        "recordHits": 100,
+        "registryHits": 1275,
+        "registryMaterializations": 102,
+        "versionReconstructions": 50,
+        "reconstructedMs": 5223.240413000003,
+        "proofEvictions": 0,
+        "metadataPathsTraversed": 47925,
+        "recordCacheBytes": 41219,
+        "registryCacheBytes": 13043,
+        "proofMetadataBytes": 337170,
+        "proofMetadataBudget": 4194304,
+        "physicalFingerprints": 200,
+        "versionProofs": 50,
+        "registryProofs": 51
+      }
+    }
+  },
+  "after": {
+    "generation": 52,
+    "documents": 1,
+    "performance": {
+      "open": {
+        "verifyCommittedMs": 6097.333267999999
+      },
+      "transactions": [
+        {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 832.730141,
+          "stageAndPrepareMs": 137.59801399999924,
+          "candidateVerificationMs": 1168.882721,
+          "currentPublicationMs": 2.3223479999996925,
+          "postPublicationMs": 197.41187899999932,
+          "totalMs": 2338.996826999999
+        }
+      ],
+      "verification": {
+        "snapshotLoads": 2,
+        "versionHits": 102,
+        "versionMisses": 50,
+        "recordHits": 52,
+        "registryHits": 51,
+        "registryMaterializations": 53,
+        "versionReconstructions": 50,
+        "reconstructedMs": 3494.502016000003,
+        "proofEvictions": 0,
+        "metadataPathsTraversed": 5299,
+        "recordCacheBytes": 41219,
+        "registryCacheBytes": 13043,
+        "proofMetadataBytes": 337170,
+        "proofMetadataBudget": 4194304,
+        "physicalFingerprints": 200,
+        "versionProofs": 50,
+        "registryProofs": 51
+      }
+    }
+  },
+  "verifiedGeneration": 52,
+  "replayed": true,
+  "contentCommits": 50,
+  "limits": "Process-crash tmpfs only; native ext4/XFS power-loss, 10 GiB fill and production SLA remain external gates."
+}
