@@ -28,6 +28,13 @@ test("OS lifetime lease rejects a second writer before mutation and SIGKILL rele
   assert.deepEqual(await readFile(join(f.root,"visual-registry/CURRENT.json")),head);assert.equal((await lstat(join(f.root,"WRITER.lock"))).ino,st.ino);
   await f.reopen();assert.equal(f.store.status.state,"ready");assert.ok((await f.store.snapshot()).authority.epoch>1);
 });
+test("real flock contention remains exit-73 when parent startup IPC is delayed",async t=>{
+  const root=await temporary(t),preload=new URL("./fixtures/delayed-spawn-preload.mjs",import.meta.url),lease=new URL("../src/persistence/lease.js",import.meta.url);
+  const script=`import {openIsolatedStore} from ${JSON.stringify(lease.href)};const options=${JSON.stringify(options)};const first=await openIsolatedStore(process.argv[1],options);let result;try{await openIsolatedStore(process.argv[1],options);result={admitted:true};}catch(e){result={code:e.code,details:e.details};}console.log(JSON.stringify(result));await first.close();`;
+  const child=spawn(process.execPath,["--input-type=module","-e",script,root],{env:{...process.env,NODE_OPTIONS:"--import="+preload.href},stdio:["ignore","pipe","pipe"]});let stdout="",stderr="";
+  child.stdout.on("data",b=>stdout+=b);child.stderr.on("data",b=>stderr+=b);const [code]=await once(child,"exit");assert.equal(code,0,stderr);
+  const result=JSON.parse(stdout.trim());assert.equal(result.code,"STORAGE_UNAVAILABLE");assert.equal(result.details.exitCode,73);
+});
 test("direct coordinator construction without its own inherited OS lease cannot write",async t=>{
   const f=await fixture(t),raw=new CommitCoordinator(new ManagedFiles(f.root),f.store.status.platform);
   assert.equal(raw.publish,undefined);
