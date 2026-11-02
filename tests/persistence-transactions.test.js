@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile, statfs } from "node:fs/promises";
 import { fixture, actor, command, document, richDocument, epoch, titleEdit, id } from "./fixtures/uva-persistence.mjs";
+import { tmpdir } from "node:os";
 import { embed } from "./fixtures/uva-pr1a.mjs";
 import { hashJson, canonicalJson } from "../src/documents/validation.js";
 import { readCommittedSnapshot } from "../src/persistence/coordinator.js";
+import { verifyPreparedClosure } from "../src/persistence/records.js";
 import { ManagedFiles, StagingPlan } from "../src/persistence/filesystem.js";
 import { PageStore, pagePath } from "../src/persistence/pages.js";
 
@@ -96,4 +98,33 @@ test("future tombstones keep the committed key bound without reapplying or prete
   assert.throws(()=>replayLedgerEntry(tombstone,payloadHash),e=>e.code==="RETRY_WINDOW_EXPIRED");
   assert.throws(()=>replayLedgerEntry(tombstone,"b".repeat(64)),e=>e.code==="IDEMPOTENCY_MISMATCH");
   assert.ok(Buffer.byteLength(canonicalJson(tombstone.record))<=1024);assert.equal((await f.store.diagnostics()).contentCommits,1);
+});
+
+const nativeType=Number(BigInt.asUintN(32,(await statfs(tmpdir(),{bigint:true})).type));
+for(const profile of ["linux-process-crash-test","linux-local-durable"])test("historical Registry uses its own Bindings after embed update/removal / "+profile,{
+  skip:profile==="linux-local-durable"&&![0xef53,0x58465342].includes(nativeType)?"No approved native ext4/XFS temporary mount":false,
+},async t=>{
+  const f=await fixture(t,{profile}),child=document(2),parent=embed();
+  if(profile==="linux-local-durable")parent.persistence=child.persistence="durable";
+  const firstCommand=command([parent,child]),first=await f.store.commit(firstCommand,actor(),await epoch(f.store)),original=await f.store.snapshot();
+  const updatedChild=titleEdit(child),updatedParent=structuredClone(parent);
+  updatedParent.revision=2;updatedParent.scenes[0].revision=2;updatedParent.scenes[0].objects[0].revision=2;
+  updatedParent.scenes[0].objects[0].props.sourceRevision=2;updatedParent.bindings[0].sourceRevision=2;
+  const updateCommand={requestId:id("req",2),changes:[{document:updatedParent,expectedRevision:1},{document:updatedChild,expectedRevision:1}]};
+  const second=await f.store.commit(updateCommand,actor(),await epoch(f.store)),updated=await f.store.snapshot();
+  assert.deepEqual(updated.documents,[updatedParent,updatedChild]);
+  assert.notEqual(original.root.roots.registry,updated.root.roots.registry);
+  assert.deepEqual((await verifyPreparedClosure(new ManagedFiles(f.root),original.envelope)).documents,[parent,child]);
+
+  const removed=structuredClone(updatedParent);removed.revision=3;removed.scenes[0].revision=3;
+  removed.scenes[0].objects=[];removed.scenes[0].layers[0].content=[];removed.bindings=[];
+  await f.store.commit(command([removed],3,2),actor(),await epoch(f.store));
+  assert.deepEqual((await f.store.snapshot()).documents,[removed,updatedChild]);
+  assert.deepEqual((await verifyPreparedClosure(new ManagedFiles(f.root),original.envelope)).documents,[parent,child]);
+  assert.deepEqual((await verifyPreparedClosure(new ManagedFiles(f.root),updated.envelope)).documents,[updatedParent,updatedChild]);
+  await f.reopen({profile});assert.equal(f.store.status.state,"ready");
+  assert.deepEqual((await readCommittedSnapshot(f.root)).documents,[removed,updatedChild]);
+  assert.deepEqual((await f.store.commit(firstCommand,actor(2),await epoch(f.store))).ack,first.ack);
+  assert.deepEqual((await f.store.commit(updateCommand,actor(3),await epoch(f.store))).ack,second.ack);
+  assert.equal((await f.store.diagnostics()).contentCommits,3);
 });
