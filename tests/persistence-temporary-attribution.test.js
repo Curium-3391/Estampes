@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { lifecycleFixture, document, command, actor, epoch, TIME, DAY } from "./fixtures/uva-lifecycle.mjs";
+import { lifecycleFixture, document, command, actor, epoch, titleEdit, TIME, DAY } from "./fixtures/uva-lifecycle.mjs";
 import { ManagedFiles } from "../src/persistence/filesystem.js";
 import { loadCommitted } from "../src/persistence/records.js";
 import { openIsolatedStore } from "../src/persistence/lease.js";
@@ -19,6 +19,13 @@ async function killAt(t,f,point){
   const names=await readdir(join(f.root,"visual-temporaries/claims"));assert.equal(names.length,1);
   const claim=JSON.parse(await readFile(join(f.root,"visual-temporaries/claims",names[0])));assert.equal(claim.owner.kind,"transaction");
   f.store.kill("SIGKILL");await f.store.waitForExit();assert.equal((await pending).code,"RECOVERY_REQUIRED");return claim;
+}
+
+async function killOperationAt(t,f,point,operation){
+  let listener,timer;const reached=new Promise((resolve,reject)=>{listener=event=>{if(event.name===point){clearTimeout(timer);f.store.events.off("stage",listener);resolve();}};
+    f.store.events.on("stage",listener);timer=setTimeout(()=>reject(new Error("Stage not reached: "+point)),20000);});
+  t.after(()=>{clearTimeout(timer);f.store.events.off("stage",listener);});await f.store.injectFault({point,mode:"pause"});
+  const pending=operation().catch(error=>error);await reached;f.store.kill("SIGKILL");await f.store.waitForExit();assert.equal((await pending).code,"RECOVERY_REQUIRED");
 }
 
 test("PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace",async t=>{
@@ -69,4 +76,25 @@ test("PR-1D: two durable claims for one target are ambiguous and fail closed",as
     await files.durableCreate("visual-temporaries/claims/"+claimId+".json",Buffer.from(canonicalJson(claim)),"test-claim");
   }
   await f.reopen();assert.equal(f.store.status.state,"read-only-recovery");
+});
+
+for(const laterCommit of [false,true])test("PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later="+laterCommit,async t=>{
+  const f=await lifecycleFixture(t),first=document(),cmd=command([first]);await killOperationAt(t,f,"current.after-dir-fsync",async()=>f.store.commit(cmd,actor(),await epoch(f.store)));
+  const files=new ManagedFiles(f.root),names=await readdir(join(f.root,"visual-temporaries/claims"));assert.equal(names.length,1);
+  const claim=await files.json("visual-temporaries/claims/"+names[0]);await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  const replay=await f.store.commit(cmd,actor(2),await epoch(f.store));assert.equal(replay.replayed,true);assert.notEqual((await files.digest(claim.finalPath)).hash,claim.hash);
+  let expected=first;if(laterCommit){expected={...structuredClone(first),revision:2,title:"later acknowledged content"};await f.store.commit(command([expected],2,1),actor(3),await epoch(f.store));}
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));assert.deepEqual((await f.store.snapshot()).documents,[expected]);
+  const retry=await f.store.commit(cmd,actor(4),await epoch(f.store));assert.equal(retry.replayed,true);assert.deepEqual(retry.ack,replay.ack);
+});
+
+for(const point of ["gc.before-quarantine","gc.after-rename","gc.after-unlink"])test("PR-1D native finding H-02: GC disposition remains sole temporary owner after "+point,async t=>{
+  const f=await lifecycleFixture(t),first=document();await f.store.commit(command([first]),actor(),await epoch(f.store));
+  const changed=titleEdit(first);await killOperationAt(t,f,"staged.before-file-fsync",async()=>f.store.commit(command([changed],2,1),actor(2),await epoch(f.store)));
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));const plan=await f.store.maintenance("gcPlan",{classes:["G2"]});assert.equal(plan.planned,true);
+  if(point==="gc.after-unlink"){assert.equal((await f.store.maintenance("gcStep",{id:plan.id})).state,"waiting-grace");await f.store.maintenance("clock",{nowMs:TIME+DAY});}
+  await killOperationAt(t,f,point,()=>f.store.maintenance("gcStep",{id:plan.id}));await f.reopen({testClockMs:TIME+DAY});assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  await f.store.maintenance("gcStep",{id:plan.id});await f.store.maintenance("clock",{nowMs:TIME+2*DAY});assert.equal((await f.store.maintenance("gcStep",{id:plan.id})).state,"complete");
+  const snapshot=await loadCommitted(new ManagedFiles(f.root));assert.equal([...snapshot.indices.retention.keys()].some(key=>key.startsWith("temporary:")),false);
+  await f.store.maintenance("gcPlan",{classes:["G2"]});await f.reopen({testClockMs:TIME+2*DAY});assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
 });

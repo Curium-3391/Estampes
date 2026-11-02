@@ -14,12 +14,13 @@ const uuid="[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 const allowed=new RegExp("^(?:(?:visual-documents/"+uuid+"/generations/[1-9][0-9]*-"+hash+"\\.json|visual-registry/(?:pages|roots)/"+hash+"\\.json|visual-history/(?:chunks/"+hash+"\\.bin|deltas/"+hash+"\\.json)|visual-maintenance/(?:gc|backup-lists|backup-list-pages)/"+hash+"\\.json|visual-transactions/"+uuid+"/(?:intent|prepared|outcome)\\.json|visual-registry/CURRENT\\.json|storage-format\\.json)(?:\\.tmp-"+uuid+")?|visual-temporaries/claims/"+uuid+"\\.json)$");
 export const gcSourceAllowed=path=>typeof path==="string"&&allowed.test(path);
 const candidateSchema=z.object({path:z.string().refine(gcSourceAllowed),hash:Hash,bytes:z.number().int().min(0),class:z.enum(["G1","G2"]),quarantine:z.string(),reason:z.string().max(160)}).strict();
+const temporaryDispositionSchema=z.object({recovery:TemporaryRecoverySchema,claimCandidate:z.number().int().min(0).max(127),temporaryCandidate:z.number().int().min(0).max(127).nullable()}).strict();
 export const GcPlanSchema=bounded(z.object({schema:z.literal("estampes.gc-plan/1"),id:z.string().uuid(),storeInstanceId:z.string().uuid(),sourceGeneration:z.number().int().positive(),
- sourceRootHash:Hash,rootsetHash:Hash,pinsEpoch:z.number().int().min(0),createdAtMs:z.number().int().min(0),candidates:z.array(candidateSchema).min(1).max(128)}).strict());
+ sourceRootHash:Hash,rootsetHash:Hash,pinsEpoch:z.number().int().min(0),createdAtMs:z.number().int().min(0),candidates:z.array(candidateSchema).min(1).max(128),temporaryDispositions:z.array(temporaryDispositionSchema).max(64).optional()}).strict());
 export const gcPlanPath=hash=>"visual-maintenance/gc/"+parse(Hash,hash)+".json";
 export async function readGcPlan(files,record){
  const r=parse(GcRecordSchema,record),raw=await files.json(gcPlanPath(r.planHash),4*1024**2),validated=GcPlanSchema.safeParse(raw);integrity(validated.success,"Invalid committed GC plan schema");const plan=validated.data;integrity(hashJson(plan)===r.planHash,"GC plan hash mismatch");
- integrity(new Set(r.moved).size===r.moved.length&&new Set(r.deleted).size===r.deleted.length&&r.moved.every(i=>i<plan.candidates.length)&&r.deleted.every(i=>r.moved.includes(i)),"GC progress differs from candidate inventory");
+ integrity(new Set(r.moved).size===r.moved.length&&new Set(r.deleted).size===r.deleted.length&&new Set(r.unlinking??[]).size===(r.unlinking??[]).length&&r.moved.every(i=>i<plan.candidates.length)&&r.deleted.every(i=>r.moved.includes(i))&&(r.unlinking??[]).every(i=>r.moved.includes(i)&&!r.deleted.includes(i)),"GC progress differs from candidate inventory");
  for(const [i,c]of plan.candidates.entries())integrity(c.quarantine===`gc-quarantine/${plan.id}/${i}-${c.hash}.bin`,"Unsafe GC quarantine path");return plan;
 }
 async function rootMetadata(files,envelope,paths){
@@ -48,7 +49,7 @@ export class GarbageCollector {
  constructor(manager){this.manager=manager;this.owner=manager.owner;this.files=this.owner.files;}
  async plan({classes=["G1","G2"]}={}){
   integrity(Array.isArray(classes)&&classes.length>0&&classes.every(v=>["G1","G2"].includes(v)),"Invalid GC class filter");
-  const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner),candidates=[],proofs=new Map(),selected=new Set();
+  const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner),candidates=[],proofs=new Map(),selected=new Set(),temporaryDispositions=[];
   const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=128||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return false;
    const info=await this.files.digest(path);selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:""});return true;};
   for(const row of snapshot.indices.locator.values())if(row.kind==="delta"){
@@ -61,8 +62,9 @@ export class GarbageCollector {
    const recovery=parse(TemporaryRecoverySchema,raw);integrity(key==="temporary:"+recovery.claimId,"Temporary recovery key mismatch");
    const claim=await readTemporaryClaim(this.files,recovery.claimId);
    integrity(claim.claimId===recovery.claimId&&canonicalJson(claim.owner)===canonicalJson(recovery.owner)&&claim.finalPath===recovery.finalPath&&claim.temporaryPath===recovery.temporaryPath&&claim.hash===recovery.hash&&claim.bytes===recovery.bytes,"Temporary claim differs from durable recovery classification");
-   const hasTemporary=await this.files.exists(claim.temporaryPath);if(hasTemporary)integrity(await add(claim.temporaryPath,"G2","Attributed temporary from a durably classified transaction"),"Attributed temporary could not enter GC plan");
+   const hasTemporary=await this.files.exists(claim.temporaryPath);let temporaryCandidate=null;if(hasTemporary){integrity(await add(claim.temporaryPath,"G2","Attributed temporary from a durably classified transaction"),"Attributed temporary could not enter GC plan");temporaryCandidate=candidates.length-1;}
    integrity(await add(temporaryClaimPath(claim.claimId),"G2","Durable temporary ownership claim after terminal classification"),"Temporary claim could not enter GC plan");
+   temporaryDispositions.push({recovery,claimCandidate:candidates.length-1,temporaryCandidate});
    proofs.set(key,undefined);
   }
   for(const dir of await readdir(this.files.path("visual-transactions"))){
@@ -86,7 +88,7 @@ export class GarbageCollector {
   }
   if(!candidates.length)return {planned:false,reason:"No provably unreachable managed files"};
   const id=randomUUID();for(const [i,c]of candidates.entries())c.quarantine=`gc-quarantine/${id}/${i}-${c.hash}.bin`;
-  const plan={schema:"estampes.gc-plan/1",id,storeInstanceId:snapshot.root.storeInstanceId,sourceGeneration:snapshot.root.generation,sourceRootHash:snapshot.envelope.rootHash,rootsetHash,pinsEpoch:this.manager.pins.epoch,createdAtMs:now,candidates};parse(GcPlanSchema,plan);
+  const plan={schema:"estampes.gc-plan/1",id,storeInstanceId:snapshot.root.storeInstanceId,sourceGeneration:snapshot.root.generation,sourceRootHash:snapshot.envelope.rootHash,rootsetHash,pinsEpoch:this.manager.pins.epoch,createdAtMs:now,candidates,...(temporaryDispositions.length?{temporaryDispositions}:{})};parse(GcPlanSchema,plan);
   await this.manager.publish("gc-plan",async({plan:staging})=>{const hash=hashJson(plan);staging.add(gcPlanPath(hash),plan,4*1024**2,"gc-plan");return {retentionChanges:new Map([...proofs,["gc:"+id,{schema:"estampes.gc-state/1",planHash:hash,state:"planned",quarantinedAtMs:null,moved:[],deleted:[]}]]),result:{id,candidates:candidates.length}};});
   return {planned:true,id,candidates:candidates.length};
  }
@@ -111,16 +113,25 @@ export class GarbageCollector {
   await this.files.point("gc.after-quarantine",{id});
   // Re-mark after durable quarantine progress; callbacks cannot use the old mark.
   const remarked=await protectedPaths(this.owner);
-  const next=structuredClone(this.owner.current.indices.retention.get(key));let waiting=false;
+  let next=structuredClone(this.owner.current.indices.retention.get(key)),waiting=false;const deletionIntent=[];
   for(const i of next.moved){
    if(next.deleted.includes(i))continue;const c=plan.candidates[i];
    if(remarked.paths.has(c.path)){waiting=true;continue;}
    if(c.class==="G2"&&(!this.manager.canAge()||this.manager.now()-next.quarantinedAtMs<DAY)){waiting=true;continue;}
+   deletionIntent.push(i);
+  }
+  if(deletionIntent.length){
+   next.state="unlinking";next.unlinking=deletionIntent;
+   await this.manager.publish("gc-unlink-intent",async()=>({retentionChanges:new Map([[key,next]]),result:{id,unlinking:deletionIntent.length}}));
+   const finalMark=await protectedPaths(this.owner);next=structuredClone(this.owner.current.indices.retention.get(key));
+   for(const i of next.unlinking??[]){const c=plan.candidates[i];if(finalMark.paths.has(c.path)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){
     integrity((await this.files.digest(c.quarantine)).hash===c.hash,"Quarantine checksum failed before unlink");
     await this.files.remove(c.quarantine,"gc");
    }
    next.deleted.push(i);progressed++;
+   }
+   delete next.unlinking;
   }
   next.state=next.deleted.length===plan.candidates.length?"complete":waiting?"waiting-grace":"quarantining";
   await this.manager.publish("gc-unlink-progress",async()=>({retentionChanges:new Map([[key,next]]),result:{id,state:next.state,deleted:next.deleted.length}}));
