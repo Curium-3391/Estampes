@@ -88,3 +88,18 @@ R-01–06的**最新獨立分類**見FINAL-ARCHITECTURE-GATE B；原REVIEW-REMED
 | No cutover / scope | 現有95hash不變、exact allowednewfiles與2remediatedhelpers；defaultnative拒unknown | 1D/1B／migration／newAPI仍未授權；native gap阻擋PR-1C complete exit |
 
 實際counts與raw log SHA256見PR-1C execution manifest；所有gate仍依owning PR，而非全67case數量宣稱完成。
+
+
+## PR-1D — Observed implementation trace
+
+| Authorized requirement | Current code / actual test evidence | Cases / remaining PR gate |
+| --- | --- | --- |
+| Complete logical history, stable IDs/hashes | archive.js + records.js; lifecycle and lifecycle-faults reconstruct every fixture revision, detect missing chunk | UVA-46/63; native/capacity qualification, then PR-1B approval |
+| Consistent roots, readers, recovery, checkpoints | lifecycle.js + pins.js; fixed Registry/Locator pair, FD ownership, explicit checkpoint release, active read waits | UVA-46/65; full stress/binary closure remains |
+| Two-class transactional GC | gc.js + coordinator.js; hashed plan under retention Root, quarantine/fsync, G1 alternate verified, G2 terminal proof/grace, restart tests | UVA-47/49/59; device faults remain |
+| ACK retention and permanent identity | records.js + lifecycle.compactLedger + journal.js; expiry/mismatch/rollback/restart/journal GC tests | UVA-48; production routes remain PR-1B |
+| Capacity and maintenance admission | capacity.js + lifecycle.admit; actual allocated blocks/reservations, rejection keeps draft/Root, auto progress | UVA-60/64; measured small benchmarks only, full budget qualification blocked |
+| Complete supported backup/restore | backup.js + restore-worker.js; fixed pinned root, hash index, manifest last, lossless Doc-only closure, RO stale restore | UVA-50/65; binary and other stores deferred, no writable continuation |
+| Scope and historical integrity | PR-1D-AUTHORIZATION, evidence/pr1d-authorization.json, narrow consistency allowlist; old tests/native/95 hashes unchanged | PR-1D isolated authorization only; no activation/migration/push/PR-1B |
+
+[Implementation report](PR-1D-IMPLEMENTATION-REPORT.md) is the current observed evidence boundary. It does not rewrite earlier blocked findings and does not mark the full UVA cases complete.

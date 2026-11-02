@@ -1,0 +1,964 @@
+{
+  "implementationCommit": "eef2f5c13580fa0acd41af84796b09ee8021238b",
+  "sourceSeal": "pr1d-source-seal.json",
+  "node": "22.23.4",
+  "profile": "linux-process-crash-test",
+  "nativeGate": "BLOCKED_NOT_EXECUTED",
+  "powerLoss": "NOT_EXECUTED",
+  "productionActivation": false,
+  "pr1bStarted": false,
+  "runs": [
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-transactions.test.js tests/persistence-platform.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 19,
+        "pass": 17,
+        "fail": 0,
+        "skipped": 2,
+        "cancelled": 0
+      },
+      "note": "pre-lifecycle regression",
+      "log": "pr1d-logs/pr1c-regression-first.log.gz",
+      "bytes": 5027,
+      "sha256": "688498234f306e204bb2ff41f71322440b531a668988a4b340bab74596cdf1e2",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-lifecycle.test.js",
+      "exitCode": 1,
+      "results": {
+        "tests": 9,
+        "pass": 8,
+        "fail": 1,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "new pin fixture selected only current rather than old candidates; G2 mixed plan also requires grace",
+      "log": "pr1d-logs/lifecycle-first.log.gz",
+      "bytes": 3093,
+      "sha256": "043c3ae51f2b7118a9400288dfb84f9d01d09e92a47234a23ee0bce2245447f3",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-lifecycle.test.js",
+      "exitCode": 1,
+      "results": {
+        "tests": 9,
+        "pass": 8,
+        "fail": 1,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "new fixture pin did not include older candidate version",
+      "log": "pr1d-logs/lifecycle-second.log.gz",
+      "bytes": 3043,
+      "sha256": "a1adc680e32b12fd5abd80c342f92e14c9fa045b7544029c927b30db5f991d72",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-lifecycle.test.js",
+      "exitCode": 1,
+      "results": {
+        "tests": 9,
+        "pass": 8,
+        "fail": 1,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "correctly pinned history excludes candidates already at planning; new assertion updated to test that exclusion",
+      "log": "pr1d-logs/lifecycle-third.log.gz",
+      "bytes": 3035,
+      "sha256": "e51cf2e801d4edaaf963a68373a82da2b4bf2ecccd6feec9a98bb14ff794f952",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-lifecycle-faults.test.js tests/persistence-backup.test.js",
+      "exitCode": 1,
+      "results": {
+        "tests": 20,
+        "pass": 19,
+        "fail": 1,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "corrupt committed GC plan rejected as input but did not fence; fixed integrity classification",
+      "log": "pr1d-logs/faults-first.log.gz",
+      "bytes": 5667,
+      "sha256": "71f5d46caeb85ccf1856a959531bc23dc642859b7470778718189b89c01ebbf3",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-lifecycle.test.js tests/persistence-lifecycle-faults.test.js tests/persistence-backup.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 29,
+        "pass": 29,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "29 tests before final journal/pin regressions",
+      "log": "pr1d-logs/lifecycle-all-second.log.gz",
+      "bytes": 7235,
+      "sha256": "9f10c86ff57ba9ac8f7bbefc7f3339fc705a8414d331e81181ed5ac39c6ac239",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-lifecycle-faults.test.js tests/persistence-backup.test.js tests/persistence-capacity.test.js tests/persistence-lifecycle.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 34,
+        "pass": 34,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "34 tests final source; source seal applies",
+      "log": "pr1d-logs/lifecycle-final-source.log.gz",
+      "bytes": 8557,
+      "sha256": "75ea891272d92a4169c8a31f27b8cb136d04fcc6648b4223835fdd68c38e0162",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test tests/persistence-capacity.test.js",
+      "exitCode": 0,
+      "results": {
+        "tests": 3,
+        "pass": 3,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "actual allocated files and coordinator capacity tests",
+      "log": "pr1d-logs/capacity-first.log.gz",
+      "bytes": 937,
+      "sha256": "388e2ebb8892f7c5059b097345a1a788b77713003c5049318ad24fc90224813e",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs",
+      "exitCode": 0,
+      "results": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "note": "proposed schemas only",
+      "log": "pr1d-logs/proposed-contracts.log.gz",
+      "bytes": 4602,
+      "sha256": "2424e4fda84a18e6da6b158ecaa0ce28185d6e3600da1a96258bbe500b164903",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "9 formal examples; no new tool registered",
+      "log": "pr1d-logs/formal-examples.log.gz",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081",
+      "encoding": "gzip"
+    },
+    {
+      "command": "python -m pytest cas-service/tests -q",
+      "exitCode": 1,
+      "results": {},
+      "note": "pytest unavailable; project uses unittest; preserved failed attempt",
+      "log": "pr1d-logs/cas-python.log.gz",
+      "bytes": 97,
+      "sha256": "51f5550d86043279227c92b72199d4ee1f66d30623405f70c98442058ffe76c7",
+      "encoding": "gzip"
+    },
+    {
+      "command": "python -m unittest discover -s cas-service/tests -v",
+      "exitCode": 0,
+      "results": {},
+      "note": "17 unittest tests passed; pre-existing ResourceWarnings retained",
+      "log": "pr1d-logs/cas-unittest.log.gz",
+      "bytes": 3689,
+      "sha256": "c2d5a5416219cba67cf2d76bddcdb433b7e72111b09987c58108bb10561d5727",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --test --test-concurrency=1",
+      "exitCode": 1,
+      "results": {
+        "tests": 436,
+        "pass": 427,
+        "fail": 7,
+        "skipped": 2,
+        "cancelled": 0
+      },
+      "note": "436 total /427 pass /7 browser executable missing /2 native skip; overlapped source finalization, not sealed final proof",
+      "log": "pr1d-logs/node22-full-first.log.gz",
+      "bytes": 108311,
+      "sha256": "9f4eee271f10c2cad720d43c392936b74265e83ec2b1aae073aa14031f8a2773",
+      "encoding": "gzip"
+    },
+    {
+      "command": "CHROME_BIN=/usr/bin/chromium npm exec --yes --package=node@22 -- node --test --test-concurrency=1",
+      "exitCode": 0,
+      "results": {
+        "tests": 438,
+        "pass": 436,
+        "fail": 0,
+        "skipped": 2,
+        "cancelled": 0
+      },
+      "note": "438 total /436 pass /0 fail /2 native skip; sealed final source; browser uses fake Host, not ChatGPT acceptance",
+      "log": "pr1d-logs/node22-full-final.log.gz",
+      "bytes": 99932,
+      "sha256": "11d388e5ef0c5ce8af1292a7995ec9b9e986436db576b8a9f373c7dff06b1426",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "first documentation pass before final report",
+      "log": "pr1d-logs/docs-first.log.gz",
+      "bytes": 127,
+      "sha256": "f1375cdd8dc6761821006696be215be1369995c0c1c07c2be14e324b81375109",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "version check only; no release",
+      "log": "pr1d-logs/release-first.log.gz",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "narrow PR-1D authorization; historical assertions retained",
+      "log": "pr1d-logs/consistency-first.log.gz",
+      "bytes": 391,
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/pr1d-native-probe.mjs",
+      "exitCode": 2,
+      "results": {},
+      "note": "MANDATORY NATIVE GATE BLOCKED; actual guard refused tmpfs; not a skipped native success",
+      "log": "pr1d-logs/native-probe.log.gz",
+      "bytes": 322,
+      "sha256": "d9969cecc413a9e406080f72c24cd43332f6e3b535d54fd5fd144688027d089b",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/pr1d-capacity-benchmark.mjs > capacity-benchmark.json 2> capacity-benchmark.log",
+      "exitCode": 0,
+      "results": {},
+      "note": "exploratory four real workloads; overlaps verification/source hardening; not sealed final performance acceptance",
+      "log": "pr1d-logs/capacity-benchmark.json",
+      "bytes": 2839,
+      "sha256": "62b2b87669defffa94c089693f9c34043ccc8244c457f27bf317cda750fc5fa3"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/pr1d-capacity-benchmark.mjs > capacity-benchmark-final.json 2> capacity-benchmark-final.log",
+      "exitCode": 0,
+      "results": {},
+      "note": "four real workloads on sealed eef2f5c source; capacity/performance qualification BLOCKED; no native/SLA claim",
+      "log": "pr1d-logs/capacity-benchmark-final.json",
+      "bytes": 2834,
+      "sha256": "630f80f02a85c74c28fd3be56710e4bd87dcc66c5f6a94712b0183a28cfa5db3"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 1,
+      "results": {},
+      "note": "appendix case row prefix duplicated formal definitions; relabeled subsets; 67-case requirement unchanged",
+      "log": "pr1d-logs/consistency-final-first.log.gz",
+      "bytes": 54,
+      "sha256": "ba62bb46b8aeb53d7bb9d3a0f78ca94d95c81e9b3b1cd7ce828eef350eceb307",
+      "encoding": "gzip"
+    },
+    {
+      "command": "temporary documentation-only seal fixture; node check-consistency.mjs",
+      "exitCode": 1,
+      "results": {},
+      "note": "EXPECTED_REJECTION: mismatched source seal; exact original bytes restored",
+      "log": "pr1d-logs/scope-negative-seal.log.gz",
+      "bytes": 121,
+      "sha256": "09254a959acd61552964c715a99e16b56734b6d1792087a4acc910ee57a708b8",
+      "commandDetails": [
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs"
+        ]
+      ],
+      "encoding": "gzip"
+    },
+    {
+      "command": "temporary disposable unauthorized-path fixture; node check-consistency.mjs",
+      "exitCode": 1,
+      "results": {},
+      "note": "EXPECTED_REJECTION: file outside fixed scope; fixture removed",
+      "log": "pr1d-logs/scope-negative-path.log.gz",
+      "bytes": 370,
+      "sha256": "4da915d53e8daee154f97ba4452310fdb61b0bca2f0c33e38c6ec2095ebb39ab",
+      "commandDetails": [
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs"
+        ]
+      ],
+      "encoding": "gzip"
+    },
+    {
+      "command": "git ancestry/branch/main/scope commands listed individually in log",
+      "exitCode": 0,
+      "results": {},
+      "note": "remote main baseline unchanged; both native commits descend from original PR-1C; old production paths/native guard/test unchanged",
+      "log": "pr1d-logs/baseline-verification.log.gz",
+      "bytes": 907,
+      "sha256": "3689579e9e54e3206e5561ffed0d6242f78a26ea958b1513ca3522069cf26207",
+      "encoding": "gzip"
+    },
+    {
+      "command": "Node 22 --check all 20 authorized code/test files plus three documentation validators/harnesses",
+      "exitCode": 0,
+      "results": {},
+      "note": "23 syntax checks",
+      "log": "pr1d-logs/syntax-final.log.gz",
+      "bytes": 47,
+      "sha256": "f013ac205bdce70e8a48d255bb22fe4954c1acff9b1a1f80d6168161f634c7b3",
+      "commandDetails": [
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/archive.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/backup.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/capacity.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/coordinator.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/filesystem.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/gc.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/journal.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/lease.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/lifecycle-state.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/lifecycle.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/pages.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/pins.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/records.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/restore-worker.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/worker.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-lifecycle.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-lifecycle-faults.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-backup.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-capacity.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/fixtures/uva-lifecycle.mjs"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "docs/rfc/unified-visual-architecture/evidence/pr1d-capacity-benchmark.mjs"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "docs/rfc/unified-visual-architecture/evidence/pr1d-native-probe.mjs"
+        ]
+      ],
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "91 Markdown /55 tools /22 config variables",
+      "log": "pr1d-logs/docs-final.log.gz",
+      "bytes": 127,
+      "sha256": "abd2a1c36aa7b31be8f74166c53d7590229e6276d854d377cbce024a8dfa039c",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "release consistency only; no tag or release pushed",
+      "log": "pr1d-logs/release-final.log.gz",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "67 original cases;95 hashes;source seal;old tests/native/historical evidence unchanged",
+      "log": "pr1d-logs/consistency-final.log.gz",
+      "bytes": 391,
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "sealed-source evidence docs;91 Markdown/55 tools/22 config",
+      "log": "pr1d-logs/docs-sealed-final.log.gz",
+      "bytes": 127,
+      "sha256": "abd2a1c36aa7b31be8f74166c53d7590229e6276d854d377cbce024a8dfa039c",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "67 cases;fixed20 code/test paths;95 original hashes;old tests/native evidence;all recorded artifact hashes",
+      "log": "pr1d-logs/consistency-sealed-final.log.gz",
+      "bytes": 391,
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3",
+      "encoding": "gzip"
+    },
+    {
+      "command": "Node22 --check exact20 source/test files and3 documentation validators/harnesses",
+      "exitCode": 0,
+      "results": {},
+      "note": "23 syntax checks after documentation validator hardening",
+      "log": "pr1d-logs/syntax-sealed-final.log.gz",
+      "bytes": 47,
+      "sha256": "f013ac205bdce70e8a48d255bb22fe4954c1acff9b1a1f80d6168161f634c7b3",
+      "commandDetails": [
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/archive.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/backup.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/capacity.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/coordinator.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/filesystem.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/gc.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/journal.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/lease.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/lifecycle-state.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/lifecycle.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/pages.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/pins.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/records.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/restore-worker.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "src/persistence/worker.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-lifecycle.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-lifecycle-faults.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-backup.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/persistence-capacity.test.js"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "tests/fixtures/uva-lifecycle.mjs"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "docs/rfc/unified-visual-architecture/evidence/pr1d-capacity-benchmark.mjs"
+        ],
+        [
+          "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+          "--check",
+          "docs/rfc/unified-visual-architecture/evidence/pr1d-native-probe.mjs"
+        ]
+      ],
+      "encoding": "gzip"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "results": {},
+      "note": "no whitespace errors",
+      "log": "pr1d-logs/whitespace-final.log.gz",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "final report/scope/evidence state before documentation commit; code/test source unchanged from eef2f5c",
+      "log": "pr1d-logs/docs-precommit.log.gz",
+      "bytes": 127,
+      "sha256": "abd2a1c36aa7b31be8f74166c53d7590229e6276d854d377cbce024a8dfa039c",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "final report/scope/evidence state before documentation commit; code/test source unchanged from eef2f5c",
+      "log": "pr1d-logs/consistency-precommit.log.gz",
+      "bytes": 391,
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3",
+      "encoding": "gzip"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "results": {},
+      "note": "final report/scope/evidence state before documentation commit; code/test source unchanged from eef2f5c",
+      "log": "pr1d-logs/whitespace-precommit.log.gz",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "encoding": "gzip"
+    },
+    {
+      "command": "git diff --cached --check",
+      "exitCode": 2,
+      "results": {},
+      "note": "verbatim failed TAP logs contain whitespace-only assertion lines; preserve exact bytes in gzip rather than strip them or weaken whitespace checks",
+      "log": "pr1d-logs/staged-whitespace-first.log.gz",
+      "bytes": 744,
+      "sha256": "5004e43cffab8b097692034b7ee4582838d4dc088f0ec042617eb89cacb7aab1",
+      "encoding": "gzip"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "delivery check after lossless gzip encoding; no source/test changes after implementation commit",
+      "log": "pr1d-logs/consistency-final-gzip.log.gz",
+      "encoding": "gzip",
+      "bytes": 391,
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run docs:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "delivery check after lossless gzip encoding; no source/test changes after implementation commit",
+      "log": "pr1d-logs/docs-delivery.log.gz",
+      "encoding": "gzip",
+      "bytes": 127,
+      "sha256": "abd2a1c36aa7b31be8f74166c53d7590229e6276d854d377cbce024a8dfa039c"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- npm run release:check",
+      "exitCode": 0,
+      "results": {},
+      "note": "delivery check after lossless gzip encoding; no source/test changes after implementation commit",
+      "log": "pr1d-logs/release-delivery.log.gz",
+      "encoding": "gzip",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": "npm exec --yes --package=node@22 -- node --check docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "exitCode": 0,
+      "results": {},
+      "note": "delivery check after lossless gzip encoding; no source/test changes after implementation commit",
+      "log": "pr1d-logs/checker-syntax-delivery.log.gz",
+      "encoding": "gzip",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --cached --check",
+      "exitCode": 0,
+      "results": {},
+      "note": "delivery check after lossless gzip encoding; no source/test changes after implementation commit",
+      "log": "pr1d-logs/staged-whitespace-final.log.gz",
+      "encoding": "gzip",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "pr1d-logs/baseline-verification.log.gz",
+      "bytes": 391,
+      "sha256": "0cc6238dc7b49018603eb17e8f083aecf9cff6db77a8f18c7dd24b17a74bb152"
+    },
+    {
+      "path": "pr1d-logs/capacity-benchmark-final.json",
+      "bytes": 2834,
+      "sha256": "630f80f02a85c74c28fd3be56710e4bd87dcc66c5f6a94712b0183a28cfa5db3"
+    },
+    {
+      "path": "pr1d-logs/capacity-benchmark-final.log.gz",
+      "bytes": 79,
+      "sha256": "d2b1d027af4a398efc16067f02cb38561fb599c844c04ce94b08e292c519f182"
+    },
+    {
+      "path": "pr1d-logs/capacity-benchmark.json",
+      "bytes": 2839,
+      "sha256": "62b2b87669defffa94c089693f9c34043ccc8244c457f27bf317cda750fc5fa3"
+    },
+    {
+      "path": "pr1d-logs/capacity-benchmark.log.gz",
+      "bytes": 79,
+      "sha256": "d2b1d027af4a398efc16067f02cb38561fb599c844c04ce94b08e292c519f182"
+    },
+    {
+      "path": "pr1d-logs/capacity-first.log.gz",
+      "bytes": 378,
+      "sha256": "d5dc8429fa91a9ec247777eda187a529dd9069977b58a1020f992d270187ce78"
+    },
+    {
+      "path": "pr1d-logs/cas-python.log.gz",
+      "bytes": 96,
+      "sha256": "9eea44f7e388ec770055e930880896b0bf9f86d445e9e471d80a0b3c15567a19"
+    },
+    {
+      "path": "pr1d-logs/cas-unittest.log.gz",
+      "bytes": 876,
+      "sha256": "01f2d3277b7826a8640cbbca57116f30a3f7af61765ce5a6cd27e9784e02b764"
+    },
+    {
+      "path": "pr1d-logs/checker-syntax-delivery.log.gz",
+      "bytes": 20,
+      "sha256": "f61f27bd17de546264aa58f40f3aafaac7021e0ef69c17f6b1b4cd7664a037ec"
+    },
+    {
+      "path": "pr1d-logs/consistency-final-first.log.gz",
+      "bytes": 73,
+      "sha256": "30f1cfa1ca346db207903fb8f7e26b622c2105b06522858f044527696a1657a1"
+    },
+    {
+      "path": "pr1d-logs/consistency-final-gzip.log.gz",
+      "bytes": 274,
+      "sha256": "d834afdd572cf6fa947f911b17ae8c856f76e8ee3e554dcf25e306876a54dd93"
+    },
+    {
+      "path": "pr1d-logs/consistency-final.log.gz",
+      "bytes": 274,
+      "sha256": "d834afdd572cf6fa947f911b17ae8c856f76e8ee3e554dcf25e306876a54dd93"
+    },
+    {
+      "path": "pr1d-logs/consistency-first.log.gz",
+      "bytes": 274,
+      "sha256": "d834afdd572cf6fa947f911b17ae8c856f76e8ee3e554dcf25e306876a54dd93"
+    },
+    {
+      "path": "pr1d-logs/consistency-precommit.log.gz",
+      "bytes": 274,
+      "sha256": "d834afdd572cf6fa947f911b17ae8c856f76e8ee3e554dcf25e306876a54dd93"
+    },
+    {
+      "path": "pr1d-logs/consistency-sealed-final.log.gz",
+      "bytes": 274,
+      "sha256": "d834afdd572cf6fa947f911b17ae8c856f76e8ee3e554dcf25e306876a54dd93"
+    },
+    {
+      "path": "pr1d-logs/docs-delivery.log.gz",
+      "bytes": 125,
+      "sha256": "65c12ba1dd0229c16181c4164420252d45d4fcbd8575ee39a7302df9ff75f984"
+    },
+    {
+      "path": "pr1d-logs/docs-final.log.gz",
+      "bytes": 125,
+      "sha256": "65c12ba1dd0229c16181c4164420252d45d4fcbd8575ee39a7302df9ff75f984"
+    },
+    {
+      "path": "pr1d-logs/docs-first.log.gz",
+      "bytes": 125,
+      "sha256": "f9784bcd564b2a9ce11b2ebeea27ab725518e3a70377301eaea2e450a0cb446e"
+    },
+    {
+      "path": "pr1d-logs/docs-precommit.log.gz",
+      "bytes": 125,
+      "sha256": "65c12ba1dd0229c16181c4164420252d45d4fcbd8575ee39a7302df9ff75f984"
+    },
+    {
+      "path": "pr1d-logs/docs-sealed-final.log.gz",
+      "bytes": 125,
+      "sha256": "65c12ba1dd0229c16181c4164420252d45d4fcbd8575ee39a7302df9ff75f984"
+    },
+    {
+      "path": "pr1d-logs/environment.json",
+      "bytes": 394,
+      "sha256": "0d91fec6da7d67a48a7651f4ef14e2267f54fd9d4b423f62cbec535005407cc5"
+    },
+    {
+      "path": "pr1d-logs/faults-first.log.gz",
+      "bytes": 1551,
+      "sha256": "ed5fa94815c5636a0efce4b8795b6e9b98dc40134cea263baa2ecf4e6d51073b"
+    },
+    {
+      "path": "pr1d-logs/formal-examples.log.gz",
+      "bytes": 367,
+      "sha256": "64a93581700d5cb64c139cbae3795f9f91b2a6f7e59cb3bb85385b3b6cb92894"
+    },
+    {
+      "path": "pr1d-logs/lifecycle-all-second.log.gz",
+      "bytes": 1771,
+      "sha256": "d2f392050f5cbc36b73c28292fc874b597194cb481e9e8f0ca054a4f1a5ee175"
+    },
+    {
+      "path": "pr1d-logs/lifecycle-final-source.log.gz",
+      "bytes": 2074,
+      "sha256": "d0e99eb4915bd3db88972acd1e401164f9f3554d309f0c506412668dfcbb0676"
+    },
+    {
+      "path": "pr1d-logs/lifecycle-first.log.gz",
+      "bytes": 1120,
+      "sha256": "c96dcc5cfd2f59194e3b99054a00d83cbf622a35a2241cf903723d20635d6d28"
+    },
+    {
+      "path": "pr1d-logs/lifecycle-second.log.gz",
+      "bytes": 1099,
+      "sha256": "472a16a2495ac10e0bd689368dd4db52993e4a3817f846e49639ead01a4d3329"
+    },
+    {
+      "path": "pr1d-logs/lifecycle-third.log.gz",
+      "bytes": 1102,
+      "sha256": "ac8fb365fe3324155b914ad111f71b502dacd00f403e329201a3c485a642ec57"
+    },
+    {
+      "path": "pr1d-logs/native-probe.log.gz",
+      "bytes": 266,
+      "sha256": "085966e85946d94780a09e7bc53b0d1273f9c7a8afffc6e6d1feb20c4f293ca7"
+    },
+    {
+      "path": "pr1d-logs/node22-full-final.log.gz",
+      "bytes": 21198,
+      "sha256": "17d5648d7b1f698276fd2e2d4b7f6ead98e1a2f14e08d993e5a0faf7b115a305"
+    },
+    {
+      "path": "pr1d-logs/node22-full-first.log.gz",
+      "bytes": 22323,
+      "sha256": "dd2c28d6a4358fb0eabec33f64e620e464dcedc82bca042c8e9fccd61a97eff3"
+    },
+    {
+      "path": "pr1d-logs/pr1c-regression-first.log.gz",
+      "bytes": 1443,
+      "sha256": "8c6ff912cc13953cc94a3f7736a24a0eeafde79e05486e91b2a0839d76ab9e4b"
+    },
+    {
+      "path": "pr1d-logs/proposed-contracts.log.gz",
+      "bytes": 1272,
+      "sha256": "81213c1c5573830f9a0c5777528563adbd178f46dcc9e2079899e6fed95a0251"
+    },
+    {
+      "path": "pr1d-logs/release-delivery.log.gz",
+      "bytes": 154,
+      "sha256": "3c0295b6d8805479479faafa00d26514666dc18ca73c86e977b95b09c0b2f471"
+    },
+    {
+      "path": "pr1d-logs/release-final.log.gz",
+      "bytes": 154,
+      "sha256": "3c0295b6d8805479479faafa00d26514666dc18ca73c86e977b95b09c0b2f471"
+    },
+    {
+      "path": "pr1d-logs/release-first.log.gz",
+      "bytes": 154,
+      "sha256": "3c0295b6d8805479479faafa00d26514666dc18ca73c86e977b95b09c0b2f471"
+    },
+    {
+      "path": "pr1d-logs/scope-negative-path.log.gz",
+      "bytes": 180,
+      "sha256": "5e6d313a1dfacb13a0b184d7340ad51d767011bed50ab91139d5fdd529b82903"
+    },
+    {
+      "path": "pr1d-logs/scope-negative-seal.log.gz",
+      "bytes": 111,
+      "sha256": "0b42fce17c0c534fee31e43ab3b5ae29d54a2c7fd5cd81669d6828e0ab2839ba"
+    },
+    {
+      "path": "pr1d-logs/staged-whitespace-final.log.gz",
+      "bytes": 20,
+      "sha256": "f61f27bd17de546264aa58f40f3aafaac7021e0ef69c17f6b1b4cd7664a037ec"
+    },
+    {
+      "path": "pr1d-logs/staged-whitespace-first.log.gz",
+      "bytes": 155,
+      "sha256": "eec0a4777ddec874300ec1bde34ea4f9b4de02dba9cbf54ecb0bd0024a4be5a5"
+    },
+    {
+      "path": "pr1d-logs/syntax-final.log.gz",
+      "bytes": 67,
+      "sha256": "86a650fa0f8b3dc73c004750b2d402876a3926f11458a7c6f7edb3a82401d06f"
+    },
+    {
+      "path": "pr1d-logs/syntax-sealed-final.log.gz",
+      "bytes": 67,
+      "sha256": "86a650fa0f8b3dc73c004750b2d402876a3926f11458a7c6f7edb3a82401d06f"
+    },
+    {
+      "path": "pr1d-logs/whitespace-final.log.gz",
+      "bytes": 20,
+      "sha256": "f61f27bd17de546264aa58f40f3aafaac7021e0ef69c17f6b1b4cd7664a037ec"
+    },
+    {
+      "path": "pr1d-logs/whitespace-precommit.log.gz",
+      "bytes": 20,
+      "sha256": "f61f27bd17de546264aa58f40f3aafaac7021e0ef69c17f6b1b4cd7664a037ec"
+    }
+  ],
+  "gateRecommendation": "IMPLEMENTATION BLOCKED",
+  "blockers": [
+    "new-code native ext4/XFS acceptance unavailable",
+    "measured validation memory/latency and full capacity/recovery workload not qualified",
+    "random atomic crash-temporary files without exact durable inventory are retained; complete orphan attribution/drain not implemented"
+  ],
+  "executionCwd": "/workspace/Estampes",
+  "sourceRunDirectory": "/workspace/scratch/uva-pr1d",
+  "commandCaptureNote": "CLI commands are shown without stdout/stderr redirection unless separately stated. Helper checks enumerate their executed commands in the log or commandDetails.",
+  "verbatimLogEncoding": "gzip; per-run bytes/SHA256 verify decompressed original; artifacts bytes/SHA256 verify compressed files; no whitespace normalization"
+}

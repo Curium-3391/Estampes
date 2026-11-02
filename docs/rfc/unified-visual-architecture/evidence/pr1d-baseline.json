@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-11-02T06:30:53.121643+00:00",
+  "baseCommit": "58f7789414130085543560147df87e85a62123ea",
+  "baseBranch": "codex/pr1c-native-ext4-acceptance",
+  "originalPr1c": "5549f10586dc17e0a802c42dd6c37ebaa70ad80a",
+  "nativeRegressionCommit": "1684335e7e463a0ea5bb1a560ed6565ef42299ae",
+  "ancestryVerified": true,
+  "workingBranch": "feat/unified-visual-architecture-pr1d",
+  "initialWorkingTreeClean": true,
+  "version": "0.20.0",
+  "fetchedMain": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "mainDrift": false,
+  "environment": {
+    "workspace": "overlayfs",
+    "temporary": "tmpfs",
+    "approvedNativeMountAvailable": false,
+    "nativeNewCodeAcceptance": "BLOCKED_NOT_EXECUTED",
+    "powerLossTest": "NOT_EXECUTED"
+  },
+  "existingProductActivation": false
+}

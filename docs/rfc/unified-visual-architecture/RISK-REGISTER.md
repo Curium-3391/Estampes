@@ -41,3 +41,14 @@ ReviewFinding R-01–R-06的狀態見[REVIEW-REMEDIATION](REVIEW-REMEDIATION.md)
 | FG-03 Desktop/macOS被誤當Linuxdurable | S1 / High uncertainty，ARMimagebuild不是FS證據 | explicitprofileallowlist、Desktop/APFS預設拒cutover、OSfence而非marker | UVA-66平台/driver/faultprofile，記未測項 | readonly或新memorysession，不續寫原durablestore；PR-1C/1B/7A |
 | FG-04 nestedclone隱式遺失 / denied metadata leak | S1 / Medium，原materialize未定義 | sharedpreflight、typedrefusal、redactedpreview、editablebundle替代 | UVA-67/55 zeroeffects/canary/hash | 保原source，不flatten；新ADR才recursiveclone；PR-6D/6B/6C |
 | FG-05/06 schema通過被誤當權限/產品批准 | S1 / Medium，Matrix/Importshape與文字有落差 | schema反例+wire統一；trusteduseractor缺證據就拒route；每OD分scope簽核 | UVA-55/42/66與人工approvalrecord，diffscope/sourcehash | 不開userwrite/cutover，保provenance；PR-1A/1B/5A |
+
+
+## PR-1D — Observed risks; no production activation
+
+| Existing risk | Actual evidence / severity | Mitigation and detection | Recovery / exit gate |
+| --- | --- | --- | --- |
+| R15 / R16 / FG-01 | Lossless deltas, G1/G2, permanent tombstones and real allocated-block admission are implemented in isolated code; fixture fault tests pass. Large-history/native behavior remains unqualified; unattributed atomic crash-temporaries are retained, so repeated failures may exhaust quota safely. | Fixed-root verification, FD pins, terminal proof, durable quarantine progress; new lifecycle/fault/capacity tests; exact logs in PR-1D report | Fail-stop/read-only or reject preserving draft/history; no old-binary continuation on delta stores; PR-1D exit remains blocked |
+| FG-01 / FG-02 performance | Actual 8 MiB document fixture shows high worker RSS and long commit latency from repeated historical reconstruction/validation; this is an observed limitation, severity S2 / high under growing histories | Preserve integrity checks, profile verification path and metadata growth; rerun full workload, startup/recovery and capacity gates before any integration | Keep isolated store and full history; no product activation or PR-1B; do not treat a low-write-amplification result as a latency SLA |
+| FG-03 native evidence misuse | Current mounts have no ext4/XFS; mandatory new-code probe refuses tmpfs, exit 2; historical WSL2 PR-1C results do not test PR-1D | Native guard and all old acceptance evidence bytewise preserved; separate current/native/power-loss labels | Native rerun required; no durable profile promotion, no deployment or cutover |
+
+These are evidence updates to existing risks, not human approval, new architecture authority or permission to delete user history.

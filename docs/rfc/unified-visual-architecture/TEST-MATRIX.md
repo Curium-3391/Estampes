@@ -141,3 +141,23 @@ Status：以下均為 Proposed product acceptance，尚未執行；UVA-55文件�
 | Root coherence (UVA-63) | 六root同代、COW分頁／hash／resolver／logical version、fixedsnapshot、splitroot拒、publish前disk closure check | GC／compaction touchedpage race、active FD pins、fullhistory delta/pack替換（PR-1D） |
 
 PR-1C目前只執行Document entity transactions，binaryassets與其他store adapter未實作。不將整個UVA-31/32/33/49/59/63/66標Passed；nativeSkip不算通過，overall exit blocked。
+
+
+## PR-1D — Executed subsets; full cases remain gated
+
+This appendix supersedes only the earlier “PR-1D not yet implemented/authorized” statements for the isolated code below. Existing 67 cases, priorities and historical results remain unchanged. Commands, counts, raw failures and final evidence are in [PR-1D report](PR-1D-IMPLEMENTATION-REPORT.md) and its manifest. No entire UVA case is promoted to Passed.
+
+| Case subset | Actual production code / test | Remaining complete-case gate |
+| --- | --- | --- |
+| Subset UVA-46 | lifecycle/records/archive; lifecycle tests: all logical versions/hash, archived Doc, named checkpoint, current/recovery roots and live physical pins | full external reference/binary/other-store closure; native qualification |
+| Subset UVA-47 | gc/protectedPaths/plan/step; G1 full→verified delta, pin excludes candidate, G2 terminal staging+24h, quarantine corruption | deployment/device faults; unknown PR-1C staging and random atomic crash-temporaries lack complete attribution/drain and are conservatively retained |
+| Subset UVA-48 | ledger same-root ACK→tombstone; seven-day exact boundary, principal key mismatch/restart, rollback clock, terminal journal GC | full production route/host retries and long-horizon capacity |
+| Subset UVA-49 | lifecycle-faults: real SIGKILL before/during quarantine/unlink and before/after compaction publication | native new-code faults and genuine power loss; cross-store transaction integration |
+| Subset UVA-50 | backup tests: fixed root with later ACK, lossless supported history, checksum manifest-last, partial ENOSPC/SIGKILL resume, missing Ledger rejection, namespace-preserving new-volume RO restore | binary assets/CAS/Workspace are explicitly outside scope; writable stale continuation is forbidden |
+| Subset UVA-59 | EIO/ENOSPC, changed CURRENT, corrupt checkpoint/GC metadata, missing delta chunk; old file/dir barrier tests preserved | current native ext4/XFS and physical power loss unavailable, not passed |
+| Subset UVA-60 | auto-maintenance steps advance on actual admitted writes; FIFO queue prevents stale Root publication; source mismatch is retried/backpressured | sustained deployment-scale conflict/fairness and latency qualification |
+| Subset UVA-63 | six-root COW transaction retained; delta logical hash/identity and fixed Registry/Locator pairs; 32 MiB boundary unit test | full 1000-command operational checkpoint and large metadata-page limits not measured |
+| Subset UVA-64 | capacity tests use actual allocated files and live coordinator rejection before intent; benchmarks use real immutable store | 10 GiB pressure, 100k strokes and worst-case growth/SLA remain unexecuted |
+| Subset UVA-65 | actual FD pin union, configured count/bytes, active-read expiry/quiescence, concurrent snapshot reads, backup deadline release | default 64-session/1 GiB stress, real device/Host integration remain unexecuted |
+
+New tests run against disposable stores using the real implementation, with explicit `linux-process-crash-test` ACKs. Historical/native tests and their expectations are unchanged. Mandatory native positive acceptance is BLOCKED, not simulated or silently converted to a pass.

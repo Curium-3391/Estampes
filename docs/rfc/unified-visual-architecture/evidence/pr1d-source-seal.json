@@ -1,0 +1,105 @@
+{
+  "implementationCommit": "eef2f5c13580fa0acd41af84796b09ee8021238b",
+  "paths": [
+    {
+      "path": "src/persistence/archive.js",
+      "bytes": 8851,
+      "sha256": "2aa39a9d3fbde387b9264eab3a02654386ba954eafc6f687fc3e9d0d1d3f1baf"
+    },
+    {
+      "path": "src/persistence/backup.js",
+      "bytes": 15026,
+      "sha256": "4d9d727a69d8debe4a1115f55a99b1a1fb906d5d4e28213f16d98026963cc4f1"
+    },
+    {
+      "path": "src/persistence/capacity.js",
+      "bytes": 1001,
+      "sha256": "62c6df848202f5f5b272e30778477987a4d3ff426a54d8cca55e556c1f0df3e4"
+    },
+    {
+      "path": "src/persistence/coordinator.js",
+      "bytes": 20033,
+      "sha256": "c0d196d781a44ac130b30f91124076f49bfd9e0daf55fd3e0793e4311799e101"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "bytes": 8924,
+      "sha256": "4b81354dc8b40fba48817f50a28b5035de5fdd63572cc1eb659e3e2d3fa5f044"
+    },
+    {
+      "path": "src/persistence/gc.js",
+      "bytes": 12832,
+      "sha256": "14b3b17d58c393923ef89ecde12ff11b6f12f3ed471a388cd7d3399be4f93f98"
+    },
+    {
+      "path": "src/persistence/journal.js",
+      "bytes": 5187,
+      "sha256": "b350c52fe76415508a44be1ffa9ede36775f2b2529389cb9509d3773186c2ddd"
+    },
+    {
+      "path": "src/persistence/lease.js",
+      "bytes": 3519,
+      "sha256": "e2111a4f3c99a8da98828268fdccdb3f22aafd8d8959bc77c678e5e888d31196"
+    },
+    {
+      "path": "src/persistence/lifecycle-state.js",
+      "bytes": 4005,
+      "sha256": "38765aaf57c1fa20e604d73e170e7cdb1906ab89f3c21e0a2a28b1440fb06abe"
+    },
+    {
+      "path": "src/persistence/lifecycle.js",
+      "bytes": 11865,
+      "sha256": "465354ecf094f48fa400cad7c1be741865ba793ab1119a067dd918fbedfd0e6d"
+    },
+    {
+      "path": "src/persistence/pages.js",
+      "bytes": 3929,
+      "sha256": "2ffa1f8ee3d723507403dd70a2be60fda2c8a19918c19dbc1a9754155f331176"
+    },
+    {
+      "path": "src/persistence/pins.js",
+      "bytes": 3293,
+      "sha256": "e28e866918f25d2a272c532d5444f04943b70a2245c1bd24cd6fcdd1381addb7"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "bytes": 12134,
+      "sha256": "fa9017e9ca15885dfb3f6ef4c3fbde7ab71a14f40018f942ce7c7d8455b94686"
+    },
+    {
+      "path": "src/persistence/restore-worker.js",
+      "bytes": 365,
+      "sha256": "3b2edd0617aada3c0ee069cc1a1940f7f2778f3bf863b34b420ca456f9c744eb"
+    },
+    {
+      "path": "src/persistence/worker.js",
+      "bytes": 2346,
+      "sha256": "624f5c331e5eba8bfb04477a635052ad6870ad51fa2717ac9e9e3370628364af"
+    },
+    {
+      "path": "tests/persistence-lifecycle.test.js",
+      "bytes": 9054,
+      "sha256": "e34f4f2ed84bf4d0eb48d3e1d5403121c47b091abd2036009a6f40acd02b42ed"
+    },
+    {
+      "path": "tests/persistence-lifecycle-faults.test.js",
+      "bytes": 9301,
+      "sha256": "93d72b3391814b00e023d9b15432b700582a08cb8fc65b6edfcd59c10cc9673b"
+    },
+    {
+      "path": "tests/persistence-backup.test.js",
+      "bytes": 7280,
+      "sha256": "438f88efbcd63963a07b04042807963aa529cbff0bb05fc70b959e9d2012ee8c"
+    },
+    {
+      "path": "tests/persistence-capacity.test.js",
+      "bytes": 2990,
+      "sha256": "a63aaf4b38095bbe3181f9b81fcfc18dce898cd52ec74cd11b086e5f36b62a14"
+    },
+    {
+      "path": "tests/fixtures/uva-lifecycle.mjs",
+      "bytes": 1495,
+      "sha256": "2f0fb2538d00f117b9482cd932a44ae034791d03d4efde3f01032f1728f9a60d"
+    }
+  ]
+}

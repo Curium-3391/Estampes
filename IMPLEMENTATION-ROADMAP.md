@@ -1,6 +1,6 @@
 # Unified Visual Architecture — Implementation Roadmap
 
-Status：**PR-1A修訂／隔離PR-1C有限實作授權；1D/1B與其餘PR仍Proposed**。Authority：[RFC index](docs/rfc/unified-visual-architecture/README.md)、[Open Decisions](docs/rfc/unified-visual-architecture/OPEN-DECISIONS.md)、[Test Matrix](docs/rfc/unified-visual-architecture/TEST-MATRIX.md)。Phase0/0.1/0.2是歷史設計基線；最新維護者授權僅PR-1A，見PR-1A-AUTHORIZATION；不授權1C/1D/1B與後續階段。Current code基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0。
+Status：**PR-1D 隔離實作已獲最新明確授權；整合、PR-1B 與其餘 PR 未授權**。架構仍以 Phase 0.2 契約為準；歷史 PR-1A/PR-1C/native 報告保留原結論。當輪範圍與退出判定見 [PR-1D-AUTHORIZATION](docs/rfc/unified-visual-architecture/PR-1D-AUTHORIZATION.md) 及 [PR-1D report](docs/rfc/unified-visual-architecture/PR-1D-IMPLEMENTATION-REPORT.md)。既有產品基線為 `7fb9b73442401fc32a7034888deaf49303e582a6` / 0.20.0；本輪 base 為 `58f7789414130085543560147df87e85a62123ea`。
 
 後續Agent先確認新HEAD差異與批准紀錄；已批准架構不重新發散探索；缺失的ownership/ordering/publicbehavior不能猜。每PR附before/after fixture、sourceSHA、實測命令、flag狀態、rollback步驟與publicformat差異。以下為likelyfiles，不代表Phase0已新增這些核心模組。
 
@@ -143,3 +143,14 @@ Phase退出追加：Phase1=UVA-41/42schema+46–50/56–60/62storage/authority�
 [新有限授權](docs/rfc/unified-visual-architecture/PR-1C-AUTHORIZATION.md)已允許獨立PR-1A review修訂及PR-1C隔離transaction backend；歷史1A stop紀錄不被改成全OD批准。真file I/O、flock／journal／sixroots／OCC／ledger／recovery與fault tests的實際範圍見[Implementation Report](docs/rfc/unified-visual-architecture/PR-1C-IMPLEMENTATION-REPORT.md)。
 
 PR-1C尚未完整退出：本環境無已批准ext4/XFS掛載，native durable正向test明確Skip；test-only ACK不算native durable evidence。後續最小工作是在批准的disposable native mount重跑backend／stage faults，保留FS/driver/kernel與exact commands；不用重開架構或先做1D。沒有maintenance／fullotherstore adapters／部署fence，不允啟productionwriter。1D與1B均未開始亦未授權；本輪commit後停止，未push／merge／release。
+
+
+## PR-1D — Current isolated implementation and remaining gate
+
+Latest explicit user instruction authorizes implementation, not integration. New lifecycle is confined to `src/persistence/` and requires explicit isolated opt-in; persisted policy then remains authoritative across restart. Existing server/tools/stores do not import or activate it. PR-1A, original PR-1C and WSL2 native evidence stay historical and unchanged.
+
+Implemented units within PR-1D: (a) retention/reader pins and verified logical delta locators, (b) coordinator-committed compaction/G1/G2/journal/ACK lifecycle, (c) allocated-block quota/reservations and fair serialized admission, (d) pinned document-store backup and new-volume read-only restore, (e) process/fault tests and measurements. Each Root mutation uses the same coordinator and six-root manifest; no secondary CURRENT.
+
+Exit remains **IMPLEMENTATION BLOCKED** pending new-code native ext4/XFS acceptance, full capacity/workload qualification and exact durable attribution/drain of random atomic crash-temporary artifacts. Unknown artifacts are retained conservatively rather than deleted by suffix. Small real benchmarks and application fault injection do not establish production SLA, block-device power-loss safety or complete UVA coverage. See the report's measured limitations, including historical validation CPU cost and conservative retained metadata. No production writer may be enabled.
+
+PR-1B continues to depend on completed PR-1D safety gates, separately approved Authority Cutover/old-binary fencing, authenticated operation policy, binary/other-store closure, cross-store recovery and explicit migration authorization. Feature flags cannot transfer storage authority. Rollback preserves the complete lifecycle-capable store and history; old PR-1C cannot read delta stores and must not resume their writer.

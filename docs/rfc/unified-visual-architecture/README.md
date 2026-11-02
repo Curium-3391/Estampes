@@ -1,10 +1,10 @@
-# Unified Visual Architecture — Phase 0 / 0.1 / 0.2 / PR-1A
+# Unified Visual Architecture — Phase 0 / isolated Phase 1
 
-狀態：**PR-1A及其review修訂／隔離PR-1C已獲有限授權；1D/1B與後續runtime/deployment仍pending**。歷史調查日期：2026-11-01 UTC，production baseline為 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本仍 `0.20.0`。Phase 0–0.2文件保留設計及審查歷史；PR-1A的隔離實作、實測及授權範圍另見下方專節，不代表後續Phase 1–7已獲准。
+狀態：**隔離 PR-1D 已獲最新明確實作授權；PR-1D exit 仍 BLOCKED；PR-1B／整合／部署未授權**。歷史調查日期：2026-11-01 UTC，production baseline為 `7fb9b73442401fc32a7034888deaf49303e582a6`，版本仍 `0.20.0`。Phase 0–0.2文件保留設計及審查歷史；PR-1A的隔離實作、實測及授權範圍另見下方專節，不代表後續Phase 1–7已獲准。
 
 ## 閱讀與決策權限
 
-程式碼決定 Current Implementation；執行紀錄決定 Observed；文件與 Changelog 表示歷史意圖；下列 RFC、ADR 的 Decision 原為 Proposed recommendation；僅PR-1A必要子集已依新維護者授權批准，詳見[有限授權紀錄](PR-1A-AUTHORIZATION.md)，其餘仍未批准。使用者本次限制優先於本文件。Open Decision 必須在相依 PR 前簽核；Future Extension 不屬本輪交付。不因 Agent 推薦就成為 Approved。
+程式碼決定 Current Implementation；執行紀錄決定 Observed；文件與 Changelog 表示歷史意圖；下列 RFC、ADR 的 Decision 原為 Proposed recommendation；後續 PR-1A、PR-1C 及 PR-1D 依各自明確維護者授權執行有限隔離工作，詳見各 PR 的授權紀錄；其餘範圍及 runtime／部署仍未批准。使用者本次限制優先於本文件。Open Decision 必須在相依 PR 前簽核；Future Extension 不屬本輪交付。不因 Agent 推薦就成為 Approved。
 
 | 文件 | 用途 |
 | --- | --- |
@@ -76,8 +76,14 @@ Current Implementation：見 AUDIT。Proposed Architecture：見 RFC。Open Deci
 
 ## PR-1A review / PR-1C authorization
 
-[有限授權](PR-1C-AUTHORIZATION.md)、[F-01/F-02 remediation report](PR-1A-REMEDIATION-REPORT.md)。此為PR-1A之後的新維護者授權，歷史停止紀錄不改寫；1D/1B、部署與真正cutover仍pending。
+[有限授權](PR-1C-AUTHORIZATION.md)、[F-01/F-02 remediation report](PR-1A-REMEDIATION-REPORT.md)。此為PR-1A之後的歷史有限授權，當時1D/1B尚待授權；最新1D授權見下節，1B、部署與真正cutover仍未授權。
 
-## PR-1C — Isolated persistence / native profile blocker
+## PR-1C — Isolated persistence / historical native acceptance
 
-[Implementation Report](PR-1C-IMPLEMENTATION-REPORT.md)記錄真file I/O、OS lease、six-root publication／recovery及fault results。現有MCP/UI/storage路徑未啟用；process-crash test ACK不是Durable ACK。Native ext4/XFS正向測試缺掛載，整體PR-1C驗收仍有阻擋，不能開始1D/1B或啟用production writer。
+[Implementation Report](PR-1C-IMPLEMENTATION-REPORT.md) 保留早期缺少 native 掛載的阻擋結論。後續 [Native Acceptance Report](PR-1C-NATIVE-ACCEPTANCE-REPORT.md) 在 `58f7789414130085543560147df87e85a62123ea` 記錄 WSL2 ext4 的功能驗收；這不是 power-loss 認證，也不涵蓋新增的 PR-1D 程式。兩份歷史報告與全部日誌保持原 bytes；現有 MCP/UI/storage 路徑未啟用新 writer。
+
+## PR-1D — Isolated lifecycle / current exit gate
+
+[授權](PR-1D-AUTHORIZATION.md)、[實作報告](PR-1D-IMPLEMENTATION-REPORT.md)、[執行紀錄](evidence/pr1d-execution-manifest.json)、[來源封存](evidence/pr1d-source-seal.json)。新增 retention/pins、lossless delta/locator、G1/G2、Ledger lifecycle、quota/admission、Doc-store backup／RO restore 及實際故障測試。現有產品路徑、使用者資料、舊測試與歷史證據未改。
+
+**IMPLEMENTATION BLOCKED**：目前新程式的 ext4/XFS 驗收缺乏掛載，完整容量／效能資格驗證亦未完成；小型量測暴露歷史驗證 CPU／記憶體成本。缺乏 durable inventory 的 crash temporary 保守保留，完整 orphan drain 仍待補足。維護者只授權隔離實作與提交，不授權 production writer、PR-1B、migration、push、merge 或 release。停在 PR-1D Gate。

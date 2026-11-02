@@ -1,0 +1,13 @@
+{
+  "observedAtUtc": "2026-11-02T06:51:23Z",
+  "kernel": "6.18.57",
+  "python": "3.12.14",
+  "uid": 1000,
+  "nativeMounts": [],
+  "chromium": "Chromium 154.0.8037.57 built on Debian GNU/Linux 13 (trixie)",
+  "flock": "flock from util-linux 2.41.5",
+  "defaultNode": "v24.19.0",
+  "suiteNode": "v22.23.4",
+  "capEff": "0000000000000000",
+  "scope": "no credentials/environment secrets dumped"
+}
