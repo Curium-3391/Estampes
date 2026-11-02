@@ -2,6 +2,7 @@
 // never registers a tool, authorizes a host action or mutates the legacy store.
 import { randomUUID, createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import { readdir } from "node:fs/promises";
 import { parse, canonicalJson, hashJson, RevisionSchema } from "../documents/validation.js";
 import { createId, normalizeRequestId } from "../documents/identity.js";
 import { ActorContextSchema, assertCreatorUnchanged } from "../documents/provenance.js";
@@ -15,6 +16,7 @@ import { LifecycleManager } from "./lifecycle.js";
 import { initialPolicy, policyOf, DAY } from "./lifecycle-state.js";
 import { stageDelta } from "./archive.js";
 import { fail, integrity, PersistenceError } from "./errors.js";
+import { recoverBootstrapTemporary, classifyTemporaryClaims } from "./temporary-attribution.js";
 
 const stablePrincipal = actor => {
   const p=actor.principal;
@@ -46,25 +48,35 @@ export class CommitCoordinator {
     this.platform=await inspectPlatform(this.files.root,this.platform.profile,this.platform.purpose);
     await assertOwnedWriterLease(this.files.root);
     try{
-      if(!await this.files.exists("storage-format.json")){
+      await recoverBootstrapTemporary(this.files);
+      const hasFormat=await this.files.exists("storage-format.json"),hasCurrent=await this.files.exists("visual-registry/CURRENT.json");
+      if(!hasFormat){
         this.format=parse(FormatSchema,{schema:"estampes.isolated-store/1",storeInstanceId:randomUUID(),purpose:"isolated-pr1c-testing",profile:this.platform.profile,
           quotaBytes:options.quotaBytes??(options.lifecycle?10*1024**3:256*1024*1024),maxContentCommits:options.maxContentCommits??100,...(options.lifecycle?{lifecycle:options.lifecycle}:{})});
-        await this.files.atomic("storage-format.json",Buffer.from(canonicalJson(this.format)),"bootstrap");
+        await this.files.atomic("storage-format.json",Buffer.from(canonicalJson(this.format)),"bootstrap",{owner:{kind:"bootstrap",id:randomUUID()}});
+      }else this.format=parse(FormatSchema,await this.files.json("storage-format.json",4096));
+      integrity(this.format.profile===this.platform.profile,"Stored profile differs; test stores cannot be promoted to durable");
+      if(!hasCurrent){
+        // A format rename can survive while genesis has not started. Resume only
+        // when no transaction exists; a missing CURRENT from any established
+        // store remains an integrity failure rather than an implicit reset.
+        if(await this.files.exists("visual-transactions"))integrity((await readdir(this.files.path("visual-transactions"))).length===0,"CURRENT is missing from a non-pristine store");
         await this.files.ensureDirectory("visual-transactions");
         if(this.format.lifecycle)this.installLifecycle(this.format.lifecycle,options.testClockMs);
         await this.#publish(null,null,"genesis");
       }else{
-        this.format=parse(FormatSchema,await this.files.json("storage-format.json",4096));
-        integrity(this.format.profile===this.platform.profile,"Stored profile differs; test stores cannot be promoted to durable");
         await LifecycleManager.recoverPhysical(this.files);
-        const verifyStarted=performance.now();this.current=await loadCommitted(this.files,{cache:this.verification,metrics:this.performance});this.performance.open={verifyCommittedMs:performance.now()-verifyStarted};integrity(this.current.root.storeInstanceId===this.format.storeInstanceId,"Store namespace differs from CURRENT");
+        const verifyStarted=performance.now();
+        this.current=await loadCommitted(this.files,{cache:this.verification,metrics:this.performance});
+        this.performance.open={verifyCommittedMs:performance.now()-verifyStarted};
+        integrity(this.current.root.storeInstanceId===this.format.storeInstanceId,"Store namespace differs from CURRENT");
         if(this.current.lifecycle||options.lifecycle||this.format.lifecycle)this.installLifecycle(this.current.lifecycle?.options??options.lifecycle??this.format.lifecycle,options.testClockMs);
         if(await this.files.exists("restore-restriction.json")){this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:"RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF"};return this;}
         // Re-establish all file/directory barriers after an interrupted publish.
         for(const path of this.current.files)await this.files.resync(path);
         await this.files.resync("storage-format.json");
-        const report=await this.journal.recover(this.current);this.seen=report.seen;this.recoveryReport=report.outcomes;
-        await this.#publish(null,null,"recovery-epoch");
+        const report=await this.journal.recover(this.current),temporaries=await classifyTemporaryClaims(this.files,this.current);this.seen=report.seen;this.recoveryReport=[...report.outcomes,...temporaries.outcomes];
+        await this.#publish(null,null,"recovery-epoch",{name:"temporary-recovery",mutate:async()=>({retentionChanges:temporaries.changes,result:{temporaries:temporaries.outcomes.length}})});
       }
       this.state="ready";
       if(this.lifecycle)await this.lifecycle.onOpen();
@@ -179,21 +191,27 @@ export class CommitCoordinator {
       await this.files.point("before-intent");await this.journal.intent(intent);intentWritten=true;
       if(request)this.seen.set(request.digest,payloadHash);
       await this.files.point("after-intent-durable");
-      await plan.flush(record=>record.label!=="root");await this.files.point("after-staged-writes");
-      await plan.flush(record=>record.label==="root");await this.journal.prepare({schema:"estampes.prepared/1",commitId,generation,rootHash});
+      const temporaryOwner={kind:"transaction",id:commitId.slice(3)};
+      await plan.flush(record=>record.label!=="root",temporaryOwner);await this.files.point("after-staged-writes");
+      await plan.flush(record=>record.label==="root",temporaryOwner);await this.journal.prepare({schema:"estampes.prepared/1",commitId,generation,rootHash});
       timings.stageAndPrepareMs=performance.now()-stageStarted;stageStarted=performance.now();
       await this.files.point("after-prepared");
       const prepared=await verifyPreparedClosure(this.files,envelope,{cache:this.verification,metrics:this.performance});
       timings.candidateVerificationMs=performance.now()-stageStarted;stageStarted=performance.now();
       if(before&&canonicalJson(await this.files.json("visual-registry/CURRENT.json",64*1024))!==canonicalJson(before.envelope))fail("INTEGRITY_ERROR","CURRENT changed during preparation",{storageIntegrity:true});
-      publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current");
+      publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current",{owner:temporaryOwner});
       await this.files.point("after-publication-durable");
       timings.currentPublicationMs=performance.now()-stageStarted;stageStarted=performance.now();
-      const selected=await this.files.json("visual-registry/CURRENT.json",64*1024);integrity(canonicalJson(selected)===canonicalJson(envelope),"Published CURRENT differs from prepared envelope");
+      const selected=await this.files.json("visual-registry/CURRENT.json",64*1024);
+      integrity(canonicalJson(selected)===canonicalJson(envelope),"Published CURRENT differs from prepared envelope");
+      // Candidate closure verification already covered every reachable file. Re-read
+      // the newly staged inventory after CURRENT publication to detect replacement
+      // between verification and selection without reconstructing all old versions.
       for(const [path,record]of plan.records){const digest=await this.files.digest(path);integrity(digest.bytes===record.bytes.length&&digest.hash===hashJsonBytes(record.bytes),"Published staged file changed after candidate verification");}
       integrity(prepared.envelope.rootHash===rootHash,"Published root changed under writer lease");
       await this.journal.outcome(commitId,member);this.current=prepared;
-      timings.postPublicationMs=performance.now()-stageStarted;timings.totalMs=performance.now()-transactionStarted;this.performance.transactions.push(timings);if(this.performance.transactions.length>64)this.performance.transactions.shift();
+      timings.postPublicationMs=performance.now()-stageStarted;timings.totalMs=performance.now()-transactionStarted;
+      this.performance.transactions.push(timings);if(this.performance.transactions.length>64)this.performance.transactions.shift();
       await this.files.point("before-ack");
       return {ack,replayed:false,...(maintenance?{result:maintenanceResult,envelope:prepared.envelope}:{})};
     }catch(e){

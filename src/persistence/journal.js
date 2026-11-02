@@ -13,11 +13,11 @@ const outcomeSchema=z.object({schema:z.literal("estampes.transaction-outcome/1")
 export const transactionPath=id=>"visual-transactions/"+parse(TransactionIdSchema,id).slice(3);
 export class IntentJournal {
   constructor(files){this.files=files;}
-  async intent(value){parse(IntentSchema,value);await this.files.atomic(transactionPath(value.commitId)+"/intent.json",Buffer.from(canonicalJson(value)),"intent",{immutable:true});}
-  async prepare(value){parse(preparedSchema,value);await this.files.atomic(transactionPath(value.commitId)+"/prepared.json",Buffer.from(canonicalJson(value)),"prepared",{immutable:true});}
+  async intent(value){parse(IntentSchema,value);await this.files.atomic(transactionPath(value.commitId)+"/intent.json",Buffer.from(canonicalJson(value)),"intent",{immutable:true,owner:{kind:"transaction",id:value.commitId.slice(3)}});}
+  async prepare(value){parse(preparedSchema,value);await this.files.atomic(transactionPath(value.commitId)+"/prepared.json",Buffer.from(canonicalJson(value)),"prepared",{immutable:true,owner:{kind:"transaction",id:value.commitId.slice(3)}});}
   async outcome(commitId,member){
     const value={schema:"estampes.transaction-outcome/1",commitId,outcome:member?"committed":"aborted",...(member?{membership:{generation:member.generation,registryRootHash:member.registryRootHash,resultHash:member.resultHash}}:{})};
-    await this.files.atomic(transactionPath(commitId)+"/outcome.json",Buffer.from(canonicalJson(value)),"outcome",{immutable:true});
+    await this.files.atomic(transactionPath(commitId)+"/outcome.json",Buffer.from(canonicalJson(value)),"outcome",{immutable:true,owner:{kind:"transaction",id:commitId.slice(3)}});
   }
   async recover(snapshot){
     const seen=new Map(),outcomes=[];

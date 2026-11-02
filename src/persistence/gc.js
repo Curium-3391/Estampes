@@ -9,8 +9,9 @@ import { loadCommitted } from "./records.js";
 import { integrity, fail } from "./errors.js";
 import { randomUUID } from "node:crypto";
 import { IntentSchema } from "./journal.js";
+import { TemporaryRecoverySchema, readTemporaryClaim, temporaryClaimPath } from "./temporary-attribution.js";
 const uuid="[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",hash="[0-9a-f]{64}";
-const allowed=new RegExp("^(?:visual-documents/"+uuid+"/generations/[1-9][0-9]*-"+hash+"\\.json|visual-registry/(?:pages|roots)/"+hash+"\\.json|visual-history/(?:chunks/"+hash+"\\.bin|deltas/"+hash+"\\.json)|visual-transactions/"+uuid+"/(?:intent|prepared|outcome)\\.json)(?:\\.tmp-"+uuid+")?$");
+const allowed=new RegExp("^(?:(?:visual-documents/"+uuid+"/generations/[1-9][0-9]*-"+hash+"\\.json|visual-registry/(?:pages|roots)/"+hash+"\\.json|visual-history/(?:chunks/"+hash+"\\.bin|deltas/"+hash+"\\.json)|visual-maintenance/(?:gc|backup-lists|backup-list-pages)/"+hash+"\\.json|visual-transactions/"+uuid+"/(?:intent|prepared|outcome)\\.json|visual-registry/CURRENT\\.json|storage-format\\.json)(?:\\.tmp-"+uuid+")?|visual-temporaries/claims/"+uuid+"\\.json)$");
 export const gcSourceAllowed=path=>typeof path==="string"&&allowed.test(path);
 const candidateSchema=z.object({path:z.string().refine(gcSourceAllowed),hash:Hash,bytes:z.number().int().min(0),class:z.enum(["G1","G2"]),quarantine:z.string(),reason:z.string().max(160)}).strict();
 export const GcPlanSchema=bounded(z.object({schema:z.literal("estampes.gc-plan/1"),id:z.string().uuid(),storeInstanceId:z.string().uuid(),sourceGeneration:z.number().int().positive(),
@@ -25,7 +26,7 @@ async function rootMetadata(files,envelope,paths){
  const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
  for(const [kind,hash]of Object.entries(root.roots))await pages.read(hash,kind);for(const p of pages.track)paths.add(p);
 }
-export async function protectedPaths(owner,{verify=true}={}){
+export async function protectedPaths(owner,{verify=true,includeTemporary=false}={}){
  const snapshot=verify?await loadCommitted(owner.files):owner.current;
  integrity(snapshot.envelope.rootHash===owner.current.envelope.rootHash,"CURRENT changed outside serialized maintenance");
  const paths=new Set(snapshot.files);paths.add("storage-format.json");paths.add("WRITER.lock");
@@ -36,6 +37,7 @@ export async function protectedPaths(owner,{verify=true}={}){
   if(key.startsWith("backup:")){
    const list=await owner.lifecycle.backups.readList(value.filesHash);for(const p of list.paths)paths.add(p);if(value.state==="copying")for(const f of list.files)paths.add(f.path);
   }
+  if(includeTemporary&&key.startsWith("temporary:")){const recovery=parse(TemporaryRecoverySchema,value);paths.add(temporaryClaimPath(recovery.claimId));if(await owner.files.exists(recovery.temporaryPath))paths.add(recovery.temporaryPath);}
  }
  for(const path of owner.lifecycle.pins.paths)paths.add(path);
  const pending=policyOf(snapshot.indices.retention)?.maintenance.pending;
@@ -47,13 +49,22 @@ export class GarbageCollector {
  async plan({classes=["G1","G2"]}={}){
   integrity(Array.isArray(classes)&&classes.length>0&&classes.every(v=>["G1","G2"].includes(v)),"Invalid GC class filter");
   const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner),candidates=[],proofs=new Map(),selected=new Set();
-  const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=128||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return;
-   const info=await this.files.digest(path);selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:""});};
+  const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=128||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return false;
+   const info=await this.files.digest(path);selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:""});return true;};
   for(const row of snapshot.indices.locator.values())if(row.kind==="delta"){
    const ref=row.logical,path=`visual-documents/${ref.entityId.slice(4)}/generations/${ref.revision}-${ref.contentHash}.json`;
    await add(path,"G1","Verified committed delta reconstructs the same logical version");
   }
   const now=this.manager.now(),safeClock=this.manager.canAge();
+  for(const [key,raw]of snapshot.indices.retention){
+   if(!key.startsWith("temporary:")||!classes.includes("G2")||candidates.length>126)continue;
+   const recovery=parse(TemporaryRecoverySchema,raw);integrity(key==="temporary:"+recovery.claimId,"Temporary recovery key mismatch");
+   const claim=await readTemporaryClaim(this.files,recovery.claimId);
+   integrity(claim.claimId===recovery.claimId&&canonicalJson(claim.owner)===canonicalJson(recovery.owner)&&claim.finalPath===recovery.finalPath&&claim.temporaryPath===recovery.temporaryPath&&claim.hash===recovery.hash&&claim.bytes===recovery.bytes,"Temporary claim differs from durable recovery classification");
+   const hasTemporary=await this.files.exists(claim.temporaryPath);if(hasTemporary)integrity(await add(claim.temporaryPath,"G2","Attributed temporary from a durably classified transaction"),"Attributed temporary could not enter GC plan");
+   integrity(await add(temporaryClaimPath(claim.claimId),"G2","Durable temporary ownership claim after terminal classification"),"Temporary claim could not enter GC plan");
+   proofs.set(key,undefined);
+  }
   for(const dir of await readdir(this.files.path("visual-transactions"))){
    if(!new RegExp("^"+uuid+"$").test(dir))fail("INTEGRITY_ERROR","Unknown transaction directory during GC planning");
    const prefix="visual-transactions/"+dir,tx="tx:"+dir,member=snapshot.indices.commitIndex.get(tx);

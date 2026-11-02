@@ -32,7 +32,7 @@ export class BackupManager {
   if(scope!=="document-store")fail("UNSUPPORTED_TARGET","Binary assets and other Estampes stores are not integrated; full Estampes backup is unsupported");
   destination=await realpath(destination);integrity(relative(this.files.root,destination).startsWith(".."),"Backup destination must be outside the active store");
   await inspectPlatform(destination,this.owner.platform.profile,"isolated-pr1c-testing");integrity((await readdir(destination)).length===0,"Backup destination must be explicitly empty");
-  const {snapshot,paths}=await protectedPaths(this.owner),members=[];
+  const {snapshot,paths}=await protectedPaths(this.owner,{includeTemporary:true}),members=[];
   for(const path of paths){if(path==="WRITER.lock"||path.startsWith("gc-quarantine/"))continue;if(!safeCopyPath(path))fail("UNSUPPORTED_TARGET","Backup closure contains an unsupported member");const info=await this.files.digest(path);members.push({path,hash:info.hash,bytes:info.bytes});}
   // Journal/key lifecycle is part of the supported store, not inferred from age.
   for(const dir of await readdir(this.files.path("visual-transactions")))for(const name of await readdir(this.files.path("visual-transactions/"+dir))){const path="visual-transactions/"+dir+"/"+name;if(!safeCopyPath(path)||members.some(f=>f.path===path))continue;const f=await this.files.digest(path);members.push({path,hash:f.hash,bytes:f.bytes});}
@@ -40,8 +40,8 @@ export class BackupManager {
   members.sort((a,b)=>a.path.localeCompare(b.path));const id=randomUUID(),pin=await this.manager.pins.acquire({envelope:snapshot.envelope},members.filter(f=>f.path!=="visual-registry/CURRENT.json").map(f=>f.path),this.manager.now(),{kind:"backup",ttlMs:30*60*1000});
   try{
    const totalBytes=members.reduce((n,f)=>n+f.bytes,0),space=await statfs(destination,{bigint:true});if(space.bavail*space.bsize<BigInt(totalBytes+64*MB))fail("STORAGE_UNAVAILABLE","Backup destination lacks required copy and reserve space");
-   const dest=new ManagedFiles(destination),token={schema:"estampes.backup-owner/1",id,storeInstanceId:snapshot.root.storeInstanceId};await dest.atomic("backup-owner.json",Buffer.from(canonicalJson(token)),"backup-owner");
-   await dest.atomic("restore-restriction.json",Buffer.from(canonicalJson({schema:"estampes.restore-restriction/1",continuation:"read-only",reason:"Backup artifact is not an active writer namespace"})),"backup-restriction");
+   const dest=new ManagedFiles(destination),atomicOwner={kind:"backup",id},token={schema:"estampes.backup-owner/1",id,storeInstanceId:snapshot.root.storeInstanceId};await dest.atomic("backup-owner.json",Buffer.from(canonicalJson(token)),"backup-owner",{owner:atomicOwner});
+   await dest.atomic("restore-restriction.json",Buffer.from(canonicalJson({schema:"estampes.restore-restriction/1",continuation:"read-only",reason:"Backup artifact is not an active writer namespace"})),"backup-restriction",{owner:atomicOwner});
    const result=await this.manager.publish("backup-start",async({plan})=>{
     const pages=[];for(let i=0;i<members.length;i+=1024){const page=members.slice(i,i+1024),hash=hashJson(page);plan.add(backupListPage(hash),page,4*MB,"backup-index");pages.push(hash);}
     const list={schema:"estampes.backup-file-index/1",pages,fileCount:members.length,totalBytes:members.reduce((s,f)=>s+f.bytes,0)},filesHash=hashJson(list);plan.add(backupListPath(filesHash),list,64*1024,"backup-index");
@@ -84,9 +84,9 @@ export class BackupManager {
    }
    if(job.fileIndex===list.files.length){
     for(const f of list.files)integrity((await dest.digest(f.path)).hash===f.hash,"Backup final member verification failed");
-    for(const path of list.paths)await dest.atomic(path,await this.files.bytes(path,4*MB),"backup-index",{immutable:true});
+    for(const path of list.paths)await dest.atomic(path,await this.files.bytes(path,4*MB),"backup-index",{immutable:true,owner:{kind:"backup",id}});
     const manifest={schema:"estampes.unified-document-backup/1",complete:true,scope:"document-store",fullEstampes:false,binaryAssetsIncluded:false,source:job.source,storeInstanceId:this.owner.current.root.storeInstanceId,filesHash:job.filesHash,createdAtMs:this.manager.now()};parse(manifestSchema,manifest);
-    await loadCommitted(dest);await this.files.point("backup.before-complete",{id});await dest.atomic("backup-manifest.json",Buffer.from(canonicalJson(manifest)),"backup-complete");job.state="complete";
+    await loadCommitted(dest);await this.files.point("backup.before-complete",{id});await dest.atomic("backup-manifest.json",Buffer.from(canonicalJson(manifest)),"backup-complete",{owner:{kind:"backup",id}});job.state="complete";
    }
    await this.manager.publish("backup-progress",async()=>({retentionChanges:new Map([[key,job]]),result:{id,state:job.state,fileIndex:job.fileIndex,remainingBytes:job.remainingBytes}}));
   }finally{session.active--;if(!session.active)for(const wake of session.waiters.splice(0))wake();}
@@ -102,17 +102,17 @@ export class BackupManager {
 export async function restoreBackupContents(backup,destination,profile){
  await inspectPlatform(destination,profile,"isolated-pr1c-testing");await assertOwnedWriterLease(destination);
  const existing=await readdir(destination);integrity(existing.every(n=>n==="WRITER.lock"),"Restore refuses a non-empty or active target");
- const source=new ManagedFiles(await realpath(backup)),manifest=parse(manifestSchema,await source.json("backup-manifest.json",64*1024)),list=await readBackupList(source,manifest.filesHash),target=new ManagedFiles(destination);
+ const source=new ManagedFiles(await realpath(backup)),manifest=parse(manifestSchema,await source.json("backup-manifest.json",64*1024)),list=await readBackupList(source,manifest.filesHash),target=new ManagedFiles(destination),atomicOwner={kind:"restore",id:randomUUID()};
  const format=await source.json("storage-format.json",4096);integrity(format.profile===profile&&format.storeInstanceId===manifest.storeInstanceId,"Restore cannot promote a profile or change store namespace");
  for(const f of list.files)integrity((await source.digest(f.path)).hash===f.hash,"Backup member is missing or corrupt");const verified=await loadCommitted(source);integrity(canonicalJson(verified.envelope)===canonicalJson(manifest.source),"Backup manifest and CURRENT differ");
- await target.atomic("restore-restriction.json",Buffer.from(canonicalJson({schema:"estampes.restore-restriction/1",rootHash:manifest.source.rootHash,continuation:"read-only",reason:"No proof excludes post-backup ACKs or fences the original store"})),"restore-marker");
+ await target.atomic("restore-restriction.json",Buffer.from(canonicalJson({schema:"estampes.restore-restriction/1",rootHash:manifest.source.rootHash,continuation:"read-only",reason:"No proof excludes post-backup ACKs or fences the original store"})),"restore-marker",{owner:atomicOwner});
  const buffer=Buffer.alloc(4*MB);
  for(const f of list.files.filter(f=>f.path!=="visual-registry/CURRENT.json")){
   await target.ensureDirectory(dirname(f.path));const input=await open(source.path(f.path),"r"),output=await open(target.path(f.path),"wx",0o600);
   try{let offset=0;for(;;){const {bytesRead}=await input.read(buffer,0,buffer.length,offset);if(!bytesRead)break;await output.write(buffer,0,bytesRead,offset);offset+=bytesRead;}await output.sync();}finally{await input.close();await output.close();}
   await target.syncDirectory(dirname(target.path(f.path)),"restore");integrity((await target.digest(f.path)).hash===f.hash,"Restore member hash mismatch");
  }
- await target.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(manifest.source)),"restore-current");const restored=await loadCommitted(target);
+ await target.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(manifest.source)),"restore-current",{owner:atomicOwner});const restored=await loadCommitted(target);
  integrity(restored.envelope.rootHash===manifest.source.rootHash,"Restored Root differs");return {restored:true,readOnly:true,fullEstampes:false,storeInstanceId:manifest.storeInstanceId,generation:manifest.source.generation,continuation:"BLOCKED_UNPROVEN_POST_BACKUP_TAIL"};
 }
 export async function restoreIsolatedBackup(backup,destination,{profile="linux-local-durable"}={}){

@@ -76,10 +76,11 @@ test("COW index pages are bounded, partitioned, chained, immutable and strictly 
   const f=await fixture(t);await f.store.close();const files=new ManagedFiles(f.root),plan=new StagingPlan(files),pages=new PageStore(files,plan);
   const large="x".repeat(256*1024),entries=new Map();let bucket;
   for(let i=0;entries.size<18;i++){const key="test:"+i,b=hashJson(key).slice(0,2);bucket??=b;if(b===bucket)entries.set(key,{large});}
-  const first=await pages.update(null,"registry",entries);await plan.flush();assert.equal((await new PageStore(files).read(first,"registry")).size,18);
+  const owner={kind:"transaction",id:id("tx",9001).slice(3)};
+  const first=await pages.update(null,"registry",entries);await plan.flush(()=>true,owner);assert.equal((await new PageStore(files).read(first,"registry")).size,18);
   for(const {bytes}of plan.records.values())assert.ok(bytes.length<=4*1024*1024);
   const plan2=new StagingPlan(files),next=new PageStore(files,plan2),key=entries.keys().next().value;
-  const second=await next.update(first,"registry",new Map([[key,{large:"updated"}]]));await plan2.flush();
+  const second=await next.update(first,"registry",new Map([[key,{large:"updated"}]]));await plan2.flush(()=>true,owner);
   assert.notEqual(first,second);assert.deepEqual((await new PageStore(files).read(first,"registry")).get(key),{large});
   await writeFile(files.path(pagePath(second)),"{}");await assert.rejects(new PageStore(files).read(second,"registry"),code("INTEGRITY_ERROR"));
 });

@@ -1,8 +1,9 @@
 import { open, lstat, mkdir, rename, readFile, readdir, statfs, unlink } from "node:fs/promises";
 import { join, dirname, resolve, relative } from "node:path";
-import { randomUUID, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { canonicalJson } from "../documents/validation.js";
 import { fail, integrity } from "./errors.js";
+import { registerTemporary, temporaryClaimPath } from "./temporary-attribution.js";
 
 export class ManagedFiles {
   constructor(root, observer = async () => {}) { this.root=root;this.observer=observer;this.fault=null;this.trace=[]; }
@@ -50,7 +51,12 @@ export class ManagedFiles {
     integrity(Buffer.from(canonicalJson(value)).equals(bytes),"Non-canonical managed JSON");return value;
   }
   async exists(name){try{await lstat(this.path(name));return true;}catch(e){if(e.code==="ENOENT")return false;throw e;}}
-  async atomic(name,bytes,label,{immutable=false}={}) {
+  async durableCreate(name,bytes,label){
+    await this.ensureDirectory(dirname(name));await this.point(label+".before-write",{path:name});const fd=await open(this.path(name),"wx",0o600);
+    try{await fd.writeFile(bytes);await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}
+    finally{await fd.close();}await this.syncDirectory(dirname(this.path(name)),label);
+  }
+  async atomic(name,bytes,label,{immutable=false,owner}={}) {
     await this.ensureDirectory(dirname(name));
     if(immutable&&await this.exists(name)){
       if(!(await this.bytes(name)).equals(bytes))fail("INTEGRITY_ERROR","Immutable file collision or corruption",{storageIntegrity:true});
@@ -58,7 +64,7 @@ export class ManagedFiles {
       // Reusing its bytes never substitutes for the file + directory barriers.
       await this.resync(name,label);return;
     }
-    const temporary=name+".tmp-"+randomUUID(), target=this.path(name);
+    const claim=await registerTemporary(this,name,bytes,label,owner),temporary=claim.temporaryPath,target=this.path(name);
     await this.point(label+".before-write",{path:name});
     const fd=await open(this.path(temporary),"wx",0o600);
     try{await fd.writeFile(bytes);await this.point(label+".before-file-fsync",{path:name});
@@ -69,6 +75,7 @@ export class ManagedFiles {
     try{await rename(this.path(temporary),target);}catch(e){e.barrier=true;throw e;}
     await this.point(label+".after-rename",{path:name});
     await this.syncDirectory(dirname(target),label);
+    await this.remove(temporaryClaimPath(claim.claimId),"temporary-claim");
   }
   async resync(name,label="recovery") {
     const fd=await open(this.path(name),"r");try{await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}finally{await fd.close();}
@@ -123,5 +130,5 @@ export class StagingPlan {
   }
   async json(name,maxBytes){return this.records.has(name)?JSON.parse(this.records.get(name).bytes):this.files.json(name,maxBytes);}
   allocationEstimate(){const dirs=new Set();let bytes=0;for(const [path,record]of this.records){bytes+=Math.ceil(record.bytes.length/4096)*4096;let dir=dirname(path);while(dir!=="."){dirs.add(dir);dir=dirname(dir);}}return bytes+dirs.size*4096;}
-  async flush(include=()=>true){for(const [path,record]of this.records)if(include(record))await this.files.atomic(path,record.bytes,record.label,{immutable:true});}
+  async flush(include=()=>true,owner){for(const [path,record]of this.records)if(include(record))await this.files.atomic(path,record.bytes,record.label,{immutable:true,owner});}
 }

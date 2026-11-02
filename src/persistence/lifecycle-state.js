@@ -2,6 +2,7 @@ import { z } from "zod";
 import { bounded, parse, ContentHashSchema, hashJson } from "../documents/validation.js";
 import { CurrentEnvelopeSchema, RecoveryResolverSchema } from "./commit-root-schema.js";
 import { fail } from "./errors.js";
+import { TemporaryRecoverySchema } from "./temporary-attribution.js";
 export const DAY=24*60*60*1000, ACK_WINDOW=7*DAY;
 export const LifecycleOptionsSchema=z.object({enabled:z.literal(true),autoMaintenance:z.boolean().default(true),
  pinSessions:z.number().int().min(1).max(1024).default(64),pinBytes:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).default(1024**3)}).strict();
@@ -30,6 +31,7 @@ export function validateRetentionEntry(key,value){
  if(key.startsWith("backup:"))return parse(BackupJobSchema,value);
  if(key.startsWith("journal-compacted:"))return parse(JournalProofSchema,value);
  if(key.startsWith("journal-key:")){const out=parse(z.object({payloadHash:ContentHashSchema}).strict(),value);return out;}
+ if(key.startsWith("temporary:"))return parse(TemporaryRecoverySchema,value);
  fail("INTEGRITY_ERROR","Unknown retention record namespace");
 }
 export const checkpointKey=name=>"checkpoint:"+hashJson(name);
