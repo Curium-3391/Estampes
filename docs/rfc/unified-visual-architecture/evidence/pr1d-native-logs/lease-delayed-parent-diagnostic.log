@@ -1,0 +1,171 @@
+{
+  "attempts": 20,
+  "counts": {
+    "UNSUPPORTED_STORAGE:EPIPE": 20
+  },
+  "unexpectedTypedErrors": [
+    {
+      "attempt": 1,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 2,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 3,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 4,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 5,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 6,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 7,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 8,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 9,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 10,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 11,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 12,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 13,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 14,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 15,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 16,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 17,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 18,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 19,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    },
+    {
+      "attempt": 20,
+      "code": "UNSUPPORTED_STORAGE",
+      "message": "Cannot start OS lease backend",
+      "details": {
+        "cause": "EPIPE"
+      }
+    }
+  ],
+  "originalWriterRemainsReady": true,
+  "currentAndLockUnchanged": true,
+  "profile": "linux-local-durable"
+}

@@ -1,0 +1,1050 @@
+{
+  "schema": "estampes.pr1d-independent-native-acceptance/1",
+  "date": "2026-11-03",
+  "timezone": "Asia/Taipei",
+  "sourceCommit": "c090d93a9c984f015d1a2a24a3f70df026be7f34",
+  "validationBranch": "codex/pr1d-remediation-native-ext4-acceptance",
+  "validationScriptsCommit": "5cc57275b4be71ae7955c1105bb87e247a9818b2",
+  "acceptance": "BLOCKED",
+  "productionSourceModified": false,
+  "existingTestsModified": false,
+  "kernelOrFilesystemAllowlistRelaxed": false,
+  "clientStartupTimeoutChanged": false,
+  "powerLossCertified": false,
+  "pushed": false,
+  "merged": false,
+  "fullOriginalSuite": {
+    "tests": 449,
+    "pass": 449,
+    "fail": 0,
+    "skip": 0,
+    "concurrency": 1
+  },
+  "browser": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0,
+    "realChatGPTHost": false
+  },
+  "nativeHarness": {
+    "tests": 112,
+    "pass": 111,
+    "fail": 1,
+    "skip": 0,
+    "diagnosticRetest": {
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "independentFaults": {
+    "tests": 22,
+    "pass": 20,
+    "fail": 2,
+    "skip": 0
+  },
+  "currentClaimRegressions": {
+    "tests": 4,
+    "pass": 0,
+    "fail": 4,
+    "skip": 0
+  },
+  "leaseDiagnosis": {
+    "unforcedAttempts": 200,
+    "correctExit73": 200,
+    "parentDelayMs": 20,
+    "delayedAttempts": 20,
+    "misclassifiedEPIPE": 20
+  },
+  "review": [
+    {
+      "id": "H-01",
+      "severity": "High",
+      "status": "REPRODUCED",
+      "source": "src/persistence/temporary-attribution.js:60-66; src/persistence/coordinator.js:78-79",
+      "finding": "Superseded CURRENT claim incorrectly fences subsequent valid recovery"
+    },
+    {
+      "id": "H-02",
+      "severity": "High",
+      "status": "REPRODUCED",
+      "source": "src/persistence/temporary-attribution.js:55-66; src/persistence/gc.js:59-66",
+      "finding": "Startup reintroduces GC-owned claim record; post-drain next GC hits ENOENT and fences writer"
+    },
+    {
+      "id": "M-01",
+      "severity": "Medium",
+      "status": "CODE PATH AND MEASURED GROWTH",
+      "source": "src/persistence/records.js:16-24",
+      "finding": "Version physical proofs outside record/registry byte caps; observed 625/2500/10000 physical rows"
+    },
+    {
+      "id": "M-02",
+      "severity": "Medium",
+      "status": "REPRODUCED WITH EXPLICIT SCHEDULING INJECTION",
+      "source": "src/persistence/lease.js:28-30",
+      "finding": "Startup child.send EPIPE classified as unsupported backend before contention exit"
+    }
+  ],
+  "falsePositiveClosed": "Initial historical-locator rejection test accidentally opted into lifecycle and targeted obsolete locator; corrected fixture asserts retained resolver and passes corruption rejection",
+  "unexecuted": [
+    "200-command scaling stopped after measured 100-command startup 27.84s",
+    "1000 commands",
+    "revision-1000 checkpoint/restart",
+    "10 GiB fill/recovery",
+    "100k-stroke capacity",
+    "64-reader/1 GiB full stress",
+    "physical/VM/block-device power loss",
+    "Windows/VHDX flush certification",
+    "other filesystem/deployment profiles",
+    "production activation/cutover/PR-1B"
+  ],
+  "failedAttempts": [
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/python-dependencies.log",
+      "exitCode": 1,
+      "counts": {}
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.log",
+      "exitCode": 1,
+      "counts": {
+        "tests": 2,
+        "pass": 0,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/native-persistence-harness.log",
+      "exitCode": 1,
+      "counts": {
+        "tests": 112,
+        "pass": 111,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-native-faults.log",
+      "exitCode": 1,
+      "counts": {
+        "tests": 20,
+        "pass": 17,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-final.log",
+      "exitCode": 1,
+      "counts": {
+        "tests": 4,
+        "pass": 0,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-native-faults-final.log",
+      "exitCode": 1,
+      "counts": {
+        "tests": 21,
+        "pass": 19,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-native-faults-complete.log",
+      "exitCode": 1,
+      "counts": {
+        "tests": 22,
+        "pass": 20,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-delayed-parent-diagnostic.log",
+      "exitCode": 1,
+      "counts": {}
+    },
+    {
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/docs-final.log",
+      "exitCode": 1,
+      "counts": {}
+    }
+  ],
+  "runs": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "venv",
+        "--without-pip",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/venv"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:37:59Z",
+      "durationSeconds": 0.167,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/python-venv.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pip",
+        "--python",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/venv",
+        "install",
+        "-r",
+        "cas-service/requirements.lock"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:37:59Z",
+      "durationSeconds": 0.033,
+      "exitCode": 1,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/python-dependencies.log",
+      "sha256": "0c13b4a79cc1cdf657d8a10a86a7d6f27aaa02e0f5af6e9aadac127dcbe60b54"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "pip",
+        "--python",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/venv",
+        "install",
+        "-r",
+        "cas-service/requirements.lock"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:38:04Z",
+      "durationSeconds": 9.997,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/python-dependencies-corrected.log",
+      "sha256": "5c367d9f3436d93a20116a2d20ef5f42110508660313a771bc8029bd6fa36c86"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/browser-libraries.py"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:38:57Z",
+      "durationSeconds": 4.831,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/browser-libraries.log",
+      "sha256": "da4a0db7afbc5e6b0db534eb5201b8b1d54607b5a8281809cd59ded3e5e22abd"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "tests/persistence-platform.test.js"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:39:02Z",
+      "durationSeconds": 4.629,
+      "exitCode": 0,
+      "counts": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/platform-baseline.log",
+      "sha256": "797604f93428d0368b70caef09844ab118cae9d7ecbc901ea893c46fa805cb23"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/superseded-claim.test.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:39:30Z",
+      "durationSeconds": 4.58,
+      "exitCode": 1,
+      "counts": {
+        "tests": 2,
+        "pass": 0,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.log",
+      "sha256": "7e2255f513e0cf46a092a27e688fa7c307bd9e708b88fceb63c55386e06ba4e9"
+    },
+    {
+      "command": [
+        "env",
+        "PLAYWRIGHT_BROWSERS_PATH=/tmp/estampes-pr1d-native-l_u7qnh9/browsers",
+        "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+        "node_modules/playwright-core/cli.js",
+        "install",
+        "chromium"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:38:14Z",
+      "durationSeconds": 152.283,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/browser-download.log",
+      "sha256": "edb81254105bcd7a100a03b402f405583728c8cbc12c0ae616d1ae8f1bbedfee"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "docs/rfc/unified-visual-architecture/evidence/contract-validation.spec.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:45:11Z",
+      "durationSeconds": 0.516,
+      "exitCode": 0,
+      "counts": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/contract-tests.log",
+      "sha256": "6c3b489bca99623cb4fff74453d4a7850356dbc200c35453f684b03d4cdc51cb"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:45:11Z",
+      "durationSeconds": 0.215,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/formal-examples.log",
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "cas-service/tests",
+        "-v"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:45:12Z",
+      "durationSeconds": 5.782,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/cas-python.log",
+      "sha256": "1ae677b3ad0f5e13fed831a6b5191966ef5e93e17f1a0db5308385b02d9e92c7"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "tests/persistence-platform.test.js",
+        "tests/persistence-transactions.test.js",
+        "tests/persistence-faults.test.js",
+        "tests/persistence-lifecycle.test.js",
+        "tests/persistence-lifecycle-faults.test.js",
+        "tests/persistence-backup.test.js",
+        "tests/persistence-capacity.test.js",
+        "tests/persistence-performance.test.js",
+        "tests/persistence-temporary-attribution.test.js"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:39:55Z",
+      "durationSeconds": 387.444,
+      "exitCode": 0,
+      "counts": {
+        "tests": 113,
+        "pass": 113,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/persistence-baseline.log",
+      "sha256": "d3cefab0fda1805a4a79723be32cf714807ac76fa753d46d772f5e39b8bcdf87"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:41:02Z",
+      "durationSeconds": 437.435,
+      "exitCode": 0,
+      "counts": {
+        "tests": 449,
+        "pass": 449,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/full-node22-original-serial.log",
+      "sha256": "494845e3ac1b18b8d6240273c097a3cd2bf8ed928660b56ca02e94319e563711"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-probe.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:49:08Z",
+      "durationSeconds": 0.065,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/native-prerequisite.log",
+      "sha256": "2ac47a2df460b7a81f9a988568db49c5cba78c45deea30dd3ccc65b64f22ce10"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:49:08Z",
+      "durationSeconds": 1.469,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/architecture-baseline.log",
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "docs:check"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:49:09Z",
+      "durationSeconds": 0.516,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/docs-baseline.log",
+      "sha256": "d5ae01aa25119e24e075f5f2316ed457cab4cb303ce7b7431bb7f4f0875e0ef2"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "release:check"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:49:10Z",
+      "durationSeconds": 0.215,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/release-check.log",
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "command": [
+        "node",
+        "--check",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:50:22Z",
+      "durationSeconds": 0.033,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark-syntax.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "--check",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/profile-preload.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:50:22Z",
+      "durationSeconds": 0.033,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/profile-syntax.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "--check",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:50:22Z",
+      "durationSeconds": 0.033,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-syntax.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "--check",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:50:23Z",
+      "durationSeconds": 0.032,
+      "exitCode": 0,
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/regression-syntax.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-backup.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-capacity.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-faults.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-lifecycle-faults.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-lifecycle.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-performance.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-platform.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-temporary-attribution.test.js",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-transactions.test.js"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:47:26Z",
+      "durationSeconds": 280.17,
+      "exitCode": 1,
+      "counts": {
+        "tests": 112,
+        "pass": 111,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/native-persistence-harness.log",
+      "sha256": "3066391361904a7c8a39ca7b43b8ccca79f3124be5799658ec645e4e2ab8354a"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:52:06Z",
+      "durationSeconds": 57.155,
+      "exitCode": 1,
+      "counts": {
+        "tests": 20,
+        "pass": 17,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-native-faults.log",
+      "sha256": "2b8bdc05ae42e9a437b94bacbc5e5f068f8289ac257135419858b80d4cee8be9"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:53:03Z",
+      "durationSeconds": 9.594,
+      "exitCode": 1,
+      "counts": {
+        "tests": 4,
+        "pass": 0,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-final.log",
+      "sha256": "348d9d42f1f8a18b2b36e62316191f9746caf95e823160e8c65cd929f31aa09f"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:54:36Z",
+      "durationSeconds": 57.757,
+      "exitCode": 1,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs": "954aa3ceb571a13e658d1d95ee054629502c3c2e889b02f3c047bb806ecf0de2"
+      },
+      "counts": {
+        "tests": 21,
+        "pass": 19,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-native-faults-final.log",
+      "sha256": "61c2fd52e2ae040b16fd761d3d9d5a5abe47ede37e1a1e597e8e5da565498a7f"
+    },
+    {
+      "command": [
+        "env",
+        "PR1D_SPAWN_DIAGNOSTICS=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/spawn-errors.jsonl",
+        "NODE_OPTIONS=--import=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/spawn-observer.mjs",
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-platform.test.js"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:55:34Z",
+      "durationSeconds": 4.38,
+      "exitCode": 0,
+      "inputSha256": {
+        "/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-platform.test.js": "4a6e395fecbdd4bd39952053ec92a9121a68ff8a8b0ced6789d0dd314eecb6f7"
+      },
+      "counts": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/native-platform-diagnostic.log",
+      "sha256": "a9f8a41d2d57c79cfd8dc3cb3b3830e7d4078224a092c6f7e1d2ddd645454750"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs",
+        "capacity"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:55:44Z",
+      "durationSeconds": 116.062,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs": "8ed2879fa88f8517ecc281f957200e9851bb863bf80090fd5551d3b38abb415f"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/capacity-ext4.log",
+      "sha256": "0f68798197519a4c7ef411eba87897062ed6650b5c02781b1bda2568e1ce119e"
+    },
+    {
+      "command": [
+        "env",
+        "PR1D_PROFILE_MODE=1",
+        "NODE_OPTIONS=--import=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/profile-preload.mjs",
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs",
+        "profile8"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:57:40Z",
+      "durationSeconds": 66.389,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs": "8ed2879fa88f8517ecc281f957200e9851bb863bf80090fd5551d3b38abb415f"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/profile-8MiB-ext4.log",
+      "sha256": "fef46cb8a3f04d4600b7713de6ba72025538397fe211d844909741093dcd5f3e"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/summarize-profiles.py"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:59:45Z",
+      "durationSeconds": 0.918,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/summarize-profiles.py": "b6fc3911c0fb49ed70ae2993542ad641a2fc8709588c19d4a100e6be39253173"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/profile-summary.log",
+      "sha256": "46d18c9172d8a1dfefa5987eed8e854c7b2aa3cf7838df3cb725315e88cdfdf5"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T16:59:46Z",
+      "durationSeconds": 62.409,
+      "exitCode": 1,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs": "2d4c8724b9245d39537349cdd83510019414f90204e6300827bf4b0a607fa766"
+      },
+      "counts": {
+        "tests": 22,
+        "pass": 20,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-native-faults-complete.log",
+      "sha256": "ed9dc2ad2c5af04a70eb9510320bbf19f2db24e2806a9d5712d9f0d52a940be6"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs",
+        "history",
+        "25"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:00:48Z",
+      "durationSeconds": 30.452,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs": "8ed2879fa88f8517ecc281f957200e9851bb863bf80090fd5551d3b38abb415f"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/history-25.log",
+      "sha256": "eb227dfcaf97930aff25977aaebdac1e442599f49f1988268ac9e7d4a9be26b9"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs",
+        "history",
+        "50"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:01:19Z",
+      "durationSeconds": 106.314,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs": "8ed2879fa88f8517ecc281f957200e9851bb863bf80090fd5551d3b38abb415f"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/history-50.log",
+      "sha256": "5ad547a5bf368b0cc8f41a612caaabe2d9a82792fdc8cfb56e92468534d109c4"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs",
+        "history",
+        "100"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:05:52Z",
+      "durationSeconds": 426.074,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/benchmark.mjs": "8ed2879fa88f8517ecc281f957200e9851bb863bf80090fd5551d3b38abb415f"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/history-100.log",
+      "sha256": "7292645dc3f3cf60d6098721e6b9d4c058675ddfd9fb6e6bc2afdcbf3a0af3ca"
+    },
+    {
+      "command": [
+        "env",
+        "PR1D_SPAWN_DIAGNOSTICS=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/spawn-errors.jsonl",
+        "NODE_OPTIONS=--import=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/spawn-observer.mjs",
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-diagnostic.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:13:09Z",
+      "durationSeconds": 1.27,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-diagnostic.mjs": "2e5a4aff89d002f46fd6391bc46dbd0ae7746c74c32092e5f5bc5526468a94da"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-contention-diagnostic.log",
+      "sha256": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f"
+    },
+    {
+      "command": [
+        "env",
+        "PR1D_DIAGNOSTIC_ATTEMPTS=20",
+        "PR1D_LEASE_TAG=lease-delayed-parent-results",
+        "PR1D_SPAWN_DELAY_MS=20",
+        "PR1D_SPAWN_DIAGNOSTICS=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/spawn-errors.jsonl",
+        "NODE_OPTIONS=--import=/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/spawn-observer.mjs",
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-diagnostic.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:14:15Z",
+      "durationSeconds": 1.12,
+      "exitCode": 1,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-diagnostic.mjs": "ccd25cca297e39d1e36c6743457786e6e3db8a966b6d725ee0e1f94896115652"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/lease-delayed-parent-diagnostic.log",
+      "sha256": "c8e1aea017205877f86a81e2a35d92a2d8b0145056cfc4d098473d53fc9d0ed1"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/tmp/estampes-pr1d-native-l_u7qnh9/syntax-check.py"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:22:11Z",
+      "durationSeconds": 0.767,
+      "exitCode": 0,
+      "inputSha256": {
+        "/tmp/estampes-pr1d-native-l_u7qnh9/syntax-check.py": "7948de06e4bac14e0fd20b41d4385ae2f9579398166d85975ac60509c0657d94"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/syntax-final.log",
+      "sha256": "e4518667f0c2afa2aea8716b42121cefcd48318e7b877381ad4cc340f06406cb"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:22:12Z",
+      "durationSeconds": 1.72,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs": "6e120343a94fadebdfc55e396384bbcea93993312cccda9c15e3ea3cc15925d2"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/architecture-final.log",
+      "sha256": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "docs:check"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:22:13Z",
+      "durationSeconds": 0.617,
+      "exitCode": 1,
+      "inputSha256": {},
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/docs-final.log",
+      "sha256": "5ad4cbe2c519eea42956a5d364dfb8ef3890badebeb9fbb41e564a893bceb6a2"
+    },
+    {
+      "command": [
+        "node",
+        "docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:22:14Z",
+      "durationSeconds": 0.215,
+      "exitCode": 0,
+      "inputSha256": {
+        "docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs": "878a6af90bf0fd1141dd47d6da23bc530b29d512a8f7539220aaaeb96e3d9737"
+      },
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/formal-examples-final.log",
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "docs:check"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:23:35Z",
+      "durationSeconds": 0.467,
+      "exitCode": 0,
+      "inputSha256": {},
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/docs-final-corrected.log",
+      "sha256": "59325af79bd6581e64754f9c857adbdef6a8cacf97548db73c11a469cc0acb3f"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:23:36Z",
+      "durationSeconds": 0.018,
+      "exitCode": 0,
+      "inputSha256": {},
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/staged-whitespace-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "c090d93a9c984f015d1a2a24a3f70df026be7f34"
+      ],
+      "uid": 1001,
+      "startedUTC": "2026-11-02T17:23:36Z",
+      "durationSeconds": 0.018,
+      "exitCode": 0,
+      "inputSha256": {},
+      "counts": {},
+      "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/baseline-whitespace-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "profiles": [
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/8MiB-profiled-58999.cpuprofile.gz",
+      "compressedBytes": 86395,
+      "compressedSha256": "50f81c3b22f9300aa8188cb72629614638d7ccb4a9e25903b7b5604ad4d43298",
+      "originalBytes": 743401,
+      "originalSha256": "665b1cb7f4d04a54bb1037bff533e7f95d60f10bea215768f889a7e68118ac18"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/8MiB-profiled-58999.heapprofile.gz",
+      "compressedBytes": 56285,
+      "compressedSha256": "9ec1baaf2e5de647cdc6d8d2aa26609c2033e7db9adf03ed5d9241503c57e7ab",
+      "originalBytes": 862016,
+      "originalSha256": "97de1e3c0754e17f530bf83d9361c01d04e769af303a1feabff12c94e77dc13b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/8MiB-profiled-58999.observation.json.gz",
+      "compressedBytes": 10813,
+      "compressedSha256": "b362a1e8ffcbfa1b9d3a272e9684beba3d697e22f82468dedda522746fb17d11",
+      "originalBytes": 40353,
+      "originalSha256": "487b2183d42f788792c9a94b5858bb87384c755dc32fc01378df15e2a090c57d"
+    }
+  ],
+  "reportSha256": "521e162d7394537edddb284d90aea2e614fe9f292cdacb3246b89e96491e9faa",
+  "evidenceSha256": {
+    ".gitattributes": "5f6abd22a2be538d9b531d0d4b4cd991b4026eb210fb22a49c17a69d500b022f",
+    "8MiB-profiled-58999.cpuprofile.gz": "50f81c3b22f9300aa8188cb72629614638d7ccb4a9e25903b7b5604ad4d43298",
+    "8MiB-profiled-58999.heapprofile.gz": "9ec1baaf2e5de647cdc6d8d2aa26609c2033e7db9adf03ed5d9241503c57e7ab",
+    "8MiB-profiled-58999.observation.json.gz": "b362a1e8ffcbfa1b9d3a272e9684beba3d697e22f82468dedda522746fb17d11",
+    "architecture-baseline.log": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3",
+    "architecture-final.log": "3b7177c0b82bbc577f396d06ff0f8ffee4413dc960e922b4c14948e2b4ac9df3",
+    "baseline-whitespace-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "benchmark-syntax.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "benchmark.mjs": "8ed2879fa88f8517ecc281f957200e9851bb863bf80090fd5551d3b38abb415f",
+    "browser-download.log": "edb81254105bcd7a100a03b402f405583728c8cbc12c0ae616d1ae8f1bbedfee",
+    "browser-libraries.log": "da4a0db7afbc5e6b0db534eb5201b8b1d54607b5a8281809cd59ded3e5e22abd",
+    "browser-libraries.py": "4b1795c8f2fe148ebdd4fadd38f80e4df1d9afbe86c82212027e57076094f819",
+    "browser-results.json": "73731c1865ecfed474d6892cf051b56d25325ab02e90bc2ae7e02f13a7e33a7a",
+    "capacity-ext4.log": "0f68798197519a4c7ef411eba87897062ed6650b5c02781b1bda2568e1ce119e",
+    "cas-python.log": "1ae677b3ad0f5e13fed831a6b5191966ef5e93e17f1a0db5308385b02d9e92c7",
+    "contract-tests.log": "6c3b489bca99623cb4fff74453d4a7850356dbc200c35453f684b03d4cdc51cb",
+    "docs-baseline.log": "d5ae01aa25119e24e075f5f2316ed457cab4cb303ce7b7431bb7f4f0875e0ef2",
+    "docs-final-corrected.log": "59325af79bd6581e64754f9c857adbdef6a8cacf97548db73c11a469cc0acb3f",
+    "docs-final.log": "5ad4cbe2c519eea42956a5d364dfb8ef3890badebeb9fbb41e564a893bceb6a2",
+    "environment.json": "f756ab7b84c975b069b38bca849b94e4d491be703997bdf34c175efe76adb0f0",
+    "fault-preload.mjs": "d56bc93340773934966b5b514a61979b6438b82efc0b6cd91e07265395e37422",
+    "formal-examples-final.log": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081",
+    "formal-examples.log": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081",
+    "full-node22-original-serial.log": "494845e3ac1b18b8d6240273c097a3cd2bf8ed928660b56ca02e94319e563711",
+    "history-100.log": "7292645dc3f3cf60d6098721e6b9d4c058675ddfd9fb6e6bc2afdcbf3a0af3ca",
+    "history-25.log": "eb227dfcaf97930aff25977aaebdac1e442599f49f1988268ac9e7d4a9be26b9",
+    "history-50.log": "5ad547a5bf368b0cc8f41a612caaabe2d9a82792fdc8cfb56e92468534d109c4",
+    "history-summary.json": "6b3b4c9896b6c6204ac8a8124d47bcdec64f870f0083e1f3b1ef13bcb9931e65",
+    "independent-cases-corrected-21.mjs.txt": "954aa3ceb571a13e658d1d95ee054629502c3c2e889b02f3c047bb806ecf0de2",
+    "independent-cases-first.mjs.txt": "4016694c4c65408a6c7b86a3b4c75dfe7eb3494b5b51ad18861f55b829c9ccd8",
+    "independent-cases.mjs": "2d4c8724b9245d39537349cdd83510019414f90204e6300827bf4b0a607fa766",
+    "independent-native-faults-complete.log": "ed9dc2ad2c5af04a70eb9510320bbf19f2db24e2806a9d5712d9f0d52a940be6",
+    "independent-native-faults-final.log": "61c2fd52e2ae040b16fd761d3d9d5a5abe47ede37e1a1e597e8e5da565498a7f",
+    "independent-native-faults.log": "2b8bdc05ae42e9a437b94bacbc5e5f068f8289ac257135419858b80d4cee8be9",
+    "independent-syntax.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lease-contention-diagnostic.log": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f",
+    "lease-contention-results.json": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f",
+    "lease-delayed-parent-diagnostic.log": "c8e1aea017205877f86a81e2a35d92a2d8b0145056cfc4d098473d53fc9d0ed1",
+    "lease-delayed-parent-results.json": "c8e1aea017205877f86a81e2a35d92a2d8b0145056cfc4d098473d53fc9d0ed1",
+    "lease-diagnostic-initial.mjs.txt": "2e5a4aff89d002f46fd6391bc46dbd0ae7746c74c32092e5f5bc5526468a94da",
+    "lease-diagnostic.mjs": "ccd25cca297e39d1e36c6743457786e6e3db8a966b6d725ee0e1f94896115652",
+    "metrics-capacity.json": "0f914ed237529ff33e4a27ea50413ee95ffb2bed3d92be30835dc09781ba3dfd",
+    "metrics-history-100.json": "d953dc876d72d48dfa3b36dc9ce272f5c203af99499c695328766484919c5bb7",
+    "metrics-history-25.json": "bcfc14459d61af1440e79b1e1860c01d291e34d5e1a323a3a09286ebcdda1d9c",
+    "metrics-history-50.json": "c02e21c8fd8ee064c81764624a2d45fd89b753fa3321d44718d848aea3298b91",
+    "metrics-profile8.json": "25a4e1ffd6905b3e5dc51ec0325b43ac487bb7113dd51c19eb769019f7d93735",
+    "native-harness.json": "db8c1f50aba6e35ebc7ae9a80a2f799938f85fd50b4cde056dd6784d0c25e302",
+    "native-persistence-harness.log": "3066391361904a7c8a39ca7b43b8ccca79f3124be5799658ec645e4e2ab8354a",
+    "native-platform-diagnostic.log": "a9f8a41d2d57c79cfd8dc3cb3b3830e7d4078224a092c6f7e1d2ddd645454750",
+    "native-prerequisite.log": "2ac47a2df460b7a81f9a988568db49c5cba78c45deea30dd3ccc65b64f22ce10",
+    "partial-write-preload.mjs": "cdbb587fd90f29bd2afa99138f69f9de85831b1cf36817dad2a65259c40a72b9",
+    "persistence-baseline.log": "d3cefab0fda1805a4a79723be32cf714807ac76fa753d46d772f5e39b8bcdf87",
+    "platform-baseline.log": "797604f93428d0368b70caef09844ab118cae9d7ecbc901ea893c46fa805cb23",
+    "prepare-native.py": "0b531ebfad3743323080b45f27a649eafe44f128b3c82a9cd5233aa3410386b9",
+    "profile-8MiB-ext4.log": "fef46cb8a3f04d4600b7713de6ba72025538397fe211d844909741093dcd5f3e",
+    "profile-preload.mjs": "8323a5d9a7315520bf298e9a03c1ef77ff0491394f1accbf09897fdd1a8e168d",
+    "profile-summary.json": "46d18c9172d8a1dfefa5987eed8e854c7b2aa3cf7838df3cb725315e88cdfdf5",
+    "profile-summary.log": "46d18c9172d8a1dfefa5987eed8e854c7b2aa3cf7838df3cb725315e88cdfdf5",
+    "profile-syntax.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python-dependencies-corrected.log": "5c367d9f3436d93a20116a2d20ef5f42110508660313a771bc8029bd6fa36c86",
+    "python-dependencies.log": "0c13b4a79cc1cdf657d8a10a86a7d6f27aaa02e0f5af6e9aadac127dcbe60b54",
+    "python-venv.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "recovery-probe-initial.mjs.txt": "4fea8daeb8875b0c59d4f635abb07cd89959bc85560f4654e71c031a666be0df",
+    "recovery-probe.mjs": "94e3f7f939a929e43fff69b16e239284a1556b933b0e45b29233589ee7a8f816",
+    "regression-syntax.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "release-check.log": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+    "runner.py": "9f79198f85cc92c6337a24a929911dd6104457d4e58ab69fef0b9e97fb339f11",
+    "runs.jsonl": "0c1092d8ba8724c58e1ad8677ede54ed76e73f9f6ad85190ef03307868194637",
+    "source-manifest.json": "fd2a34da66ea02726efc519b0d65e9da9106244737635b443925ad11a0cdeffd",
+    "spawn-errors.jsonl": "51cca04153170a00aebe708a1e8481327884abf1ccc2d4bbf9de7ee6af35206f",
+    "spawn-observer-initial.mjs.txt": "968d8595e5840c50b79cdacd80a404eb1bfa9db2a1050ee284ed4c5b36958f1b",
+    "spawn-observer.mjs": "6dde61e97656b1cc086b53d58588544a257694f6f641079eff64b275010e13f5",
+    "staged-whitespace-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "summarize-profiles.py": "b6fc3911c0fb49ed70ae2993542ad641a2fc8709588c19d4a100e6be39253173",
+    "superseded-current-final.log": "348d9d42f1f8a18b2b36e62316191f9746caf95e823160e8c65cd929f31aa09f",
+    "superseded-current-initial.mjs.txt": "b8b3d0fdd36620b5e0af2e9537db819c84500599b9be43bd86fe9ff4a6f41c56",
+    "superseded-current-regression.log": "7e2255f513e0cf46a092a27e688fa7c307bd9e708b88fceb63c55386e06ba4e9",
+    "superseded-current-regression.mjs": "de4b1f979c83935d84664b20fd935535fa6941e3b04b0c90886d16e55e9804d0",
+    "syntax-check.py.txt": "7948de06e4bac14e0fd20b41d4385ae2f9579398166d85975ac60509c0657d94",
+    "syntax-final.log": "e4518667f0c2afa2aea8716b42121cefcd48318e7b877381ad4cc340f06406cb"
+  }
+}

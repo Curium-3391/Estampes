@@ -1,0 +1,114 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+not ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 2017.063505
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+    
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:28:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":false,"claimId":"39206a57-9059-4b57-a88b-333484875e25","currentGeneration":3,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+not ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 2787.543434
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+    
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:28:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":true,"claimId":"5e1e1ccb-fb3d-4004-af6c-0d858d96bb6d","currentGeneration":4,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+not ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+  ---
+  duration_ms: 2016.847177
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+    
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:28:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"profile":"linux-local-durable","laterCommit":false,"claimId":"2c107c0e-2c93-48ec-b010-aa1fba901ce1","currentGeneration":3,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+not ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+  ---
+  duration_ms: 2498.528456
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+    
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:28:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"profile":"linux-local-durable","laterCommit":true,"claimId":"1e4b82ad-9012-4079-a33f-223c9eb67f60","currentGeneration":4,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}}}
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9507.391135

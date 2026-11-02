@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 1 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 9.935867
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 2 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 3.990887
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+ok 3 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 1070.925484
+  type: 'test'
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 4 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 538.289995
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 5 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 1141.67503
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 6 - native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+  ---
+  duration_ms: 1521.037044
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4555.660761

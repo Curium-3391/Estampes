@@ -1,0 +1,187 @@
+TAP version 13
+# Subtest: native independent SIGKILL / temporary-claim.after-dir-fsync
+ok 1 - native independent SIGKILL / temporary-claim.after-dir-fsync
+  ---
+  duration_ms: 2292.795852
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.before-write
+ok 2 - native independent SIGKILL / staged.before-write
+  ---
+  duration_ms: 2270.248866
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.after-file-fsync
+ok 3 - native independent SIGKILL / staged.after-file-fsync
+  ---
+  duration_ms: 2300.950519
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.before-rename
+ok 4 - native independent SIGKILL / staged.before-rename
+  ---
+  duration_ms: 2240.938687
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.after-rename
+ok 5 - native independent SIGKILL / staged.after-rename
+  ---
+  duration_ms: 2250.870769
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.before-dir-fsync
+ok 6 - native independent SIGKILL / staged.before-dir-fsync
+  ---
+  duration_ms: 2259.63239
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.after-dir-fsync
+ok 7 - native independent SIGKILL / staged.after-dir-fsync
+  ---
+  duration_ms: 2309.276686
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / before-ack
+ok 8 - native independent SIGKILL / before-ack
+  ---
+  duration_ms: 2208.877288
+  type: 'test'
+  ...
+# Subtest: native regression: interrupted attributed G2 drain / gc.before-quarantine
+not ok 9 - native regression: interrupted attributed G2 drain / gc.before-quarantine
+  ---
+  duration_ms: 4680.208973
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs:29:81'
+  failureType: 'testCodeFailure'
+  error: |-
+    A completed G2 plan must not leave a missing claim that fences subsequent GC
+    + actual - expected
+    
+    + {
+    +   code: 'ENOENT',
+    +   message: "ENOENT: no such file or directory, lstat '/tmp/estampes-pr1d-native-l_u7qnh9/tmp/estampes-pr1c-pr1d-HgPcQe/visual-temporaries/claims/c10cb0f9-5088-4c1d-948a-bb76f61896e8.json'"
+    + }
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    code: 'ENOENT'
+    message: "ENOENT: no such file or directory, lstat '/tmp/estampes-pr1d-native-l_u7qnh9/tmp/estampes-pr1c-pr1d-HgPcQe/visual-temporaries/claims/c10cb0f9-5088-4c1d-948a-bb76f61896e8.json'"
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs:40:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"point":"gc.before-quarantine","claimExists":false,"staleTemporaryProof":{"bytes":363,"claimId":"c10cb0f9-5088-4c1d-948a-bb76f61896e8","classifiedGeneration":4,"finalPath":"visual-registry/pages/00d5db6528770275fdee274fbcea03ffa8dc07fc7c43fd46829d13c2ce7f1f05.json","hash":"00d5db6528770275fdee274fbcea03ffa8dc07fc7c43fd46829d13c2ce7f1f05","outcome":"aborted","owner":{"id":"cc26b5c9-a6d0-4543-afb2-8e071cfeca95","kind":"transaction"},"schema":"estampes.temporary-recovery/1","temporaryPath":"visual-registry/pages/00d5db6528770275fdee274fbcea03ffa8dc07fc7c43fd46829d13c2ce7f1f05.json.tmp-c10cb0f9-5088-4c1d-948a-bb76f61896e8"},"documents":1,"ledger":1,"nextGcProblem":{"code":"ENOENT","message":"ENOENT: no such file or directory, lstat '/tmp/estampes-pr1d-native-l_u7qnh9/tmp/estampes-pr1c-pr1d-HgPcQe/visual-temporaries/claims/c10cb0f9-5088-4c1d-948a-bb76f61896e8.json'"},"writerState":"read-only-recovery"}
+# Subtest: native regression: interrupted attributed G2 drain / gc.after-rename
+not ok 10 - native regression: interrupted attributed G2 drain / gc.after-rename
+  ---
+  duration_ms: 13139.68285
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs:29:81'
+  failureType: 'testCodeFailure'
+  error: |-
+    A completed G2 plan must not leave a missing claim that fences subsequent GC
+    + actual - expected
+    
+    + {
+    +   code: 'ENOENT',
+    +   message: "ENOENT: no such file or directory, lstat '/tmp/estampes-pr1d-native-l_u7qnh9/tmp/estampes-pr1c-pr1d-tOHwQj/visual-temporaries/claims/08225494-62a0-4ffe-9741-899d53a6ad05.json'"
+    + }
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    code: 'ENOENT'
+    message: "ENOENT: no such file or directory, lstat '/tmp/estampes-pr1d-native-l_u7qnh9/tmp/estampes-pr1c-pr1d-tOHwQj/visual-temporaries/claims/08225494-62a0-4ffe-9741-899d53a6ad05.json'"
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/independent-cases.mjs:40:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"point":"gc.after-rename","claimExists":false,"staleTemporaryProof":{"bytes":363,"claimId":"08225494-62a0-4ffe-9741-899d53a6ad05","classifiedGeneration":4,"finalPath":"visual-registry/pages/1310540cb9e5419b498f5644aa9562a35db1fb8e351d9e89a2789aea423bcff4.json","hash":"1310540cb9e5419b498f5644aa9562a35db1fb8e351d9e89a2789aea423bcff4","outcome":"aborted","owner":{"id":"5db7ad91-5290-40a8-a1c8-5ac33b30a790","kind":"transaction"},"schema":"estampes.temporary-recovery/1","temporaryPath":"visual-registry/pages/1310540cb9e5419b498f5644aa9562a35db1fb8e351d9e89a2789aea423bcff4.json.tmp-08225494-62a0-4ffe-9741-899d53a6ad05"},"documents":1,"ledger":1,"nextGcProblem":{"code":"ENOENT","message":"ENOENT: no such file or directory, lstat '/tmp/estampes-pr1d-native-l_u7qnh9/tmp/estampes-pr1c-pr1d-tOHwQj/visual-temporaries/claims/08225494-62a0-4ffe-9741-899d53a6ad05.json'"},"writerState":"read-only-recovery"}
+# Subtest: native regression: interrupted attributed G2 drain / gc.after-unlink
+ok 11 - native regression: interrupted attributed G2 drain / gc.after-unlink
+  ---
+  duration_ms: 7238.470242
+  type: 'test'
+  ...
+# {"point":"gc.after-unlink","claimExists":false,"staleTemporaryProof":null,"documents":1,"ledger":1,"nextGcProblem":null,"writerState":"ready"}
+# Subtest: native attribution corruption safely preserves bytes / claim-schema
+ok 12 - native attribution corruption safely preserves bytes / claim-schema
+  ---
+  duration_ms: 828.839769
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / claim-hash
+ok 13 - native attribution corruption safely preserves bytes / claim-hash
+  ---
+  duration_ms: 917.988729
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / temporary-bytes
+ok 14 - native attribution corruption safely preserves bytes / temporary-bytes
+  ---
+  duration_ms: 943.664038
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / claim-missing
+ok 15 - native attribution corruption safely preserves bytes / claim-missing
+  ---
+  duration_ms: 809.260024
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / journal-missing
+ok 16 - native attribution corruption safely preserves bytes / journal-missing
+  ---
+  duration_ms: 1180.370446
+  type: 'test'
+  ...
+# Subtest: native SIGKILL inside actual startup classification read
+ok 17 - native SIGKILL inside actual startup classification read
+  ---
+  duration_ms: 1463.770762
+  type: 'test'
+  ...
+# Subtest: native SIGKILL inside actual startup history read
+ok 18 - native SIGKILL inside actual startup history read
+  ---
+  duration_ms: 2363.286341
+  type: 'test'
+  ...
+# Subtest: native cache invalidates atomic physical replacement / historical-locator-page
+ok 19 - native cache invalidates atomic physical replacement / historical-locator-page
+  ---
+  duration_ms: 2279.426502
+  type: 'test'
+  ...
+# Subtest: native cache invalidates atomic physical replacement / historical-generation
+ok 20 - native cache invalidates atomic physical replacement / historical-generation
+  ---
+  duration_ms: 2590.674461
+  type: 'test'
+  ...
+# Subtest: native reused transaction owner with competing claims fails closed
+ok 21 - native reused transaction owner with competing claims fails closed
+  ---
+  duration_ms: 934.693304
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 19
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 57712.264802

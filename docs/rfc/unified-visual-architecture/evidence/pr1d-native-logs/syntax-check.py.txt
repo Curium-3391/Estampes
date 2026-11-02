@@ -1,0 +1,6 @@
+from pathlib import Path
+import ast,subprocess
+p=Path("docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs")
+for f in sorted(p.glob("*.mjs")):subprocess.run(["node","--check",str(f)],check=True)
+for f in sorted(p.glob("*.py")):ast.parse(f.read_text(),filename=str(f))
+print("Syntax passed:",len(list(p.glob("*.mjs"))),"ES modules;",len(list(p.glob("*.py"))),"Python scripts")

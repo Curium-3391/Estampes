@@ -1,0 +1,4 @@
+# Raw output retains its original bytes and diagnostic formatting.
+*.log -text -whitespace
+*.cpuprofile -text
+*.heapprofile -text

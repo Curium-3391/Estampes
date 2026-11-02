@@ -1,0 +1,7 @@
+
+> estampes@0.20.0 docs:check
+> node scripts/check-docs.mjs
+
+docs/rfc/unified-visual-architecture/PR-1D-NATIVE-ACCEPTANCE-REPORT.md:172: [links] broken link: evidence/pr1d-native-logs/manifest.json (no such file docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/manifest.json)
+
+1 documentation problem(s) in 94 files.

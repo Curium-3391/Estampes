@@ -1,0 +1,66 @@
+{
+  "measurements": [
+    {
+      "commands": 25,
+      "commitTotalMs": 20573.014444999997,
+      "p50Ms": 801.2027399999997,
+      "p95Ms": 1278.4138459999995,
+      "maxMs": 1303.6827059999996,
+      "peakRSSKiB": 155652,
+      "files": 791,
+      "allocatedBytes": 3579904,
+      "directOpenMs": 3173.538618,
+      "directVerifyMs": 1497.011024,
+      "normalClientOpenMs": 3381.8098290000016,
+      "normalClientVerifyMs": 1557.378318,
+      "versionPhysicalProofRows": 625,
+      "directCpuMs": null,
+      "replayed": true
+    },
+    {
+      "commands": 50,
+      "commitTotalMs": 79421.84547499998,
+      "p50Ms": 1561.5663060000006,
+      "p95Ms": 2714.7430729999905,
+      "maxMs": 3736.5939609999996,
+      "peakRSSKiB": 165056,
+      "files": 2116,
+      "allocatedBytes": 9551872,
+      "directOpenMs": 8847.863824999999,
+      "directVerifyMs": 5194.033392,
+      "normalClientOpenMs": 8889.010735000003,
+      "normalClientVerifyMs": 5206.456545,
+      "versionPhysicalProofRows": 2500,
+      "directCpuMs": null,
+      "replayed": true
+    },
+    {
+      "commands": 100,
+      "commitTotalMs": 340524.6301130001,
+      "p50Ms": 2965.442498000004,
+      "p95Ms": 7016.102601999999,
+      "maxMs": 13186.511658000003,
+      "peakRSSKiB": 180160,
+      "files": 6190,
+      "allocatedBytes": 28389376,
+      "directOpenMs": 27022.779852,
+      "directVerifyMs": 18171.869132,
+      "normalClientOpenMs": 27840.900981999992,
+      "normalClientVerifyMs": 18829.291547,
+      "versionPhysicalProofRows": 10000,
+      "directCpuMs": {
+        "user": 11540.258,
+        "system": 14765.125
+      },
+      "replayed": true
+    }
+  ],
+  "decision": {
+    "200": "NOT EXECUTED: actual 100-command client open approaches unchanged 30s deadline; stop expensive scaling",
+    "1000": "NOT EXECUTED",
+    "revision1000Checkpoint": "NOT EXECUTED",
+    "clientTimeoutMs": 30000,
+    "observed100ClientMarginMs": 2159.099018000008
+  },
+  "helperVersions": "25/50 used recovery-probe-initial.mjs.txt; 100 added resourceUsage CPU counters only, without changing recovery/timeout behavior; no CPU values are invented for 25/50"
+}

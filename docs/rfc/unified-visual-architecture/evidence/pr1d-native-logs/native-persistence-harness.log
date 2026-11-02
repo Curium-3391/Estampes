@@ -1,0 +1,697 @@
+TAP version 13
+# Subtest: UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+ok 1 - UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+  ---
+  duration_ms: 7157.541031
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+ok 2 - UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+  ---
+  duration_ms: 3141.010259
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+ok 3 - UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+  ---
+  duration_ms: 3284.290472
+  type: 'test'
+  ...
+# Subtest: UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+ok 4 - UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+  ---
+  duration_ms: 2563.1767
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+ok 5 - UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+  ---
+  duration_ms: 2961.835773
+  type: 'test'
+  ...
+# Subtest: UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+ok 6 - UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+  ---
+  duration_ms: 561.551366
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+ok 7 - UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+  ---
+  duration_ms: 4302.846971
+  type: 'test'
+  ...
+# Subtest: UVA-64: actual allocated blocks, outstanding reservations and recovery reserve participate in admission
+ok 8 - UVA-64: actual allocated blocks, outstanding reservations and recovery reserve participate in admission
+  ---
+  duration_ms: 616.607725
+  type: 'test'
+  ...
+# Subtest: UVA-64: quota pressure rejects a real content command before intent and preserves its draft and Root
+ok 9 - UVA-64: quota pressure rejects a real content command before intent and preserves its draft and Root
+  ---
+  duration_ms: 641.890821
+  type: 'test'
+  ...
+# Subtest: UVA-63: real archive threshold chooses a full anchor at 32 MiB without staging an oversized delta
+ok 10 - UVA-63: real archive threshold chooses a full anchor at 32 MiB without staging an oversized delta
+  ---
+  duration_ms: 4.096801
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-intent preserves one whole root and at most one retry effect
+ok 11 - SIGKILL / before-intent preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1513.27385
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+ok 12 - SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1512.908577
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+ok 13 - SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1539.113418
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+ok 14 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1460.344913
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+ok 15 - SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1706.33241
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+ok 16 - SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1551.101131
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+ok 17 - SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1723.289412
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+ok 18 - SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1712.417145
+  type: 'test'
+  ...
+# Subtest: SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+ok 19 - SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 3622.874237
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-prepared preserves one whole root and at most one retry effect
+ok 20 - SIGKILL / after-prepared preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 8311.426561
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+ok 21 - SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 2005.692879
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+ok 22 - SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1578.220818
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+ok 23 - SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1529.698228
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+ok 24 - SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1468.63407
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-ack preserves one whole root and at most one retry effect
+ok 25 - SIGKILL / before-ack preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1524.68757
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+ok 26 - fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1512.087208
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+ok 27 - fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1519.605091
+  type: 'test'
+  ...
+# Subtest: fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+ok 28 - fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1410.868007
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+ok 29 - fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1534.695612
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+ok 30 - fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1550.250742
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+ok 31 - fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1650.688616
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+ok 32 - fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1622.80067
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+ok 33 - fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1634.794304
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+ok 34 - fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1611.158747
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+ok 35 - fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1678.412459
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+ok 36 - fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1487.228587
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+ok 37 - fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1440.125325
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+ok 38 - fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1529.841082
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+ok 39 - ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1511.687803
+  type: 'test'
+  ...
+# Subtest: ENOSPC / staged.before-write retains committed data and recovers without a second effect
+ok 40 - ENOSPC / staged.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1526.154232
+  type: 'test'
+  ...
+# Subtest: ENOSPC / root.before-write retains committed data and recovers without a second effect
+ok 41 - ENOSPC / root.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1657.161068
+  type: 'test'
+  ...
+# Subtest: ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+ok 42 - ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1650.858581
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-write retains committed data and recovers without a second effect
+ok 43 - ENOSPC / current.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1731.327147
+  type: 'test'
+  ...
+# Subtest: EXDEV / staged.before-rename retains committed data and recovers without a second effect
+ok 44 - EXDEV / staged.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1555.6327
+  type: 'test'
+  ...
+# Subtest: EXDEV / current.before-rename retains committed data and recovers without a second effect
+ok 45 - EXDEV / current.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1707.597011
+  type: 'test'
+  ...
+# Subtest: ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+ok 46 - ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+  ---
+  duration_ms: 1490.777501
+  type: 'test'
+  ...
+# Subtest: corrupt CURRENT enters read-only recovery without guessing an older root
+ok 47 - corrupt CURRENT enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1302.335143
+  type: 'test'
+  ...
+# Subtest: corrupt root enters read-only recovery without guessing an older root
+ok 48 - corrupt root enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1123.581825
+  type: 'test'
+  ...
+# Subtest: corrupt registry-page enters read-only recovery without guessing an older root
+ok 49 - corrupt registry-page enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1136.977246
+  type: 'test'
+  ...
+# Subtest: corrupt generation enters read-only recovery without guessing an older root
+ok 50 - corrupt generation enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1151.871167
+  type: 'test'
+  ...
+# Subtest: corrupt intent enters read-only recovery without guessing an older root
+ok 51 - corrupt intent enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1239.807844
+  type: 'test'
+  ...
+# Subtest: corrupt outcome enters read-only recovery without guessing an older root
+ok 52 - corrupt outcome enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1209.691568
+  type: 'test'
+  ...
+# Subtest: mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+ok 53 - mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+  ---
+  duration_ms: 1130.222551
+  type: 'test'
+  ...
+# Subtest: an aborted prepared generation is never adopted, even when its staged file is corrupt
+ok 54 - an aborted prepared generation is never adopted, even when its staged file is corrupt
+  ---
+  duration_ms: 1369.521669
+  type: 'test'
+  ...
+# Subtest: interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+ok 55 - interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+  ---
+  duration_ms: 2214.209081
+  type: 'test'
+  ...
+# Subtest: recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+ok 56 - recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+  ---
+  duration_ms: 1191.223304
+  type: 'test'
+  ...
+# Subtest: reused orphan generation bytes must pass file/directory barriers again before publication
+ok 57 - reused orphan generation bytes must pass file/directory barriers again before publication
+  ---
+  duration_ms: 2128.857055
+  type: 'test'
+  ...
+# Subtest: committed metadata tamper detected during a live write fences the writer before any ACK
+ok 58 - committed metadata tamper detected during a live write fences the writer before any ACK
+  ---
+  duration_ms: 506.583593
+  type: 'test'
+  ...
+# Subtest: SIGKILL during recovery outcome repair is idempotent on the next restart
+ok 59 - SIGKILL during recovery outcome repair is idempotent on the next restart
+  ---
+  duration_ms: 1761.490903
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.before-quarantine resumes durable GC without losing a logical version
+ok 60 - UVA-49/59: SIGKILL at gc.before-quarantine resumes durable GC without losing a logical version
+  ---
+  duration_ms: 15070.59663
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.after-rename resumes durable GC without losing a logical version
+ok 61 - UVA-49/59: SIGKILL at gc.after-rename resumes durable GC without losing a logical version
+  ---
+  duration_ms: 7625.668903
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.after-unlink resumes durable GC without losing a logical version
+ok 62 - UVA-49/59: SIGKILL at gc.after-unlink resumes durable GC without losing a logical version
+  ---
+  duration_ms: 8073.35476
+  type: 'test'
+  ...
+# Subtest: UVA-47: G2 requires terminal proof and a full quarantine day; rollback clock cannot age it
+ok 63 - UVA-47: G2 requires terminal proof and a full quarantine day; rollback clock cannot age it
+  ---
+  duration_ms: 5097.392837
+  type: 'test'
+  ...
+# Subtest: UVA-49: corrupt committed GC plan stops maintenance and fences writes
+ok 64 - UVA-49: corrupt committed GC plan stops maintenance and fences writes
+  ---
+  duration_ms: 5264.825154
+  type: 'test'
+  ...
+# Subtest: UVA-49: corrupt quarantined bytes are never unlinked as verified duplicates
+ok 65 - UVA-49: corrupt quarantined bytes are never unlinked as verified duplicates
+  ---
+  duration_ms: 5685.969773
+  type: 'test'
+  ...
+# Subtest: UVA-49/63: compaction SIGKILL at current.before-rename preserves stable references
+ok 66 - UVA-49/63: compaction SIGKILL at current.before-rename preserves stable references
+  ---
+  duration_ms: 5194.05446
+  type: 'test'
+  ...
+# Subtest: UVA-49/63: compaction SIGKILL at after-publication-durable preserves stable references
+ok 67 - UVA-49/63: compaction SIGKILL at after-publication-durable preserves stable references
+  ---
+  duration_ms: 4910.878024
+  type: 'test'
+  ...
+# Subtest: UVA-59: missing archive chunk and corrupt checkpoint envelope fail closed
+ok 68 - UVA-59: missing archive chunk and corrupt checkpoint envelope fail closed
+  ---
+  duration_ms: 1703.774165
+  type: 'test'
+  ...
+# Subtest: UVA-59: corrupt named checkpoint Root cannot be ignored by GC
+ok 69 - UVA-59: corrupt named checkpoint Root cannot be ignored by GC
+  ---
+  duration_ms: 1153.697988
+  type: 'test'
+  ...
+# Subtest: UVA-59: external CURRENT drift never publishes a stale maintenance Root
+ok 70 - UVA-59: external CURRENT drift never publishes a stale maintenance Root
+  ---
+  duration_ms: 970.638092
+  type: 'test'
+  ...
+# Subtest: UVA-59: ENOSPC during checkpoint yields no false completion and preserves content
+ok 71 - UVA-59: ENOSPC during checkpoint yields no false completion and preserves content
+  ---
+  duration_ms: 5239.455806
+  type: 'test'
+  ...
+# Subtest: UVA-59: ENOSPC during gcStep yields no false completion and preserves content
+ok 72 - UVA-59: ENOSPC during gcStep yields no false completion and preserves content
+  ---
+  duration_ms: 6681.88311
+  type: 'test'
+  ...
+# Subtest: UVA-48/59: journal compaction retains permanent key binding through quarantine and restart
+ok 73 - UVA-48/59: journal compaction retains permanent key binding through quarantine and restart
+  ---
+  duration_ms: 4750.338721
+  type: 'test'
+  ...
+# Subtest: UVA-48/59: live terminal-journal tampering cannot manufacture a GC retention proof
+ok 74 - UVA-48/59: live terminal-journal tampering cannot manufacture a GC retention proof
+  ---
+  duration_ms: 1179.266312
+  type: 'test'
+  ...
+# Subtest: UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+ok 75 - UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+  ---
+  duration_ms: 5247.244347
+  type: 'test'
+  ...
+# Subtest: UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+ok 76 - UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+  ---
+  duration_ms: 25575.544035
+  type: 'test'
+  ...
+# Subtest: UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+ok 77 - UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+  ---
+  duration_ms: 2753.527507
+  type: 'test'
+  ...
+# Subtest: clock rollback cannot shorten ACK retention or erase persisted high-water state
+ok 78 - clock rollback cannot shorten ACK retention or erase persisted high-water state
+  ---
+  duration_ms: 2502.405416
+  type: 'test'
+  ...
+# Subtest: UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+ok 79 - UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+  ---
+  duration_ms: 2734.659314
+  type: 'test'
+  ...
+# Subtest: UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+ok 80 - UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+  ---
+  duration_ms: 930.648574
+  type: 'test'
+  ...
+# Subtest: multiple concurrent readers remain fixed while writes advance the one authoritative Root
+ok 81 - multiple concurrent readers remain fixed while writes advance the one authoritative Root
+  ---
+  duration_ms: 1612.857925
+  type: 'test'
+  ...
+# Subtest: lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+ok 82 - lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+  ---
+  duration_ms: 3.209184
+  type: 'test'
+  ...
+# Subtest: maintenance makes bounded progress under sustained writes and accounts allocated blocks
+ok 83 - maintenance makes bounded progress under sustained writes and accounts allocated blocks
+  ---
+  duration_ms: 7142.553298
+  type: 'test'
+  ...
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 84 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 8497.97525
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 85 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 1168.38139
+  type: 'test'
+  ...
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 86 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 6.386472
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 87 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 3.79847
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+not ok 88 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 514.954669
+  type: 'test'
+  location: '/tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-platform.test.js:25:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    PersistenceError: Cannot start OS lease backend
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (file:///tmp/estampes-pr1d-native-l_u7qnh9/native-harness/tests/persistence-platform.test.js:27:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 89 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 534.895904
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 90 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 1123.428657
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 91 - native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+  ---
+  duration_ms: 1453.256731
+  type: 'test'
+  ...
+# Subtest: PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace
+ok 92 - PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace
+  ---
+  duration_ms: 3245.045616
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash after CURRENT rename classifies the exact claim and preserves the committed effect
+ok 93 - PR-1D: crash after CURRENT rename classifies the exact claim and preserves the committed effect
+  ---
+  duration_ms: 1668.041907
+  type: 'test'
+  ...
+# Subtest: PR-1D: an unclaimed atomic-shaped temporary is preserved and forces read-only recovery
+ok 94 - PR-1D: an unclaimed atomic-shaped temporary is preserved and forces read-only recovery
+  ---
+  duration_ms: 766.105491
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-write never creates an unattributed effect
+ok 95 - PR-1D: crash at temporary-claim.before-write never creates an unattributed effect
+  ---
+  duration_ms: 1049.827234
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-file-fsync never creates an unattributed effect
+ok 96 - PR-1D: crash at temporary-claim.before-file-fsync never creates an unattributed effect
+  ---
+  duration_ms: 1130.366848
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-dir-fsync never creates an unattributed effect
+ok 97 - PR-1D: crash at temporary-claim.before-dir-fsync never creates an unattributed effect
+  ---
+  duration_ms: 1132.318023
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-unlink never creates an unattributed effect
+ok 98 - PR-1D: crash at temporary-claim.before-unlink never creates an unattributed effect
+  ---
+  duration_ms: 1200.143919
+  type: 'test'
+  ...
+# Subtest: PR-1D: bootstrap claim left after rename is completed idempotently on restart
+ok 99 - PR-1D: bootstrap claim left after rename is completed idempotently on restart
+  ---
+  duration_ms: 769.279817
+  type: 'test'
+  ...
+# Subtest: PR-1D: two durable claims for one target are ambiguous and fail closed
+ok 100 - PR-1D: two durable claims for one target are ambiguous and fail closed
+  ---
+  duration_ms: 812.284241
+  type: 'test'
+  ...
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 101 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 1603.007648
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 102 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 923.010533
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 103 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 1787.571065
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 104 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 896.1437
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 105 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 1705.35594
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 106 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 1817.112823
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 107 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 921.5891
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 108 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 1162.178998
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 109 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 2018.875769
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 110 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 909.049723
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 111 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 948.105299
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+ok 112 - historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+  ---
+  duration_ms: 3142.025032
+  type: 'test'
+  ...
+1..112
+# tests 112
+# suites 0
+# pass 111
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 280097.64608

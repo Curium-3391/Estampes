@@ -1,0 +1,62 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test
+not ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test
+  ---
+  duration_ms: 2195.868722
+  type: 'test'
+  location: '/tmp/estampes-pr1d-native-l_u7qnh9/superseded-claim.test.mjs:8:73'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+    
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-pr1d-native-l_u7qnh9/superseded-claim.test.mjs:26:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"profile":"linux-process-crash-test","claimId":"4cf14116-3e9c-49c5-be1a-b97c791c6e48","currentGeneration":3,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"},"platform":{"platform":"linux","profile":"linux-process-crash-test","fsType":"0xef53","device":2096,"durability":"process-crash-test","purpose":"isolated-pr1c-testing"},"recovery":[],"trace":["recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-outcome","outcome.before-file-fsync","outcome.after-file-fsync","outcome.before-dir-fsync","outcome.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-outcome","outcome.before-file-fsync","outcome.after-file-fsync","outcome.before-dir-fsync","outcome.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-outcome","outcome.before-file-fsync","outcome.after-file-fsync","outcome.before-dir-fsync","outcome.after-dir-fsync"],"contentCommits":1,"lifecycle":{"pins":{"sessions":0,"physicalBytes":0,"epoch":0,"active":0},"policy":{"schema":"estampes.lifecycle/1","options":{"enabled":true,"autoMaintenance":false,"pinSessions":64,"pinBytes":1073741824},"highWaterMs":1893456000000,"committedAtMs":1893456000000,"contentSinceMaintenance":1,"maintenance":{"state":"idle","cursor":null,"conflicts":0,"steps":0}},"reservations":0},"performance":{"open":{"verifyCommittedMs":67.291969},"transactions":[],"verification":{"snapshotLoads":1,"versionHits":2,"versionMisses":1,"recordHits":2,"registryHits":0,"registryMaterializations":3,"versionReconstructions":1,"reconstructedMs":4.177804000000009,"recordCacheBytes":810,"registryCacheBytes":262,"versionProofs":1,"registryProofs":2}}}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable
+not ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable
+  ---
+  duration_ms: 2114.729685
+  type: 'test'
+  location: '/tmp/estampes-pr1d-native-l_u7qnh9/superseded-claim.test.mjs:8:73'
+  failureType: 'testCodeFailure'
+  error: |-
+    A classified old CURRENT claim must not fence a later valid CURRENT: {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"}
+    + actual - expected
+    
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-pr1d-native-l_u7qnh9/superseded-claim.test.mjs:26:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"profile":"linux-local-durable","claimId":"9bec61b1-932f-4ae4-ab4e-02a53bc6a257","currentGeneration":3,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"},"platform":{"platform":"linux","profile":"linux-local-durable","fsType":"0xef53","device":2096,"durability":"durable","purpose":"isolated-pr1c-testing"},"recovery":[],"trace":["recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-outcome","outcome.before-file-fsync","outcome.after-file-fsync","outcome.before-dir-fsync","outcome.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-outcome","outcome.before-file-fsync","outcome.after-file-fsync","outcome.before-dir-fsync","outcome.after-dir-fsync","recovery.before-file-fsync","recovery.after-file-fsync","recovery.before-dir-fsync","recovery.after-dir-fsync","recovery.before-outcome","outcome.before-file-fsync","outcome.after-file-fsync","outcome.before-dir-fsync","outcome.after-dir-fsync"],"contentCommits":1,"lifecycle":{"pins":{"sessions":0,"physicalBytes":0,"epoch":0,"active":0},"policy":{"schema":"estampes.lifecycle/1","options":{"enabled":true,"autoMaintenance":false,"pinSessions":64,"pinBytes":1073741824},"highWaterMs":1893456000000,"committedAtMs":1893456000000,"contentSinceMaintenance":1,"maintenance":{"state":"idle","cursor":null,"conflicts":0,"steps":0}},"reservations":0},"performance":{"open":{"verifyCommittedMs":69.321426},"transactions":[],"verification":{"snapshotLoads":1,"versionHits":2,"versionMisses":1,"recordHits":2,"registryHits":0,"registryMaterializations":3,"versionReconstructions":1,"reconstructedMs":4.061995999999965,"recordCacheBytes":811,"registryCacheBytes":262,"versionProofs":1,"registryProofs":2}}}}
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4517.679978
