@@ -5,8 +5,8 @@ import { LogicalRevisionRefSchema } from "../documents/references.js";
 import { bounded, ContentHashSchema, RevisionSchema, TimestampSchema, parse, canonicalJson } from "../documents/validation.js";
 import { integrity } from "./errors.js";
 export const IntentSchema=bounded(z.object({schema:z.literal("estampes.transaction-intent/1"),commitId:TransactionIdSchema,storeInstanceId:UUIDSchema,
-  mode:z.enum(["content","genesis","recovery-epoch"]),baseRootHash:ContentHashSchema.nullable(),baseGeneration:z.number().int().min(0),
-  requestKeyDigest:ContentHashSchema.nullable(),payloadHash:ContentHashSchema,acceptedAt:TimestampSchema,after:z.array(LogicalRevisionRefSchema).max(64)}).strict());
+  mode:z.enum(["content","genesis","recovery-epoch","maintenance"]),baseRootHash:ContentHashSchema.nullable(),baseGeneration:z.number().int().min(0),
+  requestKeyDigest:ContentHashSchema.nullable(),payloadHash:ContentHashSchema,acceptedAt:TimestampSchema,after:z.array(LogicalRevisionRefSchema).max(64),stagedFiles:z.array(z.object({path:z.string().max(512),hash:ContentHashSchema,bytes:z.number().int().min(0)}).strict()).max(4096).optional()}).strict());
 const preparedSchema=z.object({schema:z.literal("estampes.prepared/1"),commitId:TransactionIdSchema,generation:RevisionSchema,rootHash:ContentHashSchema}).strict();
 const outcomeSchema=z.object({schema:z.literal("estampes.transaction-outcome/1"),commitId:TransactionIdSchema,outcome:z.enum(["committed","aborted"]),
   membership:z.object({generation:RevisionSchema,registryRootHash:ContentHashSchema,resultHash:ContentHashSchema}).strict().optional()}).strict();
@@ -24,7 +24,7 @@ export class IntentJournal {
     for(const name of await readdir(this.files.path("visual-transactions"))){
       if(!UUIDSchema.safeParse(name).success){integrity(false,"Unknown transaction directory");}
       const id="tx:"+name,path=transactionPath(id),member=snapshot.indices.commitIndex.get(id);
-      if(!await this.files.exists(path+"/intent.json")){integrity(!member,"Committed transaction is missing its durable intent");outcomes.push({commitId:id,outcome:"incomplete-intent"});continue;}
+      if(!await this.files.exists(path+"/intent.json")){const proof=snapshot.indices.retention.get("journal-compacted:"+id);integrity(!member||(proof?.commitId===id&&proof.outcome==="committed"&&proof.payloadHash===member.payloadHash),"Committed transaction is missing its durable intent or matching compaction proof");outcomes.push({commitId:id,outcome:"incomplete-intent"});continue;}
       const intent=parse(IntentSchema,await this.files.json(path+"/intent.json"));
       integrity(intent.commitId===id&&intent.storeInstanceId===snapshot.root.storeInstanceId,"Journal namespace mismatch");
       if(intent.requestKeyDigest!==null){
@@ -43,6 +43,7 @@ export class IntentJournal {
       await this.files.point("recovery.before-outcome",{commitId:id});await this.outcome(id,member);
       outcomes.push({commitId:id,outcome:member?"committed":"aborted"});
     }
+    for(const [key,value]of snapshot.indices.retention)if(key.startsWith("journal-key:")){const digest=key.slice(12);integrity(!seen.has(digest)||seen.get(digest)===value.payloadHash,"Compacted request proof conflicts with a durable intent");seen.set(digest,value.payloadHash);}
     return {seen,outcomes};
   }
 }

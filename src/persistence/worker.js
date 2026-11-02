@@ -23,6 +23,7 @@ process.on("message",async message=>{
     if(method==="snapshot")respond(id,coordinator.snapshot());
     else if(method==="diagnostics")respond(id,coordinator.diagnostics());
     else if(method==="fault"){coordinator.files.arm(parse(faultSchema,args.fault));respond(id,{armed:true});}
+    else if(method==="maintenance")respond(id,await coordinator.maintenance(args.action,args.arguments??{}));
     else if(method==="commit")respond(id,await coordinator.commit(args.command,args.actor,args.expectedEpoch));
     else if(method==="close"){await coordinator.queue;respond(id,{closed:true});process.disconnect();}
     else throw new Error("Unknown internal method");

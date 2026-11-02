@@ -1,0 +1,140 @@
+// Destructive work is only permitted by a plan committed in the sole CommitRoot.
+import { readdir } from "node:fs/promises";
+import { z } from "zod";
+import { PageStore } from "./pages.js";
+import { parseCommitRoot, assertCurrentEnvelope, CurrentEnvelopeSchema } from "./commit-root-schema.js";
+import { GcRecordSchema, DAY, policyOf } from "./lifecycle-state.js";
+import { hashJson, canonicalJson, parse, ContentHashSchema as Hash, bounded } from "../documents/validation.js";
+import { loadCommitted } from "./records.js";
+import { integrity, fail } from "./errors.js";
+import { randomUUID } from "node:crypto";
+import { IntentSchema } from "./journal.js";
+const uuid="[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",hash="[0-9a-f]{64}";
+const allowed=new RegExp("^(?:visual-documents/"+uuid+"/generations/[1-9][0-9]*-"+hash+"\\.json|visual-registry/(?:pages|roots)/"+hash+"\\.json|visual-history/(?:chunks/"+hash+"\\.bin|deltas/"+hash+"\\.json)|visual-transactions/"+uuid+"/(?:intent|prepared|outcome)\\.json)(?:\\.tmp-"+uuid+")?$");
+export const gcSourceAllowed=path=>typeof path==="string"&&allowed.test(path);
+const candidateSchema=z.object({path:z.string().refine(gcSourceAllowed),hash:Hash,bytes:z.number().int().min(0),class:z.enum(["G1","G2"]),quarantine:z.string(),reason:z.string().max(160)}).strict();
+export const GcPlanSchema=bounded(z.object({schema:z.literal("estampes.gc-plan/1"),id:z.string().uuid(),storeInstanceId:z.string().uuid(),sourceGeneration:z.number().int().positive(),
+ sourceRootHash:Hash,rootsetHash:Hash,pinsEpoch:z.number().int().min(0),createdAtMs:z.number().int().min(0),candidates:z.array(candidateSchema).min(1).max(128)}).strict());
+export const gcPlanPath=hash=>"visual-maintenance/gc/"+parse(Hash,hash)+".json";
+export async function readGcPlan(files,record){
+ const r=parse(GcRecordSchema,record),raw=await files.json(gcPlanPath(r.planHash),4*1024**2),validated=GcPlanSchema.safeParse(raw);integrity(validated.success,"Invalid committed GC plan schema");const plan=validated.data;integrity(hashJson(plan)===r.planHash,"GC plan hash mismatch");
+ integrity(new Set(r.moved).size===r.moved.length&&new Set(r.deleted).size===r.deleted.length&&r.moved.every(i=>i<plan.candidates.length)&&r.deleted.every(i=>r.moved.includes(i)),"GC progress differs from candidate inventory");
+ for(const [i,c]of plan.candidates.entries())integrity(c.quarantine===`gc-quarantine/${plan.id}/${i}-${c.hash}.bin`,"Unsafe GC quarantine path");return plan;
+}
+async function rootMetadata(files,envelope,paths){
+ const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
+ for(const [kind,hash]of Object.entries(root.roots))await pages.read(hash,kind);for(const p of pages.track)paths.add(p);
+}
+export async function protectedPaths(owner,{verify=true}={}){
+ const snapshot=verify?await loadCommitted(owner.files):owner.current;
+ integrity(snapshot.envelope.rootHash===owner.current.envelope.rootHash,"CURRENT changed outside serialized maintenance");
+ const paths=new Set(snapshot.files);paths.add("storage-format.json");paths.add("WRITER.lock");
+ for(const [key,value]of snapshot.indices.retention){
+  if(key.startsWith("recovery:"))await rootMetadata(owner.files,value.envelope,paths);
+  if(key.startsWith("checkpoint:")&&value.envelope)await rootMetadata(owner.files,value.envelope,paths);
+  if(key.startsWith("gc:")){paths.add(gcPlanPath(value.planHash));const plan=await readGcPlan(owner.files,value);if(!["complete","failed"].includes(value.state))for(const c of plan.candidates)if(await owner.files.exists(c.quarantine))paths.add(c.quarantine);}
+  if(key.startsWith("backup:")){
+   const list=await owner.lifecycle.backups.readList(value.filesHash);for(const p of list.paths)paths.add(p);if(value.state==="copying")for(const f of list.files)paths.add(f.path);
+  }
+ }
+ for(const path of owner.lifecycle.pins.paths)paths.add(path);
+ const pending=policyOf(snapshot.indices.retention)?.maintenance.pending;
+ if(pending)for(const hash of pending.writtenChunks??[])paths.add("visual-history/chunks/"+hash+".bin");
+ return {snapshot,paths,hash:hashJson([...paths].sort())};
+}
+export class GarbageCollector {
+ constructor(manager){this.manager=manager;this.owner=manager.owner;this.files=this.owner.files;}
+ async plan({classes=["G1","G2"]}={}){
+  integrity(Array.isArray(classes)&&classes.length>0&&classes.every(v=>["G1","G2"].includes(v)),"Invalid GC class filter");
+  const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner),candidates=[],proofs=new Map(),selected=new Set();
+  const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=128||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return;
+   const info=await this.files.digest(path);selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:""});};
+  for(const row of snapshot.indices.locator.values())if(row.kind==="delta"){
+   const ref=row.logical,path=`visual-documents/${ref.entityId.slice(4)}/generations/${ref.revision}-${ref.contentHash}.json`;
+   await add(path,"G1","Verified committed delta reconstructs the same logical version");
+  }
+  const now=this.manager.now(),safeClock=this.manager.canAge();
+  for(const dir of await readdir(this.files.path("visual-transactions"))){
+   if(!new RegExp("^"+uuid+"$").test(dir))fail("INTEGRITY_ERROR","Unknown transaction directory during GC planning");
+   const prefix="visual-transactions/"+dir,tx="tx:"+dir,member=snapshot.indices.commitIndex.get(tx);
+   if(!await this.files.exists(prefix+"/intent.json"))continue;
+   const rawIntent=await this.files.json(prefix+"/intent.json"),validated=IntentSchema.safeParse(rawIntent);integrity(validated.success,"GC encountered an invalid terminal intent");
+   const intent=validated.data,outcome=await this.files.json(prefix+"/outcome.json");
+   integrity(intent.commitId===tx&&intent.storeInstanceId===snapshot.root.storeInstanceId&&outcome.commitId===tx&&outcome.outcome===(member?"committed":"aborted"),"Journal is not terminal/consistent for GC");
+   if(member){
+    integrity(member.payloadHash===intent.payloadHash&&member.requestKeyDigest===intent.requestKeyDigest&&outcome.membership?.generation===member.generation&&outcome.membership?.registryRootHash===member.registryRootHash&&outcome.membership?.resultHash===member.resultHash,"GC terminal journal differs from authoritative membership");
+    if(intent.requestKeyDigest){const v=snapshot.indices.ledger.get(intent.requestKeyDigest),entry=v?.kind==="tombstone"?v.record:v;integrity(entry?.acceptedAt===intent.acceptedAt&&entry?.payloadHash===intent.payloadHash,"GC journal differs from permanent Ledger");}
+   }
+   for(const f of intent.stagedFiles??[])if(!paths.has(f.path))await add(f.path,"G2","Unreachable file from a terminal transaction plan");
+   const age=now-Date.parse(intent.acceptedAt),wait=member?7*DAY:DAY;
+   if(safeClock&&age>=wait){
+    proofs.set("journal-compacted:"+tx,{schema:"estampes.compacted-journal/1",commitId:tx,payloadHash:intent.payloadHash,outcome:member?"committed":"aborted",atMs:now});
+    if(intent.requestKeyDigest)proofs.set("journal-key:"+intent.requestKeyDigest,{payloadHash:intent.payloadHash});
+    for(const name of ["intent.json","prepared.json","outcome.json"])await add(prefix+"/"+name,"G2","Terminal journal with durable membership/key retention proof");
+   }
+  }
+  if(!candidates.length)return {planned:false,reason:"No provably unreachable managed files"};
+  const id=randomUUID();for(const [i,c]of candidates.entries())c.quarantine=`gc-quarantine/${id}/${i}-${c.hash}.bin`;
+  const plan={schema:"estampes.gc-plan/1",id,storeInstanceId:snapshot.root.storeInstanceId,sourceGeneration:snapshot.root.generation,sourceRootHash:snapshot.envelope.rootHash,rootsetHash,pinsEpoch:this.manager.pins.epoch,createdAtMs:now,candidates};parse(GcPlanSchema,plan);
+  await this.manager.publish("gc-plan",async({plan:staging})=>{const hash=hashJson(plan);staging.add(gcPlanPath(hash),plan,4*1024**2,"gc-plan");return {retentionChanges:new Map([...proofs,["gc:"+id,{schema:"estampes.gc-state/1",planHash:hash,state:"planned",quarantinedAtMs:null,moved:[],deleted:[]}]]),result:{id,candidates:candidates.length}};});
+  return {planned:true,id,candidates:candidates.length};
+ }
+ async step(id){
+  const key="gc:"+id,record=this.owner.current.indices.retention.get(key);if(!record)fail("NOT_FOUND","GC plan not found");if(record.state==="complete")return {id,state:"complete"};
+  const plan=await readGcPlan(this.files,record);integrity(plan.storeInstanceId===this.owner.current.root.storeInstanceId,"GC plan namespace differs");
+  const state=structuredClone(record),{paths}=await protectedPaths(this.owner);let progressed=0;
+  await this.files.point("gc.before-quarantine",{id});
+  for(const [i,c]of plan.candidates.entries()){
+   if(state.moved.includes(i))continue;
+   if(paths.has(c.path)){state.reason="PINNED_OR_REACHABLE";continue;}
+   if(await this.files.exists(c.quarantine)){integrity((await this.files.digest(c.quarantine)).hash===c.hash,"Quarantined file changed");}
+   else if(await this.files.exists(c.path)){
+    integrity((await this.files.digest(c.path)).hash===c.hash,"GC source changed since plan");
+    await this.files.move(c.path,c.quarantine,"gc");
+   }else {state.moved.push(i);state.deleted.push(i);progressed++;continue;}
+   state.moved.push(i);progressed++;
+  }
+  if(state.quarantinedAtMs===null&&state.moved.length)state.quarantinedAtMs=this.manager.acceptedTime();
+  state.state="quarantining";
+  await this.manager.publish("gc-quarantine-progress",async()=>({retentionChanges:new Map([[key,state]]),result:{id,moved:state.moved.length}}));
+  await this.files.point("gc.after-quarantine",{id});
+  // Re-mark after durable quarantine progress; callbacks cannot use the old mark.
+  const remarked=await protectedPaths(this.owner);
+  const next=structuredClone(this.owner.current.indices.retention.get(key));let waiting=false;
+  for(const i of next.moved){
+   if(next.deleted.includes(i))continue;const c=plan.candidates[i];
+   if(remarked.paths.has(c.path)){waiting=true;continue;}
+   if(c.class==="G2"&&(!this.manager.canAge()||this.manager.now()-next.quarantinedAtMs<DAY)){waiting=true;continue;}
+   if(await this.files.exists(c.quarantine)){
+    integrity((await this.files.digest(c.quarantine)).hash===c.hash,"Quarantine checksum failed before unlink");
+    await this.files.remove(c.quarantine,"gc");
+   }
+   next.deleted.push(i);progressed++;
+  }
+  next.state=next.deleted.length===plan.candidates.length?"complete":waiting?"waiting-grace":"quarantining";
+  await this.manager.publish("gc-unlink-progress",async()=>({retentionChanges:new Map([[key,next]]),result:{id,state:next.state,deleted:next.deleted.length}}));
+  return {id,state:next.state,progressed,moved:next.moved.length,deleted:next.deleted.length};
+ }
+}
+// Before a full logical load, restore any quarantined representation that a
+// committed Locator still requires. Plans come only from hashed CURRENT data.
+export async function recoverQuarantine(files){
+ if(!await files.exists("visual-registry/CURRENT.json"))return;
+ const envelope=parse(CurrentEnvelopeSchema,await files.json("visual-registry/CURRENT.json",64*1024)),pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
+ const retention=await pages.read(root.roots.retention,"retention"),locator=await pages.read(root.roots.locator,"locator"),required=new Set(pages.track);
+ for(const row of locator.values()){
+  if(row.kind==="full")required.add(row.relativePath);
+  const delta=row.kind==="delta"?row:row.alternative;
+  if(delta){const path="visual-history/deltas/"+delta.manifest+".json";required.add(path);if(await files.exists(path)){const m=await files.json(path,4*1024**2);integrity(hashJson(m)===delta.manifest,"Recovery delta manifest mismatch");for(const h of m.chunks)required.add("visual-history/chunks/"+h+".bin");}}
+ }
+ for(const [key,value]of retention)if(key.startsWith("backup:")&&value.state==="copying"){
+  const {readBackupList}=await import("./backup.js"),list=await readBackupList(files,value.filesHash);for(const f of list.files)required.add(f.path);
+ }
+ for(const [key,value]of retention)if(key.startsWith("gc:")){
+  const plan=await readGcPlan(files,value);integrity(plan.storeInstanceId===root.storeInstanceId,"Recovery GC namespace mismatch");
+  for(const c of plan.candidates)if(await files.exists(c.quarantine)){
+   integrity((await files.digest(c.quarantine)).hash===c.hash,"Corrupt quarantine during recovery");
+   if(required.has(c.path)&&!await files.exists(c.path))await files.move(c.quarantine,c.path,"gc-recovery");
+  }
+ }
+}

@@ -37,6 +37,7 @@ export async function openIsolatedStore(directory,options={},observeStage=()=>{}
     snapshot:()=>call("snapshot"),diagnostics:()=>call("diagnostics"),
     commit:(command,actor,expectedEpoch)=>call("commit",{command,actor,expectedEpoch}),
     injectFault:fault=>call("fault",{fault}),
+    maintenance:(action,args={})=>call("maintenance",{action,arguments:args}),
     kill:signal=>child.kill(signal??"SIGKILL"),
     waitForExit:()=>closed?Promise.resolve():new Promise(resolve=>events.once("closed",resolve)),
     close:async()=>{if(!closed){try{await call("close");}finally{await (closed?Promise.resolve():new Promise(resolve=>events.once("closed",resolve)));}}},

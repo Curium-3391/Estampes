@@ -14,7 +14,7 @@ export class PageStore {
     parse(ContentHashSchema,hash);const path=folder+"/"+hash+".json";this.track.add(path);
     if(this.cache.has(path))return this.cache.get(path);
     try {
-      const value=await (this.plan??this.io).json(path,limit);integrity(hashJson(value)===hash,"Content-addressed metadata hash mismatch");this.cache.set(path,value);return value;
+      const value=await (this.plan??this.io).json(path,limit);integrity(hashJson(value)===hash,"Content-addressed metadata hash mismatch");this.cache.set(path,value);if(this.cache.size>4)this.cache.delete(this.cache.keys().next().value);return value;
     }catch(e){fail("INTEGRITY_ERROR","Content-addressed metadata cannot be verified",{storageIntegrity:true,cause:e.code??"IO_ERROR"});}
   }
   async read(hash,kind){

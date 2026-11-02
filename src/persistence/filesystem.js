@@ -1,4 +1,4 @@
-import { open, lstat, mkdir, rename, readFile, readdir, statfs } from "node:fs/promises";
+import { open, lstat, mkdir, rename, readFile, readdir, statfs, unlink } from "node:fs/promises";
 import { join, dirname, resolve, relative } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { canonicalJson } from "../documents/validation.js";
@@ -74,10 +74,33 @@ export class ManagedFiles {
     const fd=await open(this.path(name),"r");try{await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}finally{await fd.close();}
     await this.syncDirectory(dirname(this.path(name)),label);
   }
-  async usedBytes() {
-    const walk=async dir=>{let bytes=0;for(const e of await readdir(dir,{withFileTypes:true})){
-      const p=join(dir,e.name);if(e.isDirectory())bytes+=await walk(p);else{const st=await lstat(p);integrity(st.isFile()&&!st.isSymbolicLink(),"Unexpected managed entry");bytes+=st.size;}
-    }return bytes;};return walk(this.root);
+  async info(name){
+    const path=this.path(name),st=await lstat(path);if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Physical entry crosses managed device");integrity(st.isFile()&&!st.isSymbolicLink(),"Managed physical entry is not a regular file");
+    let dir=dirname(path);while(dir!==this.root){const p=await lstat(dir);integrity(p.isDirectory()&&!p.isSymbolicLink(),"Unsafe physical parent");dir=dirname(dir);}
+    return {bytes:st.size,allocatedBytes:st.blocks*512,dev:st.dev,ino:st.ino};
+  }
+  async digest(name){
+    const info=await this.info(name),fd=await open(this.path(name),"r"),hash=createHash("sha256"),buffer=Buffer.alloc(4*1024*1024);let offset=0;
+    try{for(;;){const {bytesRead}=await fd.read(buffer,0,buffer.length,offset);if(!bytesRead)break;hash.update(buffer.subarray(0,bytesRead));offset+=bytesRead;}}finally{await fd.close();}
+    integrity(offset===info.bytes,"Physical file changed during hash verification");return {...info,hash:hash.digest("hex")};
+  }
+  async usage(){
+    const inodes=new Set();let logicalBytes=0,allocatedBytes=0,files=0;
+    const walk=async dir=>{const entries=await readdir(dir,{withFileTypes:true});for(const e of entries){
+      const p=join(dir,e.name),st=await lstat(p);integrity(!st.isSymbolicLink()&&(st.isFile()||st.isDirectory()),"Unsafe managed usage entry");
+      const key=st.dev+":"+st.ino;if(!inodes.has(key)){allocatedBytes+=st.blocks*512;inodes.add(key);}
+      if(st.isDirectory())await walk(p);else{logicalBytes+=st.size;files++;}
+    }};await walk(this.root);return {logicalBytes,allocatedBytes,files};
+  }
+  async usedBytes(){return (await this.usage()).allocatedBytes;}
+  async move(from,to,label="gc"){
+    await this.info(from);await this.ensureDirectory(dirname(to));await this.point(label+".before-rename",{from,to});
+    try{await rename(this.path(from),this.path(to));}catch(e){e.barrier=true;throw e;}
+    await this.point(label+".after-rename",{from,to});await this.syncDirectory(dirname(this.path(from)),label);await this.syncDirectory(dirname(this.path(to)),label);
+  }
+  async remove(name,label="gc"){
+    await this.point(label+".before-unlink",{path:name});try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT")throw e;}
+    await this.point(label+".after-unlink",{path:name});await this.syncDirectory(dirname(this.path(name)),label);
   }
   async preflight(bytes,quota,reserve) {
     const used=await this.usedBytes(), fs=await statfs(this.root,{bigint:true}), available=fs.bavail*fs.bsize;
@@ -86,6 +109,10 @@ export class ManagedFiles {
 }
 export class StagingPlan {
   constructor(files){this.files=files;this.records=new Map();this.bytes=0;}
+  addBytes(name,bytes,label="staged"){
+    if(this.records.has(name))integrity(this.records.get(name).bytes.equals(bytes),"Conflicting staged bytes");
+    else{this.records.set(name,{bytes:Buffer.from(bytes),label});this.bytes+=bytes.length;}return name;
+  }
   add(name,value,limit=4*1024*1024,label="staged") {
     const bytes=Buffer.from(canonicalJson(value));if(bytes.length>limit)fail("LIMIT","Immutable record exceeds byte limit");
     if(this.records.has(name))integrity(this.records.get(name).bytes.equals(bytes),"Conflicting staged immutable path");
@@ -95,5 +122,6 @@ export class StagingPlan {
     const hash=createHash("sha256").update(canonicalJson(value)).digest("hex");this.add(folder+"/"+hash+".json",value,limit,label);return hash;
   }
   async json(name,maxBytes){return this.records.has(name)?JSON.parse(this.records.get(name).bytes):this.files.json(name,maxBytes);}
+  allocationEstimate(){const dirs=new Set();let bytes=0;for(const [path,record]of this.records){bytes+=Math.ceil(record.bytes.length/4096)*4096;let dir=dirname(path);while(dir!=="."){dirs.add(dir);dir=dirname(dir);}}return bytes+dirs.size*4096;}
   async flush(include=()=>true){for(const [path,record]of this.records)if(include(record))await this.files.atomic(path,record.bytes,record.label,{immutable:true});}
 }
