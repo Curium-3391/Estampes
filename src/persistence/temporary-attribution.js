@@ -124,6 +124,7 @@ export async function classifyTemporaryClaims(files,snapshot){
     if(temporary){const digest=await files.digest(claim.temporaryPath);integrity(digest.hash===claim.hash&&digest.bytes===claim.bytes,"Attributed temporary hash mismatch");}
     let finalMatches=false;if(final){const digest=await files.digest(claim.finalPath);finalMatches=digest.hash===claim.hash&&digest.bytes===claim.bytes;}
     const publication=member&&claim.finalPath==="visual-registry/CURRENT.json"?await selectedPublication(files,snapshot,claim,member):undefined;
+    if(claim.finalPath==="visual-registry/CURRENT.json"&&finalMatches)integrity(member&&publication,"Matching CURRENT bytes lack exact selected transaction ownership");
     const historical=Boolean(publication);
     if(member)integrity(finalMatches||historical,"Committed transaction has an incomplete attributed atomic file");
     const outcome=finalMatches||historical?"completed":"aborted";

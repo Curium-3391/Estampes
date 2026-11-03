@@ -7,6 +7,7 @@ import {fileURLToPath} from "node:url";
 import {openIsolatedStore} from "../src/persistence/lease.js";
 import {ManagedFiles} from "../src/persistence/filesystem.js";
 import {loadCommitted, versionPath} from "../src/persistence/records.js";
+import {registerTemporary} from "../src/persistence/temporary-attribution.js";
 import {restoreIsolatedBackup} from "../src/persistence/backup.js";
 import {randomUUID} from "node:crypto";
 import {canonicalJson, hashJson} from "../src/documents/validation.js";
@@ -240,4 +241,13 @@ test('R3-C1 / relocated backup verifies logical history without inheriting physi
   await assert.rejects(restored.maintenance('gcStep',{id:job.id}),e=>e.code==='RECOVERY_REQUIRED');
   await assert.rejects(restored.commit(command([doc(2)],20),actor(),1),e=>e.code==='RECOVERY_REQUIRED');
   assert.deepEqual(await readFile(join(target,current)),bytes);
+});
+
+
+test('R3-B1 / matching CURRENT bytes cannot prove an unknown transaction owner',async t=>{
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root);await f.store.close();
+  const before=await readFile(files.path(current));
+  await registerTemporary(files,current,before,'current',{kind:'transaction',id:randomUUID()});
+  await f.reopen();assert.equal(f.store.status.state,'read-only-recovery');
+  assert.deepEqual(await readFile(files.path(current)),before);
 });
