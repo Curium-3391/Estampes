@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 2645.107726
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":false,"claimId":"3b932475-c734-454c-ad1d-a3dd59a94d0b","currentGeneration":4,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 3048.775166
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":true,"claimId":"8d37f94f-cad9-4c49-ba98-9e40c429003d","currentGeneration":5,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=false
+  ---
+  duration_ms: 2394.415263
+  type: 'test'
+  ...
+# {"profile":"linux-local-durable","laterCommit":false,"claimId":"94fb7c2d-d1e4-4e3b-8eea-5b2887abdf99","currentGeneration":4,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-local-durable / laterContent=true
+  ---
+  duration_ms: 2945.938645
+  type: 'test'
+  ...
+# {"profile":"linux-local-durable","laterCommit":true,"claimId":"60acdc14-1bc9-4ddb-b20f-fe9ece1fa640","currentGeneration":5,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"ready","problem":null}}
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11222.580808

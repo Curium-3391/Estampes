@@ -1,0 +1,9 @@
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/benchmark.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-ack-race.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-integrity.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-read-race-preload.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/lease-diagnostic.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/lease-failures.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/lease-observer.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/recovery-probe.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs

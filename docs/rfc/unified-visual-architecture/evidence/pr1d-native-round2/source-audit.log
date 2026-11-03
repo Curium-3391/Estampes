@@ -1,0 +1,7 @@
+c090d93a9c984f015d1a2a24a3f70df026be7f34 b163a859af93ea814c82f0e02e20da27c407bfad docs(persistence): record PR-1D remediation evidence
+05913e926aa07a528815a5f3f3d2078c108e8833 5cc57275b4be71ae7955c1105bb87e247a9818b2 docs(persistence): record blocked PR-1D native acceptance and review
+ed3e96eab53e68885b8a39408078dce8ddcd391e 05913e926aa07a528815a5f3f3d2078c108e8833 fix(persistence): preserve temporary ownership across recovery
+1f9a0d8c165e3329f97410b02e6810854f4a32ce ed3e96eab53e68885b8a39408078dce8ddcd391e fix(persistence): classify lease startup IPC races
+41c34d865e10f40dfba2f23aa9b8cfd871509c67 1f9a0d8c165e3329f97410b02e6810854f4a32ce perf(persistence): bound verification proof metadata
+88d892829c7fada3ebbf5db8a2bcdf8c42975c47 41c34d865e10f40dfba2f23aa9b8cfd871509c67 docs(persistence): record native findings remediation
+273 baseline files are byte-identical

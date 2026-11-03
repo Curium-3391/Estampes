@@ -1,0 +1,213 @@
+TAP version 13
+# Subtest: H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+ok 1 - H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+  ---
+  duration_ms: 12870.370572
+  type: 'test'
+  ...
+# Subtest: H-01 / three reopens retain exact ACK and reject different payload / linux-local-durable
+ok 2 - H-01 / three reopens retain exact ACK and reject different payload / linux-local-durable
+  ---
+  duration_ms: 5063.075355
+  type: 'test'
+  ...
+# Subtest: H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+not ok 3 - H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+  ---
+  duration_ms: 33638.720876
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:72:1'
+  failureType: 'testCodeFailure'
+  error: 'Writer startup timed out'
+  code: 'RECOVERY_REQUIRED'
+  name: 'PersistenceError'
+  stack: |-
+    Timeout._onTimeout (file:///home/estampes/projects/Estampes/src/persistence/lease.js:19:62)
+    listOnTimeout (node:internal/timers:585:17)
+    process.processTimers (node:internal/timers:521:7)
+  ...
+# Subtest: H-01 / missing prepared fails closed for a superseded CURRENT
+ok 4 - H-01 / missing prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 13482.957263
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Committed transaction has an incomplete attributed atomic file"},"recovery":[]}
+# Subtest: H-01 / corrupt prepared fails closed for a superseded CURRENT
+ok 5 - H-01 / corrupt prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2024.693547
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"UNSUPPORTED_SCHEMA","message":"Invalid input: expected \\"estampes.prepared/1\\""},"recovery":[]}
+# Subtest: H-01 / forged publication fails closed for a superseded CURRENT
+not ok 6 - H-01 / forged publication fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2427.109186
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:101:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'ready'
+    - 'read-only-recovery'
+           ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'read-only-recovery'
+  actual: 'ready'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:128:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"state":"ready","problem":null,"recovery":[{"commitId":"tx:43797fff-bd9f-4a35-a3cd-e1459f985606","outcome":"committed"},{"commitId":"tx:4c72e016-738d-42c3-9aec-3e4a19c691c7","outcome":"committed"},{"commitId":"tx:cd38b35d-13a9-4d3e-a3f9-8ca776227fe6","outcome":"committed"},{"claimId":"61381341-be51-4393-bfbc-81cbebc8c997","owner":"tx:cd38b35d-13a9-4d3e-a3f9-8ca776227fe6","outcome":"completed","temporary":false,"final":false}]}
+# Subtest: H-02 / native SIGKILL across durable G2 plan
+not ok 7 - H-02 / native SIGKILL across durable G2 plan
+  ---
+  duration_ms: 3421.69057
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:157:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:168:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 before intent
+not ok 8 - H-02 / native SIGKILL across durable G2 before intent
+  ---
+  duration_ms: 3007.839405
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:157:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:168:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 after intent
+not ok 9 - H-02 / native SIGKILL across durable G2 after intent
+  ---
+  duration_ms: 2667.143776
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:157:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:168:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 terminal
+not ok 10 - H-02 / native SIGKILL across durable G2 terminal
+  ---
+  duration_ms: 2892.977093
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:157:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:168:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: H-02 / corrupt plan lacks durable unlink intent and must fail closed
+ok 11 - H-02 / corrupt plan lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 3780.720544
+  type: 'test'
+  ...
+# Subtest: H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+ok 12 - H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 35586.695427
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+ok 13 - H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 3904.374467
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+not ok 14 - H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 5062.803583
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'RECOVERY_REQUIRED'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'RECOVERY_REQUIRED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:228:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"result":{"id":"0bd1dc07-5677-4d2a-bee0-42da81d21d54","state":"complete","progressed":4,"moved":4,"deleted":4},"gcState":{"deleted":[0,1,2,3],"moved":[0,1,2,3],"planHash":"78c6deaa3ceee43c3afd1ae67534482bef8949f5b239e6ebd9b5e3c62a226161","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"complete"},"writerState":"ready"}
+1..14
+# tests 14
+# suites 0
+# pass 7
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 130044.917176

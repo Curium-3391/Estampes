@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 1 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 6.246991
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 2 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 4.150758
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+ok 3 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 1310.255772
+  type: 'test'
+  ...
+# Subtest: real flock contention remains exit-73 when parent startup IPC is delayed
+ok 4 - real flock contention remains exit-73 when parent startup IPC is delayed
+  ---
+  duration_ms: 894.902391
+  type: 'test'
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 5 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 622.696862
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 6 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 1236.073334
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 7 - native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+  ---
+  duration_ms: 1748.02152
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6158.746405

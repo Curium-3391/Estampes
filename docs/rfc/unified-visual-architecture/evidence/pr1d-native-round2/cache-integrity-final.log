@@ -1,0 +1,81 @@
+TAP version 13
+# Subtest: M-01 / default budget, shared fingerprints and eviction on real ext4 files
+ok 1 - M-01 / default budget, shared fingerprints and eviction on real ext4 files
+  ---
+  duration_ms: 9330.189448
+  type: 'test'
+  ...
+# {"beforeInvalidation":{"proofBytes":4193826,"budget":4194304,"fingerprints":224,"proofs":148,"snapshotLoads":0,"versionHits":2,"versionMisses":225,"recordHits":0,"registryHits":0,"registryMaterializations":0,"versionReconstructions":0,"reconstructedMs":0,"proofEvictions":77,"metadataPathsTraversed":225}}
+# {"afterInvalidation":{"proofBytes":583,"budget":4194304,"fingerprints":1,"proofs":1,"snapshotLoads":0,"versionHits":2,"versionMisses":226,"recordHits":0,"registryHits":0,"registryMaterializations":0,"versionReconstructions":0,"reconstructedMs":0,"proofEvictions":77,"metadataPathsTraversed":227}}
+# Subtest: M-01 / evicted real historical proofs reconstruct exactly and start cold
+ok 2 - M-01 / evicted real historical proofs reconstruct exactly and start cold
+  ---
+  duration_ms: 3477.591061
+  type: 'test'
+  ...
+# {"initial":{"snapshotLoads":1,"versionHits":0,"versionMisses":7,"recordHits":0,"registryHits":0,"registryMaterializations":5,"versionReconstructions":7,"reconstructedMs":43.46068099999866,"proofEvictions":9,"metadataPathsTraversed":0,"recordCacheBytes":2441,"registryCacheBytes":260,"proofMetadataBytes":1376,"proofMetadataBudget":1400,"physicalFingerprints":3,"versionProofs":1,"registryProofs":1},"repeated":{"snapshotLoads":2,"versionHits":0,"versionMisses":14,"recordHits":0,"registryHits":0,"registryMaterializations":10,"versionReconstructions":14,"reconstructedMs":80.36082700000043,"proofEvictions":20,"metadataPathsTraversed":0,"recordCacheBytes":2441,"registryCacheBytes":260,"proofMetadataBytes":1376,"proofMetadataBudget":1400,"physicalFingerprints":3,"versionProofs":1,"registryProofs":1},"freshCache":{"snapshotLoads":1,"versionHits":4,"versionMisses":3,"recordHits":4,"registryHits":0,"registryMaterializations":5,"versionReconstructions":3,"reconstructedMs":14.288931000000957,"proofEvictions":0,"metadataPathsTraversed":14,"recordCacheBytes":2441,"registryCacheBytes":782,"proofMetadataBytes":5550,"proofMetadataBudget":4194304,"physicalFingerprints":12,"versionProofs":3,"registryProofs":4}}
+# Subtest: M-01 / inode invalidates a historical dependency before ACK
+ok 3 - M-01 / inode invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2441.209602
+  type: 'test'
+  ...
+# {"mode":"inode","stats":{"snapshotLoads":4,"versionHits":9,"versionMisses":3,"recordHits":6,"registryHits":3,"registryMaterializations":11,"versionReconstructions":3,"reconstructedMs":8.430256999999983,"proofEvictions":0,"metadataPathsTraversed":17,"recordCacheBytes":2441,"registryCacheBytes":782,"proofMetadataBytes":6225,"proofMetadataBudget":4194304,"physicalFingerprints":15,"versionProofs":3,"registryProofs":4},"updated":{"snapshotLoads":5,"versionHits":13,"versionMisses":5,"recordHits":8,"registryHits":6,"registryMaterializations":14,"versionReconstructions":5,"reconstructedMs":13.27185099999997,"proofEvictions":0,"metadataPathsTraversed":33,"recordCacheBytes":3254,"registryCacheBytes":1042,"proofMetadataBytes":8415,"proofMetadataBudget":4194304,"physicalFingerprints":20,"versionProofs":4,"registryProofs":5}}
+# Subtest: M-01 / size invalidates a historical dependency before ACK
+ok 4 - M-01 / size invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2520.419535
+  type: 'test'
+  ...
+# Subtest: M-01 / timestamps invalidates a historical dependency before ACK
+ok 5 - M-01 / timestamps invalidates a historical dependency before ACK
+  ---
+  duration_ms: 34003.698985
+  type: 'test'
+  ...
+# {"mode":"timestamps","stats":{"snapshotLoads":4,"versionHits":9,"versionMisses":3,"recordHits":6,"registryHits":3,"registryMaterializations":11,"versionReconstructions":3,"reconstructedMs":9.221099000000322,"proofEvictions":0,"metadataPathsTraversed":17,"recordCacheBytes":2441,"registryCacheBytes":782,"proofMetadataBytes":6225,"proofMetadataBudget":4194304,"physicalFingerprints":15,"versionProofs":3,"registryProofs":4},"updated":{"snapshotLoads":5,"versionHits":13,"versionMisses":5,"recordHits":8,"registryHits":6,"registryMaterializations":14,"versionReconstructions":5,"reconstructedMs":13.993631999996069,"proofEvictions":0,"metadataPathsTraversed":33,"recordCacheBytes":3254,"registryCacheBytes":1042,"proofMetadataBytes":8397,"proofMetadataBudget":4194304,"physicalFingerprints":20,"versionProofs":4,"registryProofs":5}}
+# Subtest: M-01 / registry invalidates a historical dependency before ACK
+ok 6 - M-01 / registry invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2658.162709
+  type: 'test'
+  ...
+# Subtest: M-01 / pin across compaction protects the old representation from native GC
+ok 7 - M-01 / pin across compaction protects the old representation from native GC
+  ---
+  duration_ms: 9819.578369
+  type: 'test'
+  ...
+# Subtest: M-01 / mutation between verified read and fingerprint must never cache corrupt bytes
+not ok 8 - M-01 / mutation between verified read and fingerprint must never cache corrupt bytes
+  ---
+  duration_ms: 2070.615336
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-integrity.mjs:141:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'INTEGRITY_ERROR'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'INTEGRITY_ERROR'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-integrity.mjs:163:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"warmVerified":true,"coldCode":"INTEGRITY_ERROR"}
+1..8
+# tests 8
+# suites 0
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 66547.801472

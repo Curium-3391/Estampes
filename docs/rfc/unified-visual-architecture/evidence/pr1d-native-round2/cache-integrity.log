@@ -1,0 +1,77 @@
+TAP version 13
+# Subtest: M-01 / default budget, shared fingerprints and eviction on real ext4 files
+not ok 1 - M-01 / default budget, shared fingerprints and eviction on real ext4 files
+  ---
+  duration_ms: 7148.904459
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-integrity.mjs:15:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(cache.stats.proofEvictions > 0)
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-integrity.mjs:30:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: M-01 / evicted real historical proofs reconstruct exactly and start cold
+ok 2 - M-01 / evicted real historical proofs reconstruct exactly and start cold
+  ---
+  duration_ms: 3154.858116
+  type: 'test'
+  ...
+# {"initial":{"snapshotLoads":1,"versionHits":0,"versionMisses":7,"recordHits":0,"registryHits":0,"registryMaterializations":5,"versionReconstructions":7,"reconstructedMs":51.875420000000304,"proofEvictions":10,"metadataPathsTraversed":0,"recordCacheBytes":2441,"registryCacheBytes":260,"proofMetadataBytes":792,"proofMetadataBudget":1400,"physicalFingerprints":2,"versionProofs":0,"registryProofs":1},"repeated":{"snapshotLoads":2,"versionHits":0,"versionMisses":14,"recordHits":0,"registryHits":0,"registryMaterializations":10,"versionReconstructions":14,"reconstructedMs":93.46941600000355,"proofEvictions":21,"metadataPathsTraversed":0,"recordCacheBytes":2441,"registryCacheBytes":260,"proofMetadataBytes":792,"proofMetadataBudget":1400,"physicalFingerprints":2,"versionProofs":0,"registryProofs":1},"freshCache":{"snapshotLoads":1,"versionHits":4,"versionMisses":3,"recordHits":4,"registryHits":0,"registryMaterializations":5,"versionReconstructions":3,"reconstructedMs":14.319747000001371,"proofEvictions":0,"metadataPathsTraversed":14,"recordCacheBytes":2441,"registryCacheBytes":782,"proofMetadataBytes":5550,"proofMetadataBudget":4194304,"physicalFingerprints":12,"versionProofs":3,"registryProofs":4}}
+# Subtest: M-01 / inode invalidates a historical dependency before ACK
+ok 3 - M-01 / inode invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2083.012317
+  type: 'test'
+  ...
+# {"mode":"inode","stats":{"snapshotLoads":4,"versionHits":9,"versionMisses":3,"recordHits":6,"registryHits":3,"registryMaterializations":11,"versionReconstructions":3,"reconstructedMs":8.65174300000001,"proofEvictions":0,"metadataPathsTraversed":17,"recordCacheBytes":2441,"registryCacheBytes":782,"proofMetadataBytes":6225,"proofMetadataBudget":4194304,"physicalFingerprints":15,"versionProofs":3,"registryProofs":4},"updated":{"snapshotLoads":5,"versionHits":13,"versionMisses":5,"recordHits":8,"registryHits":6,"registryMaterializations":14,"versionReconstructions":5,"reconstructedMs":13.3868369999999,"proofEvictions":0,"metadataPathsTraversed":33,"recordCacheBytes":3254,"registryCacheBytes":1042,"proofMetadataBytes":8415,"proofMetadataBudget":4194304,"physicalFingerprints":20,"versionProofs":4,"registryProofs":5}}
+# Subtest: M-01 / size invalidates a historical dependency before ACK
+ok 4 - M-01 / size invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2393.690752
+  type: 'test'
+  ...
+# Subtest: M-01 / timestamps invalidates a historical dependency before ACK
+ok 5 - M-01 / timestamps invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2014.195294
+  type: 'test'
+  ...
+# {"mode":"timestamps","stats":{"snapshotLoads":4,"versionHits":9,"versionMisses":3,"recordHits":6,"registryHits":3,"registryMaterializations":11,"versionReconstructions":3,"reconstructedMs":8.481895999999779,"proofEvictions":0,"metadataPathsTraversed":17,"recordCacheBytes":2441,"registryCacheBytes":782,"proofMetadataBytes":6225,"proofMetadataBudget":4194304,"physicalFingerprints":15,"versionProofs":3,"registryProofs":4},"updated":{"snapshotLoads":5,"versionHits":13,"versionMisses":5,"recordHits":8,"registryHits":6,"registryMaterializations":14,"versionReconstructions":5,"reconstructedMs":12.28546799999981,"proofEvictions":0,"metadataPathsTraversed":33,"recordCacheBytes":3254,"registryCacheBytes":1042,"proofMetadataBytes":8397,"proofMetadataBudget":4194304,"physicalFingerprints":20,"versionProofs":4,"registryProofs":5}}
+# Subtest: M-01 / registry invalidates a historical dependency before ACK
+ok 6 - M-01 / registry invalidates a historical dependency before ACK
+  ---
+  duration_ms: 2302.089257
+  type: 'test'
+  ...
+# Subtest: M-01 / pin across compaction protects the old representation from native GC
+ok 7 - M-01 / pin across compaction protects the old representation from native GC
+  ---
+  duration_ms: 18398.625558
+  type: 'test'
+  ...
+# Subtest: M-01 / mutation between verified read and fingerprint must never cache corrupt bytes
+ok 8 - M-01 / mutation between verified read and fingerprint must never cache corrupt bytes
+  ---
+  duration_ms: 1758.441546
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 39458.810174

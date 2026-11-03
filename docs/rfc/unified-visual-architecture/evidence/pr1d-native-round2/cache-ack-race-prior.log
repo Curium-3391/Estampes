@@ -1,0 +1,37 @@
+83eee489f007019b8f1ed9368683ad74d2c1fbf8386bd2bb4b20e3f475df9555  docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-ack-race.mjs
+94e6bcd0117ade516bbbd25a6f43bf14ce1f69d2a365cc294b6b49eaea6dc7df  docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-read-race-preload.mjs
+TAP version 13
+# Subtest: verification read race must reject before acknowledging a commit
+not ok 1 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 14403.153659
+  type: 'test'
+  location: '/tmp/estampes-pr1d-round2.R5oYLFwJ/prior-tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-ack-race.mjs:10:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'RECOVERY_REQUIRED'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'RECOVERY_REQUIRED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-pr1d-round2.R5oYLFwJ/prior-tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-ack-race.mjs:35:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"ack":{"schema":"estampes.commit-ack/1","commitId":"tx:650b6786-dcdc-4090-9386-18718fc5b73e","resultId":"event:ab39ba2d-3426-4583-81d1-b4246524173f","durability":"durable","noChange":false,"revisionVector":[{"storeInstanceId":"81eb4d14-e6f1-4dee-99ef-52e00b105f3d","entityId":"doc:00000002-0000-4000-8000-000000000001","revision":1,"contentHash":"d9927bc594ff56b3252b371be04466eb0f62b5e68c994df9a146abfb3ddab6e5"}]},"before":{"checksum":"1acd9d7fc7c96e58604afbebcaa164e385f4c711f82a76e82821bb6e1a942dee","commitId":"tx:292229f4-cc2a-4f23-9702-7deb9f6bb303","generation":3,"rootHash":"927626069df5f40a17a2d57b656c9d717b74162f31de4d3028b3693047ea6798"},"after":{"checksum":"098e766213b212cbc47ea33bc8a768538f7045c184851f368d15c8951cfa0e4b","commitId":"tx:650b6786-dcdc-4090-9386-18718fc5b73e","generation":4,"rootHash":"d5b7ccd8fcb06c15b0aa1b7918b097e16b8fe70b2832b0d238293c964f83ca27"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14630.531348

@@ -1,0 +1,117 @@
+Measured 8MiB-profiled
+{
+  "node": "v22.23.4",
+  "mode": "profile8",
+  "results": [
+    {
+      "name": "8MiB-profiled",
+      "bytes": 8388608,
+      "commands": 4,
+      "reconstructionPlan": {
+        "logicalVersions": 4,
+        "fullVersions": 1,
+        "deltaVersions": 3,
+        "maxDeltaSpan": 3,
+        "sumDeltaSpans": 6
+      },
+      "profile": "linux-local-durable",
+      "filesystem": "ext4",
+      "instrumented": true,
+      "initialOpenMs": 554.247074,
+      "initialBytes": 8389404,
+      "naiveSnapshotBytes": 33557631,
+      "peakWorkerRssKiB": 547676,
+      "usage": {
+        "logicalBytes": 8448019,
+        "allocatedBytes": 8871936,
+        "files": 97
+      },
+      "latencyMs": {
+        "p50": 10826.473421000002,
+        "p95": 10899.488420000001,
+        "max": 10899.488420000001,
+        "total": 39613.075887000006
+      },
+      "performance": {
+        "open": null,
+        "transactions": [
+          {
+            "mode": "genesis",
+            "buildAndPreflightMs": 8.931265999999994,
+            "stageAndPrepareMs": 192.826141,
+            "candidateVerificationMs": 27.562790000000007,
+            "currentPublicationMs": 15.209148999999968,
+            "postPublicationMs": 29.904781999999955,
+            "totalMs": 274.468962
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 2408.351254,
+            "stageAndPrepareMs": 308.196336,
+            "candidateVerificationMs": 4202.38922,
+            "currentPublicationMs": 15.612300000000687,
+            "postPublicationMs": 77.71298000000024,
+            "totalMs": 7012.2773050000005
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 4224.018302,
+            "stageAndPrepareMs": 268.72948800000086,
+            "candidateVerificationMs": 4425.983932999998,
+            "currentPublicationMs": 14.863704999999754,
+            "postPublicationMs": 56.5248849999989,
+            "totalMs": 8990.133821
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 4297.8264500000005,
+            "stageAndPrepareMs": 289.02622500000143,
+            "candidateVerificationMs": 5192.204787999999,
+            "currentPublicationMs": 16.83549900000071,
+            "postPublicationMs": 45.77279799999815,
+            "totalMs": 9841.695504
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 4076.414609000003,
+            "stageAndPrepareMs": 275.52844500000356,
+            "candidateVerificationMs": 5438.366607999997,
+            "currentPublicationMs": 12.698766000001342,
+            "postPublicationMs": 46.36481400000048,
+            "totalMs": 9849.400193999998
+          }
+        ],
+        "verification": {
+          "snapshotLoads": 5,
+          "versionHits": 14,
+          "versionMisses": 4,
+          "recordHits": 8,
+          "registryHits": 10,
+          "registryMaterializations": 10,
+          "versionReconstructions": 4,
+          "reconstructedMs": 5150.973828000002,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 62,
+          "recordCacheBytes": 16778924,
+          "registryCacheBytes": 1042,
+          "proofMetadataBytes": 7715,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 16,
+          "versionProofs": 4,
+          "registryProofs": 5
+        }
+      },
+      "maintenance": {
+        "state": "idle",
+        "cursor": null,
+        "conflicts": 0,
+        "steps": 0
+      },
+      "startup": null,
+      "replayed": null,
+      "verifiedHistoryVersions": 4,
+      "coldParentVerifyAndReconstructionMs": 20286.800305000004
+    }
+  ],
+  "limits": "WSL2 ext4 application/process-crash measurements; no power-loss or deployment SLA; direct leased startup probe does not change the real 30s client timeout."
+}
