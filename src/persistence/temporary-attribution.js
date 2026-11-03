@@ -92,7 +92,7 @@ async function selectedPublication(files,snapshot,claim,member){
   const envelope=await verifyCurrentPublication(files,snapshot,claim,member);
   if(canonicalJson(snapshot.envelope)!==canonicalJson(envelope)){
     const prior=snapshot.indices.retention.get("temporary:"+claim.claimId);
-    integrity(prior&&sameClaim(prior,claim)&&prior.outcome==="completed"&&prior.publication&&canonicalJson(prior.publication.envelope)===canonicalJson(envelope),"Superseded CURRENT lacks trusted original selection evidence");
+    integrity(prior&&sameClaim(prior,claim)&&prior.outcome==="completed"&&prior.classifiedGeneration<snapshot.root.generation&&prior.publication&&canonicalJson(prior.publication.envelope)===canonicalJson(envelope),"Superseded CURRENT lacks trusted original selection evidence");
   }
   return {schema:"estampes.selected-current-proof/1",envelope};
 }
@@ -118,7 +118,8 @@ export async function classifyTemporaryClaims(files,snapshot){
     if(disposition){integrity(canonicalJson(disposition)===canonicalJson(parse(TemporaryRecoverySchema,{...disposition})),"Invalid GC temporary disposition");
       integrity(canonicalJson(disposition.owner)===canonicalJson(claim.owner)&&disposition.finalPath===claim.finalPath&&disposition.temporaryPath===claim.temporaryPath&&disposition.hash===claim.hash&&disposition.bytes===claim.bytes,"GC disposition differs from temporary claim");
       outcomes.push({claimId:claim.claimId,owner:"tx:"+claim.owner.id,outcome:"gc-owned",temporary:await files.exists(claim.temporaryPath),final:false});continue;}
-    integrity(!finalOwners.has(claim.finalPath),"Atomic target has conflicting temporary owners");finalOwners.set(claim.finalPath,claim.owner);
+    if(claim.finalPath!=="visual-registry/CURRENT.json")integrity(!finalOwners.has(claim.finalPath),"Atomic target has conflicting temporary owners");
+    const group=finalOwners.get(claim.finalPath)??[];finalOwners.set(claim.finalPath,group);
     const tx="tx:"+claim.owner.id,member=snapshot.indices.commitIndex.get(tx),temporary=await files.exists(claim.temporaryPath),final=await files.exists(claim.finalPath);
     if(temporary){const digest=await files.digest(claim.temporaryPath);integrity(digest.hash===claim.hash&&digest.bytes===claim.bytes,"Attributed temporary hash mismatch");}
     let finalMatches=false;if(final){const digest=await files.digest(claim.finalPath);finalMatches=digest.hash===claim.hash&&digest.bytes===claim.bytes;}
@@ -126,9 +127,35 @@ export async function classifyTemporaryClaims(files,snapshot){
     const historical=Boolean(publication);
     if(member)integrity(finalMatches||historical,"Committed transaction has an incomplete attributed atomic file");
     const outcome=finalMatches||historical?"completed":"aborted";
+    group.push({claim,publication,outcome});
     changes.set("temporary:"+claim.claimId,parse(TemporaryRecoverySchema,{schema:"estampes.temporary-recovery/1",claimId:claim.claimId,owner:claim.owner,
       finalPath:claim.finalPath,temporaryPath:claim.temporaryPath,hash:claim.hash,bytes:claim.bytes,outcome,classifiedGeneration:snapshot.root.generation,...(publication?{publication}:{})}));
     outcomes.push({claimId:claim.claimId,owner:tx,outcome,temporary,final:finalMatches});
+  }
+  const currentClaims=finalOwners.get("visual-registry/CURRENT.json")??[];
+  if(currentClaims.length>1){
+    const owners=new Set(),generations=new Set(),published=[];
+    for(const {claim,publication,outcome}of currentClaims){
+      integrity(!owners.has(claim.owner.id),"CURRENT claims repeat a transaction owner");owners.add(claim.owner.id);
+      if(publication){
+        const generation=publication.envelope.generation;
+        integrity(!generations.has(generation),"CURRENT claims have conflicting selected generations");generations.add(generation);published.push(publication.envelope);
+      }else{
+        // A prior selected recovery classification can also own an aborted
+        // temporary. It never becomes publication evidence or a CURRENT owner.
+        const prior=snapshot.indices.retention.get("temporary:"+claim.claimId);
+        integrity(outcome==="aborted"&&prior&&sameClaim(prior,claim)&&prior.outcome==="aborted"&&prior.classifiedGeneration<snapshot.root.generation,"Conflicting CURRENT claim lacks a selected terminal classification");
+      }
+    }
+    published.sort((a,b)=>a.generation-b.generation);
+    // Selection comes from CURRENT/its retained descriptors, not this sort.
+    // CommitIndex already binds each exact transaction to a unique generation.
+    // Adjacent witnessed publications must also have exact parent linkage.
+    const pages=new PageStore(files);
+    for(let i=1;i<published.length;i++)if(published[i].generation===published[i-1].generation+1){
+      const root=parseCommitRoot(await pages.hashed(published[i].rootHash,"visual-registry/roots",64*1024));
+      integrity(root.parentCommitHash===published[i-1].rootHash,"Selected CURRENT claim lineage forks");
+    }
   }
   return {changes,outcomes};
 }
