@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 1 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 1986.103204
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["191b0ab9-8810-4fa5-9a6f-092154531edb.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+ok 2 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 2134.22215
+  type: 'test'
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"fab906caeb897af3de9abd1b81579e60407df0ce620212f6cd74adfc6e39c487","commitId":"tx:664119d7-36fa-41fb-869d-7de38d7ed3ab","generation":2,"rootHash":"cbe211791f96302c8f97b94e10d8cfc1cee7db1c8cc2aa8e9a6cf6580c335900"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["37b59650-c35d-44c4-b9ec-ed03abcdb578.json","7076965b-3f93-4555-9686-0b573965384f.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 3 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 2360.163574
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"28cddaf5aad30effe1270fe039277168b9da8d853aca40a14fe51440448121d7","commitId":"tx:cb9e82c6-be8b-4555-b9e2-fa64fb96a80d","generation":2,"rootHash":"3dc652aa0a71f879531108434e077beffaeb9ea7ca1e42a34d5a5dd58c33c6a9"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["9a8bdec9-69be-43a5-bc57-8230317ef626.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+ok 4 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+  ---
+  duration_ms: 5036.999968
+  type: 'test'
+  ...
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+ok 5 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+  ---
+  duration_ms: 5852.729417
+  type: 'test'
+  ...
+# Subtest: native repeated planning must not orphan an overlapping active GC plan
+ok 6 - native repeated planning must not orphan an overlapping active GC plan
+  ---
+  duration_ms: 3271.17263
+  type: 'test'
+  ...
+# {"first":{"planned":true,"id":"8894e2d0-9a7d-46cd-923e-1de2e2fb4c8f","candidates":2},"second":{"planned":false,"reason":"No provably unreachable managed files"},"overlap":[],"result":{"id":"8894e2d0-9a7d-46cd-923e-1de2e2fb4c8f","state":"complete","progressed":4,"moved":2,"deleted":2},"state":"ready","problem":null}
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20804.874298

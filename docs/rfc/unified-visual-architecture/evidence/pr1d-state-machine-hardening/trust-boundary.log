@@ -1,0 +1,184 @@
+TAP version 13
+# Subtest: UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+ok 1 - UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+  ---
+  duration_ms: 2585.595029
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+ok 2 - UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+  ---
+  duration_ms: 1266.962173
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+ok 3 - UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+  ---
+  duration_ms: 1396.490316
+  type: 'test'
+  ...
+# Subtest: UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+ok 4 - UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+  ---
+  duration_ms: 928.235292
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+ok 5 - UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+  ---
+  duration_ms: 1024.442956
+  type: 'test'
+  ...
+# Subtest: UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+ok 6 - UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+  ---
+  duration_ms: 288.341692
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+ok 7 - UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+  ---
+  duration_ms: 1335.110995
+  type: 'test'
+  ...
+# Subtest: native candidate proof remains valid through after-prepared
+ok 8 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 1228.283796
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:343607:810:1793723547744840963:1793723547744840963","after":"34:343607:2:1793723548420678418:1793723548420678418","workerPid":44085},"before":{"generation":3,"rootHash":"a734b4ea280a8aeab989dc3e45ea7146d1203c93becf8c8a810d64533c327411","commitId":"tx:8eef492f-2c20-4003-b0a8-6d479b048074","checksum":"08ad97df8efe3a1a87fe6652f454b54e185ba53650c58b82e85919f7d55f99d1"},"after":{"checksum":"08ad97df8efe3a1a87fe6652f454b54e185ba53650c58b82e85919f7d55f99d1","commitId":"tx:8eef492f-2c20-4003-b0a8-6d479b048074","generation":3,"rootHash":"a734b4ea280a8aeab989dc3e45ea7146d1203c93becf8c8a810d64533c327411"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+ok 9 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 1219.694284
+  type: 'test'
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:343754:810:1793723548951406517:1793723548951406517","after":"34:343854:2:1793723549622930689:1793723549622930689","workerPid":44118},"before":{"generation":3,"rootHash":"d4673d585f571251d4ee3be9b4173e083b67c4feb2490393e13786b47379dcb7","commitId":"tx:fe3b80c8-ff00-4418-b3fa-52bc0632f363","checksum":"e0aa7ab0f8d578c42863699fb23d4a6d2f9e176b9267befe683eb9e31886eacd"},"after":{"checksum":"e0aa7ab0f8d578c42863699fb23d4a6d2f9e176b9267befe683eb9e31886eacd","commitId":"tx:fe3b80c8-ff00-4418-b3fa-52bc0632f363","generation":3,"rootHash":"d4673d585f571251d4ee3be9b4173e083b67c4feb2490393e13786b47379dcb7"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+ok 10 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 1308.748893
+  type: 'test'
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:343904:810:1793723550205365428:1793723550205365428","after":"34:343904:2:1793723550917009092:1793723550917009092","workerPid":44151},"before":{"generation":3,"rootHash":"b67200986e7d0c230e2c99450f9882ae2fa6094d71b3ff0aeb5189c4a192fa27","commitId":"tx:b44f9d8d-6130-42ee-916e-f8a90ff53c6f","checksum":"65619ef07f42fff691f27c63f72a26f77049a7efe06d916a396bd6817f787fa9"},"after":{"checksum":"9107b402d811dbb59e53ba8dc51841d7186c0be2761b336d2a19a72ce7abaecd","commitId":"tx:bd0b24cb-5a33-44b1-bc1e-83f1d7096b4f","generation":4,"rootHash":"dd3378709d357ffeef2fe853c6a06d8a0713d1b65d48bd3dd1357e0249772a5c"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace
+ok 11 - GC retains a replaced quarantine inode / replace
+  ---
+  duration_ms: 1588.547882
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/d56f29f3-ebfc-4c86-a3dc-f7efce9d87bc/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/d56f29f3-ebfc-4c86-a3dc-f7efce9d87bc/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace","before":"34:344051:810:1793723551541978632:1793723552116826712","after":"34:344232:2:1793723552795078245:1793723552795078245","workerPid":44184},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace-same
+ok 12 - GC retains a replaced quarantine inode / replace-same
+  ---
+  duration_ms: 1544.449179
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/7c4b2802-761a-4aee-9c2b-9147400068f1/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/7c4b2802-761a-4aee-9c2b-9147400068f1/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace-same","before":"34:344282:810:1793723553087109658:1793723553675105091","after":"34:344461:810:1793723554337278408:1793723554337278408","workerPid":44206},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+ok 13 - R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+  ---
+  duration_ms: 156.33375
+  type: 'test'
+  ...
+# {"attempts":128,"identicalFingerprints":0,"staleProofsAccepted":0,"filesystem":"actual temporary filesystem; not asserted ext4"}
+# Subtest: R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+ok 14 - R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+  ---
+  duration_ms: 3.915977
+  type: 'test'
+  ...
+# Subtest: private tree rejects directory permissions on reopen and preserves CURRENT
+ok 15 - private tree rejects directory permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 508.599707
+  type: 'test'
+  ...
+# Subtest: private tree rejects file permissions on reopen and preserves CURRENT
+ok 16 - private tree rejects file permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 551.787519
+  type: 'test'
+  ...
+# Subtest: private tree rejects hardlink on reopen and preserves CURRENT
+ok 17 - private tree rejects hardlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 491.631388
+  type: 'test'
+  ...
+# Subtest: private tree rejects symlink on reopen and preserves CURRENT
+ok 18 - private tree rejects symlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 504.971258
+  type: 'test'
+  ...
+# Subtest: unsafe writable ancestry is refused before creating the OS lease
+ok 19 - unsafe writable ancestry is refused before creating the OS lease
+  ---
+  duration_ms: 2.960494
+  type: 'test'
+  ...
+# Subtest: runtime root mode changes fence before publication without automatic chmod
+ok 20 - runtime root mode changes fence before publication without automatic chmod
+  ---
+  duration_ms: 243.043607
+  type: 'test'
+  ...
+# Subtest: same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+ok 21 - same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+  ---
+  duration_ms: 227.533355
+  type: 'test'
+  ...
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 22 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 6.119671
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 23 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 1.310571
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+ok 24 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 479.750029
+  type: 'test'
+  ...
+# Subtest: real flock contention remains exit-73 when parent startup IPC is delayed
+ok 25 - real flock contention remains exit-73 when parent startup IPC is delayed
+  ---
+  duration_ms: 360.231425
+  type: 'test'
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 26 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 229.441909
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 27 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 592.647888
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 28 - native ext4/XFS durable ACK survives process restart (still not a power-loss test) # SKIP No approved native ext4/XFS temporary mount; durable writer refused rather than simulating support
+  ---
+  duration_ms: 0.131678
+  type: 'test'
+  ...
+1..28
+# tests 28
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 20532.759644

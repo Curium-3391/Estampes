@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: R3-C1 / exclusive G1 ownership / planned
+ok 1 - R3-C1 / exclusive G1 ownership / planned
+  ---
+  duration_ms: 3698.08191
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / partial-quarantine
+ok 2 - R3-C1 / exclusive G1 ownership / partial-quarantine
+  ---
+  duration_ms: 4403.875092
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / unlink-intent
+ok 3 - R3-C1 / exclusive G1 ownership / unlink-intent
+  ---
+  duration_ms: 4726.707919
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / complete
+ok 4 - R3-C1 / exclusive G1 ownership / complete
+  ---
+  duration_ms: 4357.460613
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / planned
+ok 5 - R3-C1 / exclusive G2 ownership / planned
+  ---
+  duration_ms: 2946.489876
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / partial-quarantine
+ok 6 - R3-C1 / exclusive G2 ownership / partial-quarantine
+  ---
+  duration_ms: 2986.020147
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / unlink-intent
+ok 7 - R3-C1 / exclusive G2 ownership / unlink-intent
+  ---
+  duration_ms: 4214.088194
+  type: 'test'
+  ...
+# {"kind":"G2","phase":"unlink-intent","laterCandidates":[{"path":"visual-registry/pages/ab72c3717efca0b80c5eb5f153c309e1c84333cea1f70f6518524a0d2d075b8f.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/672c40760fd0fb8cd4abefda0dc729df009a3691de53a41cdd219864491bbd72.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/ae90ba879cd88a8a1e57fd13c81a93200caff82f9547866493188943a6f037ae.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-transactions/0fc4333c-0369-4c56-b964-c2feb04b16ed/intent.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-transactions/0fc4333c-0369-4c56-b964-c2feb04b16ed/outcome.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-registry/pages/8f1d64c3240c9a21cb1b20cb07bc1ebc917ee70fee12ebd118654515fc47e43b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/70c6e6afea1a04ad982d476258fe11a413c307930e9fe6b1fe71e0e3cd5acf03.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/b51768565594ecf0fc9b8e463cfcecdd96acfb3f2cfb499e3fd6433b2f49eabe.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/1b16be40aab5d67c725348280e7ca7e4b1d5eec3dc65a2dbcd30dab95d755d8b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/800d66ae44b2a752f0195af5c284e3e6bcdf11d92e9196a27ed452634bd998a9.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/44c9cca047b22ece26c7879c3918709b876f324ae8a90e27d25ebb70bf7f480d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/904c1d95632a76da5350630925d73378eb0d464e1144763a2a3827d21ca70f07.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/a42ce9b57a432bd44ea26fa87cb6a5228cdc855d9a6fb442d330376ceda82c48.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/c6728e6fff53d8d252927819f0a0a67e858739cba16676cc6073237cbecf30c0.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/4ba48aaf177a5a8d164d015f1ded18ae79b77da5fa6931f7e57b307c9ae074aa.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/aee6229d38587e636a3546bae076bb2e37340ed2997a18f6249d6d2005d3e6e1.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/650398e1fd14ca1b2d37c7404b893821ab9e2826662e967d404507a25d8498fa.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/52a1b1f535d4374f198de5f7619ceb4f631fd15efe5cc7726a25d4f975dfddac.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/bdceb7fcb67423f29871eb06a39bda9f5353c8b1d4f8d22c27219d3b1c0ea51c.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/6e5e95edfa4b24cc2dac85a6c289b48e85ca4f62c72ccffa6ceb73b37ea11279.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/5d69f6c1638fc901921be6d04d9671c6bd79458bfc759e4aecefc62823d5b050.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/4045429efb75e9f6e497bb0e8fa324c71ab2d1da88f94be9fcad7809b1a50343.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/cfa9532375835d7d68261974b6e3716016b63764e0615adb6477df6ed5a55370.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/b2bf4b06a7986cd4a7b23c3731b58c4493ba935d896a115a35ae806e75bbc17d.json","reason":"Unreachable file from a terminal transaction plan"}]}
+# Subtest: R3-C1 / exclusive G2 ownership / complete
+ok 8 - R3-C1 / exclusive G2 ownership / complete
+  ---
+  duration_ms: 2524.500961
+  type: 'test'
+  ...
+# {"kind":"G2","phase":"complete","laterCandidates":[{"path":"visual-registry/pages/f3be5a685f8e0acf624b50e5c14b2762287bfe8870607b826e83f46fc376e37a.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/89096a3845aec8425415dbbf74d189ca2b768614442030b07b06d4150d8f1a43.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/ce480c1aeb1e6d419bf9cb9b3c389bede96c66976e242d5c223cda0ae9e9700b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/425e9d53e5f188e0191b510823e1d9bbf2e0820747f0a3a76212e643581bf532.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/af1eed191479279769803346ab38727bafa8903298908ebbf60cd4ea8d3be87d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/64b08687f617b0f3e061aee4e45c3304f7be26b063949c6240c6bb19fe3c5894.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/166141a0e223211b3988928ad80a25f452758c242a381ae9452744f0e411e31a.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/785233499dcdfa270bb3c618efacaf03086c2531f0ad290052f186de311ebd54.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/cfa9532375835d7d68261974b6e3716016b63764e0615adb6477df6ed5a55370.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/1ecd461c2e0b9c460ecfe4d83f02016428a5e517e3bbae45cf4acd7bef656b8c.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/f214e5f9c4c0e16bc301623aa8961e86b70d17294d9e081b264c3de09bc883b9.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/4e0d62578a2ce9ae1605862e7e8c645f9aac582b320cd4f3f6859acd3145faaf.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/39e09a7220710411f611d19d08ec62c25ccf17671443ffc079eb6cac0d1cd549.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/a832fd826ec60bdfafdc55f8d14dec8efd010e6e6c25d43b33b039d4e6d96708.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/0cb77cf5a92e8ee02359c2c964366cc3281c8eae2149011ca3d5565bd89ebc16.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/5e877ad0eb6e6789be9967c26e36be73a58ab1dfbfac64f039663e9485f05a7c.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/20317640df2d450e078d3c4f29ab8ff70e7870977c492e21126b9d9abcd4eb3b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/f5d1c12bbf92607d6bcbd79cfe58479d92eb3b2895012dfa28afc246981b877b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/4b49250ea2de284a32e00387653f1980a05a160350597a0b29e405007664c512.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/20c73aec157cb9daee05538aeb15d548b2ba2eb30beb27538ef132ae6868dbf3.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/719a9a23ce8f18db56756174381b25b009856ff8de60836a99e47b8b82b62835.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/e673817c90d504a634b04383d3174638d0cff00b31c5d5a8ec0a5768064b8318.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-transactions/f45c3be0-ff9f-4d48-be0f-8b97b8827e05/intent.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-transactions/f45c3be0-ff9f-4d48-be0f-8b97b8827e05/outcome.json","reason":"Terminal journal with durable membership/key retention proof"}]}
+# Subtest: R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+ok 9 - R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+  ---
+  duration_ms: 6752.788265
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 36767.351897

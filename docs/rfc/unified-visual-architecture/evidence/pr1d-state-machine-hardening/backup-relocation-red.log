@@ -1,0 +1,26 @@
+TAP version 13
+# Subtest: active GC physical reservations do not authorize mutations in a relocated read-only backup
+not ok 1 - active GC physical reservations do not authorize mutations in a relocated read-only backup
+  ---
+  duration_ms: 500.180131
+  type: 'test'
+  location: '/tmp/estampes-backup-relocation-test.mjs:6:1'
+  failureType: 'testCodeFailure'
+  error: 'Document revision must change exactly once for a content change'
+  code: 'INTEGRITY_ERROR'
+  name: 'PersistenceError'
+  stack: |-
+    ChildProcess.<anonymous> (file:///workspace/Estampes/src/persistence/lease.js:27:28)
+    ChildProcess.emit (node:events:519:28)
+    emit (node:internal/child_process:949:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 686.636287

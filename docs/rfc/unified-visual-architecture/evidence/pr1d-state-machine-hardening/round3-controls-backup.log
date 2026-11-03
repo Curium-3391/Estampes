@@ -1,0 +1,31 @@
+TAP version 13
+# Subtest: native GC re-marks backup dependencies created after its selected plan
+ok 1 - native GC re-marks backup dependencies created after its selected plan
+  ---
+  duration_ms: 1580.492957
+  type: 'test'
+  ...
+# {"step":{"id":"8e1b09f0-3a43-4e0a-a521-a999224dbdf1","state":"waiting-grace","progressed":18,"moved":18,"deleted":0},"protectedCandidates":["visual-transactions/cbcfb994-fb92-487c-9cb3-ab279936df84/intent.json","visual-transactions/cbcfb994-fb92-487c-9cb3-ab279936df84/outcome.json"],"backup":"complete"}
+# Subtest: native selected proof survives three commits then rejects missing on-disk evidence
+ok 2 - native selected proof survives three commits then rejects missing on-disk evidence
+  ---
+  duration_ms: 3467.37819
+  type: 'test'
+  ...
+# {"damage":"missing","evidencePath":"visual-registry/pages/a14815a29a3c8a5b2cf75acc65f4ad02a00ecb702b74d4743cf0f6d490445dfe.json","current":{"generation":9,"rootHash":"9e884e26074be519884fd9a13b7265cb5ad414725c6c6854058dc9878db0b153","commitId":"tx:45e11c32-4786-435f-80e3-be6c918b9b42","checksum":"f8728d4eb07296e9a4dcc0e263d9ff7f64ad46ecded3556d3ae7d959dfa72157"},"ledger":4,"problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Content-addressed metadata cannot be verified"}}
+# Subtest: native selected proof survives three commits then rejects corrupt on-disk evidence
+ok 3 - native selected proof survives three commits then rejects corrupt on-disk evidence
+  ---
+  duration_ms: 3329.337865
+  type: 'test'
+  ...
+# {"damage":"corrupt","evidencePath":"visual-registry/pages/707ed2f7c345773c4a898f18ee48f368acd6744b7efd12bb43012654fa23f687.json","current":{"generation":9,"rootHash":"2e39ef31f0250067a6c80c63db4c376585290c0c68de8040e49e049c13996b3a","commitId":"tx:5b8abbcd-98a4-44b4-a5f5-1eca2a0f374d","checksum":"ecb8c84c3979c981440b254261011bf74f57330b75aebc416d004d38f4744226"},"ledger":4,"problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Content-addressed metadata cannot be verified"}}
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8667.898016

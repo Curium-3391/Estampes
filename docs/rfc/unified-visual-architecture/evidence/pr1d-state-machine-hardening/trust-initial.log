@@ -1,0 +1,129 @@
+TAP version 13
+# Subtest: native candidate proof remains valid through after-prepared
+ok 1 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 1717.764264
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:337933:810:1793723280137755161:1793723280137755161","after":"34:337933:2:1793723280909695238:1793723280909695238","workerPid":43576},"before":{"generation":3,"rootHash":"2d8c111817ca3b566afe127ee1e7ef05a7abf669c9a7fafbf48e4caa28285c90","commitId":"tx:f23ab13f-4587-4865-bed1-dd121d4d6848","checksum":"e1752bcb4a6ace1016dabbe53902a8c1b229092df57c8dff599c22f870f93238"},"after":{"checksum":"e1752bcb4a6ace1016dabbe53902a8c1b229092df57c8dff599c22f870f93238","commitId":"tx:f23ab13f-4587-4865-bed1-dd121d4d6848","generation":3,"rootHash":"2d8c111817ca3b566afe127ee1e7ef05a7abf669c9a7fafbf48e4caa28285c90"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+ok 2 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 1413.912134
+  type: 'test'
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:338080:810:1793723281671087510:1793723281671087510","after":"34:338180:2:1793723282436529190:1793723282436529190","workerPid":43612},"before":{"generation":3,"rootHash":"3a27753948205a678b7aec5bc3cf87df55acac260d3a0c2cb7b22d4664a99e3a","commitId":"tx:d0641c54-efe8-40a6-b75f-85ee2a75a905","checksum":"773a429d9d55b0dce103fce9cbe6ea14b18b822da1cdf03ede1fd4079c4eec13"},"after":{"checksum":"773a429d9d55b0dce103fce9cbe6ea14b18b822da1cdf03ede1fd4079c4eec13","commitId":"tx:d0641c54-efe8-40a6-b75f-85ee2a75a905","generation":3,"rootHash":"3a27753948205a678b7aec5bc3cf87df55acac260d3a0c2cb7b22d4664a99e3a"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+ok 3 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 1561.803079
+  type: 'test'
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:338230:810:1793723283089222027:1793723283089222027","after":"34:338230:2:1793723283972071102:1793723283972071102","workerPid":43648},"before":{"generation":3,"rootHash":"1eeedec539e4819ce59fc9a34709b7f2cab3b0581062d7673885be87f27a572b","commitId":"tx:9980bf42-515d-4a0a-85a9-bd472a8c13b0","checksum":"8de9fd8967e3ed0d673015df57aaf07b69f5646d3dbc5d2a820818531ec376a7"},"after":{"checksum":"b736d34af974fae876d4a3868054db0e86ee892805147510474f982302d4b7dc","commitId":"tx:e2361219-0f0f-4326-9791-c080247faa9d","generation":4,"rootHash":"0adfb0ceb2ad41b968368508d4d5eb9225d99f4c9012e28defce5533c1186de7"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native GC does not unlink a different inode at the authorized quarantine path
+ok 4 - native GC does not unlink a different inode at the authorized quarantine path
+  ---
+  duration_ms: 1907.470008
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/59a515d0-305a-4d50-bbbf-6e845e90cb3e/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/59a515d0-305a-4d50-bbbf-6e845e90cb3e/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace","before":"34:338381:810:1793723284619184456:1793723285389955606","after":"34:338562:2:1793723286207673821:1793723286207673821","workerPid":43686},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 5 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 4335.748423
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+ok 6 - PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+  ---
+  duration_ms: 25066.72809
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+ok 7 - PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+  ---
+  duration_ms: 69.624708
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 8 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 415.259117
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 9 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 1047.44528
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"2cf776dbc80a405baff0652c75e7ba02a0d41884ce2c2b887d14df6dfaca157f","commitId":"tx:9aeb8edf-998d-42c3-a45f-f61395778c4a","generation":3,"rootHash":"3c78b9684b84331ae726cce11cbd5dd5400d219567db356ff09ec71a9d489500"},"after":{"checksum":"2cf776dbc80a405baff0652c75e7ba02a0d41884ce2c2b887d14df6dfaca157f","commitId":"tx:9aeb8edf-998d-42c3-a45f-f61395778c4a","generation":3,"rootHash":"3c78b9684b84331ae726cce11cbd5dd5400d219567db356ff09ec71a9d489500"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 10 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.603627
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 11 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.431037
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 12 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.546409
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 13 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 4.536333
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 14 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.169147
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 15 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 5.524485
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 16 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.018519
+  type: 'test'
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 17 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 3625.236081
+  type: 'test'
+  ...
+# Subtest: a new verification operation cannot inherit another observation's metadata trust
+ok 18 - a new verification operation cannot inherit another observation's metadata trust
+  ---
+  duration_ms: 414.706712
+  type: 'test'
+  ...
+# Subtest: shared canonical representations still pass the complete strict Document schema gate
+ok 19 - shared canonical representations still pass the complete strict Document schema gate
+  ---
+  duration_ms: 345.927055
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 42469.779725

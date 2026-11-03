@@ -1,0 +1,27 @@
+TAP version 13
+# Subtest: active GC physical reservations do not authorize mutations in a relocated read-only backup
+not ok 1 - active GC physical reservations do not authorize mutations in a relocated read-only backup
+  ---
+  duration_ms: 4906.035994
+  type: 'test'
+  location: '/tmp/estampes-backup-relocation-test.mjs:6:1'
+  failureType: 'testCodeFailure'
+  error: 'No verified committed snapshot is available'
+  code: 'RECOVERY_REQUIRED'
+  name: 'PersistenceError'
+  stack: |-
+    ChildProcess.<anonymous> (file:///workspace/Estampes/src/persistence/lease.js:27:28)
+    ChildProcess.emit (node:events:519:28)
+    emit (node:internal/child_process:949:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"GC candidate missing without prior durable unlink intent"},"platform":{"platform":"linux","profile":"linux-process-crash-test","fsType":"0x1021994","device":34,"durability":"process-crash-test","purpose":"isolated-pr1c-testing"},"filesystemTrust":{"model":"private-trusted-uid/1","uid":1000,"unixPermissions":"checked","sameUidAdversary":"unsupported-not-isolated","privilegedActors":"outside-guarantee"},"recovery":[],"trace":[],"contentCommits":0,"lifecycle":null,"performance":{"open":null,"transactions":[]}}
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5103.137378

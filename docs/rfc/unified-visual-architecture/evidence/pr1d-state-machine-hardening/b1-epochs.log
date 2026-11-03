@@ -1,0 +1,43 @@
+TAP version 13
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 1 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 2089.587814
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["d9a754ce-1d80-428c-9388-e9098145bb1a.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+ok 2 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 1958.45387
+  type: 'test'
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"1b3b080d6aea36c76b8ba8d55662f2d0c162aa272afa31400769167cdcdc2e06","commitId":"tx:d1353e08-0ffd-4e9f-8ac5-732cf1d908b7","generation":2,"rootHash":"e2bf6aa0f55230123bbfbfd7638362868e48a254b72a80e2abadbf00a27f0560"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["7fd3b0e3-64e0-4310-8e3d-4b27b7cb995e.json","893f0b15-efff-41f4-995f-0cbdd3bafd42.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 3 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 2274.967241
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"8d0afb9d1111fda5bd493b52a218363fcbc99f42bc0be99dd59d27536944560f","commitId":"tx:f6660ca4-7395-44ae-b1a5-3fd13b24b4e2","generation":2,"rootHash":"dedc0eb788d4bf107d15b8ab84cb0004c75806c7eef216a67ffae77e9946fd67"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["7fa43cf4-ccc1-40c8-963b-e528def4ff85.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+ok 4 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+  ---
+  duration_ms: 4888.738572
+  type: 'test'
+  ...
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+ok 5 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+  ---
+  duration_ms: 4889.248315
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16274.980422

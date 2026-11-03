@@ -1,0 +1,152 @@
+{
+  "results": [
+    {
+      "argv": [
+        "uname",
+        "-a"
+      ],
+      "exitCode": 0,
+      "output": "Linux 375f986bd21f 6.18.57 #1 SMP Tue Oct 20 21:56:04 UTC 2026 x86_64 GNU/Linux\n"
+    },
+    {
+      "argv": [
+        "id"
+      ],
+      "exitCode": 0,
+      "output": "uid=1000(agent) gid=1000(agent) groups=1000(agent)\n"
+    },
+    {
+      "argv": [
+        "findmnt",
+        "-T",
+        "/workspace/Estampes"
+      ],
+      "exitCode": 0,
+      "output": "TARGET SOURCE  FSTYPE  OPTIONS\n/      overlay overlay rw,relatime,lowerdir=/run/kata-containers/erofs-multi-layer/375f986bd21f480da88d693a7bc972ef/lower-0,upperdir=/run/kata-containers/erofs-multi-layer/375f986bd21f480da88d693a7bc972ef/upper/upper,workdir=/run/kata-containers/erofs-multi-layer/375f986bd21f480da88d693a7bc972ef/upper/work,index=off,metacopy=off\n"
+    },
+    {
+      "argv": [
+        "findmnt",
+        "-T",
+        "/tmp"
+      ],
+      "exitCode": 0,
+      "output": "TARGET SOURCE FSTYPE OPTIONS\n/tmp   none   tmpfs  rw,relatime\n"
+    },
+    {
+      "argv": [
+        "/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "v22.23.4\n"
+    },
+    {
+      "argv": [
+        "npm",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "11.9.0\n"
+    },
+    {
+      "argv": [
+        "python3",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "Python 3.12.14\n"
+    },
+    {
+      "argv": [
+        "/usr/bin/flock",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "flock from util-linux 2.41.5\n"
+    },
+    {
+      "argv": [
+        "/usr/bin/chromium",
+        "--version"
+      ],
+      "exitCode": 0,
+      "output": "Chromium 154.0.8037.57 built on Debian GNU/Linux 13 (trixie)\n"
+    },
+    {
+      "argv": [
+        "python3",
+        "-c",
+        "import sympy,mpmath; print(sympy.__version__,mpmath.__version__)"
+      ],
+      "exitCode": 0,
+      "output": "1.14.0 1.3.0\n"
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "origin/main",
+        "origin/codex/pr1d-native-reacceptance-round3"
+      ],
+      "exitCode": 0,
+      "output": "7fb9b73442401fc32a7034888deaf49303e582a6\n31dae29f1cf7d1e8caf6c670124eed7c7ed91e11\n"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--name-only",
+        "b2f853c..31dae29",
+        "--",
+        "src",
+        "tests",
+        "scripts",
+        "server.js",
+        "package.json",
+        "package-lock.json"
+      ],
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "ancestor": "b2f853c5",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "94f3b59f",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "a33fe411",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "322038b4",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "c090d93",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "05913e9",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "88d8928",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "58f7789",
+      "exitCode": 0
+    },
+    {
+      "ancestor": "26a51e6",
+      "exitCode": 0
+    }
+  ],
+  "memoryLimitBytes": "8589934592",
+  "nodeProfile": "linux-process-crash-test; native ext4/XFS not available",
+  "clientTimezone": "Asia/Taipei"
+}

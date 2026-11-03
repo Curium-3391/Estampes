@@ -1,0 +1,256 @@
+TAP version 13
+# Subtest: H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+ok 1 - H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+  ---
+  duration_ms: 1965.062505
+  type: 'test'
+  ...
+# Subtest: H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+ok 2 - H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+  ---
+  duration_ms: 1819.332752
+  type: 'test'
+  ...
+# Both disposable lease workers are ready
+# CURRENT cleanup is temporary-claim.before-unlink occurrence 18
+# SIGKILL left only the durable CURRENT claim
+# Cleanup recovery reopen 1 ready
+# Cleanup recovery reopen 2 ready
+# Cleanup recovery reopen 3 ready
+# Subtest: H-01 / missing prepared fails closed for a superseded CURRENT
+ok 3 - H-01 / missing prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 911.093943
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Missing CURRENT publication candidate evidence"},"recovery":[]}
+# Subtest: H-01 / corrupt prepared fails closed for a superseded CURRENT
+ok 4 - H-01 / corrupt prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 904.16292
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"UNSUPPORTED_SCHEMA","message":"Invalid input: expected \\"estampes.prepared/1\\""},"recovery":[]}
+# Subtest: H-01 / forged publication fails closed for a superseded CURRENT
+ok 5 - H-01 / forged publication fails closed for a superseded CURRENT
+  ---
+  duration_ms: 880.867252
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"CURRENT candidate differs from exact claim"},"recovery":[]}
+# Subtest: H-02 / native SIGKILL across durable G2 plan
+ok 6 - H-02 / native SIGKILL across durable G2 plan
+  ---
+  duration_ms: 7473.702322
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 before intent
+ok 7 - H-02 / native SIGKILL across durable G2 before intent
+  ---
+  duration_ms: 7126.091865
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 after intent
+ok 8 - H-02 / native SIGKILL across durable G2 after intent
+  ---
+  duration_ms: 7037.836106
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 terminal
+ok 9 - H-02 / native SIGKILL across durable G2 terminal
+  ---
+  duration_ms: 6517.042038
+  type: 'test'
+  ...
+# Subtest: H-02 / corrupt plan lacks durable unlink intent and must fail closed
+ok 10 - H-02 / corrupt plan lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 1721.806726
+  type: 'test'
+  ...
+# Subtest: H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+ok 11 - H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 1270.037491
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+ok 12 - H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 1602.068142
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+ok 13 - H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 1699.280315
+  type: 'test'
+  ...
+# {"result":{"code":"RECOVERY_REQUIRED","message":"Maintenance requires recovery"},"gcState":{"deleted":[],"moved":[0,1,2,3],"planHash":"4247a75737ff9478370316ab02519172aa5e259b195b3c3a7eb84f29ab95a385","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"waiting-grace"},"writerState":"read-only-recovery"}
+# Subtest: H-01 / a superseded old-format classification cannot invent missing selection evidence
+ok 14 - H-01 / a superseded old-format classification cannot invent missing selection evidence
+  ---
+  duration_ms: 829.253487
+  type: 'test'
+  ...
+# Subtest: H-02 / missing source before quarantine cannot be authorized retroactively
+ok 15 - H-02 / missing source before quarantine cannot be authorized retroactively
+  ---
+  duration_ms: 1089.462109
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine before intent cannot be authorized retroactively
+ok 16 - H-02 / missing quarantine before intent cannot be authorized retroactively
+  ---
+  duration_ms: 1768.932926
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+ok 17 - H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+  ---
+  duration_ms: 2550.446887
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+ok 18 - H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+  ---
+  duration_ms: 2238.927889
+  type: 'test'
+  ...
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 19 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 2353.71635
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["b6aeb19f-78ea-4158-a2cb-96c2c315aa32.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+ok 20 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 2194.673409
+  type: 'test'
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"b5ebc1895afd2fea4fdbfc70592c6549ea07bd41dbcb545a8879444ab765b9da","commitId":"tx:45f5a037-ca31-4f9f-87ca-27ea2b508886","generation":2,"rootHash":"13522e5efa5f7d721bc5faccde0be8b7b28b384df7910bd55b3089a4632a663d"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["27daf10a-7a49-4538-b275-613bcd0b96c9.json","3c1a5f36-c0cf-4a6c-bd57-a6adecdecae7.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 21 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 2128.858502
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"67db06a10e59771d0f0f219957af9dbc3ad1f1d39696aca3cfd8aaa68b91b5d2","commitId":"tx:35a2e1bf-e859-4dd7-9629-58778ade5200","generation":2,"rootHash":"99884153de33533e10bafeac70e3e38d5a156ff3e5f1619bf0d71cfe9bb57859"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["1daa19c6-72a7-41f4-9cd4-0d727321df85.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+ok 22 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+  ---
+  duration_ms: 5139.314819
+  type: 'test'
+  ...
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+ok 23 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+  ---
+  duration_ms: 5539.180345
+  type: 'test'
+  ...
+# Subtest: native repeated planning must not orphan an overlapping active GC plan
+ok 24 - native repeated planning must not orphan an overlapping active GC plan
+  ---
+  duration_ms: 3329.201472
+  type: 'test'
+  ...
+# {"first":{"planned":true,"id":"c5ab4dc5-f244-4875-91aa-39423fecd893","candidates":2},"second":{"planned":false,"reason":"No provably unreachable managed files"},"overlap":[],"result":{"id":"c5ab4dc5-f244-4875-91aa-39423fecd893","state":"complete","progressed":4,"moved":2,"deleted":2},"state":"ready","problem":null}
+# Subtest: R3-C1 / exclusive G1 ownership / planned
+ok 25 - R3-C1 / exclusive G1 ownership / planned
+  ---
+  duration_ms: 3696.809678
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / partial-quarantine
+ok 26 - R3-C1 / exclusive G1 ownership / partial-quarantine
+  ---
+  duration_ms: 5919.15302
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / unlink-intent
+ok 27 - R3-C1 / exclusive G1 ownership / unlink-intent
+  ---
+  duration_ms: 6819.114902
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / complete
+ok 28 - R3-C1 / exclusive G1 ownership / complete
+  ---
+  duration_ms: 4513.368618
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / planned
+ok 29 - R3-C1 / exclusive G2 ownership / planned
+  ---
+  duration_ms: 2636.402218
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / partial-quarantine
+ok 30 - R3-C1 / exclusive G2 ownership / partial-quarantine
+  ---
+  duration_ms: 3548.846072
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / unlink-intent
+not ok 31 - R3-C1 / exclusive G2 ownership / unlink-intent
+  ---
+  duration_ms: 2564.656167
+  type: 'test'
+  location: '/workspace/Estampes/tests/persistence-state-machine.test.js:140:110'
+  failureType: 'testCodeFailure'
+  error: |-
+    No second deletion authority for an existing object
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/Estampes/tests/persistence-state-machine.test.js:166:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / complete
+not ok 32 - R3-C1 / exclusive G2 ownership / complete
+  ---
+  duration_ms: 2037.582767
+  type: 'test'
+  location: '/workspace/Estampes/tests/persistence-state-machine.test.js:140:110'
+  failureType: 'testCodeFailure'
+  error: |-
+    No second deletion authority for an existing object
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/Estampes/tests/persistence-state-machine.test.js:166:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+ok 33 - R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+  ---
+  duration_ms: 7195.489942
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 31
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 109381.381653

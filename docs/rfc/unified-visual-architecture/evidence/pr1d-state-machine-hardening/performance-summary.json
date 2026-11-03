@@ -1,0 +1,421 @@
+{
+  "environment": "Node 22.23.4 process-crash; tmpfs stores, overlay checkout; page cache not dropped",
+  "baseline": "31dae29f1cf7d1e8caf6c670124eed7c7ed91e11",
+  "pairs": [
+    {
+      "workload": 25,
+      "baseline": {
+        "label": "baseline-history-25",
+        "coldMs": 1282.5813320000007,
+        "latencyMs": {
+          "p50": 292.3936719999997,
+          "p95": 517.4977399999998,
+          "max": 559.1109659999993,
+          "total": 7732.509292000001
+        },
+        "peakWorkerRssKiB": 161452,
+        "warmCpu": {
+          "userMs": 6590,
+          "systemMs": 2720
+        },
+        "coldCpu": {
+          "userMs": 1080,
+          "systemMs": 460
+        },
+        "usage": {
+          "logicalBytes": 628799,
+          "allocatedBytes": 3395584,
+          "files": 802
+        },
+        "verified": 25,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 26,
+          "versionHits": 325,
+          "versionMisses": 25,
+          "recordHits": 325,
+          "registryHits": 325,
+          "registryMaterializations": 26,
+          "versionReconstructions": 25,
+          "reconstructedMs": 73.71113700000029,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6150,
+          "deltaApplications": 24,
+          "operationPrefixHits": 24,
+          "physicalFingerprintChecks": 5345,
+          "recordCacheBytes": 20594,
+          "registryCacheBytes": 6518,
+          "proofMetadataBytes": 102195,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 100,
+          "versionProofs": 25,
+          "registryProofs": 26
+        },
+        "contentReconstructionPreserved": true
+      },
+      "candidate": {
+        "label": "candidate-history-25",
+        "coldMs": 1411.6258130000006,
+        "latencyMs": {
+          "p50": 392.46701399999984,
+          "p95": 663.7295039999999,
+          "max": 819.3621829999993,
+          "total": 10939.613587
+        },
+        "peakWorkerRssKiB": 117068,
+        "warmCpu": {
+          "userMs": 5890,
+          "systemMs": 4920
+        },
+        "coldCpu": {
+          "userMs": 1040,
+          "systemMs": 540
+        },
+        "usage": {
+          "logicalBytes": 625176,
+          "allocatedBytes": 3366912,
+          "files": 796
+        },
+        "verified": 25,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 26,
+          "versionHits": 325,
+          "versionMisses": 25,
+          "recordHits": 325,
+          "registryHits": 325,
+          "registryMaterializations": 26,
+          "versionReconstructions": 25,
+          "reconstructedMs": 74.39136300000143,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6150,
+          "deltaApplications": 24,
+          "operationPrefixHits": 24,
+          "physicalFingerprintChecks": 4143,
+          "contentHashChecks": 5344,
+          "recordCacheBytes": 20594,
+          "registryCacheBytes": 6518,
+          "proofMetadataBytes": 110195,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 100,
+          "versionProofs": 25,
+          "registryProofs": 26
+        },
+        "contentReconstructionPreserved": true
+      }
+    },
+    {
+      "workload": 50,
+      "baseline": {
+        "label": "paired-baseline-50",
+        "coldMs": 1778.9752019999978,
+        "latencyMs": {
+          "p50": 388.8935959999999,
+          "p95": 798.1165839999994,
+          "max": 892.6987900000022,
+          "total": 21249.096492000008
+        },
+        "peakWorkerRssKiB": 155296,
+        "warmCpu": {
+          "userMs": 17360,
+          "systemMs": 7930
+        },
+        "coldCpu": {
+          "userMs": 1350,
+          "systemMs": 740
+        },
+        "usage": {
+          "logicalBytes": 1880047,
+          "allocatedBytes": 9207808,
+          "files": 2146
+        },
+        "verified": 50,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 51,
+          "versionHits": 1275,
+          "versionMisses": 50,
+          "recordHits": 1275,
+          "registryHits": 1275,
+          "registryMaterializations": 51,
+          "versionReconstructions": 50,
+          "reconstructedMs": 104.04795500000074,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 45425,
+          "deltaApplications": 49,
+          "operationPrefixHits": 49,
+          "physicalFingerprintChecks": 20331,
+          "recordCacheBytes": 41219,
+          "registryCacheBytes": 13043,
+          "proofMetadataBytes": 337170,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 200,
+          "versionProofs": 50,
+          "registryProofs": 51
+        },
+        "contentReconstructionPreserved": true
+      },
+      "candidate": {
+        "label": "paired-candidate-50",
+        "coldMs": 2384.1794009999976,
+        "latencyMs": {
+          "p50": 622.5895310000014,
+          "p95": 1162.7078390000024,
+          "max": 1295.9366919999993,
+          "total": 30465.821139999996
+        },
+        "peakWorkerRssKiB": 129000,
+        "warmCpu": {
+          "userMs": 15700,
+          "systemMs": 13670
+        },
+        "coldCpu": {
+          "userMs": 1560,
+          "systemMs": 990
+        },
+        "usage": {
+          "logicalBytes": 1865841,
+          "allocatedBytes": 9170944,
+          "files": 2137
+        },
+        "verified": 50,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 51,
+          "versionHits": 1275,
+          "versionMisses": 50,
+          "recordHits": 1275,
+          "registryHits": 1275,
+          "registryMaterializations": 51,
+          "versionReconstructions": 50,
+          "reconstructedMs": 109.48897700000265,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 45425,
+          "deltaApplications": 49,
+          "operationPrefixHits": 49,
+          "physicalFingerprintChecks": 15452,
+          "contentHashChecks": 20353,
+          "recordCacheBytes": 41219,
+          "registryCacheBytes": 13043,
+          "proofMetadataBytes": 353170,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 200,
+          "versionProofs": 50,
+          "registryProofs": 51
+        },
+        "contentReconstructionPreserved": true
+      }
+    },
+    {
+      "workload": 100,
+      "baseline": {
+        "label": "paired-baseline-100",
+        "coldMs": 3142.9429709999968,
+        "latencyMs": {
+          "p50": 837.157865000001,
+          "p95": 1427.7359029999934,
+          "max": 1674.8646119999903,
+          "total": 80956.92391699996
+        },
+        "peakWorkerRssKiB": 183956,
+        "warmCpu": {
+          "userMs": 60710,
+          "systemMs": 31380
+        },
+        "coldCpu": {
+          "userMs": 2560,
+          "systemMs": 1110
+        },
+        "usage": {
+          "logicalBytes": 6234006,
+          "allocatedBytes": 27664384,
+          "files": 6277
+        },
+        "verified": 100,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 101,
+          "versionHits": 5050,
+          "versionMisses": 100,
+          "recordHits": 5050,
+          "registryHits": 5050,
+          "registryMaterializations": 101,
+          "versionReconstructions": 100,
+          "reconstructedMs": 245.19480900002725,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 348350,
+          "deltaApplications": 99,
+          "operationPrefixHits": 99,
+          "physicalFingerprintChecks": 77699,
+          "recordCacheBytes": 82471,
+          "registryCacheBytes": 26094,
+          "proofMetadataBytes": 1206495,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 400,
+          "versionProofs": 100,
+          "registryProofs": 101
+        },
+        "contentReconstructionPreserved": true
+      },
+      "candidate": {
+        "label": "paired-candidate-100",
+        "coldMs": 4529.418650000007,
+        "latencyMs": {
+          "p50": 1186.4793019999997,
+          "p95": 2154.335049999994,
+          "max": 2324.1193340000027,
+          "total": 116492.31524800004
+        },
+        "peakWorkerRssKiB": 133504,
+        "warmCpu": {
+          "userMs": 55570,
+          "systemMs": 54500
+        },
+        "coldCpu": {
+          "userMs": 2820,
+          "systemMs": 1860
+        },
+        "usage": {
+          "logicalBytes": 6183787,
+          "allocatedBytes": 27545600,
+          "files": 6246
+        },
+        "verified": 100,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 101,
+          "versionHits": 5050,
+          "versionMisses": 100,
+          "recordHits": 5050,
+          "registryHits": 5050,
+          "registryMaterializations": 101,
+          "versionReconstructions": 100,
+          "reconstructedMs": 215.90521699995338,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 348350,
+          "deltaApplications": 99,
+          "operationPrefixHits": 99,
+          "physicalFingerprintChecks": 57988,
+          "contentHashChecks": 77789,
+          "recordCacheBytes": 82471,
+          "registryCacheBytes": 26094,
+          "proofMetadataBytes": 1238495,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 400,
+          "versionProofs": 100,
+          "registryProofs": 101
+        },
+        "contentReconstructionPreserved": true
+      }
+    },
+    {
+      "workload": "8mib",
+      "baseline": {
+        "label": "paired-baseline-8mib",
+        "coldMs": 7919.3187480000015,
+        "latencyMs": {
+          "p50": 3636.1685049999996,
+          "p95": 3929.6472240000003,
+          "max": 3929.6472240000003,
+          "total": 14300.76992
+        },
+        "peakWorkerRssKiB": 414264,
+        "warmCpu": {
+          "userMs": 13380,
+          "systemMs": 890
+        },
+        "coldCpu": {
+          "userMs": 7640,
+          "systemMs": 460
+        },
+        "usage": {
+          "logicalBytes": 8456264,
+          "allocatedBytes": 8843264,
+          "files": 109
+        },
+        "verified": 4,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 5,
+          "versionHits": 10,
+          "versionMisses": 4,
+          "recordHits": 9,
+          "registryHits": 10,
+          "registryMaterializations": 5,
+          "versionReconstructions": 4,
+          "reconstructedMs": 1071.0435669999988,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 46,
+          "deltaApplications": 3,
+          "operationPrefixHits": 3,
+          "physicalFingerprintChecks": 201,
+          "recordCacheBytes": 16778938,
+          "registryCacheBytes": 1042,
+          "proofMetadataBytes": 7699,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 16,
+          "versionProofs": 4,
+          "registryProofs": 5
+        },
+        "contentReconstructionPreserved": true
+      },
+      "candidate": {
+        "label": "paired-candidate-8mib",
+        "coldMs": 6764.1738479999985,
+        "latencyMs": {
+          "p50": 3404.3715119999997,
+          "p95": 3547.625301,
+          "max": 3547.625301,
+          "total": 13449.963234
+        },
+        "peakWorkerRssKiB": 479844,
+        "warmCpu": {
+          "userMs": 12640,
+          "systemMs": 730
+        },
+        "coldCpu": {
+          "userMs": 6500,
+          "systemMs": 400
+        },
+        "usage": {
+          "logicalBytes": 8455840,
+          "allocatedBytes": 8839168,
+          "files": 108
+        },
+        "verified": 4,
+        "exactReplay": true,
+        "verification": {
+          "snapshotLoads": 5,
+          "versionHits": 10,
+          "versionMisses": 4,
+          "recordHits": 9,
+          "registryHits": 10,
+          "registryMaterializations": 5,
+          "versionReconstructions": 4,
+          "reconstructedMs": 896.3500870000007,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 46,
+          "deltaApplications": 3,
+          "operationPrefixHits": 3,
+          "physicalFingerprintChecks": 175,
+          "contentHashChecks": 200,
+          "recordCacheBytes": 16778938,
+          "registryCacheBytes": 1042,
+          "proofMetadataBytes": 8979,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 16,
+          "versionProofs": 4,
+          "registryProofs": 5
+        },
+        "contentReconstructionPreserved": true
+      }
+    }
+  ],
+  "excludedConfoundedRuns": [
+    "baseline-history-50",
+    "candidate-history-50"
+  ],
+  "qualificationSeparate": "qualification-auto-maintenance.json",
+  "nativeInference": false,
+  "startupTimeoutMs": 30000
+}

@@ -1,0 +1,2 @@
+# Preserve verbatim TAP failures and subprocess diagnostics, including whitespace.
+*.log -text -whitespace

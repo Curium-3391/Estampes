@@ -1,0 +1,23 @@
+{
+  "source": "explicit-maintainer-user-instruction",
+  "authorizedPr": "PR-1D-STATE-MACHINE-HARDENING",
+  "evidenceBaseCommit": "31dae29f1cf7d1e8caf6c670124eed7c7ed91e11",
+  "authorizedProductionAndTestPaths": [
+    "src/persistence/backup.js",
+    "src/persistence/coordinator.js",
+    "src/persistence/filesystem.js",
+    "src/persistence/gc.js",
+    "src/persistence/lease.js",
+    "src/persistence/ownership.js",
+    "src/persistence/records.js",
+    "src/persistence/temporary-attribution.js",
+    "tests/persistence-state-machine.test.js",
+    "tests/persistence-filesystem-trust.test.js",
+    "tests/fixtures/round3-boundary-preload.mjs"
+  ],
+  "activation": false,
+  "pr1bAuthorized": false,
+  "migrationAuthorized": false,
+  "pushAuthorized": true,
+  "pushInstruction": "Separate direct user instruction in this chat: 完成後push. No merge or deployment authorization."
+}

@@ -1,0 +1,49 @@
+{
+  "baseline": "31dae29f1cf7d1e8caf6c670124eed7c7ed91e11",
+  "implementationHead": "d33d2dde6dd81588fa70e581a0c750cf3977ca72",
+  "baselineFiles": 929,
+  "preservedFiles": 921,
+  "authorizedModifications": [
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "baselineSha256": "81ce498797e98a6a7c73c2e7e5b07cd2ad2b167af3a13079e71c113fd289f11c",
+      "currentSha256": "e3e27c9b6a2e3061d69cc3460be4eb90df95e4b4297e0a2ee552503d85a9e168"
+    },
+    {
+      "path": "src/persistence/backup.js",
+      "baselineSha256": "ddd5a05e32d7b884dc0b182a29e1cfed056cdab5804266812aabbdfc57abfb42",
+      "currentSha256": "c3dac852862d587506315606b9e5c7de27c93c0a15318e1433acaaaa14fceeec"
+    },
+    {
+      "path": "src/persistence/coordinator.js",
+      "baselineSha256": "075245e553b26e192038b2e8916cea541bd4f2a56b63da1c26c83b69719e6d95",
+      "currentSha256": "1e1e49bfb04fef463c638bfe1977ed07c9d54206f50e6e313513e8b1cbd7fad8"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "baselineSha256": "663bbc50b53a5dd736cc7b849573b3caf82a51d3f1d19f2f1c95b2ce5a4009c1",
+      "currentSha256": "6c31e7e0c3a164ade79dedbf3d1a9ae29c5d8db70e5466f54022cf958c89d831"
+    },
+    {
+      "path": "src/persistence/gc.js",
+      "baselineSha256": "d226638a18779890e0045ffc9c8da8e807dfdba1486037cfad9494f341ee2437",
+      "currentSha256": "ad5888cc5d4a30eb6c1aeaa2b4c90cbc173835d9f2998300425c7268b4fd3366"
+    },
+    {
+      "path": "src/persistence/lease.js",
+      "baselineSha256": "a083048878df518f0a98485a87bf8aaf3307bca0acffe807210c1d9e05dccdc5",
+      "currentSha256": "b2fbdc8e76987480c733aeda2b4f97c740068478c9fce112efbd7289a8afaca6"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "baselineSha256": "867c852ab539b6fe0f0f11c2fa29a5bee3da3abe07ba120def167a29b8980602",
+      "currentSha256": "3f419d579e58d328af15dd106a56a80d1cbe16ec2bfc751eed9479cf145cdfe2"
+    },
+    {
+      "path": "src/persistence/temporary-attribution.js",
+      "baselineSha256": "ca633309f25c1d4ef0e4758d2889062117517579ab37a4e52c080ae69b03c2a1",
+      "currentSha256": "a0934ae3ec8f4002c2d42ef058e8bd83e165f5e816e450a54c6b4221c64149c3"
+    }
+  ],
+  "oldTestsAndHistoricalReportsUnchanged": true
+}

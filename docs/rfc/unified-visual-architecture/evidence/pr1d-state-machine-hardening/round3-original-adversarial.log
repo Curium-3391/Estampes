@@ -1,0 +1,101 @@
+TAP version 13
+# Subtest: native candidate proof remains valid through after-prepared
+ok 1 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 1149.289177
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:450433:810:1793724926884803531:1793724926884803531","after":"34:450433:2:1793724927526482740:1793724927526482740","workerPid":57094},"before":{"generation":3,"rootHash":"c213d1682b79c030a4e605ab2d04974b8bcb0cedd3f4016d28679ec7d8ce438e","commitId":"tx:971e86ba-7b54-4c1e-9f01-52e553436fc1","checksum":"d4d7d2d4be7ca75f754d06409ac7a44d1a83218be2f15330dcd0f54b4bd29d8c"},"after":{"checksum":"d4d7d2d4be7ca75f754d06409ac7a44d1a83218be2f15330dcd0f54b4bd29d8c","commitId":"tx:971e86ba-7b54-4c1e-9f01-52e553436fc1","generation":3,"rootHash":"c213d1682b79c030a4e605ab2d04974b8bcb0cedd3f4016d28679ec7d8ce438e"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+ok 2 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 1092.730029
+  type: 'test'
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:450580:810:1793724928038492614:1793724928038492614","after":"34:450680:2:1793724928635252505:1793724928635252505","workerPid":57127},"before":{"generation":3,"rootHash":"908ac32820a3dfefacdda5eb3b5e1c8c4849a058bbd3308ddc07c648e25a26ea","commitId":"tx:3607ad0c-4758-472c-985b-d76f3252b359","checksum":"80f4f24a1ed2419c35b79533e4d011a80989cd3b0eca82e6cddf0d87da622a2f"},"after":{"checksum":"80f4f24a1ed2419c35b79533e4d011a80989cd3b0eca82e6cddf0d87da622a2f","commitId":"tx:3607ad0c-4758-472c-985b-d76f3252b359","generation":3,"rootHash":"908ac32820a3dfefacdda5eb3b5e1c8c4849a058bbd3308ddc07c648e25a26ea"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+not ok 3 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 1108.872448
+  type: 'test'
+  location: '/tmp/estampes-state-machine-replay/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:53:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+    +   checksum: 'dbe2cb4a43be7fcf7775ba5abe4206d4beb5142cb9aad77155737a7c557b8515',
+    +   commitId: 'tx:df059749-1248-4b31-a57e-c5c5d0a60199',
+    +   generation: 4,
+    +   rootHash: 'a83e9e25dfd44ed8b02b43f8c201bf2f7d44a70e166d46fc81f6454d827f2567'
+    -   checksum: 'ccb54a374db7db41b876376e3919c1a672b0797f135769a3bc2f0027f614017f',
+    -   commitId: 'tx:6892aa9d-7d9f-457d-8db4-1f39d23fa167',
+    -   generation: 3,
+    -   rootHash: '14c71d6e3d6fbc6543d55e15820ede6a3a7b53f794810037ce95020d70ba32b7'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    generation: 3
+    rootHash: '14c71d6e3d6fbc6543d55e15820ede6a3a7b53f794810037ce95020d70ba32b7'
+    commitId: 'tx:6892aa9d-7d9f-457d-8db4-1f39d23fa167'
+    checksum: 'ccb54a374db7db41b876376e3919c1a672b0797f135769a3bc2f0027f614017f'
+  actual:
+    checksum: 'dbe2cb4a43be7fcf7775ba5abe4206d4beb5142cb9aad77155737a7c557b8515'
+    commitId: 'tx:df059749-1248-4b31-a57e-c5c5d0a60199'
+    generation: 4
+    rootHash: 'a83e9e25dfd44ed8b02b43f8c201bf2f7d44a70e166d46fc81f6454d827f2567'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-state-machine-replay/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:80:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:450730:810:1793724929120457034:1793724929120457034","after":"34:450730:2:1793724929698524931:1793724929698524931","workerPid":57160},"before":{"generation":3,"rootHash":"14c71d6e3d6fbc6543d55e15820ede6a3a7b53f794810037ce95020d70ba32b7","commitId":"tx:6892aa9d-7d9f-457d-8db4-1f39d23fa167","checksum":"ccb54a374db7db41b876376e3919c1a672b0797f135769a3bc2f0027f614017f"},"after":{"checksum":"dbe2cb4a43be7fcf7775ba5abe4206d4beb5142cb9aad77155737a7c557b8515","commitId":"tx:df059749-1248-4b31-a57e-c5c5d0a60199","generation":4,"rootHash":"a83e9e25dfd44ed8b02b43f8c201bf2f7d44a70e166d46fc81f6454d827f2567"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 4 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 1973.282925
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["105889d7-f3e9-4ac9-b486-fdfe7a01792f.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+ok 5 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 1980.615777
+  type: 'test'
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"ab8a9277eade3d976cc8be3d2ec45df77c004b5081b1024a2270a1ee9bc81092","commitId":"tx:c0778c76-a490-43be-ba01-82d4463afbbe","generation":2,"rootHash":"ab05d792d200bab782cb724b01c4e0820d1328a257e9635c18c342ba0fa29281"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["4f8b446a-e025-41b7-937a-ea7ec24c738f.json","6e003abc-ffdd-4a9e-b32d-d4380050a623.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 6 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 2032.620306
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"dc5f09803b6e9a87daf10e8e53b9d36c70f8519bc684ecf3c841d085e9e4f20b","commitId":"tx:e1d8c78b-e13c-41ec-94f6-0ad2911a802e","generation":2,"rootHash":"9e78ae3c19e50fccd123a62238289812c5bb5bd33d4a6c510e4e23b006fd682f"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["c30e7158-2a72-43e6-8d43-37b87e2b3ddf.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native repeated planning must not orphan an overlapping active GC plan
+ok 7 - native repeated planning must not orphan an overlapping active GC plan
+  ---
+  duration_ms: 3858.761352
+  type: 'test'
+  ...
+# {"first":{"planned":true,"id":"a35f07dc-40f2-4215-89a5-030172c02e01","candidates":2},"second":{"planned":false,"reason":"No provably unreachable managed files"},"overlap":[],"result":{"id":"a35f07dc-40f2-4215-89a5-030172c02e01","state":"complete","progressed":4,"moved":2,"deleted":2},"state":"ready","problem":null}
+# Subtest: native GC does not unlink a different inode at the authorized quarantine path
+ok 8 - native GC does not unlink a different inode at the authorized quarantine path
+  ---
+  duration_ms: 1246.447384
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/7d2b9349-f1ad-47a9-9c2a-6dc09c07b99d/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/7d2b9349-f1ad-47a9-9c2a-6dc09c07b99d/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace","before":"34:451842:810:1793724940109154694:1793724940589484827","after":"34:452023:2:1793724941055503392:1793724941055503392","workerPid":57397},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+1..8
+# tests 8
+# suites 0
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14588.518565

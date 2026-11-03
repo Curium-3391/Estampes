@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: all nine proposed examples and classified Markdown fences match
+ok 1 - all nine proposed examples and classified Markdown fences match
+  ---
+  duration_ms: 37.051867
+  type: 'test'
+  ...
+# Subtest: request ID normalization is deterministic and rejects short IDs
+ok 2 - request ID normalization is deterministic and rejects short IDs
+  ---
+  duration_ms: 0.562949
+  type: 'test'
+  ...
+# Subtest: legacy/string layer example is rejected; layer object is valid
+ok 3 - legacy/string layer example is rejected; layer object is valid
+  ---
+  duration_ms: 2.099878
+  type: 'test'
+  ...
+# Subtest: missing required target revision is rejected
+ok 4 - missing required target revision is rejected
+  ---
+  duration_ms: 0.601057
+  type: 'test'
+  ...
+# Subtest: legacy/new revision axes cannot be mixed
+ok 5 - legacy/new revision axes cannot be mixed
+  ---
+  duration_ms: 0.356638
+  type: 'test'
+  ...
+# Subtest: short document and mismatched response reference are rejected
+ok 6 - short document and mismatched response reference are rejected
+  ---
+  duration_ms: 0.700447
+  type: 'test'
+  ...
+# Subtest: caller cannot forge author, actor, ownership or commandId
+ok 7 - caller cannot forge author, actor, ownership or commandId
+  ---
+  duration_ms: 1.153921
+  type: 'test'
+  ...
+# Subtest: module provenance requires consistent author and publisher lineage
+ok 8 - module provenance requires consistent author and publisher lineage
+  ---
+  duration_ms: 2.619232
+  type: 'test'
+  ...
+# Subtest: user editing preserves createdBy and records user as last editor
+ok 9 - user editing preserves createdBy and records user as last editor
+  ---
+  duration_ms: 0.646726
+  type: 'test'
+  ...
+# Subtest: embed requires affine inverse and explicit clip
+ok 10 - embed requires affine inverse and explicit clip
+  ---
+  duration_ms: 0.558303
+  type: 'test'
+  ...
+# Subtest: snapshot embed requires independently identified editable child and origin
+ok 11 - snapshot embed requires independently identified editable child and origin
+  ---
+  duration_ms: 2.620004
+  type: 'test'
+  ...
+# Subtest: CAS example creates owned plot without unsupported adoption input
+ok 12 - CAS example creates owned plot without unsupported adoption input
+  ---
+  duration_ms: 0.688629
+  type: 'test'
+  ...
+# Subtest: invalid operation enum, anchor and unknown capability are rejected
+ok 13 - invalid operation enum, anchor and unknown capability are rejected
+  ---
+  duration_ms: 0.946989
+  type: 'test'
+  ...
+# Subtest: input schemas are strict and do not default extra grants
+ok 14 - input schemas are strict and do not default extra grants
+  ---
+  duration_ms: 0.216977
+  type: 'test'
+  ...
+# Subtest: unknown historical module identity stays unclaimed without fabricating signer or lineage
+ok 15 - unknown historical module identity stays unclaimed without fabricating signer or lineage
+  ---
+  duration_ms: 0.853879
+  type: 'test'
+  ...
+# Subtest: adoption can link a historical source without rewriting its creator
+ok 16 - adoption can link a historical source without rewriting its creator
+  ---
+  duration_ms: 0.304819
+  type: 'test'
+  ...
+# Subtest: external import archives authorship without granting local module ownership
+ok 17 - external import archives authorship without granting local module ownership
+  ---
+  duration_ms: 0.718484
+  type: 'test'
+  ...
+# Subtest: affine validation uses the specified condition rather than determinant magnitude
+ok 18 - affine validation uses the specified condition rather than determinant magnitude
+  ---
+  duration_ms: 0.199491
+  type: 'test'
+  ...
+# Subtest: commit root requires one closed registry/locator/ledger/authority root set
+ok 19 - commit root requires one closed registry/locator/ledger/authority root set
+  ---
+  duration_ms: 1.541095
+  type: 'test'
+  ...
+# Subtest: nested snapshot refusal is typed and contains no child data or raster fallback
+ok 20 - nested snapshot refusal is typed and contains no child data or raster fallback
+  ---
+  duration_ms: 2.173068
+  type: 'test'
+  ...
+# Subtest: commit membership does not self-reference its enclosing content-addressed root
+ok 21 - commit membership does not self-reference its enclosing content-addressed root
+  ---
+  duration_ms: 0.558113
+  type: 'test'
+  ...
+# Subtest: recovery pairing names the locator component without a self-referential commit hash
+ok 22 - recovery pairing names the locator component without a self-referential commit hash
+  ---
+  duration_ms: 2.428535
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 183.614287
