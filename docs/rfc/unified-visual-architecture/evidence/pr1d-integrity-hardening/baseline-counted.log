@@ -1,0 +1,13 @@
+file:///tmp/estampes-hardening-baseline/src/persistence/lease.js:19
+    const timer=setTimeout(()=>{child.kill("SIGKILL");reject(new PersistenceError("RECOVERY_REQUIRED","Writer startup timed out"));},30000);
+                                                             ^
+
+PersistenceError: Writer startup timed out
+    at Timeout.<anonymous> (file:///tmp/estampes-hardening-baseline/src/persistence/lease.js:19:62)
+    at listOnTimeout (node:internal/timers:585:17)
+    at process.processTimers (node:internal/timers:521:7) {
+  code: 'RECOVERY_REQUIRED',
+  details: {}
+}
+
+Node.js v22.23.4

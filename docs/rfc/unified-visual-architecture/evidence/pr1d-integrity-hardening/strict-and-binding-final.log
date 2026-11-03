@@ -1,0 +1,155 @@
+TAP version 13
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 1 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 1122.193439
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 2 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 464.317117
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 3 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 852.519674
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 4 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 640.84577
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 5 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 1417.862235
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 6 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 1192.76629
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 7 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 690.247206
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 8 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 919.276042
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 9 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 2643.340042
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 10 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 718.365288
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 11 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 635.66251
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-process-crash-test
+ok 12 - historical Registry uses its own Bindings after embed update/removal / linux-process-crash-test
+  ---
+  duration_ms: 2023.072959
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+ok 13 - historical Registry uses its own Bindings after embed update/removal / linux-local-durable # SKIP No approved native ext4/XFS temporary mount
+  ---
+  duration_ms: 0.154002
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 14 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 1693.608808
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"d942754fb3d1981d351cb5d906d335e94c97aaac4cfd5105d64ebb7b27d6b001","commitId":"tx:ea5f1b3b-6026-4e87-8711-10663fbb075b","generation":3,"rootHash":"9ac7d332f6fce50f0cd406aba0893cdd268c01b24c78d7bc663142fc54f0de91"},"after":{"checksum":"d942754fb3d1981d351cb5d906d335e94c97aaac4cfd5105d64ebb7b27d6b001","commitId":"tx:ea5f1b3b-6026-4e87-8711-10663fbb075b","generation":3,"rootHash":"9ac7d332f6fce50f0cd406aba0893cdd268c01b24c78d7bc663142fc54f0de91"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 15 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.916668
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 16 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 1.900356
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 17 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.05596
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 18 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.151404
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 19 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 1.534243
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 20 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 5.839907
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 21 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.219758
+  type: 'test'
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 22 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 5075.5473
+  type: 'test'
+  ...
+# Subtest: a new verification operation cannot inherit another observation's metadata trust
+ok 23 - a new verification operation cannot inherit another observation's metadata trust
+  ---
+  duration_ms: 551.568252
+  type: 'test'
+  ...
+# Subtest: shared canonical representations still pass the complete strict Document schema gate
+ok 24 - shared canonical representations still pass the complete strict Document schema gate
+  ---
+  duration_ms: 657.759863
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 21798.203052

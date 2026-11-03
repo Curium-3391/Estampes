@@ -1,0 +1,89 @@
+TAP version 13
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 1 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 2581.440221
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+ok 2 - PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+  ---
+  duration_ms: 13714.618532
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+ok 3 - PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+  ---
+  duration_ms: 54.103101
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 4 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 366.77879
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 5 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 921.754245
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"e934c7f48b90404b18e8f96625cbd20a13d290de35d4548cc67cae5e0937ece1","commitId":"tx:d68bd457-1e5b-4cd7-b02a-475bb560e028","generation":3,"rootHash":"136387403aed3f917d7cf8f585b79f9dfb9395a89f97d9c82c32b89ebfb9dd3b"},"after":{"checksum":"e934c7f48b90404b18e8f96625cbd20a13d290de35d4548cc67cae5e0937ece1","commitId":"tx:d68bd457-1e5b-4cd7-b02a-475bb560e028","generation":3,"rootHash":"136387403aed3f917d7cf8f585b79f9dfb9395a89f97d9c82c32b89ebfb9dd3b"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 6 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.090214
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 7 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 1.920199
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 8 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.937999
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 9 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.362214
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 10 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.034518
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 11 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.482556
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 12 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.856476
+  type: 'test'
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 13 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 2631.775021
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20549.422475

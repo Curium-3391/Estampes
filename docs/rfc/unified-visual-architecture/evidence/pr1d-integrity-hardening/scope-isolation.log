@@ -1,0 +1,71 @@
+TAP version 13
+# Subtest: verification read race must reject before acknowledging a commit
+ok 1 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 3014.297943
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"90b9e7df350908bf2a840b0f77c12d84b165b31b74df6195face3a77c4d36dd0","commitId":"tx:b6cf310a-8901-4997-afd2-725210206b19","generation":3,"rootHash":"0e3b0e9099fd2fc82f74cbca19258fe8bb108ff35e3711ff50f4034af69cc1f0"},"after":{"checksum":"90b9e7df350908bf2a840b0f77c12d84b165b31b74df6195face3a77c4d36dd0","commitId":"tx:b6cf310a-8901-4997-afd2-725210206b19","generation":3,"rootHash":"0e3b0e9099fd2fc82f74cbca19258fe8bb108ff35e3711ff50f4034af69cc1f0"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 2 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 4.734903
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 3 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.820018
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 4 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.970972
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 5 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 4.116982
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 6 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.665035
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 7 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 4.812991
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 8 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.071927
+  type: 'test'
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 9 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 5970.416399
+  type: 'test'
+  ...
+# Subtest: a new verification operation cannot inherit another observation's metadata trust
+ok 10 - a new verification operation cannot inherit another observation's metadata trust
+  ---
+  duration_ms: 967.491153
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10314.33923

@@ -1,0 +1,32 @@
+file:///tmp/estampes-hardening-baseline/src/persistence/lease.js:28
+  const exited=(code,signal)=>terminate(new PersistenceError(code===73?"STORAGE_UNAVAILABLE":"RECOVERY_REQUIRED",code===73?"Second writer rejected by exclusive OS lease":"Writer process exited; inspect committed outcome",{exitCode:code,signal,diagnostic:stderr,...(startupIpcError?{ipcCause:startupIpcError.code}: {})}));
+                                        ^
+
+PersistenceError: Writer process exited; inspect committed outcome
+    at ChildProcess.exited (file:///tmp/estampes-hardening-baseline/src/persistence/lease.js:28:41)
+    at Object.onceWrapper (node:events:634:26)
+    at ChildProcess.emit (node:events:519:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12) {
+  code: 'RECOVERY_REQUIRED',
+  details: {
+    exitCode: 1,
+    signal: null,
+    diagnostic: 'node:internal/fs/promises:639\n' +
+      '  return new FileHandle(await PromisePrototypeThen(\n' +
+      '                        ^\n' +
+      '\n' +
+      "Error: ENOENT: no such file or directory, open 'file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-integrity-hardening/baseline-profile.cpuprofile'\n" +
+      '    at async open (node:internal/fs/promises:639:25)\n' +
+      '    at async writeFile (node:internal/fs/promises:1222:14)\n' +
+      '    at async process.<anonymous> (file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-integrity-hardening/profile-preload.mjs:19:207) {\n' +
+      '  errno: -2,\n' +
+      "  code: 'ENOENT',\n" +
+      "  syscall: 'open',\n" +
+      "  path: 'file:///workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-integrity-hardening/baseline-profile.cpuprofile'\n" +
+      '}\n' +
+      '\n' +
+      'Node.js v22.23.4\n'
+  }
+}
+
+Node.js v22.23.4

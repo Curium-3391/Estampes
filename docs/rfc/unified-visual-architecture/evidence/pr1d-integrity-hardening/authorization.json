@@ -1,0 +1,22 @@
+{
+  "source": "explicit-maintainer-user-instruction",
+  "authorizedPr": "PR-1D-INTEGRITY-HARDENING",
+  "evidenceBaseCommit": "a33fe411aac7fe763a9adf5b8d71bf4f77e5f3b0",
+  "authorizedProductionAndTestPaths": [
+    "src/persistence/archive.js",
+    "src/persistence/coordinator.js",
+    "src/persistence/filesystem.js",
+    "src/persistence/gc.js",
+    "src/persistence/lifecycle.js",
+    "src/persistence/pages.js",
+    "src/persistence/records.js",
+    "src/persistence/temporary-attribution.js",
+    "tests/persistence-integrity-hardening.test.js",
+    "tests/persistence-verification-race.test.js",
+    "tests/fixtures/verification-read-race.mjs"
+  ],
+  "activation": false,
+  "pr1bAuthorized": false,
+  "migrationAuthorized": false,
+  "pushAuthorized": true
+}

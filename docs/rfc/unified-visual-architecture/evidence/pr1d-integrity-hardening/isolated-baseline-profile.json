@@ -1,0 +1,117 @@
+{
+  "label": "isolated-baseline-profile",
+  "node": "v22.23.4",
+  "code": "/tmp/estampes-hardening-baseline",
+  "profile": "linux-process-crash-test",
+  "filesystem": "overlay workspace / tmpfs disposable store (see environment.log)",
+  "count": 4,
+  "payload": 8388608,
+  "peakWorkerRssKiB": 426328,
+  "latencyMs": {
+    "p50": 8351.729139,
+    "p95": 8528.915048,
+    "max": 8528.915048,
+    "total": 31128.316447
+  },
+  "coldMs": null,
+  "warmCpu": {
+    "userMs": 28750,
+    "systemMs": 3650
+  },
+  "coldCpu": null,
+  "warm": {
+    "open": null,
+    "transactions": [
+      {
+        "mode": "genesis",
+        "buildAndPreflightMs": 10.513509999999997,
+        "stageAndPrepareMs": 40.95865700000002,
+        "candidateVerificationMs": 14.750246000000004,
+        "currentPublicationMs": 2.6778100000000222,
+        "postPublicationMs": 20.36960399999998,
+        "totalMs": 89.29268000000002
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 1762.8377569999998,
+        "stageAndPrepareMs": 46.931334000000334,
+        "candidateVerificationMs": 3339.158019,
+        "currentPublicationMs": 3.2419749999999112,
+        "postPublicationMs": 57.06608099999994,
+        "totalMs": 5209.245723
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 3540.4550609999997,
+        "stageAndPrepareMs": 32.220163999998476,
+        "candidateVerificationMs": 3945.1844189999993,
+        "currentPublicationMs": 1.8261949999996432,
+        "postPublicationMs": 16.63016400000015,
+        "totalMs": 7536.324796
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 3508.783239999999,
+        "stageAndPrepareMs": 31.520351999999548,
+        "candidateVerificationMs": 3952.9222230000014,
+        "currentPublicationMs": 2.5512280000002647,
+        "postPublicationMs": 29.92164099999718,
+        "totalMs": 7525.707555999999
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 3163.685863999999,
+        "stageAndPrepareMs": 33.40066399999705,
+        "candidateVerificationMs": 4234.6881570000005,
+        "currentPublicationMs": 1.955669000002672,
+        "postPublicationMs": 35.85323900000003,
+        "totalMs": 7469.599308000001
+      }
+    ],
+    "verification": {
+      "snapshotLoads": 5,
+      "versionHits": 14,
+      "versionMisses": 4,
+      "recordHits": 8,
+      "registryHits": 10,
+      "registryMaterializations": 10,
+      "versionReconstructions": 4,
+      "reconstructedMs": 4261.84734,
+      "proofEvictions": 0,
+      "metadataPathsTraversed": 62,
+      "recordCacheBytes": 16778938,
+      "registryCacheBytes": 1042,
+      "proofMetadataBytes": 7699,
+      "proofMetadataBudget": 4194304,
+      "physicalFingerprints": 16,
+      "versionProofs": 4,
+      "registryProofs": 5
+    }
+  },
+  "cold": null,
+  "maintenance": {
+    "schema": "estampes.lifecycle/1",
+    "options": {
+      "enabled": true,
+      "autoMaintenance": false,
+      "pinSessions": 64,
+      "pinBytes": 1073741824
+    },
+    "highWaterMs": 1793689961848,
+    "committedAtMs": 1793689961848,
+    "contentSinceMaintenance": 4,
+    "maintenance": {
+      "state": "idle",
+      "cursor": null,
+      "conflicts": 0,
+      "steps": 0
+    }
+  },
+  "usage": {
+    "logicalBytes": 8448455,
+    "allocatedBytes": 8798208,
+    "files": 98
+  },
+  "verified": 4,
+  "exactReplay": null
+}

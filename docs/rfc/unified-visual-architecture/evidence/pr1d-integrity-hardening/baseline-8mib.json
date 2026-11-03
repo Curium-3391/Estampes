@@ -1,0 +1,146 @@
+{
+  "label": "baseline-8mib",
+  "node": "v22.23.4",
+  "code": "/tmp/estampes-hardening-baseline",
+  "profile": "linux-process-crash-test",
+  "filesystem": "overlay workspace / tmpfs disposable store (see environment.log)",
+  "count": 4,
+  "payload": 8388608,
+  "peakWorkerRssKiB": 466592,
+  "latencyMs": {
+    "p50": 7423.352735,
+    "p95": 7497.797692999997,
+    "max": 7497.797692999997,
+    "total": 27765.646747999996
+  },
+  "coldMs": 13147.488704,
+  "warm": {
+    "open": null,
+    "transactions": [
+      {
+        "mode": "genesis",
+        "buildAndPreflightMs": 15.60359299999999,
+        "stageAndPrepareMs": 23.20604,
+        "candidateVerificationMs": 10.70486600000001,
+        "currentPublicationMs": 1.3815740000000005,
+        "postPublicationMs": 6.287221999999986,
+        "totalMs": 57.203225
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 2230.215311,
+        "stageAndPrepareMs": 44.7036720000001,
+        "candidateVerificationMs": 2932.715284,
+        "currentPublicationMs": 1.5917120000003706,
+        "postPublicationMs": 20.28593599999931,
+        "totalMs": 5229.521338
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 2911.5192640000005,
+        "stageAndPrepareMs": 22.9581390000003,
+        "candidateVerificationMs": 3280.3503949999995,
+        "currentPublicationMs": 1.5374510000001465,
+        "postPublicationMs": 27.73738400000002,
+        "totalMs": 6244.111057
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 2888.4740889999994,
+        "stageAndPrepareMs": 16.559376999997767,
+        "candidateVerificationMs": 3773.895270000001,
+        "currentPublicationMs": 1.4259819999970205,
+        "postPublicationMs": 26.653984999997192,
+        "totalMs": 6707.016334
+      },
+      {
+        "mode": "content",
+        "buildAndPreflightMs": 2833.7021300000015,
+        "stageAndPrepareMs": 15.487604000001738,
+        "candidateVerificationMs": 3921.427658999997,
+        "currentPublicationMs": 1.6185009999971953,
+        "postPublicationMs": 42.88945500000045,
+        "totalMs": 6815.137677000002
+      }
+    ],
+    "verification": {
+      "snapshotLoads": 5,
+      "versionHits": 14,
+      "versionMisses": 4,
+      "recordHits": 8,
+      "registryHits": 10,
+      "registryMaterializations": 10,
+      "versionReconstructions": 4,
+      "reconstructedMs": 3801.514107999997,
+      "proofEvictions": 0,
+      "metadataPathsTraversed": 62,
+      "recordCacheBytes": 16778938,
+      "registryCacheBytes": 1042,
+      "proofMetadataBytes": 7683,
+      "proofMetadataBudget": 4194304,
+      "physicalFingerprints": 16,
+      "versionProofs": 4,
+      "registryProofs": 5
+    }
+  },
+  "cold": {
+    "open": {
+      "verifyCommittedMs": 11579.344412999999
+    },
+    "transactions": [
+      {
+        "mode": "recovery-epoch",
+        "buildAndPreflightMs": 24.646489000000656,
+        "stageAndPrepareMs": 20.457296000000497,
+        "candidateVerificationMs": 1296.292246000001,
+        "currentPublicationMs": 1.4271540000008827,
+        "postPublicationMs": 26.884274000000005,
+        "totalMs": 1369.7335380000004
+      }
+    ],
+    "verification": {
+      "snapshotLoads": 2,
+      "versionHits": 10,
+      "versionMisses": 6,
+      "recordHits": 4,
+      "registryHits": 5,
+      "registryMaterializations": 7,
+      "versionReconstructions": 6,
+      "reconstructedMs": 5187.622294999999,
+      "proofEvictions": 0,
+      "metadataPathsTraversed": 55,
+      "recordCacheBytes": 16778938,
+      "registryCacheBytes": 1042,
+      "proofMetadataBytes": 7683,
+      "proofMetadataBudget": 4194304,
+      "physicalFingerprints": 16,
+      "versionProofs": 4,
+      "registryProofs": 5
+    }
+  },
+  "maintenance": {
+    "schema": "estampes.lifecycle/1",
+    "options": {
+      "enabled": true,
+      "autoMaintenance": false,
+      "pinSessions": 64,
+      "pinBytes": 1073741824
+    },
+    "highWaterMs": 1793688066700,
+    "committedAtMs": 1793688066700,
+    "contentSinceMaintenance": 4,
+    "maintenance": {
+      "state": "idle",
+      "cursor": null,
+      "conflicts": 0,
+      "steps": 0
+    }
+  },
+  "usage": {
+    "logicalBytes": 8456264,
+    "allocatedBytes": 8843264,
+    "files": 109
+  },
+  "verified": 4,
+  "exactReplay": true
+}

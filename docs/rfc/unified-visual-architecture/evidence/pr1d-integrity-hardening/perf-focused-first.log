@@ -1,0 +1,215 @@
+TAP version 13
+# Subtest: UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+ok 1 - UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+  ---
+  duration_ms: 1780.613011
+  type: 'test'
+  ...
+# Subtest: UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+ok 2 - UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+  ---
+  duration_ms: 3138.63871
+  type: 'test'
+  ...
+# Subtest: UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+ok 3 - UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+  ---
+  duration_ms: 840.810692
+  type: 'test'
+  ...
+# Subtest: clock rollback cannot shorten ACK retention or erase persisted high-water state
+ok 4 - clock rollback cannot shorten ACK retention or erase persisted high-water state
+  ---
+  duration_ms: 877.178005
+  type: 'test'
+  ...
+# Subtest: UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+ok 5 - UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+  ---
+  duration_ms: 868.644551
+  type: 'test'
+  ...
+# Subtest: UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+ok 6 - UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+  ---
+  duration_ms: 342.982046
+  type: 'test'
+  ...
+# Subtest: multiple concurrent readers remain fixed while writes advance the one authoritative Root
+ok 7 - multiple concurrent readers remain fixed while writes advance the one authoritative Root
+  ---
+  duration_ms: 491.399803
+  type: 'test'
+  ...
+# Subtest: lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+ok 8 - lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+  ---
+  duration_ms: 1.966035
+  type: 'test'
+  ...
+# Subtest: maintenance makes bounded progress under sustained writes and accounts allocated blocks
+ok 9 - maintenance makes bounded progress under sustained writes and accounts allocated blocks
+  ---
+  duration_ms: 2299.610201
+  type: 'test'
+  ...
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 10 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 2400.172933
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+ok 11 - PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+  ---
+  duration_ms: 11637.571964
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+ok 12 - PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+  ---
+  duration_ms: 50.922629
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 13 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 351.667432
+  type: 'test'
+  ...
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 14 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 648.83091
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 15 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 323.583307
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 16 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 459.734562
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 17 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 327.704223
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 18 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 666.869279
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 19 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 767.144674
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 20 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 355.209759
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 21 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 411.775614
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 22 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 1368.859364
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 23 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 286.579497
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 24 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 301.708143
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-process-crash-test
+ok 25 - historical Registry uses its own Bindings after embed update/removal / linux-process-crash-test
+  ---
+  duration_ms: 1087.925847
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+ok 26 - historical Registry uses its own Bindings after embed update/removal / linux-local-durable # SKIP No approved native ext4/XFS temporary mount
+  ---
+  duration_ms: 0.113802
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 27 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 961.090287
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"b20f04b4b9429488e5653d1d190ca5e10c1a5ef2d57e9d107e0aef0af4956e49","commitId":"tx:234c6e3d-bbb9-4728-b95f-ec0866c13418","generation":3,"rootHash":"71ab2e2867f2093ad1065e3553400e846de00c64e8b7cbba6f1d636dbfc031e8"},"after":{"checksum":"b20f04b4b9429488e5653d1d190ca5e10c1a5ef2d57e9d107e0aef0af4956e49","commitId":"tx:234c6e3d-bbb9-4728-b95f-ec0866c13418","generation":3,"rootHash":"71ab2e2867f2093ad1065e3553400e846de00c64e8b7cbba6f1d636dbfc031e8"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 28 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.684296
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 29 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.238776
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 30 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.101137
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 31 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.265076
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 32 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 1.736088
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 33 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 3.407088
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 34 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 2.790489
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 33548.916795

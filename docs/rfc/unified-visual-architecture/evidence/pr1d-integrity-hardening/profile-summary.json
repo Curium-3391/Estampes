@@ -1,0 +1,783 @@
+[
+  {
+    "name": "baseline-counted",
+    "estimatedSampledAllocationBytes": 3765143328,
+    "topAllocationSites": [
+      {
+        "frame": "join @ :0",
+        "bytes": 1176150248
+      },
+      {
+        "frame": "encode @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:94",
+        "bytes": 1050383240
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "bytes": 402794688
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:80",
+        "bytes": 360710832
+      },
+      {
+        "frame": "same @ file:///tmp/estampes-hardening-baseline/src/persistence/archive.js:21",
+        "bytes": 117447536
+      },
+      {
+        "frame": "cloneJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:102",
+        "bytes": 100668624
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:97",
+        "bytes": 93553952
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "bytes": 67474832
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "bytes": 50501712
+      },
+      {
+        "frame": "createFromString @ node:buffer:478",
+        "bytes": 41983456
+      },
+      {
+        "frame": "json @ file:///tmp/estampes-hardening-baseline/src/persistence/filesystem.js:48",
+        "bytes": 33915744
+      },
+      {
+        "frame": "toString @ node:buffer:839",
+        "bytes": 33657920
+      }
+    ],
+    "cpuTopSelfMs": [
+      {
+        "frame": "visit @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:43",
+        "ms": 36399.394
+      },
+      {
+        "frame": "addString @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:30",
+        "ms": 16247.189
+      },
+      {
+        "frame": "encode @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:94",
+        "ms": 9647.176
+      },
+      {
+        "frame": "(idle) @ :0",
+        "ms": 3018.315
+      },
+      {
+        "frame": "assertJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:23",
+        "ms": 2036.383
+      },
+      {
+        "frame": "(garbage collector) @ :0",
+        "ms": 1535.515
+      },
+      {
+        "frame": "update @ :0",
+        "ms": 610.761
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:80",
+        "ms": 576.897
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "ms": 479.823
+      },
+      {
+        "frame": "cloneJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:102",
+        "ms": 222.512
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "ms": 171.841
+      },
+      {
+        "frame": "same @ file:///tmp/estampes-hardening-baseline/src/persistence/archive.js:21",
+        "ms": 143.251
+      }
+    ],
+    "encodingCounts": {
+      "canonical": 1838,
+      "hash": 931
+    },
+    "resource": {
+      "userCPUTime": 33604178,
+      "systemCPUTime": 4076586,
+      "maxRSS": 538940,
+      "sharedMemorySize": 0,
+      "unsharedDataSize": 0,
+      "unsharedStackSize": 0,
+      "minorPageFault": 971355,
+      "majorPageFault": 0,
+      "swappedOut": 0,
+      "fsRead": 0,
+      "fsWrite": 8,
+      "ipcSent": 0,
+      "ipcReceived": 0,
+      "signalsCount": 0,
+      "voluntaryContextSwitches": 60391,
+      "involuntaryContextSwitches": 110180
+    },
+    "cpu": {
+      "user": 33604139,
+      "system": 4076581
+    },
+    "io": {
+      "bytes:visual-registry": {
+        "calls": 251,
+        "totalMs": 601.0464909999928
+      },
+      "json:visual-registry": {
+        "calls": 243,
+        "totalMs": 630.4046269999966
+      },
+      "info:visual-registry": {
+        "calls": 106,
+        "totalMs": 59.650742999992644
+      },
+      "digest:visual-registry": {
+        "calls": 81,
+        "totalMs": 322.074163999941
+      },
+      "bytes:visual-documents": {
+        "calls": 8,
+        "totalMs": 90.37888499998826
+      },
+      "json:visual-documents": {
+        "calls": 4,
+        "totalMs": 2123.55375199999
+      },
+      "info:visual-documents": {
+        "calls": 19,
+        "totalMs": 11.371609999996508
+      },
+      "digest:visual-documents": {
+        "calls": 1,
+        "totalMs": 15.760809000001245
+      },
+      "bytes:visual-history": {
+        "calls": 12,
+        "totalMs": 25.237089999998716
+      },
+      "json:visual-history": {
+        "calls": 6,
+        "totalMs": 19.729776000011043
+      },
+      "info:visual-history": {
+        "calls": 50,
+        "totalMs": 48.29968799997732
+      },
+      "digest:visual-history": {
+        "calls": 6,
+        "totalMs": 45.5672199999899
+      }
+    },
+    "peakSampledHeapUsed": 315740960,
+    "gcEvents": 470,
+    "gcMs": 1542.6053919994738,
+    "artifacts": [
+      {
+        "path": "baseline-counted.cpuprofile.gz",
+        "rawSha256": "eeaccdaf3e774a5a74fe1cd846dd1dc748c25c73ffc568831f1e63712b123dec",
+        "storedSha256": "78ffe7db963f43016fc2bff12a883842f13f84e8aa33803ebbc1e06731bf0e33"
+      },
+      {
+        "path": "baseline-counted.heapprofile.gz",
+        "rawSha256": "2b5dc6bed0ed9a64f81ad999288f5d27598051ff4c8d319349d5946337b5afaa",
+        "storedSha256": "403ccce03fbca866931df28d3fc79dcfe69b9d84bb63e4713fde015d5c35393d"
+      }
+    ],
+    "limitations": "Inspector sampling includes collected objects and has overhead; allocation estimates are cumulative, not live heap. I/O wrappers overlap. Earlier baseline-counted warm artifact precedes a cold-start timeout; use the isolated pair for comparisons."
+  },
+  {
+    "name": "baseline-sampled",
+    "estimatedSampledAllocationBytes": 3761867088,
+    "topAllocationSites": [
+      {
+        "frame": "join @ :0",
+        "bytes": 1175918872
+      },
+      {
+        "frame": "encode @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:94",
+        "bytes": 1109595600
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "bytes": 402892424
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:80",
+        "bytes": 360710832
+      },
+      {
+        "frame": "same @ file:///tmp/estampes-hardening-baseline/src/persistence/archive.js:21",
+        "bytes": 117447536
+      },
+      {
+        "frame": "cloneJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:102",
+        "bytes": 100668624
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "bytes": 67113848
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "bytes": 50567208
+      },
+      {
+        "frame": "createFromString @ node:buffer:478",
+        "bytes": 41947360
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:97",
+        "bytes": 34767936
+      },
+      {
+        "frame": "json @ file:///tmp/estampes-hardening-baseline/src/persistence/filesystem.js:48",
+        "bytes": 34276912
+      },
+      {
+        "frame": "toString @ node:buffer:839",
+        "bytes": 33657920
+      }
+    ],
+    "cpuTopSelfMs": [
+      {
+        "frame": "visit @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:43",
+        "ms": 15662.657
+      },
+      {
+        "frame": "addString @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:30",
+        "ms": 6797.736
+      },
+      {
+        "frame": "encode @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:94",
+        "ms": 4125.64
+      },
+      {
+        "frame": "assertJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:23",
+        "ms": 1441.07
+      },
+      {
+        "frame": "(idle) @ :0",
+        "ms": 828.986
+      },
+      {
+        "frame": "(garbage collector) @ :0",
+        "ms": 461.67
+      },
+      {
+        "frame": "update @ :0",
+        "ms": 319.123
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:80",
+        "ms": 226.0
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "ms": 189.719
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "ms": 88.151
+      },
+      {
+        "frame": "cloneJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:102",
+        "ms": 50.041
+      },
+      {
+        "frame": "same @ file:///tmp/estampes-hardening-baseline/src/persistence/archive.js:21",
+        "ms": 40.345
+      }
+    ],
+    "encodingCounts": null,
+    "resource": {
+      "userCPUTime": 28958611,
+      "systemCPUTime": 2208259,
+      "maxRSS": 496892,
+      "sharedMemorySize": 0,
+      "unsharedDataSize": 0,
+      "unsharedStackSize": 0,
+      "minorPageFault": 994254,
+      "majorPageFault": 0,
+      "swappedOut": 0,
+      "fsRead": 0,
+      "fsWrite": 0,
+      "ipcSent": 0,
+      "ipcReceived": 0,
+      "signalsCount": 0,
+      "voluntaryContextSwitches": 44520,
+      "involuntaryContextSwitches": 6060
+    },
+    "cpu": {
+      "user": 28958580,
+      "system": 2208257
+    },
+    "io": {
+      "bytes:visual-registry": {
+        "calls": 251,
+        "totalMs": 148.98622499999306
+      },
+      "json:visual-registry": {
+        "calls": 243,
+        "totalMs": 164.16025199998342
+      },
+      "info:visual-registry": {
+        "calls": 106,
+        "totalMs": 39.2912690000162
+      },
+      "digest:visual-registry": {
+        "calls": 81,
+        "totalMs": 93.87146300000038
+      },
+      "bytes:visual-documents": {
+        "calls": 8,
+        "totalMs": 22.033477999997558
+      },
+      "json:visual-documents": {
+        "calls": 4,
+        "totalMs": 612.5901010000011
+      },
+      "info:visual-documents": {
+        "calls": 19,
+        "totalMs": 25.93090500000335
+      },
+      "digest:visual-documents": {
+        "calls": 1,
+        "totalMs": 6.880316000000676
+      },
+      "bytes:visual-history": {
+        "calls": 12,
+        "totalMs": 39.82138499999928
+      },
+      "json:visual-history": {
+        "calls": 6,
+        "totalMs": 34.52320900000268
+      },
+      "info:visual-history": {
+        "calls": 50,
+        "totalMs": 7.490086999978303
+      },
+      "digest:visual-history": {
+        "calls": 6,
+        "totalMs": 2.7129619999941497
+      }
+    },
+    "peakSampledHeapUsed": 357993592,
+    "gcEvents": 464,
+    "gcMs": 383.54082000104245,
+    "artifacts": [
+      {
+        "path": "baseline-sampled.cpuprofile.gz",
+        "rawSha256": "3e780f767cade9c0293353636d6d6766de0a58f0aa08b55da4ee110f62197461",
+        "storedSha256": "77af0a0eb48c1930c071761b7002e8d8d9c5c3867f8a14b1d44c188b89654ced"
+      },
+      {
+        "path": "baseline-sampled.heapprofile.gz",
+        "rawSha256": "9655d39381ee75b8d999818ddb4368476fb14d342a22447fe3f39ed38f024257",
+        "storedSha256": "13d94ef61e8f02c78516c23d92699f2834f181dedfda0b2b790295743e6f0871"
+      }
+    ],
+    "limitations": "Inspector sampling includes collected objects and has overhead; allocation estimates are cumulative, not live heap. I/O wrappers overlap. Earlier baseline-counted warm artifact precedes a cold-start timeout; use the isolated pair for comparisons."
+  },
+  {
+    "name": "isolated-baseline-profile",
+    "estimatedSampledAllocationBytes": 3774720232,
+    "topAllocationSites": [
+      {
+        "frame": "join @ :0",
+        "bytes": 1176757264
+      },
+      {
+        "frame": "encode @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:94",
+        "bytes": 1134236728
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "bytes": 403058096
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:80",
+        "bytes": 360710832
+      },
+      {
+        "frame": "same @ file:///tmp/estampes-hardening-baseline/src/persistence/archive.js:21",
+        "bytes": 117447536
+      },
+      {
+        "frame": "cloneJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:102",
+        "bytes": 100668624
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "bytes": 67277936
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "bytes": 50637760
+      },
+      {
+        "frame": "createFromString @ node:buffer:478",
+        "bytes": 41947360
+      },
+      {
+        "frame": "json @ file:///tmp/estampes-hardening-baseline/src/persistence/filesystem.js:48",
+        "bytes": 33948200
+      },
+      {
+        "frame": "toString @ node:buffer:839",
+        "bytes": 33657168
+      },
+      {
+        "frame": "byteLength @ node:buffer:775",
+        "bytes": 33592544
+      }
+    ],
+    "cpuTopSelfMs": [
+      {
+        "frame": "visit @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:43",
+        "ms": 14961.301
+      },
+      {
+        "frame": "addString @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:30",
+        "ms": 5975.326
+      },
+      {
+        "frame": "encode @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:94",
+        "ms": 5024.995
+      },
+      {
+        "frame": "assertJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:23",
+        "ms": 1744.216
+      },
+      {
+        "frame": "(idle) @ :0",
+        "ms": 1024.931
+      },
+      {
+        "frame": "(garbage collector) @ :0",
+        "ms": 525.62
+      },
+      {
+        "frame": " @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:80",
+        "ms": 351.18
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "ms": 316.27
+      },
+      {
+        "frame": "update @ :0",
+        "ms": 307.147
+      },
+      {
+        "frame": "same @ file:///tmp/estampes-hardening-baseline/src/persistence/archive.js:21",
+        "ms": 193.645
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "ms": 93.606
+      },
+      {
+        "frame": "cloneJson @ file:///tmp/estampes-hardening-baseline/src/documents/validation.js:102",
+        "ms": 82.066
+      }
+    ],
+    "encodingCounts": {
+      "canonical": 1838,
+      "hash": 931
+    },
+    "resource": {
+      "userCPUTime": 28805438,
+      "systemCPUTime": 3656482,
+      "maxRSS": 426328,
+      "sharedMemorySize": 0,
+      "unsharedDataSize": 0,
+      "unsharedStackSize": 0,
+      "minorPageFault": 1005466,
+      "majorPageFault": 0,
+      "swappedOut": 0,
+      "fsRead": 0,
+      "fsWrite": 0,
+      "ipcSent": 0,
+      "ipcReceived": 0,
+      "signalsCount": 0,
+      "voluntaryContextSwitches": 46271,
+      "involuntaryContextSwitches": 7046
+    },
+    "cpu": {
+      "user": 28805411,
+      "system": 3656479
+    },
+    "io": {
+      "bytes:visual-registry": {
+        "calls": 251,
+        "totalMs": 121.91202800003026
+      },
+      "json:visual-registry": {
+        "calls": 243,
+        "totalMs": 135.8394429999995
+      },
+      "info:visual-registry": {
+        "calls": 106,
+        "totalMs": 33.876109999984635
+      },
+      "digest:visual-registry": {
+        "calls": 81,
+        "totalMs": 116.05016100000529
+      },
+      "bytes:visual-documents": {
+        "calls": 8,
+        "totalMs": 39.24827299999197
+      },
+      "json:visual-documents": {
+        "calls": 4,
+        "totalMs": 678.7010289999994
+      },
+      "info:visual-documents": {
+        "calls": 19,
+        "totalMs": 24.43531200000689
+      },
+      "digest:visual-documents": {
+        "calls": 1,
+        "totalMs": 11.967262000000119
+      },
+      "bytes:visual-history": {
+        "calls": 12,
+        "totalMs": 29.941384999998263
+      },
+      "json:visual-history": {
+        "calls": 6,
+        "totalMs": 27.98711000000003
+      },
+      "info:visual-history": {
+        "calls": 50,
+        "totalMs": 8.4217800000024
+      },
+      "digest:visual-history": {
+        "calls": 6,
+        "totalMs": 4.775733000004038
+      }
+    },
+    "peakSampledHeapUsed": 273415688,
+    "gcEvents": 476,
+    "gcMs": 512.690905998461,
+    "artifacts": [
+      {
+        "path": "isolated-baseline-profile.cpuprofile.gz",
+        "rawSha256": "b032ec6e11252bfa208a7dd352340d7775bfae6f563a75eb7e5032875037637e",
+        "storedSha256": "5ba8bf278d1953258cd394c29b7c16b077b97b53621423f2df5a6fa35ec3bf00"
+      },
+      {
+        "path": "isolated-baseline-profile.heapprofile.gz",
+        "rawSha256": "59499b5661ae61b385d5b9e822a47ff305c90a0f905eedb41daf8a7c13b60c0b",
+        "storedSha256": "0e00bd2ace9cb0d84ed0e4a48c4c92eeda58fa01faa9e20bdb0189f576c968b3"
+      }
+    ],
+    "limitations": "Inspector sampling includes collected objects and has overhead; allocation estimates are cumulative, not live heap. I/O wrappers overlap. Earlier baseline-counted warm artifact precedes a cold-start timeout; use the isolated pair for comparisons."
+  },
+  {
+    "name": "isolated-candidate-profile",
+    "estimatedSampledAllocationBytes": 1518371256,
+    "topAllocationSites": [
+      {
+        "frame": "join @ :0",
+        "bytes": 404684312
+      },
+      {
+        "frame": "encode @ file:///workspace/Estampes/src/documents/validation.js:94",
+        "bytes": 319719304
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "bytes": 193156336
+      },
+      {
+        "frame": " @ file:///workspace/Estampes/src/documents/validation.js:80",
+        "bytes": 167772480
+      },
+      {
+        "frame": " @ file:///workspace/Estampes/src/documents/validation.js:97",
+        "bytes": 86116344
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "bytes": 67212312
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "bytes": 50434504
+      },
+      {
+        "frame": "structuredClone @ node:internal/worker/js_transferable:112",
+        "bytes": 50364560
+      },
+      {
+        "frame": "createFromString @ node:buffer:478",
+        "bytes": 41947408
+      },
+      {
+        "frame": "write @ node:string_decoder:94",
+        "bytes": 34437480
+      },
+      {
+        "frame": "visit @ file:///workspace/Estampes/src/documents/validation.js:43",
+        "bytes": 8582632
+      },
+      {
+        "frame": "toString @ node:buffer:839",
+        "bytes": 8555568
+      }
+    ],
+    "cpuTopSelfMs": [
+      {
+        "frame": "visit @ file:///workspace/Estampes/src/documents/validation.js:43",
+        "ms": 7139.922
+      },
+      {
+        "frame": "addString @ file:///workspace/Estampes/src/documents/validation.js:30",
+        "ms": 1782.704
+      },
+      {
+        "frame": "encode @ file:///workspace/Estampes/src/documents/validation.js:94",
+        "ms": 1515.91
+      },
+      {
+        "frame": "assertJson @ file:///workspace/Estampes/src/documents/validation.js:23",
+        "ms": 1301.131
+      },
+      {
+        "frame": "(idle) @ :0",
+        "ms": 831.863
+      },
+      {
+        "frame": "(garbage collector) @ :0",
+        "ms": 184.978
+      },
+      {
+        "frame": "update @ :0",
+        "ms": 163.869
+      },
+      {
+        "frame": " @ file:///workspace/Estampes/src/documents/validation.js:80",
+        "ms": 147.732
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "ms": 132.232
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "ms": 103.219
+      },
+      {
+        "frame": "lstat @ :0",
+        "ms": 39.351
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "ms": 36.994
+      }
+    ],
+    "encodingCounts": {
+      "canonical": 1779,
+      "hash": 865
+    },
+    "resource": {
+      "userCPUTime": 12790804,
+      "systemCPUTime": 1269165,
+      "maxRSS": 486364,
+      "sharedMemorySize": 0,
+      "unsharedDataSize": 0,
+      "unsharedStackSize": 0,
+      "minorPageFault": 422317,
+      "majorPageFault": 0,
+      "swappedOut": 0,
+      "fsRead": 0,
+      "fsWrite": 0,
+      "ipcSent": 0,
+      "ipcReceived": 0,
+      "signalsCount": 0,
+      "voluntaryContextSwitches": 38140,
+      "involuntaryContextSwitches": 13406
+    },
+    "cpu": {
+      "user": 12790771,
+      "system": 1269162
+    },
+    "io": {
+      "info:visual-registry": {
+        "calls": 1042,
+        "totalMs": 125.09619900001309
+      },
+      "bytes:visual-registry": {
+        "calls": 225,
+        "totalMs": 139.64429700000676
+      },
+      "json:visual-registry": {
+        "calls": 217,
+        "totalMs": 149.05347200000864
+      },
+      "digest:visual-registry": {
+        "calls": 81,
+        "totalMs": 65.38961800000197
+      },
+      "info:visual-documents": {
+        "calls": 23,
+        "totalMs": 28.806042000003345
+      },
+      "bytes:visual-documents": {
+        "calls": 1,
+        "totalMs": 3.1194040000000314
+      },
+      "json:visual-documents": {
+        "calls": 1,
+        "totalMs": 142.413188
+      },
+      "digest:visual-documents": {
+        "calls": 1,
+        "totalMs": 6.80560400000013
+      },
+      "info:visual-history": {
+        "calls": 78,
+        "totalMs": 8.158080999998674
+      },
+      "bytes:visual-history": {
+        "calls": 6,
+        "totalMs": 3.4871389999989333
+      },
+      "json:visual-history": {
+        "calls": 3,
+        "totalMs": 2.052915999999641
+      },
+      "digest:visual-history": {
+        "calls": 6,
+        "totalMs": 3.436867000003076
+      }
+    },
+    "peakSampledHeapUsed": 307537960,
+    "gcEvents": 188,
+    "gcMs": 167.459652999416,
+    "artifacts": [
+      {
+        "path": "isolated-candidate-profile.cpuprofile.gz",
+        "rawSha256": "d158e2683071e5ee4eb2d70f581eb6af367a11c1b3bdf19fd2a22811fe70f8cb",
+        "storedSha256": "1d1df44eff0ce4d547625e864f2c359ae5b4bd941ef053b0eefbd278fc77a589"
+      },
+      {
+        "path": "isolated-candidate-profile.heapprofile.gz",
+        "rawSha256": "da95b4025d61f74cc48506881b8bbdf772c646ad3bd95cec5596266bab14c8c6",
+        "storedSha256": "c0bc997906376f9a9f22c33d68897cf35ec57ffadd081611abc5fef358aaaefb"
+      }
+    ],
+    "limitations": "Inspector sampling includes collected objects and has overhead; allocation estimates are cumulative, not live heap. I/O wrappers overlap. Earlier baseline-counted warm artifact precedes a cold-start timeout; use the isolated pair for comparisons."
+  }
+]

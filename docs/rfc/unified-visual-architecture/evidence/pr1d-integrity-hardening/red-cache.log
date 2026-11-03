@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: verification read race must reject before acknowledging a commit
+not ok 1 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 858.027998
+  type: 'test'
+  location: '/tmp/estampes-hardening-baseline/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-ack-race.mjs:10:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'RECOVERY_REQUIRED'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'RECOVERY_REQUIRED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-hardening-baseline/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/cache-ack-race.mjs:35:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"ack":{"schema":"estampes.commit-ack/1","commitId":"tx:68d703a8-54cb-4741-9083-d25f82d275f6","resultId":"event:739cc76f-900d-4424-b0e6-8890b8b5901a","durability":"process-crash-test","noChange":false,"revisionVector":[{"storeInstanceId":"af1d5958-2d11-48fc-b71d-3c3af6d7e1fd","entityId":"doc:00000002-0000-4000-8000-000000000001","revision":1,"contentHash":"f26f40f26d0353e61fde4cd4dcc7d3c73125da4da1995410226016b69d5e95af"}]},"before":{"checksum":"f9fd2e46b3c5fe05f1f946bebbb09b80707ef5331e71ff6f2ffb2633647a7804","commitId":"tx:e6002786-db93-4f84-b325-c56d736049b4","generation":3,"rootHash":"f437ed65943ba29b3a227bc4d8a11c1361d980b76ae033412d2c67672b00aa33"},"after":{"checksum":"a299d370616017eda8849c0933392cfc3191ced0db5e004cbba4cd31e27c95fc","commitId":"tx:68d703a8-54cb-4741-9083-d25f82d275f6","generation":4,"rootHash":"4c9c7f589e90dfa3ad2b67d0cc59dbf1333ffa0ed1e70956d9316605329cb506"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 989.908627

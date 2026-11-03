@@ -1,0 +1,54 @@
+{
+  "baseline": "a33fe411aac7fe763a9adf5b8d71bf4f77e5f3b0",
+  "implementationHead": "c09d9e70189401eb2e4e16dc49affaf3908d386c",
+  "baselineFiles": 697,
+  "preservedFiles": 688,
+  "authorizedModifications": [
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/check-consistency.mjs",
+      "baselineSha256": "5df3de41d029258253a209d0ef4dd56b8dabc22a5c208710ba23904fa7d0d711",
+      "currentSha256": "81ce498797e98a6a7c73c2e7e5b07cd2ad2b167af3a13079e71c113fd289f11c"
+    },
+    {
+      "path": "src/persistence/archive.js",
+      "baselineSha256": "2aa39a9d3fbde387b9264eab3a02654386ba954eafc6f687fc3e9d0d1d3f1baf",
+      "currentSha256": "e342fb129ab00a7dd20ebbc579bca2adab961d3dbc8192baff7fd26639bbc429"
+    },
+    {
+      "path": "src/persistence/coordinator.js",
+      "baselineSha256": "df0fac2b41f164a08a6011090c265f9f58e70030e6dd02e7ee85ee50a2f194c7",
+      "currentSha256": "075245e553b26e192038b2e8916cea541bd4f2a56b63da1c26c83b69719e6d95"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "baselineSha256": "57d97a09411f93f9b8b9ddd2458b1939d0579c2117ef7c5b0fc9f92e243b6296",
+      "currentSha256": "663bbc50b53a5dd736cc7b849573b3caf82a51d3f1d19f2f1c95b2ce5a4009c1"
+    },
+    {
+      "path": "src/persistence/gc.js",
+      "baselineSha256": "8ccd38ae2bfdb45b756f2caf49aae4b9428b885fbcfb4d7573a19de84a318ba2",
+      "currentSha256": "bed0e16b63c86c4eb8d9bb665075d9cdcf7b574e81818bf5e03c6d5285fde464"
+    },
+    {
+      "path": "src/persistence/lifecycle.js",
+      "baselineSha256": "465354ecf094f48fa400cad7c1be741865ba793ab1119a067dd918fbedfd0e6d",
+      "currentSha256": "623494b3feaece422f48d8898059081ab28940af29cf40a122055a38e42202f3"
+    },
+    {
+      "path": "src/persistence/pages.js",
+      "baselineSha256": "2ffa1f8ee3d723507403dd70a2be60fda2c8a19918c19dbc1a9754155f331176",
+      "currentSha256": "289359bcbdf263713e7bf56657b877265bc255a192926f0276721cc4312dab46"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "baselineSha256": "f973dafb7f7f71863ee488a4ba5dc988b989000934efb47ab1f88c0f4f848c4f",
+      "currentSha256": "867c852ab539b6fe0f0f11c2fa29a5bee3da3abe07ba120def167a29b8980602"
+    },
+    {
+      "path": "src/persistence/temporary-attribution.js",
+      "baselineSha256": "1f5145bcf55f0f71fe8ce2aa8d7ff8e1c4a601010af24f08a28363e01f11ce5c",
+      "currentSha256": "ca633309f25c1d4ef0e4758d2889062117517579ab37a4e52c080ae69b03c2a1"
+    }
+  ],
+  "oldTestsAndHistoricalReportsUnchanged": true
+}

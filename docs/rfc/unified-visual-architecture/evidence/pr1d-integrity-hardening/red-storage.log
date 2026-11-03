@@ -1,0 +1,62 @@
+TAP version 13
+# Subtest: H-01 / forged publication fails closed for a superseded CURRENT
+not ok 1 - H-01 / forged publication fails closed for a superseded CURRENT
+  ---
+  duration_ms: 833.695969
+  type: 'test'
+  location: '/tmp/estampes-hardening-baseline/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:105:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'ready'
+    - 'read-only-recovery'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'read-only-recovery'
+  actual: 'ready'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-hardening-baseline/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:132:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"state":"ready","problem":null,"recovery":[{"commitId":"tx:251bbd0f-9679-4e5c-aa26-abb947b22ef0","outcome":"committed"},{"commitId":"tx:a6c86445-4a7d-4b8e-801e-46bd981cb994","outcome":"committed"},{"commitId":"tx:b22e95e5-c858-4b77-b6b3-79ece89e482a","outcome":"committed"},{"claimId":"581121a8-8c49-4465-a781-0cfe16aad70a","owner":"tx:b22e95e5-c858-4b77-b6b3-79ece89e482a","outcome":"completed","temporary":false,"final":false}]}
+# Subtest: H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+not ok 2 - H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 1187.147175
+  type: 'test'
+  location: '/tmp/estampes-hardening-baseline/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:216:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'RECOVERY_REQUIRED'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'RECOVERY_REQUIRED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/estampes-hardening-baseline/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round2/storage-faults.mjs:235:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"result":{"id":"25d5edff-6e0b-421f-a602-b6e664967b85","state":"complete","progressed":4,"moved":4,"deleted":4},"gcState":{"deleted":[0,1,2,3],"moved":[0,1,2,3],"planHash":"b74282949e07f303b8fd1afcd5e639d3bfeb9c4c0b42d7fc6d204f18e69b37da","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"complete"},"writerState":"ready"}
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2146.582988
