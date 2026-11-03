@@ -28,11 +28,20 @@ export async function readGcPlan(files,record){
 async function verifyGcLocations(files,plan,record){
  for(const [i,c]of plan.candidates.entries()){
   const source=await files.exists(c.path),quarantine=await files.exists(c.quarantine);
-  integrity(!(source&&quarantine),"GC candidate exists in two physical locations");
-  if(record.deleted.includes(i)){integrity(!source&&!quarantine,"Terminal GC candidate reappeared");continue;}
+  if(record.deleted.includes(i)){
+   integrity(!quarantine,"Terminal GC quarantine candidate reappeared");
+   // A later transaction may legitimately recreate the content-addressed
+   // source path. This terminal plan has no deletion authority over it.
+   if(source){const digest=await files.digest(c.path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Reused terminal GC source differs from its content identity");}
+   continue;
+  }
   if(!source&&!quarantine){integrity(record.moved.includes(i)&&(record.unlinking??[]).includes(i),"GC candidate missing without prior durable unlink intent");continue;}
-  const digest=await files.digest(quarantine?c.quarantine:c.path);
-  integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC candidate physical identity changed");
+  // A later content transaction can recreate its immutable source while the
+  // earlier copy is still quarantined. Verify both, retain the new source,
+  // and let the live-root re-mark postpone deletion of the old copy.
+  for(const path of [...(source?[c.path]:[]),...(quarantine?[c.quarantine]:[])]){
+   const digest=await files.digest(path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC candidate physical identity changed");
+  }
  }
 }
 async function rootMetadata(files,envelope,paths){

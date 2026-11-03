@@ -268,3 +268,20 @@ for(const location of ['source before quarantine','quarantine before intent'])te
   assert.deepEqual(await readFile(files.path(current)),before);
   assert.equal((await f.store.diagnostics()).state,'read-only-recovery');
 });
+
+for(const phase of ['quarantined','terminal'])test('H-02 / a later legitimate commit can reuse a content-addressed path / '+phase,async t=>{
+  const f=await lifecycleFixture(t),d=document(),cmd=command([d]);
+  await f.store.injectFault({point:'after-staged-writes',mode:'throw',code:'ENOSPC'});
+  await assert.rejects(f.store.commit(cmd,actor(),await epoch(f.store)),e=>e.code==='STORAGE_UNAVAILABLE');
+  await f.reopen();ready(f);
+  const job=await f.store.maintenance('gcPlan',{classes:['G2']});assert.equal(job.planned,true);
+  assert.equal((await f.store.maintenance('gcStep',{id:job.id})).state,'waiting-grace');
+  if(phase==='terminal'){await f.store.maintenance('clock',{nowMs:TIME+DAY});
+    assert.equal((await f.store.maintenance('gcStep',{id:job.id})).state,'complete');}
+  const ack=await f.store.commit(cmd,actor(2),await epoch(f.store));assert.equal(ack.replayed,false);
+  await f.reopen({testClockMs:TIME+DAY});ready(f);
+  assert.deepEqual((await f.store.snapshot()).documents,[d]);
+  assert.deepEqual((await f.store.commit(cmd,actor(3),await epoch(f.store))).ack,ack.ack);
+  assert.equal((await f.store.diagnostics()).contentCommits,1);
+  assert.equal((await f.store.maintenance('gcStep',{id:job.id})).state,phase==='terminal'?'complete':'waiting-grace');
+});
