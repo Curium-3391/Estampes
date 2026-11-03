@@ -2,7 +2,7 @@
 
 python3 <this file> /home/estampes/<new-0700-scratch> all
 Use "original" or "instrumented" to run the corresponding phase separately.
-Run in a fresh diagnostic checkout to keep existing evidence immutable.
+New logs go to <scratch>/evidence. Checked-in evidence remains immutable.
 """
 import hashlib
 import json
@@ -33,8 +33,9 @@ def digest(path):
 
 
 def run(scratch, native, name, mode=None):
-    log = EVIDENCE / (name + ".log")
-    trace = EVIDENCE / (name + ".jsonl")
+    evidence = scratch / "evidence"
+    log = evidence / (name + ".log")
+    trace = evidence / (name + ".jsonl")
     assert not log.exists() and not trace.exists(), f"Refusing to overwrite {name}"
     env = {key: value for key, value in os.environ.items()
            if not key.startswith(("ESTAMPES_", "PR1D_")) and key != "NODE_OPTIONS"}
@@ -73,7 +74,7 @@ def run(scratch, native, name, mode=None):
                   log=log.name, sha256=digest(log))
     if trace.exists():
         record.update(trace=trace.name, traceSha256=digest(trace))
-    with (EVIDENCE / "runs.jsonl").open("a") as output:
+    with (evidence / "runs.jsonl").open("a") as output:
         output.write(json.dumps(record) + "\n")
     print(json.dumps(record), flush=True)
     if code in (124, -signal.SIGXFSZ) or (
@@ -93,6 +94,7 @@ def main():
     assert shutil.disk_usage(scratch).free >= 1024 ** 3
     assert NODE.is_file()
     resource.setrlimit(resource.RLIMIT_FSIZE, (LIMIT, LIMIT))
+    (scratch / "evidence").mkdir(mode=0o700)
     native = scratch / "native"
     subprocess.run([sys.executable, HISTORICAL / "prepare-native.py", Path.cwd(), native], check=True)
     codes = []

@@ -1,0 +1,52 @@
+Baseline and original replay
+2765ec10c5524f28e594b8456d2341b47fd6d44c
+6098e0422deadbaf2a08c7b6bc6af98777fc604b
+2765ec10c5524f28e594b8456d2341b47fd6d44c
+756ea491e27bce3a2998dc61ba1e3ee34525919c
+## codex/pr1d-g2-diagnostic-adjudication
+uid=1001(estampes) gid=1001(estampes) groups=1001(estampes),27(sudo),100(users)
+6.6.87.2-microsoft-standard-WSL2
+PRETTY_NAME="Ubuntu 24.04.1 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.1 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+TARGET SOURCE   FSTYPE MAJ:MIN OPTIONS
+/      /dev/sdd ext4     8:48  rw,relatime,discard,errors=remount-ro,data=ordered
+TARGET SOURCE   FSTYPE MAJ:MIN OPTIONS
+/      /dev/sdd ext4     8:48  rw,relatime,discard,errors=remount-ro,data=ordered
+NAME MAJ:MIN FSTYPE UUID                                 MOUNTPOINTS
+sda    8:0   ext4
+sdb    8:16  ext4
+sdc    8:32  swap   f8096ecc-081b-439a-bd7b-7f38c18702f9 [SWAP]
+sdd    8:48  ext4   45502865-6e33-40d2-b828-35dbab24a7c7 /mnt/wslg/distro
+                                                         /
+mode=755 uid=1001 gid=1001 device=2096 /home/estampes/projects/Estampes
+mode=700 uid=1001 gid=1001 device=2096 /home/estampes/estampes-pr1d-g2.FDDopsPa
+ext2/ext3 ef53 /home/estampes/projects/Estampes
+ext2/ext3 ef53 /home/estampes/estampes-pr1d-g2.FDDopsPa
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdd       1007G  3.4G  953G   1% /
+v22.23.4
+flock from util-linux 2.39.3
+
+Instrumented scratch and kernel mount identity
+mode=700 uid=1001 gid=1001 device=2096 /home/estampes/estampes-pr1d-g2.vFxlbfSz
+TARGET SOURCE   FSTYPE MAJ:MIN OPTIONS
+/      /dev/sdd ext4     8:48  rw,relatime,discard,errors=remount-ro,data=ordered
+80 65 8:48 / / rw,relatime - ext4 /dev/sdd rw,discard,errors=remount-ro,data=ordered
+All seven per-run Store temp roots empty after fixture cleanup.
+
+Production src and tests Git trees at production baseline and acceptance HEAD
+040000 tree 4c1b3e88c479f8ffd9fd1320f32442d2f96d4590	src
+040000 tree 06c2cc113c9f612c86eb92396db9e73b0541cf2d	tests
+040000 tree 4c1b3e88c479f8ffd9fd1320f32442d2f96d4590	src
+040000 tree 06c2cc113c9f612c86eb92396db9e73b0541cf2d	tests

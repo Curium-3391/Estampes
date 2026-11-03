@@ -1,0 +1,1673 @@
+{
+  "schema": "estampes.pr1d-g2-adjudication-evidence/1",
+  "sourceCommit": "2765ec10c5524f28e594b8456d2341b47fd6d44c",
+  "sourceTree": "6098e0422deadbaf2a08c7b6bc6af98777fc604b",
+  "implementationCommit": "29d097833688ddb649a88cb2a09f22ba5fadda8e",
+  "implementationTree": "756ea491e27bce3a2998dc61ba1e3ee34525919c",
+  "executedDiagnosticHarnessCommit": "047b3b882d2c605a09efd945cc58368c5b53e058",
+  "originalTestSha256": "3c697a80afc8b3239ac46412ef22b98bfb4ff12f195b4b9e0b03eee35212a68f",
+  "priorEvidence": {
+    "native-persistence.log": "0e99d8c918dffd7f8f53c58f750a433484a8b92f5fe1e2e80f6d600ca8aaeb0d",
+    "native-persistence.log.gz": "2f749ab7cb1e3b68cc31bd6eb8b928b00c028238c90e248e92ee3565b81be19d",
+    "native-harness.json": "87bf3c3badea46e1160147d00a55911b7e4987425cc58fa6433849d965408f16",
+    "g2-diagnostic.log": "e75bc94ac4c397a70b46860b583a899e21046ac0269b18496f92ffb3d626829c",
+    "g2-original-retest.log": "24329d2f2b3e532fcf4ff55a4527e832d0bf5c2d5cd5e8ac0abcfcc1c74965d8",
+    "runs.jsonl": "6de98b6cab59b0aa8a0bc9d2141d78244b2d803c712e4a6848284c70f631c7ab",
+    "manifest.json": "747f6b62e1be8ecb32e8b99aa6290713296069cbee8f7c8913be4e9c90562f4c"
+  },
+  "verdict": "C — UNRESOLVED INTERMITTENT",
+  "instrumentedRuns": [
+    {
+      "name": "strict-1",
+      "planId": "3cdfb7e2-d3b1-402f-a004-567c398595af",
+      "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+      "recoveryInterruptions": 4,
+      "publications": [
+        {
+          "name": "gc-plan",
+          "envelope": {
+            "generation": 9,
+            "rootHash": "2dae839d752bcb36d11baa85e24844abb36cedf5f514642dac9702621efc4c7e",
+            "commitId": "tx:9d313bd2-09be-490e-9889-27a75203a73b",
+            "checksum": "8500cc7879ce2e01b274b7628e519e89376d36c016fd7893dabe1061d603818c"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [],
+            "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+            "quarantinedAtMs": null,
+            "schema": "estampes.gc-state/1",
+            "state": "planned"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 10,
+            "rootHash": "84be7b3adf7b5576176891e3a8e542e234077700dbb2a2672584885cfdecba07",
+            "commitId": "tx:049f2e5e-f025-4f23-aea6-0754341ca116",
+            "checksum": "3a6645717da7b534ecabf6fc2e2ee731492f4c310d55cf41aa481214e25069ec"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 11,
+            "rootHash": "a0a4dd5a075dd952c1ca5de9950530455d4263d17d2a8e74b7ff7111190f0240",
+            "commitId": "tx:00b9d4dd-1555-4e8f-905c-2df4e8c31acc",
+            "checksum": "16a8b99ff869854560168ae3e7df20249ad375f0049a5792688a36df7690f1a0"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "waiting-grace"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 13,
+            "rootHash": "a3568209ec13816e90ac15ab03e8f6a4b7f0f2c3adce416a43aee53b25f4567e",
+            "commitId": "tx:dc00388f-739c-4abe-af6f-1665b56cadc1",
+            "checksum": "7e6c725cd1b1bf55658f6c5119f50a6f1e12db76ab601982d2b97f1d26482bb9"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-intent",
+          "envelope": {
+            "generation": 14,
+            "rootHash": "9518e7b0d7ed002cdbf6b83bd5b6dce07bf06c7c9cd123a0f2825bd1fd58f418",
+            "commitId": "tx:86fd032d-1bfb-4255-b512-d5a78e3b8a22",
+            "checksum": "5451c9558c9216f1dde2dd86ed9c398d30c1454736f132750d63fcb201461a97"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "unlinking",
+            "unlinking": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 15,
+            "rootHash": "dc66f2827d086e0d70da19c6b6d294e994232658abe17be69bb4613b879f42fd",
+            "commitId": "tx:8453c8e6-7cad-4f18-86e6-269d64a5db0c",
+            "checksum": "ef54f76f12829cf1ea6dc03dffea036456cfd938756bb9fd8b226ea75551f204"
+          },
+          "progress": {
+            "deleted": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "949244537c9298d79ab4581a845259572ab4f4cdcf200d221e582c3a9a2e1d1c",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "complete"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        }
+      ],
+      "gcResults": [
+        {
+          "planned": true,
+          "id": "3cdfb7e2-d3b1-402f-a004-567c398595af",
+          "candidates": 12
+        },
+        {
+          "id": "3cdfb7e2-d3b1-402f-a004-567c398595af",
+          "state": "waiting-grace",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 0
+        },
+        {
+          "id": "3cdfb7e2-d3b1-402f-a004-567c398595af",
+          "state": "complete",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 12
+        }
+      ],
+      "afterColdRestart": {
+        "generation": 16,
+        "rootHash": "13ddcb74054e6b70cf7fda19cf64d0bdf25cd46c26fdafc5dbed906440ca0b02",
+        "commitId": "tx:5ee91ca3-697a-481d-a682-54aaf496636c",
+        "checksum": "d7be0a5ccafc2ca25a4b371e0e37cd684d547ba7d1fb52915f886709b0f9983f"
+      },
+      "maxObservedStoreFiles": 191,
+      "maxObservedStoreAllocatedBytes": 925696
+    },
+    {
+      "name": "strict-2",
+      "planId": "b4555840-483d-4929-a572-f36188282705",
+      "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+      "recoveryInterruptions": 4,
+      "publications": [
+        {
+          "name": "gc-plan",
+          "envelope": {
+            "generation": 9,
+            "rootHash": "6ff5365e2b177c5c99cf8e3b12c04c922dc4ce8fc841f253535d9542aa7fcbcf",
+            "commitId": "tx:ab7a3873-c9f9-45e6-9871-65975c69e7b2",
+            "checksum": "ed374d71884760a6964757352ef6b95df32f6c15cbbf0044d6fdb7259086c190"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [],
+            "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+            "quarantinedAtMs": null,
+            "schema": "estampes.gc-state/1",
+            "state": "planned"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 10,
+            "rootHash": "de6dbf48c601188117aeba6915f0e077064f58ed9e16f9b5fc937ad42b7cc57e",
+            "commitId": "tx:f19a8c4f-d934-48cc-8528-f46444136421",
+            "checksum": "8493564edd637e55e1e228283f696d789d8ff38a78f63dbde9abf4d04cdaf429"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 11,
+            "rootHash": "35e7b96087f2a9e0ccda7f5ae14095b46bc31aec276d02e4516bd75a9a461167",
+            "commitId": "tx:f7c84411-32c1-4afb-875f-38ebc88b7e75",
+            "checksum": "e194eba8576eb75789c2ece82e3fd35158456452972686a71409d331c27accef"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "waiting-grace"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 13,
+            "rootHash": "f2dfb621a7b8924429df124df53c2a54d70bf0437a36e9c1ee3988aa8e4fb9f5",
+            "commitId": "tx:a2546155-74d1-44df-83b3-d36800398968",
+            "checksum": "ed2600e010b111419124ea3653ab2bfd6cf181870ea7aa7872380c4c29685307"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-intent",
+          "envelope": {
+            "generation": 14,
+            "rootHash": "655f99b85c1ef4223c218785fdcafab27462c84cb88341187b89277c858d80bc",
+            "commitId": "tx:f05c9932-4c4a-4ce8-bb54-b317f06a60ad",
+            "checksum": "0b15a0f57668d4a3ba1e68feebce79d50a932fabd679c17ac112c6703ba819b4"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "unlinking",
+            "unlinking": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 15,
+            "rootHash": "9605ed9346eb2da74201d2afafae8fa7ed3984d4f0ef111cf5272b39b220ea18",
+            "commitId": "tx:9d7e6e16-e364-4baf-ba25-e26e2ef89993",
+            "checksum": "d7e4ef2d442e776981e7f0698ea331c0fe89dd34687b03aaead8d7fb091ea1cf"
+          },
+          "progress": {
+            "deleted": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "09bcf76b691fd642ccc754fe2b11b435ba102ce1f91a9ccad77f870e3244e3c7",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "complete"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        }
+      ],
+      "gcResults": [
+        {
+          "planned": true,
+          "id": "b4555840-483d-4929-a572-f36188282705",
+          "candidates": 12
+        },
+        {
+          "id": "b4555840-483d-4929-a572-f36188282705",
+          "state": "waiting-grace",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 0
+        },
+        {
+          "id": "b4555840-483d-4929-a572-f36188282705",
+          "state": "complete",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 12
+        }
+      ],
+      "afterColdRestart": {
+        "generation": 16,
+        "rootHash": "f2dd71193e56c38683958c0a6d6c9550db41f6d70a4d9602a5a307286d48d31d",
+        "commitId": "tx:6a426210-7552-40fd-8072-b16e8e23d4f8",
+        "checksum": "2a8bc510467ff0e7b4bcc130ddf6875662cb791a0fdfa97bd2a3abaa8cf90660"
+      },
+      "maxObservedStoreFiles": 191,
+      "maxObservedStoreAllocatedBytes": 925696
+    },
+    {
+      "name": "strict-3",
+      "planId": "53b9faa4-0b42-426a-8517-568290a390f3",
+      "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+      "recoveryInterruptions": 4,
+      "publications": [
+        {
+          "name": "gc-plan",
+          "envelope": {
+            "generation": 9,
+            "rootHash": "1a20c7c139016823e6d8fe16dcbf24cdb06405cf9916a8ccac4d32d9cfab1aa4",
+            "commitId": "tx:0e857f80-acab-4c1b-923e-73dc6ebcfa74",
+            "checksum": "e568b5775b8f226fd8b71cfee04915da17a9f1f2b821f589c6ad396f1ee98995"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [],
+            "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+            "quarantinedAtMs": null,
+            "schema": "estampes.gc-state/1",
+            "state": "planned"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 10,
+            "rootHash": "fc3562772e4cb88a9bda6733b0f2c09743a84e22dd00c047bf23c88ed45f200f",
+            "commitId": "tx:b216160c-ae98-4e56-91cb-f07497e1128b",
+            "checksum": "f118b524d476489fec74cd10acdf78ac2c53df124c5a38a1469b25d11e86f557"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 11,
+            "rootHash": "64e90376bdc3466d34a2cf7f59160ac55dca2fb0945e1861b91e419780bfeee5",
+            "commitId": "tx:3651ea6a-1149-47a9-ae4a-8dd56b290617",
+            "checksum": "8158dc8e575674a4310b3b71b41be0b4fb19e794a542dc2017a7754028958344"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "waiting-grace"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 13,
+            "rootHash": "aa09cace29ac36f58c07faa2d97bd6ca80a6565dded885385ee3c0b129bc55b6",
+            "commitId": "tx:b77104fe-b2e5-4246-8d97-c5cb277e7523",
+            "checksum": "6f736d26da7ca30f820ad05e497e811101c7e739687040314da17f9eb2c127c5"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-intent",
+          "envelope": {
+            "generation": 14,
+            "rootHash": "9cdded24dcfc322692b55e1a2b5a81da4b156a6cead1184f3899fcf30d695ddf",
+            "commitId": "tx:913814ff-c20f-46fb-87eb-ae15cdece3a0",
+            "checksum": "cb3842bb19ed197773d350371cb1ef9e7f679e6c89fba59f5a7684878398038c"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "unlinking",
+            "unlinking": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 15,
+            "rootHash": "9a66dc1b967ddbdd8672f1ae2091830800d8c1439c2f0b50a6a1f59d6d7eae82",
+            "commitId": "tx:e39b1aea-f1ba-4cf9-b8aa-036e77cf6fdc",
+            "checksum": "5b581c5e5e6cd56167aa65375feb743ffec5b8a1ee40e5fd5caa57c96bb5a2ce"
+          },
+          "progress": {
+            "deleted": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1ab96f66c785ab344dd8645037175083e910986f380ba6076ee8452b83fb5be0",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "complete"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        }
+      ],
+      "gcResults": [
+        {
+          "planned": true,
+          "id": "53b9faa4-0b42-426a-8517-568290a390f3",
+          "candidates": 12
+        },
+        {
+          "id": "53b9faa4-0b42-426a-8517-568290a390f3",
+          "state": "waiting-grace",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 0
+        },
+        {
+          "id": "53b9faa4-0b42-426a-8517-568290a390f3",
+          "state": "complete",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 12
+        }
+      ],
+      "afterColdRestart": {
+        "generation": 16,
+        "rootHash": "447567da294cc4ee41a1fbca50de8b3c1941d286cbddfa5f757f31e742ed7eb1",
+        "commitId": "tx:be0c14c6-0172-4e59-ae19-fef56fbfd0d6",
+        "checksum": "02175e1646c7977dea766d77dc78b676dc74f1481e4a693e4f82193f5747cef8"
+      },
+      "maxObservedStoreFiles": 191,
+      "maxObservedStoreAllocatedBytes": 925696
+    },
+    {
+      "name": "strict-4",
+      "planId": "fac953df-fc07-427d-a344-767c5a40e914",
+      "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+      "recoveryInterruptions": 4,
+      "publications": [
+        {
+          "name": "gc-plan",
+          "envelope": {
+            "generation": 9,
+            "rootHash": "4cb699a726131e4be7ae05f991cb62a19ae5f3bc6442e491457fd8f890391415",
+            "commitId": "tx:f92c9cc9-5698-4cd4-af71-cb66a52f2697",
+            "checksum": "5c1e67873c520d54f6da15f092f44f145a63c8c5ac765ee653c54e7033028214"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [],
+            "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+            "quarantinedAtMs": null,
+            "schema": "estampes.gc-state/1",
+            "state": "planned"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 10,
+            "rootHash": "12231d289f422bdda14fb871bfe309ec95256cfcb4657aaaaff6c22866800353",
+            "commitId": "tx:8b488e40-15ad-4809-88fe-251d158474da",
+            "checksum": "9363f3ad945611b2925ec3a87aae1c2c340d8a74eee7b58cb876c89b72b87893"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 11,
+            "rootHash": "05ae5224972c481de83c1d6340f541a02f4d54d1ecaa558c7b974b225fbfaec7",
+            "commitId": "tx:d15e59cc-f62a-46c5-9e2c-566bf37bad93",
+            "checksum": "035cfd6fb2b611fa068f14db94d0c01b0781efd8cb0014d36ea67534ef6b7f54"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "waiting-grace"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 13,
+            "rootHash": "ed71d8bb273bc52fe71795443b772c334c2087a65b49256190efd6a446b23c16",
+            "commitId": "tx:47cb2238-8b2d-46c4-900c-a5320733737b",
+            "checksum": "7a68762c17b1877d6d1f58a1013f24a9fa50b0873a5906d93da2df0223b9f168"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-intent",
+          "envelope": {
+            "generation": 14,
+            "rootHash": "d8e7798815aae34d3140e87982fafe8670823a07b8763369b96da938cbb0b45f",
+            "commitId": "tx:72cb0185-d73a-42de-9ddf-f101ee920d40",
+            "checksum": "d660d00f0ffbfac439931940da1767f59ff3c5f8434eeb1a1a22fadf9e2c1748"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "unlinking",
+            "unlinking": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 15,
+            "rootHash": "8e7a8b34a74c3d20af6b91be2d86e7b16db30f375b9151df755a996f8dea48a2",
+            "commitId": "tx:d4e1296e-ae48-413e-9f31-65cfc748e1a2",
+            "checksum": "4109f5f9be385f531b1c29544f437a8b17ba032c22a5341471cbae263c3effaf"
+          },
+          "progress": {
+            "deleted": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "1c53579457c40dddf3bcbc283c08eece1628a659e42477f1a991f9cc71edfc9e",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "complete"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        }
+      ],
+      "gcResults": [
+        {
+          "planned": true,
+          "id": "fac953df-fc07-427d-a344-767c5a40e914",
+          "candidates": 12
+        },
+        {
+          "id": "fac953df-fc07-427d-a344-767c5a40e914",
+          "state": "waiting-grace",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 0
+        },
+        {
+          "id": "fac953df-fc07-427d-a344-767c5a40e914",
+          "state": "complete",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 12
+        }
+      ],
+      "afterColdRestart": {
+        "generation": 16,
+        "rootHash": "5bf02ca336148561f2b43874771fc9d2382422327f931ee330c46229c626d0e8",
+        "commitId": "tx:644809f3-fc7a-4429-bc85-a04a9871bf15",
+        "checksum": "b28ab1c0b518cf2922281e84f11d9713af00cdce3bf6482cde51e69d21e57cc9"
+      },
+      "maxObservedStoreFiles": 192,
+      "maxObservedStoreAllocatedBytes": 929792
+    },
+    {
+      "name": "control-uninterrupted",
+      "planId": "2973f1e6-36e8-40af-ac52-017ad84049d8",
+      "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+      "recoveryInterruptions": 0,
+      "publications": [
+        {
+          "name": "gc-plan",
+          "envelope": {
+            "generation": 5,
+            "rootHash": "d0001ca5f3baf8746fea1fd7262ab5090559bc27c5ff5e0de78b7d101160252f",
+            "commitId": "tx:e1ae9475-0780-47ae-a858-9b1142ce5ec8",
+            "checksum": "7f67c987f1968603a6fd19efd4fcfa879a895e7b12ebefc472a18d3bce98ba74"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [],
+            "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+            "quarantinedAtMs": null,
+            "schema": "estampes.gc-state/1",
+            "state": "planned"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 6,
+            "rootHash": "ee021779e5dac07d72a3a2e1b38f812b653750cd8b234df469a92e7de4fe2a52",
+            "commitId": "tx:ea16cfa7-04ed-4f38-947a-0a7d2fb27d58",
+            "checksum": "c40c79a01f36092d3ccce6a1e09fe17bc879114936e559f30e47ad7dd85c185e"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 7,
+            "rootHash": "71ffbd9413285babb72076e627d0244dca799ef3cbd3f7283121ef6923d46261",
+            "commitId": "tx:17f68782-6e66-42cb-a7ed-14fe72b0c648",
+            "checksum": "c1dec4c4f44f4f23bb83ceee3bf8fd5b89ecac0a94dfb738d126088d5f6ceea3"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "waiting-grace"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 9,
+            "rootHash": "88d16bd2b0571b84c8e281a6b8bb1a83cf5a1877b512dec3e02db945bd9c454a",
+            "commitId": "tx:3c1c0d32-aa5e-4237-9f72-9cb790736672",
+            "checksum": "85e4dfcf683a4234222ded01fbb5e8fb1cd99848af51e18396dcf83dc78e0436"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-intent",
+          "envelope": {
+            "generation": 10,
+            "rootHash": "6ae9e7f5015a47c85d443ad9f3569794a2a4c42921e0aeb6dd39a662f922d5ae",
+            "commitId": "tx:21d2651c-90ec-465c-bfeb-b9c2be9bea63",
+            "checksum": "de5706568a1c7c9e1894d1f65a762a234b6298e3d1445bbdddb3a3587a2e86ce"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "unlinking",
+            "unlinking": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 11,
+            "rootHash": "379d9593c2001e49058b7f5c03bb66e5f6e77624ac2da9fa9301d95a043ce9ae",
+            "commitId": "tx:54cba240-8216-44c4-b95d-4c00dc5c2df4",
+            "checksum": "6bac645bc17aefcc11dc9159dbb06a40f456907bdd90e96ba5f8cc2a8b37d37a"
+          },
+          "progress": {
+            "deleted": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "planHash": "45f7dedc0aca60daf204b9fe923f68f5646363370b5111036162826edca44405",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "complete"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        }
+      ],
+      "gcResults": [
+        {
+          "planned": true,
+          "id": "2973f1e6-36e8-40af-ac52-017ad84049d8",
+          "candidates": 8
+        },
+        {
+          "id": "2973f1e6-36e8-40af-ac52-017ad84049d8",
+          "state": "waiting-grace",
+          "progressed": 8,
+          "moved": 8,
+          "deleted": 0
+        },
+        {
+          "id": "2973f1e6-36e8-40af-ac52-017ad84049d8",
+          "state": "complete",
+          "progressed": 8,
+          "moved": 8,
+          "deleted": 8
+        }
+      ],
+      "afterColdRestart": {
+        "generation": 12,
+        "rootHash": "dd6a690a2ea6fc55bba89b80c6cc2878a7856c6069b7ccda7a11122eb9a953ac",
+        "commitId": "tx:0cafbd53-bdf8-42fe-b020-cdcecb4c0877",
+        "checksum": "c46247ab299017e7b9775b464a507cb4e6d72fd4509b5ccc3036ad34a62aa5e3"
+      },
+      "maxObservedStoreFiles": 133,
+      "maxObservedStoreAllocatedBytes": 659456
+    },
+    {
+      "name": "control-bounded-drain",
+      "planId": "870184d9-06a1-41f4-b971-b86adfe0ae43",
+      "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+      "recoveryInterruptions": 4,
+      "publications": [
+        {
+          "name": "gc-plan",
+          "envelope": {
+            "generation": 9,
+            "rootHash": "85b1fa094fff2ba4687becc1f1760af6bc9c504d72e12dbfa37fab66d1a14be1",
+            "commitId": "tx:90bc94b5-a85b-4d09-96c6-ba193b7f9e4f",
+            "checksum": "f47e710ef83b747e4f4e70324af58f2b23ee39fbf1369a865658a24df81ff866"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [],
+            "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+            "quarantinedAtMs": null,
+            "schema": "estampes.gc-state/1",
+            "state": "planned"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 10,
+            "rootHash": "55309e5a0686bfacf99e69ecca7b5b0fea76927f4910d7106a1f9c3e9b9cddff",
+            "commitId": "tx:028abb31-d360-4142-be8b-04f84994898e",
+            "checksum": "558d2e6dec9a5c6ffadec784919a59645e9d5e05d8c3df46ae5c7850a1923dc5"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 11,
+            "rootHash": "bde0e99db331233c599e29a96658fbdef478d7de94306cd1602ad8f29b071eae",
+            "commitId": "tx:8edfd855-3484-407d-ad7f-469850cbd140",
+            "checksum": "e288d3dab0f5b774a34ce43901fad1d3c60e41663978b81cfa434bf52ab37b57"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "waiting-grace"
+          },
+          "clock": {
+            "clockMs": 1893456000000,
+            "highWaterMs": 1893456000000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-quarantine-progress",
+          "envelope": {
+            "generation": 13,
+            "rootHash": "2bcd74649df81cf4b7a57cac82e4ddca9f2b18bd252d8174702fd3b3e2a04509",
+            "commitId": "tx:1dc6abb2-2810-4bc6-ac24-3df30105f279",
+            "checksum": "c9539c61049e86d540076006fd093059f6b72c3f6cd063f4ded9a38ccb22cad8"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "quarantining"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-intent",
+          "envelope": {
+            "generation": 14,
+            "rootHash": "d971e26de98e1d3b7c4df615e91e06004cccd7f389b82b4548869296dcd6cad7",
+            "commitId": "tx:d61cc376-8029-433e-9380-40f46caf8660",
+            "checksum": "bfd93513a3b4b060c4f5cc797b84305779c976a315a9ad55022d1463031ea52b"
+          },
+          "progress": {
+            "deleted": [],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "unlinking",
+            "unlinking": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        },
+        {
+          "name": "gc-unlink-progress",
+          "envelope": {
+            "generation": 15,
+            "rootHash": "cc403096c11e1f212d9dc5546431776a87a31ada3ef94bceb78d3eea85f5a670",
+            "commitId": "tx:27664a09-6d33-4f46-b2d2-00e165655628",
+            "checksum": "1ea51af5397cdab4909f83319e0c001ce3225066ea297fb1677731aab8eb1271"
+          },
+          "progress": {
+            "deleted": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "moved": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "planHash": "585dcb46bb26fb153d5d3e5be435bc43ea0cb5894b8a1663781b17fe88e49d24",
+            "quarantinedAtMs": 1893456000000,
+            "schema": "estampes.gc-state/1",
+            "state": "complete"
+          },
+          "clock": {
+            "clockMs": 1893542400000,
+            "highWaterMs": 1893542400000,
+            "legacyClockFloor": 1893456000000,
+            "canAge": true
+          }
+        }
+      ],
+      "gcResults": [
+        {
+          "planned": true,
+          "id": "870184d9-06a1-41f4-b971-b86adfe0ae43",
+          "candidates": 12
+        },
+        {
+          "id": "870184d9-06a1-41f4-b971-b86adfe0ae43",
+          "state": "waiting-grace",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 0
+        },
+        {
+          "id": "870184d9-06a1-41f4-b971-b86adfe0ae43",
+          "state": "complete",
+          "progressed": 12,
+          "moved": 12,
+          "deleted": 12
+        }
+      ],
+      "afterColdRestart": {
+        "generation": 16,
+        "rootHash": "8df05a264bf3f47bb10154f4b82d38bd3131a3ea653556fe3e7095b244e198f1",
+        "commitId": "tx:d6795d1d-a186-48bb-8457-05d4892ff49b",
+        "checksum": "09d87755fe7cea6fd0a4922972d0f22534667b4969b15622e8de618d2dfea99d"
+      },
+      "maxObservedStoreFiles": 191,
+      "maxObservedStoreAllocatedBytes": 925696
+    }
+  ],
+  "files": {
+    "control-bounded-drain.jsonl.gz": {
+      "sha256": "1405a478d6ba879683918531ad2de682b48cf881cb1ee4ff26163f65c0b55e22",
+      "bytes": 150834
+    },
+    "control-bounded-drain.log": {
+      "sha256": "94acbd2785174f684de45439a433c5ec30c452a51f64a3dc449b04681421b54b",
+      "bytes": 228
+    },
+    "control-uninterrupted.jsonl.gz": {
+      "sha256": "7cb895082a551309ce9bcde26b98b63ee3381d3ea6215f1050f933a4c5d76aa4",
+      "bytes": 68534
+    },
+    "control-uninterrupted.log": {
+      "sha256": "97e633edc3e55aab7f37901bf4b62b284c713692217038a010ed551db00d0088",
+      "bytes": 228
+    },
+    "environment.log": {
+      "sha256": "b4c3e3a54a7d8d13a7dda9b8a0e80179f541b43b7ddaed93967edf8dd33114f0",
+      "bytes": 2383
+    },
+    "observe.mjs": {
+      "sha256": "b427686a0e58dbcf60b38cac60a876fb0f1820276bc792d3e3b886a30a4d6762",
+      "bytes": 6174
+    },
+    "original.log": {
+      "sha256": "8315819abe443dbc90ef695f763e6934631345ab50d067f82a1fc0628be8765a",
+      "bytes": 388
+    },
+    "replay.mjs": {
+      "sha256": "87373c10935b1f09256b0f880ca3633c3ebee889dc59aa8f99f1ea63249ecf2e",
+      "bytes": 6077
+    },
+    "run.py": {
+      "sha256": "da868a944f013f4cd9f597f917095b80f28aada787656328a5bd17f421d3c06a",
+      "bytes": 4972
+    },
+    "runs.jsonl": {
+      "sha256": "c83c594fafd6439e3ed3f2c263dc71b592bcc41f004866f82adccd3759ab33d4",
+      "bytes": 9933
+    },
+    "strict-1.jsonl.gz": {
+      "sha256": "b6ef628a7cd4b44f91e84af88589143633fed3b42f38af4de0a18a91be85599d",
+      "bytes": 151460
+    },
+    "strict-1.log": {
+      "sha256": "a4eb948368979cd7baee9555838b4acfd6914323ae47b92edad824115b701998",
+      "bytes": 214
+    },
+    "strict-2.jsonl.gz": {
+      "sha256": "2f0e1a4e2a9de6c035847753f35e661e0302fe439ae38abe417e9c53cdeed773",
+      "bytes": 149285
+    },
+    "strict-2.log": {
+      "sha256": "9e2b5a9fa7e30320640765b0ce5f72c9f1014fd2bc922614fb06f933a46c1ebc",
+      "bytes": 214
+    },
+    "strict-3.jsonl.gz": {
+      "sha256": "8fe66552384184c9ed6bf77a7e35aed09b9ce16ac0b324199c996929d75adda9",
+      "bytes": 152241
+    },
+    "strict-3.log": {
+      "sha256": "8576616d2943f74e9524b9245fb66a62aa59993bfb0d14d62907cd67a6600f58",
+      "bytes": 214
+    },
+    "strict-4.jsonl.gz": {
+      "sha256": "45366cf03643f6dc9af5e0c3b4abaa29d05d8262c799b4ddcb316ba8e25c8d05",
+      "bytes": 150836
+    },
+    "strict-4.log": {
+      "sha256": "72818164b8ee1b955b030ec765ee7b14ad066b68e5770d3ed1fc560bacf5e884",
+      "bytes": 213
+    },
+    "worker-observer.mjs": {
+      "sha256": "277fad33b5fbddc0097f2e8a2debf1025a52902937a2b6669d4a5b26047dbbca",
+      "bytes": 1832
+    }
+  }
+}

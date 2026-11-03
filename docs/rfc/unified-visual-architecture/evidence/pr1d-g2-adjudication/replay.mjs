@@ -48,9 +48,8 @@ async function reopen(fixture, clockMs, instrument = false) {
 }
 
 test("G2 " + mode, async t => {
-  // Preserve the sealed native variant's profile split. Its copied test opens
-  // interrupted recovery with durable options but lifecycleFixture() has its
-  // own process-crash default for bootstrap and ordinary reopen.
+  // The sealed prepare-native.py conversion also sets the fixture default
+  // to linux-local-durable. Match the original call to lifecycleFixture(t).
   const f = await lifecycleFixture(t);
   const files = new ManagedFiles(f.root);
   const cmd = command([document()]);
