@@ -168,6 +168,12 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
     memberships.set(key,entry);generations.add(entry.generation);
   }
   const current=memberships.get(root.commitId);integrity(current?.generation===root.generation&&current.registryRootHash===root.roots.registry,"Current commit membership is inconsistent");
+  for(const [key,value]of indices.retention)if(key.startsWith("temporary:")&&value.publication){
+    integrity(key==="temporary:"+value.claimId&&value.outcome==="completed"&&value.publication.envelope.generation<=value.classifiedGeneration,"Invalid selected CURRENT classification");
+    const {verifyCurrentPublication}=await import("./temporary-attribution.js");
+    const selected=await verifyCurrentPublication(files,{root},value,memberships.get("tx:"+value.owner.id),pages.track);
+    integrity(canonicalJson(selected)===canonicalJson(value.publication.envelope),"Selected CURRENT proof differs from its original candidate");
+  }
   const keys=new Set();
   for(const [key,raw]of indices.ledger){
     const value=parse(LedgerValueSchema,raw),entry=ledgerRecord(value),member=memberships.get(entry.commitId);keys.add(key);

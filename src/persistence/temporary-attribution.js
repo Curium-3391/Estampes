@@ -13,7 +13,8 @@ export const TemporaryOwnerSchema=z.object({kind:z.enum(["transaction","bootstra
 export const TemporaryClaimSchema=bounded(z.object({schema:z.literal("estampes.temporary-claim/1"),claimId:z.string().regex(uuid),owner:TemporaryOwnerSchema,
   finalPath:z.string().min(1).max(512),temporaryPath:z.string().min(1).max(560),hash:ContentHashSchema,bytes:z.number().int().min(0),label:z.string().min(1).max(80)}).strict());
 export const TemporaryRecoverySchema=z.object({schema:z.literal("estampes.temporary-recovery/1"),claimId:z.string().regex(uuid),owner:TemporaryOwnerSchema,
-  finalPath:z.string().min(1).max(512),temporaryPath:z.string().min(1).max(560),hash:ContentHashSchema,bytes:z.number().int().min(0),outcome:z.enum(["completed","aborted"]),classifiedGeneration:z.number().int().positive()}).strict();
+  finalPath:z.string().min(1).max(512),temporaryPath:z.string().min(1).max(560),hash:ContentHashSchema,bytes:z.number().int().min(0),outcome:z.enum(["completed","aborted"]),classifiedGeneration:z.number().int().positive(),
+  publication:z.object({schema:z.literal("estampes.selected-current-proof/1"),envelope:CurrentEnvelopeSchema}).strict().optional()}).strict();
 export const temporaryClaimPath=id=>"visual-temporaries/claims/"+parse(z.string().regex(uuid),id)+".json";
 const hashBytes=bytes=>createHash("sha256").update(bytes).digest("hex");
 const PreparedSchema=z.object({schema:z.literal("estampes.prepared/1"),commitId:TransactionIdSchema,generation:z.number().int().positive(),rootHash:ContentHashSchema}).strict();
@@ -71,16 +72,29 @@ async function gcTemporaryOwnership(files,snapshot){
   return {dispositions,ownedPaths};
 }
 
-async function provesHistoricalCurrentPublication(files,snapshot,claim,member){
-  if(claim.finalPath!=="visual-registry/CURRENT.json"||claim.label!=="current")return false;
+// The prepared file describes a candidate. Selection is established only by
+// exact CURRENT now, or by a prior selected proof committed under CURRENT.
+export async function verifyCurrentPublication(files,snapshot,claim,member,track=new Set()){
+  integrity(claim.finalPath==="visual-registry/CURRENT.json"&&claim.owner.kind==="transaction"&&member,"Invalid CURRENT publication owner");
   const commitId="tx:"+claim.owner.id,path="visual-transactions/"+claim.owner.id+"/prepared.json";
-  if(!await files.exists(path))return false;
+  integrity(await files.exists(path),"Missing CURRENT publication candidate evidence");
   const prepared=parse(PreparedSchema,await files.json(path,4096));
-  if(prepared.commitId!==commitId||prepared.generation!==member.generation)return false;
-  const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(prepared.rootHash,"visual-registry/roots",64*1024));
+  integrity(prepared.commitId===commitId&&prepared.generation===member.generation,"CURRENT candidate transaction identity differs");track.add(path);
+  const pages=new PageStore(files,null,track),root=parseCommitRoot(await pages.hashed(prepared.rootHash,"visual-registry/roots",64*1024));
   const head={generation:prepared.generation,rootHash:prepared.rootHash,commitId},envelope=parse(CurrentEnvelopeSchema,{...head,checksum:hashJson(head)});
   assertCurrentEnvelope(root,envelope);
-  return root.roots.registry===member.registryRootHash&&root.commitId===member.commitId&&hashBytes(Buffer.from(canonicalJson(envelope)))===claim.hash&&Buffer.byteLength(canonicalJson(envelope))===claim.bytes;
+  integrity(root.storeInstanceId===snapshot.root.storeInstanceId&&root.roots.registry===member.registryRootHash&&root.commitId===member.commitId&&hashBytes(Buffer.from(canonicalJson(envelope)))===claim.hash&&Buffer.byteLength(canonicalJson(envelope))===claim.bytes,"CURRENT candidate differs from exact claim");
+  return envelope;
+}
+const sameClaim=(a,b)=>a.claimId===b.claimId&&canonicalJson(a.owner)===canonicalJson(b.owner)&&a.finalPath===b.finalPath&&a.temporaryPath===b.temporaryPath&&a.hash===b.hash&&a.bytes===b.bytes;
+async function selectedPublication(files,snapshot,claim,member){
+  integrity(claim.label==="current","CURRENT claim has an invalid label");
+  const envelope=await verifyCurrentPublication(files,snapshot,claim,member);
+  if(canonicalJson(snapshot.envelope)!==canonicalJson(envelope)){
+    const prior=snapshot.indices.retention.get("temporary:"+claim.claimId);
+    integrity(prior&&sameClaim(prior,claim)&&prior.outcome==="completed"&&prior.publication&&canonicalJson(prior.publication.envelope)===canonicalJson(envelope),"Superseded CURRENT lacks trusted original selection evidence");
+  }
+  return {schema:"estampes.selected-current-proof/1",envelope};
 }
 
 export async function recoverBootstrapTemporary(files){
@@ -108,11 +122,12 @@ export async function classifyTemporaryClaims(files,snapshot){
     const tx="tx:"+claim.owner.id,member=snapshot.indices.commitIndex.get(tx),temporary=await files.exists(claim.temporaryPath),final=await files.exists(claim.finalPath);
     if(temporary){const digest=await files.digest(claim.temporaryPath);integrity(digest.hash===claim.hash&&digest.bytes===claim.bytes,"Attributed temporary hash mismatch");}
     let finalMatches=false;if(final){const digest=await files.digest(claim.finalPath);finalMatches=digest.hash===claim.hash&&digest.bytes===claim.bytes;}
-    const historical=member&&!finalMatches&&await provesHistoricalCurrentPublication(files,snapshot,claim,member);
+    const publication=member&&claim.finalPath==="visual-registry/CURRENT.json"?await selectedPublication(files,snapshot,claim,member):undefined;
+    const historical=Boolean(publication);
     if(member)integrity(finalMatches||historical,"Committed transaction has an incomplete attributed atomic file");
     const outcome=finalMatches||historical?"completed":"aborted";
     changes.set("temporary:"+claim.claimId,parse(TemporaryRecoverySchema,{schema:"estampes.temporary-recovery/1",claimId:claim.claimId,owner:claim.owner,
-      finalPath:claim.finalPath,temporaryPath:claim.temporaryPath,hash:claim.hash,bytes:claim.bytes,outcome,classifiedGeneration:snapshot.root.generation}));
+      finalPath:claim.finalPath,temporaryPath:claim.temporaryPath,hash:claim.hash,bytes:claim.bytes,outcome,classifiedGeneration:snapshot.root.generation,...(publication?{publication}:{})}));
     outcomes.push({claimId:claim.claimId,owner:tx,outcome,temporary,final:finalMatches});
   }
   return {changes,outcomes};
