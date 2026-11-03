@@ -74,13 +74,16 @@ export class CommitCoordinator {
         if(this.format.lifecycle)this.installLifecycle(this.format.lifecycle,options.testClockMs);
         await this.#publish(null,null,"genesis");
       }else{
-        await LifecycleManager.recoverPhysical(this.files);
+        // A copied, restricted backup has no physical deletion authority in
+        // this tree. Verify its logical closure without replaying source GC.
+        const restricted=await this.files.exists("restore-restriction.json");
+        if(!restricted)await LifecycleManager.recoverPhysical(this.files);
         const verifyStarted=performance.now();
         this.current=await loadCommitted(this.files,{cache:this.verification,metrics:this.performance});
         this.performance.open={verifyCommittedMs:performance.now()-verifyStarted};
         integrity(this.current.root.storeInstanceId===this.format.storeInstanceId,"Store namespace differs from CURRENT");
         if(this.current.lifecycle||options.lifecycle||this.format.lifecycle)this.installLifecycle(this.current.lifecycle?.options??options.lifecycle??this.format.lifecycle,options.testClockMs);
-        if(await this.files.exists("restore-restriction.json")){this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:"RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF"};return this;}
+        if(restricted){this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:"RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF"};return this;}
         // Re-establish all file/directory barriers after an interrupted publish.
         for(const path of this.current.files)await this.files.resync(path);
         await this.files.resync("storage-format.json");

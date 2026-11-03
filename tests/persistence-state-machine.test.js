@@ -7,9 +7,12 @@ import {fileURLToPath} from "node:url";
 import {openIsolatedStore} from "../src/persistence/lease.js";
 import {ManagedFiles} from "../src/persistence/filesystem.js";
 import {loadCommitted, versionPath} from "../src/persistence/records.js";
-import {readGcPlan} from "../src/persistence/gc.js";
+import {restoreIsolatedBackup} from "../src/persistence/backup.js";
+import {randomUUID} from "node:crypto";
+import {canonicalJson, hashJson} from "../src/documents/validation.js";
+import {readGcPlan, gcOwnership, gcPlanPath} from "../src/persistence/gc.js";
 import {PageStore} from "../src/persistence/pages.js";
-import {lifecycleFixture, document, titleEdit, command, actor, epoch, drain, TIME, DAY} from "./fixtures/uva-lifecycle.mjs";
+import {lifecycleFixture, destination, document, titleEdit, command, actor, epoch, drain, TIME, DAY} from "./fixtures/uva-lifecycle.mjs";
 
 const profile = "linux-process-crash-test";
 const current = "visual-registry/CURRENT.json";
@@ -194,4 +197,47 @@ test('R3-C1 / disjoint G1 and G2 plans retain independent physical ownership',as
   assert.equal((await f.store.maintenance('gcStep',{id:second.id})).state,'waiting-grace');
   await f.store.maintenance('clock',{nowMs:TIME+DAY});assert.equal((await f.store.maintenance('gcStep',{id:second.id})).state,'complete');
   await f.reopen({testClockMs:TIME+DAY});ready(f);assert.equal((await f.store.diagnostics()).contentCommits,3);
+});
+
+
+test('R3-B1 / repeated recovery rejects a forged transaction generation',async t=>{
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root);
+  await stopCommit(f,'current.after-dir-fsync',command([document()]));
+  await assert.rejects(openIsolatedStore(f.root,{...options,fault:{point:'current.after-dir-fsync',mode:'pause'}},event=>{
+    if(event.name==='current.after-dir-fsync')process.kill(event.pid,'SIGKILL');
+  }),e=>e.code==='RECOVERY_REQUIRED');
+  const claims=await readdir(files.path('visual-temporaries/claims'));
+  assert.equal(claims.length,2);
+  const claim=await files.json('visual-temporaries/claims/'+claims[0]),path='visual-transactions/'+claim.owner.id+'/prepared.json',prepared=await files.json(path);
+  await writeFile(files.path(path),canonicalJson({...prepared,generation:prepared.generation+1}));
+  const before=await readFile(files.path(current));
+  await f.reopen();assert.equal(f.store.status.state,'read-only-recovery');
+  assert.deepEqual(await readFile(files.path(current)),before);
+});
+
+test('R3-C1 / independent hashed overlapping plans and false terminal progress fail closed',async t=>{
+  const f=await g1(t),files=new ManagedFiles(f.root),first=await f.store.maintenance('gcPlan',{classes:['G1']});
+  const snapshot=await loadCommitted(files),record=snapshot.indices.retention.get('gc:'+first.id),plan=await readGcPlan(files,record);
+  const duplicate=structuredClone(plan);duplicate.id=randomUUID();
+  for(const [i,c]of duplicate.candidates.entries())c.quarantine='gc-quarantine/'+duplicate.id+'/'+i+'-'+c.hash+'.bin';
+  const hash=hashJson(duplicate);await files.durableCreate(gcPlanPath(hash),Buffer.from(canonicalJson(duplicate)),'test-ambiguous-plan');
+  const retention=new Map(snapshot.indices.retention);retention.set('gc:'+duplicate.id,{...record,planHash:hash});
+  await assert.rejects(gcOwnership(files,{...snapshot,indices:{...snapshot.indices,retention}}),e=>e.code==='INTEGRITY_ERROR');
+  await assert.rejects(readGcPlan(files,{...record,state:'complete'}),e=>e.code==='INTEGRITY_ERROR');
+  await f.reopen();ready(f);assert.equal((await f.store.maintenance('gcStep',{id:first.id})).state,'complete');
+});
+
+
+test('R3-C1 / relocated backup verifies logical history without inheriting physical GC authority',async t=>{
+  const f=await g1(t),job=await f.store.maintenance('gcPlan',{classes:['G1']});assert.equal(job.planned,true);
+  const before=await f.store.snapshot(),backup=await destination(t),copy=await f.store.maintenance('backupStart',{destination:backup});
+  let done=false;for(let n=0;n<100;n++)if((await f.store.maintenance('backupStep',{id:copy.id})).state==='complete'){done=true;break;}
+  assert.equal(done,true);
+  const target=await destination(t,'restore'),result=await restoreIsolatedBackup(backup,target,{profile});assert.equal(result.readOnly,true);
+  const bytes=await readFile(join(target,current)),restored=await openIsolatedStore(target,options);t.after(()=>restored.close());
+  assert.equal(restored.status.state,'read-only-recovery');assert.equal(restored.status.problem.cause,'RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF');
+  assert.deepEqual((await restored.snapshot()).documents,before.documents);
+  await assert.rejects(restored.maintenance('gcStep',{id:job.id}),e=>e.code==='RECOVERY_REQUIRED');
+  await assert.rejects(restored.commit(command([doc(2)],20),actor(),1),e=>e.code==='RECOVERY_REQUIRED');
+  assert.deepEqual(await readFile(join(target,current)),bytes);
 });
