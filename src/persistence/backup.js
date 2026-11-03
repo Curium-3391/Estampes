@@ -11,6 +11,7 @@ import { CurrentEnvelopeSchema } from "./commit-root-schema.js";
 import { loadCommitted } from "./records.js";
 import { protectedPaths, gcSourceAllowed } from "./gc.js";
 import { integrity, fail, PersistenceError } from "./errors.js";
+import { privateLeaseTree } from "./ownership.js";
 const MB=1024**2;
 const fileSchema=z.object({path:z.string().min(1).max(512),hash:Hash,bytes:z.number().int().min(0)}).strict();
 const listSchema=z.object({schema:z.literal("estampes.backup-file-index/1"),pages:z.array(Hash).max(100),fileCount:z.number().int().min(1).max(100000),totalBytes:z.number().int().min(0)}).strict();
@@ -40,7 +41,7 @@ export class BackupManager {
   members.sort((a,b)=>a.path.localeCompare(b.path));const id=randomUUID(),pin=await this.manager.pins.acquire({envelope:snapshot.envelope},members.filter(f=>f.path!=="visual-registry/CURRENT.json").map(f=>f.path),this.manager.now(),{kind:"backup",ttlMs:30*60*1000});
   try{
    const totalBytes=members.reduce((n,f)=>n+f.bytes,0),space=await statfs(destination,{bigint:true});if(space.bavail*space.bsize<BigInt(totalBytes+64*MB))fail("STORAGE_UNAVAILABLE","Backup destination lacks required copy and reserve space");
-   const dest=new ManagedFiles(destination),atomicOwner={kind:"backup",id},token={schema:"estampes.backup-owner/1",id,storeInstanceId:snapshot.root.storeInstanceId};await dest.atomic("backup-owner.json",Buffer.from(canonicalJson(token)),"backup-owner",{owner:atomicOwner});
+   const dest=new ManagedFiles(destination),atomicOwner={kind:"backup",id},token={schema:"estampes.backup-owner/1",id,storeInstanceId:snapshot.root.storeInstanceId};await dest.auditBoundary();await dest.atomic("backup-owner.json",Buffer.from(canonicalJson(token)),"backup-owner",{owner:atomicOwner});
    await dest.atomic("restore-restriction.json",Buffer.from(canonicalJson({schema:"estampes.restore-restriction/1",continuation:"read-only",reason:"Backup artifact is not an active writer namespace"})),"backup-restriction",{owner:atomicOwner});
    const result=await this.manager.publish("backup-start",async({plan})=>{
     const pages=[];for(let i=0;i<members.length;i+=1024){const page=members.slice(i,i+1024),hash=hashJson(page);plan.add(backupListPage(hash),page,4*MB,"backup-index");pages.push(hash);}
@@ -117,6 +118,7 @@ export async function restoreBackupContents(backup,destination,profile){
 }
 export async function restoreIsolatedBackup(backup,destination,{profile="linux-local-durable"}={}){
  await inspectPlatform(destination,profile,"isolated-pr1c-testing");
+ await privateLeaseTree(destination);
  return new Promise((resolveResult,reject)=>{
   const worker=fileURLToPath(new URL("./restore-worker.js",import.meta.url)),child=spawn("/usr/bin/flock",["-n","-E","73","-F",join(destination,"WRITER.lock"),process.execPath,worker,backup,destination,profile],{stdio:["ignore","ignore","pipe","ipc"]});let answer;
   child.on("message",m=>{answer=m;});child.once("error",reject);child.once("exit",(code,signal)=>{if(code===0&&answer?.value)resolveResult(answer.value);else reject(new PersistenceError(answer?.error?.code??"RECOVERY_REQUIRED",answer?.error?.message??"Restore worker failed",{code,signal}));});

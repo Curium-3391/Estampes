@@ -37,7 +37,7 @@ async function inventory(files,gcOwnedPaths=new Set()){
   const found=[];
   const walk=async absolute=>{for(const entry of await readdir(absolute,{withFileTypes:true})){
     const path=join(absolute,entry.name),name=relative(files.root,path);
-    const st=await lstat(path);integrity(!st.isSymbolicLink()&&(st.isDirectory()||st.isFile()),"Unsafe entry during temporary inventory");
+    const st=await lstat(path);files.validateEntry(st);
     if(st.isDirectory())await walk(path);else if(/\.tmp-[0-9a-f]{8}-[0-9a-f-]{27}$/.test(name))found.push(name);
   }};await walk(files.root);
   for(const path of found)if(!claims.has(path)&&!gcOwnedPaths.has(path))fail("INTEGRITY_ERROR","Unattributed atomic temporary file",{storageIntegrity:true,path});

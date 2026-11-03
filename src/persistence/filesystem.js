@@ -5,6 +5,7 @@ import { canonicalJson } from "../documents/validation.js";
 import { fail, integrity } from "./errors.js";
 import { registerTemporary, temporaryClaimPath } from "./temporary-attribution.js";
 import { constants } from "node:fs";
+import { privateDirectory, privateFile, privateAncestry } from "./ownership.js";
 
 export const physicalFingerprint=info=>[info.dev,info.ino,info.bytes,info.mtimeNs,info.ctimeNs].join(":");
 const physicalInfo=st=>({bytes:Number(st.size),allocatedBytes:Number(st.blocks*512n),dev:String(st.dev),ino:String(st.ino),mtimeNs:String(st.mtimeNs),ctimeNs:String(st.ctimeNs)});
@@ -13,25 +14,37 @@ export class ManagedFiles {
   constructor(root, observer = async () => {}) { this.root=root;this.observer=observer;this.fault=null;this.trace=[]; }
   // A verification operation owns its observations. They are never recovered
   // from disk or inferred from a later stat of bytes read earlier.
-  observation(){const io=Object.create(this);io.observations=new Map();io.checkedFingerprints=new Set();io.jsonIdentities=new WeakMap();io.metadataCache={records:new Map(),bytes:0};io.fingerprintChecks=0;return io;}
+  observation(){const io=Object.create(this);io.observations=new Map();io.contentProofs=new Map();io.checkedFingerprints=new Set();io.jsonIdentities=new WeakMap();io.metadataCache={records:new Map(),bytes:0};io.fingerprintChecks=0;io.contentHashChecks=0;return io;}
+  async auditBoundary(){this.trust=await privateAncestry(this.root);return this.trust;}
+  validateEntry(st){if(st.isDirectory())privateDirectory(st);else privateFile(st);}
   async checkFingerprint(name,expected){
-    if(this.observations?.has(name))return this.observations.get(name)===expected;
-    this.fingerprintChecks=(this.fingerprintChecks??0)+1;const info=await this.info(name);
-    if(physicalFingerprint(info)!==expected)return false;this.observed(name,info);return true;
+    if(!expected?.hash)return false;
+    let value=this.contentProofs?.get(name),fingerprint=this.observations?.get(name);
+    if(!value){const digest=await this.digest(name);value={hash:digest.hash,contentBytes:digest.bytes};fingerprint=physicalFingerprint(digest);}
+    return fingerprint===expected.fingerprint&&value.hash===expected.hash&&value.contentBytes===expected.contentBytes;
   }
-  observed(name,info){
+  observed(name,info,hash){
     if(!this.observations)return;
     const value=physicalFingerprint(info),prior=this.observations.get(name);
-    if(prior&&prior!==value)fail("INTEGRITY_ERROR","Managed file changed within verification",{storageIntegrity:true});this.observations.set(name,value);
+    const content=this.contentProofs.get(name);
+    if((prior&&prior!==value)||(content&&hash&&(content.hash!==hash||content.contentBytes!==info.bytes)))fail("INTEGRITY_ERROR","Managed file changed within verification",{storageIntegrity:true});this.observations.set(name,value);
+    if(hash)this.contentProofs.set(name,{hash,contentBytes:info.bytes});
   }
-  async proofFingerprint(name){
-    if(!this.observations){const io=this.observation();await io.bytes(name);return io.proofFingerprint(name);}
+  async proofIdentity(name){
+    if(!this.observations){const io=this.observation();await io.bytes(name);return io.proofIdentity(name);}
     const expected=this.observations.get(name);
-    if(this.checkedFingerprints.has(name))return expected;
-    this.fingerprintChecks++;
-    if(!expected||physicalFingerprint(await this.info(name))!==expected)fail("INTEGRITY_ERROR","Verified bytes no longer match managed file identity",{storageIntegrity:true});this.checkedFingerprints.add(name);return expected;
+    if(!this.checkedFingerprints.has(name)){
+      this.fingerprintChecks++;const content=this.contentProofs.get(name),actual=await this.digest(name);
+      if(!content||physicalFingerprint(actual)!==expected||actual.hash!==content.hash||actual.bytes!==content.contentBytes)fail("INTEGRITY_ERROR","Verified content proof changed",{storageIntegrity:true});this.checkedFingerprints.add(name);
+    }
+    const content=this.contentProofs.get(name);
+    if(!expected||!content)fail("INTEGRITY_ERROR","Missing verified content observation",{storageIntegrity:true});return {fingerprint:expected,...content};
   }
-  async verifyObservations(){for(const [path,expected]of this.observations??[]){this.fingerprintChecks++;if(physicalFingerprint(await this.info(path))!==expected)fail("INTEGRITY_ERROR","Verified file changed before publication",{storageIntegrity:true});}}
+  async proofFingerprint(name){return (await this.proofIdentity(name)).fingerprint;}
+  async verifyObservations(){for(const [path,fingerprint]of this.observations??[]){
+    this.fingerprintChecks++;const expected=this.contentProofs.get(path),actual=await this.digest(path);
+    if(!expected||physicalFingerprint(actual)!==fingerprint||actual.hash!==expected.hash||actual.bytes!==expected.contentBytes)fail("INTEGRITY_ERROR","Verified dependency changed before publication or ACK",{storageIntegrity:true});
+  }}
   path(name) {
     const p=resolve(this.root,name);
     if (!name || p===this.root || relative(this.root,p).startsWith("..") || name.includes("\\")) fail("INTEGRITY_ERROR","Unsafe managed path");
@@ -54,28 +67,30 @@ export class ManagedFiles {
     await this.point(label+".after-dir-fsync");
   }
   async ensureDirectory(name) {
+    privateDirectory(await lstat(this.root));
     if(name===".")return;
     const path=this.path(name), parts=relative(this.root,path).split("/");let current=this.root;
     for(const part of parts){const parent=current;current=join(current,part);let made=false;
       try{await mkdir(current,{mode:0o700});made=true;}catch(e){if(e.code!=="EEXIST")throw e;}
-      const st=await lstat(current);integrity(st.isDirectory()&&!st.isSymbolicLink(),"Managed directory is not a regular directory");
+      const st=await lstat(current);privateDirectory(st);
       if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Managed tree crosses filesystem devices");
       if(made)await this.syncDirectory(parent,"mkdir");
     }
   }
   async bytes(name,maxBytes=64*1024*1024) {
-    const path=this.path(name), st=await lstat(path);integrity(st.isFile()&&!st.isSymbolicLink()&&st.size<=maxBytes,"Invalid managed file or byte limit");
+    const path=this.path(name), st=await lstat(path);privateFile(st);integrity(st.size<=maxBytes,"Invalid managed file or byte limit");
     if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Managed file crosses filesystem devices");
     // All path components were created under the private store; recheck against symlink substitution.
-    let dir=dirname(path);while(dir!==this.root){const s=await lstat(dir);integrity(s.isDirectory()&&!s.isSymbolicLink(),"Symlink in managed path");dir=dirname(dir);}
+    let dir=dirname(path);while(dir!==this.root){privateDirectory(await lstat(dir));dir=dirname(dir);}
     const before=await this.info(name),fd=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
     try{
       const opened=await fd.stat({bigint:true});
+      privateFile(opened);integrity(Number(opened.size)<=maxBytes,"Opened managed file exceeds byte limit");
       integrity(opened.isFile()&&physicalFingerprint(physicalInfo(opened))===physicalFingerprint(before),"Managed path changed before open");
       const bytes=await fd.readFile();
       const after=physicalInfo(await fd.stat({bigint:true})),selected=await this.info(name);
       integrity(bytes.length<=maxBytes&&bytes.length===before.bytes&&physicalFingerprint(before)===physicalFingerprint(after)&&physicalFingerprint(after)===physicalFingerprint(selected),"Managed file changed during read");
-      this.observed(name,after);return bytes;
+      this.observed(name,after,createHash("sha256").update(bytes).digest("hex"));return bytes;
     }finally{await fd.close();}
   }
   async json(name,maxBytes) {
@@ -90,7 +105,7 @@ export class ManagedFiles {
     try{await fd.writeFile(bytes);await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}
     finally{await fd.close();}await this.syncDirectory(dirname(this.path(name)),label);
   }
-  async atomic(name,bytes,label,{immutable=false,owner}={}) {
+  async atomic(name,bytes,label,{immutable=false,owner,beforeRename}={}) {
     await this.ensureDirectory(dirname(name));
     if(immutable&&await this.exists(name)){
       if(!(await this.bytes(name)).equals(bytes))fail("INTEGRITY_ERROR","Immutable file collision or corruption",{storageIntegrity:true});
@@ -106,6 +121,7 @@ export class ManagedFiles {
       await this.point(label+".after-file-fsync",{path:name});
     }finally{await fd.close();}
     await this.point(label+".before-rename",{path:name});
+    if(beforeRename)await beforeRename();
     try{await rename(this.path(temporary),target);}catch(e){e.barrier=true;throw e;}
     await this.point(label+".after-rename",{path:name});
     await this.syncDirectory(dirname(target),label);
@@ -116,17 +132,18 @@ export class ManagedFiles {
     await this.syncDirectory(dirname(this.path(name)),label);
   }
   async info(name){
-    const path=this.path(name),st=await lstat(path,{bigint:true});if(st.dev!==(await lstat(this.root,{bigint:true})).dev)fail("UNSUPPORTED_STORAGE","Physical entry crosses managed device");integrity(st.isFile()&&!st.isSymbolicLink(),"Managed physical entry is not a regular file");
-    let dir=dirname(path);while(dir!==this.root){const p=await lstat(dir);integrity(p.isDirectory()&&!p.isSymbolicLink(),"Unsafe physical parent");dir=dirname(dir);}
+    const path=this.path(name),st=await lstat(path,{bigint:true}),root=await lstat(this.root,{bigint:true});privateDirectory(root);privateFile(st);if(st.dev!==root.dev)fail("UNSUPPORTED_STORAGE","Physical entry crosses managed device");
+    let dir=dirname(path);while(dir!==this.root){privateDirectory(await lstat(dir));dir=dirname(dir);}
     return physicalInfo(st);
   }
   async digest(name){
-    const info=await this.info(name),fd=await open(this.path(name),constants.O_RDONLY|constants.O_NOFOLLOW),hash=createHash("sha256"),buffer=Buffer.alloc(4*1024*1024);let offset=0;
+    const info=await this.info(name),fd=await open(this.path(name),constants.O_RDONLY|constants.O_NOFOLLOW),hash=createHash("sha256"),buffer=Buffer.alloc(Math.max(1,Math.min(info.bytes,4*1024*1024)));let offset=0;
     try{
       integrity(physicalFingerprint(physicalInfo(await fd.stat({bigint:true})))===physicalFingerprint(info),"Physical file replaced before hash verification");
-      for(;;){const {bytesRead}=await fd.read(buffer,0,buffer.length,offset);if(!bytesRead)break;hash.update(buffer.subarray(0,bytesRead));offset+=bytesRead;}
+      while(offset<info.bytes){const {bytesRead}=await fd.read(buffer,0,Math.min(buffer.length,info.bytes-offset),offset);if(!bytesRead)break;hash.update(buffer.subarray(0,bytesRead));offset+=bytesRead;}
+      const tail=await fd.read(buffer,0,1,offset);integrity(tail.bytesRead===0,"Physical file grew during hash verification");
       integrity(offset===info.bytes&&physicalFingerprint(physicalInfo(await fd.stat({bigint:true})))===physicalFingerprint(info)&&physicalFingerprint(await this.info(name))===physicalFingerprint(info),"Physical file changed during hash verification");
-      return {...info,hash:hash.digest("hex")};
+      const value={...info,hash:hash.digest("hex")};this.contentHashChecks=(this.contentHashChecks??0)+1;this.observed(name,info,value.hash);return value;
     }finally{await fd.close();}
   }
   async usage(){
@@ -143,8 +160,10 @@ export class ManagedFiles {
     try{await rename(this.path(from),this.path(to));}catch(e){e.barrier=true;throw e;}
     await this.point(label+".after-rename",{from,to});await this.syncDirectory(dirname(this.path(from)),label);await this.syncDirectory(dirname(this.path(to)),label);
   }
-  async remove(name,label="gc",{allowMissing=true}={}){
-    await this.point(label+".before-unlink",{path:name});try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT"||!allowMissing)throw e;}
+  async remove(name,label="gc",{allowMissing=true,expected}={}){
+    await this.point(label+".before-unlink",{path:name});
+    if(expected){const actual=await this.digest(name);if(physicalFingerprint(actual)!==physicalFingerprint(expected)||actual.hash!==expected.hash)fail("INTEGRITY_ERROR","Authorized unlink object was replaced or modified",{storageIntegrity:true});}
+    try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT"||!allowMissing)throw e;}
     await this.point(label+".after-unlink",{path:name});await this.syncDirectory(dirname(this.path(name)),label);
   }
   async preflight(bytes,quota,reserve) {

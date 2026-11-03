@@ -56,6 +56,7 @@ export class CommitCoordinator {
     this.platform=await inspectPlatform(this.files.root,this.platform.profile,this.platform.purpose);
     await assertOwnedWriterLease(this.files.root);
     try{
+      await this.files.auditBoundary();
       await recoverBootstrapTemporary(this.files);
       const hasFormat=await this.files.exists("storage-format.json"),hasCurrent=await this.files.exists("visual-registry/CURRENT.json");
       if(!hasFormat){
@@ -98,7 +99,7 @@ export class CommitCoordinator {
     const result=this.queue.then(run);this.queue=result.catch(()=>{});return result;
   }
   snapshot(){if(!this.current)fail("RECOVERY_REQUIRED","No verified committed snapshot is available");return structuredClone({root:this.current.root,envelope:this.current.envelope,documents:this.current.documents,authority:this.current.authority,state:this.state});}
-  diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null,performance:structuredClone(this.performance)};}
+  diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,filesystemTrust:this.files.trust??null,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null,performance:structuredClone(this.performance)};}
   commit(input,actorInput,expectedEpoch){
     // Parse/copy immediately, before queueing; caller changes cannot alter a pending command.
     const command=parse(CommitCommandSchema,input),actor=parse(ActorContextSchema,actorInput);parse(RevisionSchema,expectedEpoch);
@@ -122,6 +123,7 @@ export class CommitCoordinator {
     let intentWritten=false,publicationAttempted=false,reservation=null;
     let maintenanceResult=null,overrides={};
     try{
+      await this.files.auditBoundary();
       if(before&&canonicalJson(await this.files.json("visual-registry/CURRENT.json",64*1024))!==canonicalJson(before.envelope))fail("INTEGRITY_ERROR","CURRENT drift outside writer coordinator",{storageIntegrity:true});
       if(command){
         const touched=new Set();
@@ -208,8 +210,7 @@ export class CommitCoordinator {
       const prepared=await verifyPreparedClosure(this.files,envelope,{cache:this.verification,metrics:this.performance});
       timings.candidateVerificationMs=performance.now()-stageStarted;stageStarted=performance.now();
       if(before&&canonicalJson(await this.files.json("visual-registry/CURRENT.json",64*1024))!==canonicalJson(before.envelope))fail("INTEGRITY_ERROR","CURRENT changed during preparation",{storageIntegrity:true});
-      await prepared.verifyObservation();
-      publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current",{owner:temporaryOwner});
+      publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current",{owner:temporaryOwner,beforeRename:()=>prepared.verifyObservation()});
       await this.files.point("after-publication-durable");
       timings.currentPublicationMs=performance.now()-stageStarted;stageStarted=performance.now();
       const selected=await this.files.json("visual-registry/CURRENT.json",64*1024);
@@ -219,10 +220,11 @@ export class CommitCoordinator {
       // between verification and selection without reconstructing all old versions.
       for(const [path,record]of plan.records){const digest=await this.files.digest(path);integrity(digest.bytes===record.bytes.length&&digest.hash===hashJsonBytes(record.bytes),"Published staged file changed after candidate verification");}
       integrity(prepared.envelope.rootHash===rootHash,"Published root changed under writer lease");
-      await this.journal.outcome(commitId,member);await prepared.verifyObservation();this.current=prepared;
+      await this.journal.outcome(commitId,member);
+      await this.files.point("before-ack");
+      await prepared.verifyObservation();this.current=prepared;
       timings.postPublicationMs=performance.now()-stageStarted;timings.totalMs=performance.now()-transactionStarted;
       this.performance.transactions.push(timings);if(this.performance.transactions.length>64)this.performance.transactions.shift();
-      await this.files.point("before-ack");
       return {ack,replayed:false,...(maintenance?{result:maintenanceResult,envelope:prepared.envelope}:{})};
     }catch(e){
       if(publicationAttempted||e.barrier||e.details?.storageIntegrity||["EIO","EROFS","EACCES"].includes(e.code)){

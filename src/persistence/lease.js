@@ -7,10 +7,12 @@ import { join } from "node:path";
 import { inspectPlatform } from "./platform.js";
 import { assertJson } from "../documents/validation.js";
 import { PersistenceError } from "./errors.js";
+import { privateLeaseTree } from "./ownership.js";
 
 export async function openIsolatedStore(directory,options={},observeStage=()=>{}) {
   assertJson(options);const profile=options.profile??"linux-local-durable",purpose=options.purpose;
   await inspectPlatform(directory,profile,purpose); // must reject unsupported profiles before lock file creation.
+  await privateLeaseTree(directory);
   const worker=fileURLToPath(new URL("./worker.js",import.meta.url));
   const child=spawn("/usr/bin/flock",["-n","-E","73","-F",join(directory,"WRITER.lock"),process.execPath,worker,directory],{stdio:["ignore","ignore","pipe","ipc"]});
   const events=new EventEmitter(),pending=new Map();let sequence=0,stderr="",closed=false,spawned=false,startupIpcError=null;

@@ -29,15 +29,15 @@ export class VerificationCache {
   }}
   async valid(files,key,row,track){
     const proof=this.versions.get(key);if(!proof||proof.rowHash!==hashJson(row))return false;
-    for(const path of proof.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return false;let valid;try{valid=await files.checkFingerprint(path,expected);}catch{this.invalidatePath(path);return false;}if(!valid){this.invalidatePath(path);return false;}track.add(path);}
+    for(const path of proof.paths){const expected=this.fingerprints.get(path);this.stats.metadataPathsTraversed++;if(!expected)return false;let valid;try{valid=await files.checkFingerprint(path,expected);}catch{this.invalidatePath(path);return false;}if(!valid){this.invalidatePath(path);return false;}track.add(path);}
     this.versions.delete(key);proof.last=++this.proofSequence;this.versions.set(key,proof);
     this.stats.versionHits++;return true;
   }
   async remember(files,key,row,paths,record){
-    this.dropProof(key);const unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,await files.proofFingerprint(path)]);
+    this.dropProof(key);const unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,await files.proofIdentity(path)]);
     let bytes=Buffer.byteLength(key)+Buffer.byteLength(hashJson(row))+64;for(const [path,value]of values){let physical=this.fingerprints.get(path);
-      if(physical&&physical.fingerprint!==value){this.invalidatePath(path);physical=this.fingerprints.get(path);}
-      if(!physical){const physicalBytes=Buffer.byteLength(path)+Buffer.byteLength(value)+48;physical={fingerprint:value,refs:0,bytes:physicalBytes};this.fingerprints.set(path,physical);this.proofTotal+=physicalBytes;}
+      if(physical&&(physical.fingerprint!==value.fingerprint||physical.hash!==value.hash||physical.contentBytes!==value.contentBytes)){this.invalidatePath(path);physical=this.fingerprints.get(path);}
+      if(!physical){const physicalBytes=Buffer.byteLength(path)+Buffer.byteLength(value.fingerprint)+Buffer.byteLength(value.hash)+64;physical={...value,refs:0,bytes:physicalBytes};this.fingerprints.set(path,physical);this.proofTotal+=physicalBytes;}
       physical.refs++;bytes+=Buffer.byteLength(path)+16;
     }
     this.versions.set(key,{rowHash:hashJson(row),paths:unique,bytes,last:++this.proofSequence});this.proofTotal+=bytes;this.stats.versionMisses++;this.evictProofMetadata();
@@ -52,15 +52,15 @@ export class VerificationCache {
   async registry(files,rootHash,resolver,locator,currentLocatorRootHash,track){
     const hit=this.registries.get(rootHash),historicalLocator=resolver.resolverLocatorRootHash!==currentLocatorRootHash;
     if(!hit||hit.logicalClosureHash!==resolver.logicalClosureHash||(historicalLocator&&hit.resolverLocatorRootHash!==resolver.resolverLocatorRootHash)||hit.locatorRowsHash!==hashJson(hit.refs.map(ref=>locator.get(hashJson(ref)))))return null;
-    for(const path of hit.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return null;let valid;try{valid=await files.checkFingerprint(path,expected);}catch{this.invalidatePath(path);return null;}if(!valid){this.invalidatePath(path);return null;}track.add(path);}
+    for(const path of hit.paths){const expected=this.fingerprints.get(path);this.stats.metadataPathsTraversed++;if(!expected)return null;let valid;try{valid=await files.checkFingerprint(path,expected);}catch{this.invalidatePath(path);return null;}if(!valid){this.invalidatePath(path);return null;}track.add(path);}
     this.registries.delete(rootHash);hit.last=++this.proofSequence;this.registries.set(rootHash,hit);this.stats.registryHits++;return hit.registry;
   }
   async rememberRegistry(files,rootHash,resolver,registry,locator,paths,currentLocatorRootHash){
     const bytes=Buffer.byteLength(canonicalJson([...registry]));if(bytes>this.registryBytes)return;
-    const refs=[...registry].filter(([key])=>key.startsWith("entity:")).map(([,ref])=>ref),unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,await files.proofFingerprint(path)]);
+    const refs=[...registry].filter(([key])=>key.startsWith("entity:")).map(([,ref])=>ref),unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,await files.proofIdentity(path)]);
     this.dropRegistry(rootHash);let proofBytes=Buffer.byteLength(rootHash)+128;
-    for(const [path,value]of values){let physical=this.fingerprints.get(path);if(physical&&physical.fingerprint!==value){this.invalidatePath(path);physical=this.fingerprints.get(path);}
-      if(!physical){const physicalBytes=Buffer.byteLength(path)+Buffer.byteLength(value)+48;physical={fingerprint:value,refs:0,bytes:physicalBytes};this.fingerprints.set(path,physical);this.proofTotal+=physicalBytes;}physical.refs++;proofBytes+=Buffer.byteLength(path)+16;}
+    for(const [path,value]of values){let physical=this.fingerprints.get(path);if(physical&&(physical.fingerprint!==value.fingerprint||physical.hash!==value.hash||physical.contentBytes!==value.contentBytes)){this.invalidatePath(path);physical=this.fingerprints.get(path);}
+      if(!physical){const physicalBytes=Buffer.byteLength(path)+Buffer.byteLength(value.fingerprint)+Buffer.byteLength(value.hash)+64;physical={...value,refs:0,bytes:physicalBytes};this.fingerprints.set(path,physical);this.proofTotal+=physicalBytes;}physical.refs++;proofBytes+=Buffer.byteLength(path)+16;}
     const value={logicalClosureHash:resolver.logicalClosureHash,resolverLocatorRootHash:resolver.resolverLocatorRootHash===currentLocatorRootHash?null:resolver.resolverLocatorRootHash,locatorRowsHash:hashJson(refs.map(ref=>locator.get(hashJson(ref)))),refs,paths:unique,registry,bytes,proofBytes,last:++this.proofSequence};
     this.registries.set(rootHash,value);this.registryTotal+=bytes;this.proofTotal+=proofBytes;
     while(this.registryTotal>this.registryBytes&&this.registries.size>1)this.dropRegistry(this.registries.keys().next().value,true);
@@ -198,6 +198,7 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   cache.stats.deltaApplications=(cache.stats.deltaApplications??0)+versionReads.deltaApplications;
   cache.stats.operationPrefixHits=(cache.stats.operationPrefixHits??0)+versionReads.hits;
   cache.stats.physicalFingerprintChecks=(cache.stats.physicalFingerprintChecks??0)+files.fingerprintChecks;
+  cache.stats.contentHashChecks=(cache.stats.contentHashChecks??0)+files.contentHashChecks;
   if(metrics)metrics.verification={...cache.stats,recordCacheBytes:cache.recordTotal,registryCacheBytes:cache.registryTotal,proofMetadataBytes:cache.proofTotal,proofMetadataBudget:cache.proofBytes,physicalFingerprints:cache.fingerprints.size,versionProofs:cache.versions.size,registryProofs:cache.registries.size};
   return {root,envelope,indices,documents,authority,lifecycle,files:[...pages.track,"visual-registry/CURRENT.json"],verifyObservation:()=>files.verifyObservations()};
 }

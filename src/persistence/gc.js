@@ -181,7 +181,7 @@ export class GarbageCollector {
    for(const i of next.unlinking??[]){const c=plan.candidates[i];if(finalMark.paths.has(c.path)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){
     const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine checksum failed before unlink");
-    await this.files.remove(c.quarantine,"gc",{allowMissing:false});
+    await this.files.remove(c.quarantine,"gc",{allowMissing:false,expected:digest});
    }else {integrity(priorUnlinking.has(i),"Quarantine vanished after new unlink authorization");await this.files.syncDirectory(this.files.path("gc-quarantine/"+id),"gc");}
    next.deleted.push(i);progressed++;
    }
