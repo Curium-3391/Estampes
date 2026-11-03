@@ -241,3 +241,30 @@ for (const fault of ["corrupt plan", "tampered quarantine", "missing quarantine 
     }
   });
 }
+
+test('H-01 / a superseded old-format classification cannot invent missing selection evidence',async t=>{
+  const {classifyTemporaryClaims}=await import('../src/persistence/temporary-attribution.js');
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root),cmd=command([document()]);
+  await killAt(f,'current.after-dir-fsync',async()=>f.store.commit(cmd,actor(),await epoch(f.store)));
+  const claim=await onlyClaim(files);await f.reopen();ready(f);
+  const selected=await loadCommitted(files),key='temporary:'+claim.value.claimId,proof=selected.indices.retention.get(key);
+  assert.ok(proof.publication);
+  assert.ok(selected.files.includes('visual-transactions/'+claim.value.owner.id+'/prepared.json'));
+  assert.ok(selected.files.includes('visual-registry/roots/'+proof.publication.envelope.rootHash+'.json'));
+  const before=await readFile(files.path(current));
+  const {publication,...oldFormat}=proof;selected.indices.retention.set(key,oldFormat);
+  await assert.rejects(classifyTemporaryClaims(files,selected),e=>e.code==='INTEGRITY_ERROR');
+  assert.deepEqual(await readFile(files.path(current)),before);
+});
+
+for(const location of ['source before quarantine','quarantine before intent'])test('H-02 / missing '+location+' cannot be authorized retroactively',async t=>{
+  const {f,files}=await g2Fixture(t),job=await f.store.maintenance('gcPlan',{classes:['G2']});
+  if(location.startsWith('quarantine'))assert.equal((await f.store.maintenance('gcStep',{id:job.id})).state,'waiting-grace');
+  const snapshot=await loadCommitted(files),record=snapshot.indices.retention.get('gc:'+job.id),plan=await readGcPlan(files,record);
+  assert.equal(record.unlinking,undefined);
+  const candidate=plan.candidates[0];await unlink(files.path(location.startsWith('source')?candidate.path:candidate.quarantine));
+  const before=await readFile(files.path(current));
+  await assert.rejects(f.store.maintenance('gcStep',{id:job.id}),e=>e.code==='RECOVERY_REQUIRED');
+  assert.deepEqual(await readFile(files.path(current)),before);
+  assert.equal((await f.store.diagnostics()).state,'read-only-recovery');
+});

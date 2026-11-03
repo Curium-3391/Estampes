@@ -216,7 +216,7 @@ export class CommitCoordinator {
       await this.files.point("before-ack");
       return {ack,replayed:false,...(maintenance?{result:maintenanceResult,envelope:prepared.envelope}:{})};
     }catch(e){
-      if(publicationAttempted||e.barrier||e.details?.storageIntegrity||["INTEGRITY_ERROR","EIO","EROFS","EACCES"].includes(e.code)){
+      if(publicationAttempted||e.barrier||e.details?.storageIntegrity||["EIO","EROFS","EACCES"].includes(e.code)){
         this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:e.code??"IO_ERROR",message:String(e.message).slice(0,300)};
         throw new PersistenceError("RECOVERY_REQUIRED","Commit outcome requires recovery; no durable ACK emitted",this.problem);
       }

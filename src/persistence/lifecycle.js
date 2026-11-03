@@ -6,7 +6,7 @@ import { BackupManager } from "./backup.js";
 import { readVersion, physicalVersionPaths, stageDelta, MIB } from "./archive.js";
 import { readRegistrySnapshot } from "./records.js";
 import { policyOf, initialPolicy, LifecycleOptionsSchema, checkpointKey, ACK_WINDOW } from "./lifecycle-state.js";
-import { integrity, fail } from "./errors.js";
+import { integrity, fail, PersistenceError } from "./errors.js";
 import { PageStore } from "./pages.js";
 import { parseCommitRoot, assertCurrentEnvelope } from "./commit-root-schema.js";
 
@@ -107,6 +107,6 @@ export class LifecycleManager {
    if(action==="verify")return {verified:true,files:(await protectedPaths(this.owner)).paths.size};
    if(action==="usage")return {...await this.files.usage(),pins:this.pins.status()};
    fail("INVALID_INPUT","Unknown lifecycle operation");
-  }catch(e){if(e.barrier||e.details?.storageIntegrity||["INTEGRITY_ERROR","EIO","ENOENT"].includes(e.code)){this.owner.state="read-only-recovery";this.owner.problem={code:"RECOVERY_REQUIRED",cause:e.code??"IO_ERROR",message:String(e.message).slice(0,300)};}throw e;}
+  }catch(e){if(e.barrier||e.details?.storageIntegrity||["INTEGRITY_ERROR","EIO","ENOENT"].includes(e.code)){this.owner.state="read-only-recovery";this.owner.problem={code:"RECOVERY_REQUIRED",cause:e.code??"IO_ERROR",message:String(e.message).slice(0,300)};throw new PersistenceError("RECOVERY_REQUIRED","Maintenance requires recovery",this.owner.problem);}throw e;}
  }
 }

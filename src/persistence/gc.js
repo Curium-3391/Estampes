@@ -23,6 +23,18 @@ export async function readGcPlan(files,record){
  integrity(new Set(r.moved).size===r.moved.length&&new Set(r.deleted).size===r.deleted.length&&new Set(r.unlinking??[]).size===(r.unlinking??[]).length&&r.moved.every(i=>i<plan.candidates.length)&&r.deleted.every(i=>r.moved.includes(i))&&(r.unlinking??[]).every(i=>r.moved.includes(i)&&!r.deleted.includes(i)),"GC progress differs from candidate inventory");
  for(const [i,c]of plan.candidates.entries())integrity(c.quarantine===`gc-quarantine/${plan.id}/${i}-${c.hash}.bin`,"Unsafe GC quarantine path");return plan;
 }
+// Absence is an outcome only when an earlier selected Root already authorized
+// that exact candidate's unlink. A new intent cannot explain an older loss.
+async function verifyGcLocations(files,plan,record){
+ for(const [i,c]of plan.candidates.entries()){
+  const source=await files.exists(c.path),quarantine=await files.exists(c.quarantine);
+  integrity(!(source&&quarantine),"GC candidate exists in two physical locations");
+  if(record.deleted.includes(i)){integrity(!source&&!quarantine,"Terminal GC candidate reappeared");continue;}
+  if(!source&&!quarantine){integrity(record.moved.includes(i)&&(record.unlinking??[]).includes(i),"GC candidate missing without prior durable unlink intent");continue;}
+  const digest=await files.digest(quarantine?c.quarantine:c.path);
+  integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC candidate physical identity changed");
+ }
+}
 async function rootMetadata(files,envelope,paths){
  const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
  for(const [kind,hash]of Object.entries(root.roots))await pages.read(hash,kind);for(const p of pages.track)paths.add(p);
@@ -93,18 +105,20 @@ export class GarbageCollector {
   return {planned:true,id,candidates:candidates.length};
  }
  async step(id){
-  const key="gc:"+id,record=this.owner.current.indices.retention.get(key);if(!record)fail("NOT_FOUND","GC plan not found");if(record.state==="complete")return {id,state:"complete"};
+  const key="gc:"+id,record=this.owner.current.indices.retention.get(key);if(!record)fail("NOT_FOUND","GC plan not found");
   const plan=await readGcPlan(this.files,record);integrity(plan.storeInstanceId===this.owner.current.root.storeInstanceId,"GC plan namespace differs");
+  await verifyGcLocations(this.files,plan,record);if(record.state==="complete")return {id,state:"complete"};
+  const priorUnlinking=new Set(record.unlinking??[]);
   const state=structuredClone(record),{paths}=await protectedPaths(this.owner);let progressed=0;
   await this.files.point("gc.before-quarantine",{id});
   for(const [i,c]of plan.candidates.entries()){
    if(state.moved.includes(i))continue;
    if(paths.has(c.path)){state.reason="PINNED_OR_REACHABLE";continue;}
-   if(await this.files.exists(c.quarantine)){integrity((await this.files.digest(c.quarantine)).hash===c.hash,"Quarantined file changed");}
+   if(await this.files.exists(c.quarantine)){const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantined file changed");}
    else if(await this.files.exists(c.path)){
-    integrity((await this.files.digest(c.path)).hash===c.hash,"GC source changed since plan");
+    const digest=await this.files.digest(c.path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC source changed since plan");
     await this.files.move(c.path,c.quarantine,"gc");
-   }else {state.moved.push(i);state.deleted.push(i);progressed++;continue;}
+   }else fail("INTEGRITY_ERROR","GC source vanished before quarantine");
    state.moved.push(i);progressed++;
   }
   if(state.quarantinedAtMs===null&&state.moved.length)state.quarantinedAtMs=this.manager.acceptedTime();
@@ -118,6 +132,8 @@ export class GarbageCollector {
    if(next.deleted.includes(i))continue;const c=plan.candidates[i];
    if(remarked.paths.has(c.path)){waiting=true;continue;}
    if(c.class==="G2"&&(!this.manager.canAge()||this.manager.now()-next.quarantinedAtMs<DAY)){waiting=true;continue;}
+   if(await this.files.exists(c.quarantine)){const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine changed before unlink authorization");}
+   else integrity(priorUnlinking.has(i),"Missing quarantine cannot acquire a new unlink intent");
    deletionIntent.push(i);
   }
   if(deletionIntent.length){
@@ -126,9 +142,9 @@ export class GarbageCollector {
    const finalMark=await protectedPaths(this.owner);next=structuredClone(this.owner.current.indices.retention.get(key));
    for(const i of next.unlinking??[]){const c=plan.candidates[i];if(finalMark.paths.has(c.path)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){
-    integrity((await this.files.digest(c.quarantine)).hash===c.hash,"Quarantine checksum failed before unlink");
-    await this.files.remove(c.quarantine,"gc");
-   }
+    const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine checksum failed before unlink");
+    await this.files.remove(c.quarantine,"gc",{allowMissing:false});
+   }else {integrity(priorUnlinking.has(i),"Quarantine vanished after new unlink authorization");await this.files.syncDirectory(this.files.path("gc-quarantine/"+id),"gc");}
    next.deleted.push(i);progressed++;
    }
    delete next.unlinking;
@@ -154,6 +170,7 @@ export async function recoverQuarantine(files){
  }
  for(const [key,value]of retention)if(key.startsWith("gc:")){
   const plan=await readGcPlan(files,value);integrity(plan.storeInstanceId===root.storeInstanceId,"Recovery GC namespace mismatch");
+  await verifyGcLocations(files,plan,value);
   for(const c of plan.candidates)if(await files.exists(c.quarantine)){
    integrity((await files.digest(c.quarantine)).hash===c.hash,"Corrupt quarantine during recovery");
    if(required.has(c.path)&&!await files.exists(c.path))await files.move(c.quarantine,c.path,"gc-recovery");

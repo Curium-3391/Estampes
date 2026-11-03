@@ -17,12 +17,12 @@ export class ManagedFiles {
   observed(name,info){
     if(!this.observations)return;
     const value=physicalFingerprint(info),prior=this.observations.get(name);
-    integrity(!prior||prior===value,"Managed file changed within verification");this.observations.set(name,value);
+    if(prior&&prior!==value)fail("INTEGRITY_ERROR","Managed file changed within verification",{storageIntegrity:true});this.observations.set(name,value);
   }
   async proofFingerprint(name){
     if(!this.observations){const io=this.observation();await io.bytes(name);return io.proofFingerprint(name);}
     const expected=this.observations.get(name);
-    integrity(Boolean(expected)&&physicalFingerprint(await this.info(name))===expected,"Verified bytes no longer match managed file identity");return expected;
+    if(!expected||physicalFingerprint(await this.info(name))!==expected)fail("INTEGRITY_ERROR","Verified bytes no longer match managed file identity",{storageIntegrity:true});return expected;
   }
   async verifyObservations(){for(const path of this.observations?.keys()??[])await this.proofFingerprint(path);}
   path(name) {
@@ -135,8 +135,8 @@ export class ManagedFiles {
     try{await rename(this.path(from),this.path(to));}catch(e){e.barrier=true;throw e;}
     await this.point(label+".after-rename",{from,to});await this.syncDirectory(dirname(this.path(from)),label);await this.syncDirectory(dirname(this.path(to)),label);
   }
-  async remove(name,label="gc"){
-    await this.point(label+".before-unlink",{path:name});try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT")throw e;}
+  async remove(name,label="gc",{allowMissing=true}={}){
+    await this.point(label+".before-unlink",{path:name});try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT"||!allowMissing)throw e;}
     await this.point(label+".after-unlink",{path:name});await this.syncDirectory(dirname(this.path(name)),label);
   }
   async preflight(bytes,quota,reserve) {
