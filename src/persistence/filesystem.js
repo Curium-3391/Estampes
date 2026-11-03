@@ -13,7 +13,12 @@ export class ManagedFiles {
   constructor(root, observer = async () => {}) { this.root=root;this.observer=observer;this.fault=null;this.trace=[]; }
   // A verification operation owns its observations. They are never recovered
   // from disk or inferred from a later stat of bytes read earlier.
-  observation(){const io=Object.create(this);io.observations=new Map();return io;}
+  observation(){const io=Object.create(this);io.observations=new Map();io.checkedFingerprints=new Set();io.jsonIdentities=new WeakMap();io.metadataCache={records:new Map(),bytes:0};io.fingerprintChecks=0;return io;}
+  async checkFingerprint(name,expected){
+    if(this.observations?.has(name))return this.observations.get(name)===expected;
+    this.fingerprintChecks=(this.fingerprintChecks??0)+1;const info=await this.info(name);
+    if(physicalFingerprint(info)!==expected)return false;this.observed(name,info);return true;
+  }
   observed(name,info){
     if(!this.observations)return;
     const value=physicalFingerprint(info),prior=this.observations.get(name);
@@ -22,9 +27,11 @@ export class ManagedFiles {
   async proofFingerprint(name){
     if(!this.observations){const io=this.observation();await io.bytes(name);return io.proofFingerprint(name);}
     const expected=this.observations.get(name);
-    if(!expected||physicalFingerprint(await this.info(name))!==expected)fail("INTEGRITY_ERROR","Verified bytes no longer match managed file identity",{storageIntegrity:true});return expected;
+    if(this.checkedFingerprints.has(name))return expected;
+    this.fingerprintChecks++;
+    if(!expected||physicalFingerprint(await this.info(name))!==expected)fail("INTEGRITY_ERROR","Verified bytes no longer match managed file identity",{storageIntegrity:true});this.checkedFingerprints.add(name);return expected;
   }
-  async verifyObservations(){for(const path of this.observations?.keys()??[])await this.proofFingerprint(path);}
+  async verifyObservations(){for(const [path,expected]of this.observations??[]){this.fingerprintChecks++;if(physicalFingerprint(await this.info(path))!==expected)fail("INTEGRITY_ERROR","Verified file changed before publication",{storageIntegrity:true});}}
   path(name) {
     const p=resolve(this.root,name);
     if (!name || p===this.root || relative(this.root,p).startsWith("..") || name.includes("\\")) fail("INTEGRITY_ERROR","Unsafe managed path");
@@ -74,7 +81,8 @@ export class ManagedFiles {
   async json(name,maxBytes) {
     const bytes=await this.bytes(name,maxBytes);let value;
     try{value=JSON.parse(bytes);}catch{fail("INTEGRITY_ERROR","Malformed managed JSON");}
-    integrity(Buffer.from(canonicalJson(value)).equals(bytes),"Non-canonical managed JSON");return value;
+    integrity(Buffer.from(canonicalJson(value)).equals(bytes),"Non-canonical managed JSON");
+    if(value&&typeof value==="object")this.jsonIdentities?.set(value,{hash:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});return value;
   }
   async exists(name){try{await lstat(this.path(name));return true;}catch(e){if(e.code==="ENOENT")return false;throw e;}}
   async durableCreate(name,bytes,label){

@@ -10,7 +10,7 @@ import { parseCommitRoot } from "./commit-root-schema.js";
 import { ManagedFiles, StagingPlan } from "./filesystem.js";
 import { PageStore } from "./pages.js";
 import { IntentJournal } from "./journal.js";
-import { CommitCommandSchema, FormatSchema, AckSchema, LedgerEntrySchema, VerificationCache, replayLedgerEntry, loadCommitted, verifyPreparedClosure, storeDocument, versionPath, closure, logicalClosureHash } from "./records.js";
+import { CommitCommandSchema, FormatSchema, AckSchema, LedgerEntrySchema, VerificationCache, replayLedgerEntry, loadCommitted, verifyPreparedClosure, versionPath, closure, logicalClosureHash } from "./records.js";
 import { assertOwnedWriterLease, inspectPlatform } from "./platform.js";
 import { LifecycleManager } from "./lifecycle.js";
 import { initialPolicy, policyOf, DAY } from "./lifecycle-state.js";
@@ -24,20 +24,28 @@ const stablePrincipal = actor => {
   if(p.kind==="module")return {owner:actor.authenticatedOwnerId,kind:p.kind,moduleId:p.moduleId,ownershipLineageId:p.ownershipLineageId};
   fail("FORBIDDEN","Historical/import principals are not authenticated command initiators");
 };
+// These values are already strict, finite JSON from command/committed closure
+// validation. Equality matches canonical JSON, including object key order and -0.
+const sameData=(a,b)=>{
+  if(a===b)return true;
+  if(a===null||b===null||typeof a!=="object"||typeof b!=="object"||Array.isArray(a)!==Array.isArray(b))return false;
+  const keys=Object.keys(a);return keys.length===Object.keys(b).length&&keys.every(key=>Object.hasOwn(b,key)&&sameData(a[key],b[key]));
+};
+const storedValidatedDocument=d=>{const {bindings,...document}=d;return {schema:"estampes.document-record/1",document,bindingIds:bindings.map(b=>b.id)};};
 function checkRevisions(before,after){
   if(!before){integrity(after.revision===1&&after.scenes.every(s=>s.revision===1),"New Document/Scenes must start at revision one");return;}
   integrity(before.kind===after.kind&&before.createdAt===after.createdAt&&canonicalJson(before.provenance)===canonicalJson(after.provenance),"Immutable Document identity/provenance changed");
   const omit=(v,keys)=>Object.fromEntries(Object.entries(v).filter(([k])=>!keys.includes(k)));
-  const changed=canonicalJson(omit(before,["revision","updatedAt"]))!==canonicalJson(omit(after,["revision","updatedAt"]));
+  const changed=!sameData(omit(before,["revision","updatedAt"]),omit(after,["revision","updatedAt"]));
   integrity(after.revision===before.revision+(changed?1:0),"Document revision must change exactly once for a content change");
   for(const scene of after.scenes){
     const old=before.scenes.find(s=>s.id===scene.id);
-    integrity(scene.revision===(old?old.revision+(canonicalJson(omit(old,["revision"]))===canonicalJson(omit(scene,["revision"]))?0:1):1),"Scene revision differs from actual content change");
+    integrity(scene.revision===(old?old.revision+(sameData(omit(old,["revision"]),omit(scene,["revision"]))?0:1):1),"Scene revision differs from actual content change");
     for(const field of ["objects","annotations"])for(const entity of scene[field]){
       const prior=old?.[field].find(e=>e.id===entity.id);
       if(!prior){integrity(entity.revision===1,"New entity must start at revision one");continue;}
       assertCreatorUnchanged(prior.provenance,entity.provenance);
-      integrity(entity.revision===prior.revision+(canonicalJson(omit(prior,["revision"]))===canonicalJson(omit(entity,["revision"]))?0:1),"Entity revision differs from actual change");
+      integrity(entity.revision===prior.revision+(sameData(omit(prior,["revision"]),omit(entity,["revision"]))?0:1),"Entity revision differs from actual change");
     }
   }
 }
@@ -110,7 +118,7 @@ export class CommitCoordinator {
   async #publish(command,request,mode,maintenance=null){
     const transactionStarted=performance.now(),timings={mode};let stageStarted=transactionStarted;
     const before=this.current,generation=(before?.root.generation??0)+1,commitId=createId("tx"),acceptedAt=new Date(this.lifecycle?this.lifecycle.acceptedTime():Date.now()).toISOString(),plan=new StagingPlan(this.files),pages=new PageStore(this.files,plan);
-    const registry=new Map(before?.indices.registry??[]),documentMap=new Map((before?.documents??[]).map(d=>[d.id,d])),registryChanges=new Map(),locatorChanges=new Map(),after=[];
+    const registry=new Map(before?.indices.registry??[]),documentMap=new Map((before?.documents??[]).map(d=>[d.id,d])),registryChanges=new Map(),locatorChanges=new Map(),after=[],unchangedDocuments=new Set();
     let intentWritten=false,publicationAttempted=false,reservation=null;
     let maintenanceResult=null,overrides={};
     try{
@@ -134,15 +142,16 @@ export class CommitCoordinator {
           canonicalBindings.set(binding.id,binding);registryChanges.set("binding:"+binding.id,binding);
         }
         for(const key of registry.keys())if(key.startsWith("binding:")&&!canonicalBindings.has(key.slice(8)))registryChanges.set(key,undefined);
-        for(const change of command.changes){const d=change.document,record=storeDocument(d),ref={storeInstanceId:this.format.storeInstanceId,entityId:d.id,revision:d.revision,contentHash:hashJson(record)};
+        for(const change of command.changes){const d=change.document,record=storedValidatedDocument(d),encoded=Buffer.from(canonicalJson(record)),ref={storeInstanceId:this.format.storeInstanceId,entityId:d.id,revision:d.revision,contentHash:hashJsonBytes(encoded)};
           const oldRef=before?.indices.registry.get("entity:"+d.id),oldLocator=oldRef?before.indices.locator.get(hashJson(oldRef)):null;
           let delta=null;
-          if(this.lifecycle&&oldRef&&hashJson(oldRef)!==hashJson(ref))delta=stageDelta(plan,storeDocument(before.documents.find(v=>v.id===d.id)),record,oldRef,ref,oldLocator);
+          if(this.lifecycle&&oldRef&&hashJson(oldRef)!==hashJson(ref))delta=stageDelta(plan,storedValidatedDocument(before.documents.find(v=>v.id===d.id)),record,oldRef,ref,oldLocator,encoded.length);
           const unchanged=oldRef&&hashJson(oldRef)===hashJson(ref);
+          if(unchanged&&sameData(d.bindings,before.documents.find(v=>v.id===d.id).bindings))unchangedDocuments.add(d.id);
           const operational=this.lifecycle&&d.revision%1000===0;
-          if(!unchanged&&(!delta||operational))plan.add(versionPath(ref),record,64*1024*1024);
+          if(!unchanged&&(!delta||operational)){integrity(encoded.length<=64*1024*1024,"Document record exceeds byte limit");plan.addBytes(versionPath(ref),encoded);}
           registryChanges.set("entity:"+d.id,ref);after.push(ref);
-          locatorChanges.set(hashJson(ref),unchanged?oldLocator:delta&&!operational?delta:{logical:ref,kind:"full",relativePath:versionPath(ref),bytes:Buffer.byteLength(canonicalJson(record)),...(delta?{alternative:delta}:{})});
+          locatorChanges.set(hashJson(ref),unchanged?oldLocator:delta&&!operational?delta:{logical:ref,kind:"full",relativePath:versionPath(ref),bytes:encoded.length,...(delta?{alternative:delta}:{})});
         }
       }
       if(maintenance){overrides=await maintenance.mutate({before,plan,pages,commitId,generation});maintenanceResult=overrides.result??{};for(const [key,value]of overrides.locatorChanges??[])locatorChanges.set(key,value);}
@@ -154,7 +163,7 @@ export class CommitCoordinator {
       const authority={schema:"estampes.isolated-authority/1",storeInstanceId:this.format.storeInstanceId,epoch,mode:"isolated-testing",profile:this.platform.profile};
       roots.authority=await pages.update(before?.root.roots.authority,"authority",new Map([["store",authority]]));
       const ack=command?parse(AckSchema,{schema:"estampes.commit-ack/1",commitId,resultId:createId("event"),durability:this.platform.durability,
-        noChange:command.changes.every(c=>before.documents.some(d=>d.id===c.document.id&&canonicalJson(d)===canonicalJson(c.document))),revisionVector:after}):null;
+        noChange:command.changes.every(c=>unchangedDocuments.has(c.document.id)),revisionVector:after}):null;
       const resultHash=hashJson(ack??{mode,epoch,result:maintenanceResult}),payloadHash=request?.payloadHash??hashJson({mode,epoch,maintenance:maintenance?.name??null,metadata:maintenance?.metadata??null});
       const member={commitId,generation,registryRootHash:roots.registry,requestKeyDigest:request?.digest??null,payloadHash,resultHash,outcome:"committed"};
       const ledgerChange=new Map();

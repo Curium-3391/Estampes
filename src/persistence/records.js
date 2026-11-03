@@ -7,10 +7,9 @@ import { CurrentEnvelopeSchema, parseCommitRoot, assertCurrentEnvelope, CommitIn
 import { validateCompleteDocumentClosure } from "../documents/integrity.js";
 import { PageStore } from "./pages.js";
 import { integrity, fail } from "./errors.js";
-import { PhysicalLocatorSchema, readVersion } from "./archive.js";
+import { PhysicalLocatorSchema, readVersion, VersionReadSession } from "./archive.js";
 import { LifecycleOptionsSchema, policyOf, validateRetentionEntry } from "./lifecycle-state.js";
 import { performance } from "node:perf_hooks";
-import { physicalFingerprint as fingerprint } from "./filesystem.js";
 
 export class VerificationCache {
   constructor({recordBytes=24*1024*1024,registryBytes=32*1024*1024,proofBytes=4*1024*1024}={}){this.recordBytes=recordBytes;this.registryBytes=registryBytes;this.proofBytes=proofBytes;this.records=new Map();this.recordTotal=0;this.versions=new Map();this.fingerprints=new Map();this.proofTotal=0;this.proofSequence=0;this.registries=new Map();this.registryTotal=0;this.stats={snapshotLoads:0,versionHits:0,versionMisses:0,recordHits:0,registryHits:0,registryMaterializations:0,versionReconstructions:0,reconstructedMs:0,proofEvictions:0,metadataPathsTraversed:0};}
@@ -30,7 +29,7 @@ export class VerificationCache {
   }}
   async valid(files,key,row,track){
     const proof=this.versions.get(key);if(!proof||proof.rowHash!==hashJson(row))return false;
-    for(const path of proof.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return false;let info;try{info=await files.info(path);}catch{this.invalidatePath(path);return false;}if(fingerprint(info)!==expected){this.invalidatePath(path);return false;}files.observed?.(path,info);track.add(path);}
+    for(const path of proof.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return false;let valid;try{valid=await files.checkFingerprint(path,expected);}catch{this.invalidatePath(path);return false;}if(!valid){this.invalidatePath(path);return false;}track.add(path);}
     this.versions.delete(key);proof.last=++this.proofSequence;this.versions.set(key,proof);
     this.stats.versionHits++;return true;
   }
@@ -53,7 +52,7 @@ export class VerificationCache {
   async registry(files,rootHash,resolver,locator,currentLocatorRootHash,track){
     const hit=this.registries.get(rootHash),historicalLocator=resolver.resolverLocatorRootHash!==currentLocatorRootHash;
     if(!hit||hit.logicalClosureHash!==resolver.logicalClosureHash||(historicalLocator&&hit.resolverLocatorRootHash!==resolver.resolverLocatorRootHash)||hit.locatorRowsHash!==hashJson(hit.refs.map(ref=>locator.get(hashJson(ref)))))return null;
-    for(const path of hit.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return null;let info;try{info=await files.info(path);}catch{this.invalidatePath(path);return null;}if(fingerprint(info)!==expected){this.invalidatePath(path);return null;}files.observed?.(path,info);track.add(path);}
+    for(const path of hit.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return null;let valid;try{valid=await files.checkFingerprint(path,expected);}catch{this.invalidatePath(path);return null;}if(!valid){this.invalidatePath(path);return null;}track.add(path);}
     this.registries.delete(rootHash);hit.last=++this.proofSequence;this.registries.set(rootHash,hit);this.stats.registryHits++;return hit.registry;
   }
   async rememberRegistry(files,rootHash,resolver,registry,locator,paths,currentLocatorRootHash){
@@ -109,6 +108,7 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   const envelope=parse(CurrentEnvelopeSchema,envelopeInput);
   const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
   const indices={};for(const [kind,hash]of Object.entries(root.roots))indices[kind]=await pages.read(hash,kind);
+  const versionReads=new VersionReadSession(indices.locator);
   const authority=parse(AuthoritySchema,indices.authority.get("store"));integrity(indices.authority.size===1&&authority.storeInstanceId===root.storeInstanceId,"Invalid authority identity");
   const lifecycle=policyOf(indices.retention);
   for(const [key,value]of indices.retention){
@@ -120,17 +120,22 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   for(const h of lifecycle?.maintenance.pending?.writtenChunks??[]){const path="visual-history/chunks/"+h+".bin",bytes=await files.bytes(path,4*1024**2);integrity((await import("./archive.js")).hashBytes(bytes)===h,"Pending archive chunk hash mismatch");pages.track.add(path);}
   const readRecord=async(ref,row,{retain=false}={})=>{
     const key=hashJson(ref);if(await cache.valid(files,key,row,pages.track)){const record=cache.record(key);if(record)return record;}
-    const paths=new Set(),started=performance.now(),record=parseStoredDocument(await readStoredVersion(files,ref,indices.locator,paths));cache.stats.versionReconstructions++;cache.stats.reconstructedMs+=performance.now()-started;
+    const paths=new Set(),started=performance.now(),record=parseStoredDocument(await readStoredVersion(files,ref,indices.locator,paths,undefined,versionReads));cache.stats.versionReconstructions++;cache.stats.reconstructedMs+=performance.now()-started;
     for(const path of paths)pages.track.add(path);await cache.remember(files,key,row,paths,retain?record:null);return record;
   };
+  const unverified=[];
   for(const [key,raw]of indices.locator){
     const value=parse(LocatorSchema,raw),ref=value.logical;parse(DocumentIdSchema,ref.entityId);
     integrity(key===hashJson(ref)&&ref.storeInstanceId===root.storeInstanceId,"Locator identity mismatch");
-    if(!await cache.valid(files,key,value,pages.track)){
-      const paths=new Set(),started=performance.now(),record=parseStoredDocument(await readStoredVersion(files,ref,indices.locator,paths));cache.stats.versionReconstructions++;cache.stats.reconstructedMs+=performance.now()-started;
-      if(value.kind==="full"&&value.alternative)parseStoredDocument(await readStoredVersion(files,ref,indices.locator,paths,value.alternative));
+    if(await cache.valid(files,key,value,pages.track)){
+      const record=cache.record(key);if(record)versionReads.put(value,record,cache.versions.get(key).paths);
+    }else unverified.push([key,value]);
+  }
+  for(const [key,value]of unverified){
+      const ref=value.logical;
+      const paths=new Set(),started=performance.now(),record=parseStoredDocument(await readStoredVersion(files,ref,indices.locator,paths,undefined,versionReads));cache.stats.versionReconstructions++;cache.stats.reconstructedMs+=performance.now()-started;
+      if(value.kind==="full"&&value.alternative)parseStoredDocument(await readStoredVersion(files,ref,indices.locator,paths,value.alternative,versionReads));
       for(const path of paths)pages.track.add(path);await cache.remember(files,key,value,paths,record);
-    }
   }
   const materialize=async(registry,locator=indices.locator)=>{
     cache.stats.registryMaterializations++;
@@ -143,12 +148,15 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
         const record=locator===indices.locator?await readRecord(ref,locator.get(hashJson(ref)),{retain:registry===indices.registry}):parseStoredDocument(await readStoredVersion(files,ref,locator,pages.track));
         integrity(new Set(record.bindingIds).size===record.bindingIds.length,"Duplicate stored binding ID");
         const ownBindings=record.bindingIds.map(id=>{integrity(bindings.has(id),"Missing canonical binding record");return bindings.get(id);});
-        documents.push(parseVisualDocument({...record.document,bindings:ownBindings}));
+        documents.push({...record.document,bindings:ownBindings});
       }else integrity(key.startsWith("binding:"),"Unknown registry namespace in isolated store");
     }
-    closure(documents,root.storeInstanceId,root.generation);return documents;
+    // Complete closure validation performs the strict Document parses and
+    // returns their copied values. Avoid a redundant parse before that gate.
+    return closure(documents,root.storeInstanceId,root.generation).documents;
   };
   const documents=await materialize(indices.registry);
+  const materialized=new Set([root.roots.registry]);
   let currentCatalog=false;
   for(const [key,raw]of indices.retention){
     if(!key.startsWith("registry:"))continue;
@@ -158,7 +166,7 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
     else locator=indices.locator;
     integrity(logicalClosureHash(registry)===resolver.logicalClosureHash,"Recovery logical closure hash mismatch");
     for(const [k,value]of registry)if(k.startsWith("entity:"))integrity(locator.has(hashJson(value))&&canonicalJson(locator.get(hashJson(value)))===canonicalJson(indices.locator.get(hashJson(value))),"Recovery resolver lacks matching retained version");
-    if(!registryHit){await materialize(registry,locator);const proofTrack=new Set(),proofPages=new PageStore(files,null,proofTrack);await proofPages.read(resolver.registryRootHash,"registry");if(resolver.resolverLocatorRootHash!==root.roots.locator)await proofPages.read(resolver.resolverLocatorRootHash,"locator");for(const path of proofTrack)pages.track.add(path);await cache.rememberRegistry(files,resolver.registryRootHash,resolver,registry,indices.locator,proofTrack,root.roots.locator);}
+    if(!registryHit){if(!materialized.has(resolver.registryRootHash)){await materialize(registry,indices.locator);materialized.add(resolver.registryRootHash);}const proofTrack=new Set(),proofPages=new PageStore(files,null,proofTrack);await proofPages.read(resolver.registryRootHash,"registry");if(resolver.resolverLocatorRootHash!==root.roots.locator)await proofPages.read(resolver.resolverLocatorRootHash,"locator");for(const path of proofTrack)pages.track.add(path);await cache.rememberRegistry(files,resolver.registryRootHash,resolver,registry,indices.locator,proofTrack,root.roots.locator);}
     if(resolver.registryRootHash===root.roots.registry){integrity(resolver.resolverLocatorRootHash===root.roots.locator,"Current recovery resolver is split");currentCatalog=true;}
   }
   integrity(currentCatalog,"Current registry lacks recovery catalog entry");
@@ -186,8 +194,11 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
     for(const ref of entry.ack.revisionVector)integrity(canonicalJson(registry.get("entity:"+ref.entityId))===canonicalJson(ref),"ACK revision vector differs from committed registry");
   }
   for(const member of memberships.values())if(member.requestKeyDigest!==null)integrity(keys.has(member.requestKeyDigest),"Committed effect is missing its ledger outcome");
-  if(metrics)metrics.verification={...cache.stats,recordCacheBytes:cache.recordTotal,registryCacheBytes:cache.registryTotal,proofMetadataBytes:cache.proofTotal,proofMetadataBudget:cache.proofBytes,physicalFingerprints:cache.fingerprints.size,versionProofs:cache.versions.size,registryProofs:cache.registries.size};
   await files.verifyObservations();
+  cache.stats.deltaApplications=(cache.stats.deltaApplications??0)+versionReads.deltaApplications;
+  cache.stats.operationPrefixHits=(cache.stats.operationPrefixHits??0)+versionReads.hits;
+  cache.stats.physicalFingerprintChecks=(cache.stats.physicalFingerprintChecks??0)+files.fingerprintChecks;
+  if(metrics)metrics.verification={...cache.stats,recordCacheBytes:cache.recordTotal,registryCacheBytes:cache.registryTotal,proofMetadataBytes:cache.proofTotal,proofMetadataBudget:cache.proofBytes,physicalFingerprints:cache.fingerprints.size,versionProofs:cache.versions.size,registryProofs:cache.registries.size};
   return {root,envelope,indices,documents,authority,lifecycle,files:[...pages.track,"visual-registry/CURRENT.json"],verifyObservation:()=>files.verifyObservations()};
 }
 
@@ -202,7 +213,7 @@ export async function readRegistrySnapshot(files,registryHash,locatorHash,storeI
  for(const [key,ref]of registry)if(key.startsWith("entity:")){
   const record=parseStoredDocument(await readStoredVersion(files,ref,locator,track));
   const own=record.bindingIds.map(id=>{integrity(bindings.has(id),"Historical binding is absent from its own Registry");return bindings.get(id);});
-  documents.push(parseVisualDocument({...record.document,bindings:own}));
+  documents.push({...record.document,bindings:own});
  }
- closure(documents,storeInstanceId,generation);return {documents,registry,locator,files:[...track]};
+ const validated=closure(documents,storeInstanceId,generation).documents;return {documents:validated,registry,locator,files:[...track]};
 }

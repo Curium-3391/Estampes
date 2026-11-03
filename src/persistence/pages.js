@@ -9,12 +9,14 @@ const pageSchema=z.object({schema:z.literal("estampes.index-page/1"),kind:kindSc
 export const pagePath=hash=>"visual-registry/pages/"+parse(ContentHashSchema,hash)+".json";
 const bucketOf=key=>hashJson(key).slice(0,2);
 export class PageStore {
-  constructor(io,plan=null,track=new Set()){this.io=io;this.plan=plan;this.track=track;this.cache=new Map();}
+  constructor(io,plan=null,track=new Set()){this.io=io;this.plan=plan;this.track=track;this.cacheState=!plan&&io.observations?(io.metadataCache??={records:new Map(),bytes:0}):{records:new Map(),bytes:0};this.cache=this.cacheState.records;}
   async hashed(hash,folder="visual-registry/pages",limit=4*1024*1024){
     parse(ContentHashSchema,hash);const path=folder+"/"+hash+".json";this.track.add(path);
-    if(this.cache.has(path))return this.cache.get(path);
+    if(this.cache.has(path))return this.cache.get(path).value;
     try {
-      const value=await (this.plan??this.io).json(path,limit);integrity(hashJson(value)===hash,"Content-addressed metadata hash mismatch");this.cache.set(path,value);if(this.cache.size>4)this.cache.delete(this.cache.keys().next().value);return value;
+      const value=await (this.plan??this.io).json(path,limit);integrity(hashJson(value)===hash,"Content-addressed metadata hash mismatch");
+      const bytes=Buffer.byteLength(canonicalJson(value));this.cache.set(path,{value,bytes});this.cacheState.bytes+=bytes;
+      while(this.cacheState.bytes>4*1024**2){const key=this.cache.keys().next().value;this.cacheState.bytes-=this.cache.get(key).bytes;this.cache.delete(key);}return value;
     }catch(e){fail("INTEGRITY_ERROR","Content-addressed metadata cannot be verified",{storageIntegrity:true,cause:e.code??"IO_ERROR"});}
   }
   async read(hash,kind){
