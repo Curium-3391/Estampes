@@ -13,7 +13,9 @@ import { TemporaryRecoverySchema, readTemporaryClaim, temporaryClaimPath } from 
 const uuid="[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",hash="[0-9a-f]{64}";
 const allowed=new RegExp("^(?:(?:visual-documents/"+uuid+"/generations/[1-9][0-9]*-"+hash+"\\.json|visual-registry/(?:pages|roots)/"+hash+"\\.json|visual-history/(?:chunks/"+hash+"\\.bin|deltas/"+hash+"\\.json)|visual-maintenance/(?:gc|backup-lists|backup-list-pages)/"+hash+"\\.json|visual-transactions/"+uuid+"/(?:intent|prepared|outcome)\\.json|visual-registry/CURRENT\\.json|storage-format\\.json)(?:\\.tmp-"+uuid+")?|visual-temporaries/claims/"+uuid+"\\.json)$");
 export const gcSourceAllowed=path=>typeof path==="string"&&allowed.test(path);
-const candidateSchema=z.object({path:z.string().refine(gcSourceAllowed),hash:Hash,bytes:z.number().int().min(0),class:z.enum(["G1","G2"]),quarantine:z.string(),reason:z.string().max(160)}).strict();
+const physicalSchema=z.object({dev:z.string().regex(/^\d{1,32}$/),ino:z.string().regex(/^\d{1,32}$/)}).strict();
+const objectKey=value=>value?value.dev+":"+value.ino:null;
+const candidateSchema=z.object({path:z.string().refine(gcSourceAllowed),hash:Hash,bytes:z.number().int().min(0),class:z.enum(["G1","G2"]),quarantine:z.string(),reason:z.string().max(160),physical:physicalSchema.optional()}).strict();
 const temporaryDispositionSchema=z.object({recovery:TemporaryRecoverySchema,claimCandidate:z.number().int().min(0).max(127),temporaryCandidate:z.number().int().min(0).max(127).nullable()}).strict();
 export const GcPlanSchema=bounded(z.object({schema:z.literal("estampes.gc-plan/1"),id:z.string().uuid(),storeInstanceId:z.string().uuid(),sourceGeneration:z.number().int().positive(),
  sourceRootHash:Hash,rootsetHash:Hash,pinsEpoch:z.number().int().min(0),createdAtMs:z.number().int().min(0),candidates:z.array(candidateSchema).min(1).max(128),temporaryDispositions:z.array(temporaryDispositionSchema).max(64).optional()}).strict());
@@ -21,6 +23,7 @@ export const gcPlanPath=hash=>"visual-maintenance/gc/"+parse(Hash,hash)+".json";
 export async function readGcPlan(files,record){
  const r=parse(GcRecordSchema,record),raw=await files.json(gcPlanPath(r.planHash),4*1024**2),validated=GcPlanSchema.safeParse(raw);integrity(validated.success,"Invalid committed GC plan schema");const plan=validated.data;integrity(hashJson(plan)===r.planHash,"GC plan hash mismatch");
  integrity(new Set(r.moved).size===r.moved.length&&new Set(r.deleted).size===r.deleted.length&&new Set(r.unlinking??[]).size===(r.unlinking??[]).length&&r.moved.every(i=>i<plan.candidates.length)&&r.deleted.every(i=>r.moved.includes(i))&&(r.unlinking??[]).every(i=>r.moved.includes(i)&&!r.deleted.includes(i)),"GC progress differs from candidate inventory");
+ integrity(new Set(plan.candidates.map(c=>c.path)).size===plan.candidates.length&&(r.state!=="complete"||r.deleted.length===plan.candidates.length),"GC plan repeats a candidate or has incomplete terminal progress");
  for(const [i,c]of plan.candidates.entries())integrity(c.quarantine===`gc-quarantine/${plan.id}/${i}-${c.hash}.bin`,"Unsafe GC quarantine path");return plan;
 }
 // Absence is an outcome only when an earlier selected Root already authorized
@@ -41,8 +44,30 @@ async function verifyGcLocations(files,plan,record){
   // and let the live-root re-mark postpone deletion of the old copy.
   for(const path of [...(source?[c.path]:[]),...(quarantine?[c.quarantine]:[])]){
    const digest=await files.digest(path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC candidate physical identity changed");
+   if(c.physical&&(path===c.quarantine||(!quarantine&&!(record.unlinking??[]).includes(i))))integrity(objectKey(digest)===objectKey(c.physical),"GC candidate object differs from selected ownership");
   }
  }
+}
+// Reservations are derived from the sole selected retention root, not a second
+// authority. Terminal candidates release ownership; pathname reuse is a new
+// object. Old plans without object identity reserve their paths conservatively.
+export async function gcOwnership(files,snapshot){
+ const objects=new Set(),legacyPaths=new Set(),paths=new Map();let count=0;
+ for(const [key,record]of snapshot.indices.retention)if(key.startsWith("gc:")){
+  const plan=await readGcPlan(files,record);
+  integrity(key==="gc:"+plan.id&&plan.storeInstanceId===snapshot.root.storeInstanceId&&plan.sourceGeneration<=snapshot.root.generation,"GC ownership namespace differs from selected root");
+  if(record.state==="complete")continue;
+  await verifyGcLocations(files,plan,record);
+  for(const [i,c]of plan.candidates.entries()){
+   if(record.deleted.includes(i))continue;
+   if(++count>4096)fail("STORAGE_UNAVAILABLE","Active GC ownership exceeds bounded inventory");
+   const object=objectKey(c.physical),prior=paths.get(c.path)??[];
+   integrity(!legacyPaths.has(c.path)&&(!object?prior.length===0:!objects.has(object)),"Physical candidate has overlapping active GC owners");
+   if(object)objects.add(object);else legacyPaths.add(c.path);
+   prior.push(object);paths.set(c.path,prior);
+  }
+ }
+ return {objects,legacyPaths,count};
 }
 async function rootMetadata(files,envelope,paths){
  const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
@@ -71,15 +96,18 @@ export class GarbageCollector {
  async plan({classes=["G1","G2"]}={}){
   integrity(Array.isArray(classes)&&classes.length>0&&classes.every(v=>["G1","G2"].includes(v)),"Invalid GC class filter");
   const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner),candidates=[],proofs=new Map(),selected=new Set(),temporaryDispositions=[];
+  const ownership=await gcOwnership(this.files,snapshot);
   const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=128||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return false;
-   const info=await this.files.digest(path);selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:""});return true;};
+   const info=await this.files.digest(path);if(ownership.legacyPaths.has(path)||ownership.objects.has(objectKey(info)))return false;
+   if(ownership.count+candidates.length>=4096)fail("STORAGE_UNAVAILABLE","Active GC ownership budget exhausted");
+   selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:"",physical:{dev:info.dev,ino:info.ino}});return true;};
   for(const row of snapshot.indices.locator.values())if(row.kind==="delta"){
    const ref=row.logical,path=`visual-documents/${ref.entityId.slice(4)}/generations/${ref.revision}-${ref.contentHash}.json`;
    await add(path,"G1","Verified committed delta reconstructs the same logical version");
   }
   const now=this.manager.now(),safeClock=this.manager.canAge();
   for(const [key,raw]of snapshot.indices.retention){
-   if(!key.startsWith("temporary:")||!classes.includes("G2")||candidates.length>126)continue;
+   if(!key.startsWith("temporary:")||!classes.includes("G2")||candidates.length>126||temporaryDispositions.length>=64)continue;
    const recovery=parse(TemporaryRecoverySchema,raw);integrity(key==="temporary:"+recovery.claimId,"Temporary recovery key mismatch");
    const claim=await readTemporaryClaim(this.files,recovery.claimId);
    integrity(claim.claimId===recovery.claimId&&canonicalJson(claim.owner)===canonicalJson(recovery.owner)&&claim.finalPath===recovery.finalPath&&claim.temporaryPath===recovery.temporaryPath&&claim.hash===recovery.hash&&claim.bytes===recovery.bytes,"Temporary claim differs from durable recovery classification");
@@ -116,6 +144,7 @@ export class GarbageCollector {
  async step(id){
   const key="gc:"+id,record=this.owner.current.indices.retention.get(key);if(!record)fail("NOT_FOUND","GC plan not found");
   const plan=await readGcPlan(this.files,record);integrity(plan.storeInstanceId===this.owner.current.root.storeInstanceId,"GC plan namespace differs");
+  await gcOwnership(this.files,this.owner.current);
   await verifyGcLocations(this.files,plan,record);if(record.state==="complete")return {id,state:"complete"};
   const priorUnlinking=new Set(record.unlinking??[]);
   const state=structuredClone(record),{paths}=await protectedPaths(this.owner);let progressed=0;
@@ -169,6 +198,7 @@ export async function recoverQuarantine(files){
  if(!await files.exists("visual-registry/CURRENT.json"))return;
  const envelope=parse(CurrentEnvelopeSchema,await files.json("visual-registry/CURRENT.json",64*1024)),pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
  const retention=await pages.read(root.roots.retention,"retention"),locator=await pages.read(root.roots.locator,"locator"),required=new Set(pages.track);
+ await gcOwnership(files,{root,indices:{retention}});
  for(const row of locator.values()){
   if(row.kind==="full")required.add(row.relativePath);
   const delta=row.kind==="delta"?row:row.alternative;
