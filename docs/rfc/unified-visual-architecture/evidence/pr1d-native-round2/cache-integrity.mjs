@@ -1,0 +1,164 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtemp, rm, rename, writeFile, utimes, appendFile, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { ManagedFiles } from "../../../../../src/persistence/filesystem.js";
+import { VerificationCache, loadCommitted, storeDocument, versionPath } from "../../../../../src/persistence/records.js";
+import { readVersion } from "../../../../../src/persistence/archive.js";
+import { hashJson } from "../../../../../src/documents/validation.js";
+import { lifecycleFixture, document, titleEdit, command, actor, epoch, drain } from "../../../../../tests/fixtures/uva-lifecycle.mjs";
+
+const profile = "linux-local-durable";
+const durable = () => ({...document(), persistence: "durable"});
+
+test("M-01 / default budget, shared fingerprints and eviction on real ext4 files", async t => {
+  const root = await mkdtemp(join(tmpdir(), "estampes-proof-budget-"));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  const files = new ManagedFiles(root), cache = new VerificationCache();
+  const paths = [];
+  for (let n = 0; n < 224; n++) {
+    const path = "proof/" + n + "-" + "x".repeat(160);
+    await files.durableCreate(path, Buffer.from("{}"), "proof");
+    paths.push(path);
+  }
+  const row = n => ({n});
+  for (let n = 0; n < 224; n++) {
+    await cache.remember(files, "version-" + n, row(n), paths.slice(0, n + 1), null);
+    assert.ok(cache.proofTotal <= 4 * 1024 * 1024);
+  }
+  assert.ok(cache.stats.proofEvictions > 0);
+  assert.equal(cache.fingerprints.size, paths.length);
+  assert.equal(await cache.valid(files, "version-0", row(0), new Set()), false);
+  assert.equal(await cache.valid(files, "version-223", row(223), new Set()), true);
+  // Refresh from content after a miss, then prove that sharing does not retain
+  // other proofs if their shared fingerprint changes.
+  await files.json(paths[0]);
+  await cache.remember(files, "version-0", row(0), [paths[0]], null);
+  assert.equal(await cache.valid(files, "version-0", row(0), new Set()), true);
+  const metrics = () => ({proofBytes: cache.proofTotal, budget: cache.proofBytes, fingerprints: cache.fingerprints.size,
+    proofs: cache.versions.size, ...cache.stats});
+  t.diagnostic(JSON.stringify({beforeInvalidation: metrics()}));
+  await writeFile(files.path(paths[0]), "[]");
+  assert.equal(await cache.valid(files, "version-0", row(0), new Set()), false);
+  assert.equal(await cache.valid(files, "version-223", row(223), new Set()), false);
+  await files.json(paths[0]);
+  await cache.remember(files, "new", row(224), [paths[0]], null);
+  assert.equal(cache.versions.size, 1);
+  assert.equal(cache.fingerprints.size, 1);
+  t.diagnostic(JSON.stringify({afterInvalidation: metrics()}));
+});
+
+async function history(f) {
+  const docs = [durable()], refs = [];
+  for (let n = 1; n <= 3; n++) {
+    if (n > 1) docs.push({...titleEdit(docs.at(-1)), title: "history " + n});
+    const ack = await f.store.commit(command([docs.at(-1)], n, n === 1 ? null : n - 1), actor(n), await epoch(f.store));
+    refs.push(ack.ack.revisionVector[0]);
+  }
+  return {docs, refs};
+}
+
+test("M-01 / evicted real historical proofs reconstruct exactly and start cold", async t => {
+  const f = await lifecycleFixture(t, {profile}), {docs, refs} = await history(f);
+  await f.store.close();
+  const cache = new VerificationCache({proofBytes: 1400}), files = new ManagedFiles(f.root), metrics = {};
+  const original = await loadCommitted(files, {cache, metrics});
+  const initial = metrics.verification;
+  const repeat = await loadCommitted(files, {cache, metrics});
+  assert.ok(initial.proofEvictions > 0);
+  assert.ok(metrics.verification.versionReconstructions > initial.versionReconstructions);
+  assert.deepEqual(repeat.envelope, original.envelope);
+  for (const [i, ref] of refs.entries()) assert.deepEqual(await readVersion(files, ref, repeat.indices.locator), storeDocument(docs[i]));
+  const cold = {};
+  await loadCommitted(files, {metrics: cold});
+  assert.equal(cold.verification.snapshotLoads, 1);
+  assert.equal(cold.verification.versionReconstructions, refs.length);
+  t.diagnostic(JSON.stringify({initial, repeated: metrics.verification, freshCache: cold.verification}));
+  await f.reopen();
+  assert.equal(f.store.status.state, "ready");
+  assert.deepEqual((await f.store.snapshot()).documents, [docs.at(-1)]);
+});
+
+for (const mode of ["inode", "size", "timestamps", "registry"]) {
+  test("M-01 / " + mode + " invalidates a historical dependency before ACK", async t => {
+    const f = await lifecycleFixture(t, {profile, legacy: true}), {docs, refs} = await history(f);
+    const files = new ManagedFiles(f.root), selected = await loadCommitted(files);
+    const registry = [...selected.indices.retention.values()].find(row =>
+      row.registryRootHash && row.registryRootHash !== selected.root.roots.registry);
+    const path = mode === "registry" ? "visual-registry/pages/" + registry.registryRootHash + ".json" : versionPath(refs[0]);
+    const bytes = await readFile(files.path(path)), before = await files.info(path);
+    if (mode === "inode") {
+      await writeFile(files.path("replacement"), bytes);
+      await rename(files.path("replacement"), files.path(path));
+      assert.notEqual((await files.info(path)).ino, before.ino);
+    }
+    if (mode === "size") await appendFile(files.path(path), " ");
+    if (mode === "timestamps") {
+      await utimes(files.path(path), new Date(0), new Date(0));
+      const after = await files.info(path);
+      assert.equal(after.ino, before.ino);
+      assert.equal(after.bytes, before.bytes);
+      assert.notEqual(after.mtimeNs, before.mtimeNs);
+      assert.notEqual(after.ctimeNs, before.ctimeNs);
+    }
+    const next = titleEdit(docs.at(-1));
+    const commit = () => epoch(f.store).then(e => f.store.commit(command([next], 4, 3), actor(4), e));
+    if (mode === "inode" || mode === "timestamps") {
+      const stats = (await f.store.diagnostics()).performance.verification;
+      assert.equal((await commit()).ack.durability, "durable");
+      const updated = (await f.store.diagnostics()).performance.verification;
+      assert.ok(updated.versionReconstructions - stats.versionReconstructions >= 2, "Replacement forces an old version and the new version to be reverified");
+      t.diagnostic(JSON.stringify({mode, stats, updated}));
+      return;
+    }
+    if (mode === "registry") await writeFile(files.path(path), "{}");
+    await assert.rejects(commit(), error => error.code === "RECOVERY_REQUIRED");
+    assert.deepEqual((await loadCommitted(files).catch(error => error)).code, "INTEGRITY_ERROR");
+    assert.deepEqual(await files.json("visual-registry/CURRENT.json"), selected.envelope);
+    await f.reopen();
+    assert.equal(f.store.status.state, "read-only-recovery");
+  });
+}
+
+test("M-01 / pin across compaction protects the old representation from native GC", async t => {
+  const f = await lifecycleFixture(t, {profile, legacy: true}), {docs, refs} = await history(f);
+  await f.enable();
+  const pin = await f.store.maintenance("pin", {historyRefs: refs});
+  await drain(f.store);
+  assert.equal((await f.store.maintenance("gcPlan", {classes: ["G1"]})).planned, false);
+  assert.deepEqual(await f.store.maintenance("readPin", {id: pin.id}), [docs.at(-1)]);
+  await f.store.maintenance("releasePin", {id: pin.id});
+  const plan = await f.store.maintenance("gcPlan", {classes: ["G1"]});
+  assert.equal(plan.planned, true);
+  assert.equal((await f.store.maintenance("gcStep", {id: plan.id})).state, "complete");
+  await f.reopen();
+  assert.equal(f.store.status.state, "ready");
+  const files = new ManagedFiles(f.root), snapshot = await loadCommitted(files);
+  for (const [i, ref] of refs.entries()) assert.equal(hashJson(await readVersion(files, ref, snapshot.indices.locator)), hashJson(storeDocument(docs[i])));
+});
+
+test("M-01 / mutation between verified read and fingerprint must never cache corrupt bytes", async t => {
+  const f = await lifecycleFixture(t, {profile, legacy: true}), {docs, refs} = await history(f);
+  await f.store.close();
+  const cache = new VerificationCache(), files = new ManagedFiles(f.root);
+  const target = versionPath(refs.at(-1)), info = files.info.bind(files);
+  let injected = false;
+  files.info = async path => {
+    if (!injected && path === target) {
+      injected = true;
+      // The first fingerprint lookup follows successful readVersion.
+      await writeFile(files.path(path), "{}");
+    }
+    return info(path);
+  };
+  const initial = await loadCommitted(files, {cache}).catch(error => error);
+  assert.equal(injected, true);
+  if (initial.code === "INTEGRITY_ERROR") return;
+  assert.deepEqual(initial.documents, [docs.at(-1)]);
+  const warm = await loadCommitted(files, {cache}).catch(error => error);
+  const cold = await loadCommitted(new ManagedFiles(f.root)).catch(error => error);
+  t.diagnostic(JSON.stringify({warmCode: warm.code, warmVerified: !!warm.envelope, coldCode: cold.code}));
+  assert.equal(cold.code, "INTEGRITY_ERROR");
+  assert.equal(warm.code, "INTEGRITY_ERROR");
+});

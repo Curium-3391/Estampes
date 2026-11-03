@@ -1,0 +1,123 @@
+{
+  "root": "/tmp/estampes-pr1d-round2.R5oYLFwJ/native-harness",
+  "productionSource": "symlink to unchanged workspace src",
+  "files": [
+    {
+      "path": "tests/fixtures/uva-pr1a.mjs",
+      "sourceSha256": "004101be7bf056c42d4216303c477939f5fe967a6eabdbb51a83b17b0eb4b87f",
+      "harnessSha256": "9ad83ded2f581de9884ce1037dac2ee191386bf308f52c9ff2bfe696650de15b",
+      "changes": [
+        [
+          "persistence: \"memory\"",
+          "persistence: \"durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/fixtures/uva-persistence.mjs",
+      "sourceSha256": "14741a446a9a3f49d7cafd89e18d27b437cde4ff46db3c81a3bd298541c95d68",
+      "harnessSha256": "5186cfb7104bc5fcbd82ad1c13765f90f1cf80123aeb2e97efd6e5f547ac2791",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/fixtures/uva-lifecycle.mjs",
+      "sourceSha256": "2f0fb2538d00f117b9482cd932a44ae034791d03d4efde3f01032f1728f9a60d",
+      "harnessSha256": "0ee8bfeacdd3a89cce5f882bbd675a394e9a04e4d9bff5bb9d73a73109316985",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/persistence-backup.test.js",
+      "sourceSha256": "438f88efbcd63963a07b04042807963aa529cbff0bb05fc70b959e9d2012ee8c",
+      "harnessSha256": "782da22a987965cdc96b8ab0d42eb11b68bb472485e786036e1b780b23cc59af",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/persistence-capacity.test.js",
+      "sourceSha256": "a63aaf4b38095bbe3181f9b81fcfc18dce898cd52ec74cd11b086e5f36b62a14",
+      "harnessSha256": "a63aaf4b38095bbe3181f9b81fcfc18dce898cd52ec74cd11b086e5f36b62a14",
+      "changes": []
+    },
+    {
+      "path": "tests/persistence-faults.test.js",
+      "sourceSha256": "f1ad459e34c9c3d05d8af323e4b5edea290c8de5b1b3ed0ada6c6496648debc9",
+      "harnessSha256": "cff6f98304588959ee6adc19fbdec7bfcfc9149c413af6a328dd7906ad446870",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/persistence-lifecycle-faults.test.js",
+      "sourceSha256": "93d72b3391814b00e023d9b15432b700582a08cb8fc65b6edfcd59c10cc9673b",
+      "harnessSha256": "93d72b3391814b00e023d9b15432b700582a08cb8fc65b6edfcd59c10cc9673b",
+      "changes": []
+    },
+    {
+      "path": "tests/persistence-lifecycle.test.js",
+      "sourceSha256": "e34f4f2ed84bf4d0eb48d3e1d5403121c47b091abd2036009a6f40acd02b42ed",
+      "harnessSha256": "e34f4f2ed84bf4d0eb48d3e1d5403121c47b091abd2036009a6f40acd02b42ed",
+      "changes": []
+    },
+    {
+      "path": "tests/persistence-performance.test.js",
+      "sourceSha256": "d8542409555ba9656fe093f7ee7db116e13a417f21ea49ca5bd937668084e167",
+      "harnessSha256": "d8542409555ba9656fe093f7ee7db116e13a417f21ea49ca5bd937668084e167",
+      "changes": []
+    },
+    {
+      "path": "tests/persistence-platform.test.js",
+      "sourceSha256": "a33fc0123fb7b85093f7eee7bdc195f97fb4ce1d924fc21fb69bf93704422b53",
+      "harnessSha256": "924e1c7291cb160e0ec6e3532a5e7c4412d0cdf28d6915859994448675946cbc",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/persistence-temporary-attribution.test.js",
+      "sourceSha256": "268f91c93878b17111273e4e08d563f04b3f0ee2c607d4821b598a03e03bf22d",
+      "harnessSha256": "94f08ca2184fc196cdd8b256d2ec5c3ed7085c61b90669d197a754955971de76",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ]
+      ]
+    },
+    {
+      "path": "tests/persistence-transactions.test.js",
+      "sourceSha256": "536bef5012c7f4d11541bef557175729a84fc78e630042eeb1d15000f62d12a1",
+      "harnessSha256": "29b5b00ad3cb36d75af8b9f362b65360a51f97c72f66a1eda3e5ac18ae59700c",
+      "changes": [
+        [
+          "\"linux-process-crash-test\"",
+          "\"linux-local-durable\""
+        ],
+        [
+          "ACK semantic assertion",
+          "durable; duplicate native profile iteration reduced to one"
+        ]
+      ]
+    }
+  ],
+  "sourceCommit": "88d892829c7fada3ebbf5db8a2bcdf8c42975c47"
+}
