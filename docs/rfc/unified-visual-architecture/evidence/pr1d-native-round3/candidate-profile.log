@@ -1,0 +1,120 @@
+Measured 8MiB-profiled
+{
+  "node": "v22.23.4",
+  "mode": "profile8",
+  "results": [
+    {
+      "name": "8MiB-profiled",
+      "bytes": 8388608,
+      "commands": 4,
+      "reconstructionPlan": {
+        "logicalVersions": 4,
+        "fullVersions": 1,
+        "deltaVersions": 3,
+        "maxDeltaSpan": 3,
+        "sumDeltaSpans": 6
+      },
+      "profile": "linux-local-durable",
+      "filesystem": "ext4",
+      "instrumented": true,
+      "initialOpenMs": 550.873198,
+      "initialBytes": 8389404,
+      "naiveSnapshotBytes": 33557631,
+      "peakWorkerRssKiB": 442752,
+      "usage": {
+        "logicalBytes": 8448371,
+        "allocatedBytes": 8876032,
+        "files": 98
+      },
+      "latencyMs": {
+        "p50": 4834.268302999999,
+        "p95": 4959.476449,
+        "max": 4959.476449,
+        "total": 19142.822163999997
+      },
+      "performance": {
+        "open": null,
+        "transactions": [
+          {
+            "mode": "genesis",
+            "buildAndPreflightMs": 9.03404900000001,
+            "stageAndPrepareMs": 178.33789299999995,
+            "candidateVerificationMs": 43.720167000000004,
+            "currentPublicationMs": 17.857564000000025,
+            "postPublicationMs": 39.01879699999995,
+            "totalMs": 288.00038299999994
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 1585.336167,
+            "stageAndPrepareMs": 291.53945699999986,
+            "candidateVerificationMs": 1757.8840770000002,
+            "currentPublicationMs": 23.527028999999857,
+            "postPublicationMs": 110.34421099999963,
+            "totalMs": 3768.6445499999995
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 1865.5501480000003,
+            "stageAndPrepareMs": 283.63780300000144,
+            "candidateVerificationMs": 1685.7596819999999,
+            "currentPublicationMs": 25.526221999998597,
+            "postPublicationMs": 87.1296229999989,
+            "totalMs": 3947.6146590000008
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 1869.3195269999997,
+            "stageAndPrepareMs": 248.00887199999852,
+            "candidateVerificationMs": 1650.0496910000002,
+            "currentPublicationMs": 28.136779000000388,
+            "postPublicationMs": 69.29661599999963,
+            "totalMs": 3864.8221059999996
+          },
+          {
+            "mode": "content",
+            "buildAndPreflightMs": 1758.5820810000005,
+            "stageAndPrepareMs": 228.95744399999967,
+            "candidateVerificationMs": 1668.028964000001,
+            "currentPublicationMs": 32.20958000000246,
+            "postPublicationMs": 96.20313399999941,
+            "totalMs": 3784.005814
+          }
+        ],
+        "verification": {
+          "snapshotLoads": 5,
+          "versionHits": 10,
+          "versionMisses": 4,
+          "recordHits": 9,
+          "registryHits": 10,
+          "registryMaterializations": 5,
+          "versionReconstructions": 4,
+          "reconstructedMs": 1274.7443540000008,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 46,
+          "deltaApplications": 3,
+          "operationPrefixHits": 3,
+          "physicalFingerprintChecks": 201,
+          "recordCacheBytes": 16778924,
+          "registryCacheBytes": 1042,
+          "proofMetadataBytes": 7715,
+          "proofMetadataBudget": 4194304,
+          "physicalFingerprints": 16,
+          "versionProofs": 4,
+          "registryProofs": 5
+        }
+      },
+      "maintenance": {
+        "state": "idle",
+        "cursor": null,
+        "conflicts": 0,
+        "steps": 0
+      },
+      "startup": null,
+      "replayed": null,
+      "verifiedHistoryVersions": 4,
+      "coldParentVerifyAndReconstructionMs": 10499.797649
+    }
+  ],
+  "limits": "WSL2 ext4 application/process-crash measurements; no power-loss or deployment SLA; direct leased startup probe does not change the real 30s client timeout."
+}

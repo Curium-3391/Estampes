@@ -1,0 +1,17 @@
+TAP version 13
+# Subtest: native GC re-marks backup dependencies created after its selected plan
+ok 1 - native GC re-marks backup dependencies created after its selected plan
+  ---
+  duration_ms: 8079.097618
+  type: 'test'
+  ...
+# {"step":{"id":"9e18e609-7ab4-4593-8ca6-b00034e4e09e","state":"waiting-grace","progressed":18,"moved":18,"deleted":0},"protectedCandidates":["visual-transactions/dc8f14a8-9b03-409b-9a08-563e9a097f56/intent.json","visual-transactions/dc8f14a8-9b03-409b-9a08-563e9a097f56/outcome.json"],"backup":"complete"}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8380.9191

@@ -1,0 +1,60 @@
+{
+  "executable": "/home/estampes/estampes-pr1d-round3.ZeBGComd/browsers/chromium-1194/chrome-linux/chrome",
+  "version": "Chromium 141.0.7390.37",
+  "pass": 8,
+  "fail": 0,
+  "skip": 0,
+  "cases": [
+    {
+      "file": "tests/cards-e2e.test.js",
+      "name": "info cards in a browser: per-module groups, fold, hide and bring back",
+      "tapCase": 38,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/finding-list.test.js",
+      "name": "finding groups: compact rows, detail drilldown, canvas selection and review drafts",
+      "tapCase": 135,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/layers-e2e.test.js",
+      "name": "layers in a browser: base image + overlay image + Graph curve, fade and reorder",
+      "tapCase": 186,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/surface-open.test.js",
+      "name": "browser: the widget opened by manage_surface_panels shows the calculator with the model's cell",
+      "tapCase": 433,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/surface-open.test.js",
+      "name": "browser: with the calculator alone, the launcher offers the Graph canvas and brings it back",
+      "tapCase": 434,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/upload-e2e.test.js",
+      "name": "pick a photo in the canvas: upload in slices, preview then full image, model told",
+      "tapCase": 462,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/workbench-e2e.test.js",
+      "name": "workbench in a browser: Graph + calculator side by side, drag, mobile tabs",
+      "tapCase": 476,
+      "result": "PASS"
+    },
+    {
+      "file": "tests/zoom-perf.test.js",
+      "name": "browser: a burst of wheel zooms triggers only a few full renders",
+      "tapCase": 486,
+      "result": "PASS"
+    }
+  ],
+  "boundary": "Real browser with repository fake host; not real ChatGPT host acceptance",
+  "executableSha256": "85918a9937192b78da8edb51c38a7af4920ac6bd9ba19939ecb0bb724d5a1a95",
+  "sourceLog": "full-serial-restart.log"
+}

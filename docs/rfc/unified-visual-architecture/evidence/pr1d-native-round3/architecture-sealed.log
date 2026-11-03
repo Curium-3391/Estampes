@@ -1,0 +1,4 @@
+outside integrity hardening scope / historical input changed: node_modules
+outside isolated PR-1D scope: node_modules
+outside PR-1A remediation / PR-1C scope: node_modules
+outside approved Phase 0 / limited PR-1A scope: node_modules

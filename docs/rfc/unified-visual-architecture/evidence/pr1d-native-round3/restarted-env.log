@@ -1,0 +1,19 @@
+uid=1001(estampes) gid=1001(estampes) groups=1001(estampes),27(sudo),100(users)
+2026-11-03T23:01:26+08:00
+2026-11-03 14:15:18
+6.6.87.2-microsoft-standard-WSL2
+TARGET SOURCE   FSTYPE OPTIONS
+/      /dev/sdd ext4   rw,relatime,discard,errors=remount-ro,data=ordered
+TARGET SOURCE   FSTYPE OPTIONS
+/      /dev/sdd ext4   rw,relatime,discard,errors=remount-ro,data=ordered
+0xef53 be1d78fd15e717c5 .
+0xef53 be1d78fd15e717c5 /home/estampes/estampes-pr1d-round3.ZeBGComd/tmp
+700 1001 1001 /home/estampes/estampes-pr1d-round3.ZeBGComd
+700 1001 1001 /home/estampes/estampes-pr1d-round3.ZeBGComd/tmp
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdd       1007G  3.4G  953G   1% /
+Filesystem       Inodes IUsed    IFree IUse% Mounted on
+/dev/sdd       67108864 74475 67034389    1% /
+v22.23.4
+b2f853c5e7473a008552ff70c838de3faff07c20
+c634b864f5643ffc189f1dddedf38d1656ada57d

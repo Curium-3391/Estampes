@@ -1,0 +1,385 @@
+[
+  {
+    "name": "8MiB-profiled-10359",
+    "cpuSampledWallMs": 20265.639,
+    "cpuIdleSampleMs": 3021.49,
+    "cpuTopSelfMs": [
+      {
+        "frame": "visit @ file:///home/estampes/projects/Estampes/src/documents/validation.js:43",
+        "ms": 7895.273
+      },
+      {
+        "frame": "addString @ file:///home/estampes/projects/Estampes/src/documents/validation.js:30",
+        "ms": 4707.609
+      },
+      {
+        "frame": "(idle) @ :0",
+        "ms": 3021.49
+      },
+      {
+        "frame": "encode @ file:///home/estampes/projects/Estampes/src/documents/validation.js:94",
+        "ms": 1519.49
+      },
+      {
+        "frame": "assertJson @ file:///home/estampes/projects/Estampes/src/documents/validation.js:23",
+        "ms": 802.325
+      },
+      {
+        "frame": "update @ :0",
+        "ms": 593.859
+      },
+      {
+        "frame": "(garbage collector) @ :0",
+        "ms": 215.145
+      },
+      {
+        "frame": " @ file:///home/estampes/projects/Estampes/src/documents/validation.js:80",
+        "ms": 180.995
+      },
+      {
+        "frame": "lstat @ :0",
+        "ms": 171.874
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "ms": 149.918
+      },
+      {
+        "frame": "(program) @ :0",
+        "ms": 107.063
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "ms": 92.235
+      },
+      {
+        "frame": " @ :0",
+        "ms": 49.607
+      },
+      {
+        "frame": "structuredClone @ node:internal/worker/js_transferable:112",
+        "ms": 48.203
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "ms": 46.962
+      },
+      {
+        "frame": "lstat @ node:internal/fs/promises:1022",
+        "ms": 41.827
+      },
+      {
+        "frame": "FastBuffer @ node:internal/buffer:956",
+        "ms": 35.619
+      },
+      {
+        "frame": "post @ node:inspector:118",
+        "ms": 28.211
+      },
+      {
+        "frame": "fstat @ :0",
+        "ms": 26.153
+      },
+      {
+        "frame": "writeUtf8String @ :0",
+        "ms": 25.365
+      },
+      {
+        "frame": "close @ :0",
+        "ms": 19.824
+      },
+      {
+        "frame": "openFileHandle @ :0",
+        "ms": 19.804
+      },
+      {
+        "frame": "normalizeString @ node:path:93",
+        "ms": 15.563
+      },
+      {
+        "frame": " @ :3",
+        "ms": 12.588
+      },
+      {
+        "frame": "getStatsFromBinding @ node:internal/fs/utils:552",
+        "ms": 11.563
+      }
+    ],
+    "cpuTopInclusiveMs": [
+      {
+        "frame": "(root) @ :0",
+        "ms": 20265.639
+      },
+      {
+        "frame": "assertJson @ file:///home/estampes/projects/Estampes/src/documents/validation.js:23",
+        "ms": 13407.322
+      },
+      {
+        "frame": "visit @ file:///home/estampes/projects/Estampes/src/documents/validation.js:43",
+        "ms": 12603.914
+      },
+      {
+        "frame": "closure @ file:///home/estampes/projects/Estampes/src/persistence/records.js:101",
+        "ms": 10424.937
+      },
+      {
+        "frame": "validateCompleteDocumentClosure @ file:///home/estampes/projects/Estampes/src/documents/integrity.js:133",
+        "ms": 9112.597
+      },
+      {
+        "frame": "safeParse @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/classic/schemas.js:140",
+        "ms": 8444.98
+      },
+      {
+        "frame": "parse @ file:///home/estampes/projects/Estampes/src/documents/validation.js:85",
+        "ms": 8444.98
+      },
+      {
+        "frame": " @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/parse.js:41",
+        "ms": 8443.897
+      },
+      {
+        "frame": "inst._zod.parse @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:2303",
+        "ms": 8413.446
+      },
+      {
+        "frame": "inst._zod.run @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:97",
+        "ms": 8409.996
+      },
+      {
+        "frame": "indexDocuments @ file:///home/estampes/projects/Estampes/src/documents/integrity.js:10",
+        "ms": 7763.239
+      },
+      {
+        "frame": "canonicalJson @ file:///home/estampes/projects/Estampes/src/documents/validation.js:92",
+        "ms": 6958.617
+      },
+      {
+        "frame": "#publish @ file:///home/estampes/projects/Estampes/src/persistence/coordinator.js:118",
+        "ms": 6871.6
+      },
+      {
+        "frame": "parseVisualDocument @ file:///home/estampes/projects/Estampes/src/documents/schema.js:208",
+        "ms": 5947.87
+      },
+      {
+        "frame": "inst._zod.parse @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:1199",
+        "ms": 5725.778
+      },
+      {
+        "frame": " @ :3",
+        "ms": 5711.702
+      },
+      {
+        "frame": "handlePipeResult @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:2318",
+        "ms": 5700.546
+      },
+      {
+        "frame": "runChecks @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:34",
+        "ms": 5455.42
+      },
+      {
+        "frame": " @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/api.js:980",
+        "ms": 5447.429
+      },
+      {
+        "frame": " @ file:///home/estampes/projects/Estampes/src/documents/validation.js:75",
+        "ms": 5446.364
+      },
+      {
+        "frame": "inst._zod.parse @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:1723",
+        "ms": 5202.235
+      },
+      {
+        "frame": "inst._zod.parse @ file:///home/estampes/projects/Estampes/node_modules/zod/v4/core/schemas.js:2115",
+        "ms": 5201.176
+      },
+      {
+        "frame": "materialize @ file:///home/estampes/projects/Estampes/src/persistence/records.js:140",
+        "ms": 5095.098
+      },
+      {
+        "frame": "addString @ file:///home/estampes/projects/Estampes/src/documents/validation.js:30",
+        "ms": 4707.609
+      },
+      {
+        "frame": "analyzeReferences @ file:///home/estampes/projects/Estampes/src/documents/integrity.js:34",
+        "ms": 3900.621
+      }
+    ],
+    "estimatedSampledAllocationsBytes": 1515201368,
+    "heapTopEstimatedAllocationSites": [
+      {
+        "frame": "join @ :0",
+        "bytes": 405061448
+      },
+      {
+        "frame": "encode @ file:///home/estampes/projects/Estampes/src/documents/validation.js:94",
+        "bytes": 320080200
+      },
+      {
+        "frame": "update @ node:internal/crypto/hash:132",
+        "bytes": 193023432
+      },
+      {
+        "frame": " @ file:///home/estampes/projects/Estampes/src/documents/validation.js:80",
+        "bytes": 167772480
+      },
+      {
+        "frame": " @ file:///home/estampes/projects/Estampes/src/documents/validation.js:97",
+        "bytes": 85788432
+      },
+      {
+        "frame": "parseChannelMessages @ node:internal/child_process/serialization:142",
+        "bytes": 67343616
+      },
+      {
+        "frame": "writeChannelMessage @ node:internal/child_process/serialization:163",
+        "bytes": 50638152
+      },
+      {
+        "frame": "structuredClone @ node:internal/worker/js_transferable:112",
+        "bytes": 50397984
+      },
+      {
+        "frame": "createFromString @ node:buffer:478",
+        "bytes": 41983496
+      },
+      {
+        "frame": "write @ node:string_decoder:94",
+        "bytes": 32584016
+      },
+      {
+        "frame": "json @ file:///home/estampes/projects/Estampes/src/persistence/filesystem.js:81",
+        "bytes": 8716656
+      },
+      {
+        "frame": "toString @ node:buffer:839",
+        "bytes": 8389480
+      },
+      {
+        "frame": "visit @ file:///home/estampes/projects/Estampes/src/documents/validation.js:43",
+        "bytes": 8351824
+      },
+      {
+        "frame": "lstat @ node:internal/fs/promises:1022",
+        "bytes": 7059328
+      },
+      {
+        "frame": "normalizeString @ node:path:93",
+        "bytes": 5543272
+      },
+      {
+        "frame": "getStatsFromBinding @ node:internal/fs/utils:552",
+        "bytes": 3790936
+      },
+      {
+        "frame": "sort @ :0",
+        "bytes": 2848232
+      },
+      {
+        "frame": "addString @ file:///home/estampes/projects/Estampes/src/documents/validation.js:30",
+        "bytes": 2721648
+      },
+      {
+        "frame": "resolve @ node:path:1260",
+        "bytes": 2656600
+      },
+      {
+        "frame": "getOwnPropertyDescriptor @ :0",
+        "bytes": 2328904
+      },
+      {
+        "frame": "then @ :0",
+        "bytes": 2167872
+      },
+      {
+        "frame": "next @ :0",
+        "bytes": 1970888
+      },
+      {
+        "frame": "relative @ node:path:1371",
+        "bytes": 1543184
+      },
+      {
+        "frame": "fsCall @ node:internal/fs/promises:452",
+        "bytes": 1510200
+      },
+      {
+        "frame": "Promise @ :0",
+        "bytes": 1312440
+      }
+    ],
+    "gcEvents": 188,
+    "gcTotalMs": 191.93264801055193,
+    "gcKinds": {
+      "1": 172,
+      "8": 8,
+      "4": 8
+    },
+    "maxRSSKiB": 442752,
+    "maxSampledHeapUsed": 299410080,
+    "maxSampledHeapTotal": 336076800,
+    "maxSampledExternal": 52660691,
+    "finalMemory": {
+      "rss": 154394624,
+      "heapTotal": 78159872,
+      "heapUsed": 42650736,
+      "external": 3517924,
+      "arrayBuffers": 1302387
+    },
+    "encodingCounts": null,
+    "maxSampledArrayBuffers": 33669188,
+    "io": {
+      "info:visual-registry": {
+        "calls": 1042,
+        "totalMs": 498.16709699997455
+      },
+      "bytes:visual-registry": {
+        "calls": 225,
+        "totalMs": 451.26314899998397
+      },
+      "json:visual-registry": {
+        "calls": 217,
+        "totalMs": 454.13345600001264
+      },
+      "digest:visual-registry": {
+        "calls": 81,
+        "totalMs": 204.28675799999593
+      },
+      "info:visual-documents": {
+        "calls": 23,
+        "totalMs": 15.97840099999894
+      },
+      "bytes:visual-documents": {
+        "calls": 1,
+        "totalMs": 7.390051999999741
+      },
+      "json:visual-documents": {
+        "calls": 1,
+        "totalMs": 235.57534099999975
+      },
+      "digest:visual-documents": {
+        "calls": 1,
+        "totalMs": 23.145103000000745
+      },
+      "info:visual-history": {
+        "calls": 78,
+        "totalMs": 32.918947999998636
+      },
+      "bytes:visual-history": {
+        "calls": 6,
+        "totalMs": 11.741893000002165
+      },
+      "json:visual-history": {
+        "calls": 3,
+        "totalMs": 6.249586999998428
+      },
+      "digest:visual-history": {
+        "calls": 6,
+        "totalMs": 9.323639000000185
+      }
+    },
+    "limitations": "Inspector sampling is statistical, includes collected allocations, and has overhead. CPU inclusive rows overlap. I/O wrappers are nested; their wall times must not be added. RSS is not live JS heap."
+  }
+]

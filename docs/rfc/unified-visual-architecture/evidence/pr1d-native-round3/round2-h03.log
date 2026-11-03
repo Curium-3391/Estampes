@@ -1,0 +1,17 @@
+TAP version 13
+# Subtest: verification read race must reject before acknowledging a commit
+ok 1 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 2370.120588
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"4656a01cb1afe8acbfe05cb5f34d9665f10dda8cf73c69c7946b2192344349f0","commitId":"tx:b046e803-e6e6-4c6f-9538-897abb0c59b4","generation":3,"rootHash":"c7a15ec2ba0264b5958621e81925af949f5141c6b8de0f0f7e55a5158d7be481"},"after":{"checksum":"4656a01cb1afe8acbfe05cb5f34d9665f10dda8cf73c69c7946b2192344349f0","commitId":"tx:b046e803-e6e6-4c6f-9538-897abb0c59b4","generation":3,"rootHash":"c7a15ec2ba0264b5958621e81925af949f5141c6b8de0f0f7e55a5158d7be481"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2552.77671

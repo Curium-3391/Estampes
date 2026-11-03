@@ -1,0 +1,610 @@
+{
+  "schema": "estampes.pr1d-native-round3-evidence/1",
+  "sourceCommit": "b2f853c5e7473a008552ff70c838de3faff07c20",
+  "sourceTree": "c634b864f5643ffc189f1dddedf38d1656ada57d",
+  "previousNativeBaseline": "a33fe411aac7fe763a9adf5b8d71bf4f77e5f3b0",
+  "completedRuns": 59,
+  "nonzeroRuns": [
+    "browser-runtime.log",
+    "architecture.log",
+    "architecture-exact.log",
+    "architecture-sealed.log",
+    "adversarial.log",
+    "focused.log",
+    "full-serial-restart.log"
+  ],
+  "interrupted": {
+    "log": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/full-serial.log",
+    "command": [
+      "node",
+      "--test",
+      "--test-concurrency=1"
+    ],
+    "exitCode": null,
+    "reason": "WSL host restarted before command completion and run index write.",
+    "sha256": "34e045a54044df945ed00195e4b8fe5610bd55d48c612edf777e3610626f2dc3"
+  },
+  "normalizedDisplayLogsWithLosslessRaw": [
+    {
+      "log": "browser-runtime-final.log",
+      "rawGzip": "browser-runtime-final.log.gz",
+      "rawSha256": "ddc27977b1186425a776ed089d0dabf4d97bf84243025c7686982452213c1ac4",
+      "readableLogSha256": "44fc67f7f9ae00e1d8765470b3165ca073faeab64366324a03ed7c0c25d3312b"
+    },
+    {
+      "log": "adversarial.log",
+      "rawGzip": "adversarial.log.gz",
+      "rawSha256": "ddd76007a399885ab7d214c07452cc1c5e54311fe41c08237c1385be7acfc51a",
+      "readableLogSha256": "3eead868965932e33cef88ae61b563842d46bd04c65e59ed7f114052c71cff5d"
+    },
+    {
+      "log": "browser-runtime-restart.log",
+      "rawGzip": "browser-runtime-restart.log.gz",
+      "rawSha256": "004f9281e79a57d49ab8de79745ad09131f04f42f5796757a86d451b03e9f7e6",
+      "readableLogSha256": "5051adc4b75cb91bb45c1b90a5febd6a466dfb234d1bbfc4e28c08df093bcd66"
+    },
+    {
+      "log": "full-serial.log",
+      "rawGzip": "full-serial.log.gz",
+      "rawSha256": "34e045a54044df945ed00195e4b8fe5610bd55d48c612edf777e3610626f2dc3",
+      "readableLogSha256": "34e045a54044df945ed00195e4b8fe5610bd55d48c612edf777e3610626f2dc3"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/rfc/unified-visual-architecture/PR-1D-NATIVE-REACCEPTANCE-ROUND3-REPORT.md",
+      "bytes": 22139,
+      "sha256": "964f405f6b94e54df17e1440922222ca41f2cd3e0da6eb795470138203c9f80d"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/8MiB-profiled-10359.cpuprofile.gz",
+      "bytes": 55528,
+      "sha256": "713e8dfbce2c2ee5862532cd6fd4b9f1dd4809aa9022e6596092bc0d23c632aa",
+      "rawBytes": 509153,
+      "rawSha256": "1de74b4d1ed9b05a95218815e7e1b043901fa508c4289b138bc895afa383912b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/8MiB-profiled-10359.heapprofile.gz",
+      "bytes": 51566,
+      "sha256": "626ed55731c680b6b4eaae6416fd51634c7fa0d29fd711250729f77bf456b59d",
+      "rawBytes": 767236,
+      "rawSha256": "e42b7345b8b160002afdb0c2d9e9e48839a27595279dd03d0c079a2bf7e111f9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/8MiB-profiled-10359.observation.json.gz",
+      "bytes": 5631,
+      "sha256": "36d03c57cc1d11132e70c2f576c312927a7f7e87f026cd21cb9c3423144b979c",
+      "rawBytes": 20523,
+      "rawSha256": "71ce3ce7f6e1df809ce83e4dd6faef947d771615c5383b236d9503a4f2a99e94"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/8MiB-profiled-12255.cpuprofile.gz",
+      "bytes": 60358,
+      "sha256": "7c0cbd65be619a478faafdb25ccf8e9159052367ea0b5c0bf933638db3abed59",
+      "rawBytes": 550994,
+      "rawSha256": "014d4d06ac52f495346e4f173fc98b16f076894238648e73f7009c715173615e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/8MiB-profiled-12255.heapprofile.gz",
+      "bytes": 51428,
+      "sha256": "90cf5e3e38e82b8fe1d0e315edf028d289c6d764f7495859b3d89942ecb75715",
+      "rawBytes": 794199,
+      "rawSha256": "83ee1f4cbffe65d27b9dcbcad5689832607c64ef4b092d2b9ddf23561d3265ef"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/8MiB-profiled-12255.observation.json.gz",
+      "bytes": 5887,
+      "sha256": "25e8a91bdecdef6f9eaa1ab53cf444bd0c5f472481fd620c854f4adea4e4be8e",
+      "rawBytes": 21823,
+      "rawSha256": "60111392ef35e381f121eff2d161a246c6d3d80de13c52de86599cc08d91efde"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.log",
+      "bytes": 13442,
+      "sha256": "3eead868965932e33cef88ae61b563842d46bd04c65e59ed7f114052c71cff5d"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.log.gz",
+      "bytes": 3303,
+      "sha256": "f0f601e73a31ee0e211a7695c6635a995e71f069d3aacc199f495f2c75c8b810",
+      "rawBytes": 13482,
+      "rawSha256": "ddd76007a399885ab7d214c07452cc1c5e54311fe41c08237c1385be7acfc51a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs",
+      "bytes": 8929,
+      "sha256": "35859ee86839b6380484ad8ba599994ac322a1ab8ca6c87b5fbfd42434d8ea26"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/architecture-clean.log",
+      "bytes": 398,
+      "sha256": "200f387d5c4162e450204000edcdcd5782de2e595619e850a47086b502926fef"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/architecture-exact.log",
+      "bytes": 939,
+      "sha256": "f6a71a138bc853d4e1a9cf6fef3b16b2eff91036087a7fd32baeb7f3ba0b544b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/architecture-sealed.log",
+      "bytes": 233,
+      "sha256": "1a188aab1b0d249204567bc4bac9af4f6ced313a66472dc61cd248e291e2fbfd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/architecture.log",
+      "bytes": 5068,
+      "sha256": "f981afcfcddb2d1439a1a2f5a78b6e3f65aaad4ba3a53442a1b65520f2ff1e22"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/backup-gc.log",
+      "bytes": 639,
+      "sha256": "27b47d36d72864f2447c492653da107b3dd12325732a8af3c3a01f59ef553a8e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/backup-gc.mjs",
+      "bytes": 2581,
+      "sha256": "1d55c003dfc6e6edc14942e22a72c9cee46cda064390f0e8360af7e94d29d18a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/baseline-8mib.log",
+      "bytes": 31132,
+      "sha256": "5cf2fe90af849f3e53427541098a78fc8067397b8ee77ee31a7f49514f44bf77"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/baseline-history-100.log",
+      "bytes": 230493,
+      "sha256": "eb2e89c0a33bf7bfc547bb054666d4bb693cb1f2f1c04172abb5bf6de8cc67a2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/baseline-metrics-8mib.json",
+      "bytes": 31118,
+      "sha256": "32b53daf25b6e086a7455d0cb1d0a34b18b706b3f1398d0f5df0848cdf319fbb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/baseline-metrics-history-100.json",
+      "bytes": 229226,
+      "sha256": "07bc4e9dc8da657e1ff78e4d8ef2f1c181f025a91f310f33623bebac4c2fcf54"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/baseline-prep-restart.log",
+      "bytes": 54,
+      "sha256": "22a5da387bc45f482747151bf13381aed56f57b2bf6a4f9485222f691f8b3e46"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/baseline-prep.log",
+      "bytes": 35,
+      "sha256": "9b18df9d4908ab40c690ecfac03bb5700da5bd997c6d59ca6b8a59c6fbe5e02e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/benchmark.mjs",
+      "bytes": 7526,
+      "sha256": "ac34bfce76d42aa065ff8ccdd9024a4dfdc77b2ff28e7a9c10ceb5d8a80637e1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/boundary-preload.mjs",
+      "bytes": 1679,
+      "sha256": "68c0502fc85e33d468b34f82975819114aa3b706f365be5e9c0ff99b70a61cbd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-download-restart.log",
+      "bytes": 4516,
+      "sha256": "1ef911f323a96dfc7d9f372ffe22cd9ac2f42b860897ac112be67d9dd53f2a91"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-download.log",
+      "bytes": 4478,
+      "sha256": "ae4f934afd7ed678d73ebe9dd235c883576e6af0ab9db22581d0a554cdcb2311"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-libraries-restart.log",
+      "bytes": 347,
+      "sha256": "bd9c7fadf79a545ec0c416b26614795a6b38e8d14f4c9f536acfae6a8d996250"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-libraries.log",
+      "bytes": 347,
+      "sha256": "53fdf6156d59f8e905b699239967468b1550ed40504a7865a6b7fc39ac550c3f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-results.json",
+      "bytes": 2011,
+      "sha256": "468e4985a875c1b8de3c399224d29924b94034f5cdb046849bfec7d88dfcd480"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-runtime-final.log",
+      "bytes": 7167,
+      "sha256": "44fc67f7f9ae00e1d8765470b3165ca073faeab64366324a03ed7c0c25d3312b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-runtime-final.log.gz",
+      "bytes": 1325,
+      "sha256": "f43f967a34b7da7b99a6e49a877a64a3c0786a5cdcf5c5920d293ccacc1ad81d",
+      "rawBytes": 7168,
+      "rawSha256": "ddc27977b1186425a776ed089d0dabf4d97bf84243025c7686982452213c1ac4"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-runtime-restart.log",
+      "bytes": 7319,
+      "sha256": "5051adc4b75cb91bb45c1b90a5febd6a466dfb234d1bbfc4e28c08df093bcd66"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-runtime-restart.log.gz",
+      "bytes": 1347,
+      "sha256": "bb543dfa51567671b1144071924d33611daea0f8f040b01d4076376810da8ae9",
+      "rawBytes": 7320,
+      "rawSha256": "004f9281e79a57d49ab8de79745ad09131f04f42f5796757a86d451b03e9f7e6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/browser-runtime.log",
+      "bytes": 99,
+      "sha256": "bf2215adad2981adf4b8a24d48521324bbc5ef43a7f658bd23f7021650f72ed5"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/candidate-8mib.log",
+      "bytes": 31847,
+      "sha256": "5aa98f53a71170b08ac8297fe8ed0a5bf56c5879c72f2e96c7f824ee21588553"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/candidate-history-100.log",
+      "bytes": 230769,
+      "sha256": "f76047fce333ac1d044505a66159b097725b4f8de0efbd76287863d94e02ddf8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/candidate-history-25.log",
+      "bytes": 90311,
+      "sha256": "81d0bffa296f610cc1a69630d2b40a6dd46d416bbec7efe64b3ee3cecd718cd5"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/candidate-history-50.log",
+      "bytes": 159435,
+      "sha256": "7d711abf24e90218bcd19838abfc0c9191410a69a9942746d2034a3e3fd81950"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/candidate-profile.log",
+      "bytes": 3985,
+      "sha256": "5b996d09db0d651909a40e0181b38e8fe8a1aee422844edfe3dda9b92d145545"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/cas.log",
+      "bytes": 3297,
+      "sha256": "a63895e5782e5c9fa5ce68dfc87e2ae3030a2d63a9b57a32f8f7cdf8cb5bf8ab"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/contracts.log",
+      "bytes": 4599,
+      "sha256": "01138d9a6e8ec93c9499f5be3dba06268cc2cd3a48405df06d104c292bb9c8ad"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/count-loader.mjs",
+      "bytes": 956,
+      "sha256": "ebfb857a776d47f9dd4c3df1dfe363f0c9736eb69b2cc5f362c67823e8743a57"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/count-register.mjs",
+      "bytes": 182,
+      "sha256": "0741b0b7b95f3b7fcc2527e866dcef4c4563fa2574e102f602d513cbdf2ccadf"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/counted-profile.log",
+      "bytes": 3953,
+      "sha256": "1d304cd759fe404e614242f2a1233c582e7890226b833f78bcfcb755f7eee0c1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/ctime-original-retest.log",
+      "bytes": 331,
+      "sha256": "7a0ceefa3bafb2f657a27ccdaabf0b6823bfcb7c0c937365265405dd41753c22"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/docs-final.log",
+      "bytes": 128,
+      "sha256": "bec42f94e9d23739e9097425bdc6b33038c06a33d7c87a05e62c5d423a9e0bc2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/env.log",
+      "bytes": 2939,
+      "sha256": "ed70423f43a3327625d64248325b3d6a7b9e545d4a31447e177a8b4c5abe1aa6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/examples.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/final-source.log",
+      "bytes": 57,
+      "sha256": "afe909edc982551082f642533ba707d12f5dcc22a3b4d8e4a37477573ea3d21c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/focused.log",
+      "bytes": 8588,
+      "sha256": "1b5ce9c655a2d0cb88f939a9a94520f015b09a1cfcc478334dda03d5c357cb9a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/full-serial-restart.log",
+      "bytes": 113035,
+      "sha256": "8809c57b99ba7341b39598a9fca1e86d45bdad04ff4b225d766647748bd4cb87"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/full-serial.log",
+      "bytes": 71268,
+      "sha256": "34e045a54044df945ed00195e4b8fe5610bd55d48c612edf777e3610626f2dc3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/full-serial.log.gz",
+      "bytes": 14957,
+      "sha256": "1642cc563ed2ba9d23e5da1db8a70aa407247ca9c3ce3edf09ee68ccc1917744",
+      "rawBytes": 71268,
+      "rawSha256": "34e045a54044df945ed00195e4b8fe5610bd55d48c612edf777e3610626f2dc3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-contention-results.json",
+      "bytes": 215,
+      "sha256": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-delay.log",
+      "bytes": 213,
+      "sha256": "1a4afed5595cf5fae3e84c87566d5be99ae793c20df331c576ad5d2bfaa0fdca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-delayed-parent-results.json",
+      "bytes": 213,
+      "sha256": "1a4afed5595cf5fae3e84c87566d5be99ae793c20df331c576ad5d2bfaa0fdca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-diagnostic.mjs",
+      "bytes": 1949,
+      "sha256": "ccd25cca297e39d1e36c6743457786e6e3db8a966b6d725ee0e1f94896115652"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-events.jsonl",
+      "bytes": 23560,
+      "sha256": "e5d84d3f5355200454a2e024783b758050f1aa01c7f7596d419463059f9a68de"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-failures.log",
+      "bytes": 1020,
+      "sha256": "69d00b04fc4b2239dd2ca4a7591c4119fdbbaa99292565b304749c296095f04b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-failures.mjs",
+      "bytes": 2532,
+      "sha256": "e0ed0754f5e04810db6387b1e876de75f5200987c8cc762ca1311c8bf6e7afb2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-normal.log",
+      "bytes": 215,
+      "sha256": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-observer.mjs",
+      "bytes": 2040,
+      "sha256": "a8b0dfd2cbad55e5fada28d7b3fcf49dae9d01df25cd3a0c1ac84080b01d97e1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.log",
+      "bytes": 944,
+      "sha256": "12f9a8cf34ac9dd9e3b7e2a5fd1588f83694b5c3731637882c565881878ea0bc"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs",
+      "bytes": 2523,
+      "sha256": "f098381b9ac06965ca1f083d823154360365ca5712d528204acebe402140ddeb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metrics-8mib.json",
+      "bytes": 31833,
+      "sha256": "4aeabfadb7a95eca874062feea64f16164604636725035eb6e4b001a0d10aa8a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metrics-history-100.json",
+      "bytes": 229495,
+      "sha256": "8603a5a3c2835d4189d362293a4b90c5293390527f71348c6bc81e1bd858660f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metrics-history-25.json",
+      "bytes": 90039,
+      "sha256": "2bd72d0901426822efcce5e2af6a9c961faa8b642a517d174b291aaecb81b938"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metrics-history-50.json",
+      "bytes": 158799,
+      "sha256": "abb8bcabec91274b1af31d57eef09ca372a738db192d48eb8235c651cf7d505b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metrics-profile8-counted.json",
+      "bytes": 3930,
+      "sha256": "43322053988574522738558084f8dcecb4dfc1358cfbcff21e9cf6e787d456eb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metrics-profile8.json",
+      "bytes": 3962,
+      "sha256": "682488927217a0f89190870e91cb4d82e291df74b65b5d04f96e2ed8db7ae124"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/native-harness.json",
+      "bytes": 5036,
+      "sha256": "872469630457815fd26f9d665667cedb9b0930a7fe82c6cb4112d052661e7136"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/native-persistence.log",
+      "bytes": 37781,
+      "sha256": "8ecf06ebd2acba18e49e274a45c3c59e70ffa1f55ac7389eedbb009150f2b245"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/native-prep.log",
+      "bytes": 33,
+      "sha256": "de0158a147afda5d411e66a36485c814c794c35cc81b76ea9e01ead9751c1bb1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/original-faults.log",
+      "bytes": 4905,
+      "sha256": "691a77a98511d6d77027af6f2c512b59a38c5c8902f2cf42ce7bd25d36bf0f76"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/original-h01.log",
+      "bytes": 2304,
+      "sha256": "c10ef29cdb05bddd43c6545e14961ce39d506c9d45f7f546824d36fbdca07e55"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/original-persistence.log",
+      "bytes": 38060,
+      "sha256": "235f449bdd7211cda09177637688332914ac14f0031489dcada6f2b6f2eecfc6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/performance.sh",
+      "bytes": 1612,
+      "sha256": "617cd30f91a294ca5c3199e13734e16820f585af7985ef7baab73414599da11c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/platform.log",
+      "bytes": 1744,
+      "sha256": "3d0cae60ce1ad7cafe41043ca59c0fe959c7d586fe1e95e7e6b1951295d10318"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/prepare-native.py",
+      "bytes": 1876,
+      "sha256": "87c7805caed71a796dd8f186d8c501f0d583d505ebce517c5bdc7e1c1f5d06e8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/preservation.log",
+      "bytes": 2470,
+      "sha256": "916cb82a03b7d58fcf45e06e9dee47fc3ac4680fff33548be1c064cb1a8faebb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/profile-preload.mjs",
+      "bytes": 2259,
+      "sha256": "5c5cf017a36835707148075b97d1e7f55a9f59a1c67e8ebeb78a0f5ba037d5d8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/profile-summary-final.log",
+      "bytes": 22337,
+      "sha256": "19c78d87841ec74627bcc53da4567bfb798a7380301368888b974167c85c28d8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/profile-summary-first.json",
+      "bytes": 10857,
+      "sha256": "afb8d02ad42cf7b8e1f015092fac07348cbbdd9af04a6f4a784d3dd828c7a321"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/profile-summary.json",
+      "bytes": 22337,
+      "sha256": "19c78d87841ec74627bcc53da4567bfb798a7380301368888b974167c85c28d8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/profile-summary.log",
+      "bytes": 10857,
+      "sha256": "afb8d02ad42cf7b8e1f015092fac07348cbbdd9af04a6f4a784d3dd828c7a321"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/publication-controls.log",
+      "bytes": 1602,
+      "sha256": "071b079869832dbe349a68385880ca515e00422b65da1b8c96a80b3aa35b2f76"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/publication-controls.mjs",
+      "bytes": 3589,
+      "sha256": "f7865f825e0a7a0b1c89dc3cf0302a6bb2378359ff6cf8159593841a7e6e5797"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/publication-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/python-lock-restart.log",
+      "bytes": 471,
+      "sha256": "5c367d9f3436d93a20116a2d20ef5f42110508660313a771bc8029bd6fa36c86"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/python-lock.log",
+      "bytes": 471,
+      "sha256": "5c367d9f3436d93a20116a2d20ef5f42110508660313a771bc8029bd6fa36c86"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/python-venv-restart.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/python-venv.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/recovery-probe.mjs",
+      "bytes": 1310,
+      "sha256": "dd93856215a2efffbf325a1f811ce6818a90efd391451afb58bb1ad4bf8f4c7a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/release.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/restarted-env.log",
+      "bytes": 873,
+      "sha256": "2f1f586baf7a6d29cad8d4d851bd21e5e141f991888d52bdadb2fb6d451e2681"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/round2-cache.log",
+      "bytes": 5828,
+      "sha256": "5c1e757fa76a68a6d507bc05608201bf99e7eb455dc083dd4e425d2f21806aca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/round2-h03.log",
+      "bytes": 883,
+      "sha256": "a726f51607e142f19b498dbd56ab68f7a222465751828e83ab0448108ad470ee"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/round2-storage.log",
+      "bytes": 4154,
+      "sha256": "5312bb0922e179b76cb6fcead41ebeaeccf994ebaa9edfb8140804e9844c35ce"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/run.py",
+      "bytes": 1885,
+      "sha256": "ee2c4e5c78fd193156c13647655c5838f1931be521b51608a956fd96b24f2675"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/runs.jsonl",
+      "bytes": 39217,
+      "sha256": "c30421cba6129587f526b2e96bbe073357b2fe952f1212d0d634b0256d7647bf"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/seal-evidence.py",
+      "bytes": 2343,
+      "sha256": "6f593ceb6e791aca1cb851de8a91c7ff36aba3811fd430a54535a11a5ddd080f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/source-manifest.json",
+      "bytes": 162297,
+      "sha256": "b3daec3a1396df5376768dc2562963147472fca70672a10e5e7bf40e6e6fcfab"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/source-seal.log",
+      "bytes": 57,
+      "sha256": "afe909edc982551082f642533ba707d12f5dcc22a3b4d8e4a37477573ea3d21c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/staged-whitespace.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/summarize-profiles.py",
+      "bytes": 2990,
+      "sha256": "2375ba2fac94c331953ce8158ab1fa975b96748015e901cd2a8a0fc26d218a16"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/syntax.log",
+      "bytes": 1001,
+      "sha256": "5eb033c4a3b165e29129b7de2fdde6cf4773dc8b9e7f433a01584cdb788e16b0"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/verify-source.py",
+      "bytes": 1655,
+      "sha256": "13eaeb788211cba2d67288525a9dd04ca61920973d9fc8ca5e4c5b8b3fa69b15"
+    }
+  ]
+}

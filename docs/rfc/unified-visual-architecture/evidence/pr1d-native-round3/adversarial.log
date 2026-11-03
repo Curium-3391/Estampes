@@ -1,0 +1,179 @@
+TAP version 13
+# Subtest: native candidate proof remains valid through after-prepared
+ok 1 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 3070.1241
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.json","before":"2096:77259:811:1793717607891214922:1793717607895047119","after":"2096:77259:2:1793717609707676074:1793717609707676074","workerPid":56484},"before":{"generation":3,"rootHash":"f09acc0b183c0009f8b8d6f4d7daeb46cc8b572a2b8897ddc47d891c7315d252","commitId":"tx:609e6b21-606e-48dc-848a-353b0d182dc5","checksum":"489f3841c41e0da63e92c6a777b31abbbc99262cdc4e6325168a6e7dc487a8b9"},"after":{"checksum":"489f3841c41e0da63e92c6a777b31abbbc99262cdc4e6325168a6e7dc487a8b9","commitId":"tx:609e6b21-606e-48dc-848a-353b0d182dc5","generation":3,"rootHash":"f09acc0b183c0009f8b8d6f4d7daeb46cc8b572a2b8897ddc47d891c7315d252"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+not ok 2 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 3056.355498
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:53:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+    +   checksum: '4bf21bb7842a9e47d26dc43bbacd362b16c93bfbc263467de91592eb80060a07',
+    +   commitId: 'tx:f41e8751-3c7e-4e89-a484-89c149ac6cb2',
+    +   generation: 4,
+    +   rootHash: 'e9df00ad69c137b298ff22f222a777ce5434b1ddb82381096a64cde30a6a5ca6'
+    -   checksum: 'd817bbb7095512de368cab63025a2950ba278d3c6da57f8fbd925531cab83ced',
+    -   commitId: 'tx:34d3090c-2b08-4343-b575-f05d6175e617',
+    -   generation: 3,
+    -   rootHash: 'b9e287eebbda8742076a87814302222561c58dfff9c0e92efb00291fa69a7168'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    generation: 3
+    rootHash: 'b9e287eebbda8742076a87814302222561c58dfff9c0e92efb00291fa69a7168'
+    commitId: 'tx:34d3090c-2b08-4343-b575-f05d6175e617'
+    checksum: 'd817bbb7095512de368cab63025a2950ba278d3c6da57f8fbd925531cab83ced'
+  actual:
+    checksum: '4bf21bb7842a9e47d26dc43bbacd362b16c93bfbc263467de91592eb80060a07'
+    commitId: 'tx:f41e8751-3c7e-4e89-a484-89c149ac6cb2'
+    generation: 4
+    rootHash: 'e9df00ad69c137b298ff22f222a777ce5434b1ddb82381096a64cde30a6a5ca6'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:80:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.json","before":"2096:77259:811:1793717610903321388:1793717610903321388","after":"2096:77400:2:1793717612673796181:1793717612673796181","workerPid":56553},"before":{"generation":3,"rootHash":"b9e287eebbda8742076a87814302222561c58dfff9c0e92efb00291fa69a7168","commitId":"tx:34d3090c-2b08-4343-b575-f05d6175e617","checksum":"d817bbb7095512de368cab63025a2950ba278d3c6da57f8fbd925531cab83ced"},"after":{"checksum":"4bf21bb7842a9e47d26dc43bbacd362b16c93bfbc263467de91592eb80060a07","commitId":"tx:f41e8751-3c7e-4e89-a484-89c149ac6cb2","generation":4,"rootHash":"e9df00ad69c137b298ff22f222a777ce5434b1ddb82381096a64cde30a6a5ca6"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Verified file changed before publication"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+not ok 3 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 2928.700296
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:53:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'RECOVERY_REQUIRED'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'RECOVERY_REQUIRED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:78:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.json","before":"2096:77259:811:1793717613895779130:1793717613899530564","after":"2096:77259:2:1793717615730230486:1793717615730230486","workerPid":56587},"before":{"generation":3,"rootHash":"3dccd818dd7acb47722b15aa1de53b00e4f15b6daa14b46d06feea3fdc49b51d","commitId":"tx:3e625cc0-0caa-4078-99fb-aefeb000e50b","checksum":"c41c7abfd7800c018c5f95a42280b1f9505e5cc9683e794d34ce84dad70bd802"},"after":{"checksum":"a39497417e6fec15ac379f1df3ac725a92a0212bd7711d1743202a2a04c9b6c8","commitId":"tx:d195fa0b-6b41-4b8e-8aa9-dd0e7ff8a3be","generation":4,"rootHash":"3ba97e971ad4df4c52fd78eadf4c5ee4459b80d1296cd1f6c1f8db3ff36c5896"},"ledgerBefore":1,"ledgerAfter":2,"result":{"ack":{"schema":"estampes.commit-ack/1","commitId":"tx:d195fa0b-6b41-4b8e-8aa9-dd0e7ff8a3be","resultId":"event:043e6e3e-4f1c-4465-a1bb-ea68904944d2","durability":"durable","noChange":false,"revisionVector":[{"storeInstanceId":"3847aa72-1a89-431c-bd37-6107ee7bb565","entityId":"doc:00000002-0000-4000-8000-000000000001","revision":1,"contentHash":"d9927bc594ff56b3252b371be04466eb0f62b5e68c994df9a146abfb3ddab6e5"}]},"replayed":false},"warm":"ready","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 4 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 4346.547074
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["7b3b76bf-4176-4a0b-b543-5133b49268e4.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+not ok 5 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 2690.482876
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:86:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Atomic target has conflicting temporary owners"}
+    + actual - expected
+
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    ready (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:18:27)
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:109:5)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"ccbce1b1a2a7fc3d318e29be0ebd757a8ed59e4e8e8e7167076cf71d9c7b19f7","commitId":"tx:9183c413-a0ac-4cb8-b9d8-6840a197cc4e","generation":2,"rootHash":"ea0d78a89328e76658df88e462510813c84d4239fde7f9e296410092d2f18590"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["200a6514-0f58-4979-9981-acc325ac7cbd.json","58d28182-4aa1-4b76-8139-597e7bc7595a.json"],"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Atomic target has conflicting temporary owners"},"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 6 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 6568.737252
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"fa7774ab6e8973fedc03ad53e205c70da340ad416663b3b4705226ec61890e91","commitId":"tx:7e0d2c83-3ca3-4e9b-bc9d-0ad1c7de2160","generation":2,"rootHash":"c695d55c7e8d7fa16f42b3ba1655fe617bce866f9fb4c4b016f45325bcc4056b"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["a143044e-dfa6-4dad-aada-f01efba9dc60.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native repeated planning must not orphan an overlapping active GC plan
+not ok 7 - native repeated planning must not orphan an overlapping active GC plan
+  ---
+  duration_ms: 14754.153988
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:131:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"GC candidate missing without prior durable unlink intent"}
+    + actual - expected
+
+    + 'read-only-recovery'
+    - 'ready'
+           ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ready'
+  actual: 'read-only-recovery'
+  operator: 'strictEqual'
+  stack: |-
+    ready (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:18:27)
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:143:3)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"first":{"planned":true,"id":"331f65c4-587c-4374-a773-91823f005f16","candidates":2},"second":{"planned":true,"id":"ecebb4c8-9e81-47fb-8674-669670feb6a2","candidates":2},"overlap":["visual-documents/00000001-0000-4000-8000-000000000001/generations/3-4b4f2d119b2e952bb6c2f3dd62e2e67af5e2e12ce056ba93bd0c56a6948e7ba2.json","visual-documents/00000001-0000-4000-8000-000000000001/generations/2-2d43f3e39f27fb304b75c8f48fb8a0c3303a2ad8588922cdd965786bab86327e.json"],"result":{"id":"331f65c4-587c-4374-a773-91823f005f16","state":"complete","progressed":4,"moved":2,"deleted":2},"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"GC candidate missing without prior durable unlink intent"}}
+# Subtest: native GC does not unlink a different inode at the authorized quarantine path
+not ok 8 - native GC does not unlink a different inode at the authorized quarantine path
+  ---
+  duration_ms: 5073.396287
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:147:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'RECOVERY_REQUIRED'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'RECOVERY_REQUIRED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs:166:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/ddd57df2-9603-40cc-96a8-fba3bda47226/0-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.bin","target":"gc-quarantine/ddd57df2-9603-40cc-96a8-fba3bda47226/0-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.bin","mode":"replace","before":"2096:77663:811:1793717645296639393:1793717646832052643","after":"2096:80525:2:1793717651798389430:1793717651798389430","workerPid":58738},"result":{"id":"ddd57df2-9603-40cc-96a8-fba3bda47226","state":"complete","progressed":13,"moved":13,"deleted":13},"exists":false,"writer":"ready"}
+1..8
+# tests 8
+# suites 0
+# pass 3
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 42817.770203

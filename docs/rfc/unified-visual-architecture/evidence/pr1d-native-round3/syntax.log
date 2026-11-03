@@ -1,0 +1,12 @@
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/adversarial.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/backup-gc.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/benchmark.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/boundary-preload.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/count-loader.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/count-register.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-diagnostic.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-failures.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/lease-observer.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/profile-preload.mjs
+docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/recovery-probe.mjs
