@@ -1,0 +1,17 @@
+TAP version 13
+# Subtest: native post-publication EIO fences without rolling back selected CURRENT or inventing an ACK
+ok 1 - native post-publication EIO fences without rolling back selected CURRENT or inventing an ACK
+  ---
+  duration_ms: 2339.855018
+  type: 'test'
+  ...
+# {"before":{"generation":1,"rootHash":"279b4c42e18bc029642ef3a0c917899292589fb55d1e48894f961b991d3b7280","commitId":"tx:7cdcf677-f38c-4af7-aacb-3c2073f6d7ab","checksum":"3541b0267eb637f695aceef009cd7adde7d5e6bf2882e4b2ef7b14e180f46feb"},"selected":{"generation":2,"rootHash":"71a9b1e7839d60ccd9155b8dcd6a24f572b15279dfa828b0ea76398c8591175f","commitId":"tx:70ce1912-cbb7-421e-b496-bf78a3deff79","checksum":"4aae1f8c743765c2473e56f7f6c6d7980427779b9a25e60a9ebc4c9696361054"},"recovered":{"generation":3,"rootHash":"9ac3838c0fdcd67b46841fd886e541ebf89b5334cecfa6a8f2a4d2100c3f16d1","commitId":"tx:5d5d8829-a077-4a38-83c8-2d3a82fbeb87","checksum":"2b5f34bdad697cc79373ea8f45d0bae602f74539aec4b3302958c5e9db5d8b8d"},"ledger":[0,1,1],"failed":{"code":"RECOVERY_REQUIRED","message":"Commit outcome requires recovery; no durable ACK emitted","details":{"code":"RECOVERY_REQUIRED","cause":"EIO","message":"Injected filesystem failure at before-ack"}},"replay":{"ack":{"schema":"estampes.commit-ack/1","commitId":"tx:70ce1912-cbb7-421e-b496-bf78a3deff79","resultId":"event:0ef1f426-9f59-4fd1-af30-67bc4a879bc6","durability":"durable","noChange":false,"revisionVector":[{"storeInstanceId":"2f571a3c-51ac-4f66-afe5-2d2622586954","entityId":"doc:00000001-0000-4000-8000-000000000001","revision":1,"contentHash":"72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec"}]},"replayed":true}}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2562.263358

@@ -1,0 +1,3185 @@
+TAP version 13
+# Subtest: confidence never verifies a claim: every unverified link waits for review
+ok 1 - confidence never verifies a claim: every unverified link waits for review
+  ---
+  duration_ms: 35.6826
+  type: 'test'
+  ...
+# Subtest: evidence regions are checked: inside 0..1, on an image of this view
+ok 2 - evidence regions are checked: inside 0..1, on an image of this view
+  ---
+  duration_ms: 8.470157
+  type: 'test'
+  ...
+# Subtest: a rejected link outlives its marks and cannot be re-proposed without new evidence
+ok 3 - a rejected link outlives its marks and cannot be re-proposed without new evidence
+  ---
+  duration_ms: 25.808683
+  type: 'test'
+  ...
+# Subtest: withdrawing or reversing a rejection forgets it; re-pointing a link clears the verdict
+ok 4 - withdrawing or reversing a rejection forgets it; re-pointing a link clears the verdict
+  ---
+  duration_ms: 21.322588
+  type: 'test'
+  ...
+# Subtest: a note is a claim: new wording starts fresh, a rejected note is refused at that place
+ok 5 - a note is a claim: new wording starts fresh, a rejected note is refused at that place
+  ---
+  duration_ms: 18.679196
+  type: 'test'
+  ...
+# Subtest: rejections are stored with the canvas and come back after a restart
+ok 6 - rejections are stored with the canvas and come back after a restart
+  ---
+  duration_ms: 7.378787
+  type: 'test'
+  ...
+# Subtest: same region: half overlap or the new centre inside the old box
+ok 7 - same region: half overlap or the new centre inside the old box
+  ---
+  duration_ms: 0.275
+  type: 'test'
+  ...
+# Subtest: plate solving runs as a background job and marks the named objects
+ok 8 - plate solving runs as a background job and marks the named objects
+  ---
+  duration_ms: 90.990194
+  type: 'test'
+  ...
+# Subtest: a failed solve is reported as a result, not an error, and changes nothing
+ok 9 - a failed solve is reported as a result, not an error, and changes nothing
+  ---
+  duration_ms: 36.99692
+  type: 'test'
+  ...
+# Subtest: errors become a failed job with a plain reason
+ok 10 - errors become a failed job with a plain reason
+  ---
+  duration_ms: 168.126862
+  type: 'test'
+  ...
+# Subtest: a job that runs too long is stopped and never applies its result later
+ok 11 - a job that runs too long is stopped and never applies its result later
+  ---
+  duration_ms: 1130.309411
+  type: 'test'
+  ...
+# Subtest: jobs survive a restart as interrupted, and the id format is checked
+ok 12 - jobs survive a restart as interrupted, and the id format is checked
+  ---
+  duration_ms: 1047.617812
+  type: 'test'
+  ...
+# Subtest: the module cannot run unless the user granted its permissions
+ok 13 - the module cannot run unless the user granted its permissions
+  ---
+  duration_ms: 25.672593
+  type: 'test'
+  ...
+# Subtest: job tools return the canvas payload, so the widget shows the photo and not its sample
+ok 14 - job tools return the canvas payload, so the widget shows the photo and not its sample
+  ---
+  duration_ms: 51.177378
+  type: 'test'
+  ...
+# Subtest: marks: bright named stars come first and overlapping labels are skipped
+ok 15 - marks: bright named stars come first and overlapping labels are skipped
+  ---
+  duration_ms: 1.602152
+  type: 'test'
+  ...
+# Subtest: the sky map draws the solved field with no network
+ok 16 - the sky map draws the solved field with no network
+  ---
+  duration_ms: 50.230178
+  type: 'test'
+  ...
+# Subtest: sky geometry: Hammer centre, RA grows to the left, field outline stays near its centre
+ok 17 - sky geometry: Hammer centre, RA grows to the left, field outline stays near its centre
+  ---
+  duration_ms: 0.863249
+  type: 'test'
+  ...
+# Subtest: export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting
+ok 18 - export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting
+  ---
+  duration_ms: 1672.727613
+  type: 'test'
+  ...
+# Subtest: export_workspace_bundle over MCP: signed link downloads a bundle that imports back
+ok 19 - export_workspace_bundle over MCP: signed link downloads a bundle that imports back
+  ---
+  duration_ms: 723.065944
+  type: 'test'
+  ...
+# Subtest: zip: round trip, and unsafe names are refused
+ok 20 - zip: round trip, and unsafe names are refused
+  ---
+  duration_ms: 3.065626
+  type: 'test'
+  ...
+# Subtest: export then import into an empty server: 3 images, 29 marks, same layers, still editable
+ok 21 - export then import into an empty server: 3 images, 29 marks, same layers, still editable
+  ---
+  duration_ms: 127.563569
+  type: 'test'
+  ...
+# Subtest: importing the same bundle twice returns the same workspace and adds nothing
+ok 22 - importing the same bundle twice returns the same workspace and adds nothing
+  ---
+  duration_ms: 101.837086
+  type: 'test'
+  ...
+# Subtest: import onto a server that has the images with other marks never overwrites them
+ok 23 - import onto a server that has the images with other marks never overwrites them
+  ---
+  duration_ms: 86.788918
+  type: 'test'
+  ...
+# Subtest: tampering, wrong format, missing files and bad marks are refused or dropped
+ok 24 - tampering, wrong format, missing files and bad marks are refused or dropped
+  ---
+  duration_ms: 83.991899
+  type: 'test'
+  ...
+# Subtest: a bundle with an out-of-range mark keeps the rest and reports it
+ok 25 - a bundle with an out-of-range mark keeps the rest and reports it
+  ---
+  duration_ms: 94.794932
+  type: 'test'
+  ...
+# [storage] restored imageId=img:cdd7884aea5523cd marks=25
+# [storage] restored imageId=img:236cdd18eb31ff52 marks=2
+# [storage] restored imageId=img:7adaeac0f3f67a71 marks=2
+# Subtest: on disk: import persists the restored canvases and workspace
+ok 26 - on disk: import persists the restored canvases and workspace
+  ---
+  duration_ms: 141.716843
+  type: 'test'
+  ...
+# Subtest: a JPEG exported without stored originals imports under its new id (working copy)
+ok 27 - a JPEG exported without stored originals imports under its new id (working copy)
+  ---
+  duration_ms: 21.922978
+  type: 'test'
+  ...
+# Subtest: same marks but different layer settings are not reused: the bundle keeps its own copy
+ok 28 - same marks but different layer settings are not reused: the bundle keeps its own copy
+  ---
+  duration_ms: 77.893688
+  type: 'test'
+  ...
+# Subtest: canvas pixels include saved handwriting in full and cropped views; source stays blank
+ok 29 - canvas pixels include saved handwriting in full and cropped views; source stays blank
+  ---
+  duration_ms: 248.697495
+  type: 'test'
+  ...
+# Subtest: public Graph pixels update; hidden layers and scratch are excluded, locked layers remain visible
+ok 30 - public Graph pixels update; hidden layers and scratch are excluded, locked layers remain visible
+  ---
+  duration_ms: 705.656151
+  type: 'test'
+  ...
+# Subtest: revision checks cover marks, layer opacity and view visibility; render takes a consistent snapshot
+ok 31 - revision checks cover marks, layer opacity and view visibility; render takes a consistent snapshot
+  ---
+  duration_ms: 39.108371
+  type: 'test'
+  ...
+# Subtest: mixed canvas draws marks over public objects and supports lossless WebP
+ok 32 - mixed canvas draws marks over public objects and supports lossless WebP
+  ---
+  duration_ms: 39.70506
+  type: 'test'
+  ...
+# Subtest: crop coordinates convert back to the full image
+ok 33 - crop coordinates convert back to the full image
+  ---
+  duration_ms: 1.972209
+  type: 'test'
+  ...
+# Subtest: marks persist with stable ids: add, edit, comment, remove
+ok 34 - marks persist with stable ids: add, edit, comment, remove
+  ---
+  duration_ms: 15.246692
+  type: 'test'
+  ...
+# Subtest: verification image shows the crop with and without the marks
+ok 35 - verification image shows the crop with and without the marks
+  ---
+  duration_ms: 52.766779
+  type: 'test'
+  ...
+# Subtest: each send and each GPT drawing call becomes one layer
+ok 36 - each send and each GPT drawing call becomes one layer
+  ---
+  duration_ms: 7.772237
+  type: 'test'
+  ...
+# Subtest: GPT can add a trace about user marks after several rounds; nothing is lost
+ok 37 - GPT can add a trace about user marks after several rounds; nothing is lost
+  ---
+  duration_ms: 6.460885
+  type: 'test'
+  ...
+# Subtest: info cards in a browser: per-module groups, fold, hide and bring back
+ok 38 - info cards in a browser: per-module groups, fold, hide and bring back
+  ---
+  duration_ms: 6633.128723
+  type: 'test'
+  ...
+# Subtest: cas: disabled until the user enables it
+ok 39 - cas: disabled until the user enables it
+  ---
+  duration_ms: 437.865307
+  type: 'test'
+  ...
+# Subtest: cas: exact results come from SymPy, with LaTeX and a typed AST
+ok 40 - cas: exact results come from SymPy, with LaTeX and a typed AST
+  ---
+  duration_ms: 136.196156
+  type: 'test'
+  ...
+# Subtest: cas: bad input is a cell error, the input is kept and nothing executes
+ok 41 - cas: bad input is a cell error, the input is kept and nothing executes
+  ---
+  duration_ms: 20.203861
+  type: 'test'
+  ...
+# Subtest: cas: plot_result draws a semantic function plot and links it to the cell
+ok 42 - cas: plot_result draws a semantic function plot and links it to the cell
+  ---
+  duration_ms: 60.873998
+  type: 'test'
+  ...
+# Subtest: cas: editing upstream makes results and links stale, and a stale result is not plotted
+ok 43 - cas: editing upstream makes results and links stale, and a stale result is not plotted
+  ---
+  duration_ms: 91.039042
+  type: 'test'
+  ...
+# Subtest: cas: conditional, partial and complex results are never plotted as ordinary functions
+ok 44 - cas: conditional, partial and complex results are never plotted as ordinary functions
+  ---
+  duration_ms: 509.889642
+  type: 'test'
+  ...
+# Subtest: cas: revision conflicts and idempotency keys
+ok 45 - cas: revision conflicts and idempotency keys
+  ---
+  duration_ms: 27.291548
+  type: 'test'
+  ...
+# Subtest: cas: notebooks survive a restart of the Core
+ok 46 - cas: notebooks survive a restart of the Core
+  ---
+  duration_ms: 16.925026
+  type: 'test'
+  ...
+# Subtest: cas: with no calculator service the module reports it and Core keeps working
+ok 47 - cas: with no calculator service the module reports it and Core keeps working
+  ---
+  duration_ms: 10.659411
+  type: 'test'
+  ...
+# Subtest: bridge: only real single-variable results become Graph expressions
+ok 48 - bridge: only real single-variable results become Graph expressions
+  ---
+  duration_ms: 1.036226
+  type: 'test'
+  ...
+# Subtest: cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged
+ok 49 - cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged
+  ---
+  duration_ms: 430.442308
+  type: 'test'
+  ...
+# Subtest: claims over MCP: unverified until the user reviews, a rejection refuses the repeat
+ok 50 - claims over MCP: unverified until the user reviews, a rejection refuses the repeat
+  ---
+  duration_ms: 9160.297301
+  type: 'test'
+  ...
+# Subtest: image layers retain alpha and reorder across raster, marks and editable Graph copies
+ok 51 - image layers retain alpha and reorder across raster, marks and editable Graph copies
+  ---
+  duration_ms: 138.8115
+  type: 'test'
+  ...
+# Subtest: composition refuses self-copy and rolls back failed layer insertion
+ok 52 - composition refuses self-copy and rolls back failed layer insertion
+  ---
+  duration_ms: 7.099894
+  type: 'test'
+  ...
+# Subtest: transform matrices: quarter turns are exact, singular matrices have no inverse
+ok 53 - transform matrices: quarter turns are exact, singular matrices have no inverse
+  ---
+  duration_ms: 3.09351
+  type: 'test'
+  ...
+# Subtest: fitTransform recovers similarity, affine and homography and reports residuals
+ok 54 - fitTransform recovers similarity, affine and homography and reports residuals
+  ---
+  duration_ms: 1.71172
+  type: 'test'
+  ...
+# Subtest: preview sampling returns exactly the old process_image pixels
+ok 55 - preview sampling returns exactly the old process_image pixels
+  ---
+  duration_ms: 1272.123126
+  type: 'test'
+  ...
+# Subtest: native sampling cuts real source pixels beyond the working copy, EXIF applied
+ok 56 - native sampling cuts real source pixels beyond the working copy, EXIF applied
+  ---
+  duration_ms: 1279.985682
+  type: 'test'
+  ...
+# Subtest: derived view ids are deterministic and recipes rebuild the same pixels
+ok 57 - derived view ids are deterministic and recipes rebuild the same pixels
+  ---
+  duration_ms: 509.28972
+  type: 'test'
+  ...
+# Subtest: coordinates read off a derived view map back exactly, rects under rotation become polygons
+ok 58 - coordinates read off a derived view map back exactly, rects under rotation become polygons
+  ---
+  duration_ms: 540.275665
+  type: 'test'
+  ...
+# Subtest: zoom tiles come from the source file when it is larger than the working copy
+ok 59 - zoom tiles come from the source file when it is larger than the working copy
+  ---
+  duration_ms: 431.980312
+  type: 'test'
+  ...
+# [storage] restored imageId=img:3986680c66f4d2c3 marks=0
+# Subtest: derived view recipes are stored with the image and survive a restart
+ok 60 - derived view recipes are stored with the image and survive a restart
+  ---
+  duration_ms: 875.968796
+  type: 'test'
+  ...
+# Subtest: MCP: native process_image, marking through derivedViewId, inspect_image and get_derived_view
+ok 61 - MCP: native process_image, marking through derivedViewId, inspect_image and get_derived_view
+  ---
+  duration_ms: 2415.932477
+  type: 'test'
+  ...
+# Subtest: PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+ok 62 - PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+  ---
+  duration_ms: 7.834511
+  type: 'test'
+  ...
+# Subtest: asset aliases validate full SHA and cannot become Document identities
+ok 63 - asset aliases validate full SHA and cannot become Document identities
+  ---
+  duration_ms: 2.8051
+  type: 'test'
+  ...
+# Subtest: legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+ok 64 - legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+  ---
+  duration_ms: 3.197598
+  type: 'test'
+  ...
+# Subtest: import identity tables reject source/target collisions without conflating different domains
+ok 65 - import identity tables reject source/target collisions without conflating different domains
+  ---
+  duration_ms: 4.710443
+  type: 'test'
+  ...
+# Subtest: graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+ok 66 - graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+  ---
+  duration_ms: 20.818501
+  type: 'test'
+  ...
+# Subtest: scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+ok 67 - scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+  ---
+  duration_ms: 71.370337
+  type: 'test'
+  ...
+# Subtest: strict read records preserve opacity zero, precision, locking and reject unknown fields
+ok 68 - strict read records preserve opacity zero, precision, locking and reject unknown fields
+  ---
+  duration_ms: 12.543465
+  type: 'test'
+  ...
+# Subtest: duplicates and all layer membership inconsistencies are rejected
+ok 69 - duplicates and all layer membership inconsistencies are rejected
+  ---
+  duration_ms: 7.686894
+  type: 'test'
+  ...
+# Subtest: frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+ok 70 - frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+  ---
+  duration_ms: 4.906552
+  type: 'test'
+  ...
+# Subtest: finite geometry and normalized bounds reject invalid coordinates without clamping
+ok 71 - finite geometry and normalized bounds reject invalid coordinates without clamping
+  ---
+  duration_ms: 1.647896
+  type: 'test'
+  ...
+# Subtest: imported authors remain unknown with complete original source, never active module owners
+ok 72 - imported authors remain unknown with complete original source, never active module owners
+  ---
+  duration_ms: 1.500372
+  type: 'test'
+  ...
+# Subtest: unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+ok 73 - unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+  ---
+  duration_ms: 0.707092
+  type: 'test'
+  ...
+# Subtest: creator/source history and sticky user audit cannot be overwritten
+ok 74 - creator/source history and sticky user audit cannot be overwritten
+  ---
+  duration_ms: 1.182148
+  type: 'test'
+  ...
+# Subtest: trusted actor shape and grant intersection are not caller-granted permissions
+ok 75 - trusted actor shape and grant intersection are not caller-granted permissions
+  ---
+  duration_ms: 1.060778
+  type: 'test'
+  ...
+# Subtest: production wire schemas accept formal EX-04 but reject forged actor fields at every level
+ok 76 - production wire schemas accept formal EX-04 but reject forged actor fields at every level
+  ---
+  duration_ms: 16.36932
+  type: 'test'
+  ...
+# Subtest: existing-annotation input uses entity OCC and validates geometry against stored type
+ok 77 - existing-annotation input uses entity OCC and validates geometry against stored type
+  ---
+  duration_ms: 1.111969
+  type: 'test'
+  ...
+# Subtest: Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+ok 78 - Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+  ---
+  duration_ms: 1.051191
+  type: 'test'
+  ...
+# Subtest: embed object and canonical binding agree, child is authoritative and independently identified
+ok 79 - embed object and canonical binding agree, child is authoritative and independently identified
+  ---
+  duration_ms: 14.764797
+  type: 'test'
+  ...
+# Subtest: fresh cross-document targets must exist; unresolved materialized status never grants access
+ok 80 - fresh cross-document targets must exist; unresolved materialized status never grants access
+  ---
+  duration_ms: 12.381048
+  type: 'test'
+  ...
+# Subtest: embed cycles and depth are checked on supplied after-state snapshots
+ok 81 - embed cycles and depth are checked on supplied after-state snapshots
+  ---
+  duration_ms: 14.708114
+  type: 'test'
+  ...
+# Subtest: snapshot refusal uses closed redacted projections and cannot imply raster success
+ok 82 - snapshot refusal uses closed redacted projections and cannot imply raster success
+  ---
+  duration_ms: 2.048957
+  type: 'test'
+  ...
+# Subtest: six-root CommitRoot cannot use missing/extra/self-referential descriptors
+ok 83 - six-root CommitRoot cannot use missing/extra/self-referential descriptors
+  ---
+  duration_ms: 3.21854
+  type: 'test'
+  ...
+# Subtest: CURRENT checksum is canonical, excludes itself and matches exactly one root
+ok 84 - CURRENT checksum is canonical, excludes itself and matches exactly one root
+  ---
+  duration_ms: 1.048585
+  type: 'test'
+  ...
+# Subtest: recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+ok 85 - recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+  ---
+  duration_ms: 2.397338
+  type: 'test'
+  ...
+# Subtest: adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+ok 86 - adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+  ---
+  duration_ms: 0.771128
+  type: 'test'
+  ...
+# Subtest: JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+ok 87 - JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+  ---
+  duration_ms: 50.348839
+  type: 'test'
+  ...
+# Subtest: 95 pre-existing production/config files still match the verified baseline
+ok 88 - 95 pre-existing production/config files still match the verified baseline
+  ---
+  duration_ms: 6.163812
+  type: 'test'
+  ...
+# Subtest: removed annotation anchors retain invalid references only with explicit matching tombstones
+ok 89 - removed annotation anchors retain invalid references only with explicit matching tombstones
+  ---
+  duration_ms: 3.963886
+  type: 'test'
+  ...
+# Subtest: interaction/gesture references and canonical axes associations are checked
+ok 90 - interaction/gesture references and canonical axes associations are checked
+  ---
+  duration_ms: 12.216492
+  type: 'test'
+  ...
+# Subtest: binding UUID collisions across parent Documents cannot create two canonical records
+ok 91 - binding UUID collisions across parent Documents cannot create two canonical records
+  ---
+  duration_ms: 3.430379
+  type: 'test'
+  ...
+# Subtest: repeated embed edges cannot amplify bounded traversal exponentially
+ok 92 - repeated embed edges cannot amplify bounded traversal exponentially
+  ---
+  duration_ms: 86.714806
+  type: 'test'
+  ...
+# Subtest: external provenance profile cannot be self-promoted and import evidence never becomes current verification
+ok 93 - external provenance profile cannot be self-promoted and import evidence never becomes current verification
+  ---
+  duration_ms: 1.773175
+  type: 'test'
+  ...
+# Subtest: mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+ok 94 - mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+  ---
+  duration_ms: 2.952438
+  type: 'test'
+  ...
+# Subtest: arbitrary JSON metadata in parsed records is detached from its input snapshot
+ok 95 - arbitrary JSON metadata in parsed records is detached from its input snapshot
+  ---
+  duration_ms: 0.392125
+  type: 'test'
+  ...
+# Subtest: F-01 partial snapshots report a missing active external dependency without inventing a target
+ok 96 - F-01 partial snapshots report a missing active external dependency without inventing a target
+  ---
+  duration_ms: 35.20383
+  type: 'test'
+  ...
+# Subtest: F-01 a declared complete closure rejects missing active dependencies and accepts coherent provided children
+ok 97 - F-01 a declared complete closure rejects missing active dependencies and accepts coherent provided children
+  ---
+  duration_ms: 10.425911
+  type: 'test'
+  ...
+# Subtest: F-01 missing targets in supplied Documents remain errors even in partial mode
+ok 98 - F-01 missing targets in supplied Documents remain errors even in partial mode
+  ---
+  duration_ms: 5.065617
+  type: 'test'
+  ...
+# Subtest: F-01 closure declarations are exact revision/hash sets, not caller assertions of validity
+ok 99 - F-01 closure declarations are exact revision/hash sets, not caller assertions of validity
+  ---
+  duration_ms: 1.843261
+  type: 'test'
+  ...
+# Subtest: F-01 explicitly unresolved and historical references are preserved and reported in complete closure
+ok 100 - F-01 explicitly unresolved and historical references are preserved and reported in complete closure
+  ---
+  duration_ms: 27.330227
+  type: 'test'
+  ...
+# Subtest: F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits
+ok 101 - F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits
+  ---
+  duration_ms: 11.440523
+  type: 'test'
+  ...
+# Subtest: F-02 JSON record recovery never attests source-file bytes, assets or successful migration
+ok 102 - F-02 JSON record recovery never attests source-file bytes, assets or successful migration
+  ---
+  duration_ms: 19.292625
+  type: 'test'
+  ...
+# Subtest: F-02 mapped, editableComplete and rawRecoverable are independent statements
+ok 103 - F-02 mapped, editableComplete and rawRecoverable are independent statements
+  ---
+  duration_ms: 5.936336
+  type: 'test'
+  ...
+# Subtest: PR-1A / UVA-24: legacy shadow is pure, deterministic and round-trips geometry, layers and rich claims
+ok 104 - PR-1A / UVA-24: legacy shadow is pure, deterministic and round-trips geometry, layers and rich claims
+  ---
+  duration_ms: 55.289178
+  type: 'test'
+  ...
+# Subtest: legacy creators do not borrow layer.module or fabricate actor identities/timestamps
+ok 105 - legacy creators do not borrow layer.module or fabricate actor identities/timestamps
+  ---
+  duration_ms: 13.442012
+  type: 'test'
+  ...
+# Subtest: external import keeps full original claims but cannot activate local module owners or verification
+ok 106 - external import keeps full original claims but cannot activate local module owners or verification
+  ---
+  duration_ms: 9.212862
+  type: 'test'
+  ...
+# Subtest: legacy edited geometry conservatively stales current Evidence without erasing review
+ok 107 - legacy edited geometry conservatively stales current Evidence without erasing review
+  ---
+  duration_ms: 4.126116
+  type: 'test'
+  ...
+# Subtest: unknown fields at each level remain recoverable with an explicit archive report
+ok 108 - unknown fields at each level remain recoverable with an explicit archive report
+  ---
+  duration_ms: 5.253909
+  type: 'test'
+  ...
+# Subtest: historical intent, rejected claims, old undo and unsupported gestures are archived, not invented
+ok 109 - historical intent, rejected claims, old undo and unsupported gestures are archived, not invented
+  ---
+  duration_ms: 7.824366
+  type: 'test'
+  ...
+# Subtest: unlayered fallback is an explicit allocated identity; bad references are not auto-repaired
+ok 110 - unlayered fallback is an explicit allocated identity; bad references are not auto-repaired
+  ---
+  duration_ms: 9.375929
+  type: 'test'
+  ...
+# Subtest: duplicate domain IDs, missing axes and unsupported objects block without dropping source entities
+ok 111 - duplicate domain IDs, missing axes and unsupported objects block without dropping source entities
+  ---
+  duration_ms: 11.177307
+  type: 'test'
+  ...
+# Subtest: legacy raster objects require verified asset intake instead of fake conversion or flattening
+ok 112 - legacy raster objects require verified asset intake instead of fake conversion or flattening
+  ---
+  duration_ms: 0.937081
+  type: 'test'
+  ...
+# Subtest: explicit link mappings preserve direction and claim source; external targets stay unresolved
+ok 113 - explicit link mappings preserve direction and claim source; external targets stay unresolved
+  ---
+  duration_ms: 7.284623
+  type: 'test'
+  ...
+# Subtest: derivedFrom is remapped only through the explicit namespaced allocation table
+ok 114 - derivedFrom is remapped only through the explicit namespaced allocation table
+  ---
+  duration_ms: 7.65711
+  type: 'test'
+  ...
+# Subtest: missing observer/source never becomes fabricated tool evidence
+ok 115 - missing observer/source never becomes fabricated tool evidence
+  ---
+  duration_ms: 3.907204
+  type: 'test'
+  ...
+# Subtest: invalid coordinates, schemas and malformed records fail explicitly, never clamp or discard
+ok 116 - invalid coordinates, schemas and malformed records fail explicitly, never clamp or discard
+  ---
+  duration_ms: 7.582184
+  type: 'test'
+  ...
+# Subtest: fork identity and coordinate transforms use caller context, not image pixels as Document identity
+ok 117 - fork identity and coordinate transforms use caller context, not image pixels as Document identity
+  ---
+  duration_ms: 6.390915
+  type: 'test'
+  ...
+# Subtest: UVA-27 subset: actual legacy serialization and legacy AI editing restrictions remain unchanged
+ok 118 - UVA-27 subset: actual legacy serialization and legacy AI editing restrictions remain unchanged
+  ---
+  duration_ms: 8.105732
+  type: 'test'
+  ...
+# Subtest: mapping contexts cannot accidentally resolve a local source in another store namespace
+ok 119 - mapping contexts cannot accidentally resolve a local source in another store namespace
+  ---
+  duration_ms: 0.563571
+  type: 'test'
+  ...
+# Subtest: malformed optional containers and null link entries produce reports instead of TypeErrors
+ok 120 - malformed optional containers and null link entries produce reports instead of TypeErrors
+  ---
+  duration_ms: 9.821294
+  type: 'test'
+  ...
+# Subtest: unsupported provenance metadata and malformed historical times are explicitly archived
+ok 121 - unsupported provenance metadata and malformed historical times are explicitly archived
+  ---
+  duration_ms: 3.676656
+  type: 'test'
+  ...
+# Subtest: same short alias with different full hashes blocks instead of last-wins asset substitution
+ok 122 - same short alias with different full hashes blocks instead of last-wins asset substitution
+  ---
+  duration_ms: 0.696202
+  type: 'test'
+  ...
+# Subtest: engine list reports availability and optional engines degrade to a result, not a crash
+ok 123 - engine list reports availability and optional engines degrade to a result, not a crash
+  ---
+  duration_ms: 33.398171
+  type: 'test'
+  ...
+# Subtest: components return boxes in normalized source coordinates with version and provenance
+ok 124 - components return boxes in normalized source coordinates with version and provenance
+  ---
+  duration_ms: 96.760784
+  type: 'test'
+  ...
+# Subtest: blobs find point sources with sub-pixel centroids
+ok 125 - blobs find point sources with sub-pixel centroids
+  ---
+  duration_ms: 33.798301
+  type: 'test'
+  ...
+# Subtest: lines and circles find strokes and rings, and do not call a square a circle
+ok 126 - lines and circles find strokes and rings, and do not call a square a circle
+  ---
+  duration_ms: 241.464413
+  type: 'test'
+  ...
+# Subtest: custom engines register once, run purely and failures keep one shape
+ok 127 - custom engines register once, run purely and failures keep one shape
+  ---
+  duration_ms: 13.909901
+  type: 'test'
+  ...
+# Subtest: MCP: detect_features lists engines, runs one and refuses a missing image
+ok 128 - MCP: detect_features lists engines, runs one and refuses a missing image
+  ---
+  duration_ms: 545.802608
+  type: 'test'
+  ...
+# Subtest: evidence viewer inline UI is parsable and protocol-ready
+ok 129 - evidence viewer inline UI is parsable and protocol-ready
+  ---
+  duration_ms: 1.461188
+  type: 'test'
+  ...
+# Subtest: evidence viewer actually renders the 3 PNG blocks for user
+ok 130 - evidence viewer actually renders the 3 PNG blocks for user
+  ---
+  duration_ms: 0.199181
+  type: 'test'
+  ...
+# Subtest: preview requires real png blocks and never claims to classify the subject
+ok 131 - preview requires real png blocks and never claims to classify the subject
+  ---
+  duration_ms: 0.300819
+  type: 'test'
+  ...
+# Subtest: expressions: arithmetic, precedence, implicit multiplication, bars and constants
+ok 132 - expressions: arithmetic, precedence, implicit multiplication, bars and constants
+  ---
+  duration_ms: 5.267963
+  type: 'test'
+  ...
+# Subtest: expressions: anything that is not math is refused, never evaluated
+ok 133 - expressions: anything that is not math is refused, never evaluated
+  ---
+  duration_ms: 2.750093
+  type: 'test'
+  ...
+# Subtest: expressions: detects trigonometry for default axes
+ok 134 - expressions: detects trigonometry for default axes
+  ---
+  duration_ms: 0.258098
+  type: 'test'
+  ...
+# Subtest: finding groups: compact rows, detail drilldown, canvas selection and review drafts
+not ok 135 - finding groups: compact rows, detail drilldown, canvas selection and review drafts
+  ---
+  duration_ms: 6097.826358
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/finding-list.test.js:17:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'passed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'passed'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/projects/Estampes/tests/finding-list.test.js:137:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: deskew finds the tilt of ruled lines and refuses a blank page
+ok 136 - deskew finds the tilt of ruled lines and refuses a blank page
+  ---
+  duration_ms: 265.624692
+  type: 'test'
+  ...
+# Subtest: rotation by 90 degrees maps marks back exactly; any angle reports invalid corners
+ok 137 - rotation by 90 degrees maps marks back exactly; any angle reports invalid corners
+  ---
+  duration_ms: 13.46962
+  type: 'test'
+  ...
+# Subtest: perspective rectification recovers a flat surface and inverts to the image
+ok 138 - perspective rectification recovers a flat surface and inverts to the image
+  ---
+  duration_ms: 105.273325
+  type: 'test'
+  ...
+# Subtest: extra operators behave: levels stretch, gamma lifts, white balance neutralizes, channel isolates
+ok 139 - extra operators behave: levels stretch, gamma lifts, white balance neutralizes, channel isolates
+  ---
+  duration_ms: 18.085874
+  type: 'test'
+  ...
+# Subtest: auto registration recovers a rotated, scaled copy; mirror needs the flag; unrelated images fail
+ok 140 - auto registration recovers a rotated, scaled copy; mirror needs the flag; unrelated images fail
+  ---
+  duration_ms: 4328.27003
+  type: 'test'
+  ...
+# Subtest: landmark registration fits exactly and reports residuals; too few points fail
+ok 141 - landmark registration fits exactly and reports residuals; too few points fail
+  ---
+  duration_ms: 159.400627
+  type: 'test'
+  ...
+# Subtest: quality metrics tell sharp from blurred, clean from noisy, and flag clipping and casts
+ok 142 - quality metrics tell sharp from blurred, clean from noisy, and flag clipping and casts
+  ---
+  duration_ms: 302.983839
+  type: 'test'
+  ...
+# Subtest: measurements carry uncertainty and never invent units
+ok 143 - measurements carry uncertainty and never invent units
+  ---
+  duration_ms: 1.816515
+  type: 'test'
+  ...
+# Subtest: MCP: assess, rectify, calibrate in the rectified view, measure, register and compare
+ok 144 - MCP: assess, rectify, calibrate in the rectified view, measure, register and compare
+  ---
+  duration_ms: 2359.545936
+  type: 'test'
+  ...
+# Subtest: all ticks round trip
+ok 145 - all ticks round trip
+  ---
+  duration_ms: 1.215271
+  type: 'test'
+  ...
+# Subtest: midpoint mapping
+ok 146 - midpoint mapping
+  ---
+  duration_ms: 0.19813
+  type: 'test'
+  ...
+# Subtest: clamping
+ok 147 - clamping
+  ---
+  duration_ms: 0.135236
+  type: 'test'
+  ...
+# Subtest: invalid inputs
+ok 148 - invalid inputs
+  ---
+  duration_ms: 0.328641
+  type: 'test'
+  ...
+# Subtest: T04/T05: a two-stroke freehand arrow is one unconfirmed direction-arrow candidate
+ok 149 - T04/T05: a two-stroke freehand arrow is one unconfirmed direction-arrow candidate
+  ---
+  duration_ms: 4.14285
+  type: 'test'
+  ...
+# Subtest: the strokes stay separate, unchanged marks in the event; the group is extra metadata
+ok 150 - the strokes stay separate, unchanged marks in the event; the group is extra metadata
+  ---
+  duration_ms: 1.865885
+  type: 'test'
+  ...
+# Subtest: T06: two lines that only cross in their middles are not grouped
+ok 151 - T06: two lines that only cross in their middles are not grouped
+  ---
+  duration_ms: 0.242035
+  type: 'test'
+  ...
+# Subtest: T04 variant: strokes joined end to end without a head are a connected path, not an arrow
+ok 152 - T04 variant: strokes joined end to end without a head are a connected path, not an arrow
+  ---
+  duration_ms: 0.432941
+  type: 'test'
+  ...
+# Subtest: T07: the same marks give the same groups at any resolution or display size
+ok 153 - T07: the same marks give the same groups at any resolution or display size
+  ---
+  duration_ms: 1.782336
+  type: 'test'
+  ...
+# Subtest: T08: the user's no keeps the candidate visible as rejected; the strokes are untouched
+ok 154 - T08: the user's no keeps the candidate visible as rejected; the strokes are untouched
+  ---
+  duration_ms: 1.115696
+  type: 'test'
+  ...
+# Subtest: T09: deleting a member drops the group, including a hand-made one
+ok 155 - T09: deleting a member drops the group, including a hand-made one
+  ---
+  duration_ms: 0.593278
+  type: 'test'
+  ...
+# Subtest: assistant marks and closed loops do not start groups; keys ignore order
+ok 156 - assistant marks and closed loops do not start groups; keys ignore order
+  ---
+  duration_ms: 0.163395
+  type: 'test'
+  ...
+# Subtest: a head drawn as two separate wings is still an arrow; a forward continuation is not
+ok 157 - a head drawn as two separate wings is still an arrow; a forward continuation is not
+  ---
+  duration_ms: 0.648854
+  type: 'test'
+  ...
+# Subtest: acceptance 4: a loop touched by a line stays a group of unknown meaning
+ok 158 - acceptance 4: a loop touched by a line stays a group of unknown meaning
+  ---
+  duration_ms: 0.630236
+  type: 'test'
+  ...
+# Subtest: the canvas records stroke facts, shows candidates and sends the user's verdicts
+ok 159 - the canvas records stroke facts, shows candidates and sends the user's verdicts
+  ---
+  duration_ms: 11.194384
+  type: 'test'
+  ...
+# Subtest: gesture groups over MCP: candidate, user verdict stored, strokes untouched
+ok 160 - gesture groups over MCP: candidate, user verdict stored, strokes untouched
+  ---
+  duration_ms: 1204.439767
+  type: 'test'
+  ...
+# Subtest: access key gates /mcp but not health or version
+ok 161 - access key gates /mcp but not health or version
+  ---
+  duration_ms: 556.902792
+  type: 'test'
+  ...
+# Subtest: rate limit returns 429 and CORS follows the allowlist
+ok 162 - rate limit returns 429 and CORS follows the allowlist
+  ---
+  duration_ms: 491.12923
+  type: 'test'
+  ...
+# Subtest: image tools are discoverable with ChatGPT file params and fail safely
+ok 163 - image tools are discoverable with ChatGPT file params and fail safely
+  ---
+  duration_ms: 824.395559
+  type: 'test'
+  ...
+# Subtest: URL guard accepts public https and rejects SSRF targets
+ok 164 - URL guard accepts public https and rejects SSRF targets
+  ---
+  duration_ms: 7.750975
+  type: 'test'
+  ...
+# Subtest: downloads follow redirects through the guard and enforce the size cap
+ok 165 - downloads follow redirects through the guard and enforce the size cap
+  ---
+  duration_ms: 32.151286
+  type: 'test'
+  ...
+# Subtest: registerImage applies EXIF orientation, rejects non-images and caches by content
+ok 166 - registerImage applies EXIF orientation, rejects non-images and caches by content
+  ---
+  duration_ms: 54.416862
+  type: 'test'
+  ...
+# Subtest: regions map to source pixels and back without drifting
+ok 167 - regions map to source pixels and back without drifting
+  ---
+  duration_ms: 0.363783
+  type: 'test'
+  ...
+# Subtest: process_image crops, upscales and reports the covered source region
+ok 168 - process_image crops, upscales and reports the covered source region
+  ---
+  duration_ms: 199.508423
+  type: 'test'
+  ...
+# Subtest: threshold and edges produce single-channel binary/edge maps
+ok 169 - threshold and edges produce single-channel binary/edge maps
+  ---
+  duration_ms: 69.827053
+  type: 'test'
+  ...
+# Subtest: overlay_grid labels map to correct source coordinates
+ok 170 - overlay_grid labels map to correct source coordinates
+  ---
+  duration_ms: 120.558762
+  type: 'test'
+  ...
+# Subtest: zoom tiles come from native pixels and are never enlarged
+ok 171 - zoom tiles come from native pixels and are never enlarged
+  ---
+  duration_ms: 36.611508
+  type: 'test'
+  ...
+# Subtest: v0.2 uses explicit SVG dimensions, not imaginary DPI or raster pixels
+ok 172 - v0.2 uses explicit SVG dimensions, not imaginary DPI or raster pixels
+  ---
+  duration_ms: 2.766741
+  type: 'test'
+  ...
+# Subtest: v0.2 carries explicit user intent and optional quote without making up a messageId
+ok 173 - v0.2 carries explicit user intent and optional quote without making up a messageId
+  ---
+  duration_ms: 0.831293
+  type: 'test'
+  ...
+# Subtest: without explicit context the message refuses to invent a prior question
+ok 174 - without explicit context the message refuses to invent a prior question
+  ---
+  duration_ms: 0.309415
+  type: 'test'
+  ...
+# Subtest: invalid coordinates, unknown intent or duplicate IDs are rejected
+ok 175 - invalid coordinates, unknown intent or duplicate IDs are rejected
+  ---
+  duration_ms: 0.593781
+  type: 'test'
+  ...
+# Subtest: all intents supported and text limits enforced
+ok 176 - all intents supported and text limits enforced
+  ---
+  duration_ms: 1.061847
+  type: 'test'
+  ...
+# Subtest: free annotation is the default and leaves arrow meaning unspecified
+ok 177 - free annotation is the default and leaves arrow meaning unspecified
+  ---
+  duration_ms: 0.3957
+  type: 'test'
+  ...
+# Subtest: only an explicit point-out makes the arrowhead the target, and the note can still override
+ok 178 - only an explicit point-out makes the arrowhead the target, and the note can still override
+  ---
+  duration_ms: 0.509445
+  type: 'test'
+  ...
+# Subtest: arrow direction uses image pixels, not stretched normalized units
+ok 179 - arrow direction uses image pixels, not stretched normalized units
+  ---
+  duration_ms: 0.240017
+  type: 'test'
+  ...
+# Subtest: without a note the message asks for several readings instead of assuming one
+ok 180 - without a note the message asks for several readings instead of assuming one
+  ---
+  duration_ms: 0.371577
+  type: 'test'
+  ...
+# Subtest: the user renames, reorders, fades and locks layers; GPT reads the edits once
+ok 181 - the user renames, reorders, fades and locks layers; GPT reads the edits once
+  ---
+  duration_ms: 17.78819
+  type: 'test'
+  ...
+# Subtest: a locked layer stops GPT and the user changing its marks, but reset keeps it and notes still attach
+ok 182 - a locked layer stops GPT and the user changing its marks, but reset keeps it and notes still attach
+  ---
+  duration_ms: 9.426085
+  type: 'test'
+  ...
+# Subtest: the user moves and restyles an earlier mark, deletes GPT's, and cannot move GPT's
+ok 183 - the user moves and restyles an earlier mark, deletes GPT's, and cannot move GPT's
+  ---
+  duration_ms: 8.188331
+  type: 'test'
+  ...
+# Subtest: finding recency follows changed evidence without changing layer or ink order
+ok 184 - finding recency follows changed evidence without changing layer or ink order
+  ---
+  duration_ms: 11.406067
+  type: 'test'
+  ...
+# Subtest: layer rename re-renders the mounted panel, not detached rows
+ok 185 - layer rename re-renders the mounted panel, not detached rows
+  ---
+  duration_ms: 2.049657
+  type: 'test'
+  ...
+# Subtest: layers in a browser: base image + overlay image + Graph curve, fade and reorder
+ok 186 - layers in a browser: base image + overlay image + Graph curve, fade and reorder
+  ---
+  duration_ms: 2756.627112
+  type: 'test'
+  ...
+# Subtest: marks export as a layered SVG and load back onto the canvas
+ok 187 - marks export as a layered SVG and load back onto the canvas
+  ---
+  duration_ms: 51.850429
+  type: 'test'
+  ...
+# Subtest: ink report gives real widths and flags ink that hides its target
+ok 188 - ink report gives real widths and flags ink that hides its target
+  ---
+  duration_ms: 76.760001
+  type: 'test'
+  ...
+# Subtest: verification draws ink at its real width
+ok 189 - verification draws ink at its real width
+  ---
+  duration_ms: 88.673936
+  type: 'test'
+  ...
+# Subtest: layers survive export and come back as their own layers
+ok 190 - layers survive export and come back as their own layers
+  ---
+  duration_ms: 41.093997
+  type: 'test'
+  ...
+# Subtest: MCP discovers tools, calls show_number_line, and reads its inline UI
+ok 191 - MCP discovers tools, calls show_number_line, and reads its inline UI
+  ---
+  duration_ms: 1141.186147
+  type: 'test'
+  ...
+# Subtest: every bundled example module passes the validator and its own examples
+ok 192 - every bundled example module passes the validator and its own examples
+  ---
+  duration_ms: 566.182024
+  type: 'test'
+  ...
+# Subtest: author walkthrough: create, test, sign, trust, install, enable, run
+ok 193 - author walkthrough: create, test, sign, trust, install, enable, run
+  ---
+  duration_ms: 2915.831018
+  type: 'test'
+  ...
+# Subtest: modules over MCP: Store, consent, enable, plot sin(x), edit, restart
+ok 194 - modules over MCP: Store, consent, enable, plot sin(x), edit, restart
+  ---
+  duration_ms: 2567.063513
+  type: 'test'
+  ...
+# Subtest: manifest: the bundled Graph manifest is valid for this core
+ok 195 - manifest: the bundled Graph manifest is valid for this core
+  ---
+  duration_ms: 14.567902
+  type: 'test'
+  ...
+# Subtest: manifest: strict, unknown fields and unsafe schemas are refused
+ok 196 - manifest: strict, unknown fields and unsafe schemas are refused
+  ---
+  duration_ms: 4.190686
+  type: 'test'
+  ...
+# Subtest: json schema subset: validates, fills defaults, rejects regex bombs and unbounded input
+ok 197 - json schema subset: validates, fills defaults, rejects regex bombs and unbounded input
+  ---
+  duration_ms: 1.392149
+  type: 'test'
+  ...
+# Subtest: semver ranges
+ok 198 - semver ranges
+  ---
+  duration_ms: 0.466966
+  type: 'test'
+  ...
+# Subtest: declarative templates fill only declared placeholders
+ok 199 - declarative templates fill only declared placeholders
+  ---
+  duration_ms: 0.295705
+  type: 'test'
+  ...
+# Subtest: lifecycle: a model-prepared plan cannot be committed without the consent only the Store has
+ok 200 - lifecycle: a model-prepared plan cannot be committed without the consent only the Store has
+  ---
+  duration_ms: 29.282027
+  type: 'test'
+  ...
+# Subtest: lifecycle: state survives a restart; disabling stops execution but keeps the objects
+ok 201 - lifecycle: state survives a restart; disabling stops execution but keeps the objects
+  ---
+  duration_ms: 51.491434
+  type: 'test'
+  ...
+# Subtest: router: sin(x) then sin(2x) on the same canvas, expected revision enforced, bad input explained
+ok 202 - router: sin(x) then sin(2x) on the same canvas, expected revision enforced, bad input explained
+  ---
+  duration_ms: 42.120285
+  type: 'test'
+  ...
+# Subtest: router: a module that returns something unexpected is refused, not applied
+ok 203 - router: a module that returns something unexpected is refused, not applied
+  ---
+  duration_ms: 34.20048
+  type: 'test'
+  ...
+# Subtest: graph: plot_points and set_axes on a canvas
+ok 204 - graph: plot_points and set_axes on a canvas
+  ---
+  duration_ms: 25.828323
+  type: 'test'
+  ...
+# Subtest: capability profile: network use must be declared, local work must not claim to leave, jobs are not instant, text must match
+ok 205 - capability profile: network use must be declared, local work must not claim to leave, jobs are not instant, text must match
+  ---
+  duration_ms: 11.834797
+  type: 'test'
+  ...
+# Subtest: get_module_capabilities and the catalog carry each capability's profile
+ok 206 - get_module_capabilities and the catalog carry each capability's profile
+  ---
+  duration_ms: 14.928946
+  type: 'test'
+  ...
+# Subtest: OAuth sign-in: discovery, registration, consent with the access key, PKCE, tokens
+ok 207 - OAuth sign-in: discovery, registration, consent with the access key, PKCE, tokens
+  ---
+  duration_ms: 716.914366
+  type: 'test'
+  ...
+# Subtest: an open server (no access key) has no OAuth endpoints
+ok 208 - an open server (no access key) has no OAuth endpoints
+  ---
+  duration_ms: 427.202015
+  type: 'test'
+  ...
+# Subtest: client ID metadata documents: an https client_id is checked against its own redirect URIs
+ok 209 - client ID metadata documents: an https client_id is checked against its own redirect URIs
+  ---
+  duration_ms: 2.808311
+  type: 'test'
+  ...
+# [mcp-sdk] OAuthClientProvider does not implement saveDiscoveryState()/discoveryState(); the SEP-2352 callback-leg authorization-server binding cannot be checked. Implement discoveryState (persist alongside codeVerifier) — see docs/migration/upgrade-to-v2.md §SEP-2352.
+# Subtest: the MCP SDK's own OAuth client signs in end to end
+ok 210 - the MCP SDK's own OAuth client signs in end to end
+  ---
+  duration_ms: 627.510551
+  type: 'test'
+  ...
+# Subtest: package verification: digest, signature, scope, tampering, reserved ids, bad files
+ok 211 - package verification: digest, signature, scope, tampering, reserved ids, bad files
+  ---
+  duration_ms: 25.515492
+  type: 'test'
+  ...
+# Subtest: install needs consent AND the administrator's approval from the server; the chat cannot supply it
+ok 212 - install needs consent AND the administrator's approval from the server; the chat cannot supply it
+  ---
+  duration_ms: 64.834133
+  type: 'test'
+  ...
+# Subtest: installed package: enable, run, restart, lock file
+ok 213 - installed package: enable, run, restart, lock file
+  ---
+  duration_ms: 56.314129
+  type: 'test'
+  ...
+# Subtest: update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup
+ok 214 - update adds permissions, rollback restores the exact earlier bytes, tampered storage is refused at startup
+  ---
+  duration_ms: 54.532638
+  type: 'test'
+  ...
+# Subtest: a package whose own example fails never becomes active; unsigned needs the explicit switch
+ok 215 - a package whose own example fails never becomes active; unsigned needs the explicit switch
+  ---
+  duration_ms: 36.177658
+  type: 'test'
+  ...
+# Subtest: uninstall keeps canvas objects; purge removes stored versions and needs admin
+ok 216 - uninstall keeps canvas objects; purge removes stored versions and needs admin
+  ---
+  duration_ms: 51.646222
+  type: 'test'
+  ...
+# Subtest: purge and install refuse ids that are not module ids (no path traversal)
+ok 217 - purge and install refuse ids that are not module ids (no path traversal)
+  ---
+  duration_ms: 7.391375
+  type: 'test'
+  ...
+# Subtest: a purge plan goes stale when the package is installed before it is confirmed
+ok 218 - a purge plan goes stale when the package is installed before it is confirmed
+  ---
+  duration_ms: 29.521203
+  type: 'test'
+  ...
+# Subtest: a corrupted active version stays visible so it can be rolled back
+ok 219 - a corrupted active version stays visible so it can be rolled back
+  ---
+  duration_ms: 45.233632
+  type: 'test'
+  ...
+# Subtest: a rollback plan goes stale when another update lands first
+ok 220 - a rollback plan goes stale when another update lands first
+  ---
+  duration_ms: 48.656141
+  type: 'test'
+  ...
+# Subtest: an update plan goes stale when a newer version is installed first
+ok 221 - an update plan goes stale when a newer version is installed first
+  ---
+  duration_ms: 45.259711
+  type: 'test'
+  ...
+# Subtest: an install plan goes stale when the package is installed by another plan first
+ok 222 - an install plan goes stale when the package is installed by another plan first
+  ---
+  duration_ms: 18.923533
+  type: 'test'
+  ...
+# Subtest: a failed rollback leaves the running version, lock and record unchanged
+ok 223 - a failed rollback leaves the running version, lock and record unchanged
+  ---
+  duration_ms: 44.428059
+  type: 'test'
+  ...
+# Subtest: updating a failed package keeps a coherent rollback target
+ok 224 - updating a failed package keeps a coherent rollback target
+  ---
+  duration_ms: 55.1146
+  type: 'test'
+  ...
+# Subtest: a WebAssembly module installs, passes its self-test and draws through scene operations
+ok 225 - a WebAssembly module installs, passes its self-test and draws through scene operations
+  ---
+  duration_ms: 142.950595
+  type: 'test'
+  ...
+# Subtest: WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped
+ok 226 - WebAssembly limits: endless loop, memory growth, trap and oversized output are stopped
+  ---
+  duration_ms: 754.500921
+  type: 'test'
+  ...
+# Subtest: WebAssembly packages with imports, no memory maximum or too much memory are refused
+ok 227 - WebAssembly packages with imports, no memory maximum or too much memory are refused
+  ---
+  duration_ms: 7.769424
+  type: 'test'
+  ...
+# Subtest: a WebAssembly module survives a restart
+ok 228 - a WebAssembly module survives a restart
+  ---
+  duration_ms: 143.081544
+  type: 'test'
+  ...
+# Subtest: author tool: init makes a module that passes test, and test catches a broken example
+ok 229 - author tool: init makes a module that passes test, and test catches a broken example
+  ---
+  duration_ms: 657.398842
+  type: 'test'
+  ...
+# Subtest: addresses: only public ones are reachable
+ok 230 - addresses: only public ones are reachable
+  ---
+  duration_ms: 5.696998
+  type: 'test'
+  ...
+# Subtest: an HTTP module installs without any network call, then runs through the egress rules
+ok 231 - an HTTP module installs without any network call, then runs through the egress rules
+  ---
+  duration_ms: 54.988183
+  type: 'test'
+  ...
+# Subtest: egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions
+ok 232 - egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions
+  ---
+  duration_ms: 1.46272
+  type: 'test'
+  ...
+# Subtest: HTTP manifests: host must be named when there are several, secrets must be declared
+ok 233 - HTTP manifests: host must be named when there are several, secrets must be declared
+  ---
+  duration_ms: 4.202558
+  type: 'test'
+  ...
+# Subtest: environment secret names cannot collide between module ids
+ok 234 - environment secret names cannot collide between module ids
+  ---
+  duration_ms: 0.297316
+  type: 'test'
+  ...
+# Subtest: paired marks go to their own image and links join them
+ok 235 - paired marks go to their own image and links join them
+  ---
+  duration_ms: 70.274937
+  type: 'test'
+  ...
+# Subtest: a failed paired call changes neither image nor the links
+ok 236 - a failed paired call changes neither image nor the links
+  ---
+  duration_ms: 30.731922
+  type: 'test'
+  ...
+# Subtest: widget maps each image's coordinates into the side-by-side canvas and back
+ok 237 - widget maps each image's coordinates into the side-by-side canvas and back
+  ---
+  duration_ms: 1.639353
+  type: 'test'
+  ...
+# Subtest: widget lays out a workspace, turns rotated images and maps marks back exactly
+ok 238 - widget lays out a workspace, turns rotated images and maps marks back exactly
+  ---
+  duration_ms: 1.52468
+  type: 'test'
+  ...
+# Subtest: widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict
+ok 239 - widget shows links with numbers, asks the user to review every unverified claim, and sends the verdict
+  ---
+  duration_ms: 1.172062
+  type: 'test'
+  ...
+# Subtest: one call cannot add the same id to both images
+ok 240 - one call cannot add the same id to both images
+  ---
+  duration_ms: 20.964239
+  type: 'test'
+  ...
+# Subtest: a user send on a paired view tells GPT which image each mark is on
+ok 241 - a user send on a paired view tells GPT which image each mark is on
+  ---
+  duration_ms: 5.405693
+  type: 'test'
+  ...
+# Subtest: pdf recognition is cheap and does not need the engine
+ok 242 - pdf recognition is cheap and does not need the engine
+  ---
+  duration_ms: 1.573323
+  type: 'test'
+  ...
+# Subtest: PDF pages render at any dpi with the same normalized layout, labels and a text layer
+ok 243 - PDF pages render at any dpi with the same normalized layout, labels and a text layer
+  ---
+  duration_ms: 245.404267
+  type: 'test'
+  ...
+# Subtest: stored PDFs can be rendered again from their hash
+ok 244 - stored PDFs can be rendered again from their hash
+  ---
+  duration_ms: 5.965646
+  type: 'test'
+  ...
+# Subtest: UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+ok 245 - UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+  ---
+  duration_ms: 8641.713858
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+ok 246 - UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+  ---
+  duration_ms: 11725.089652
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+ok 247 - UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+  ---
+  duration_ms: 4381.108233
+  type: 'test'
+  ...
+# Subtest: UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+ok 248 - UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+  ---
+  duration_ms: 3226.950988
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+ok 249 - UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+  ---
+  duration_ms: 3732.617564
+  type: 'test'
+  ...
+# Subtest: UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+ok 250 - UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+  ---
+  duration_ms: 574.451775
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+ok 251 - UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+  ---
+  duration_ms: 5894.143519
+  type: 'test'
+  ...
+# Subtest: UVA-64: actual allocated blocks, outstanding reservations and recovery reserve participate in admission
+ok 252 - UVA-64: actual allocated blocks, outstanding reservations and recovery reserve participate in admission
+  ---
+  duration_ms: 644.820512
+  type: 'test'
+  ...
+# Subtest: UVA-64: quota pressure rejects a real content command before intent and preserves its draft and Root
+ok 253 - UVA-64: quota pressure rejects a real content command before intent and preserves its draft and Root
+  ---
+  duration_ms: 674.510122
+  type: 'test'
+  ...
+# Subtest: UVA-63: real archive threshold chooses a full anchor at 32 MiB without staging an oversized delta
+ok 254 - UVA-63: real archive threshold chooses a full anchor at 32 MiB without staging an oversized delta
+  ---
+  duration_ms: 3.854589
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-intent preserves one whole root and at most one retry effect
+ok 255 - SIGKILL / before-intent preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1815.477367
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+ok 256 - SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1840.569055
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+ok 257 - SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1885.265973
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+ok 258 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 2177.494124
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+ok 259 - SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 2127.705107
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+ok 260 - SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 6985.46138
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+ok 261 - SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 4040.110579
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+ok 262 - SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1693.874916
+  type: 'test'
+  ...
+# Subtest: SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+ok 263 - SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1796.041645
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-prepared preserves one whole root and at most one retry effect
+ok 264 - SIGKILL / after-prepared preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1798.301634
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+ok 265 - SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1840.698433
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+ok 266 - SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1842.182173
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+ok 267 - SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1657.393818
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+ok 268 - SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1593.709588
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-ack preserves one whole root and at most one retry effect
+ok 269 - SIGKILL / before-ack preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1696.504839
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+ok 270 - fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1556.903128
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+ok 271 - fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1602.511897
+  type: 'test'
+  ...
+# Subtest: fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+ok 272 - fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1561.903446
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+ok 273 - fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1607.992305
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+ok 274 - fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1928.04287
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+ok 275 - fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1754.069583
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+ok 276 - fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1718.634362
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+ok 277 - fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1691.190832
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+ok 278 - fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1939.374566
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+ok 279 - fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 2124.262412
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+ok 280 - fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1550.527343
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+ok 281 - fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1535.423639
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+ok 282 - fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 7912.101021
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+ok 283 - ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+  ---
+  duration_ms: 12755.086709
+  type: 'test'
+  ...
+# Subtest: ENOSPC / staged.before-write retains committed data and recovers without a second effect
+ok 284 - ENOSPC / staged.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1691.487937
+  type: 'test'
+  ...
+# Subtest: ENOSPC / root.before-write retains committed data and recovers without a second effect
+ok 285 - ENOSPC / root.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1836.084077
+  type: 'test'
+  ...
+# Subtest: ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+ok 286 - ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1704.674181
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-write retains committed data and recovers without a second effect
+ok 287 - ENOSPC / current.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1858.331443
+  type: 'test'
+  ...
+# Subtest: EXDEV / staged.before-rename retains committed data and recovers without a second effect
+ok 288 - EXDEV / staged.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1749.77027
+  type: 'test'
+  ...
+# Subtest: EXDEV / current.before-rename retains committed data and recovers without a second effect
+ok 289 - EXDEV / current.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 2015.738065
+  type: 'test'
+  ...
+# Subtest: ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+ok 290 - ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+  ---
+  duration_ms: 1725.239669
+  type: 'test'
+  ...
+# Subtest: corrupt CURRENT enters read-only recovery without guessing an older root
+ok 291 - corrupt CURRENT enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1129.464749
+  type: 'test'
+  ...
+# Subtest: corrupt root enters read-only recovery without guessing an older root
+ok 292 - corrupt root enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1125.233507
+  type: 'test'
+  ...
+# Subtest: corrupt registry-page enters read-only recovery without guessing an older root
+ok 293 - corrupt registry-page enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1171.04356
+  type: 'test'
+  ...
+# Subtest: corrupt generation enters read-only recovery without guessing an older root
+ok 294 - corrupt generation enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1149.081872
+  type: 'test'
+  ...
+# Subtest: corrupt intent enters read-only recovery without guessing an older root
+ok 295 - corrupt intent enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1266.505269
+  type: 'test'
+  ...
+# Subtest: corrupt outcome enters read-only recovery without guessing an older root
+ok 296 - corrupt outcome enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1355.701107
+  type: 'test'
+  ...
+# Subtest: mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+ok 297 - mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+  ---
+  duration_ms: 1186.793507
+  type: 'test'
+  ...
+# Subtest: an aborted prepared generation is never adopted, even when its staged file is corrupt
+ok 298 - an aborted prepared generation is never adopted, even when its staged file is corrupt
+  ---
+  duration_ms: 1424.450847
+  type: 'test'
+  ...
+# Subtest: interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+ok 299 - interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+  ---
+  duration_ms: 2406.856807
+  type: 'test'
+  ...
+# Subtest: recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+ok 300 - recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+  ---
+  duration_ms: 1150.991612
+  type: 'test'
+  ...
+# Subtest: reused orphan generation bytes must pass file/directory barriers again before publication
+ok 301 - reused orphan generation bytes must pass file/directory barriers again before publication
+  ---
+  duration_ms: 2240.782677
+  type: 'test'
+  ...
+# Subtest: committed metadata tamper detected during a live write fences the writer before any ACK
+ok 302 - committed metadata tamper detected during a live write fences the writer before any ACK
+  ---
+  duration_ms: 506.505178
+  type: 'test'
+  ...
+# Subtest: SIGKILL during recovery outcome repair is idempotent on the next restart
+ok 303 - SIGKILL during recovery outcome repair is idempotent on the next restart
+  ---
+  duration_ms: 1829.083158
+  type: 'test'
+  ...
+# Subtest: native candidate proof remains valid through after-prepared
+ok 304 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 2616.699843
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"2096:81867:810:1793731454793048971:1793731454800452670","after":"2096:81867:2:1793731456373946266:1793731456373946266","workerPid":28536},"before":{"generation":3,"rootHash":"77e398b1fa38df618d7166a97ab3bf37baea30034ff65b359eedf7009462dddd","commitId":"tx:0e733610-7f17-456b-95a5-a93830859391","checksum":"14635953578ce28730d39bcac651b64cb8fc811c77e83e9f104935f1edc0afd2"},"after":{"checksum":"14635953578ce28730d39bcac651b64cb8fc811c77e83e9f104935f1edc0afd2","commitId":"tx:0e733610-7f17-456b-95a5-a93830859391","generation":3,"rootHash":"77e398b1fa38df618d7166a97ab3bf37baea30034ff65b359eedf7009462dddd"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+ok 305 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 3976.963188
+  type: 'test'
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"2096:81891:810:1793731457411219308:1793731457411219308","after":"2096:76165:2:1793731460419311128:1793731460419311128","workerPid":28594},"before":{"generation":3,"rootHash":"13276c05da2b6186db61a3165446bf18fe81353af7682680c7d708568e0f4298","commitId":"tx:43093c0f-a3fe-4abb-a998-2287b10275f0","checksum":"3aa4d31a9bd92f3455d2cce074ed230105131c79c3e5be47474df38649680635"},"after":{"checksum":"3aa4d31a9bd92f3455d2cce074ed230105131c79c3e5be47474df38649680635","commitId":"tx:43093c0f-a3fe-4abb-a998-2287b10275f0","generation":3,"rootHash":"13276c05da2b6186db61a3165446bf18fe81353af7682680c7d708568e0f4298"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+ok 306 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 8728.306387
+  type: 'test'
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"2096:81079:810:1793731464853928423:1793731464883431508","after":"2096:81079:2:1793731469113436257:1793731469113436257","workerPid":28655},"before":{"generation":3,"rootHash":"9dd25a2c6aaea48a768d74a3f722a1d4160f4927b4826bd5891e5e960528deb7","commitId":"tx:ab567c1d-189a-4800-903f-86c1f54529ca","checksum":"dbfd4dab3e86ceae2f4faeb80447fad5f9b36028a90864d69639a0c6c142de15"},"after":{"checksum":"b0631c3289a54e7831a245d8a6f97e200aefd17183595702f596c240ea14448e","commitId":"tx:76ae20be-d07c-422e-95cc-8aab6843168b","generation":4,"rootHash":"bb026cd46ce54c33cb3cd875ca87b9ba6fcf3d7e8b9484c6e2b6d53b7f3e3564"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace
+ok 307 - GC retains a replaced quarantine inode / replace
+  ---
+  duration_ms: 4353.43497
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/f4226d7b-7364-488a-8648-5e16bf21dabc/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/f4226d7b-7364-488a-8648-5e16bf21dabc/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace","before":"2096:81127:810:1793731470090725932:1793731471477370907","after":"2096:81772:2:1793731473868981510:1793731473868981510","workerPid":28690},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace-same
+ok 308 - GC retains a replaced quarantine inode / replace-same
+  ---
+  duration_ms: 4446.955087
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/27c05705-c0b0-4004-abd5-5f6944e52122/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/27c05705-c0b0-4004-abd5-5f6944e52122/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace-same","before":"2096:81403:810:1793731474468299857:1793731475870408831","after":"2096:81832:810:1793731478319475164:1793731478319475164","workerPid":28719},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+ok 309 - R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+  ---
+  duration_ms: 448.90387
+  type: 'test'
+  ...
+# {"attempts":128,"identicalFingerprints":72,"staleProofsAccepted":0,"filesystem":"actual temporary filesystem; not asserted ext4"}
+# Subtest: R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+ok 310 - R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+  ---
+  duration_ms: 6.53553
+  type: 'test'
+  ...
+# Subtest: private tree rejects directory permissions on reopen and preserves CURRENT
+ok 311 - private tree rejects directory permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 1179.976253
+  type: 'test'
+  ...
+# Subtest: private tree rejects file permissions on reopen and preserves CURRENT
+ok 312 - private tree rejects file permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 1113.238762
+  type: 'test'
+  ...
+# Subtest: private tree rejects hardlink on reopen and preserves CURRENT
+ok 313 - private tree rejects hardlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 1088.111711
+  type: 'test'
+  ...
+# Subtest: private tree rejects symlink on reopen and preserves CURRENT
+ok 314 - private tree rejects symlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 1178.747502
+  type: 'test'
+  ...
+# Subtest: unsafe writable ancestry is refused before creating the OS lease
+ok 315 - unsafe writable ancestry is refused before creating the OS lease
+  ---
+  duration_ms: 3.652554
+  type: 'test'
+  ...
+# Subtest: runtime root mode changes fence before publication without automatic chmod
+ok 316 - runtime root mode changes fence before publication without automatic chmod
+  ---
+  duration_ms: 561.191695
+  type: 'test'
+  ...
+# Subtest: same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+ok 317 - same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+  ---
+  duration_ms: 552.555811
+  type: 'test'
+  ...
+# Subtest: H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+ok 318 - H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+  ---
+  duration_ms: 5354.805694
+  type: 'test'
+  ...
+# Subtest: H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+ok 319 - H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+  ---
+  duration_ms: 5050.390847
+  type: 'test'
+  ...
+# Both disposable lease workers are ready
+# CURRENT cleanup is temporary-claim.before-unlink occurrence 18
+# SIGKILL left only the durable CURRENT claim
+# Cleanup recovery reopen 1 ready
+# Cleanup recovery reopen 2 ready
+# Cleanup recovery reopen 3 ready
+# Subtest: H-01 / missing prepared fails closed for a superseded CURRENT
+ok 320 - H-01 / missing prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2069.393523
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Missing CURRENT publication candidate evidence"},"recovery":[]}
+# Subtest: H-01 / corrupt prepared fails closed for a superseded CURRENT
+ok 321 - H-01 / corrupt prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2091.375963
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"UNSUPPORTED_SCHEMA","message":"Invalid input: expected \\"estampes.prepared/1\\""},"recovery":[]}
+# Subtest: H-01 / forged publication fails closed for a superseded CURRENT
+ok 322 - H-01 / forged publication fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2440.066203
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"CURRENT candidate differs from exact claim"},"recovery":[]}
+# Subtest: H-02 / native SIGKILL across durable G2 plan
+ok 323 - H-02 / native SIGKILL across durable G2 plan
+  ---
+  duration_ms: 29611.001315
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 before intent
+ok 324 - H-02 / native SIGKILL across durable G2 before intent
+  ---
+  duration_ms: 22705.553588
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 after intent
+ok 325 - H-02 / native SIGKILL across durable G2 after intent
+  ---
+  duration_ms: 39557.644201
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 terminal
+ok 326 - H-02 / native SIGKILL across durable G2 terminal
+  ---
+  duration_ms: 20771.207005
+  type: 'test'
+  ...
+# Subtest: H-02 / corrupt plan lacks durable unlink intent and must fail closed
+ok 327 - H-02 / corrupt plan lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 4429.978933
+  type: 'test'
+  ...
+# Subtest: H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+ok 328 - H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 5283.420793
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+ok 329 - H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 10321.189869
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+ok 330 - H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 4401.53415
+  type: 'test'
+  ...
+# {"result":{"code":"RECOVERY_REQUIRED","message":"Maintenance requires recovery"},"gcState":{"deleted":[],"moved":[0,1,2,3],"planHash":"0e9f71f351e2049a7c18548edd961a4140186dcb22d4804b0d8b907ee67e0a82","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"waiting-grace"},"writerState":"read-only-recovery"}
+# Subtest: H-01 / a superseded old-format classification cannot invent missing selection evidence
+ok 331 - H-01 / a superseded old-format classification cannot invent missing selection evidence
+  ---
+  duration_ms: 1853.714841
+  type: 'test'
+  ...
+# Subtest: H-02 / missing source before quarantine cannot be authorized retroactively
+ok 332 - H-02 / missing source before quarantine cannot be authorized retroactively
+  ---
+  duration_ms: 2621.265191
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine before intent cannot be authorized retroactively
+ok 333 - H-02 / missing quarantine before intent cannot be authorized retroactively
+  ---
+  duration_ms: 4065.769087
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+ok 334 - H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+  ---
+  duration_ms: 6722.138616
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+ok 335 - H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+  ---
+  duration_ms: 6227.120967
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.before-quarantine resumes durable GC without losing a logical version
+ok 336 - UVA-49/59: SIGKILL at gc.before-quarantine resumes durable GC without losing a logical version
+  ---
+  duration_ms: 13537.86417
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.after-rename resumes durable GC without losing a logical version
+ok 337 - UVA-49/59: SIGKILL at gc.after-rename resumes durable GC without losing a logical version
+  ---
+  duration_ms: 18994.329514
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.after-unlink resumes durable GC without losing a logical version
+ok 338 - UVA-49/59: SIGKILL at gc.after-unlink resumes durable GC without losing a logical version
+  ---
+  duration_ms: 16402.108954
+  type: 'test'
+  ...
+# Subtest: UVA-47: G2 requires terminal proof and a full quarantine day; rollback clock cannot age it
+ok 339 - UVA-47: G2 requires terminal proof and a full quarantine day; rollback clock cannot age it
+  ---
+  duration_ms: 8175.070164
+  type: 'test'
+  ...
+# Subtest: UVA-49: corrupt committed GC plan stops maintenance and fences writes
+ok 340 - UVA-49: corrupt committed GC plan stops maintenance and fences writes
+  ---
+  duration_ms: 6718.691804
+  type: 'test'
+  ...
+# Subtest: UVA-49: corrupt quarantined bytes are never unlinked as verified duplicates
+ok 341 - UVA-49: corrupt quarantined bytes are never unlinked as verified duplicates
+  ---
+  duration_ms: 7955.479681
+  type: 'test'
+  ...
+# Subtest: UVA-49/63: compaction SIGKILL at current.before-rename preserves stable references
+ok 342 - UVA-49/63: compaction SIGKILL at current.before-rename preserves stable references
+  ---
+  duration_ms: 7142.97785
+  type: 'test'
+  ...
+# Subtest: UVA-49/63: compaction SIGKILL at after-publication-durable preserves stable references
+ok 343 - UVA-49/63: compaction SIGKILL at after-publication-durable preserves stable references
+  ---
+  duration_ms: 20506.871106
+  type: 'test'
+  ...
+# Subtest: UVA-59: missing archive chunk and corrupt checkpoint envelope fail closed
+ok 344 - UVA-59: missing archive chunk and corrupt checkpoint envelope fail closed
+  ---
+  duration_ms: 1908.23018
+  type: 'test'
+  ...
+# Subtest: UVA-59: corrupt named checkpoint Root cannot be ignored by GC
+ok 345 - UVA-59: corrupt named checkpoint Root cannot be ignored by GC
+  ---
+  duration_ms: 1323.67014
+  type: 'test'
+  ...
+# Subtest: UVA-59: external CURRENT drift never publishes a stale maintenance Root
+ok 346 - UVA-59: external CURRENT drift never publishes a stale maintenance Root
+  ---
+  duration_ms: 915.52923
+  type: 'test'
+  ...
+# Subtest: UVA-59: ENOSPC during checkpoint yields no false completion and preserves content
+ok 347 - UVA-59: ENOSPC during checkpoint yields no false completion and preserves content
+  ---
+  duration_ms: 6762.753693
+  type: 'test'
+  ...
+# Subtest: UVA-59: ENOSPC during gcStep yields no false completion and preserves content
+ok 348 - UVA-59: ENOSPC during gcStep yields no false completion and preserves content
+  ---
+  duration_ms: 9007.997455
+  type: 'test'
+  ...
+# Subtest: UVA-48/59: journal compaction retains permanent key binding through quarantine and restart
+ok 349 - UVA-48/59: journal compaction retains permanent key binding through quarantine and restart
+  ---
+  duration_ms: 7205.244507
+  type: 'test'
+  ...
+# Subtest: UVA-48/59: live terminal-journal tampering cannot manufacture a GC retention proof
+ok 350 - UVA-48/59: live terminal-journal tampering cannot manufacture a GC retention proof
+  ---
+  duration_ms: 1394.50095
+  type: 'test'
+  ...
+# Subtest: UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+ok 351 - UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+  ---
+  duration_ms: 6071.04437
+  type: 'test'
+  ...
+# Subtest: UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+ok 352 - UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+  ---
+  duration_ms: 15539.236739
+  type: 'test'
+  ...
+# Subtest: UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+ok 353 - UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+  ---
+  duration_ms: 3589.081596
+  type: 'test'
+  ...
+# Subtest: clock rollback cannot shorten ACK retention or erase persisted high-water state
+ok 354 - clock rollback cannot shorten ACK retention or erase persisted high-water state
+  ---
+  duration_ms: 2821.011062
+  type: 'test'
+  ...
+# Subtest: UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+ok 355 - UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+  ---
+  duration_ms: 3399.08058
+  type: 'test'
+  ...
+# Subtest: UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+ok 356 - UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+  ---
+  duration_ms: 948.35898
+  type: 'test'
+  ...
+# Subtest: multiple concurrent readers remain fixed while writes advance the one authoritative Root
+ok 357 - multiple concurrent readers remain fixed while writes advance the one authoritative Root
+  ---
+  duration_ms: 1527.82848
+  type: 'test'
+  ...
+# Subtest: lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+ok 358 - lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+  ---
+  duration_ms: 2.18727
+  type: 'test'
+  ...
+# Subtest: maintenance makes bounded progress under sustained writes and accounts allocated blocks
+ok 359 - maintenance makes bounded progress under sustained writes and accounts allocated blocks
+  ---
+  duration_ms: 17702.087169
+  type: 'test'
+  ...
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 360 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 13994.30479
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+ok 361 - PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+  ---
+  duration_ms: 91018.657954
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+ok 362 - PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+  ---
+  duration_ms: 337.69854
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 363 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 1084.1076
+  type: 'test'
+  ...
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 364 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 5.77863
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 365 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 4.69476
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+ok 366 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 1024.6005
+  type: 'test'
+  ...
+# Subtest: real flock contention remains exit-73 when parent startup IPC is delayed
+ok 367 - real flock contention remains exit-73 when parent startup IPC is delayed
+  ---
+  duration_ms: 613.98891
+  type: 'test'
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 368 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 480.72384
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 369 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 1096.56972
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 370 - native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+  ---
+  duration_ms: 1529.2269
+  type: 'test'
+  ...
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 371 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 4281.697171
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["281e16e8-8a10-4d4b-850d-d4d6d3653e54.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+ok 372 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 4611.713096
+  type: 'test'
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"4c3f461ecbb0a7b2d3166fd7ddf6ce73017043cb13e01fb9bcb7ddb22d51b79a","commitId":"tx:311b3622-79d7-406b-918c-389854cb890e","generation":2,"rootHash":"1e3282e94f186f1475e17cc2b83072aad7b5139700e0004aa721cce94acb30b3"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["27aa0811-64aa-4bc9-9b18-a1bce7b2f6a6.json","3ba89354-9c99-43cd-a67e-1411f6df8124.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 373 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 4584.281569
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"9791871eb23831dec1d65bb46c5686806bf3a9cad4e5d0ad6794da762863bf26","commitId":"tx:40a92777-7502-4737-b029-4cb1f592ec7f","generation":2,"rootHash":"02c72b41e0b0472ac11bfd71715051d0f9f05bd146b9d50a3b58432779e80e8c"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["7bf1826f-6a6e-453f-99a6-c2104c95e860.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+ok 374 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+  ---
+  duration_ms: 14703.349128
+  type: 'test'
+  ...
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+ok 375 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+  ---
+  duration_ms: 27354.733773
+  type: 'test'
+  ...
+# Subtest: native repeated planning must not orphan an overlapping active GC plan
+ok 376 - native repeated planning must not orphan an overlapping active GC plan
+  ---
+  duration_ms: 12475.761734
+  type: 'test'
+  ...
+# {"first":{"planned":true,"id":"b3c039ff-752b-4ba7-b893-88064531cb13","candidates":2},"second":{"planned":false,"reason":"No provably unreachable managed files"},"overlap":[],"result":{"id":"b3c039ff-752b-4ba7-b893-88064531cb13","state":"complete","progressed":4,"moved":2,"deleted":2},"state":"ready","problem":null}
+# Subtest: R3-C1 / exclusive G1 ownership / planned
+ok 377 - R3-C1 / exclusive G1 ownership / planned
+  ---
+  duration_ms: 13064.572588
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / partial-quarantine
+ok 378 - R3-C1 / exclusive G1 ownership / partial-quarantine
+  ---
+  duration_ms: 15350.547869
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / unlink-intent
+ok 379 - R3-C1 / exclusive G1 ownership / unlink-intent
+  ---
+  duration_ms: 22556.398571
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / complete
+ok 380 - R3-C1 / exclusive G1 ownership / complete
+  ---
+  duration_ms: 15906.791602
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / planned
+ok 381 - R3-C1 / exclusive G2 ownership / planned
+  ---
+  duration_ms: 7298.797021
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / partial-quarantine
+ok 382 - R3-C1 / exclusive G2 ownership / partial-quarantine
+  ---
+  duration_ms: 8496.730008
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / unlink-intent
+ok 383 - R3-C1 / exclusive G2 ownership / unlink-intent
+  ---
+  duration_ms: 11566.489428
+  type: 'test'
+  ...
+# {"kind":"G2","phase":"unlink-intent","laterCandidates":[{"path":"visual-registry/pages/478dfb1279a9f54e182414235892a7b788879e9e2eee6036bc4f15db19160f2f.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/a39de105e96f74f7b6e98e1a4cbf7e86e067de8dfc83ccc41a8724a4d43109d8.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/27d3dbcf82c9f6efbe30d2c9775bec60e611149f6d356b93d71d48a17748d3da.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-transactions/20d65882-3dd0-4cd3-85c4-7ceea77ee82c/intent.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-transactions/20d65882-3dd0-4cd3-85c4-7ceea77ee82c/outcome.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-registry/pages/9880f186df03cec2bfea1f868d2df935094f8c70035ba478425f11e1c7f7dcb5.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/bb633dadb9137a794001c86ac77212336d224e4dbfbfe4db90b8f4452c21b868.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/faad86a7691c98c871098399df0d00dfe66af9f80a63c0bf78737811cb01e48d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/83089a03c9e147a97cfb907de6c690cf52c7b45c7638fe5cdb0a0b605b12b1bb.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/30a816b02abc7261137115bc9f3ec19937e6f397d559b9997b79c922c04ae21c.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/2aca313c5cde145296bd55758712b1d7394e889d1b90c74ad143a09e2cf4af39.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/05a275bc127d0fd9260b993be732f0d721ec907ecf3a6a890ff30f39f94e20c6.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/95c32b0767690606f9ad844ad17663b98d291d919c8a7f3b81e1a09aeabe1993.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/63e0b324e19adedf13003cca69cae0a9f7c27540a13dfe35612947a49084f5e5.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/47a8128e41a496d3ef4b20c5015428043b88a7b6dc59b8c79f164e273bdb4157.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/cfa9532375835d7d68261974b6e3716016b63764e0615adb6477df6ed5a55370.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/c01bb0ba3b521ca441dc38c16888ff71ff3d4339b91e659ae65fc74386398da2.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/b5713cb1016e0fcaa1b403421699258fc43e1054d70fb6b590d23be3bd393608.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/5a46c309152e534c996fbe241d98ffef58007a137a084edca43641d5b1f47d8a.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/73ebc08444d961554e1ef3d7ac8240f7e1cddd71caeba8da0f0cc529d632522d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/0bc627fd0aab70669ae396a5f38c9ea705356d6580c9a0f4eafe9ba7706b08bf.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/a57ef5900c0dacb2d6e0555249c498dfe2e423c27c1c52fff1846af9544e6303.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/1ed0a360a4d081e6fa82eb6f2270c06336712ac04e0303d2676f574c0a0fe5b8.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/536f5c1af779c9ef9b3d80746ef444549227d5ffebfea507c7b889acd466873c.json","reason":"Unreachable file from a terminal transaction plan"}]}
+# Subtest: R3-C1 / exclusive G2 ownership / complete
+ok 384 - R3-C1 / exclusive G2 ownership / complete
+  ---
+  duration_ms: 7802.616235
+  type: 'test'
+  ...
+# {"kind":"G2","phase":"complete","laterCandidates":[{"path":"visual-registry/pages/4a4449007f288386e42ebc822d31bd2345a066e5f678cabc5ffd7db55cbe9f1d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/30173a80979ae9926eb07bb1f595e0acb6ba9d8e777c8200ec34a646fe29fda7.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/d128c8f9944179bf15db6363482915dae964f89e78c39869e1d08ade1e165ffa.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/76d955cb1f51921ab01fec7c80534ad75069181c335d6895c94155cf8b8c5bba.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/d0076baf6bbff87436b82f37ac30763d60ab06d30a3c7357d880f99661a955f8.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/9766e5d4406aa2159666bc01cbf76c67c0cccabe81e08f974851f2b6f6e2d2d1.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/6833911bb5f560a98225afeba21fea8a0cc75a40bf8016fae0f78711019e2d6a.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/cfa9532375835d7d68261974b6e3716016b63764e0615adb6477df6ed5a55370.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/c00f6b34bf233563095451d6b9c884885f0d650522f13023a69e0dcdd50050ee.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/9a444fc8ef9bc36bc0ff9d67a64f6779fe52efb77e634f0f995ba75a09128017.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/5ba285102b0426b70ab3d81d6c4554acc67c7b09c1ad47e6cb99336efa6040fb.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/5a39eeefb9d731e436b7708c52718a07ae56c7da0ffd1e7dc2fb4425190c549a.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/f332c6c73a87377c01cf688883e753c8a1e9e9d9acb521dd8a22fbe3da42551d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/548c6396172d306ab0a169849b7e349bc3ea1fd5a53fc1c7bf918cc2d60528ab.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/068ea4653eced78c051e6ffe09f8faf0e11be6d777b06bce10d2db8c48df8fcf.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/140c2e7baaab90e1e6937474879af0d68e5460318b80b6751de9055afb9a434e.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/4122fb307863a56c2dd02b2c2558897fd3895fe798d3de82e073be17f1ae0e7c.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/8cb0756007aaf5d3cdd3d280241004a1304a17d9222a49be783ce7709158bd6b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/ca0ef0bd6e399051d95a30392e1bee7847016aa11e22b0b2506b8ee2da0c4de5.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/10827aae9dd147d3552f33099c236dbc5ade6075c2427854b09d1b19ea34149f.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e6b951b43aa744962c466d279c247335e8bc02928dff15599e9c89fa2d79c2f0.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/65e509055520109446297570ca33e73cfecbe24bd80460181ff64d33c8b03484.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-transactions/dcd12cc7-b977-48e4-adb9-8f127a34d6e0/intent.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-transactions/dcd12cc7-b977-48e4-adb9-8f127a34d6e0/outcome.json","reason":"Terminal journal with durable membership/key retention proof"}]}
+# Subtest: R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+ok 385 - R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+  ---
+  duration_ms: 31741.088625
+  type: 'test'
+  ...
+# Subtest: R3-B1 / repeated recovery rejects a forged transaction generation
+ok 386 - R3-B1 / repeated recovery rejects a forged transaction generation
+  ---
+  duration_ms: 2261.809107
+  type: 'test'
+  ...
+# Subtest: R3-C1 / independent hashed overlapping plans and false terminal progress fail closed
+ok 387 - R3-C1 / independent hashed overlapping plans and false terminal progress fail closed
+  ---
+  duration_ms: 12960.777126
+  type: 'test'
+  ...
+# Subtest: R3-C1 / relocated backup verifies logical history without inheriting physical GC authority
+ok 388 - R3-C1 / relocated backup verifies logical history without inheriting physical GC authority
+  ---
+  duration_ms: 12992.59107
+  type: 'test'
+  ...
+# Subtest: R3-B1 / matching CURRENT bytes cannot prove an unknown transaction owner
+ok 389 - R3-B1 / matching CURRENT bytes cannot prove an unknown transaction owner
+  ---
+  duration_ms: 905.07456
+  type: 'test'
+  ...
+# Subtest: PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace
+ok 390 - PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace
+  ---
+  duration_ms: 17454.422887
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash after CURRENT rename classifies the exact claim and preserves the committed effect
+ok 391 - PR-1D: crash after CURRENT rename classifies the exact claim and preserves the committed effect
+  ---
+  duration_ms: 3158.83949
+  type: 'test'
+  ...
+# Subtest: PR-1D: an unclaimed atomic-shaped temporary is preserved and forces read-only recovery
+ok 392 - PR-1D: an unclaimed atomic-shaped temporary is preserved and forces read-only recovery
+  ---
+  duration_ms: 729.095383
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-write never creates an unattributed effect
+ok 393 - PR-1D: crash at temporary-claim.before-write never creates an unattributed effect
+  ---
+  duration_ms: 1269.089745
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-file-fsync never creates an unattributed effect
+ok 394 - PR-1D: crash at temporary-claim.before-file-fsync never creates an unattributed effect
+  ---
+  duration_ms: 1204.206723
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-dir-fsync never creates an unattributed effect
+ok 395 - PR-1D: crash at temporary-claim.before-dir-fsync never creates an unattributed effect
+  ---
+  duration_ms: 1222.840814
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-unlink never creates an unattributed effect
+ok 396 - PR-1D: crash at temporary-claim.before-unlink never creates an unattributed effect
+  ---
+  duration_ms: 1257.240686
+  type: 'test'
+  ...
+# Subtest: PR-1D: bootstrap claim left after rename is completed idempotently on restart
+ok 397 - PR-1D: bootstrap claim left after rename is completed idempotently on restart
+  ---
+  duration_ms: 682.97472
+  type: 'test'
+  ...
+# Subtest: PR-1D: two durable claims for one target are ambiguous and fail closed
+ok 398 - PR-1D: two durable claims for one target are ambiguous and fail closed
+  ---
+  duration_ms: 816.42132
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=false
+ok 399 - PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=false
+  ---
+  duration_ms: 2607.65325
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=true
+ok 400 - PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=true
+  ---
+  duration_ms: 3288.37554
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.before-quarantine
+ok 401 - PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.before-quarantine
+  ---
+  duration_ms: 9621.128103
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-rename
+ok 402 - PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-rename
+  ---
+  duration_ms: 9750.686451
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-unlink
+ok 403 - PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-unlink
+  ---
+  duration_ms: 17222.793973
+  type: 'test'
+  ...
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 404 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 3312.655293
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 405 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 947.411621
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 406 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 2215.316897
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 407 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 948.519743
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 408 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 1926.452958
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 409 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 2106.861228
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 410 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 954.610598
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 411 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 1313.986441
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 412 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 2232.58212
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 413 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 943.425449
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 414 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 1029.269986
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-process-crash-test
+ok 415 - historical Registry uses its own Bindings after embed update/removal / linux-process-crash-test
+  ---
+  duration_ms: 3875.813822
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+ok 416 - historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+  ---
+  duration_ms: 3913.049887
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 417 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 2755.446429
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"cb8e5bf540c32a7ccdf7301c2e3e9f2151a662e9b82e53547f80db4bb5825b3e","commitId":"tx:69b732e3-4f56-43c1-bb51-4f52b9323e53","generation":3,"rootHash":"ade1674b9bdc560b42469262ffd01a5b6024c5db778c4591bebff70a3c2e4fdd"},"after":{"checksum":"cb8e5bf540c32a7ccdf7301c2e3e9f2151a662e9b82e53547f80db4bb5825b3e","commitId":"tx:69b732e3-4f56-43c1-bb51-4f52b9323e53","generation":3,"rootHash":"ade1674b9bdc560b42469262ffd01a5b6024c5db778c4591bebff70a3c2e4fdd"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 418 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 5.166771
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 419 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 4.632724
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 420 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.454738
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 421 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.394772
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 422 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 5.095701
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 423 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 5.323903
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+not ok 424 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.323702
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/persistence-verification-race.test.js:41:3'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///home/estampes/projects/Estampes/tests/persistence-verification-race.test.js:70:7)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 425 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 18189.408655
+  type: 'test'
+  ...
+# Subtest: a new verification operation cannot inherit another observation's metadata trust
+ok 426 - a new verification operation cannot inherit another observation's metadata trust
+  ---
+  duration_ms: 2314.763359
+  type: 'test'
+  ...
+# Subtest: shared canonical representations still pass the complete strict Document schema gate
+ok 427 - shared canonical representations still pass the complete strict Document schema gate
+  ---
+  duration_ms: 739.232985
+  type: 'test'
+  ...
+# Subtest: polylines keep their vertices and expose a bounding box
+ok 428 - polylines keep their vertices and expose a bounding box
+  ---
+  duration_ms: 2.029795
+  type: 'test'
+  ...
+# Subtest: assistant and replayed user polylines resolve with provenance
+ok 429 - assistant and replayed user polylines resolve with provenance
+  ---
+  duration_ms: 0.856524
+  type: 'test'
+  ...
+# Subtest: user polylines become raster events GPT can follow
+ok 430 - user polylines become raster events GPT can follow
+  ---
+  duration_ms: 1.490482
+  type: 'test'
+  ...
+# Subtest: smooth and closed flags survive for freehand curves and loops
+ok 431 - smooth and closed flags survive for freehand curves and loops
+  ---
+  duration_ms: 0.291162
+  type: 'test'
+  ...
+# Subtest: submission separates the focus mark from earlier context marks
+ok 432 - submission separates the focus mark from earlier context marks
+  ---
+  duration_ms: 0.552755
+  type: 'test'
+  ...
+# Subtest: assistant findings (note, status) are kept on marks
+ok 433 - assistant findings (note, status) are kept on marks
+  ---
+  duration_ms: 0.218859
+  type: 'test'
+  ...
+# Subtest: pen style (colour, size, highlighter) is kept and validated
+ok 434 - pen style (colour, size, highlighter) is kept and validated
+  ---
+  duration_ms: 0.496766
+  type: 'test'
+  ...
+# Subtest: one image: layers, marks with provenance, style and findings, nothing host-specific
+ok 435 - one image: layers, marks with provenance, style and findings, nothing host-specific
+  ---
+  duration_ms: 14.792841
+  type: 'test'
+  ...
+# Subtest: a pair: links point from one image's mark to the other's, with review
+ok 436 - a pair: links point from one image's mark to the other's, with review
+  ---
+  duration_ms: 21.979951
+  type: 'test'
+  ...
+# Subtest: a protocol document attached as a marks file restores the matching image's marks
+ok 437 - a protocol document attached as a marks file restores the matching image's marks
+  ---
+  duration_ms: 27.219766
+  type: 'test'
+  ...
+# Subtest: downsized process_image preview reports its actual pixels and preserves precise derived-view mapping
+ok 438 - downsized process_image preview reports its actual pixels and preserves precise derived-view mapping
+  ---
+  duration_ms: 169.379988
+  type: 'test'
+  ...
+# Subtest: render_canvas pixel-to-canvas matrix matches the resized image
+ok 439 - render_canvas pixel-to-canvas matrix matches the resized image
+  ---
+  duration_ms: 157.148562
+  type: 'test'
+  ...
+# Subtest: canvas results stay under host size caps; uploads and slices carry the rest
+ok 440 - canvas results stay under host size caps; uploads and slices carry the rest
+  ---
+  duration_ms: 3043.581984
+  type: 'test'
+  ...
+# Subtest: mountain-right resolves away from tree even when model guesses tree coordinates
+ok 441 - mountain-right resolves away from tree even when model guesses tree coordinates
+  ---
+  duration_ms: 1.161029
+  type: 'test'
+  ...
+# Subtest: sun landmark matches source SVG geometry
+ok 442 - sun landmark matches source SVG geometry
+  ---
+  duration_ms: 0.282133
+  type: 'test'
+  ...
+# Subtest: semantic target must exist in selected scene
+ok 443 - semantic target must exist in selected scene
+  ---
+  duration_ms: 1.291955
+  type: 'test'
+  ...
+# Subtest: previous human marks cannot be silently converted into AI marks
+ok 444 - previous human marks cannot be silently converted into AI marks
+  ---
+  duration_ms: 0.295836
+  type: 'test'
+  ...
+# Subtest: free coordinates are retained but never called semantically grounded
+ok 445 - free coordinates are retained but never called semantically grounded
+  ---
+  duration_ms: 0.368521
+  type: 'test'
+  ...
+# Subtest: replayed human annotations preserve user author, but provenance is unverified
+ok 446 - replayed human annotations preserve user author, but provenance is unverified
+  ---
+  duration_ms: 0.186946
+  type: 'test'
+  ...
+# Subtest: all built-in scene anchors use normalized bounded coordinates
+ok 447 - all built-in scene anchors use normalized bounded coordinates
+  ---
+  duration_ms: 0.351207
+  type: 'test'
+  ...
+# Subtest: scene ops: create with refs, ids assigned by the core, provenance recorded
+ok 448 - scene ops: create with refs, ids assigned by the core, provenance recorded
+  ---
+  duration_ms: 14.891611
+  type: 'test'
+  ...
+# Subtest: scene ops: all or nothing, with a pointed error
+ok 449 - scene ops: all or nothing, with a pointed error
+  ---
+  duration_ms: 2.412799
+  type: 'test'
+  ...
+# Subtest: scene ops: a module changes only its own objects; the user changes anything
+ok 450 - scene ops: a module changes only its own objects; the user changes anything
+  ---
+  duration_ms: 7.59664
+  type: 'test'
+  ...
+# Subtest: scene ops: optimistic concurrency, in-use frames, locked layers
+ok 451 - scene ops: optimistic concurrency, in-use frames, locked layers
+  ---
+  duration_ms: 3.205399
+  type: 'test'
+  ...
+# Subtest: scene ops: scratch objects are not drawn for the user until published
+ok 452 - scene ops: scratch objects are not drawn for the user until published
+  ---
+  duration_ms: 4.702263
+  type: 'test'
+  ...
+# Subtest: scene ops: objects survive a round trip through storage form and re-render the same
+ok 453 - scene ops: objects survive a round trip through storage form and re-render the same
+  ---
+  duration_ms: 3.331695
+  type: 'test'
+  ...
+# Subtest: renderer: a plot of sin(x) is one smooth curve through the right points; tan breaks at asymptotes
+ok 454 - renderer: a plot of sin(x) is one smooth curve through the right points; tan breaks at asymptotes
+  ---
+  duration_ms: 10.294442
+  type: 'test'
+  ...
+# Subtest: plot labels: Core edits follow auto expressions and preserve custom names
+ok 455 - plot labels: Core edits follow auto expressions and preserve custom names
+  ---
+  duration_ms: 10.494165
+  type: 'test'
+  ...
+# Subtest: plot labels: legacy formula-looking and empty labels stay custom after restore
+ok 456 - plot labels: legacy formula-looking and empty labels stay custom after restore
+  ---
+  duration_ms: 6.943487
+  type: 'test'
+  ...
+# Subtest: deleted axes and plots restore together with original IDs, labels and lock checks
+ok 457 - deleted axes and plots restore together with original IDs, labels and lock checks
+  ---
+  duration_ms: 86.327789
+  type: 'test'
+  ...
+# Subtest: a required key is generated once, saved with mode 600 and reused; an explicit key or opt-out wins
+ok 458 - a required key is generated once, saved with mode 600 and reused; an explicit key or opt-out wins
+  ---
+  duration_ms: 9.801289
+  type: 'test'
+  ...
+# Subtest: X-Forwarded-For counts only behind the number of proxies the operator trusts
+ok 459 - X-Forwarded-For counts only behind the number of proxies the operator trusts
+  ---
+  duration_ms: 0.476115
+  type: 'test'
+  ...
+# Subtest: download links are signed per image and file when a key exists
+ok 460 - download links are signed per image and file when a key exists
+  ---
+  duration_ms: 1.153714
+  type: 'test'
+  ...
+# Subtest: the Docker defaults start a closed server and keep its key across restarts
+ok 461 - the Docker defaults start a closed server and keep its key across restarts
+  ---
+  duration_ms: 1194.670397
+  type: 'test'
+  ...
+# [storage] restored imageId=img:7a98620bb4bcad23 marks=2
+# Subtest: a canvas survives the memory cache being emptied (restart or eviction)
+ok 462 - a canvas survives the memory cache being emptied (restart or eviction)
+  ---
+  duration_ms: 36.882543
+  type: 'test'
+  ...
+# [storage] restored imageId=img:36ae3ced8386e509 marks=1
+# [storage] restored imageId=img:d52861abd38dc641 marks=1
+# Subtest: paired links and the user's review are stored with the left image
+ok 463 - paired links and the user's review are stored with the left image
+  ---
+  duration_ms: 28.736546
+  type: 'test'
+  ...
+# Subtest: without a storage dir nothing touches the disk and unknown ids still fail clearly
+ok 464 - without a storage dir nothing touches the disk and unknown ids still fail clearly
+  ---
+  duration_ms: 5.564123
+  type: 'test'
+  ...
+# Subtest: manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook
+ok 465 - manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook
+  ---
+  duration_ms: 1233.289158
+  type: 'test'
+  ...
+# Subtest: browser: the widget opened by manage_surface_panels shows the calculator with the model's cell
+ok 466 - browser: the widget opened by manage_surface_panels shows the calculator with the model's cell
+  ---
+  duration_ms: 2276.96129
+  type: 'test'
+  ...
+# Subtest: browser: with the calculator alone, the launcher offers the Graph canvas and brings it back
+ok 467 - browser: with the calculator alone, the launcher offers the Graph canvas and brings it back
+  ---
+  duration_ms: 2082.908779
+  type: 'test'
+  ...
+# Subtest: link refresh: stale plots are recomputed and redrawn, manually and automatically
+ok 468 - link refresh: stale plots are recomputed and redrawn, manually and automatically
+  ---
+  duration_ms: 1657.366467
+  type: 'test'
+  ...
+# Subtest: layout: defaults put the viewport left and companions right; phones get tabs
+ok 469 - layout: defaults put the viewport left and companions right; phones get tabs
+  ---
+  duration_ms: 6.041337
+  type: 'test'
+  ...
+# Subtest: layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size
+ok 470 - layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size
+  ---
+  duration_ms: 0.393821
+  type: 'test'
+  ...
+# Subtest: layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing
+ok 471 - layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing
+  ---
+  duration_ms: 2.519622
+  type: 'test'
+  ...
+# Subtest: layout: a stored layout is reconciled with the panel list and profiles do not touch each other
+ok 472 - layout: a stored layout is reconciled with the panel list and profiles do not touch each other
+  ---
+  duration_ms: 0.738218
+  type: 'test'
+  ...
+# Subtest: panel descriptors: strict, bound to real capabilities, inert when the kind is unknown
+ok 473 - panel descriptors: strict, bound to real capabilities, inert when the kind is unknown
+  ---
+  duration_ms: 13.79531
+  type: 'test'
+  ...
+# Subtest: surface over MCP: panels, calculator, plot, layouts per profile, restart
+ok 474 - surface over MCP: panels, calculator, plot, layouts per profile, restart
+  ---
+  duration_ms: 2669.514503
+  type: 'test'
+  ...
+# Subtest: the quick tunnel address is read from cloudflared's metrics and checked
+ok 475 - the quick tunnel address is read from cloudflared's metrics and checked
+  ---
+  duration_ms: 1.663935
+  type: 'test'
+  ...
+# Subtest: the watcher reports the address once and survives a missing tunnel
+ok 476 - the watcher reports the address once and survives a missing tunnel
+  ---
+  duration_ms: 3300.769122
+  type: 'test'
+  ...
+# Subtest: unified canvas contains all views without a second tool call
+ok 477 - unified canvas contains all views without a second tool call
+  ---
+  duration_ms: 4.313141
+  type: 'test'
+  ...
+# Subtest: context is optional; drawing and submission require no menu completion
+ok 478 - context is optional; drawing and submission require no menu completion
+  ---
+  duration_ms: 0.266831
+  type: 'test'
+  ...
+# Subtest: crop stays inside the source and preserves original aspect
+ok 479 - crop stays inside the source and preserves original aspect
+  ---
+  duration_ms: 0.401729
+  type: 'test'
+  ...
+# Subtest: arrows zoom around the arrowhead, not the tail
+ok 480 - arrows zoom around the arrowhead, not the tail
+  ---
+  duration_ms: 0.183017
+  type: 'test'
+  ...
+# Subtest: photo canvases crop in their own aspect ratio
+ok 481 - photo canvases crop in their own aspect ratio
+  ---
+  duration_ms: 0.359359
+  type: 'test'
+  ...
+# Subtest: real photos render from widget-only _meta and processed views get their own tabs
+ok 482 - real photos render from widget-only _meta and processed views get their own tabs
+  ---
+  duration_ms: 0.245135
+  type: 'test'
+  ...
+# Subtest: re-delivered host data does not reset the chosen tab or unsent marks
+ok 483 - re-delivered host data does not reset the chosen tab or unsent marks
+  ---
+  duration_ms: 0.285837
+  type: 'test'
+  ...
+# Subtest: only new marks are focus; sent marks become context and fade
+ok 484 - only new marks are focus; sent marks become context and fade
+  ---
+  duration_ms: 0.205732
+  type: 'test'
+  ...
+# Subtest: GPT notes and status appear beside their marks
+ok 485 - GPT notes and status appear beside their marks
+  ---
+  duration_ms: 0.42055
+  type: 'test'
+  ...
+# Subtest: new user marks continue numbering after re-presented ones
+ok 486 - new user marks continue numbering after re-presented ones
+  ---
+  duration_ms: 0.462456
+  type: 'test'
+  ...
+# Subtest: users pick colour, size and a translucent highlighter
+ok 487 - users pick colour, size and a translucent highlighter
+  ---
+  duration_ms: 0.317452
+  type: 'test'
+  ...
+# Subtest: undo and redo step through marks, including a clear
+ok 488 - undo and redo step through marks, including a clear
+  ---
+  duration_ms: 1.054435
+  type: 'test'
+  ...
+# Subtest: a late tool input never replaces the applied result
+ok 489 - a late tool input never replaces the applied result
+  ---
+  duration_ms: 0.206566
+  type: 'test'
+  ...
+# Subtest: missing pixels are reloaded and the verification image has its own tab
+ok 490 - missing pixels are reloaded and the verification image has its own tab
+  ---
+  duration_ms: 0.46394
+  type: 'test'
+  ...
+# Subtest: provenance colors are distinct from viewer inspection marker
+ok 491 - provenance colors are distinct from viewer inspection marker
+  ---
+  duration_ms: 0.199428
+  type: 'test'
+  ...
+# Subtest: zoom keeps the point under the pointer and clamps to the photo
+ok 492 - zoom keeps the point under the pointer and clamps to the photo
+  ---
+  duration_ms: 0.575846
+  type: 'test'
+  ...
+# Subtest: pinch, wheel and pan never draw; labels and drawing tolerances follow the zoom
+ok 493 - pinch, wheel and pan never draw; labels and drawing tolerances follow the zoom
+  ---
+  duration_ms: 0.444192
+  type: 'test'
+  ...
+# Subtest: layers can be hidden without losing marks; unsent marks always show
+ok 494 - layers can be hidden without losing marks; unsent marks always show
+  ---
+  duration_ms: 0.182553
+  type: 'test'
+  ...
+# Subtest: pick a photo in the canvas: upload in slices, preview then full image, model told
+ok 495 - pick a photo in the canvas: upload in slices, preview then full image, model told
+  ---
+  duration_ms: 3393.551306
+  type: 'test'
+  ...
+# Subtest: UVA characterization: changing axes reprojects frame shapes but leaves normalized user ink unchanged
+ok 496 - UVA characterization: changing axes reprojects frame shapes but leaves normalized user ink unchanged
+  ---
+  duration_ms: 12.598155
+  type: 'test'
+  ...
+# Subtest: UVA characterization: storage form retains rich ink, empty locked layers, gesture decisions and deleted objects
+ok 497 - UVA characterization: storage form retains rich ink, empty locked layers, gesture decisions and deleted objects
+  ---
+  duration_ms: 2.170986
+  type: 'test'
+  ...
+# Subtest: M0.4.3 uses the exact widget's scene artwork, not a separate semantic object catalog
+ok 498 - M0.4.3 uses the exact widget's scene artwork, not a separate semantic object catalog
+  ---
+  duration_ms: 2.302236
+  type: 'test'
+  ...
+# Subtest: M0.4.3 returns genuine PNG bytes for original, blue-focus view and crop
+ok 499 - M0.4.3 returns genuine PNG bytes for original, blue-focus view and crop
+  ---
+  duration_ms: 43.729504
+  type: 'test'
+  ...
+# Subtest: Arrow crop is around the arrowhead, NOT the tail
+ok 500 - Arrow crop is around the arrowhead, NOT the tail
+  ---
+  duration_ms: 0.250264
+  type: 'test'
+  ...
+# Subtest: Reversed rectangle coordinates and near-edge point are handled
+ok 501 - Reversed rectangle coordinates and near-edge point are handled
+  ---
+  duration_ms: 0.253971
+  type: 'test'
+  ...
+# Subtest: Reject arbitrary URLs, unknown image IDs, wrong revisions or invalid geometry
+ok 502 - Reject arbitrary URLs, unknown image IDs, wrong revisions or invalid geometry
+  ---
+  duration_ms: 0.85692
+  type: 'test'
+  ...
+# Subtest: M0.4 embedded canvas JavaScript parses
+ok 503 - M0.4 embedded canvas JavaScript parses
+  ---
+  duration_ms: 3.836534
+  type: 'test'
+  ...
+# Subtest: M0.4 separates media, AI overlays and human overlays
+ok 504 - M0.4 separates media, AI overlays and human overlays
+  ---
+  duration_ms: 0.552896
+  type: 'test'
+  ...
+# Subtest: M0.4 tools and message bridge are both present
+ok 505 - M0.4 tools and message bridge are both present
+  ---
+  duration_ms: 0.916241
+  type: 'test'
+  ...
+# Subtest: M0.4 uses fixed local scenes; no arbitrary image URL fetch
+ok 506 - M0.4 uses fixed local scenes; no arbitrary image URL fetch
+  ---
+  duration_ms: 0.996418
+  type: 'test'
+  ...
+# Subtest: M0.3 widget JavaScript parses
+ok 507 - M0.3 widget JavaScript parses
+  ---
+  duration_ms: 1.377374
+  type: 'test'
+  ...
+# Subtest: M0.3 widget has separate validation and chat paths
+ok 508 - M0.3 widget has separate validation and chat paths
+  ---
+  duration_ms: 0.35009
+  type: 'test'
+  ...
+# Subtest: workbench in a browser: Graph + calculator side by side, drag, mobile tabs
+ok 509 - workbench in a browser: Graph + calculator side by side, drag, mobile tabs
+  ---
+  duration_ms: 6906.404112
+  type: 'test'
+  ...
+# Subtest: workspaces over MCP: preview, commit, retry, read back, undo
+ok 510 - workspaces over MCP: preview, commit, retry, read back, undo
+  ---
+  duration_ms: 953.269621
+  type: 'test'
+  ...
+# Subtest: legacy adapter: a single and a paired canvas read as workspaces without changes
+ok 511 - legacy adapter: a single and a paired canvas read as workspaces without changes
+  ---
+  duration_ms: 67.75801
+  type: 'test'
+  ...
+# Subtest: merge B into A: 3 images, 29 editable marks, 9 layer instances; A and B untouched (PORT-01, MC-05..MC-09)
+ok 512 - merge B into A: 3 images, 29 editable marks, 9 layer instances; A and B untouched (PORT-01, MC-05..MC-09)
+  ---
+  duration_ms: 64.700008
+  type: 'test'
+  ...
+# Subtest: a stale preview is refused and a failed change leaves documents alone
+ok 513 - a stale preview is refused and a failed change leaves documents alone
+  ---
+  duration_ms: 60.742734
+  type: 'test'
+  ...
+# Subtest: split with copy: the copy changes independently and remembers its source (PORT-02, PORT-03)
+ok 514 - split with copy: the copy changes independently and remembers its source (PORT-02, PORT-03)
+  ---
+  duration_ms: 59.66735
+  type: 'test'
+  ...
+# Subtest: move then undo: items return, nothing is deleted (PORT-05, PORT-17)
+ok 515 - move then undo: items return, nothing is deleted (PORT-05, PORT-17)
+  ---
+  duration_ms: 55.556927
+  type: 'test'
+  ...
+# Subtest: links join marks across items and are shared with paired views
+ok 516 - links join marks across items and are shared with paired views
+  ---
+  duration_ms: 53.983665
+  type: 'test'
+  ...
+# [storage] restored imageId=img:cdd7884aea5523cd marks=25
+# [storage] restored imageId=img:236cdd18eb31ff52 marks=2
+# [storage] restored imageId=img:7adaeac0f3f67a71 marks=2
+# Subtest: workspaces, copies and links survive a restart with storage (PORT-12)
+ok 517 - workspaces, copies and links survive a restart with storage (PORT-12)
+  ---
+  duration_ms: 95.749579
+  type: 'test'
+  ...
+# Subtest: review fixes: retry after a stale preview, annotation changes stale a preview, successive undo, duplicate picks
+ok 518 - review fixes: retry after a stale preview, annotation changes stale a preview, successive undo, duplicate picks
+  ---
+  duration_ms: 53.495973
+  type: 'test'
+  ...
+# zoom burst ms: 1806 {"same":true,"renders":0}
+# Subtest: browser: a burst of wheel zooms triggers only a few full renders
+ok 519 - browser: a burst of wheel zooms triggers only a few full renders
+  ---
+  duration_ms: 3201.094876
+  type: 'test'
+  ...
+1..519
+# tests 519
+# suites 0
+# pass 517
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1113135.064961

@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: native GC re-marks backup dependencies created after its selected plan
+ok 1 - native GC re-marks backup dependencies created after its selected plan
+  ---
+  duration_ms: 5375.765085
+  type: 'test'
+  ...
+# {"step":{"id":"dcda2c93-6916-4c2d-9ee1-e88481da1cd4","state":"waiting-grace","progressed":18,"moved":18,"deleted":0},"protectedCandidates":["visual-transactions/2a6b59ac-b413-497f-b326-b0c55076983c/intent.json","visual-transactions/2a6b59ac-b413-497f-b326-b0c55076983c/outcome.json"],"backup":"complete"}
+# Subtest: same-inode rewrite after FD open and before the first read is rejected
+ok 2 - same-inode rewrite after FD open and before the first read is rejected
+  ---
+  duration_ms: 51.957966
+  type: 'test'
+  ...
+# {"before":"2096:80709:7:1793731619922041975:1793731619922041975","after":"2096:80709:10:1793731619925754697:1793731619925754697"}
+# Subtest: record real ext4 timestamp coalescing during bounded same-size rewrites
+not ok 3 - record real ext4 timestamp coalescing during bounded same-size rewrites
+  ---
+  duration_ms: 91.794824
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs:43:1'
+  failureType: 'testCodeFailure'
+  error: 'Managed file changed within verification'
+  code: 'INTEGRITY_ERROR'
+  name: 'PersistenceError'
+  stack: |-
+    fail (file:///home/estampes/projects/Estampes/src/persistence/errors.js:6:57)
+    ManagedFiles.observed (file:///home/estampes/projects/Estampes/src/persistence/filesystem.js:30:106)
+    ManagedFiles.digest (file:///home/estampes/projects/Estampes/src/persistence/filesystem.js:146:111)
+    async ManagedFiles.proofIdentity (file:///home/estampes/projects/Estampes/src/persistence/filesystem.js:37:82)
+    async ManagedFiles.proofFingerprint (file:///home/estampes/projects/Estampes/src/persistence/filesystem.js:43:40)
+    async TestContext.<anonymous> (file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs:56:24)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: native selected proof survives three commits then rejects missing on-disk evidence
+ok 4 - native selected proof survives three commits then rejects missing on-disk evidence
+  ---
+  duration_ms: 8660.817312
+  type: 'test'
+  ...
+# {"damage":"missing","evidencePath":"visual-registry/pages/cdd3f780bc5d1eeab0036117e0f5ff074ac0bf3fa6954f808ea557fda52894f4.json","current":{"generation":9,"rootHash":"9f8b9b59659f48460f36a40c8e7b9107f086a01d71ca7c8b0b2d59452e35707c","commitId":"tx:37275415-2eb9-439b-9247-a4da771a3dc7","checksum":"d29edbeed10ffe10df12e0bb0ee5fe5a727296545265c5cac58022e181197306"},"ledger":4,"problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Content-addressed metadata cannot be verified"}}
+# Subtest: native selected proof survives three commits then rejects corrupt on-disk evidence
+ok 5 - native selected proof survives three commits then rejects corrupt on-disk evidence
+  ---
+  duration_ms: 15119.903888
+  type: 'test'
+  ...
+# {"damage":"corrupt","evidencePath":"visual-registry/pages/be50768c817c07cc3f0b1ce353dce3e788f66e8641b0d9ae5cd0fba8c4339423.json","current":{"generation":9,"rootHash":"b9c4ecd2d819c4e1bb0205b012c24faeca63bd5246cc3b9a64c0dbdb355415cc","commitId":"tx:6f7ac3ca-d6b6-4c81-996e-aca2c4761e4d","checksum":"e30e8553de21e670991f9a6dbfc9eebd2bfb502b31fd61997a82bbf8c2dccb4b"},"ledger":4,"problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Content-addressed metadata cannot be verified"}}
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 29759.453007

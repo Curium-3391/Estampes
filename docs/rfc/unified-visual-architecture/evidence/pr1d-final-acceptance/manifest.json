@@ -1,0 +1,431 @@
+{
+  "schema": "estampes.pr1d-final-acceptance-evidence/1",
+  "sourceCommit": "29d097833688ddb649a88cb2a09f22ba5fadda8e",
+  "sourceTree": "756ea491e27bce3a2998dc61ba1e3ee34525919c",
+  "previousNativeBaseline": "31dae29f1cf7d1e8caf6c670124eed7c7ed91e11",
+  "testCommit": "25b2f9b62e716c1b2deb699cf7dd6ae70c3d6687",
+  "completedRuns": 45,
+  "nonzeroRuns": [
+    "r3-adversarial.log",
+    "r3-controls.log",
+    "original-persistence.log",
+    "full-serial.log",
+    "native-persistence.log"
+  ],
+  "normalizedDisplayLogsWithLosslessRaw": [
+    {
+      "log": "browser-runtime.log",
+      "rawGzip": "browser-runtime.log.gz",
+      "rawSha256": "b9955a9ef11f56c66da8e378a0aaed860e2f43ca91342c20a2a2d9d570620aba",
+      "readableLogSha256": "d483df5f314fd9b9f03dcf27f5437a46b88eea8a9f27c77a4b9684aae3e05306"
+    },
+    {
+      "log": "r3-adversarial.log",
+      "rawGzip": "r3-adversarial.log.gz",
+      "rawSha256": "e6ce3c109a6498d13d819fe762bfa8faccc169bd97afa481470b1c9142aa5b8a",
+      "readableLogSha256": "4629ad6ed7a052bc70b4405a6dca65cd4b12a481279a985a5202c8f851e1365c"
+    },
+    {
+      "log": "full-serial.log",
+      "rawGzip": "full-serial.log.gz",
+      "rawSha256": "d93c159136d60a1a1ec5979818fdc2cdedd170e595037ada45725e36de53cf50",
+      "readableLogSha256": "960f7f40ac241f39ae414da8408008ea9d3f4e66aa8b10b94bc1532ce8d1196c"
+    },
+    {
+      "log": "native-persistence.log",
+      "rawGzip": "native-persistence.log.gz",
+      "rawSha256": "d5a70ef014687ede5313664f579b78f10abd23f5a7f04ce654fcf2e758bdb654",
+      "readableLogSha256": "0e99d8c918dffd7f8f53c58f750a433484a8b92f5fe1e2e80f6d600ca8aaeb0d"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/rfc/unified-visual-architecture/PR-1D-FINAL-ENGINEERING-ACCEPTANCE-REPORT.md",
+      "bytes": 21822,
+      "sha256": "5ccd2103f93e1d36ce318b16352e19708056ca7aee97c633291d4adb261e5161"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/architecture-clean.log",
+      "bytes": 435,
+      "sha256": "d6b7d6b1a6199db0d3b21aef9c91f3e471a3e8e617febf0f87e0ffa85d2eb2c6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/benchmark.mjs",
+      "bytes": 7633,
+      "sha256": "251e783414211b6f0e6318e09680538fe5ffe45a0c35bb13a64c59ab54ec7fe6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/browser-download.log",
+      "bytes": 4514,
+      "sha256": "2dabea73f3fc47b7fa5a4463805fecb805d81063329dc5d0e2e69d15cb54423e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/browser-finding-retest.log",
+      "bytes": 357,
+      "sha256": "dfc57f6e4672bb12edd374cbfd6120d35f61c6d23b7685e4e1e099452bdef4a0"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/browser-libraries.log",
+      "bytes": 347,
+      "sha256": "3429b37419a9b28c5a9ce7dc65c2630275180ddfb60aeec86dba5c0680c32ded"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/browser-results.json",
+      "bytes": 2055,
+      "sha256": "6322778a4b73d30fcd872a16e4d17fc9b934593957a3bb05c65cd62d83b3922e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/browser-runtime.log",
+      "bytes": 7311,
+      "sha256": "d483df5f314fd9b9f03dcf27f5437a46b88eea8a9f27c77a4b9684aae3e05306"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/browser-runtime.log.gz",
+      "bytes": 1355,
+      "sha256": "e02548d35f7d2424ec31767b5b4d1dc1a0c89c46fa645960ee633967af87a3ed",
+      "rawBytes": 7312,
+      "rawSha256": "b9955a9ef11f56c66da8e378a0aaed860e2f43ca91342c20a2a2d9d570620aba"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/cas.log",
+      "bytes": 3297,
+      "sha256": "75add1966127daddeac246ea6ab37249b81c393e0aee9bac80aeac4702733650"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/contracts.log",
+      "bytes": 4595,
+      "sha256": "083f8cff0061c5b25c973879e83c26a60bcde034653ced4348f0144e375c5719"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/ctime-diagnostic.log",
+      "bytes": 720,
+      "sha256": "92d4531a31557199deb8a40a5926f6d879f72ddd22a9821d385bcaba975f6255"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/ctime-diagnostic.mjs",
+      "bytes": 1492,
+      "sha256": "2c6341f369ce0ceb677be3011c879ea9f81f4e377689248607ce530ab56b8ef7"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/ctime-retest.log",
+      "bytes": 333,
+      "sha256": "b8ced8394b97ee4839f7685a3aa75a9582a9bdcd46894e4ba7bcea1c5987f761"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/diagnostic-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/docs-final.log",
+      "bytes": 128,
+      "sha256": "da97799856304236c4744449cc7c1f8c63de20ff641595bca5191deee8fa79c2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/env.log",
+      "bytes": 2989,
+      "sha256": "3bfdead0c2832fe63eb9408341fdd89ec75e751bd0b04c9b9d0a7beb395d1eea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/examples.log",
+      "bytes": 1419,
+      "sha256": "2513c354d981e7187ad610802a47fde5bca9b5cc4277f3de8c0af4a3a7a55081"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/final-source.log",
+      "bytes": 94,
+      "sha256": "453cbf72ca8d9c9755d57604e7515524b76cefe2cd08dfcaa0f0c7cb10123b17"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/full-serial.log",
+      "bytes": 134848,
+      "sha256": "960f7f40ac241f39ae414da8408008ea9d3f4e66aa8b10b94bc1532ce8d1196c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/full-serial.log.gz",
+      "bytes": 29374,
+      "sha256": "26524113db944cac66314a849c3663f4611926c99490de26c038ffb465ad3c35",
+      "rawBytes": 134856,
+      "rawSha256": "d93c159136d60a1a1ec5979818fdc2cdedd170e595037ada45725e36de53cf50"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/g2-diagnostic.log",
+      "bytes": 3348,
+      "sha256": "e75bc94ac4c397a70b46860b583a899e21046ac0269b18496f92ffb3d626829c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/g2-original-retest.log",
+      "bytes": 387,
+      "sha256": "24329d2f2b3e532fcf4ff55a4527e832d0bf5c2d5cd5e8ac0abcfcc1c74965d8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/hardening-standalone.log",
+      "bytes": 2100,
+      "sha256": "e74858656865047233f3336f4ac7a84347e42ba56a99074313a089ed2bb1ef8c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/initial-source.log",
+      "bytes": 94,
+      "sha256": "453cbf72ca8d9c9755d57604e7515524b76cefe2cd08dfcaa0f0c7cb10123b17"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-contention-results.json",
+      "bytes": 215,
+      "sha256": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-delay.log",
+      "bytes": 213,
+      "sha256": "1a4afed5595cf5fae3e84c87566d5be99ae793c20df331c576ad5d2bfaa0fdca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-delayed-parent-results.json",
+      "bytes": 213,
+      "sha256": "1a4afed5595cf5fae3e84c87566d5be99ae793c20df331c576ad5d2bfaa0fdca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-diagnostic.mjs",
+      "bytes": 1949,
+      "sha256": "ccd25cca297e39d1e36c6743457786e6e3db8a966b6d725ee0e1f94896115652"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-events.jsonl",
+      "bytes": 23566,
+      "sha256": "fb291d1cd7b4e6c1169c8ab035275a49deadb9b1d6ecb16da658f31d59c752f6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-failures.log",
+      "bytes": 1021,
+      "sha256": "d8ffcc71d06313600605bdcb5ea0987c6d6e01c3fc856d33f0b9db7a834ca58e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-failures.mjs",
+      "bytes": 2532,
+      "sha256": "e0ed0754f5e04810db6387b1e876de75f5200987c8cc762ca1311c8bf6e7afb2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-normal.log",
+      "bytes": 215,
+      "sha256": "77e3ce85860920116d58980f53f88aa41ebb80342879a226ded97f58c2c6fa8f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/lease-observer.mjs",
+      "bytes": 2040,
+      "sha256": "a8b0dfd2cbad55e5fada28d7b3fcf49dae9d01df25cd3a0c1ac84080b01d97e1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/metrics-8mib-repeat.json",
+      "bytes": 32015,
+      "sha256": "0601bed8b08ade00a5e2c2f60e9bf6de7c6b84cce552e8b4d00051733fa19285"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/metrics-8mib.json",
+      "bytes": 32235,
+      "sha256": "cc346ddb818b261cfabde2ba23157ae4205319154005e8f7641a268c7acdd0ea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/metrics-history-100-repeat.json",
+      "bytes": 229987,
+      "sha256": "9b147dc2703fb272c1ce3437a34c746011bbbdddc52add4349cc529326725d7a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/metrics-history-100.json",
+      "bytes": 229948,
+      "sha256": "5db87497b6961e4814212d0177159076e296d12e698511ee2c7e50b6449f7d20"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/metrics-history-25.json",
+      "bytes": 90986,
+      "sha256": "3af94f8d81b1e1d9b7c18436a4f9b8d904c5fea0f2458247136c503d6699909e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/metrics-history-50.json",
+      "bytes": 159597,
+      "sha256": "82702c157969cea06ca801c64d6dbdc9ea34f0ae76a910b6494e5da828d74510"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/native-g2-diagnostic.mjs",
+      "bytes": 5413,
+      "sha256": "e5626ca56aea5a7fc29c00a6d8a9672b8fbb7e67f0ebeb2a47061f2ef389a799"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/native-harness.json",
+      "bytes": 5707,
+      "sha256": "87bf3c3badea46e1160147d00a55911b7e4987425cc58fa6433849d965408f16"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/native-persistence.log",
+      "bytes": 59694,
+      "sha256": "0e99d8c918dffd7f8f53c58f750a433484a8b92f5fe1e2e80f6d600ca8aaeb0d"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/native-persistence.log.gz",
+      "bytes": 12526,
+      "sha256": "2f749ab7cb1e3b68cc31bd6eb8b928b00c028238c90e248e92ee3565b81be19d",
+      "rawBytes": 59702,
+      "rawSha256": "d5a70ef014687ede5313664f579b78f10abd23f5a7f04ce654fcf2e758bdb654"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/native-prep.log",
+      "bytes": 51,
+      "sha256": "fe2c852f74b343212c01d86130523f0e8676f5727511ad28a5f7cca435ba6571"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/original-persistence.log",
+      "bytes": 59718,
+      "sha256": "b4b99187050b0246242af95e813d037b6c8ea2e17bbf44dd5bbe6164f3ae0c70"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/perf-8mib-repeat.log",
+      "bytes": 32029,
+      "sha256": "c32d871b9391fc430e7e15b0c24da8d790ddbe8f6b59e53e91a849e256e680c5"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/perf-8mib.log",
+      "bytes": 32249,
+      "sha256": "d503d551a1f3128569b2b8ea6b9d7a030e4e5cc979bb72f25bcd5df65230635b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/perf-history-100-repeat.log",
+      "bytes": 231290,
+      "sha256": "9ac6f3bb99b1f46fa85d88e3bfe7c055b96333b3b55bf87ee0a2ce9c38ed55e7"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/perf-history-100.log",
+      "bytes": 231233,
+      "sha256": "07c56a3f93f04d289ec266bb7c67ec0834503404314105fb9caa4d5b10c11810"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/perf-history-25.log",
+      "bytes": 91252,
+      "sha256": "6734c228ed43fcb491046dc55a96030c69e012eae2fcc2f7621c5bcd8828ede9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/perf-history-50.log",
+      "bytes": 160226,
+      "sha256": "c24b493193c792ddfb91e5415e838f57e77886f545d8ef447227527ad9e1fa75"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/performance.sh",
+      "bytes": 901,
+      "sha256": "20526abd89a1861c07f554179ff6cc99a42d55b32e18b068f9a5c38241cf35f9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/platform.log",
+      "bytes": 1741,
+      "sha256": "65b4e8a9f140c71f718a765c8cfd77122a97f4447977f0fa9533d4d66b4850fc"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/prepare-native.py",
+      "bytes": 1953,
+      "sha256": "0d74ede3d7526c33f66212796f8741226a607e53ac92bdf5c8a9261b55f38ad4"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/publication-ruling.log",
+      "bytes": 1766,
+      "sha256": "e2a40d3332287db155ebeaa8eea163ce9039b5b311b8298caa1c995a0e78744a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/publication-ruling.mjs",
+      "bytes": 2279,
+      "sha256": "429fb156dc802a462b63b97cbf8192df2a9e928587269977c4e13201b1872a74"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/python-lock.log",
+      "bytes": 471,
+      "sha256": "5c367d9f3436d93a20116a2d20ef5f42110508660313a771bc8029bd6fa36c86"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/python-venv.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r1-faults.log",
+      "bytes": 4907,
+      "sha256": "0e55cb796f88b465eeff68beca0d66bc5774238f4b79f27480bbc1e21cfc6e2b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r1-h01.log",
+      "bytes": 2304,
+      "sha256": "bcc8c14175e01727014a311f63ac8ad8fa1ceaa0ad7b6d34553bba74b23f1edf"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r2-cache.log",
+      "bytes": 5990,
+      "sha256": "1b03b3a18e4e5dcc81db552eb96d1dcdc1dc66828d8cde116f0f5f9b26ba30f3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r2-h03.log",
+      "bytes": 884,
+      "sha256": "741b3c2496ab358c57bbc56c4cd8e0d9b564c025e4910cc1874af62d0c642c1c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r2-storage.log",
+      "bytes": 4150,
+      "sha256": "7213f03cc8a3df9b53dd21066388271f0764a822181fee169cf52eb3e35808d0"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r3-adversarial.log",
+      "bytes": 8923,
+      "sha256": "4629ad6ed7a052bc70b4405a6dca65cd4b12a481279a985a5202c8f851e1365c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r3-adversarial.log.gz",
+      "bytes": 2686,
+      "sha256": "6b03be0d23aa3ca9eb88a7f355602216d59295df5a0608dc058976ddfa1cc8de",
+      "rawBytes": 8931,
+      "rawSha256": "e6ce3c109a6498d13d819fe762bfa8faccc169bd97afa481470b1c9142aa5b8a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/r3-controls.log",
+      "bytes": 3803,
+      "sha256": "eb39fe3dfec13ef87212f5641306bdc35d57a7c1482c09366577f59773433e43"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/recovery-probe.mjs",
+      "bytes": 1310,
+      "sha256": "dd93856215a2efffbf325a1f811ce6818a90efd391451afb58bb1ad4bf8f4c7a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/release.log",
+      "bytes": 188,
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/run.py",
+      "bytes": 1888,
+      "sha256": "2fecfdc8e573c9591ff22cfea8a4fac1a48202e96133448eb5005c3671c4ab86"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/runs.jsonl",
+      "bytes": 32887,
+      "sha256": "6de98b6cab59b0aa8a0bc9d2141d78244b2d803c712e4a6848284c70f631c7ab"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/seal-evidence.py",
+      "bytes": 1995,
+      "sha256": "1c3ed0f766af85db0be200ac10b92a05f33596875e770181bd751b1acbf54de9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/source-manifest.json",
+      "bytes": 213467,
+      "sha256": "8a45177d1feafa01ee616e03c62512a0a07ad819ffaa011461a4b6f4b586c0dd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/staged-whitespace.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/syntax.log",
+      "bytes": 523,
+      "sha256": "54074118e102369485c12f3493465ccbbf188536f2837dadd79c3cb08f87597d"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-final-acceptance/verify-source.py",
+      "bytes": 2470,
+      "sha256": "d978911f3de7a8ef908b128e5f798ea222667a64189e1ca36f3ce4187620dbd1"
+    }
+  ]
+}

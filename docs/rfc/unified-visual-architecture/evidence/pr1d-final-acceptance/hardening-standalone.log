@@ -1,0 +1,23 @@
+TAP version 13
+# Subtest: active GC physical reservations do not authorize mutations in a relocated read-only backup
+ok 1 - active GC physical reservations do not authorize mutations in a relocated read-only backup
+  ---
+  duration_ms: 22672.627999
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF"},"platform":{"platform":"linux","profile":"linux-process-crash-test","fsType":"0xef53","device":2096,"durability":"process-crash-test","purpose":"isolated-pr1c-testing"},"filesystemTrust":{"model":"private-trusted-uid/1","uid":1001,"unixPermissions":"checked","sameUidAdversary":"unsupported-not-isolated","privilegedActors":"outside-guarantee"},"recovery":[],"trace":[],"contentCommits":3,"lifecycle":{"pins":{"sessions":0,"physicalBytes":0,"epoch":0,"active":0},"policy":{"schema":"estampes.lifecycle/1","options":{"enabled":true,"autoMaintenance":false,"pinSessions":64,"pinBytes":1073741824},"highWaterMs":1893456000000,"committedAtMs":1893456000000,"contentSinceMaintenance":0,"maintenance":{"state":"idle","cursor":null,"conflicts":0,"steps":4}},"reservations":0},"performance":{"open":{"verifyCommittedMs":351.27462},"transactions":[],"verification":{"snapshotLoads":1,"versionHits":3,"versionMisses":3,"recordHits":3,"registryHits":0,"registryMaterializations":4,"versionReconstructions":3,"reconstructedMs":21.266013999999984,"proofEvictions":0,"metadataPathsTraversed":9,"deltaApplications":2,"operationPrefixHits":2,"physicalFingerprintChecks":72,"contentHashChecks":72,"recordCacheBytes":2438,"registryCacheBytes":782,"proofMetadataBytes":6510,"proofMetadataBudget":4194304,"physicalFingerprints":12,"versionProofs":3,"registryProofs":4}}}
+# Subtest: matching CURRENT bytes cannot confer selected transaction ownership on an unknown claim
+ok 2 - matching CURRENT bytes cannot confer selected transaction ownership on an unknown claim
+  ---
+  duration_ms: 8733.976947
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 31739.620101

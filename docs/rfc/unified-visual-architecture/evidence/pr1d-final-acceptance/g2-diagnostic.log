@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: bounded native replay of pre-rename crash, four recovery crashes and subsequent G2 drain
+    # Subtest: native diagnostic attempt 1
+    ok 1 - native diagnostic attempt 1
+      ---
+      duration_ms: 13904.947984
+      type: 'test'
+      ...
+    # {"attempt":1,"first":{"id":"6e236e66-c0c6-4c0d-aa02-1afdea33fcbd","state":"waiting-grace","progressed":12,"moved":12,"deleted":0},"result":{"id":"6e236e66-c0c6-4c0d-aa02-1afdea33fcbd","state":"complete","progressed":12,"moved":12,"deleted":12},"atPlan":[],"before":[],"after":{"generation":15,"ledger":1,"record":{"deleted":[0,1,2,3,4,5,6,7,8,9,10,11],"moved":[0,1,2,3,4,5,6,7,8,9,10,11],"planHash":"28b8a0585839f430ac8da64050d588a3806575faba18bca9a0d07f14281ece20","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"complete"},"remaining":[]},"writer":"ready"}
+    # Subtest: native diagnostic attempt 2
+    ok 2 - native diagnostic attempt 2
+      ---
+      duration_ms: 14899.402036
+      type: 'test'
+      ...
+    # {"attempt":2,"first":{"id":"e47c12d8-a54f-4d8d-a25a-0e17922f9441","state":"waiting-grace","progressed":12,"moved":12,"deleted":0},"result":{"id":"e47c12d8-a54f-4d8d-a25a-0e17922f9441","state":"complete","progressed":12,"moved":12,"deleted":12},"atPlan":[],"before":[],"after":{"generation":15,"ledger":1,"record":{"deleted":[0,1,2,3,4,5,6,7,8,9,10,11],"moved":[0,1,2,3,4,5,6,7,8,9,10,11],"planHash":"9ab2d99be8063d4aef6cd09bfffb24b224c5642b85e7fb0da4ad4d454895728f","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"complete"},"remaining":[]},"writer":"ready"}
+    # Subtest: native diagnostic attempt 3
+    ok 3 - native diagnostic attempt 3
+      ---
+      duration_ms: 14617.517991
+      type: 'test'
+      ...
+    # {"attempt":3,"first":{"id":"4aa396f1-eb2c-4008-9f59-b2d059517861","state":"waiting-grace","progressed":12,"moved":12,"deleted":0},"result":{"id":"4aa396f1-eb2c-4008-9f59-b2d059517861","state":"complete","progressed":12,"moved":12,"deleted":12},"atPlan":[],"before":[],"after":{"generation":15,"ledger":1,"record":{"deleted":[0,1,2,3,4,5,6,7,8,9,10,11],"moved":[0,1,2,3,4,5,6,7,8,9,10,11],"planHash":"6b8c52472cf5b622c66983202b0a2707744141b81632663181004382c1e5810e","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"complete"},"remaining":[]},"writer":"ready"}
+    # Subtest: native diagnostic attempt 4
+    ok 4 - native diagnostic attempt 4
+      ---
+      duration_ms: 13638.55246
+      type: 'test'
+      ...
+    # {"attempt":4,"first":{"id":"5d63b4f7-928b-4c0a-91e8-e6df5c1b3c39","state":"waiting-grace","progressed":12,"moved":12,"deleted":0},"result":{"id":"5d63b4f7-928b-4c0a-91e8-e6df5c1b3c39","state":"complete","progressed":12,"moved":12,"deleted":12},"atPlan":[],"before":[],"after":{"generation":15,"ledger":1,"record":{"deleted":[0,1,2,3,4,5,6,7,8,9,10,11],"moved":[0,1,2,3,4,5,6,7,8,9,10,11],"planHash":"e8a5d2337dded20edcd481459be7b277f37906f69162ff559b135201cd3ab45d","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"complete"},"remaining":[]},"writer":"ready"}
+    1..4
+ok 1 - bounded native replay of pre-rename crash, four recovery crashes and subsequent G2 drain
+  ---
+  duration_ms: 57062.364461
+  type: 'test'
+  ...
+1..1
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 57232.647618

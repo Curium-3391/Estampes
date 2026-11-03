@@ -1,0 +1,1144 @@
+TAP version 13
+# Subtest: UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+ok 1 - UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+  ---
+  duration_ms: 7112.38257
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+ok 2 - UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+  ---
+  duration_ms: 8796.792156
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+ok 3 - UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+  ---
+  duration_ms: 13852.445372
+  type: 'test'
+  ...
+# Subtest: UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+ok 4 - UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+  ---
+  duration_ms: 2958.016951
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+ok 5 - UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+  ---
+  duration_ms: 3259.016045
+  type: 'test'
+  ...
+# Subtest: UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+ok 6 - UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+  ---
+  duration_ms: 556.96347
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+ok 7 - UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+  ---
+  duration_ms: 5115.703277
+  type: 'test'
+  ...
+# Subtest: UVA-64: actual allocated blocks, outstanding reservations and recovery reserve participate in admission
+ok 8 - UVA-64: actual allocated blocks, outstanding reservations and recovery reserve participate in admission
+  ---
+  duration_ms: 583.229941
+  type: 'test'
+  ...
+# Subtest: UVA-64: quota pressure rejects a real content command before intent and preserves its draft and Root
+ok 9 - UVA-64: quota pressure rejects a real content command before intent and preserves its draft and Root
+  ---
+  duration_ms: 648.672613
+  type: 'test'
+  ...
+# Subtest: UVA-63: real archive threshold chooses a full anchor at 32 MiB without staging an oversized delta
+ok 10 - UVA-63: real archive threshold chooses a full anchor at 32 MiB without staging an oversized delta
+  ---
+  duration_ms: 2.974224
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-intent preserves one whole root and at most one retry effect
+ok 11 - SIGKILL / before-intent preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1525.281043
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+ok 12 - SIGKILL / intent.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1625.853406
+  type: 'test'
+  ...
+# Subtest: SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+ok 13 - SIGKILL / intent.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1606.378679
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+ok 14 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1572.361965
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+ok 15 - SIGKILL / staged.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1668.117374
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+ok 16 - SIGKILL / staged.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1936.732384
+  type: 'test'
+  ...
+# Subtest: SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+ok 17 - SIGKILL / staged.after-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1662.166415
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+ok 18 - SIGKILL / after-staged-writes preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1721.364801
+  type: 'test'
+  ...
+# Subtest: SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+ok 19 - SIGKILL / root.before-file-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1770.219755
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-prepared preserves one whole root and at most one retry effect
+ok 20 - SIGKILL / after-prepared preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1687.588092
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+ok 21 - SIGKILL / current.before-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1861.770065
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+ok 22 - SIGKILL / current.after-rename preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1724.21373
+  type: 'test'
+  ...
+# Subtest: SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+ok 23 - SIGKILL / current.before-dir-fsync preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1699.846585
+  type: 'test'
+  ...
+# Subtest: SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+ok 24 - SIGKILL / after-publication-durable preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1604.365493
+  type: 'test'
+  ...
+# Subtest: SIGKILL / before-ack preserves one whole root and at most one retry effect
+ok 25 - SIGKILL / before-ack preserves one whole root and at most one retry effect
+  ---
+  duration_ms: 1613.726385
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+ok 26 - fsync EIO / intent.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1499.591124
+  type: 'test'
+  ...
+# Subtest: fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+ok 27 - fsync EIO / intent.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 6310.913115
+  type: 'test'
+  ...
+# Subtest: fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+ok 28 - fsync EIO / mkdir.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 4335.389773
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+ok 29 - fsync EIO / staged.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1680.574077
+  type: 'test'
+  ...
+# Subtest: fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+ok 30 - fsync EIO / staged.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1862.531842
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+ok 31 - fsync EIO / root.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1763.611103
+  type: 'test'
+  ...
+# Subtest: fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+ok 32 - fsync EIO / root.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1775.400909
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+ok 33 - fsync EIO / prepared.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1749.283711
+  type: 'test'
+  ...
+# Subtest: fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+ok 34 - fsync EIO / prepared.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1784.311404
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+ok 35 - fsync EIO / current.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1875.988661
+  type: 'test'
+  ...
+# Subtest: fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+ok 36 - fsync EIO / current.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1700.24038
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+ok 37 - fsync EIO / outcome.before-file-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1675.509689
+  type: 'test'
+  ...
+# Subtest: fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+ok 38 - fsync EIO / outcome.before-dir-fsync never returns an ACK and fences further writes
+  ---
+  duration_ms: 1632.748712
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+ok 39 - ENOSPC / current.before-dir-fsync retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1689.936136
+  type: 'test'
+  ...
+# Subtest: ENOSPC / staged.before-write retains committed data and recovers without a second effect
+ok 40 - ENOSPC / staged.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1727.107137
+  type: 'test'
+  ...
+# Subtest: ENOSPC / root.before-write retains committed data and recovers without a second effect
+ok 41 - ENOSPC / root.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1757.876523
+  type: 'test'
+  ...
+# Subtest: ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+ok 42 - ENOSPC / prepared.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1779.728967
+  type: 'test'
+  ...
+# Subtest: ENOSPC / current.before-write retains committed data and recovers without a second effect
+ok 43 - ENOSPC / current.before-write retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1935.497755
+  type: 'test'
+  ...
+# Subtest: EXDEV / staged.before-rename retains committed data and recovers without a second effect
+ok 44 - EXDEV / staged.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1692.751353
+  type: 'test'
+  ...
+# Subtest: EXDEV / current.before-rename retains committed data and recovers without a second effect
+ok 45 - EXDEV / current.before-rename retains committed data and recovers without a second effect
+  ---
+  duration_ms: 1838.75221
+  type: 'test'
+  ...
+# Subtest: ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+ok 46 - ACKed effects and exact results survive SIGKILL, while unreferenced higher filenames never select authority
+  ---
+  duration_ms: 1643.646163
+  type: 'test'
+  ...
+# Subtest: corrupt CURRENT enters read-only recovery without guessing an older root
+ok 47 - corrupt CURRENT enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1120.692862
+  type: 'test'
+  ...
+# Subtest: corrupt root enters read-only recovery without guessing an older root
+ok 48 - corrupt root enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1127.317355
+  type: 'test'
+  ...
+# Subtest: corrupt registry-page enters read-only recovery without guessing an older root
+ok 49 - corrupt registry-page enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1162.300206
+  type: 'test'
+  ...
+# Subtest: corrupt generation enters read-only recovery without guessing an older root
+ok 50 - corrupt generation enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 1207.974401
+  type: 'test'
+  ...
+# Subtest: corrupt intent enters read-only recovery without guessing an older root
+ok 51 - corrupt intent enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 2345.722377
+  type: 'test'
+  ...
+# Subtest: corrupt outcome enters read-only recovery without guessing an older root
+ok 52 - corrupt outcome enters read-only recovery without guessing an older root
+  ---
+  duration_ms: 5469.686271
+  type: 'test'
+  ...
+# Subtest: mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+ok 53 - mixed registry/locator roots are rejected even with a syntactically valid CURRENT checksum
+  ---
+  duration_ms: 2861.041547
+  type: 'test'
+  ...
+# Subtest: an aborted prepared generation is never adopted, even when its staged file is corrupt
+ok 54 - an aborted prepared generation is never adopted, even when its staged file is corrupt
+  ---
+  duration_ms: 1437.267431
+  type: 'test'
+  ...
+# Subtest: interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+ok 55 - interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK
+  ---
+  duration_ms: 2501.736444
+  type: 'test'
+  ...
+# Subtest: recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+ok 56 - recovery refuses a rolled-back CURRENT when a durable outcome proves a later committed transaction
+  ---
+  duration_ms: 1182.843442
+  type: 'test'
+  ...
+# Subtest: reused orphan generation bytes must pass file/directory barriers again before publication
+ok 57 - reused orphan generation bytes must pass file/directory barriers again before publication
+  ---
+  duration_ms: 2446.326197
+  type: 'test'
+  ...
+# Subtest: committed metadata tamper detected during a live write fences the writer before any ACK
+ok 58 - committed metadata tamper detected during a live write fences the writer before any ACK
+  ---
+  duration_ms: 545.583452
+  type: 'test'
+  ...
+# Subtest: SIGKILL during recovery outcome repair is idempotent on the next restart
+ok 59 - SIGKILL during recovery outcome repair is idempotent on the next restart
+  ---
+  duration_ms: 2092.909078
+  type: 'test'
+  ...
+# Subtest: native candidate proof remains valid through after-prepared
+ok 60 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 3092.277019
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.json","before":"2096:80704:811:1793732381424770670:1793732381424770670","after":"2096:80704:2:1793732383216633770:1793732383216633770","workerPid":37919},"before":{"generation":3,"rootHash":"24720af4acb596b305f2170faaf47dd318607b0f9fbf385b4edeb800ef2e8248","commitId":"tx:56d1247c-dbbc-4bde-971d-31fd3fbc403c","checksum":"5549ac45eb1cd699303ebe6005b87944c692b6ca70b48f9bd15c0b7482cc2fb6"},"after":{"checksum":"5549ac45eb1cd699303ebe6005b87944c692b6ca70b48f9bd15c0b7482cc2fb6","commitId":"tx:56d1247c-dbbc-4bde-971d-31fd3fbc403c","generation":3,"rootHash":"24720af4acb596b305f2170faaf47dd318607b0f9fbf385b4edeb800ef2e8248"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+ok 61 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 2855.302568
+  type: 'test'
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.json","before":"2096:81147:811:1793732384293972949:1793732384297675145","after":"2096:81381:2:1793732386089538246:1793732386089538246","workerPid":38095},"before":{"generation":3,"rootHash":"eac2b0d3535a08b49b14abf5967b5439600953ac9f7261220972295d69ffdbfe","commitId":"tx:7b8b6801-c829-4c99-9ec3-6f930b56c3be","checksum":"e572eccc118751f0ea10f3d17de35d71b49aaf661eb31d338d132e141e06366a"},"after":{"checksum":"e572eccc118751f0ea10f3d17de35d71b49aaf661eb31d338d132e141e06366a","commitId":"tx:7b8b6801-c829-4c99-9ec3-6f930b56c3be","generation":3,"rootHash":"eac2b0d3535a08b49b14abf5967b5439600953ac9f7261220972295d69ffdbfe"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+ok 62 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 2969.734093
+  type: 'test'
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.json","before":"2096:81153:811:1793732387115046674:1793732387118748870","after":"2096:81153:2:1793732388989393225:1793732388989393225","workerPid":38169},"before":{"generation":3,"rootHash":"ac33880f6d209cd2fbc04913ba55f44ab5ebc16fef855671e42d733b4ae4544a","commitId":"tx:a33ee089-b294-407f-a3fe-6a18c1249c16","checksum":"1c8e2857e98bbf7ea8b471a733dc4eaad63ad51f24aaad615238d58f6657f606"},"after":{"checksum":"4fadeca66ea2097ba27a4d4e358c8ef42a8c7f00b3d5b6c459064dab93c6c6e9","commitId":"tx:4fa979b1-d754-44d2-9b94-431bb8ad043e","generation":4,"rootHash":"666f0d10158b8d810f085d212c0440fd4b7a49f5364b9591e3c2fb7413de5e29"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace
+ok 63 - GC retains a replaced quarantine inode / replace
+  ---
+  duration_ms: 4664.581433
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/56b4b4ab-b119-46b5-b0b0-660cf7bc67d7/0-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.bin","target":"gc-quarantine/56b4b4ab-b119-46b5-b0b0-660cf7bc67d7/0-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.bin","mode":"replace","before":"2096:81154:811:1793732390109376699:1793732391592798518","after":"2096:81591:2:1793732396685951195:1793732396685951195","workerPid":38229},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace-same
+ok 64 - GC retains a replaced quarantine inode / replace-same
+  ---
+  duration_ms: 4724.73176
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/c6748aff-e33f-4b4f-9cf5-6bef14bb13c2/0-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.bin","target":"gc-quarantine/c6748aff-e33f-4b4f-9cf5-6bef14bb13c2/0-72034e7db7e7659d31cd186dc08f33b69c79161edb4d5b984aee356e5eb855ec.bin","mode":"replace-same","before":"2096:81581:811:1793732397353491013:1793732398873998378","after":"2096:80863:811:1793732401406311044:1793732401410018647","workerPid":38400},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+ok 65 - R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+  ---
+  duration_ms: 510.094643
+  type: 'test'
+  ...
+# {"attempts":128,"identicalFingerprints":59,"staleProofsAccepted":0,"filesystem":"actual temporary filesystem; not asserted ext4"}
+# Subtest: R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+ok 66 - R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+  ---
+  duration_ms: 9.773148
+  type: 'test'
+  ...
+# Subtest: private tree rejects directory permissions on reopen and preserves CURRENT
+ok 67 - private tree rejects directory permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 1253.148427
+  type: 'test'
+  ...
+# Subtest: private tree rejects file permissions on reopen and preserves CURRENT
+ok 68 - private tree rejects file permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 1207.02168
+  type: 'test'
+  ...
+# Subtest: private tree rejects hardlink on reopen and preserves CURRENT
+ok 69 - private tree rejects hardlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 1395.88306
+  type: 'test'
+  ...
+# Subtest: private tree rejects symlink on reopen and preserves CURRENT
+ok 70 - private tree rejects symlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 1165.265953
+  type: 'test'
+  ...
+# Subtest: unsafe writable ancestry is refused before creating the OS lease
+ok 71 - unsafe writable ancestry is refused before creating the OS lease
+  ---
+  duration_ms: 4.569967
+  type: 'test'
+  ...
+# Subtest: runtime root mode changes fence before publication without automatic chmod
+ok 72 - runtime root mode changes fence before publication without automatic chmod
+  ---
+  duration_ms: 605.416578
+  type: 'test'
+  ...
+# Subtest: same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+ok 73 - same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+  ---
+  duration_ms: 568.364707
+  type: 'test'
+  ...
+# Subtest: H-01 / three reopens retain exact ACK and reject different payload / linux-local-durable
+ok 74 - H-01 / three reopens retain exact ACK and reject different payload / linux-local-durable
+  ---
+  duration_ms: 5316.454426
+  type: 'test'
+  ...
+# Subtest: H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+ok 75 - H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+  ---
+  duration_ms: 4668.615365
+  type: 'test'
+  ...
+# Both disposable lease workers are ready
+# CURRENT cleanup is temporary-claim.before-unlink occurrence 18
+# SIGKILL left only the durable CURRENT claim
+# Cleanup recovery reopen 1 ready
+# Cleanup recovery reopen 2 ready
+# Cleanup recovery reopen 3 ready
+# Subtest: H-01 / missing prepared fails closed for a superseded CURRENT
+ok 76 - H-01 / missing prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2231.542285
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Missing CURRENT publication candidate evidence"},"recovery":[]}
+# Subtest: H-01 / corrupt prepared fails closed for a superseded CURRENT
+ok 77 - H-01 / corrupt prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2153.811518
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"UNSUPPORTED_SCHEMA","message":"Invalid input: expected \\"estampes.prepared/1\\""},"recovery":[]}
+# Subtest: H-01 / forged publication fails closed for a superseded CURRENT
+ok 78 - H-01 / forged publication fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2128.916589
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"CURRENT candidate differs from exact claim"},"recovery":[]}
+# Subtest: H-02 / native SIGKILL across durable G2 plan
+ok 79 - H-02 / native SIGKILL across durable G2 plan
+  ---
+  duration_ms: 22368.763954
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 before intent
+ok 80 - H-02 / native SIGKILL across durable G2 before intent
+  ---
+  duration_ms: 32496.127058
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 after intent
+ok 81 - H-02 / native SIGKILL across durable G2 after intent
+  ---
+  duration_ms: 26301.572075
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 terminal
+ok 82 - H-02 / native SIGKILL across durable G2 terminal
+  ---
+  duration_ms: 20657.65566
+  type: 'test'
+  ...
+# Subtest: H-02 / corrupt plan lacks durable unlink intent and must fail closed
+ok 83 - H-02 / corrupt plan lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 4227.704059
+  type: 'test'
+  ...
+# Subtest: H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+ok 84 - H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 4255.28357
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+ok 85 - H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 4276.584234
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+ok 86 - H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 4491.033283
+  type: 'test'
+  ...
+# {"result":{"code":"RECOVERY_REQUIRED","message":"Maintenance requires recovery"},"gcState":{"deleted":[],"moved":[0,1,2,3],"planHash":"906cb577d7c4a72bbf4c6daf2887cd4deb13259b520e2fe12e7945281ffa41a3","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"waiting-grace"},"writerState":"read-only-recovery"}
+# Subtest: H-01 / a superseded old-format classification cannot invent missing selection evidence
+ok 87 - H-01 / a superseded old-format classification cannot invent missing selection evidence
+  ---
+  duration_ms: 1810.337916
+  type: 'test'
+  ...
+# Subtest: H-02 / missing source before quarantine cannot be authorized retroactively
+ok 88 - H-02 / missing source before quarantine cannot be authorized retroactively
+  ---
+  duration_ms: 2683.47922
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine before intent cannot be authorized retroactively
+ok 89 - H-02 / missing quarantine before intent cannot be authorized retroactively
+  ---
+  duration_ms: 3874.09598
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+ok 90 - H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+  ---
+  duration_ms: 6264.033979
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+ok 91 - H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+  ---
+  duration_ms: 6551.185927
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.before-quarantine resumes durable GC without losing a logical version
+ok 92 - UVA-49/59: SIGKILL at gc.before-quarantine resumes durable GC without losing a logical version
+  ---
+  duration_ms: 13178.1982
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.after-rename resumes durable GC without losing a logical version
+ok 93 - UVA-49/59: SIGKILL at gc.after-rename resumes durable GC without losing a logical version
+  ---
+  duration_ms: 13219.701211
+  type: 'test'
+  ...
+# Subtest: UVA-49/59: SIGKILL at gc.after-unlink resumes durable GC without losing a logical version
+ok 94 - UVA-49/59: SIGKILL at gc.after-unlink resumes durable GC without losing a logical version
+  ---
+  duration_ms: 20521.422715
+  type: 'test'
+  ...
+# Subtest: UVA-47: G2 requires terminal proof and a full quarantine day; rollback clock cannot age it
+ok 95 - UVA-47: G2 requires terminal proof and a full quarantine day; rollback clock cannot age it
+  ---
+  duration_ms: 7733.251619
+  type: 'test'
+  ...
+# Subtest: UVA-49: corrupt committed GC plan stops maintenance and fences writes
+ok 96 - UVA-49: corrupt committed GC plan stops maintenance and fences writes
+  ---
+  duration_ms: 6959.549495
+  type: 'test'
+  ...
+# Subtest: UVA-49: corrupt quarantined bytes are never unlinked as verified duplicates
+ok 97 - UVA-49: corrupt quarantined bytes are never unlinked as verified duplicates
+  ---
+  duration_ms: 8018.616853
+  type: 'test'
+  ...
+# Subtest: UVA-49/63: compaction SIGKILL at current.before-rename preserves stable references
+ok 98 - UVA-49/63: compaction SIGKILL at current.before-rename preserves stable references
+  ---
+  duration_ms: 7235.431293
+  type: 'test'
+  ...
+# Subtest: UVA-49/63: compaction SIGKILL at after-publication-durable preserves stable references
+ok 99 - UVA-49/63: compaction SIGKILL at after-publication-durable preserves stable references
+  ---
+  duration_ms: 7008.487898
+  type: 'test'
+  ...
+# Subtest: UVA-59: missing archive chunk and corrupt checkpoint envelope fail closed
+ok 100 - UVA-59: missing archive chunk and corrupt checkpoint envelope fail closed
+  ---
+  duration_ms: 2081.595135
+  type: 'test'
+  ...
+# Subtest: UVA-59: corrupt named checkpoint Root cannot be ignored by GC
+ok 101 - UVA-59: corrupt named checkpoint Root cannot be ignored by GC
+  ---
+  duration_ms: 1373.293778
+  type: 'test'
+  ...
+# Subtest: UVA-59: external CURRENT drift never publishes a stale maintenance Root
+ok 102 - UVA-59: external CURRENT drift never publishes a stale maintenance Root
+  ---
+  duration_ms: 1027.623981
+  type: 'test'
+  ...
+# Subtest: UVA-59: ENOSPC during checkpoint yields no false completion and preserves content
+ok 103 - UVA-59: ENOSPC during checkpoint yields no false completion and preserves content
+  ---
+  duration_ms: 7005.528601
+  type: 'test'
+  ...
+# Subtest: UVA-59: ENOSPC during gcStep yields no false completion and preserves content
+ok 104 - UVA-59: ENOSPC during gcStep yields no false completion and preserves content
+  ---
+  duration_ms: 8975.226184
+  type: 'test'
+  ...
+# Subtest: UVA-48/59: journal compaction retains permanent key binding through quarantine and restart
+ok 105 - UVA-48/59: journal compaction retains permanent key binding through quarantine and restart
+  ---
+  duration_ms: 7214.588053
+  type: 'test'
+  ...
+# Subtest: UVA-48/59: live terminal-journal tampering cannot manufacture a GC retention proof
+ok 106 - UVA-48/59: live terminal-journal tampering cannot manufacture a GC retention proof
+  ---
+  duration_ms: 1486.229638
+  type: 'test'
+  ...
+# Subtest: UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+ok 107 - UVA-46/63: content deltas preserve logical IDs, original rich history and exact ACKs
+  ---
+  duration_ms: 6505.223296
+  type: 'test'
+  ...
+# Subtest: UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+ok 108 - UVA-46/47: verified full-generation replacement is blocked by an old physical reader pin
+  ---
+  duration_ms: 16088.840554
+  type: 'test'
+  ...
+# Subtest: UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+ok 109 - UVA-48: seven-day ACKs, tombstones and mismatch survive compaction and restart
+  ---
+  duration_ms: 3571.886679
+  type: 'test'
+  ...
+# Subtest: clock rollback cannot shorten ACK retention or erase persisted high-water state
+ok 110 - clock rollback cannot shorten ACK retention or erase persisted high-water state
+  ---
+  duration_ms: 2980.720424
+  type: 'test'
+  ...
+# Subtest: UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+ok 111 - UVA-46: checkpoints survive compaction, archived Documents stay rooted and explicit release is required
+  ---
+  duration_ms: 3716.085685
+  type: 'test'
+  ...
+# Subtest: UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+ok 112 - UVA-65: reader limits count the physical hash union, expire no active read and release after quiescence
+  ---
+  duration_ms: 3279.997792
+  type: 'test'
+  ...
+# Subtest: multiple concurrent readers remain fixed while writes advance the one authoritative Root
+ok 113 - multiple concurrent readers remain fixed while writes advance the one authoritative Root
+  ---
+  duration_ms: 5692.176902
+  type: 'test'
+  ...
+# Subtest: lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+ok 114 - lossless patch handles insert/delete/splice, Unicode and hostile JSON keys without prototype mutation
+  ---
+  duration_ms: 2.194602
+  type: 'test'
+  ...
+# Subtest: maintenance makes bounded progress under sustained writes and accounts allocated blocks
+ok 115 - maintenance makes bounded progress under sustained writes and accounts allocated blocks
+  ---
+  duration_ms: 11737.481764
+  type: 'test'
+  ...
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 116 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 12871.650468
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+ok 117 - PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+  ---
+  duration_ms: 86912.960769
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+ok 118 - PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+  ---
+  duration_ms: 155.58822
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 119 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 1118.67093
+  type: 'test'
+  ...
+# Subtest: unsupported native durable profile fails before mutating the disposable directory
+ok 120 - unsupported native durable profile fails before mutating the disposable directory
+  ---
+  duration_ms: 5.85126
+  type: 'test'
+  ...
+# Subtest: unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+ok 121 - unknown profiles, missing isolated purpose and test-to-durable promotion are refused
+  ---
+  duration_ms: 3.53781
+  type: 'test'
+  ...
+# Subtest: OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+ok 122 - OS lifetime lease rejects a second writer before mutation and SIGKILL releases it
+  ---
+  duration_ms: 1034.72649
+  type: 'test'
+  ...
+# Subtest: real flock contention remains exit-73 when parent startup IPC is delayed
+ok 123 - real flock contention remains exit-73 when parent startup IPC is delayed
+  ---
+  duration_ms: 613.83825
+  type: 'test'
+  ...
+# Subtest: direct coordinator construction without its own inherited OS lease cannot write
+ok 124 - direct coordinator construction without its own inherited OS lease cannot write
+  ---
+  duration_ms: 515.75247
+  type: 'test'
+  ...
+# Subtest: client/supervisor termination cannot leave an orphan writer holding the lease
+ok 125 - client/supervisor termination cannot leave an orphan writer holding the lease
+  ---
+  duration_ms: 1136.53854
+  type: 'test'
+  ...
+# Subtest: native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+ok 126 - native ext4/XFS durable ACK survives process restart (still not a power-loss test)
+  ---
+  duration_ms: 1644.329074
+  type: 'test'
+  ...
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-prepared
+ok 127 - native selected CURRENT proof survives interrupted recovery at after-prepared
+  ---
+  duration_ms: 4378.335772
+  type: 'test'
+  ...
+# {"stage":"after-prepared","selectedGeneration":2,"claimNames":["683c413c-4154-44c6-a878-ed18e6a94476.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+ok 128 - native selected CURRENT proof survives interrupted recovery at current.after-dir-fsync
+  ---
+  duration_ms: 4771.655228
+  type: 'test'
+  ...
+# {"stage":"current.after-dir-fsync","selectedProof":{"envelope":{"checksum":"4ca0ff531e2c1e6ba6916f7601bd3637120934027aeb033d4e1cfa1b384405d6","commitId":"tx:79149652-4701-4c43-9a5c-ebb80fb93b12","generation":2,"rootHash":"e040b2ba8e6500a6ce22fe78c518547fe7837bcbf27d3492b4317b5f62189653"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["768f3571-7df5-4b24-98e1-7973813637b2.json","e8068762-d529-480b-90b2-0e64dbedcbac.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: native selected CURRENT proof survives interrupted recovery at after-publication-durable
+ok 129 - native selected CURRENT proof survives interrupted recovery at after-publication-durable
+  ---
+  duration_ms: 4836.739659
+  type: 'test'
+  ...
+# {"stage":"after-publication-durable","selectedProof":{"envelope":{"checksum":"1504e4fc4300b0c7e2b3c94929906334f4eff846f15badd07eb626697422e986","commitId":"tx:d3b1c952-8892-4a73-85a1-edadad1e6245","generation":2,"rootHash":"6e9b002ad135ac5ed9b2a49ac8b6684d9b3ce45c609627dd924a8bb179ab7563"},"schema":"estampes.selected-current-proof/1"},"selectedGeneration":3,"claimNames":["6bf00df4-d1ec-493b-a6e7-d2c3e322e194.json"],"state":"ready","problem":null,"ledger":1}
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+ok 130 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.after-dir-fsync
+  ---
+  duration_ms: 13912.585183
+  type: 'test'
+  ...
+# Subtest: R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+not ok 131 - R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename
+  ---
+  duration_ms: 25684.75144
+  type: 'test'
+  location: '/home/estampes/estampes-pr1d-final.2EnJ3YiX/native/tests/persistence-state-machine.test.js:91:79'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'quarantining'
+    - 'complete'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'complete'
+  actual: 'quarantining'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/estampes/estampes-pr1d-final.2EnJ3YiX/native/tests/persistence-state-machine.test.js:111:62)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: native repeated planning must not orphan an overlapping active GC plan
+ok 132 - native repeated planning must not orphan an overlapping active GC plan
+  ---
+  duration_ms: 12797.035822
+  type: 'test'
+  ...
+# {"first":{"planned":true,"id":"b16f0e43-4cbf-473e-b301-823eef7b556b","candidates":2},"second":{"planned":false,"reason":"No provably unreachable managed files"},"overlap":[],"result":{"id":"b16f0e43-4cbf-473e-b301-823eef7b556b","state":"complete","progressed":4,"moved":2,"deleted":2},"state":"ready","problem":null}
+# Subtest: R3-C1 / exclusive G1 ownership / planned
+ok 133 - R3-C1 / exclusive G1 ownership / planned
+  ---
+  duration_ms: 13414.968828
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / partial-quarantine
+ok 134 - R3-C1 / exclusive G1 ownership / partial-quarantine
+  ---
+  duration_ms: 15079.030993
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / unlink-intent
+ok 135 - R3-C1 / exclusive G1 ownership / unlink-intent
+  ---
+  duration_ms: 17625.490581
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G1 ownership / complete
+ok 136 - R3-C1 / exclusive G1 ownership / complete
+  ---
+  duration_ms: 13819.120035
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / planned
+ok 137 - R3-C1 / exclusive G2 ownership / planned
+  ---
+  duration_ms: 6768.837059
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / partial-quarantine
+ok 138 - R3-C1 / exclusive G2 ownership / partial-quarantine
+  ---
+  duration_ms: 8340.440274
+  type: 'test'
+  ...
+# Subtest: R3-C1 / exclusive G2 ownership / unlink-intent
+ok 139 - R3-C1 / exclusive G2 ownership / unlink-intent
+  ---
+  duration_ms: 11622.463449
+  type: 'test'
+  ...
+# {"kind":"G2","phase":"unlink-intent","laterCandidates":[{"path":"visual-registry/pages/ae29245f98a620c47afd4444d3094f9d106cf9cf72121146e70f29c54f2363c3.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/9533c1d0a796ffceff5442354f736bf8d39b10025d0efe8cc6eda34749536219.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/a901157755c033c0aa7abddc1591f5694591d41cf925b7f3846d9feaf7f60161.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/616ca1f4bb91538eccb28f0931790dd13b4f56820d40176790a1f4f84076d25d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e148ddd728b98eddb7bf41132ad27da6a2b8318b444aec97dca5531e06f2f937.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/386cb51e7b9285c0ae2a95bb041b28aeb4dfb13acab4433c1961a0c3e706ee61.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/ffddc0333ed5d45ceb4c79d73f50f287d7b0ade3d5f21a4566c406cdb136c57d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/6603c9130130c65cdd73ed2774abfaa0a1f67d4d356fbb22dd1f9a5c03acaec6.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/37b1d8d81b1b11e8b2cea62ed5f72de524d5a1febc7537b40bdc65388bf05899.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/1b36b7855e21dd7b2eff470af6e6363171aefdbb9c97ba185650a07c5b1f527d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/8cf29bdb76b92af38de37024e592e80738c3cc2bef23e71d5cfd3b69d3d5e8ff.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/cfa9532375835d7d68261974b6e3716016b63764e0615adb6477df6ed5a55370.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/97f0a936c50975c6d666a052ed43d0c7284ec5bc8733b6ba6bae1ef1353a7960.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/8125d1669f64b95e25de580caff35181a6c8668269ca51c9967d6b011b47ffb1.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/0517682241297cd3930a2f4493381100a1140f6e4564cd5ff0cc56321db2246f.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/5bcc37abee712ad82926c1522d4f3159b7936961da9c1c5101a04cd8f60960ec.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/c22df3c0fed6d5a5e4969e94063886bf2d4220337b278735b503c2a701afcbf0.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/78ef86c78f2db7ca45b666590b3ce74171ae13f8fc19458537faef8bb0925705.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/75b1bcd4c024a1e43bbe23eff0b2b26c89b8de4e0566dcd53905d413994c28e4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/6bf57e7332f32da315cbcbbefe89f7fc4e5d404807aa180001466e67247438e0.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/a74b6e2d44d9aa9f9d178f535763d5fe8b58819b8a1fa32941e7bdfd9192a269.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/9d2cf1229161612cef915a86f00191d7ea813c51032169b20bbead80977dc391.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-transactions/f9e4e06c-fff4-4dc4-8ed4-b6965e4f14fd/intent.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-transactions/f9e4e06c-fff4-4dc4-8ed4-b6965e4f14fd/outcome.json","reason":"Terminal journal with durable membership/key retention proof"}]}
+# Subtest: R3-C1 / exclusive G2 ownership / complete
+ok 140 - R3-C1 / exclusive G2 ownership / complete
+  ---
+  duration_ms: 7753.57857
+  type: 'test'
+  ...
+# {"kind":"G2","phase":"complete","laterCandidates":[{"path":"visual-registry/pages/c691296d9a554523b5b7bc41eb6c6b027650f89fe28020e182aca63af9d52277.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/dbcbfca26abfdc1c4daccd11f052b414dc5fa4bbb4a13019dc3cb4b9e6379da2.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/e9fe141dac27988af3f272e9fb2c1a3be8b1a6259c995a6732fb0989111b79a5.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/ca0801e0898dc0455210bfaec0fc0e6cbb18f28e42e6461703e676dd13f228aa.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/08f1c6a90b37a46b52bf78850b3d9cec63c9caac8710edd260e58fe0ac5e7418.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/d0303ece578883dfa41a3ea1de135c24a44bd70b2895081fa236c57f06ad517e.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/693c19e66d99a2b06056bb6f6131249db12b999fb7bf1e6dc2c48e777b40359f.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-transactions/38d646e6-3701-451a-b7f4-29b4eb96f9e5/intent.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-transactions/38d646e6-3701-451a-b7f4-29b4eb96f9e5/outcome.json","reason":"Terminal journal with durable membership/key retention proof"},{"path":"visual-registry/pages/8f3fe6b561443bb288785cd9ecf4727be649cd6e2bd622dcbaf30016878f75ed.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/8549097925a521f2a6f92209da3532b846d3675800ddd32adf3bd13a0db33ab8.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/57c5e25bf3f60458b77dd5770883d058c43c00e83ee36b9299d9aadcb6b70d51.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/6ea9d9590bd5943e51caa9124e17193abd91bb34f4272304384fcca7003b0417.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/65dcab0f7a9fb350d1d070d8aec7a540691b46ee7053abcb6ff8ab4a50f2a219.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/9b8ad6bd91d056950d85ebc373313677c1e6ab811be4cfa6c9974769a09dfdbc.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/ed67e6afe5e2b8af422e4060899611e53576e895d2dfbd289d16d95c7613ee67.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/9097ce67eacb44fb12ee9c3e65e354dc599e2aaf3e0d187d5a2f6d1656c27859.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/a3bd50e7c6424de4851d20e67999f1fd88d205b0382db4f05bc987b0d39cc9d0.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/5f3d343ae1962257c70274d112916e9f9c5903dec92d73bef5fe9313c1660421.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/0221fea761efbeb5ab23132aeb0d613e6fc382aceb898f5ebf7c891b9159c1c4.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/0bd458c9a149aae3dbcabf5c1d7c7488ee06ab6aa7f51c5e3606d284addafa7b.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/a22458c7a2c02747a368303d1c9ff69b015038a941316672bea99aedab9d203d.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/pages/cfa9532375835d7d68261974b6e3716016b63764e0615adb6477df6ed5a55370.json","reason":"Unreachable file from a terminal transaction plan"},{"path":"visual-registry/roots/d3027fcc111751f72bef86e17a77f3d6171bea3d61662b40386b9e73af9d32ba.json","reason":"Unreachable file from a terminal transaction plan"}]}
+# Subtest: R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+ok 141 - R3-C1 / disjoint G1 and G2 plans retain independent physical ownership
+  ---
+  duration_ms: 27868.695088
+  type: 'test'
+  ...
+# Subtest: R3-B1 / repeated recovery rejects a forged transaction generation
+ok 142 - R3-B1 / repeated recovery rejects a forged transaction generation
+  ---
+  duration_ms: 4590.183896
+  type: 'test'
+  ...
+# Subtest: R3-C1 / independent hashed overlapping plans and false terminal progress fail closed
+ok 143 - R3-C1 / independent hashed overlapping plans and false terminal progress fail closed
+  ---
+  duration_ms: 12755.174988
+  type: 'test'
+  ...
+# Subtest: R3-C1 / relocated backup verifies logical history without inheriting physical GC authority
+ok 144 - R3-C1 / relocated backup verifies logical history without inheriting physical GC authority
+  ---
+  duration_ms: 13051.079371
+  type: 'test'
+  ...
+# Subtest: R3-B1 / matching CURRENT bytes cannot prove an unknown transaction owner
+ok 145 - R3-B1 / matching CURRENT bytes cannot prove an unknown transaction owner
+  ---
+  duration_ms: 856.93653
+  type: 'test'
+  ...
+# Subtest: PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace
+ok 146 - PR-1D: pre-rename crash temporary has one durable owner and drains only through G2 grace
+  ---
+  duration_ms: 4579.33914
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash after CURRENT rename classifies the exact claim and preserves the committed effect
+ok 147 - PR-1D: crash after CURRENT rename classifies the exact claim and preserves the committed effect
+  ---
+  duration_ms: 1914.70315
+  type: 'test'
+  ...
+# Subtest: PR-1D: an unclaimed atomic-shaped temporary is preserved and forces read-only recovery
+ok 148 - PR-1D: an unclaimed atomic-shaped temporary is preserved and forces read-only recovery
+  ---
+  duration_ms: 741.096833
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-write never creates an unattributed effect
+ok 149 - PR-1D: crash at temporary-claim.before-write never creates an unattributed effect
+  ---
+  duration_ms: 1156.120374
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-file-fsync never creates an unattributed effect
+ok 150 - PR-1D: crash at temporary-claim.before-file-fsync never creates an unattributed effect
+  ---
+  duration_ms: 1268.950144
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-dir-fsync never creates an unattributed effect
+ok 151 - PR-1D: crash at temporary-claim.before-dir-fsync never creates an unattributed effect
+  ---
+  duration_ms: 1222.04626
+  type: 'test'
+  ...
+# Subtest: PR-1D: crash at temporary-claim.before-unlink never creates an unattributed effect
+ok 152 - PR-1D: crash at temporary-claim.before-unlink never creates an unattributed effect
+  ---
+  duration_ms: 1273.299421
+  type: 'test'
+  ...
+# Subtest: PR-1D: bootstrap claim left after rename is completed idempotently on restart
+ok 153 - PR-1D: bootstrap claim left after rename is completed idempotently on restart
+  ---
+  duration_ms: 687.990487
+  type: 'test'
+  ...
+# Subtest: PR-1D: two durable claims for one target are ambiguous and fail closed
+ok 154 - PR-1D: two durable claims for one target are ambiguous and fail closed
+  ---
+  duration_ms: 898.641666
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=false
+ok 155 - PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=false
+  ---
+  duration_ms: 2807.722963
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=true
+ok 156 - PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later=true
+  ---
+  duration_ms: 3373.150936
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.before-quarantine
+ok 157 - PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.before-quarantine
+  ---
+  duration_ms: 9048.422049
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-rename
+ok 158 - PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-rename
+  ---
+  duration_ms: 8962.115713
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-unlink
+ok 159 - PR-1D native finding H-02: GC disposition remains sole temporary owner after gc.after-unlink
+  ---
+  duration_ms: 11989.004522
+  type: 'test'
+  ...
+# Subtest: PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+ok 160 - PR-1C immutable generations preserve rich metadata and retry exact ACK across restart
+  ---
+  duration_ms: 1745.615139
+  type: 'test'
+  ...
+# Subtest: same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+ok 161 - same key with a different canonical payload is rejected before OCC; principal lanes are stable and separate
+  ---
+  duration_ms: 912.448397
+  type: 'test'
+  ...
+# Subtest: serialized competing writes use Document OCC and do not expose partial multi-Document changes
+ok 162 - serialized competing writes use Document OCC and do not expose partial multi-Document changes
+  ---
+  duration_ms: 1897.671233
+  type: 'test'
+  ...
+# Subtest: duplicate in-flight requests serialize into one ledger effect and one generation
+ok 163 - duplicate in-flight requests serialize into one ledger effect and one generation
+  ---
+  duration_ms: 911.301531
+  type: 'test'
+  ...
+# Subtest: strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+ok 164 - strict complete closure is used before writing an intent; cross-Document embeds can commit atomically
+  ---
+  duration_ms: 1763.288156
+  type: 'test'
+  ...
+# Subtest: read-set revisions/hashes and runtime epoch are checked without rebasing content
+ok 165 - read-set revisions/hashes and runtime epoch are checked without rebasing content
+  ---
+  duration_ms: 2019.331282
+  type: 'test'
+  ...
+# Subtest: internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+ok 166 - internal snapshots preserve immutable authorship and enforce scene/entity revision axes
+  ---
+  duration_ms: 898.983662
+  type: 'test'
+  ...
+# Subtest: bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+ok 167 - bounded test admission stops before unlimited generations; ordinary no-op does not bump Document revision
+  ---
+  duration_ms: 1188.616577
+  type: 'test'
+  ...
+# Subtest: COW index pages are bounded, partitioned, chained, immutable and strictly verified
+ok 168 - COW index pages are bounded, partitioned, chained, immutable and strictly verified
+  ---
+  duration_ms: 2137.81995
+  type: 'test'
+  ...
+# Subtest: barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+ok 169 - barrier trace orders intent, staged files, prepared root, CURRENT directory flush and ACK
+  ---
+  duration_ms: 885.72429
+  type: 'test'
+  ...
+# Subtest: future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+ok 170 - future tombstones keep the committed key bound without reapplying or pretending a full ACK remains
+  ---
+  duration_ms: 959.25807
+  type: 'test'
+  ...
+# Subtest: historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+ok 171 - historical Registry uses its own Bindings after embed update/removal / linux-local-durable
+  ---
+  duration_ms: 7367.046217
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 172 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 5501.176761
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"86cfd88303bde5e7dd963439a8e8e3efe72a8883d33c32395a42556f803e063b","commitId":"tx:10cc9e73-7af1-4d26-948f-f379bac724bc","generation":3,"rootHash":"c59fb2bed75e59839dde92d97a8a2b4f9290ef4fa2102389a0c4b22f771a9075"},"after":{"checksum":"86cfd88303bde5e7dd963439a8e8e3efe72a8883d33c32395a42556f803e063b","commitId":"tx:10cc9e73-7af1-4d26-948f-f379bac724bc","generation":3,"rootHash":"c59fb2bed75e59839dde92d97a8a2b4f9290ef4fa2102389a0c4b22f771a9075"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 173 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 5.853037
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 174 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.009193
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 175 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 8.250471
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 176 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 8.420176
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 177 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 7.793845
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 178 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 10.959816
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 179 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 6.677372
+  type: 'test'
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 180 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 12549.380711
+  type: 'test'
+  ...
+# Subtest: a new verification operation cannot inherit another observation's metadata trust
+ok 181 - a new verification operation cannot inherit another observation's metadata trust
+  ---
+  duration_ms: 1001.44782
+  type: 'test'
+  ...
+# Subtest: shared canonical representations still pass the complete strict Document schema gate
+ok 182 - shared canonical representations still pass the complete strict Document schema gate
+  ---
+  duration_ms: 700.84629
+  type: 'test'
+  ...
+1..182
+# tests 182
+# suites 0
+# pass 181
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 906267.934921

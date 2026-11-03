@@ -1,0 +1,10 @@
+{
+  "attempts": 20,
+  "counts": {
+    "STORAGE_UNAVAILABLE:73": 20
+  },
+  "unexpectedTypedErrors": [],
+  "originalWriterRemainsReady": true,
+  "currentAndLockUnchanged": true,
+  "profile": "linux-local-durable"
+}

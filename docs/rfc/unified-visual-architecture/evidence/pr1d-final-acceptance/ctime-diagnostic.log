@@ -1,0 +1,17 @@
+TAP version 13
+# Subtest: native chmod-only control distinguishes metadata alias from content corruption
+ok 1 - native chmod-only control distinguishes metadata alias from content corruption
+  ---
+  duration_ms: 332.6744
+  type: 'test'
+  ...
+# {"attempts":64,"aliases":37,"changed":27,"sample":{"before":"2096:81132:7:1793734762815598913:1793734762827331211","after":"2096:81132:7:1793734762815598913:1793734762827331211","proof":{"fingerprint":"2096:81132:7:1793734762815598913:1793734762827331211","hash":"015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862","contentBytes":7}},"bytesUnchanged":true}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 477.558017
