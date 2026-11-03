@@ -199,6 +199,7 @@ export class CommitCoordinator {
       const prepared=await verifyPreparedClosure(this.files,envelope,{cache:this.verification,metrics:this.performance});
       timings.candidateVerificationMs=performance.now()-stageStarted;stageStarted=performance.now();
       if(before&&canonicalJson(await this.files.json("visual-registry/CURRENT.json",64*1024))!==canonicalJson(before.envelope))fail("INTEGRITY_ERROR","CURRENT changed during preparation",{storageIntegrity:true});
+      await prepared.verifyObservation();
       publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current",{owner:temporaryOwner});
       await this.files.point("after-publication-durable");
       timings.currentPublicationMs=performance.now()-stageStarted;stageStarted=performance.now();
@@ -209,13 +210,13 @@ export class CommitCoordinator {
       // between verification and selection without reconstructing all old versions.
       for(const [path,record]of plan.records){const digest=await this.files.digest(path);integrity(digest.bytes===record.bytes.length&&digest.hash===hashJsonBytes(record.bytes),"Published staged file changed after candidate verification");}
       integrity(prepared.envelope.rootHash===rootHash,"Published root changed under writer lease");
-      await this.journal.outcome(commitId,member);this.current=prepared;
+      await this.journal.outcome(commitId,member);await prepared.verifyObservation();this.current=prepared;
       timings.postPublicationMs=performance.now()-stageStarted;timings.totalMs=performance.now()-transactionStarted;
       this.performance.transactions.push(timings);if(this.performance.transactions.length>64)this.performance.transactions.shift();
       await this.files.point("before-ack");
       return {ack,replayed:false,...(maintenance?{result:maintenanceResult,envelope:prepared.envelope}:{})};
     }catch(e){
-      if(publicationAttempted||e.barrier||e.details?.storageIntegrity||["EIO","EROFS","EACCES"].includes(e.code)){
+      if(publicationAttempted||e.barrier||e.details?.storageIntegrity||["INTEGRITY_ERROR","EIO","EROFS","EACCES"].includes(e.code)){
         this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:e.code??"IO_ERROR",message:String(e.message).slice(0,300)};
         throw new PersistenceError("RECOVERY_REQUIRED","Commit outcome requires recovery; no durable ACK emitted",this.problem);
       }

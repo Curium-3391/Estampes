@@ -10,8 +10,8 @@ import { integrity, fail } from "./errors.js";
 import { PhysicalLocatorSchema, readVersion } from "./archive.js";
 import { LifecycleOptionsSchema, policyOf, validateRetentionEntry } from "./lifecycle-state.js";
 import { performance } from "node:perf_hooks";
+import { physicalFingerprint as fingerprint } from "./filesystem.js";
 
-const fingerprint=info=>[info.dev,info.ino,info.bytes,info.mtimeNs,info.ctimeNs].join(":");
 export class VerificationCache {
   constructor({recordBytes=24*1024*1024,registryBytes=32*1024*1024,proofBytes=4*1024*1024}={}){this.recordBytes=recordBytes;this.registryBytes=registryBytes;this.proofBytes=proofBytes;this.records=new Map();this.recordTotal=0;this.versions=new Map();this.fingerprints=new Map();this.proofTotal=0;this.proofSequence=0;this.registries=new Map();this.registryTotal=0;this.stats={snapshotLoads:0,versionHits:0,versionMisses:0,recordHits:0,registryHits:0,registryMaterializations:0,versionReconstructions:0,reconstructedMs:0,proofEvictions:0,metadataPathsTraversed:0};}
   dropProof(key,evicted=false){const proof=this.versions.get(key);if(!proof)return;this.versions.delete(key);this.proofTotal-=proof.bytes;
@@ -30,12 +30,12 @@ export class VerificationCache {
   }}
   async valid(files,key,row,track){
     const proof=this.versions.get(key);if(!proof||proof.rowHash!==hashJson(row))return false;
-    for(const path of proof.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return false;let actual;try{actual=fingerprint(await files.info(path));}catch{return false;}if(actual!==expected)return false;track.add(path);}
+    for(const path of proof.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return false;let info;try{info=await files.info(path);}catch{this.invalidatePath(path);return false;}if(fingerprint(info)!==expected){this.invalidatePath(path);return false;}files.observed?.(path,info);track.add(path);}
     this.versions.delete(key);proof.last=++this.proofSequence;this.versions.set(key,proof);
     this.stats.versionHits++;return true;
   }
   async remember(files,key,row,paths,record){
-    this.dropProof(key);const unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,fingerprint(await files.info(path))]);
+    this.dropProof(key);const unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,await files.proofFingerprint(path)]);
     let bytes=Buffer.byteLength(key)+Buffer.byteLength(hashJson(row))+64;for(const [path,value]of values){let physical=this.fingerprints.get(path);
       if(physical&&physical.fingerprint!==value){this.invalidatePath(path);physical=this.fingerprints.get(path);}
       if(!physical){const physicalBytes=Buffer.byteLength(path)+Buffer.byteLength(value)+48;physical={fingerprint:value,refs:0,bytes:physicalBytes};this.fingerprints.set(path,physical);this.proofTotal+=physicalBytes;}
@@ -53,12 +53,12 @@ export class VerificationCache {
   async registry(files,rootHash,resolver,locator,currentLocatorRootHash,track){
     const hit=this.registries.get(rootHash),historicalLocator=resolver.resolverLocatorRootHash!==currentLocatorRootHash;
     if(!hit||hit.logicalClosureHash!==resolver.logicalClosureHash||(historicalLocator&&hit.resolverLocatorRootHash!==resolver.resolverLocatorRootHash)||hit.locatorRowsHash!==hashJson(hit.refs.map(ref=>locator.get(hashJson(ref)))))return null;
-    for(const path of hit.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return null;let actual;try{actual=fingerprint(await files.info(path));}catch{return null;}if(actual!==expected)return null;track.add(path);}
+    for(const path of hit.paths){const expected=this.fingerprints.get(path)?.fingerprint;this.stats.metadataPathsTraversed++;if(!expected)return null;let info;try{info=await files.info(path);}catch{this.invalidatePath(path);return null;}if(fingerprint(info)!==expected){this.invalidatePath(path);return null;}files.observed?.(path,info);track.add(path);}
     this.registries.delete(rootHash);hit.last=++this.proofSequence;this.registries.set(rootHash,hit);this.stats.registryHits++;return hit.registry;
   }
   async rememberRegistry(files,rootHash,resolver,registry,locator,paths,currentLocatorRootHash){
     const bytes=Buffer.byteLength(canonicalJson([...registry]));if(bytes>this.registryBytes)return;
-    const refs=[...registry].filter(([key])=>key.startsWith("entity:")).map(([,ref])=>ref),unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,fingerprint(await files.info(path))]);
+    const refs=[...registry].filter(([key])=>key.startsWith("entity:")).map(([,ref])=>ref),unique=[...new Set(paths)].sort(),values=[];for(const path of unique)values.push([path,await files.proofFingerprint(path)]);
     this.dropRegistry(rootHash);let proofBytes=Buffer.byteLength(rootHash)+128;
     for(const [path,value]of values){let physical=this.fingerprints.get(path);if(physical&&physical.fingerprint!==value){this.invalidatePath(path);physical=this.fingerprints.get(path);}
       if(!physical){const physicalBytes=Buffer.byteLength(path)+Buffer.byteLength(value)+48;physical={fingerprint:value,refs:0,bytes:physicalBytes};this.fingerprints.set(path,physical);this.proofTotal+=physicalBytes;}physical.refs++;proofBytes+=Buffer.byteLength(path)+16;}
@@ -104,6 +104,7 @@ export function closure(documents,storeInstanceId,generation){return validateCom
 export const logicalClosureHash=registry=>hashJson([...registry].filter(([key])=>key.startsWith("entity:")).map(([,value])=>value).sort((a,b)=>a.entityId<b.entityId?-1:a.entityId>b.entityId?1:0));
 
 async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),metrics=null}={}){
+  files=files.observation();
   cache.stats.snapshotLoads++;
   const envelope=parse(CurrentEnvelopeSchema,envelopeInput);
   const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
@@ -180,7 +181,8 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   }
   for(const member of memberships.values())if(member.requestKeyDigest!==null)integrity(keys.has(member.requestKeyDigest),"Committed effect is missing its ledger outcome");
   if(metrics)metrics.verification={...cache.stats,recordCacheBytes:cache.recordTotal,registryCacheBytes:cache.registryTotal,proofMetadataBytes:cache.proofTotal,proofMetadataBudget:cache.proofBytes,physicalFingerprints:cache.fingerprints.size,versionProofs:cache.versions.size,registryProofs:cache.registries.size};
-  return {root,envelope,indices,documents,authority,lifecycle,files:[...pages.track,"visual-registry/CURRENT.json"]};
+  await files.verifyObservations();
+  return {root,envelope,indices,documents,authority,lifecycle,files:[...pages.track,"visual-registry/CURRENT.json"],verifyObservation:()=>files.verifyObservations()};
 }
 
 export const loadCommitted=async(files,options)=>loadSnapshot(files,await files.json("visual-registry/CURRENT.json",64*1024),options);
