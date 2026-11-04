@@ -73,7 +73,7 @@ if raw python-setup 240 512 bash -c '
   set -euo pipefail
   python3 -m venv --without-pip "$TMPDIR/venv"
   python3 -m pip --python "$TMPDIR/venv/bin/python" install --no-cache-dir -r cas-service/requirements.lock
-  "$TMPDIR/venv/bin/python" -m pip freeze
+  python3 -m pip --python "$TMPDIR/venv/bin/python" freeze
 '; then
   pythonEnv=("PYTHON=$python")
   run cas-python 120 512 "$python" -m unittest discover -s cas-service/tests -v
