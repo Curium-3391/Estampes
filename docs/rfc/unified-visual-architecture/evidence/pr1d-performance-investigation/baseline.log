@@ -1,0 +1,51 @@
+["git", "rev-parse", "HEAD", "HEAD^{tree}"]
+616c73c6c4571cd9ebf9eea9e60e21882428b612
+247e117844278f0338b92306a940f3727645fb3b
+exit=0
+["git", "merge-base", "--is-ancestor", "29d097833688ddb649a88cb2a09f22ba5fadda8e", "HEAD"]
+exit=0
+["git", "diff", "--name-status", "29d097833688ddb649a88cb2a09f22ba5fadda8e", "HEAD", "--", "src", "tests", "scripts", "package.json", "package-lock.json", "server.js"]
+exit=0
+["git", "status", "--porcelain"]
+?? docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/
+exit=0
+["uname", "-a"]
+Linux acc02a22d84c 6.18.57 #1 SMP Tue Oct 20 21:56:04 UTC 2026 x86_64 GNU/Linux
+exit=0
+["id"]
+uid=1000(agent) gid=1000(agent) groups=1000(agent)
+exit=0
+["/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin/node", "--version"]
+v22.23.4
+exit=0
+["findmnt", "-T", "/workspace"]
+TARGET SOURCE  FSTYPE  OPTIONS
+/      overlay overlay rw,relatime,lowerdir=/run/kata-containers/erofs-multi-layer/acc02a22d84c4e28b71bbcfb5439c4ea/lower-0,upperdir=/run/kata-containers/erofs-multi-layer/acc02a22d84c4e28b71bbcfb5439c4ea/upper/upper,workdir=/run/kata-containers/erofs-multi-layer/acc02a22d84c4e28b71bbcfb5439c4ea/upper/work,index=off,metacopy=off
+exit=0
+["findmnt", "-T", "/tmp"]
+TARGET SOURCE FSTYPE OPTIONS
+/tmp   none   tmpfs  rw,relatime
+exit=0
+["df", "-h", "/workspace", "/tmp"]
+Filesystem      Size  Used Avail Use% Mounted on
+overlay         7.9G   27M  7.4G   1% /
+none            4.9G  4.0K  4.9G   1% /tmp
+exit=0
+["/usr/bin/flock", "--version"]
+flock from util-linux 2.41.5
+exit=0
+/sys/fs/cgroup/cpu.max
+200000 100000
+/sys/fs/cgroup/memory.max
+8589934592
+/etc/os-release
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.6
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
