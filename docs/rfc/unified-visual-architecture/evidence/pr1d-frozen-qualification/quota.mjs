@@ -25,6 +25,14 @@ let store, passed = false;
 async function allocate(bytes) {
   const fs = await statfs(root, { bigint: true });
   assert.ok(fs.bavail * fs.bsize >= 64n * BigInt(GiB));
+  const hostFree = {};
+  for (const drive of ["/mnt/c", "/mnt/d", "/mnt/e"]) {
+    const mounted = await statfs(drive, { bigint: true });
+    hostFree[drive] = Number(mounted.bavail * mounted.bsize);
+  }
+  emit("allocation-safety", { guestFree: Number(fs.bavail * fs.bsize), hostFree });
+  // Budget as though all requested extents could consume real backing blocks.
+  assert.ok(Math.min(...Object.values(hostFree)) >= 59 * GiB);
   assert.ok(bytes <= DEFAULT_QUOTA && fixture.startsWith(tmpdir() + "/"));
   const p = spawnSync("python3", ["-c", [
     "import os, sys",
@@ -72,6 +80,13 @@ try {
   const ack = (await commit(first, 1)).ack;
   await allocate(9 * GiB);
   await commit(second, 2);
+  const capacity = new CapacityManager(files, DEFAULT_QUOTA);
+  await capacity.reserve("without-backup-pressure", 1);
+  capacity.release("without-backup-pressure");
+  await assert.rejects(capacity.reserve("with-backup-pressure", 1, { reservedJobs: GiB }), error => {
+    emit("backup-reservation-pressure", { code: error.code, details: error.details });
+    return error.code === "STORAGE_UNAVAILABLE" && error.details?.reservedJobs === GiB;
+  });
   await allocate(10 * GiB - 120 * MiB);
   const before = await loadCommitted(files);
   const draft = structuredClone(third);
@@ -87,8 +102,6 @@ try {
   assert.deepEqual(third, draft);
   assert.deepEqual((await readdir(files.path("visual-transactions"))).sort(), journals);
   await unchanged(before);
-  await assert.rejects(new CapacityManager(files, DEFAULT_QUOTA)
-    .reserve("reserve-pressure", 1, { reservedJobs: 80 * MiB }), { code: "STORAGE_UNAVAILABLE" });
   assert.deepEqual((await commit(first, 4)).ack, ack);
   await unlink(fixture);
   await files.syncDirectory(root, "qualification-fixture-release");
