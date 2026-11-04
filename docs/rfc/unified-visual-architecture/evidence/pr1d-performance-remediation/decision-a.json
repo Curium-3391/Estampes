@@ -1,0 +1,34 @@
+{
+  "decision": "REVERT",
+  "reason": "No repeatable plain end-to-end benefit: opposite-sign paired results amid substantial run-to-run variance. Lstat reduction alone does not establish latency improvement.",
+  "pairs": [
+    {
+      "baseline": "baseline-history-25-2",
+      "candidate": "a-history-25-2",
+      "baselineCommitMs": 42988.407662000005,
+      "candidateCommitMs": 23455.836448999995,
+      "percentLatencyChange": -45.43683349840847
+    },
+    {
+      "baseline": "baseline-history-25-3",
+      "candidate": "a-history-25-3",
+      "baselineCommitMs": 27575.004192000004,
+      "candidateCommitMs": 29806.367924000006,
+      "percentLatencyChange": 8.091979665581928
+    }
+  ],
+  "integrity": {
+    "case": "a-integrity",
+    "pass": 60,
+    "fail": 0,
+    "skip": 0
+  },
+  "profileLastCommitLstat": {
+    "baseline": 12669,
+    "candidate": 11621
+  },
+  "boundaryPassesEach": 3,
+  "productionRestoredByteIdentical": true,
+  "later50And100Comparisons": "NOT RUN after keep/revert failure; futility stop prevents extending a rejected candidate. Pre-interruption 50 pair excluded.",
+  "patchSha256": "71b1e87dfeea3cecabdc100aa10b3d95bbcfae570766199b6b36301587547fa4"
+}

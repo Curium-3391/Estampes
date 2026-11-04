@@ -1,0 +1,22 @@
+diff --git a/src/persistence/filesystem.js b/src/persistence/filesystem.js
+index e7e856c..e3fa0b9 100644
+--- a/src/persistence/filesystem.js
++++ b/src/persistence/filesystem.js
+@@ -78,11 +78,12 @@ export class ManagedFiles {
+     }
+   }
+   async bytes(name,maxBytes=64*1024*1024) {
+-    const path=this.path(name), st=await lstat(path);privateFile(st);integrity(st.size<=maxBytes,"Invalid managed file or byte limit");
+-    if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Managed file crosses filesystem devices");
+-    // All path components were created under the private store; recheck against symlink substitution.
+-    let dir=dirname(path);while(dir!==this.root){privateDirectory(await lstat(dir));dir=dirname(dir);}
+-    const before=await this.info(name),fd=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
++    // info checks file ownership/links, device and private directory ancestry.
++    // Use that same pre-open observation rather than a duplicate metadata walk.
++    // Nothing is retained across reads or the independent post-read check.
++    const path=this.path(name),before=await this.info(name);
++    integrity(before.bytes<=maxBytes,"Invalid managed file or byte limit");
++    const fd=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+     try{
+       const opened=await fd.stat({bigint:true});
+       privateFile(opened);integrity(Number(opened.size)<=maxBytes,"Opened managed file exceeds byte limit");
