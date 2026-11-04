@@ -1,0 +1,387 @@
+TAP version 13
+# Subtest: UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+ok 1 - UVA-50: complete supported backup preserves rich history, bindings, tombstones and namespace; restore stays read-only
+  ---
+  duration_ms: 16039.589353
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+ok 2 - UVA-50/59: backup ENOSPC cannot publish complete and resumes safely after restart
+  ---
+  duration_ms: 9060.744748
+  type: 'test'
+  ...
+# Subtest: UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+ok 3 - UVA-50/59: SIGKILL before backup completion leaves an incomplete artifact and resumes
+  ---
+  duration_ms: 3976.264796
+  type: 'test'
+  ...
+# Subtest: UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+ok 4 - UVA-50: restore rejects a missing Ledger page and never overwrites an active store
+  ---
+  duration_ms: 2436.277286
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+ok 5 - UVA-50/65: deadline cancellation releases pins and an altered destination token is rejected
+  ---
+  duration_ms: 1893.998873
+  type: 'test'
+  ...
+# Subtest: UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+ok 6 - UVA-50: full Estampes backup and non-empty destinations are explicitly unsupported
+  ---
+  duration_ms: 530.055958
+  type: 'test'
+  ...
+# Subtest: UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+ok 7 - UVA-50/65: renewed backup safely reacquires an expired runtime pin from its durable file closure
+  ---
+  duration_ms: 50402.592412
+  type: 'test'
+  ...
+# Subtest: native candidate proof remains valid through after-prepared
+ok 8 - native candidate proof remains valid through after-prepared
+  ---
+  duration_ms: 9051.45166
+  type: 'test'
+  ...
+# {"marker":{"point":"after-prepared","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:13805:810:1793818020841453065:1793818020841453065","after":"34:13805:2:1793818026118639951:1793818026118639951","workerPid":1224},"before":{"generation":3,"rootHash":"d01088e1aa6fe6df876d173c4686594acae69f254f4a8781d120de5db4eba8bc","commitId":"tx:a77dd2cb-f20f-404e-80fe-a7819a262b41","checksum":"2c3558c36653b83e3c4e8ee7a06c50d25d68060f3a945980eff7af6cdd2905a4"},"after":{"checksum":"2c3558c36653b83e3c4e8ee7a06c50d25d68060f3a945980eff7af6cdd2905a4","commitId":"tx:a77dd2cb-f20f-404e-80fe-a7819a262b41","generation":3,"rootHash":"d01088e1aa6fe6df876d173c4686594acae69f254f4a8781d120de5db4eba8bc"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Stored Document generation cannot be verified"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through current.before-rename
+ok 9 - native candidate proof remains valid through current.before-rename
+  ---
+  duration_ms: 10813.320092
+  type: 'test'
+  ...
+# {"marker":{"point":"current.before-rename","mode":"replace","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:13952:810:1793818029730481456:1793818029734481281","after":"34:14052:2:1793818036815781304:1793818036815781304","workerPid":1257},"before":{"generation":3,"rootHash":"d638a1263556af871eb011b3db75c255403a5fc7e384f4f0c8a3835f2c526b4f","commitId":"tx:2a0ce935-9ef3-49a6-8471-47c540962571","checksum":"883989b3671cd56e4593ee2d9533e1e6a7f01caa036bd5c7347b3758c48480b5"},"after":{"checksum":"883989b3671cd56e4593ee2d9533e1e6a7f01caa036bd5c7347b3758c48480b5","commitId":"tx:2a0ce935-9ef3-49a6-8471-47c540962571","generation":3,"rootHash":"d638a1263556af871eb011b3db75c255403a5fc7e384f4f0c8a3835f2c526b4f"},"ledgerBefore":1,"ledgerAfter":1,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: native candidate proof remains valid through before-ack
+ok 10 - native candidate proof remains valid through before-ack
+  ---
+  duration_ms: 11007.781299
+  type: 'test'
+  ...
+# {"marker":{"point":"before-ack","mode":"overwrite","target":"visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json","before":"34:14102:810:1793818042857904970:1793818042857904970","after":"34:14102:2:1793818048841641740:1793818048841641740","workerPid":1290},"before":{"generation":3,"rootHash":"9028153ffaac273e3b75652673546fb4b4292659fe912a9f82b9ff36d3109d68","commitId":"tx:5d49b1f9-3b7b-4a63-81e0-84aaa2e85b97","checksum":"67f0c9a986159eef352d5af56e45ca1b63167087ec4549cef227fbae7ec11d21"},"after":{"checksum":"af90c7409a92b52e31b18b651f2e219a4d95bf132f9444c5eba18102b4ad4e27","commitId":"tx:ab56347b-ac22-4a1d-88ca-e10a9cea37ae","generation":4,"rootHash":"3758455a8283424c750c1804e89b45c03030c2aa8666ed6a0ca27d55e2eabe0e"},"ledgerBefore":1,"ledgerAfter":2,"result":{"error":"RECOVERY_REQUIRED","details":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Managed file changed within verification"}},"warm":"read-only-recovery","coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace
+ok 11 - GC retains a replaced quarantine inode / replace
+  ---
+  duration_ms: 26005.992345
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/5858238c-8a3e-423c-ad20-d9e600373197/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/5858238c-8a3e-423c-ad20-d9e600373197/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace","before":"34:14253:810:1793818050521568021:1793818052215204474","after":"34:14434:2:1793818075554009056:1793818075554009056","workerPid":1323},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: GC retains a replaced quarantine inode / replace-same
+ok 12 - GC retains a replaced quarantine inode / replace-same
+  ---
+  duration_ms: 32318.892025
+  type: 'test'
+  ...
+# {"marker":{"point":"gc.before-unlink","pointPath":"gc-quarantine/7c4a1f8e-b03b-471d-8b1d-5f295f7369e5/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","target":"gc-quarantine/7c4a1f8e-b03b-471d-8b1d-5f295f7369e5/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin","mode":"replace-same","before":"34:14484:810:1793818086711979907:1793818104295207797","after":"34:14665:810:1793818107886079798:1793818107887049686","workerPid":1352},"result":{"error":"RECOVERY_REQUIRED"},"exists":true,"writer":"read-only-recovery"}
+# Subtest: R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+ok 13 - R3-A2 / bounded real same-inode equal-length rewrites always reject stale content proof
+  ---
+  duration_ms: 899.225851
+  type: 'test'
+  ...
+# {"attempts":128,"identicalFingerprints":0,"staleProofsAccepted":0,"filesystem":"actual temporary filesystem; not asserted ext4"}
+# Subtest: R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+ok 14 - R3-A2 / forced metadata alias cannot reuse a cache proof with different real bytes
+  ---
+  duration_ms: 28.250913
+  type: 'test'
+  ...
+# Subtest: private tree rejects directory permissions on reopen and preserves CURRENT
+ok 15 - private tree rejects directory permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 5102.010783
+  type: 'test'
+  ...
+# Subtest: private tree rejects file permissions on reopen and preserves CURRENT
+ok 16 - private tree rejects file permissions on reopen and preserves CURRENT
+  ---
+  duration_ms: 2703.570791
+  type: 'test'
+  ...
+# Subtest: private tree rejects hardlink on reopen and preserves CURRENT
+ok 17 - private tree rejects hardlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 1886.102048
+  type: 'test'
+  ...
+# Subtest: private tree rejects symlink on reopen and preserves CURRENT
+ok 18 - private tree rejects symlink on reopen and preserves CURRENT
+  ---
+  duration_ms: 1621.422804
+  type: 'test'
+  ...
+# Subtest: unsafe writable ancestry is refused before creating the OS lease
+ok 19 - unsafe writable ancestry is refused before creating the OS lease
+  ---
+  duration_ms: 11.406236
+  type: 'test'
+  ...
+# Subtest: runtime root mode changes fence before publication without automatic chmod
+ok 20 - runtime root mode changes fence before publication without automatic chmod
+  ---
+  duration_ms: 944.322658
+  type: 'test'
+  ...
+# Subtest: same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+ok 21 - same UID remains able to rewrite its own private tree; diagnostics exclude that adversary
+  ---
+  duration_ms: 689.992816
+  type: 'test'
+  ...
+# Subtest: H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+ok 22 - H-01 / three reopens retain exact ACK and reject different payload / linux-process-crash-test
+  ---
+  duration_ms: 9635.085122
+  type: 'test'
+  ...
+# Subtest: H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+ok 23 - H-01 / SIGKILL during exact CURRENT claim cleanup still replays the durable ACK
+  ---
+  duration_ms: 3685.618916
+  type: 'test'
+  ...
+# Both disposable lease workers are ready
+# CURRENT cleanup is temporary-claim.before-unlink occurrence 18
+# SIGKILL left only the durable CURRENT claim
+# Cleanup recovery reopen 1 ready
+# Cleanup recovery reopen 2 ready
+# Cleanup recovery reopen 3 ready
+# Subtest: H-01 / missing prepared fails closed for a superseded CURRENT
+ok 24 - H-01 / missing prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 1899.776252
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Missing CURRENT publication candidate evidence"},"recovery":[]}
+# Subtest: H-01 / corrupt prepared fails closed for a superseded CURRENT
+ok 25 - H-01 / corrupt prepared fails closed for a superseded CURRENT
+  ---
+  duration_ms: 1850.271278
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"UNSUPPORTED_SCHEMA","message":"Invalid input: expected \\"estampes.prepared/1\\""},"recovery":[]}
+# Subtest: H-01 / forged publication fails closed for a superseded CURRENT
+ok 26 - H-01 / forged publication fails closed for a superseded CURRENT
+  ---
+  duration_ms: 2254.173153
+  type: 'test'
+  ...
+# {"state":"read-only-recovery","problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"CURRENT candidate differs from exact claim"},"recovery":[]}
+# Subtest: H-02 / native SIGKILL across durable G2 plan
+ok 27 - H-02 / native SIGKILL across durable G2 plan
+  ---
+  duration_ms: 17139.652879
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 before intent
+ok 28 - H-02 / native SIGKILL across durable G2 before intent
+  ---
+  duration_ms: 29496.375663
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 after intent
+ok 29 - H-02 / native SIGKILL across durable G2 after intent
+  ---
+  duration_ms: 15454.274128
+  type: 'test'
+  ...
+# Subtest: H-02 / native SIGKILL across durable G2 terminal
+ok 30 - H-02 / native SIGKILL across durable G2 terminal
+  ---
+  duration_ms: 11498.76729
+  type: 'test'
+  ...
+# Subtest: H-02 / corrupt plan lacks durable unlink intent and must fail closed
+ok 31 - H-02 / corrupt plan lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 2812.246642
+  type: 'test'
+  ...
+# Subtest: H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+ok 32 - H-02 / tampered quarantine lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 3478.551224
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+ok 33 - H-02 / missing quarantine cold lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 2910.748108
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+ok 34 - H-02 / missing quarantine warm lacks durable unlink intent and must fail closed
+  ---
+  duration_ms: 2735.986771
+  type: 'test'
+  ...
+# {"result":{"code":"RECOVERY_REQUIRED","message":"Maintenance requires recovery"},"gcState":{"deleted":[],"moved":[0,1,2,3],"planHash":"f99c4ec915f5491ee92dad392b9fa3e5cfda82268389ad97e34ae2fe5c016aea","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"waiting-grace"},"writerState":"read-only-recovery"}
+# Subtest: H-01 / a superseded old-format classification cannot invent missing selection evidence
+ok 35 - H-01 / a superseded old-format classification cannot invent missing selection evidence
+  ---
+  duration_ms: 1903.309976
+  type: 'test'
+  ...
+# Subtest: H-02 / missing source before quarantine cannot be authorized retroactively
+ok 36 - H-02 / missing source before quarantine cannot be authorized retroactively
+  ---
+  duration_ms: 3434.196473
+  type: 'test'
+  ...
+# Subtest: H-02 / missing quarantine before intent cannot be authorized retroactively
+ok 37 - H-02 / missing quarantine before intent cannot be authorized retroactively
+  ---
+  duration_ms: 3621.451979
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+ok 38 - H-02 / a later legitimate commit can reuse a content-addressed path / quarantined
+  ---
+  duration_ms: 3615.014214
+  type: 'test'
+  ...
+# Subtest: H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+ok 39 - H-02 / a later legitimate commit can reuse a content-addressed path / terminal
+  ---
+  duration_ms: 3876.095481
+  type: 'test'
+  ...
+# Subtest: coherent pre-open metadata rejects intervening parent symlink
+ok 40 - coherent pre-open metadata rejects intervening parent symlink
+  ---
+  duration_ms: 16.179821
+  type: 'test'
+  ...
+# Subtest: coherent pre-open metadata rejects intervening parent replacement
+ok 41 - coherent pre-open metadata rejects intervening parent replacement
+  ---
+  duration_ms: 4.036834
+  type: 'test'
+  ...
+# Subtest: coherent pre-open metadata rejects intervening file symlink
+ok 42 - coherent pre-open metadata rejects intervening file symlink
+  ---
+  duration_ms: 3.896147
+  type: 'test'
+  ...
+# Subtest: coherent pre-open metadata rejects intervening hardlink
+ok 43 - coherent pre-open metadata rejects intervening hardlink
+  ---
+  duration_ms: 2.752146
+  type: 'test'
+  ...
+# Subtest: coherent pre-open metadata rejects intervening permissions
+ok 44 - coherent pre-open metadata rejects intervening permissions
+  ---
+  duration_ms: 4.14497
+  type: 'test'
+  ...
+# Subtest: metadata reuse preserves byte limits and rechecks ancestry on every read
+ok 45 - metadata reuse preserves byte limits and rechecks ancestry on every read
+  ---
+  duration_ms: 4.962207
+  type: 'test'
+  ...
+# Subtest: PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+ok 46 - PR-1D: warm verification reconstructs each new logical version once, not all retained versions twice
+  ---
+  duration_ms: 6929.268206
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+ok 47 - PR-1D native finding M-01: history proofs deduplicate physical fingerprints within the explicit budget
+  ---
+  duration_ms: 62386.340593
+  type: 'test'
+  ...
+# Subtest: PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+ok 48 - PR-1D native finding M-01: a small proof budget evicts trust and forces later verification
+  ---
+  duration_ms: 126.881736
+  type: 'test'
+  ...
+# Subtest: PR-1D: a live generation replacement invalidates the cache and fences the writer
+ok 49 - PR-1D: a live generation replacement invalidates the cache and fences the writer
+  ---
+  duration_ms: 780.593562
+  type: 'test'
+  ...
+# Subtest: verification read race must reject before acknowledging a commit
+ok 50 - verification read race must reject before acknowledging a commit
+  ---
+  duration_ms: 2101.112359
+  type: 'test'
+  ...
+# {"error":"RECOVERY_REQUIRED","before":{"checksum":"7091068552443427ebe23e09840cd826c896d15e77a3324efe0238e4d0e570bd","commitId":"tx:ea3de9ab-a722-45b4-81e0-f0bc1e77ea3f","generation":3,"rootHash":"ab78e1896220f936c54883144cb9d503c43a96b0f1fa43a6d1dd11e351f4c2be"},"after":{"checksum":"7091068552443427ebe23e09840cd826c896d15e77a3324efe0238e4d0e570bd","commitId":"tx:ea3de9ab-a722-45b4-81e0-f0bc1e77ea3f","generation":3,"rootHash":"ab78e1896220f936c54883144cb9d503c43a96b0f1fa43a6d1dd11e351f4c2be"},"coldError":"INTEGRITY_ERROR","restart":"read-only-recovery"}
+# Subtest: coherent observation rejects before-open changes and cannot seed a warm proof
+ok 51 - coherent observation rejects before-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 20.54326
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects after-open changes and cannot seed a warm proof
+ok 52 - coherent observation rejects after-open changes and cannot seed a warm proof
+  ---
+  duration_ms: 9.32128
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects in-place changes and cannot seed a warm proof
+ok 53 - coherent observation rejects in-place changes and cannot seed a warm proof
+  ---
+  duration_ms: 8.542434
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects inode-replacement changes and cannot seed a warm proof
+ok 54 - coherent observation rejects inode-replacement changes and cannot seed a warm proof
+  ---
+  duration_ms: 12.633775
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects size changes and cannot seed a warm proof
+ok 55 - coherent observation rejects size changes and cannot seed a warm proof
+  ---
+  duration_ms: 15.981018
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects mtime changes and cannot seed a warm proof
+ok 56 - coherent observation rejects mtime changes and cannot seed a warm proof
+  ---
+  duration_ms: 9.290875
+  type: 'test'
+  ...
+# Subtest: coherent observation rejects ctime changes and cannot seed a warm proof
+ok 57 - coherent observation rejects ctime changes and cannot seed a warm proof
+  ---
+  duration_ms: 24.036986
+  type: 'test'
+  ...
+# Subtest: cold verification shares only hash-checked delta prefixes within a bounded operation
+ok 58 - cold verification shares only hash-checked delta prefixes within a bounded operation
+  ---
+  duration_ms: 7442.666838
+  type: 'test'
+  ...
+# Subtest: a new verification operation cannot inherit another observation's metadata trust
+ok 59 - a new verification operation cannot inherit another observation's metadata trust
+  ---
+  duration_ms: 641.712718
+  type: 'test'
+  ...
+# Subtest: shared canonical representations still pass the complete strict Document schema gate
+ok 60 - shared canonical representations still pass the complete strict Document schema gate
+  ---
+  duration_ms: 572.045749
+  type: 'test'
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 60
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 392998.57374

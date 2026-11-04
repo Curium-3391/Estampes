@@ -1,0 +1,189 @@
+{
+  "decision": "KEEP",
+  "scope": "One redundant JSON guard removed inside the synchronous JSON schema copy; exact guard/encoder/limits/copy semantics preserved.",
+  "retentionBasis": "Two independent alternating paired probes establish repeatable local schema latency/CPU reduction, with exact bytes/hashes and existing memory/cache limits. No general end-to-end speedup claim.",
+  "cpuProbes": [
+    {
+      "case": "b-cpu-pair-1",
+      "sourceHashes": {
+        "baseline": "10bfd506b5fb4be7aeeadfaa9dca5ec1b6cf6751fa2374b98471224779e89f93",
+        "candidate": "88da6025086c7c90dc07ddc825f2c0741c350084e33cfb146a9d73af8420ea40"
+      },
+      "maxRSSKiB": 321840,
+      "baseline": {
+        "wallMedianMs": 343.91667400000006,
+        "cpuMedianMs": 344.186
+      },
+      "candidate": {
+        "wallMedianMs": 232.50295799999913,
+        "cpuMedianMs": 245.525
+      },
+      "wallPercentChange": -32.39555520939962,
+      "cpuPercentChange": -28.66502414392218
+    },
+    {
+      "case": "b-cpu-pair-2",
+      "sourceHashes": {
+        "baseline": "10bfd506b5fb4be7aeeadfaa9dca5ec1b6cf6751fa2374b98471224779e89f93",
+        "candidate": "88da6025086c7c90dc07ddc825f2c0741c350084e33cfb146a9d73af8420ea40"
+      },
+      "maxRSSKiB": 321896,
+      "baseline": {
+        "wallMedianMs": 543.65852,
+        "cpuMedianMs": 582.653
+      },
+      "candidate": {
+        "wallMedianMs": 220.5853790000001,
+        "cpuMedianMs": 220.757
+      },
+      "wallPercentChange": -59.42574780213137,
+      "cpuPercentChange": -62.111754337487326
+    }
+  ],
+  "plainEndToEnd": [
+    {
+      "sizeMiB": 1,
+      "repeat": 1,
+      "baselineCommitMs": 909.6313110000003,
+      "candidateCommitMs": 1268.458517,
+      "commitPercentChange": 39.44754337947363,
+      "baselineColdMs": 1329.9323320000003,
+      "candidateColdMs": 1457.7152129999995,
+      "coldPercentChange": 9.608224262646115,
+      "baselineProcessPeakKiB": 89548,
+      "candidateProcessPeakKiB": 90212
+    },
+    {
+      "sizeMiB": 8,
+      "repeat": 1,
+      "baselineCommitMs": 7231.603590999999,
+      "candidateCommitMs": 8016.538001,
+      "commitPercentChange": 10.854223411483455,
+      "baselineColdMs": 7481.948363000001,
+      "candidateColdMs": 5179.3448960000005,
+      "coldPercentChange": -30.775452533018242,
+      "baselineProcessPeakKiB": 304764,
+      "candidateProcessPeakKiB": 356228
+    },
+    {
+      "sizeMiB": 8,
+      "repeat": 2,
+      "baselineCommitMs": 5204.978947,
+      "candidateCommitMs": 9649.608251,
+      "commitPercentChange": 85.39187860811151,
+      "baselineColdMs": 4106.645158000001,
+      "candidateColdMs": 3791.8621170000006,
+      "coldPercentChange": -7.665211599467847,
+      "baselineProcessPeakKiB": 304340,
+      "candidateProcessPeakKiB": 313296
+    },
+    {
+      "sizeMiB": 16,
+      "repeat": 1,
+      "baselineCommitMs": 12644.321926999999,
+      "candidateCommitMs": 11929.631833,
+      "commitPercentChange": -5.65226113449302,
+      "baselineColdMs": 8950.301060000002,
+      "candidateColdMs": 9601.230946,
+      "coldPercentChange": 7.272714980606443,
+      "baselineProcessPeakKiB": 514928,
+      "candidateProcessPeakKiB": 518900
+    },
+    {
+      "sizeMiB": 32,
+      "repeat": 1,
+      "baselineCommitMs": 29592.801002,
+      "candidateCommitMs": 20452.082751,
+      "commitPercentChange": -30.888317230877306,
+      "baselineColdMs": 26742.197861,
+      "candidateColdMs": 17501.657137000002,
+      "coldPercentChange": -34.55415584025769,
+      "baselineProcessPeakKiB": 727552,
+      "candidateProcessPeakKiB": 919604
+    }
+  ],
+  "canonicalParity": "PASS: 1/8/16/32 MiB raw bytes and stored-content SHA256, 512 Unicode cases",
+  "negativeBaseline": {
+    "pass": 18,
+    "fail": 0
+  },
+  "candidateFoundationAndNegative": {
+    "pass": 60,
+    "fail": 0
+  },
+  "knownFailure": {
+    "case": "b-document-32-profile",
+    "exitCode": 1,
+    "coldClientError": "RECOVERY_REQUIRED / Writer startup timed out",
+    "wallMs": 31593.517018,
+    "storePreserved": "/tmp/pr1d-investigation-mwz_4mq_",
+    "boundedPlainRetest": "b-document-32-bounded-retest: exit 0, cold 28958.340682 ms; not a resolution of variability"
+  },
+  "near64MiB": "NOT RUN: 32 MiB cold and RSS exceed the frozen near-boundary admission thresholds",
+  "cacheBudgetsUnchanged": {
+    "recordBytes": 25165824,
+    "proofBytes": 4194304
+  },
+  "maxMeasuredProcessKiB": 919604,
+  "nativeReacceptance": "BLOCKED",
+  "productionQualification": "NOT QUALIFIED",
+  "candidateSourceSha256": "88da6025086c7c90dc07ddc825f2c0741c350084e33cfb146a9d73af8420ea40",
+  "qualification": {
+    "completeSerialRetest": {
+      "exitCode": 0,
+      "stop": null,
+      "tests": 545,
+      "pass": 543,
+      "fail": 0,
+      "skipped": 2,
+      "cancelled": 0,
+      "failedNames": []
+    },
+    "originalCompleteSerial": {
+      "exitCode": 1,
+      "stop": null,
+      "tests": 545,
+      "pass": 542,
+      "fail": 1,
+      "skipped": 2,
+      "cancelled": 0,
+      "failedNames": [
+        "not ok 276 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect"
+      ]
+    },
+    "g2": {
+      "exitCode": 0,
+      "stop": null,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "failedNames": []
+    },
+    "startupControls": {
+      "startup-fault-baseline-control": {
+        "exitCode": 0,
+        "stop": null,
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "failedNames": []
+      },
+      "startup-fault-candidate-control": {
+        "exitCode": 0,
+        "stop": null,
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "failedNames": []
+      }
+    },
+    "allQualifiedSourceAndTestSha256MatchFinal": true
+  },
+  "status": "IMPLEMENTED — PRE-MERGE VALIDATED (supported tmpfs correctness only); native/performance qualification BLOCKED"
+}

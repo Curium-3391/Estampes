@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 2510.583138
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":false,"claimId":"a17fcc89-8adc-47a8-9ce3-efe771a03756","currentGeneration":4,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 2589.235571
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":true,"claimId":"d4b721a2-19ae-4edf-9627-147e41021080","currentGeneration":5,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 2064.889977
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":false,"claimId":"da43b2ee-50d8-4ef9-afbe-f14caf9214ab","currentGeneration":4,"currentDocuments":1,"ledgerEntries":1,"status":{"state":"ready","problem":null}}
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 2693.163445
+  type: 'test'
+  ...
+# {"profile":"linux-process-crash-test","laterCommit":true,"claimId":"0c9adf01-dae7-4d2b-b513-8ad43fcab676","currentGeneration":5,"currentDocuments":1,"ledgerEntries":2,"status":{"state":"ready","problem":null}}
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10106.166147

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "r1-h01",
+    "exitCode": 1,
+    "stop": null
+  },
+  {
+    "name": "r1-independent",
+    "exitCode": 0,
+    "stop": null
+  },
+  {
+    "name": "r2-storage",
+    "exitCode": 0,
+    "stop": null
+  },
+  {
+    "name": "r2-cache",
+    "exitCode": 0,
+    "stop": null
+  },
+  {
+    "name": "r2-ack",
+    "exitCode": 0,
+    "stop": null
+  },
+  {
+    "name": "r3-adversarial",
+    "exitCode": 1,
+    "stop": null
+  },
+  {
+    "name": "r3-metadata",
+    "exitCode": 0,
+    "stop": null
+  },
+  {
+    "name": "r3-publication",
+    "exitCode": 0,
+    "stop": null
+  },
+  {
+    "name": "r3-backup",
+    "exitCode": 0,
+    "stop": null
+  }
+]

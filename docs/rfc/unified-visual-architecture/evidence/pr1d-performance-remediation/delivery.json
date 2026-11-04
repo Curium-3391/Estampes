@@ -1,0 +1,17 @@
+{
+  "baseline": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+  "branch": "fix/unified-visual-architecture-pr1d-performance-remediation",
+  "optimizationA": {
+    "decision": "REVERT",
+    "decisionCommit": "b9f3fd1a93c7acff631811fc770e864650717dc1"
+  },
+  "optimizationB": {
+    "decision": "KEEP",
+    "commit": "ddfeaa221ff3e5a6556ca6cc8f57048b6dd67b2b"
+  },
+  "optimizationC": "NOT ADMITTED",
+  "evidenceCommitResolver": "git log -1 --format=%H -- docs/rfc/unified-visual-architecture/PR-1D-PERFORMANCE-REMEDIATION-REPORT.md",
+  "nativeReacceptance": "BLOCKED",
+  "production": "NOT QUALIFIED",
+  "pushAuthorization": "Explicit user instruction 完成後push; no main merge or deployment authorization"
+}

@@ -1,0 +1,15 @@
+{
+  "cause": "exec-server disconnected; environment became unavailable",
+  "interruptedCase": "a-history-50-1",
+  "terminalReceipt": "MISSING, not a pass",
+  "rawSha256": {
+    "a-history-50-1/input-sha256.json": "64934540cccbec720b77508dfbb90afd20eda1689df05022466bef78f1372b51",
+    "a-history-50-1/raw.log": "c54465bd36d2b35baa00390be783b84981b464d8bc4ce1a15bed9b33beecc8f4"
+  },
+  "excluded": [
+    "baseline-history-25-1",
+    "a-history-25-1",
+    "baseline-history-50-1",
+    "a-history-50-1"
+  ]
+}

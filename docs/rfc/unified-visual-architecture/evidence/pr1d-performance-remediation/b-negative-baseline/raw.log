@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: JSON schema canonical copy preserves Unicode, numeric and prototype-key bytes
+ok 1 - JSON schema canonical copy preserves Unicode, numeric and prototype-key bytes
+  ---
+  duration_ms: 6.71743
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects prototype before encoding
+ok 2 - canonical copy rejects prototype before encoding
+  ---
+  duration_ms: 3.201068
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects proxy before encoding
+ok 3 - canonical copy rejects proxy before encoding
+  ---
+  duration_ms: 0.564443
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects accessor before encoding
+ok 4 - canonical copy rejects accessor before encoding
+  ---
+  duration_ms: 0.231468
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects symbol before encoding
+ok 5 - canonical copy rejects symbol before encoding
+  ---
+  duration_ms: 0.350795
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects hidden before encoding
+ok 6 - canonical copy rejects hidden before encoding
+  ---
+  duration_ms: 0.195576
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects sparse before encoding
+ok 7 - canonical copy rejects sparse before encoding
+  ---
+  duration_ms: 0.222967
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects decorated array before encoding
+ok 8 - canonical copy rejects decorated array before encoding
+  ---
+  duration_ms: 0.152616
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects cycle before encoding
+ok 9 - canonical copy rejects cycle before encoding
+  ---
+  duration_ms: 0.456884
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 0 before encoding
+ok 10 - canonical copy rejects non-JSON 0 before encoding
+  ---
+  duration_ms: 2.554036
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 1 before encoding
+ok 11 - canonical copy rejects non-JSON 1 before encoding
+  ---
+  duration_ms: 0.366942
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 2 before encoding
+ok 12 - canonical copy rejects non-JSON 2 before encoding
+  ---
+  duration_ms: 0.133194
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 3 before encoding
+ok 13 - canonical copy rejects non-JSON 3 before encoding
+  ---
+  duration_ms: 0.078168
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 4 before encoding
+ok 14 - canonical copy rejects non-JSON 4 before encoding
+  ---
+  duration_ms: 0.06542
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 5 before encoding
+ok 15 - canonical copy rejects non-JSON 5 before encoding
+  ---
+  duration_ms: 0.061385
+  type: 'test'
+  ...
+# Subtest: canonical copy preserves exact byte, nesting and node limits
+ok 16 - canonical copy preserves exact byte, nesting and node limits
+  ---
+  duration_ms: 1.974924
+  type: 'test'
+  ...
+# Subtest: async JSON schema entry cannot retain a mutable value between guard and encoding
+ok 17 - async JSON schema entry cannot retain a mutable value between guard and encoding
+  ---
+  duration_ms: 0.80825
+  type: 'test'
+  ...
+# Subtest: JSON transform does not replace strict Document validation
+ok 18 - JSON transform does not replace strict Document validation
+  ---
+  duration_ms: 25.117475
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 396.754095

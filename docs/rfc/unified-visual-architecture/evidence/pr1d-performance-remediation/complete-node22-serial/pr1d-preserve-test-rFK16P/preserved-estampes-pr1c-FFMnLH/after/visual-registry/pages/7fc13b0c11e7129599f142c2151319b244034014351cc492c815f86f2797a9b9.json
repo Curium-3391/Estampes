@@ -1,0 +1,1 @@
+{"bucket":"68","entries":[{"key":"gc:773dab2f-0beb-48bd-bede-a3a4d24582fd","value":{"deleted":[],"moved":[],"planHash":"ec3221f45f97a7e9f427052ddd45a29a3cc2f349ba8ac0e2cf8645a3017953d2","quarantinedAtMs":null,"schema":"estampes.gc-state/1","state":"planned"}}],"kind":"retention","next":null,"schema":"estampes.index-page/1"}

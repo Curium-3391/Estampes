@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+not ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 20446.785004
+  type: 'test'
+  location: '/tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:116'
+  failureType: 'testCodeFailure'
+  error: 'CURRENT barrier not reached'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:11:233)
+    listOnTimeout (node:internal/timers:585:17)
+    process.processTimers (node:internal/timers:521:7)
+  ...
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+not ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 20520.815283
+  type: 'test'
+  location: '/tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:116'
+  failureType: 'testCodeFailure'
+  error: 'CURRENT barrier not reached'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:11:233)
+    listOnTimeout (node:internal/timers:585:17)
+    process.processTimers (node:internal/timers:521:7)
+  ...
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+not ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false
+  ---
+  duration_ms: 20523.233403
+  type: 'test'
+  location: '/tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:116'
+  failureType: 'testCodeFailure'
+  error: 'CURRENT barrier not reached'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:11:233)
+    listOnTimeout (node:internal/timers:585:17)
+    process.processTimers (node:internal/timers:521:7)
+  ...
+# Subtest: independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+not ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true
+  ---
+  duration_ms: 20505.64698
+  type: 'test'
+  location: '/tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:8:116'
+  failureType: 'testCodeFailure'
+  error: 'CURRENT barrier not reached'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///tmp/pr1d-remediation-replay-sh_fzu4k/tree/docs/rfc/unified-visual-architecture/evidence/pr1d-native-logs/superseded-current-regression.mjs:11:233)
+    listOnTimeout (node:internal/timers:585:17)
+    process.processTimers (node:internal/timers:521:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 82280.435036

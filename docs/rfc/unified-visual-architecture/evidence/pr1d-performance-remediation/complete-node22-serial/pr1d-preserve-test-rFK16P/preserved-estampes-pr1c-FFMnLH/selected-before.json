@@ -1,0 +1,720 @@
+{
+  "backups": [],
+  "envelope": {
+    "generation": 6,
+    "rootHash": "1119de723793cc346d23a8fa20846c182c3cd984e3c4d5272246cb87f351bcf5",
+    "commitId": "tx:3c458c6d-c805-4a1b-83fc-71552dc24a75",
+    "checksum": "192070892511e034f8506e7a2f44d14a80627e4d4698c762b1372d80b3679065"
+  },
+  "root": {
+    "schema": "estampes.commit-root/1",
+    "storeInstanceId": "35c8f4f2-e3ee-4f9a-a266-ca3f9b363e42",
+    "generation": 6,
+    "commitId": "tx:3c458c6d-c805-4a1b-83fc-71552dc24a75",
+    "parentCommitHash": "588b75944142e69fae6bf250c0b238544a3399c2114764dd5ed94dcddcff10be",
+    "roots": {
+      "registry": "60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b",
+      "locator": "af885a5c0d6e2444b6d8382af1ce75472e7d2c996569fbd7784e32eb503b1e27",
+      "ledger": "cf18831671f35aae731cb1897ca7a2cb69a21d926790ccbca6a2a4a3b851e38b",
+      "commitIndex": "48b70e62fc2aab2fe303d23fcea9acfc929fd136e341a42286cf33acdd1582b1",
+      "retention": "bf8d55dc47ea8933e023c71ebaf538afa1b385de76f6b8a1a7d6916385718964",
+      "authority": "a6f58d4a965f4b6e3692d1a0b702128ca43c48ed070b1e486909645b7ac6a484"
+    }
+  },
+  "livePaths": [
+    "visual-registry/roots/1119de723793cc346d23a8fa20846c182c3cd984e3c4d5272246cb87f351bcf5.json",
+    "visual-registry/pages/60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b.json",
+    "visual-registry/pages/af885a5c0d6e2444b6d8382af1ce75472e7d2c996569fbd7784e32eb503b1e27.json",
+    "visual-registry/pages/cf18831671f35aae731cb1897ca7a2cb69a21d926790ccbca6a2a4a3b851e38b.json",
+    "visual-registry/pages/48b70e62fc2aab2fe303d23fcea9acfc929fd136e341a42286cf33acdd1582b1.json",
+    "visual-registry/pages/37c981088b13c2d3f57641e8d1d790a5761a915102574c98f62ec652e922ac6d.json",
+    "visual-registry/pages/8ce33f6551b2266a04b6de9d58eacff660f83de318d2ad6467517366b5515830.json",
+    "visual-registry/pages/edac637d55ae56165fd19ccf12406a294f7c33dde5414acbfaeab352b195f139.json",
+    "visual-registry/pages/011ce3d8ba96a98d6f6cb677be96c208c8bc309f09c44cb48e4da78bb1eda4a2.json",
+    "visual-registry/pages/9f14c9c7133ccf2fea94958d4303d485f8a7b86875f998b39fb22dbb5fe6f4f7.json",
+    "visual-registry/pages/356f9991d364953305c29d8b81a2c0d931b0d40875cbe143886303f4845c2e57.json",
+    "visual-registry/pages/bf8d55dc47ea8933e023c71ebaf538afa1b385de76f6b8a1a7d6916385718964.json",
+    "visual-registry/pages/a019ed85d10eea911c14ea192ec8822c44c7dfd7fbdd7a9b970367153b4df0a9.json",
+    "visual-registry/pages/57dbbd0534f02da1d50059b5a035b7211d48628c5a6b5a33c449a42e57936831.json",
+    "visual-registry/pages/e33c88c341d18a4ba0c6953dcd3e66a2e1129afb2b39aaf5a12bf9265269176d.json",
+    "visual-registry/pages/3f98be56cfc1d7e5aae40a0ee72da092fdc71182195f76cfc980c4a3616e02ff.json",
+    "visual-registry/pages/a6f58d4a965f4b6e3692d1a0b702128ca43c48ed070b1e486909645b7ac6a484.json",
+    "visual-registry/pages/cf7461ca0a7a36a2b2988e7ad26250d3d697c4dfb3fd1e902bc1f0775a30e60a.json",
+    "visual-maintenance/gc/ec3221f45f97a7e9f427052ddd45a29a3cc2f349ba8ac0e2cf8645a3017953d2.json",
+    "visual-registry/roots/588b75944142e69fae6bf250c0b238544a3399c2114764dd5ed94dcddcff10be.json",
+    "visual-registry/CURRENT.json"
+  ],
+  "fixedRoots": [
+    {
+      "key": "recovery:5",
+      "envelope": {
+        "checksum": "ca67e212fb80c25d23131eea18be53ac890135b4562147e29d7c5735cacc0237",
+        "commitId": "tx:d6cff037-48bf-4bca-a7d5-81f23276381e",
+        "generation": 5,
+        "rootHash": "588b75944142e69fae6bf250c0b238544a3399c2114764dd5ed94dcddcff10be"
+      },
+      "paths": [
+        "visual-registry/roots/588b75944142e69fae6bf250c0b238544a3399c2114764dd5ed94dcddcff10be.json",
+        "visual-registry/pages/a6f58d4a965f4b6e3692d1a0b702128ca43c48ed070b1e486909645b7ac6a484.json",
+        "visual-registry/pages/cf7461ca0a7a36a2b2988e7ad26250d3d697c4dfb3fd1e902bc1f0775a30e60a.json",
+        "visual-registry/pages/0c1430136e00d7e114b7b25f4bd23a546dc3301970543b122c31e7321c3b954a.json",
+        "visual-registry/pages/37c981088b13c2d3f57641e8d1d790a5761a915102574c98f62ec652e922ac6d.json",
+        "visual-registry/pages/8ce33f6551b2266a04b6de9d58eacff660f83de318d2ad6467517366b5515830.json",
+        "visual-registry/pages/edac637d55ae56165fd19ccf12406a294f7c33dde5414acbfaeab352b195f139.json",
+        "visual-registry/pages/011ce3d8ba96a98d6f6cb677be96c208c8bc309f09c44cb48e4da78bb1eda4a2.json",
+        "visual-registry/pages/9f14c9c7133ccf2fea94958d4303d485f8a7b86875f998b39fb22dbb5fe6f4f7.json",
+        "visual-registry/pages/cf18831671f35aae731cb1897ca7a2cb69a21d926790ccbca6a2a4a3b851e38b.json",
+        "visual-registry/pages/af885a5c0d6e2444b6d8382af1ce75472e7d2c996569fbd7784e32eb503b1e27.json",
+        "visual-registry/pages/60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b.json",
+        "visual-registry/pages/ce29e4814c67333e9c0a2d41a8e0f58961b480ab030b43e22a18f06a55a98a77.json",
+        "visual-registry/pages/a019ed85d10eea911c14ea192ec8822c44c7dfd7fbdd7a9b970367153b4df0a9.json",
+        "visual-registry/pages/57dbbd0534f02da1d50059b5a035b7211d48628c5a6b5a33c449a42e57936831.json",
+        "visual-registry/pages/e15b05f59532e71e315ec657daaf42c59bd73031ffbf29313218d63ccf185ba4.json",
+        "visual-registry/pages/f4d5c2318eaf44b8b2e9a22489586690931d73c0f67ca5d43fa0f11ab740cb8d.json",
+        "visual-registry/pages/c4fa990e45d3262f9c777cb7b3286a020b912e6e381a0619c90c6e6c3e6f558c.json",
+        "visual-registry/pages/c0faca02cb1d9d0708c1e6c8049be163e1e45ba90131305a0d1939c08293701f.json",
+        "visual-registry/pages/16d507f6038e1a0232def4b9bcb8101c327e17824acc1b7e4535f2844ac81fb6.json"
+      ]
+    }
+  ],
+  "plans": [
+    {
+      "key": "gc:773dab2f-0beb-48bd-bede-a3a4d24582fd",
+      "plan": {
+        "schema": "estampes.gc-plan/1",
+        "id": "773dab2f-0beb-48bd-bede-a3a4d24582fd",
+        "storeInstanceId": "35c8f4f2-e3ee-4f9a-a266-ca3f9b363e42",
+        "sourceGeneration": 2,
+        "sourceRootHash": "9b978d1505b297eddc2589511cd39238e715eb17604acfc4c56f6e3843f98219",
+        "rootsetHash": "bd242c15fe1f92667e0b4a7ca0a48997f1b85e49936155127f03f5a3b8e176bc",
+        "pinsEpoch": 0,
+        "createdAtMs": 1893456000000,
+        "candidates": [
+          {
+            "path": "visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json",
+            "hash": "956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b",
+            "bytes": 810,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71864"
+            }
+          },
+          {
+            "path": "visual-registry/pages/382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750.json",
+            "hash": "382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750",
+            "bytes": 363,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/1-382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71866"
+            }
+          },
+          {
+            "path": "visual-registry/pages/165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f.json",
+            "hash": "165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f",
+            "bytes": 136,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/2-165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71868"
+            }
+          },
+          {
+            "path": "visual-registry/pages/0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571.json",
+            "hash": "0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571",
+            "bytes": 572,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/3-0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71870"
+            }
+          },
+          {
+            "path": "visual-registry/pages/9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf.json",
+            "hash": "9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf",
+            "bytes": 135,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/4-9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71872"
+            }
+          },
+          {
+            "path": "visual-registry/pages/e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0.json",
+            "hash": "e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0",
+            "bytes": 1072,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/5-e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71874"
+            }
+          },
+          {
+            "path": "visual-registry/pages/d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405.json",
+            "hash": "d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405",
+            "bytes": 134,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/6-d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71876"
+            }
+          },
+          {
+            "path": "visual-registry/pages/db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7.json",
+            "hash": "db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7",
+            "bytes": 576,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/7-db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71878"
+            }
+          },
+          {
+            "path": "visual-registry/pages/3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6.json",
+            "hash": "3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6",
+            "bytes": 211,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/8-3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71880"
+            }
+          },
+          {
+            "path": "visual-registry/pages/7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3.json",
+            "hash": "7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3",
+            "bytes": 398,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/9-7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71882"
+            }
+          },
+          {
+            "path": "visual-registry/pages/c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8.json",
+            "hash": "c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8",
+            "bytes": 452,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/10-c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71886"
+            }
+          },
+          {
+            "path": "visual-registry/pages/7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed.json",
+            "hash": "7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed",
+            "bytes": 452,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/11-7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71888"
+            }
+          },
+          {
+            "path": "visual-registry/pages/3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d.json",
+            "hash": "3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d",
+            "bytes": 353,
+            "class": "G2",
+            "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/12-3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d.bin",
+            "reason": "Unreachable file from a terminal transaction plan",
+            "physical": {
+              "dev": "34",
+              "ino": "71890"
+            }
+          }
+        ]
+      },
+      "progress": {
+        "deleted": [],
+        "moved": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "planHash": "ec3221f45f97a7e9f427052ddd45a29a3cc2f349ba8ac0e2cf8645a3017953d2",
+        "quarantinedAtMs": 1893456000000,
+        "schema": "estampes.gc-state/1",
+        "state": "waiting-grace"
+      },
+      "pending": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "candidates": [
+        {
+          "index": 0,
+          "path": "visual-documents/00000001-0000-4000-8000-000000000001/generations/1-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.json",
+          "hash": "956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b",
+          "bytes": 810,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/0-956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71864"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 810,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71864",
+            "mtimeNs": "1793820715611484143",
+            "ctimeNs": "1793820716624025183",
+            "hash": "956948668e3bc7aae8a894ff8f740bbb5f360d53e4cfae35290cbf7674b1da1b"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 1,
+          "path": "visual-registry/pages/382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750.json",
+          "hash": "382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750",
+          "bytes": 363,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/1-382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71866"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 363,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71866",
+            "mtimeNs": "1793820715615030112",
+            "ctimeNs": "1793820716626242697",
+            "hash": "382938295ae7dd8f2ab2a52b747fac7afeddc8bebaa6e8a6c326675e1f413750"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 2,
+          "path": "visual-registry/pages/165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f.json",
+          "hash": "165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f",
+          "bytes": 136,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/2-165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71868"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 136,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71868",
+            "mtimeNs": "1793820715617683771",
+            "ctimeNs": "1793820716629270534",
+            "hash": "165fa7647831e6f9492a6ff65d3d8cc4c1dd77bff0f8278437999278c8d4a92f"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 3,
+          "path": "visual-registry/pages/0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571.json",
+          "hash": "0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571",
+          "bytes": 572,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/3-0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71870"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 572,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71870",
+            "mtimeNs": "1793820715619175579",
+            "ctimeNs": "1793820716631504532",
+            "hash": "0692031e71aa70a759c1f2d0242a22d8d391c13f561f70fbf9ce7ff2cad94571"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 4,
+          "path": "visual-registry/pages/9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf.json",
+          "hash": "9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf",
+          "bytes": 135,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/4-9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71872"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 135,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71872",
+            "mtimeNs": "1793820715622402346",
+            "ctimeNs": "1793820716633264009",
+            "hash": "9e32f4bdb2c79ab0b00338b22085d6261c9ff68ac5387352091a3336362ae5bf"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 5,
+          "path": "visual-registry/pages/e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0.json",
+          "hash": "e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0",
+          "bytes": 1072,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/5-e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71874"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 1072,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71874",
+            "mtimeNs": "1793820715624794264",
+            "ctimeNs": "1793820716635161336",
+            "hash": "e393e05e54cc3589a1b3161e8ea886b6840ffc35f1f68fa7a9bba79ca0900ee0"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 6,
+          "path": "visual-registry/pages/d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405.json",
+          "hash": "d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405",
+          "bytes": 134,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/6-d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71876"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 134,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71876",
+            "mtimeNs": "1793820715631812486",
+            "ctimeNs": "1793820716636754619",
+            "hash": "d62b290ce0249e9e791941c978b0c168c101163a4f504e9324afb2a46f2d5405"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 7,
+          "path": "visual-registry/pages/db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7.json",
+          "hash": "db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7",
+          "bytes": 576,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/7-db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71878"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 576,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71878",
+            "mtimeNs": "1793820715635322025",
+            "ctimeNs": "1793820716638267878",
+            "hash": "db7e719fc049b793ff462e041f8c3925e02f2af42426c426478eca223785aea7"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 8,
+          "path": "visual-registry/pages/3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6.json",
+          "hash": "3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6",
+          "bytes": 211,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/8-3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71880"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 211,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71880",
+            "mtimeNs": "1793820715637514866",
+            "ctimeNs": "1793820716639800527",
+            "hash": "3fa062e295ebeabe88116d5c0a3405cf12859044d7517595696cdfb6fabbe7d6"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 9,
+          "path": "visual-registry/pages/7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3.json",
+          "hash": "7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3",
+          "bytes": 398,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/9-7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71882"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 398,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71882",
+            "mtimeNs": "1793820715639789302",
+            "ctimeNs": "1793820716641902136",
+            "hash": "7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 10,
+          "path": "visual-registry/pages/c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8.json",
+          "hash": "c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8",
+          "bytes": 452,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/10-c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71886"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 452,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71886",
+            "mtimeNs": "1793820715647857229",
+            "ctimeNs": "1793820716644015094",
+            "hash": "c5bcfdf9aadc41257e119a578233e7a52f087bec6a785edea1138dc5270af1d8"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 11,
+          "path": "visual-registry/pages/7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed.json",
+          "hash": "7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed",
+          "bytes": 452,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/11-7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71888"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 452,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71888",
+            "mtimeNs": "1793820715650498203",
+            "ctimeNs": "1793820716645927294",
+            "hash": "7809da060c64cb17a3c3ce5fc7154d5d151aa8e871d62c5a9e85e3d3539d16ed"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        },
+        {
+          "index": 12,
+          "path": "visual-registry/pages/3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d.json",
+          "hash": "3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d",
+          "bytes": 353,
+          "class": "G2",
+          "quarantine": "gc-quarantine/773dab2f-0beb-48bd-bede-a3a4d24582fd/12-3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d.bin",
+          "reason": "Unreachable file from a terminal transaction plan",
+          "physical": {
+            "dev": "34",
+            "ino": "71890"
+          },
+          "source": null,
+          "quarantineFile": {
+            "bytes": 353,
+            "allocatedBytes": 4096,
+            "dev": "34",
+            "ino": "71890",
+            "mtimeNs": "1793820715653719717",
+            "ctimeNs": "1793820716647865727",
+            "hash": "3aa7c07e7f36214e69d5a2c93ec90e3da33a27f260e41553d5f646283d18db3d"
+          },
+          "liveRoot": false,
+          "fixedRoots": [],
+          "marked": null
+        }
+      ]
+    }
+  ],
+  "retention": [
+    [
+      "registry:60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b",
+      {
+        "logicalClosureHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "registryRootHash": "60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b",
+        "resolverLocatorRootHash": "af885a5c0d6e2444b6d8382af1ce75472e7d2c996569fbd7784e32eb503b1e27"
+      }
+    ],
+    [
+      "gc:773dab2f-0beb-48bd-bede-a3a4d24582fd",
+      {
+        "deleted": [],
+        "moved": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "planHash": "ec3221f45f97a7e9f427052ddd45a29a3cc2f349ba8ac0e2cf8645a3017953d2",
+        "quarantinedAtMs": 1893456000000,
+        "schema": "estampes.gc-state/1",
+        "state": "waiting-grace"
+      }
+    ],
+    [
+      "lifecycle",
+      {
+        "committedAtMs": 1893542400000,
+        "contentSinceMaintenance": 0,
+        "highWaterMs": 1893542400000,
+        "maintenance": {
+          "conflicts": 0,
+          "cursor": null,
+          "state": "idle",
+          "steps": 0
+        },
+        "options": {
+          "autoMaintenance": false,
+          "enabled": true,
+          "pinBytes": 1073741824,
+          "pinSessions": 64
+        },
+        "schema": "estampes.lifecycle/1"
+      }
+    ],
+    [
+      "recovery:5",
+      {
+        "committedAtMs": 1893456000000,
+        "envelope": {
+          "checksum": "ca67e212fb80c25d23131eea18be53ac890135b4562147e29d7c5735cacc0237",
+          "commitId": "tx:d6cff037-48bf-4bca-a7d5-81f23276381e",
+          "generation": 5,
+          "rootHash": "588b75944142e69fae6bf250c0b238544a3399c2114764dd5ed94dcddcff10be"
+        },
+        "schema": "estampes.recovery-root/1"
+      }
+    ]
+  ],
+  "clock": {
+    "schema": "estampes.lifecycle/1",
+    "options": {
+      "enabled": true,
+      "autoMaintenance": false,
+      "pinSessions": 64,
+      "pinBytes": 1073741824
+    },
+    "highWaterMs": 1893542400000,
+    "committedAtMs": 1893542400000,
+    "contentSinceMaintenance": 0,
+    "maintenance": {
+      "state": "idle",
+      "cursor": null,
+      "conflicts": 0,
+      "steps": 0
+    }
+  },
+  "runtimePins": null,
+  "ledger": [],
+  "locator": []
+}

@@ -1,0 +1,3 @@
+# Raw diagnostic bytes are immutable evidence, including TAP diff indentation.
+# Source, tests and reports retain the repository's normal whitespace checks.
+**/raw.log -whitespace

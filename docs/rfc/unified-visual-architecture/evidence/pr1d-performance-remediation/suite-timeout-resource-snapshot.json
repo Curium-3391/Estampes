@@ -1,0 +1,8 @@
+{
+  "observedUtc": "2026-11-04T19:22:19Z",
+  "cpuStat": "usage_usec 2193198435\nuser_usec 1691302210\nsystem_usec 501896225\nnice_usec 0\nnr_periods 25632\nnr_throttled 1242\nthrottled_usec 125075455\nnr_bursts 0\nburst_usec 0\n",
+  "memoryCurrent": "297144320\n",
+  "memoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+  "processes": "    PID    PPID STAT     ELAPSED %CPU COMMAND\n    766       1 Z       01:00:31  0.0 python3\n    840       1 Z          58:50  0.0 python3\n    841       1 Zs         58:50  0.1 node\n   3732       1 Z          12:39  4.4 node\n   3865    3862 S          05:13 13.2 python3\n   3972    3865 Ssl        05:04  0.3 node\n   4163       1 Z          04:50  0.0 chromium\n   4164       1 Z          04:50  0.0 chromium\n   4510       1 Z          04:30  0.0 chromium\n   4512       1 Z          04:30  0.0 chromium\n   4840       1 Z          04:11  0.0 chromium\n   4842       1 Z          04:11  0.0 chromium\n   5633    3972 Sl         03:34  6.8 node\n   6477    5633 Rl         00:07 56.2 node\n   6495    6486 S          00:02 57.2 python3\n",
+  "pressureFiles": "Not exposed at /proc/pressure/{cpu,io,memory}; no root cause inferred"
+}

@@ -1,0 +1,2852 @@
+[
+  {
+    "case": "b-base-document-1-profile",
+    "sizeMiB": 1,
+    "phase": "commit",
+    "wallMs": 954.0656969999999,
+    "cpuUs": {
+      "user": 815168,
+      "system": 120836
+    },
+    "memoryEnd": {
+      "rss": 88891392,
+      "heapTotal": 61423616,
+      "heapUsed": 32903632,
+      "external": 8912836,
+      "arrayBuffers": 6605629
+    },
+    "maxRSSKiB": 99600,
+    "operations": {
+      "assertJson": {
+        "calls": 312,
+        "ms": 479.2427450000024,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 256,
+        "ms": 257.1402940000005,
+        "bytes": 12667904
+      },
+      "parse": {
+        "calls": 197,
+        "ms": 343.86360200000126,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 316,
+        "ms": 18.933968000003915,
+        "bytes": 16889627
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.2863089999999602,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1308,
+        "ms": 145.20680000000266,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 230,
+        "ms": 90.31844700000022,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 218,
+        "ms": 29.890994999999975,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 230,
+        "ms": 21.890051999998605,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 34,
+        "ms": 5.1559559999999465,
+        "bytes": 1060465
+      },
+      "ManagedFiles.bytes": {
+        "calls": 34,
+        "ms": 71.80729799999972,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 32,
+        "ms": 90.42684499999973,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 59.33669900000018,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 43.16321400000004,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 28.766786000000252,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 1.177585000000363,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 5.485781999999972,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.1193670000000111,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 5.667596000000003,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 20.259205999999722,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 8.501215000000457,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 4.646612999999888,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 4.324041000000534,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 4.4054900000001,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 2.563758000000007,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.19515000000023974,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 162,
+        "ms": 16.07073299999729,
+        "bytes": 5277149
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 117.88585200000148,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 3,
+        "ms": 4.9402829999999085,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 3.3133719999998448,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 1.6994210000002568,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 1.7318940000000111,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 2.7493339999998625,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 88.18109900000013,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-1-profile",
+    "sizeMiB": 1,
+    "phase": "cold-client-open",
+    "wallMs": 880.7889479999999,
+    "cpuUs": {
+      "user": 877965,
+      "system": 113623
+    },
+    "memoryEnd": {
+      "rss": 83238912,
+      "heapTotal": 57458688,
+      "heapUsed": 22903608,
+      "external": 3470837,
+      "arrayBuffers": 1163670
+    },
+    "maxRSSKiB": 84272,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2456,
+        "ms": 108.80853600000205,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.223500999999942,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 4.5872559999997975,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 428,
+        "ms": 80.1592010000017,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 347,
+        "ms": 21.373967999999195,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 428,
+        "ms": 16.642390000000148,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 94,
+        "ms": 12.851850000000354,
+        "bytes": 1095420
+      },
+      "sha256.update": {
+        "calls": 530,
+        "ms": 14.502294999998128,
+        "bytes": 12781115
+      },
+      "ManagedFiles.bytes": {
+        "calls": 94,
+        "ms": 110.89053299999955,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 516,
+        "ms": 425.8632439999999,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 453,
+        "ms": 272.66848099999805,
+        "bytes": 9598609
+      },
+      "ManagedFiles.json": {
+        "calls": 86,
+        "ms": 146.1738449999998,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 308,
+        "ms": 329.51881299999917,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 102.37568900000042,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 95.64349199999981,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 3.4211029999999027,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 240,
+        "ms": 11.341208999999708,
+        "bytes": 6345193
+      },
+      "ManagedFiles.digest": {
+        "calls": 120,
+        "ms": 83.54366100000004,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 5.1798820000000205,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 3.9992019999999684,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 3.064625999999862,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 1.055697999999893,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 2.784414999999967,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 69.983925,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 4.216760999999337,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 8.018662999999833,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 5.4186330000001135,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 14.649377999999956,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 25.89572399999986,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 7.877541000000065,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 8.343218000000093,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 3.095589000000132,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 0.7824269999999842,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 0.8628359999997883,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-1-profile",
+    "sizeMiB": 1,
+    "phase": "commit",
+    "wallMs": 711.157348,
+    "cpuUs": {
+      "user": 577689,
+      "system": 140159
+    },
+    "memoryEnd": {
+      "rss": 88756224,
+      "heapTotal": 61685760,
+      "heapUsed": 32856288,
+      "external": 8912636,
+      "arrayBuffers": 6605429
+    },
+    "maxRSSKiB": 99544,
+    "operations": {
+      "assertJson": {
+        "calls": 307,
+        "ms": 387.1743679999995,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 256,
+        "ms": 279.69262200000026,
+        "bytes": 12667904
+      },
+      "parse": {
+        "calls": 197,
+        "ms": 271.25234499999954,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 316,
+        "ms": 17.153396999997085,
+        "bytes": 16889627
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.22097800000005918,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1308,
+        "ms": 68.61730799999737,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 230,
+        "ms": 43.48579299999881,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 218,
+        "ms": 16.449818999999025,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 230,
+        "ms": 9.41525299999796,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 34,
+        "ms": 2.569770999999946,
+        "bytes": 1060465
+      },
+      "ManagedFiles.bytes": {
+        "calls": 34,
+        "ms": 31.2956760000003,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 32,
+        "ms": 66.46848599999998,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 28.72207599999922,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 23.22350900000015,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 16.983658999999875,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 0.8731539999998859,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 3.880164000000036,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.31407500000000255,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 4.257681999999932,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 6.233395999999743,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 4.248248000000672,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 4.629474999999616,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 0.7808909999997695,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 0.9909420000001319,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 0.6075770000001057,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.5671630000000505,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 162,
+        "ms": 18.36076000000071,
+        "bytes": 5277149
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 73.87232500000061,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 3,
+        "ms": 3.8542169999999487,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 2.9572150000000192,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 1.0611930000001166,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 1.1233440000000883,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 1.5619429999999284,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 53.6838759999996,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-1-profile",
+    "sizeMiB": 1,
+    "phase": "cold-client-open",
+    "wallMs": 728.904042,
+    "cpuUs": {
+      "user": 736314,
+      "system": 94591
+    },
+    "memoryEnd": {
+      "rss": 83451904,
+      "heapTotal": 57458688,
+      "heapUsed": 22867016,
+      "external": 3470837,
+      "arrayBuffers": 1163670
+    },
+    "maxRSSKiB": 84680,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2456,
+        "ms": 100.09191300000134,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.17060899999989942,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 4.955735999999575,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 428,
+        "ms": 74.08409399999789,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 347,
+        "ms": 16.4264969999993,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 428,
+        "ms": 15.81796300000127,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 94,
+        "ms": 10.802811999999676,
+        "bytes": 1095420
+      },
+      "sha256.update": {
+        "calls": 530,
+        "ms": 15.221274999998741,
+        "bytes": 12781115
+      },
+      "ManagedFiles.bytes": {
+        "calls": 94,
+        "ms": 92.78203599999932,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 512,
+        "ms": 300.29654199999993,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 453,
+        "ms": 214.28628999999978,
+        "bytes": 9598609
+      },
+      "ManagedFiles.json": {
+        "calls": 86,
+        "ms": 128.1566469999994,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 308,
+        "ms": 230.79796800000076,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 85.65204500000021,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 73.85659499999997,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 2.765455999999972,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 240,
+        "ms": 10.450566999999978,
+        "bytes": 6345193
+      },
+      "ManagedFiles.digest": {
+        "calls": 120,
+        "ms": 85.34858900000029,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 5.891629999999964,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 6.7320589999999925,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 2.975324999999998,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 0.9055689999999004,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 2.5056660000000193,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 70.04686200000015,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 2.786592999999698,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 7.865919999999733,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 3.9816419999999653,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 16.40370699999994,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 20.916641000000027,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 2.6044299999999794,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 3.6167930000000297,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 1.7906130000000076,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 3.047888999999941,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 0.6012940000000526,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-8-profile",
+    "sizeMiB": 8,
+    "phase": "commit",
+    "wallMs": 5294.742173,
+    "cpuUs": {
+      "user": 4990836,
+      "system": 410026
+    },
+    "memoryEnd": {
+      "rss": 216690688,
+      "heapTotal": 142163968,
+      "heapUsed": 113041672,
+      "external": 36165628,
+      "arrayBuffers": 33858421
+    },
+    "maxRSSKiB": 315732,
+    "operations": {
+      "assertJson": {
+        "calls": 312,
+        "ms": 3880.0931939999987,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 256,
+        "ms": 2339.235959999999,
+        "bytes": 100748288
+      },
+      "parse": {
+        "calls": 197,
+        "ms": 2657.671798000006,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 326,
+        "ms": 173.94841199999928,
+        "bytes": 134330139
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.5874019999998836,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1308,
+        "ms": 149.70335499999828,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 230,
+        "ms": 143.53700200000458,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 218,
+        "ms": 23.895056000003024,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 230,
+        "ms": 30.12232399999948,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 34,
+        "ms": 8.985243999999057,
+        "bytes": 8400497
+      },
+      "ManagedFiles.bytes": {
+        "calls": 34,
+        "ms": 67.82188799999881,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 32,
+        "ms": 322.15697100000125,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 40.79892000000109,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 30.81263299999955,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 17.316447000000608,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 0.7479410000000826,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 2.0572290000000066,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.09310400000003938,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 2.231620000000021,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 6.400013999999828,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 8.530531000001247,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 7.2726279999992585,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 2.9160820000001877,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 2.4643290000003617,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 1.6889999999998508,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.2597190000001319,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 172,
+        "ms": 45.35067699999581,
+        "bytes": 41977309
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 288.4458470000018,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 3,
+        "ms": 42.14168499999869,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 40.87385399999994,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 1.6614040000004024,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 1.6708669999998165,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 2.310754999999517,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 197.36334400000032,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-8-profile",
+    "sizeMiB": 8,
+    "phase": "cold-client-open",
+    "wallMs": 9213.841009,
+    "cpuUs": {
+      "user": 7939273,
+      "system": 1323896
+    },
+    "memoryEnd": {
+      "rss": 178470912,
+      "heapTotal": 116973568,
+      "heapUsed": 88697200,
+      "external": 15238934,
+      "arrayBuffers": 12931767
+    },
+    "maxRSSKiB": 182964,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2456,
+        "ms": 599.1457399999877,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.6398760000001857,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 14.334654999999543,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 428,
+        "ms": 415.7656999999881,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 347,
+        "ms": 106.43277799999873,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 428,
+        "ms": 107.49640300001283,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 94,
+        "ms": 66.89431999999977,
+        "bytes": 8435452
+      },
+      "sha256.update": {
+        "calls": 542,
+        "ms": 253.47888400000932,
+        "bytes": 100861499
+      },
+      "ManagedFiles.bytes": {
+        "calls": 94,
+        "ms": 704.0202950000021,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 516,
+        "ms": 6304.830508000002,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 453,
+        "ms": 3429.0354030000076,
+        "bytes": 75658897
+      },
+      "ManagedFiles.json": {
+        "calls": 86,
+        "ms": 1078.6976549999977,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 308,
+        "ms": 3862.167725,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 549.0696319999957,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 491.615122999999,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 44.893723999999565,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 252,
+        "ms": 61.0101159999997,
+        "bytes": 50385385
+      },
+      "ManagedFiles.digest": {
+        "calls": 120,
+        "ms": 401.73529099999223,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 41.42906100000073,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 29.964381000000003,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 46.344706000001224,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 2.4622329999983776,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 12.766915999999583,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 306.8326310000002,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 26.193006000002242,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 84.6063610000001,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 11.173314999998183,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 100.17757700000038,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 93.3001200000017,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 3.860359999999673,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 4.132124999999178,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 7.678603000000294,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 1.3598970000002737,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 1.0009999999983847,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-8-profile",
+    "sizeMiB": 8,
+    "phase": "commit",
+    "wallMs": 7876.681632999999,
+    "cpuUs": {
+      "user": 6985108,
+      "system": 894334
+    },
+    "memoryEnd": {
+      "rss": 156819456,
+      "heapTotal": 83386368,
+      "heapUsed": 54316472,
+      "external": 36164828,
+      "arrayBuffers": 33857621
+    },
+    "maxRSSKiB": 324320,
+    "operations": {
+      "assertJson": {
+        "calls": 307,
+        "ms": 5168.621806000001,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 256,
+        "ms": 3650.648878999997,
+        "bytes": 100748288
+      },
+      "parse": {
+        "calls": 197,
+        "ms": 3064.1188689999963,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 326,
+        "ms": 271.9184310000037,
+        "bytes": 134330139
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.6984990000000835,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1308,
+        "ms": 448.82007800000974,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 230,
+        "ms": 279.7818729999826,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 218,
+        "ms": 84.93723699999737,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 230,
+        "ms": 55.096564999994825,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 34,
+        "ms": 28.051081000000522,
+        "bytes": 8400497
+      },
+      "ManagedFiles.bytes": {
+        "calls": 34,
+        "ms": 237.35668499999792,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 32,
+        "ms": 595.1159919999986,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 191.61988700000165,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 134.40589799999634,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 77.59720800000014,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 5.202471999999943,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 17.274865999999747,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.06432299999960378,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 17.436953999999787,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 52.34277899999688,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 36.212924000001294,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 31.372535000000425,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 7.369087000001855,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 8.135739999999714,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 12.850323000000571,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 2.3970079999999143,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 172,
+        "ms": 70.42329399998016,
+        "bytes": 41977309
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 391.9270970000116,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 3,
+        "ms": 100.09093900000062,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 87.60735400000067,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 34.3535920000013,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 34.38028100000156,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 14.781614000001355,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 199.73174300000028,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-8-profile",
+    "sizeMiB": 8,
+    "phase": "cold-client-open",
+    "wallMs": 6275.180892,
+    "cpuUs": {
+      "user": 5734865,
+      "system": 650903
+    },
+    "memoryEnd": {
+      "rss": 170479616,
+      "heapTotal": 108314624,
+      "heapUsed": 80294496,
+      "external": 15238934,
+      "arrayBuffers": 12931767
+    },
+    "maxRSSKiB": 182604,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2456,
+        "ms": 477.31733200001884,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.2691800000005742,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 29.798207000000957,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 428,
+        "ms": 295.9199180000014,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 347,
+        "ms": 101.65567399999736,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 428,
+        "ms": 46.818511999995394,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 94,
+        "ms": 39.654446000001144,
+        "bytes": 8435452
+      },
+      "sha256.update": {
+        "calls": 542,
+        "ms": 149.76849400000322,
+        "bytes": 100861499
+      },
+      "ManagedFiles.bytes": {
+        "calls": 94,
+        "ms": 401.3057170000026,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 512,
+        "ms": 3933.407294000004,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 453,
+        "ms": 2786.344370999994,
+        "bytes": 75658897
+      },
+      "ManagedFiles.json": {
+        "calls": 86,
+        "ms": 1022.4168419999995,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 308,
+        "ms": 2437.871114999998,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 277.41430399999604,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 257.78908299999875,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 12.284730000000764,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 252,
+        "ms": 47.08100199999899,
+        "bytes": 50385385
+      },
+      "ManagedFiles.digest": {
+        "calls": 120,
+        "ms": 275.66959600000746,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 27.286082999999962,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 22.24145499999986,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 13.30794399999968,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 2.9908489999997983,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 6.5303499999999985,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 227.34402500000033,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 25.916182999993907,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 90.82746199999838,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 32.05754999999863,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 82.61053600000014,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 65.52320200000031,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 54.35089099999914,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 55.46915999999965,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 6.996510999999373,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 4.892257000000427,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 6.341316999999435,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-16-profile",
+    "sizeMiB": 16,
+    "phase": "commit",
+    "wallMs": 11360.824322999999,
+    "cpuUs": {
+      "user": 10482448,
+      "system": 1038699
+    },
+    "memoryEnd": {
+      "rss": 277348352,
+      "heapTotal": 167034880,
+      "heapUsed": 138217104,
+      "external": 52943648,
+      "arrayBuffers": 50636441
+    },
+    "maxRSSKiB": 432532,
+    "operations": {
+      "assertJson": {
+        "calls": 312,
+        "ms": 8494.785667000013,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 256,
+        "ms": 5355.760798000005,
+        "bytes": 201411601
+      },
+      "parse": {
+        "calls": 197,
+        "ms": 5976.252308000006,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 336,
+        "ms": 368.37666599999966,
+        "bytes": 268547885
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.387583000000177,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1308,
+        "ms": 158.65559700002905,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 230,
+        "ms": 137.4583330000005,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 218,
+        "ms": 33.40441699999246,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 230,
+        "ms": 31.502382999992278,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 34,
+        "ms": 24.473376999997527,
+        "bytes": 16789106
+      },
+      "ManagedFiles.bytes": {
+        "calls": 34,
+        "ms": 79.22391799999878,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 32,
+        "ms": 591.3853039999999,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 41.14321699999982,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 27.00347200000033,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 23.313264000001254,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 0.6678429999983564,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 4.093235000000277,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.052555999999640335,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 4.253940999999941,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 11.828249999995023,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 8.664818000004743,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 17.45476900000631,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 0.8525480000016614,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 2.1360329999970418,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 1.2775789999986955,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.4768519999988712,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 182,
+        "ms": 66.21886400000585,
+        "bytes": 83920353
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 348.60247199999503,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 3,
+        "ms": 40.01267999999982,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 37.248811999999816,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 3.1914270000015676,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 3.2548420000002807,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 3.794925999998668,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 248.1019449999967,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-16-profile",
+    "sizeMiB": 16,
+    "phase": "cold-client-open",
+    "wallMs": 11866.100613999999,
+    "cpuUs": {
+      "user": 10729199,
+      "system": 1232055
+    },
+    "memoryEnd": {
+      "rss": 181575680,
+      "heapTotal": 116678656,
+      "heapUsed": 88943472,
+      "external": 15240137,
+      "arrayBuffers": 12932970
+    },
+    "maxRSSKiB": 468384,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2456,
+        "ms": 406.8815149999867,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.22310500000071443,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 9.6636069999999,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 428,
+        "ms": 271.74339300001304,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 347,
+        "ms": 43.172706000005746,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 428,
+        "ms": 52.083961000014426,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 94,
+        "ms": 42.77459499999867,
+        "bytes": 16824065
+      },
+      "sha256.update": {
+        "calls": 554,
+        "ms": 316.7380309999952,
+        "bytes": 201524820
+      },
+      "ManagedFiles.bytes": {
+        "calls": 94,
+        "ms": 353.8972179999986,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 516,
+        "ms": 8933.308095000004,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 453,
+        "ms": 5214.087110000005,
+        "bytes": 151156396
+      },
+      "ManagedFiles.json": {
+        "calls": 86,
+        "ms": 913.8541109999983,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 308,
+        "ms": 6816.1282609999935,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 294.25569800000335,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 242.73905299999916,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 30.43512500000037,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 264,
+        "ms": 77.22934300002453,
+        "bytes": 100717037
+      },
+      "ManagedFiles.digest": {
+        "calls": 120,
+        "ms": 445.7088159999994,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 48.72387100000083,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 46.34183099999996,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 65.57854800000314,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 35.82983500000046,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 3.923641000000316,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 303.917206000001,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 14.574825999996392,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 18.491117999998096,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 9.638389999990977,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 41.788102999999865,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 105.4545619999999,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 14.788005999999768,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 15.482664000000113,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 4.402837999999065,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 1.26140000000305,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 2.5554800000018076,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-16-profile",
+    "sizeMiB": 16,
+    "phase": "commit",
+    "wallMs": 8504.432756,
+    "cpuUs": {
+      "user": 7861596,
+      "system": 873732
+    },
+    "memoryEnd": {
+      "rss": 226181120,
+      "heapTotal": 133988352,
+      "heapUsed": 103790488,
+      "external": 52943648,
+      "arrayBuffers": 50636441
+    },
+    "maxRSSKiB": 383264,
+    "operations": {
+      "assertJson": {
+        "calls": 307,
+        "ms": 6196.403007,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 256,
+        "ms": 4675.648814000008,
+        "bytes": 201411601
+      },
+      "parse": {
+        "calls": 197,
+        "ms": 3864.9563330000055,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 336,
+        "ms": 358.98417399996606,
+        "bytes": 268547885
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.3575980000000527,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1308,
+        "ms": 99.55077099995879,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 230,
+        "ms": 68.66303999999673,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 218,
+        "ms": 12.401070000013533,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 230,
+        "ms": 14.086496999987958,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 34,
+        "ms": 22.586742000001323,
+        "bytes": 16789106
+      },
+      "ManagedFiles.bytes": {
+        "calls": 34,
+        "ms": 81.39857099999972,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 32,
+        "ms": 517.7370069999974,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 44.586851999995815,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 32.681572999996206,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 19.18769599999996,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 0.5389700000014273,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 2.0099350000000413,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.03516399999989517,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 2.1083070000004227,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 6.221667999998317,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 2.4283220000015717,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 9.026504999999815,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 0.9890420000001541,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 1.3266609999991488,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 0.5584790000002613,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.33734499999991385,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 182,
+        "ms": 31.551992000004248,
+        "bytes": 83920353
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 182.8586089999999,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 3,
+        "ms": 30.133645000000797,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 28.13376199999948,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 12.160331000000042,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 12.052695000000313,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 3.8856100000011793,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 99.86483099999896,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-16-profile",
+    "sizeMiB": 16,
+    "phase": "cold-client-open",
+    "wallMs": 7443.3039690000005,
+    "cpuUs": {
+      "user": 6789506,
+      "system": 801847
+    },
+    "memoryEnd": {
+      "rss": 180920320,
+      "heapTotal": 116416512,
+      "heapUsed": 88853392,
+      "external": 15240137,
+      "arrayBuffers": 12932970
+    },
+    "maxRSSKiB": 468352,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2456,
+        "ms": 238.6310270000086,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.42270499999949607,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 4.817766000001598,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 428,
+        "ms": 175.3861049999948,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 347,
+        "ms": 35.64551399999192,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 428,
+        "ms": 35.57205100001414,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 94,
+        "ms": 32.142475999998624,
+        "bytes": 16824065
+      },
+      "sha256.update": {
+        "calls": 554,
+        "ms": 278.71317400000765,
+        "bytes": 201524820
+      },
+      "ManagedFiles.bytes": {
+        "calls": 94,
+        "ms": 212.32685799999882,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 512,
+        "ms": 5155.463262000003,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 453,
+        "ms": 3699.259887000013,
+        "bytes": 151156396
+      },
+      "ManagedFiles.json": {
+        "calls": 86,
+        "ms": 805.7987140000025,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 308,
+        "ms": 3150.6031369999982,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 174.1038680000009,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 157.37863299999879,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 27.951347000000055,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 264,
+        "ms": 57.190163999998276,
+        "bytes": 100717037
+      },
+      "ManagedFiles.digest": {
+        "calls": 120,
+        "ms": 331.79309999999714,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 36.82639300000005,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 1,
+        "ms": 32.437582999999904,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 44.33004899999878,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 17.944274000000405,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 5.8970140000001265,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 222.96856200000093,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 8.467099000001326,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 20.15344300000106,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 7.007535000001553,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 24.486673999999766,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 38.21237800000017,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 7.090481000000182,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 7.409685999999965,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 3.941751000000295,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 1.6473390000001018,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 1.141752000001361,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-32-profile",
+    "sizeMiB": 32,
+    "phase": "commit",
+    "wallMs": 24927.433613,
+    "cpuUs": {
+      "user": 22938002,
+      "system": 2792938
+    },
+    "memoryEnd": {
+      "rss": 352145408,
+      "heapTotal": 183263232,
+      "heapUsed": 154638112,
+      "external": 86496646,
+      "arrayBuffers": 84194073
+    },
+    "maxRSSKiB": 572960,
+    "operations": {
+      "assertJson": {
+        "calls": 322,
+        "ms": 18956.366370000007,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 265,
+        "ms": 11623.32185099999,
+        "bytes": 436295913
+      },
+      "parse": {
+        "calls": 199,
+        "ms": 12894.941011000035,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 364,
+        "ms": 877.1042649999636,
+        "bytes": 604095929
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.28876600000057806,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1323,
+        "ms": 290.92914700001984,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 232,
+        "ms": 218.53864699998758,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 219,
+        "ms": 44.64556600000924,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 232,
+        "ms": 56.96692100003929,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 35,
+        "ms": 85.70020100000511,
+        "bytes": 67121602
+      },
+      "ManagedFiles.bytes": {
+        "calls": 35,
+        "ms": 239.4132490000011,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 33,
+        "ms": 2184.483038000013,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 88.38874399999622,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 62.21559599999455,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 34.7659050000002,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 4.223533000000316,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 8.49048799999946,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 2.459077999999863,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 11.139906000000337,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 15.82163399998899,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 9.869157999997697,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 26.730358999997406,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 1.9293390000020736,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 2.3682520000002114,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 1.5721180000036838,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.22614599999724305,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 202,
+        "ms": 100.84237700002632,
+        "bytes": 167806433
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 640.6579620000084,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 65.41661999999633,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 2,
+        "ms": 63.40835999999763,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 51.956411000002845,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 52.016851000000315,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 9.85799599999882,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 407.0789700000023,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-base-document-32-profile",
+    "sizeMiB": 32,
+    "phase": "cold-client-open",
+    "wallMs": 19466.288901,
+    "cpuUs": {
+      "user": 17694567,
+      "system": 2136411
+    },
+    "memoryEnd": {
+      "rss": 245440512,
+      "heapTotal": 183001088,
+      "heapUsed": 154976136,
+      "external": 15237903,
+      "arrayBuffers": 12935370
+    },
+    "maxRSSKiB": 584436,
+    "operations": {
+      "fs.lstat": {
+        "calls": 2496,
+        "ms": 200.0729719999461,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 2,
+        "ms": 0.8869649999997478,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 44,
+        "ms": 3.984525999997402,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 434,
+        "ms": 138.8321069999813,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 350,
+        "ms": 22.579450000006318,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 434,
+        "ms": 23.7653329999647,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 96,
+        "ms": 136.2530799999958,
+        "bytes": 100711841
+      },
+      "sha256.update": {
+        "calls": 602,
+        "ms": 680.8430609999784,
+        "bytes": 570631464
+      },
+      "ManagedFiles.bytes": {
+        "calls": 96,
+        "ms": 404.97127099999693,
+        "bytes": 0
+      },
+      "assertJson": {
+        "calls": 535,
+        "ms": 14555.747205000005,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 470,
+        "ms": 9389.11082700002,
+        "bytes": 369266376
+      },
+      "ManagedFiles.json": {
+        "calls": 88,
+        "ms": 3540.5773249999947,
+        "bytes": 0
+      },
+      "parse": {
+        "calls": 312,
+        "ms": 9432.95414999998,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 88,
+        "ms": 143.03017800000396,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 26,
+        "ms": 122.5726850000035,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 4,
+        "ms": 52.240188999999646,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 298,
+        "ms": 77.91805400001954,
+        "bytes": 234935613
+      },
+      "ManagedFiles.digest": {
+        "calls": 121,
+        "ms": 419.27840300001503,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 6,
+        "ms": 114.48471800000107,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 3,
+        "ms": 109.37773600000105,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 6,
+        "ms": 59.39164200000141,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 4,
+        "ms": 8.317009000000326,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 2,
+        "ms": 7.514697000000524,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 4,
+        "ms": 232.5381180000004,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 133,
+        "ms": 5.370354999999108,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 36,
+        "ms": 19.695963999991363,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 63,
+        "ms": 4.269192999996449,
+        "bytes": 0
+      },
+      "IntentJournal.recover": {
+        "calls": 1,
+        "ms": 26.150400000000445,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 34.875544999998965,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 4.263215000000855,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 5.032186999998885,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 24,
+        "ms": 2.7000999999982014,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 12,
+        "ms": 0.5798330000015994,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 12,
+        "ms": 2.99117600000136,
+        "bytes": 0
+      }
+    }
+  },
+  {
+    "case": "b-document-32-profile",
+    "sizeMiB": 32,
+    "phase": "commit",
+    "wallMs": 24862.691092,
+    "cpuUs": {
+      "user": 22313944,
+      "system": 3066918
+    },
+    "memoryEnd": {
+      "rss": 419565568,
+      "heapTotal": 250650624,
+      "heapUsed": 221168968,
+      "external": 86496646,
+      "arrayBuffers": 84194073
+    },
+    "maxRSSKiB": 827620,
+    "operations": {
+      "assertJson": {
+        "calls": 317,
+        "ms": 18016.087234000002,
+        "bytes": 0
+      },
+      "canonicalJson": {
+        "calls": 265,
+        "ms": 13688.224179,
+        "bytes": 436295913
+      },
+      "parse": {
+        "calls": 199,
+        "ms": 10833.611337999993,
+        "bytes": 0
+      },
+      "sha256.update": {
+        "calls": 364,
+        "ms": 1054.3164720000113,
+        "bytes": 604095929
+      },
+      "LifecycleManager.admit": {
+        "calls": 1,
+        "ms": 0.3827630000005229,
+        "bytes": 0
+      },
+      "fs.lstat": {
+        "calls": 1323,
+        "ms": 166.15801999998257,
+        "bytes": 0
+      },
+      "ManagedFiles.info": {
+        "calls": 232,
+        "ms": 106.52401999998892,
+        "bytes": 0
+      },
+      "fs.open": {
+        "calls": 219,
+        "ms": 34.84406199996374,
+        "bytes": 0
+      },
+      "fd.stat": {
+        "calls": 232,
+        "ms": 16.55677000000378,
+        "bytes": 0
+      },
+      "fd.readFile": {
+        "calls": 35,
+        "ms": 59.85104400000182,
+        "bytes": 67121602
+      },
+      "ManagedFiles.bytes": {
+        "calls": 35,
+        "ms": 231.00538299999607,
+        "bytes": 0
+      },
+      "ManagedFiles.json": {
+        "calls": 33,
+        "ms": 2794.7260589999923,
+        "bytes": 0
+      },
+      "PageStore.hashed": {
+        "calls": 40,
+        "ms": 97.81883200000266,
+        "bytes": 0
+      },
+      "PageStore.read": {
+        "calls": 15,
+        "ms": 29.20136899999852,
+        "bytes": 0
+      },
+      "PageStore.update": {
+        "calls": 6,
+        "ms": 89.07879799999864,
+        "bytes": 0
+      },
+      "fs.readdir": {
+        "calls": 8,
+        "ms": 0.969424999999319,
+        "bytes": 0
+      },
+      "ManagedFiles.usage": {
+        "calls": 1,
+        "ms": 6.119928000000073,
+        "bytes": 0
+      },
+      "fs.statfs": {
+        "calls": 1,
+        "ms": 0.09802999999919848,
+        "bytes": 0
+      },
+      "LifecycleManager.reserve": {
+        "calls": 1,
+        "ms": 6.397871000001032,
+        "bytes": 0
+      },
+      "fs.mkdir": {
+        "calls": 80,
+        "ms": 10.491104999997333,
+        "bytes": 0
+      },
+      "fd.sync": {
+        "calls": 103,
+        "ms": 5.689800000021933,
+        "bytes": 0
+      },
+      "fd.writeFile": {
+        "calls": 38,
+        "ms": 68.7431469999974,
+        "bytes": 0
+      },
+      "fs.rename": {
+        "calls": 19,
+        "ms": 2.690472000002046,
+        "bytes": 0
+      },
+      "fs.unlink": {
+        "calls": 19,
+        "ms": 6.292266999993444,
+        "bytes": 0
+      },
+      "ManagedFiles.resync": {
+        "calls": 2,
+        "ms": 0.7194319999998697,
+        "bytes": 0
+      },
+      "VerificationCache.valid": {
+        "calls": 2,
+        "ms": 0.2218540000012581,
+        "bytes": 0
+      },
+      "fd.read": {
+        "calls": 202,
+        "ms": 71.06056599998556,
+        "bytes": 167806433
+      },
+      "ManagedFiles.digest": {
+        "calls": 81,
+        "ms": 363.1470950000221,
+        "bytes": 0
+      },
+      "ManagedFiles.proofIdentity": {
+        "calls": 4,
+        "ms": 56.34271000000081,
+        "bytes": 0
+      },
+      "VerificationCache.remember": {
+        "calls": 2,
+        "ms": 54.42161499999929,
+        "bytes": 0
+      },
+      "ManagedFiles.checkFingerprint": {
+        "calls": 2,
+        "ms": 16.42688199999975,
+        "bytes": 0
+      },
+      "VerificationCache.registry": {
+        "calls": 2,
+        "ms": 16.53655799999615,
+        "bytes": 0
+      },
+      "VerificationCache.rememberRegistry": {
+        "calls": 1,
+        "ms": 3.9554239999997662,
+        "bytes": 0
+      },
+      "ManagedFiles.verifyObservations": {
+        "calls": 3,
+        "ms": 224.30803899999955,
+        "bytes": 0
+      }
+    }
+  }
+]

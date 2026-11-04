@@ -1,0 +1,205 @@
+{
+  "a-integrity": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 60,
+    "pass": 60,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "b-negative-baseline": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 18,
+    "pass": 18,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "b-negative-candidate": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 60,
+    "pass": 60,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "g2-final-bounded": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "complete-node22-serial": {
+    "exitCode": 1,
+    "stop": null,
+    "tests": 545,
+    "pass": 542,
+    "fail": 1,
+    "skipped": 2,
+    "cancelled": 0,
+    "failedNames": [
+      "not ok 276 - SIGKILL / after-intent-durable preserves one whole root and at most one retry effect"
+    ]
+  },
+  "startup-fault-baseline-control": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "startup-fault-candidate-control": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r1-h01": {
+    "exitCode": 1,
+    "stop": null,
+    "tests": 4,
+    "pass": 0,
+    "fail": 4,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": [
+      "not ok 1 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false",
+      "not ok 2 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true",
+      "not ok 3 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=false",
+      "not ok 4 - independent regression: a completed CURRENT claim survives a second legitimate restart / linux-process-crash-test / laterContent=true"
+    ]
+  },
+  "r1-independent": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 22,
+    "pass": 22,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r2-storage": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 14,
+    "pass": 14,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r2-cache": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r2-ack": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r3-adversarial": {
+    "exitCode": 1,
+    "stop": null,
+    "tests": 8,
+    "pass": 7,
+    "fail": 1,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": [
+      "not ok 3 - native candidate proof remains valid through before-ack"
+    ]
+  },
+  "r3-metadata": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r3-publication": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r3-backup": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "r1-h01-corrected-fixture": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "contracts": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 22,
+    "pass": 22,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "complete-node22-serial-retest": {
+    "exitCode": 0,
+    "stop": null,
+    "tests": 545,
+    "pass": 543,
+    "fail": 0,
+    "skipped": 2,
+    "cancelled": 0,
+    "failedNames": []
+  },
+  "cas-python": {
+    "exitCode": 0,
+    "tests": 17
+  }
+}
