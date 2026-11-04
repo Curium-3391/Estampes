@@ -1,0 +1,17 @@
+du: cannot access '/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/history-100/estampes-pr1c-checkpoint-3UlEuS/visual-registry/pages/b3d0bf0b445672db5af7d64ee8bc8fc45b974a759346d9f6ea7ca149ba581f04.json.tmp-7693709c-8b82-4517-8f41-9a23f09612e6': No such file or directory
+Traceback (most recent call last):
+  File "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-frozen-qualification/run.py", line 109, in <module>
+    sys.exit(run(Path(path).resolve(strict=True), name, int(timeout), int(mib)*MIB, command))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-frozen-qualification/run.py", line 68, in run
+    if blocks > allocation_cap or allocated(scratch) > 12 * GIB:
+                                  ^^^^^^^^^^^^^^^^^^
+  File "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-frozen-qualification/run.py", line 33, in allocated
+    return int(subprocess.check_output(["du", "-s", "-B1", "--", path], text=True).split()[0])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 466, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['du', '-s', '-B1', '--', PosixPath('/home/estampes/estampes-pr1d-frozen.8S9L5lrb')]' returned non-zero exit status 1.

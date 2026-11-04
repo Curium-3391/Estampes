@@ -1,0 +1,28 @@
+{"event":"store","root":"/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/archive-32mib/estampes-pr1c-checkpoint-f2wozC","mode":"archive","target":4}
+{"event":"startup","label":"bootstrap","elapsedMs":661.320801,"state":"ready","problem":null,"profile":{"open":null,"transactions":[{"mode":"genesis","buildAndPreflightMs":11.740231999999992,"stageAndPrepareMs":212.995005,"candidateVerificationMs":72.41914600000007,"currentPublicationMs":38.44107800000006,"postPublicationMs":58.73267599999997,"totalMs":394.545369}],"verification":{"snapshotLoads":1,"versionHits":0,"versionMisses":0,"recordHits":0,"registryHits":0,"registryMaterializations":1,"versionReconstructions":0,"reconstructedMs":0,"proofEvictions":0,"metadataPathsTraversed":0,"deltaApplications":0,"operationPrefixHits":0,"physicalFingerprintChecks":12,"contentHashChecks":12,"recordCacheBytes":0,"registryCacheBytes":2,"proofMetadataBytes":571,"proofMetadataBudget":4194304,"physicalFingerprints":1,"versionProofs":0,"registryProofs":1}}}
+{"event":"commit","n":1,"elapsedMs":10574.283604,"peakWorkerRssKiB":295272,"ref":{"storeInstanceId":"e8867d5e-cb4d-4654-9d45-b4a6127b1f11","entityId":"doc:00000001-0000-4000-8000-000000000001","revision":1,"contentHash":"09ef4948be196dc97edb415648e46456e68dcb8c43699bcf42832ca32474d6b6"}}
+{"event":"commit","n":2,"elapsedMs":11267.388521,"peakWorkerRssKiB":311448,"ref":{"storeInstanceId":"e8867d5e-cb4d-4654-9d45-b4a6127b1f11","entityId":"doc:00000001-0000-4000-8000-000000000001","revision":2,"contentHash":"301fd2eaf423b15d3bf48c142b603cad144d052e47d91af9f60aedbffd2c4906"}}
+{"event":"commit","n":3,"elapsedMs":9460.804962999999,"peakWorkerRssKiB":370764,"ref":{"storeInstanceId":"e8867d5e-cb4d-4654-9d45-b4a6127b1f11","entityId":"doc:00000001-0000-4000-8000-000000000001","revision":3,"contentHash":"af8248d7bab12ef9a41ec519b0adad5521c862688f98dca27cb96598c804819f"}}
+{"event":"archive-threshold","priorBytes":25167184,"nextPatchBytes":12583592,"totalBytes":37750776,"threshold":33554432}
+{"event":"checkpoint-crash","point":"current.before-rename","details":{"path":"visual-registry/CURRENT.json"}}
+{"event":"startup","label":"checkpoint-pre-rename-recovery","elapsedMs":17080.990959999996,"state":"ready","problem":null,"profile":{"open":{"verifyCommittedMs":13195.35474},"transactions":[{"mode":"recovery-epoch","buildAndPreflightMs":98.39464000000044,"stageAndPrepareMs":186.87996400000156,"candidateVerificationMs":2656.147404999998,"currentPublicationMs":193.63484400000016,"postPublicationMs":239.9577390000013,"totalMs":3375.0798129999985}],"verification":{"snapshotLoads":2,"versionHits":7,"versionMisses":5,"recordHits":3,"registryHits":4,"registryMaterializations":5,"versionReconstructions":5,"reconstructedMs":6151.7361710000005,"proofEvictions":0,"metadataPathsTraversed":46,"deltaApplications":4,"operationPrefixHits":1,"physicalFingerprintChecks":108,"contentHashChecks":122,"recordCacheBytes":12583774,"registryCacheBytes":782,"proofMetadataBytes":8255,"proofMetadataBudget":4194304,"physicalFingerprints":16,"versionProofs":3,"registryProofs":4}}}
+{"event":"checkpoint-crash","point":"current.after-dir-fsync","details":{}}
+{"event":"preserved","root":"/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/archive-32mib/estampes-pr1c-checkpoint-f2wozC"}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(entry)
+
+    at file:///home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-frozen-qualification/checkpoint.mjs:116:14 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.23.4

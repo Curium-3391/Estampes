@@ -1,0 +1,16 @@
+{"event":"pressure-store","root":"/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/reader-size-preflight/estampes-pr1c-reader-size-xeN1Lo","backup":"/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/reader-size-preflight/estampes-pr1c-backup-size-Ym6nPK","documentBytes":67076892}
+{"event":"pressure-commit","elapsedMs":41082.286743,"usage":{"logicalBytes":67093874,"allocatedBytes":67260416,"files":35}}
+{"event":"preserved","root":"/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/reader-size-preflight/estampes-pr1c-reader-size-xeN1Lo","backup":"/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/reader-size-preflight/estampes-pr1c-backup-size-Ym6nPK"}
+file:///home/estampes/projects/Estampes/src/persistence/lease.js:21
+    const timer=setTimeout(()=>{child.kill("SIGKILL");reject(new PersistenceError("RECOVERY_REQUIRED","Writer startup timed out"));},30000);
+                                                             ^
+
+PersistenceError: Writer startup timed out
+    at Timeout._onTimeout (file:///home/estampes/projects/Estampes/src/persistence/lease.js:21:62)
+    at listOnTimeout (node:internal/timers:585:17)
+    at process.processTimers (node:internal/timers:521:7) {
+  code: 'RECOVERY_REQUIRED',
+  details: {}
+}
+
+Node.js v22.23.4

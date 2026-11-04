@@ -1,0 +1,56 @@
+## codex/pr1d-frozen-lifecycle-qualification
+82ae9081f6e60b4965d56138a8046d5831922e1d
+a33f526d43a4802732177954ca47ae97d9f380a3
+756ea491e27bce3a2998dc61ba1e3ee34525919c
+82ae9081f6e60b4965d56138a8046d5831922e1d
+uid=1001(estampes) gid=1001(estampes) groups=1001(estampes),27(sudo),100(users)
+Linux DESKTOP-49V0ECD 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+PRETTY_NAME="Ubuntu 24.04.1 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.1 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+TARGET SOURCE   FSTYPE MAJ:MIN OPTIONS
+/      /dev/sdd ext4     8:48  rw,relatime,discard,errors=remount-ro,data=ordered
+/home/estampes/projects/Estampes magic=0xef53 fsid=be1d78fd15e717c5
+/home/estampes/projects/Estampes mode=755 uid=1001 gid=1001 dev=830
+TARGET SOURCE   FSTYPE MAJ:MIN OPTIONS
+/      /dev/sdd ext4     8:48  rw,relatime,discard,errors=remount-ro,data=ordered
+/home/estampes/estampes-pr1d-frozen.8S9L5lrb magic=0xef53 fsid=be1d78fd15e717c5
+/home/estampes/estampes-pr1d-frozen.8S9L5lrb mode=700 uid=1001 gid=1001 dev=830
+80 65 8:48 / / rw,relatime - ext4 /dev/sdd rw,discard,errors=remount-ro,data=ordered
+NAME MAJ:MIN FSTYPE UUID                                 MOUNTPOINTS
+sda    8:0   ext4
+sdb    8:16  ext4
+sdc    8:32  swap   f8096ecc-081b-439a-bd7b-7f38c18702f9 [SWAP]
+sdd    8:48  ext4   45502865-6e33-40d2-b828-35dbab24a7c7 /mnt/wslg/distro
+                                                         /
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdd       1007G  3.4G  953G   1% /
+               total        used        free      shared  buff/cache   available
+Mem:           7.7Gi       706Mi       6.6Gi       3.5Mi       636Mi       7.0Gi
+Swap:          2.0Gi          0B       2.0Gi
+16
+1024
+0::/init.scope
+v22.23.4
+flock from util-linux 2.39.3
+
+Host backing capacity observations before pressure
+Filesystem         1B-blocks         Used    Available Use% Mounted on
+C:\             248900292608 183794565120  65105727488  74% /mnt/c
+D:\            1000199942144 277434900480 722765041664  28% /mnt/d
+E:\             240055742464 128678547456 111377195008  54% /mnt/e
+Msft
+Virtual Disk
+max
+max
+max 100000

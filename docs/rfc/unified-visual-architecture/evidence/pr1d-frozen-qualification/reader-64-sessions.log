@@ -1,0 +1,1 @@
+{"event":"shared-readers","sessions":64,"physicalBytes":7739,"epoch":64,"active":0,"readers":64,"rejectedSession":65,"elapsedMs":696.8611620000001,"usage":{"logicalBytes":30729,"allocatedBytes":286720,"files":55}}

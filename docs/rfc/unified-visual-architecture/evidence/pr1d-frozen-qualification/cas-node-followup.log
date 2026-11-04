@@ -1,0 +1,360 @@
+TAP version 13
+# Subtest: export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting
+ok 1 - export writes surface.json and notebooks; install rebuilds them under new ids, stale, without overwriting
+  ---
+  duration_ms: 1519.119232
+  type: 'test'
+  ...
+# Subtest: info cards in a browser: per-module groups, fold, hide and bring back
+not ok 2 - info cards in a browser: per-module groups, fold, hide and bring back
+  ---
+  duration_ms: 1233.312906
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/cards-e2e.test.js:8:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-DHiyhA --remote-debugging-pipe --no-startup-window
+    <launched> pid=111092
+    [pid=111092][err] [1104/151830.814352:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111092][err] [1104/151830.814433:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-DHiyhA --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111092[22m
+    [2m  - [pid=111092][err] [1104/151830.814352:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111092][err] [1104/151830.814433:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111092] <gracefully close start>[22m
+    [2m  - [pid=111092] <kill>[22m
+    [2m  - [pid=111092] <will force kill>[22m
+    [2m  - [pid=111092] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111092] starting temporary directories cleanup[22m
+    [2m  - [pid=111092] finished temporary directories cleanup[22m
+    [2m  - [pid=111092] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.open (/home/estampes/projects/Estampes/tests/helpers/widget-host.js:63:34)
+    async TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/cards-e2e.test.js:16:16)
+  ...
+# Subtest: cas: disabled until the user enables it
+ok 3 - cas: disabled until the user enables it
+  ---
+  duration_ms: 449.168649
+  type: 'test'
+  ...
+# Subtest: cas: exact results come from SymPy, with LaTeX and a typed AST
+ok 4 - cas: exact results come from SymPy, with LaTeX and a typed AST
+  ---
+  duration_ms: 129.335022
+  type: 'test'
+  ...
+# Subtest: cas: bad input is a cell error, the input is kept and nothing executes
+ok 5 - cas: bad input is a cell error, the input is kept and nothing executes
+  ---
+  duration_ms: 20.313441
+  type: 'test'
+  ...
+# Subtest: cas: plot_result draws a semantic function plot and links it to the cell
+ok 6 - cas: plot_result draws a semantic function plot and links it to the cell
+  ---
+  duration_ms: 63.547166
+  type: 'test'
+  ...
+# Subtest: cas: editing upstream makes results and links stale, and a stale result is not plotted
+ok 7 - cas: editing upstream makes results and links stale, and a stale result is not plotted
+  ---
+  duration_ms: 111.289499
+  type: 'test'
+  ...
+# Subtest: cas: conditional, partial and complex results are never plotted as ordinary functions
+ok 8 - cas: conditional, partial and complex results are never plotted as ordinary functions
+  ---
+  duration_ms: 518.629142
+  type: 'test'
+  ...
+# Subtest: cas: revision conflicts and idempotency keys
+ok 9 - cas: revision conflicts and idempotency keys
+  ---
+  duration_ms: 28.844299
+  type: 'test'
+  ...
+# Subtest: cas: notebooks survive a restart of the Core
+ok 10 - cas: notebooks survive a restart of the Core
+  ---
+  duration_ms: 19.129205
+  type: 'test'
+  ...
+# Subtest: cas: with no calculator service the module reports it and Core keeps working
+ok 11 - cas: with no calculator service the module reports it and Core keeps working
+  ---
+  duration_ms: 10.455144
+  type: 'test'
+  ...
+# Subtest: bridge: only real single-variable results become Graph expressions
+ok 12 - bridge: only real single-variable results become Graph expressions
+  ---
+  duration_ms: 1.090306
+  type: 'test'
+  ...
+# Subtest: cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged
+ok 13 - cas: a running calculation can be cancelled; it leaves no cell and the notebook is unchanged
+  ---
+  duration_ms: 433.946821
+  type: 'test'
+  ...
+# Subtest: layers in a browser: base image + overlay image + Graph curve, fade and reorder
+not ok 14 - layers in a browser: base image + overlay image + Graph curve, fade and reorder
+  ---
+  duration_ms: 1294.65193
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/layers-e2e.test.js:8:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-dSBZq6 --remote-debugging-pipe --no-startup-window
+    <launched> pid=111179
+    [pid=111179][err] [1104/151835.478340:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111179][err] [1104/151835.478417:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-dSBZq6 --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111179[22m
+    [2m  - [pid=111179][err] [1104/151835.478340:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111179][err] [1104/151835.478417:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111179] <gracefully close start>[22m
+    [2m  - [pid=111179] <kill>[22m
+    [2m  - [pid=111179] <will force kill>[22m
+    [2m  - [pid=111179] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111179] starting temporary directories cleanup[22m
+    [2m  - [pid=111179] finished temporary directories cleanup[22m
+    [2m  - [pid=111179] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.open (/home/estampes/projects/Estampes/tests/helpers/widget-host.js:63:34)
+    async TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/layers-e2e.test.js:23:16)
+  ...
+# Subtest: manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook
+ok 15 - manage_surface_panels shows the calculator, with or without a canvas, and attaches the model's notebook
+  ---
+  duration_ms: 1585.283925
+  type: 'test'
+  ...
+# Subtest: browser: the widget opened by manage_surface_panels shows the calculator with the model's cell
+not ok 16 - browser: the widget opened by manage_surface_panels shows the calculator with the model's cell
+  ---
+  duration_ms: 1558.48977
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/surface-open.test.js:38:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-3luB4Y --remote-debugging-pipe --no-startup-window
+    <launched> pid=111245
+    [pid=111245][err] [1104/151839.577745:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111245][err] [1104/151839.577821:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-3luB4Y --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111245[22m
+    [2m  - [pid=111245][err] [1104/151839.577745:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111245][err] [1104/151839.577821:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111245] <gracefully close start>[22m
+    [2m  - [pid=111245] <kill>[22m
+    [2m  - [pid=111245] <will force kill>[22m
+    [2m  - [pid=111245] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111245] starting temporary directories cleanup[22m
+    [2m  - [pid=111245] finished temporary directories cleanup[22m
+    [2m  - [pid=111245] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.open (/home/estampes/projects/Estampes/tests/helpers/widget-host.js:63:34)
+    async TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/surface-open.test.js:46:16)
+  ...
+# Subtest: browser: with the calculator alone, the launcher offers the Graph canvas and brings it back
+not ok 17 - browser: with the calculator alone, the launcher offers the Graph canvas and brings it back
+  ---
+  duration_ms: 1445.102277
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/surface-open.test.js:55:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-MHKpOt --remote-debugging-pipe --no-startup-window
+    <launched> pid=111273
+    [pid=111273][err] [1104/151841.036980:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111273][err] [1104/151841.037112:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-MHKpOt --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111273[22m
+    [2m  - [pid=111273][err] [1104/151841.036980:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111273][err] [1104/151841.037112:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111273] <gracefully close start>[22m
+    [2m  - [pid=111273] <kill>[22m
+    [2m  - [pid=111273] <will force kill>[22m
+    [2m  - [pid=111273] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111273] starting temporary directories cleanup[22m
+    [2m  - [pid=111273] finished temporary directories cleanup[22m
+    [2m  - [pid=111273] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.open (/home/estampes/projects/Estampes/tests/helpers/widget-host.js:63:34)
+    async TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/surface-open.test.js:63:16)
+  ...
+# Subtest: link refresh: stale plots are recomputed and redrawn, manually and automatically
+ok 18 - link refresh: stale plots are recomputed and redrawn, manually and automatically
+  ---
+  duration_ms: 1952.452271
+  type: 'test'
+  ...
+# Subtest: layout: defaults put the viewport left and companions right; phones get tabs
+ok 19 - layout: defaults put the viewport left and companions right; phones get tabs
+  ---
+  duration_ms: 7.316362
+  type: 'test'
+  ...
+# Subtest: layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size
+ok 20 - layout: panels stay reachable, snap to edges and neighbours, and keep a minimum size
+  ---
+  duration_ms: 0.419985
+  type: 'test'
+  ...
+# Subtest: layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing
+ok 21 - layout ops: arrange, focus, minimize, reorder; invalid ops are refused and change nothing
+  ---
+  duration_ms: 2.798691
+  type: 'test'
+  ...
+# Subtest: layout: a stored layout is reconciled with the panel list and profiles do not touch each other
+ok 22 - layout: a stored layout is reconciled with the panel list and profiles do not touch each other
+  ---
+  duration_ms: 0.820894
+  type: 'test'
+  ...
+# Subtest: panel descriptors: strict, bound to real capabilities, inert when the kind is unknown
+ok 23 - panel descriptors: strict, bound to real capabilities, inert when the kind is unknown
+  ---
+  duration_ms: 16.255241
+  type: 'test'
+  ...
+# Subtest: surface over MCP: panels, calculator, plot, layouts per profile, restart
+ok 24 - surface over MCP: panels, calculator, plot, layouts per profile, restart
+  ---
+  duration_ms: 2797.412468
+  type: 'test'
+  ...
+# Subtest: pick a photo in the canvas: upload in slices, preview then full image, model told
+not ok 25 - pick a photo in the canvas: upload in slices, preview then full image, model told
+  ---
+  duration_ms: 826.370926
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/upload-e2e.test.js:16:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-5Elgik --remote-debugging-pipe --no-startup-window
+    <launched> pid=111401
+    [pid=111401][err] [1104/151849.165390:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111401][err] [1104/151849.165488:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-5Elgik --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111401[22m
+    [2m  - [pid=111401][err] [1104/151849.165390:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111401][err] [1104/151849.165488:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111401] <gracefully close start>[22m
+    [2m  - [pid=111401] <kill>[22m
+    [2m  - [pid=111401] <will force kill>[22m
+    [2m  - [pid=111401] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111401] starting temporary directories cleanup[22m
+    [2m  - [pid=111401] finished temporary directories cleanup[22m
+    [2m  - [pid=111401] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.open (/home/estampes/projects/Estampes/tests/helpers/widget-host.js:63:34)
+    async TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/upload-e2e.test.js:19:37)
+  ...
+# Subtest: workbench in a browser: Graph + calculator side by side, drag, mobile tabs
+not ok 26 - workbench in a browser: Graph + calculator side by side, drag, mobile tabs
+  ---
+  duration_ms: 1528.61171
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/workbench-e2e.test.js:40:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-t5G4C6 --remote-debugging-pipe --no-startup-window
+    <launched> pid=111444
+    [pid=111444][err] [1104/151851.509392:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111444][err] [1104/151851.509467:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-t5G4C6 --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111444[22m
+    [2m  - [pid=111444][err] [1104/151851.509392:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111444][err] [1104/151851.509467:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111444] <gracefully close start>[22m
+    [2m  - [pid=111444] <kill>[22m
+    [2m  - [pid=111444] <will force kill>[22m
+    [2m  - [pid=111444] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111444] starting temporary directories cleanup[22m
+    [2m  - [pid=111444] finished temporary directories cleanup[22m
+    [2m  - [pid=111444] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/workbench-e2e.test.js:65:30)
+  ...
+# Subtest: browser: a burst of wheel zooms triggers only a few full renders
+not ok 27 - browser: a burst of wheel zooms triggers only a few full renders
+  ---
+  duration_ms: 899.633879
+  type: 'test'
+  location: '/home/estampes/projects/Estampes/tests/zoom-perf.test.js:11:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-lXWU5H --remote-debugging-pipe --no-startup-window
+    <launched> pid=111483
+    [pid=111483][err] [1104/151853.451122:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+    [pid=111483][err] [1104/151853.451200:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+    Call log:
+    [2m  - <launching> /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/cas-node-followup/playwright_chromiumdev_profile-lXWU5H --remote-debugging-pipe --no-startup-window[22m
+    [2m  - <launched> pid=111483[22m
+    [2m  - [pid=111483][err] [1104/151853.451122:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)[22m
+    [2m  - [pid=111483][err] [1104/151853.451200:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)[22m
+    [2m  - [pid=111483] <gracefully close start>[22m
+    [2m  - [pid=111483] <kill>[22m
+    [2m  - [pid=111483] <will force kill>[22m
+    [2m  - [pid=111483] <process did exit: exitCode=null, signal=SIGTRAP>[22m
+    [2m  - [pid=111483] starting temporary directories cleanup[22m
+    [2m  - [pid=111483] finished temporary directories cleanup[22m
+    [2m  - [pid=111483] <gracefully close end>[22m
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.open (/home/estampes/projects/Estampes/tests/helpers/widget-host.js:63:34)
+    async TestContext.<anonymous> (/home/estampes/projects/Estampes/tests/zoom-perf.test.js:19:16)
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 20
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 27451.125486

@@ -1,0 +1,142 @@
+Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libnspr4 amd64 2:4.35-1.1build1 [117 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libasound2t64 amd64 1.2.11-1ubuntu0.3 [398 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libnss3 amd64 2:3.98-1ubuntu0.3 [1445 kB]
+Fetched 1960 kB in 4s (552 kB/s)
+5d17bfb5683eb99f1be951fe48e1be5bf3c52391913b6b74a8aecf9b4f5e779f  ./libasound2t64_1.2.11-1ubuntu0.3_amd64.deb
+e579e72d091f6c7a13f5a756c31065b15aae5b81840d61b069355aa2283c07b4  ./libnspr4_2%3a4.35-1.1build1_amd64.deb
+e11fdf8c09a068d0f0c3fd90ed971253dfed7227cc20d3d487fd615d4771f1bb  ./libnss3_2%3a3.98-1ubuntu0.3_amd64.deb
+Downloading Chromium 141.0.7390.37 (playwright build v1194)[2m from https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/1194/chromium-linux.zip[22m
+|                                                                                |   0% of 173.9 MiB
+|■■■■■■■■                                                                        |  10% of 173.9 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 173.9 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 173.9 MiB
+Chromium 141.0.7390.37 (playwright build v1194) downloaded to /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194
+Downloading FFMPEG playwright build v1011[2m from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip[22m
+|                                                                                |   0% of 2.3 MiB
+|■■■■■■■■                                                                        |  10% of 2.3 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.3 MiB
+FFMPEG playwright build v1011 downloaded to /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/ffmpeg-1011
+Playwright Host validation warning:
+╔══════════════════════════════════════════════════════╗
+║ Host system is missing dependencies to run browsers. ║
+║ Please install them with the following command:      ║
+║                                                      ║
+║     sudo npx playwright install-deps                 ║
+║                                                      ║
+║ Alternatively, use apt:                              ║
+║     sudo apt-get install libnspr4\                   ║
+║         libnss3\                                     ║
+║         libasound2t64                                ║
+║                                                      ║
+║ <3 Playwright Team                                   ║
+╚══════════════════════════════════════════════════════╝
+    at validateDependenciesLinux (/home/estampes/projects/Estampes/node_modules/playwright-core/lib/server/registry/dependencies.js:269:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Registry._validateHostRequirements (/home/estampes/projects/Estampes/node_modules/playwright-core/lib/server/registry/index.js:961:14)
+    at async Registry._validateHostRequirementsForExecutableIfNeeded (/home/estampes/projects/Estampes/node_modules/playwright-core/lib/server/registry/index.js:1083:7)
+    at async Registry.validateHostRequirementsForExecutablesIfNeeded (/home/estampes/projects/Estampes/node_modules/playwright-core/lib/server/registry/index.js:1072:7)
+    at async i.<anonymous> (/home/estampes/projects/Estampes/node_modules/playwright-core/lib/cli/program.js:217:7)
+Chromium 141.0.7390.37
+/home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/browsers/chromium-1194/chrome-linux/chrome: OK
+	linux-vdso.so.1 (0x00007fffbc3b0000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x000071ff97a18000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x000071ff97a13000)
+	libglib-2.0.so.0 => /lib/x86_64-linux-gnu/libglib-2.0.so.0 (0x000071ff87cb7000)
+	libgobject-2.0.so.0 => /lib/x86_64-linux-gnu/libgobject-2.0.so.0 (0x000071ff87c54000)
+	libnspr4.so => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libnspr4.so (0x000071ff87c15000)
+	libnss3.so => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libnss3.so (0x000071ff87ae6000)
+	libnssutil3.so => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libnssutil3.so (0x000071ff87ab4000)
+	libsmime3.so => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libsmime3.so (0x000071ff87a8b000)
+	libgio-2.0.so.0 => /lib/x86_64-linux-gnu/libgio-2.0.so.0 (0x000071ff878bb000)
+	libdbus-1.so.3 => /lib/x86_64-linux-gnu/libdbus-1.so.3 (0x000071ff8786c000)
+	libatk-1.0.so.0 => /lib/x86_64-linux-gnu/libatk-1.0.so.0 (0x000071ff87842000)
+	libatk-bridge-2.0.so.0 => /lib/x86_64-linux-gnu/libatk-bridge-2.0.so.0 (0x000071ff87806000)
+	libcups.so.2 => /lib/x86_64-linux-gnu/libcups.so.2 (0x000071ff87765000)
+	libexpat.so.1 => /lib/x86_64-linux-gnu/libexpat.so.1 (0x000071ff87737000)
+	libxcb.so.1 => /lib/x86_64-linux-gnu/libxcb.so.1 (0x000071ff8770e000)
+	libxkbcommon.so.0 => /lib/x86_64-linux-gnu/libxkbcommon.so.0 (0x000071ff876c5000)
+	libatspi.so.0 => /lib/x86_64-linux-gnu/libatspi.so.0 (0x000071ff8768b000)
+	libX11.so.6 => /lib/x86_64-linux-gnu/libX11.so.6 (0x000071ff8754d000)
+	libXcomposite.so.1 => /lib/x86_64-linux-gnu/libXcomposite.so.1 (0x000071ff97a08000)
+	libXdamage.so.1 => /lib/x86_64-linux-gnu/libXdamage.so.1 (0x000071ff87548000)
+	libXext.so.6 => /lib/x86_64-linux-gnu/libXext.so.6 (0x000071ff87534000)
+	libXfixes.so.3 => /lib/x86_64-linux-gnu/libXfixes.so.3 (0x000071ff8752c000)
+	libXrandr.so.2 => /lib/x86_64-linux-gnu/libXrandr.so.2 (0x000071ff8751d000)
+	libgbm.so.1 => /lib/x86_64-linux-gnu/libgbm.so.1 (0x000071ff87516000)
+	libcairo.so.2 => /lib/x86_64-linux-gnu/libcairo.so.2 (0x000071ff873d2000)
+	libpango-1.0.so.0 => /lib/x86_64-linux-gnu/libpango-1.0.so.0 (0x000071ff87367000)
+	libudev.so.1 => /lib/x86_64-linux-gnu/libudev.so.1 (0x000071ff87334000)
+	libasound.so.2 => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libasound.so.2 (0x000071ff87228000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000071ff8713f000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x000071ff87111000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000071ff86e00000)
+	/lib64/ld-linux-x86-64.so.2 (0x000071ff97a25000)
+	libpcre2-8.so.0 => /lib/x86_64-linux-gnu/libpcre2-8.so.0 (0x000071ff87077000)
+	libffi.so.8 => /lib/x86_64-linux-gnu/libffi.so.8 (0x000071ff8706b000)
+	libplc4.so => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libplc4.so (0x000071ff87062000)
+	libplds4.so => /home/estampes/estampes-pr1d-frozen.8S9L5lrb/tmp/browser-setup/extracted/usr/lib/x86_64-linux-gnu/libplds4.so (0x000071ff8705d000)
+	libgmodule-2.0.so.0 => /lib/x86_64-linux-gnu/libgmodule-2.0.so.0 (0x000071ff87056000)
+	libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x000071ff8703a000)
+	libmount.so.1 => /lib/x86_64-linux-gnu/libmount.so.1 (0x000071ff86db3000)
+	libselinux.so.1 => /lib/x86_64-linux-gnu/libselinux.so.1 (0x000071ff86d86000)
+	libsystemd.so.0 => /lib/x86_64-linux-gnu/libsystemd.so.0 (0x000071ff86ca6000)
+	libgssapi_krb5.so.2 => /lib/x86_64-linux-gnu/libgssapi_krb5.so.2 (0x000071ff86c52000)
+	libavahi-common.so.3 => /lib/x86_64-linux-gnu/libavahi-common.so.3 (0x000071ff8702a000)
+	libavahi-client.so.3 => /lib/x86_64-linux-gnu/libavahi-client.so.3 (0x000071ff87017000)
+	libgnutls.so.30 => /lib/x86_64-linux-gnu/libgnutls.so.30 (0x000071ff86a57000)
+	libXau.so.6 => /lib/x86_64-linux-gnu/libXau.so.6 (0x000071ff86a51000)
+	libXdmcp.so.6 => /lib/x86_64-linux-gnu/libXdmcp.so.6 (0x000071ff86a49000)
+	libXi.so.6 => /lib/x86_64-linux-gnu/libXi.so.6 (0x000071ff86a36000)
+	libXrender.so.1 => /lib/x86_64-linux-gnu/libXrender.so.1 (0x000071ff86a2a000)
+	libdrm.so.2 => /lib/x86_64-linux-gnu/libdrm.so.2 (0x000071ff86a13000)
+	libpng16.so.16 => /lib/x86_64-linux-gnu/libpng16.so.16 (0x000071ff869db000)
+	libfontconfig.so.1 => /lib/x86_64-linux-gnu/libfontconfig.so.1 (0x000071ff8698a000)
+	libfreetype.so.6 => /lib/x86_64-linux-gnu/libfreetype.so.6 (0x000071ff868be000)
+	libxcb-render.so.0 => /lib/x86_64-linux-gnu/libxcb-render.so.0 (0x000071ff868af000)
+	libxcb-shm.so.0 => /lib/x86_64-linux-gnu/libxcb-shm.so.0 (0x000071ff868a8000)
+	libpixman-1.so.0 => /lib/x86_64-linux-gnu/libpixman-1.so.0 (0x000071ff867f9000)
+	libfribidi.so.0 => /lib/x86_64-linux-gnu/libfribidi.so.0 (0x000071ff867db000)
+	libthai.so.0 => /lib/x86_64-linux-gnu/libthai.so.0 (0x000071ff867d0000)
+	libharfbuzz.so.0 => /lib/x86_64-linux-gnu/libharfbuzz.so.0 (0x000071ff866c3000)
+	libcap.so.2 => /lib/x86_64-linux-gnu/libcap.so.2 (0x000071ff866b6000)
+	libblkid.so.1 => /lib/x86_64-linux-gnu/libblkid.so.1 (0x000071ff86679000)
+	libgcrypt.so.20 => /lib/x86_64-linux-gnu/libgcrypt.so.20 (0x000071ff86530000)
+	liblz4.so.1 => /lib/x86_64-linux-gnu/liblz4.so.1 (0x000071ff8650e000)
+	liblzma.so.5 => /lib/x86_64-linux-gnu/liblzma.so.5 (0x000071ff864dc000)
+	libzstd.so.1 => /lib/x86_64-linux-gnu/libzstd.so.1 (0x000071ff86422000)
+	libkrb5.so.3 => /lib/x86_64-linux-gnu/libkrb5.so.3 (0x000071ff86357000)
+	libk5crypto.so.3 => /lib/x86_64-linux-gnu/libk5crypto.so.3 (0x000071ff8632b000)
+	libcom_err.so.2 => /lib/x86_64-linux-gnu/libcom_err.so.2 (0x000071ff86325000)
+	libkrb5support.so.0 => /lib/x86_64-linux-gnu/libkrb5support.so.0 (0x000071ff86318000)
+	libp11-kit.so.0 => /lib/x86_64-linux-gnu/libp11-kit.so.0 (0x000071ff86174000)
+	libidn2.so.0 => /lib/x86_64-linux-gnu/libidn2.so.0 (0x000071ff86150000)
+	libunistring.so.5 => /lib/x86_64-linux-gnu/libunistring.so.5 (0x000071ff85fa3000)
+	libtasn1.so.6 => /lib/x86_64-linux-gnu/libtasn1.so.6 (0x000071ff85f8d000)
+	libnettle.so.8 => /lib/x86_64-linux-gnu/libnettle.so.8 (0x000071ff85f38000)
+	libhogweed.so.6 => /lib/x86_64-linux-gnu/libhogweed.so.6 (0x000071ff85ef0000)
+	libgmp.so.10 => /lib/x86_64-linux-gnu/libgmp.so.10 (0x000071ff85e6c000)
+	libbsd.so.0 => /lib/x86_64-linux-gnu/libbsd.so.0 (0x000071ff85e54000)
+	libbz2.so.1.0 => /lib/x86_64-linux-gnu/libbz2.so.1.0 (0x000071ff85e40000)
+	libbrotlidec.so.1 => /lib/x86_64-linux-gnu/libbrotlidec.so.1 (0x000071ff85e32000)
+	libdatrie.so.1 => /lib/x86_64-linux-gnu/libdatrie.so.1 (0x000071ff85e29000)
+	libgraphite2.so.3 => /lib/x86_64-linux-gnu/libgraphite2.so.3 (0x000071ff85e03000)
+	libgpg-error.so.0 => /lib/x86_64-linux-gnu/libgpg-error.so.0 (0x000071ff85ddc000)
+	libkeyutils.so.1 => /lib/x86_64-linux-gnu/libkeyutils.so.1 (0x000071ff85dd5000)
+	libresolv.so.2 => /lib/x86_64-linux-gnu/libresolv.so.2 (0x000071ff85dc3000)
+	libmd.so.0 => /lib/x86_64-linux-gnu/libmd.so.0 (0x000071ff85db4000)
+	libbrotlicommon.so.1 => /lib/x86_64-linux-gnu/libbrotlicommon.so.1 (0x000071ff85d91000)

@@ -1,0 +1,71 @@
+{
+  "dependencySkippedCount": 16,
+  "coveredByCasNodeFollowup": 13,
+  "coveredByShorterTempBrowserRun": 3,
+  "chromiumCases": [
+    {
+      "file": "tests/cards-e2e.test.js",
+      "name": "info cards in a browser: per-module groups, fold, hide and bring back",
+      "fullSerial": "PASS",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": null,
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/finding-list.test.js",
+      "name": "finding groups: compact rows, detail drilldown, canvas selection and review drafts",
+      "fullSerial": "PASS",
+      "casNodeFollowup": null,
+      "shorterTempBrowserRun": null,
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/layers-e2e.test.js",
+      "name": "layers in a browser: base image + overlay image + Graph curve, fade and reorder",
+      "fullSerial": "PASS",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": null,
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/surface-open.test.js",
+      "name": "browser: the widget opened by manage_surface_panels shows the calculator with the model's cell",
+      "fullSerial": "SKIP",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": "PASS",
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/surface-open.test.js",
+      "name": "browser: with the calculator alone, the launcher offers the Graph canvas and brings it back",
+      "fullSerial": "SKIP",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": "PASS",
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/upload-e2e.test.js",
+      "name": "pick a photo in the canvas: upload in slices, preview then full image, model told",
+      "fullSerial": "PASS",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": null,
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/workbench-e2e.test.js",
+      "name": "workbench in a browser: Graph + calculator side by side, drag, mobile tabs",
+      "fullSerial": "SKIP",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": "PASS",
+      "covered": "PASS"
+    },
+    {
+      "file": "tests/zoom-perf.test.js",
+      "name": "browser: a burst of wheel zooms triggers only a few full renders",
+      "fullSerial": "PASS",
+      "casNodeFollowup": "FAIL",
+      "shorterTempBrowserRun": null,
+      "covered": "PASS"
+    }
+  ]
+}
