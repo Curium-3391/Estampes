@@ -33,8 +33,8 @@
       "sha256": "0a5d6881d8bb8b5b510ad2904e0f09d5204df4683b6e5b697e50fa690e277e3a"
     },
     "docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/scaling.csv": {
-      "bytes": 2033,
-      "sha256": "f1533345c48cabd57045728e04b2e5f9b52444e6d2d84c76d8f11fcfd1c4aaa4"
+      "bytes": 2014,
+      "sha256": "d4bb156f97190d4189d9824b4d31650e50b0454f038303ed0e98267cac89636c"
     },
     "docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/near-64-admission.json": {
       "bytes": 3420,
@@ -2377,8 +2377,8 @@
       "sha256": "8c12102e1826dcefef3c7e480dc6e2edab5d58b7fa0b7449dc76c42de61e05f6"
     },
     "scripts/pr1d-investigation/plots.py": {
-      "bytes": 1666,
-      "sha256": "46a436e1ecf48cfe6d86b548b72954cfaaf516e08a2a3f35349ac974d8097840"
+      "bytes": 1686,
+      "sha256": "9e35b91b5af21bfabbb681c20aa5a417952275ec5e60976d73a715fd5a97e029"
     },
     "scripts/pr1d-investigation/selected-state.mjs": {
       "bytes": 2397,
