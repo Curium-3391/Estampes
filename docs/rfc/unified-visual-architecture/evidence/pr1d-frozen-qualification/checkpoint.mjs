@@ -6,8 +6,10 @@ import { performance } from "node:perf_hooks";
 import { openIsolatedStore } from "../../../../../src/persistence/lease.js";
 import { ManagedFiles } from "../../../../../src/persistence/filesystem.js";
 import { loadCommitted, storeDocument } from "../../../../../src/persistence/records.js";
+import { readGcPlan } from "../../../../../src/persistence/gc.js";
 import { ARCHIVE_BYTES, makePatch, readVersion } from "../../../../../src/persistence/archive.js";
 import { canonicalJson, hashJson } from "../../../../../src/documents/validation.js";
+import { normalizeRequestId } from "../../../../../src/documents/identity.js";
 import { actor, command, document, epoch } from "../../../../../tests/fixtures/uva-persistence.mjs";
 
 const mode = process.argv[2];
@@ -83,6 +85,51 @@ function revision(n) {
   return d;
 }
 
+async function verifyOperationalThinning(locator, head) {
+  const backup = await mkdtemp(join(tmpdir(), "estampes-pr1c-checkpoint-backup-"));
+  const pin = await store.maintenance("pin", { historyRefs: [locator.logical] });
+  const job = await store.maintenance("backupStart", { destination: backup });
+  const next = command([revision(1001)], 1001, 1000);
+  const later = await store.commit(next, actor(1001), await epoch(store));
+  assert.equal(later.ack.revisionVector[0].revision, 1001);
+
+  let replacement;
+  for (let i = 0; i < 4; i++) {
+    await store.maintenance("compact");
+    const snap = await loadCommitted(files);
+    const row = snap.indices.locator.get(hashJson(locator.logical));
+    if (row.kind === "delta") { replacement = row; break; }
+  }
+  assert.ok(replacement, "Historical operational checkpoint must have a selected verified replacement");
+  assert.equal(await files.exists(locator.relativePath), true);
+  assert.equal((await store.maintenance("history", { id: pin.id, ref: locator.logical })).document.revision, 1000);
+  const blocked = await store.maintenance("gcPlan", { classes: ["G1"] });
+  if (blocked.planned) {
+    const snap = await loadCommitted(files);
+    const plan = await readGcPlan(files, snap.indices.retention.get("gc:" + blocked.id));
+    assert.ok(!plan.candidates.some(candidate => candidate.path === locator.relativePath));
+  }
+  await store.maintenance("releasePin", { id: pin.id });
+  await store.maintenance("backupCancel", { id: job.id });
+  const released = await store.maintenance("gcPlan", { classes: ["G1"] });
+  assert.equal(released.planned, true);
+  const snap = await loadCommitted(files);
+  const plan = await readGcPlan(files, snap.indices.retention.get("gc:" + released.id));
+  assert.ok(plan.candidates.some(candidate => candidate.path === locator.relativePath));
+  const progress = await store.maintenance("gcStep", { id: released.id });
+  assert.equal(progress.state, "complete");
+  assert.equal(await files.exists(locator.relativePath), false);
+  await close();
+  await open("post-thinning-recovery");
+  const after = await loadCommitted(files);
+  assert.equal(after.indices.ledger.size, head.indices.ledger.size + 1);
+  for (const [key, ack] of head.indices.ledger) assert.deepEqual(after.indices.ledger.get(key), ack);
+  for (const ref of refs) assert.equal(hashJson(await readVersion(files, ref, after.indices.locator)), ref.contentHash);
+  emit("operational-thinning", { removed: locator.relativePath, replacement, progress,
+    before: head.envelope, after: after.envelope, checkedVersions: refs.length });
+  await rm(backup, { recursive: true });
+}
+
 try {
   emit("store", { root, mode, target });
   await open("bootstrap");
@@ -112,7 +159,7 @@ try {
       await crashCommit(last, n, "current.after-dir-fsync");
       const selected = await loadCommitted(files);
       assert.equal(selected.indices.ledger.size, n);
-      const entry = [...selected.indices.ledger.values()].find(e => e.key.requestId === last.requestId);
+      const entry = [...selected.indices.ledger.values()].find(e => e.key.commandId === normalizeRequestId(last.requestId));
       assert.ok(entry);
       refs.push(entry.ack.revisionVector[0]);
       acks.push(entry.ack);
@@ -168,6 +215,7 @@ try {
     recovery: stats(startups.filter(x => x.label !== "bootstrap").map(x => x.elapsedMs)),
     crossing,
   });
+  if (target === 1000) await verifyOperationalThinning(locator, selected);
   passed = true;
 } finally {
   clearInterval(timer);
