@@ -77,7 +77,12 @@ function jsonGuardSchema(limits) {
     catch (e) { if (!(e instanceof DocumentValidationError)) throw e; issue(ctx, e.code, e.message, e.path); }
   });
 }
-export const jsonSchema = limits => jsonGuardSchema(limits).transform(value => JSON.parse(canonicalJson(value, limits)));
+export const jsonSchema = limits => z.unknown().transform((value, ctx) => {
+  // canonicalJson performs the complete guard synchronously before encoding.
+  // Keep validation and the detached copy in one call, without a second scan.
+  try { return JSON.parse(canonicalJson(value, limits)); }
+  catch (e) { if (!(e instanceof DocumentValidationError)) throw e; issue(ctx, e.code, e.message, e.path); return z.NEVER; }
+});
 export const bounded = (schema, limits) => jsonGuardSchema(limits).pipe(schema);
 export function issue(ctx, code, message, path = []) {
   ctx.addIssue({ code: "custom", message, path, params: { documentCode: code } });
