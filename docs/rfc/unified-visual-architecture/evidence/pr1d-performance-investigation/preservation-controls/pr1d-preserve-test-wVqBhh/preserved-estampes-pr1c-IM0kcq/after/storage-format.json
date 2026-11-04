@@ -1,0 +1,1 @@
+{"lifecycle":{"autoMaintenance":false,"enabled":true,"pinBytes":1073741824,"pinSessions":64},"maxContentCommits":100,"profile":"linux-process-crash-test","purpose":"isolated-pr1c-testing","quotaBytes":10737418240,"schema":"estampes.isolated-store/1","storeInstanceId":"ebfe7f68-3b96-4447-99ae-8bd36447e804"}

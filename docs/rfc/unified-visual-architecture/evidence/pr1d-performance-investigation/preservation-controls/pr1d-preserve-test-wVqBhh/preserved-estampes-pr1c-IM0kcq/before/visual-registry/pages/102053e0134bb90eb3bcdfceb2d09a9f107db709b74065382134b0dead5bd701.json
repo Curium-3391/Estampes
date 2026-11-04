@@ -1,0 +1,1 @@
+{"bucket":"8d","entries":[{"key":"gc:36b98f71-118a-44dc-85a6-e038811ce344","value":{"deleted":[],"moved":[0,1,2,3,4,5,6,7,8,9,10,11,12],"planHash":"67286c1652e8b047bc3427e0852eecef7f72c995661d40fc6ccfc6c27f9e7ff5","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"quarantining"}}],"kind":"retention","next":null,"schema":"estampes.index-page/1"}

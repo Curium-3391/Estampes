@@ -1,0 +1,1 @@
+{"bucket":"52","entries":[{"key":"store","value":{"epoch":3,"mode":"isolated-testing","profile":"linux-process-crash-test","schema":"estampes.isolated-authority/1","storeInstanceId":"fc938d66-c009-4d1e-bb04-28a021a72d8b"}}],"kind":"authority","next":null,"schema":"estampes.index-page/1"}

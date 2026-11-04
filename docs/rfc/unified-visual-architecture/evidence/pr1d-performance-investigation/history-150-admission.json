@@ -1,0 +1,62 @@
+{
+  "admitted": true,
+  "basis": [
+    {
+      "name": "history-100-plain",
+      "command": [
+        "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin/node",
+        "/workspace/Estampes/scripts/pr1d-investigation/benchmark.mjs",
+        "history",
+        "100"
+      ],
+      "environment": {
+        "PR1D_SCRATCH": "/tmp/pr1d-investigation-4hs1y_zu",
+        "PR1D_OUTPUT": "/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/history-100-plain",
+        "TMPDIR": "/tmp/pr1d-investigation-4hs1y_zu",
+        "PATH": "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback"
+      },
+      "measure": false,
+      "extra": null,
+      "startedUTC": "2026-11-04T10:53:07Z",
+      "wallSeconds": 149.91852886899994,
+      "exitCode": 0,
+      "stop": null,
+      "budgetSeconds": 900,
+      "peakProcessRssKiB": 140004,
+      "peakTreeRssKiB": 184576,
+      "peakAllocatedBytes": 27463680,
+      "scratch": "/tmp/pr1d-investigation-4hs1y_zu",
+      "log": "history-100-plain/raw.log",
+      "sha256": "26c2a5a86daa73547994a335bb2271bb9036f9b3fc74fd4284962b81b940cfbf"
+    },
+    {
+      "name": "history-100-profile",
+      "command": [
+        "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin/node",
+        "/workspace/Estampes/scripts/pr1d-investigation/benchmark.mjs",
+        "history",
+        "100"
+      ],
+      "environment": {
+        "PR1D_SCRATCH": "/tmp/pr1d-investigation-o09sv08o",
+        "PR1D_OUTPUT": "/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/history-100-profile",
+        "TMPDIR": "/tmp/pr1d-investigation-o09sv08o",
+        "PATH": "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback"
+      },
+      "measure": true,
+      "extra": null,
+      "startedUTC": "2026-11-04T10:55:37Z",
+      "wallSeconds": 178.831700748,
+      "exitCode": 0,
+      "stop": null,
+      "budgetSeconds": 900,
+      "peakProcessRssKiB": 120040,
+      "peakTreeRssKiB": 169888,
+      "peakAllocatedBytes": 28139520,
+      "scratch": "/tmp/pr1d-investigation-o09sv08o",
+      "log": "history-100-profile/raw.log",
+      "sha256": "11f2045cc9144afe3c88edc1fb07903759db371ca8f9969c168d77900230aecf"
+    }
+  ],
+  "coldClientLimitMs": 15000
+}

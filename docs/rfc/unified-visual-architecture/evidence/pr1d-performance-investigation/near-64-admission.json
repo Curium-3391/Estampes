@@ -1,0 +1,74 @@
+{
+  "admitted": false,
+  "basis": [
+    {
+      "name": "document-32-plain",
+      "command": [
+        "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin/node",
+        "/workspace/Estampes/scripts/pr1d-investigation/benchmark.mjs",
+        "document",
+        "32"
+      ],
+      "environment": {
+        "PR1D_SCRATCH": "/tmp/pr1d-investigation-yvf03gj9",
+        "PR1D_OUTPUT": "/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/document-32-plain",
+        "TMPDIR": "/tmp/pr1d-investigation-yvf03gj9",
+        "PATH": "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback"
+      },
+      "measure": false,
+      "extra": null,
+      "startedUTC": "2026-11-04T11:11:01Z",
+      "wallSeconds": 55.662298890999864,
+      "exitCode": 0,
+      "stop": null,
+      "budgetSeconds": 180,
+      "peakProcessRssKiB": 731024,
+      "peakTreeRssKiB": 821104,
+      "perProcessHwmKiB": {
+        "3234": 559500,
+        "3245": 731024,
+        "3256": 510864,
+        "3267": 576568
+      },
+      "peakAllocatedBytes": 33783808,
+      "scratch": "/tmp/pr1d-investigation-yvf03gj9",
+      "log": "document-32-plain/raw.log",
+      "sha256": "638af7aa8204f82a7f24ace5333196de935d644240696c72c207d8bafe352f5c"
+    },
+    {
+      "name": "document-32-profile",
+      "command": [
+        "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin/node",
+        "/workspace/Estampes/scripts/pr1d-investigation/benchmark.mjs",
+        "document",
+        "32"
+      ],
+      "environment": {
+        "PR1D_SCRATCH": "/tmp/pr1d-investigation-rnaw0cz5",
+        "PR1D_OUTPUT": "/workspace/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/document-32-profile",
+        "TMPDIR": "/tmp/pr1d-investigation-rnaw0cz5",
+        "PATH": "/workspace/.estampes-tools/node-v22.23.4-linux-x64/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback"
+      },
+      "measure": true,
+      "extra": null,
+      "startedUTC": "2026-11-04T11:11:57Z",
+      "wallSeconds": 55.6719895719998,
+      "exitCode": 0,
+      "stop": null,
+      "budgetSeconds": 180,
+      "peakProcessRssKiB": 804236,
+      "peakTreeRssKiB": 996844,
+      "perProcessHwmKiB": {
+        "3283": 522624,
+        "3294": 702420,
+        "3306": 584020,
+        "3323": 804236
+      },
+      "peakAllocatedBytes": 33783808,
+      "scratch": "/tmp/pr1d-investigation-rnaw0cz5",
+      "log": "document-32-profile/raw.log",
+      "sha256": "45e523ddf6cd88fd982c24477f0cbeb6aeec41b9404bef97ddc3f92af21aac72"
+    }
+  ],
+  "coldClientLimitMs": 15000
+}

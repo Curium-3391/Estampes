@@ -1,0 +1,1 @@
+{"bucket":"f1","entries":[{"key":"gc:07ee8715-d11a-4bf5-af13-473800126981","value":{"deleted":[],"moved":[0,1,2,3,4,5,6,7,8,9,10,11,12],"planHash":"f6464a11d1282c6e118ada1de971f3584fa9a123d4f5fbd89dd08ba5161713d5","quarantinedAtMs":1893456000000,"schema":"estampes.gc-state/1","state":"waiting-grace"}}],"kind":"retention","next":null,"schema":"estampes.index-page/1"}

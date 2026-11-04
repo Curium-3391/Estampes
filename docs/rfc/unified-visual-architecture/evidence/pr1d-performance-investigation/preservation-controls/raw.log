@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: evidence guard rejects out-of-scratch, symlink and hardlink candidates
+ok 1 - evidence guard rejects out-of-scratch, symlink and hardlink candidates
+  ---
+  duration_ms: 26.611085
+  type: 'test'
+  ...
+# Subtest: opt-in teardown seals stopped selected Store before one restart and same-plan step
+ok 2 - opt-in teardown seals stopped selected Store before one restart and same-plan step
+  ---
+  duration_ms: 2332.055029
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2505.053446
