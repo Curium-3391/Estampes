@@ -30,7 +30,37 @@ def rss_tree(leader):
 
 
 def allocated(path):
-    return int(subprocess.check_output(["du", "-s", "-B1", "--", path], text=True).split()[0])
+    # The worker may rename or remove an entry between scandir and stat.
+    # Count physical blocks without traversing symlinks or following another FS.
+    visited = set()
+    device = path.stat().st_dev
+    def blocks(entry):
+        try:
+            info = entry.lstat()
+            key = (info.st_dev, info.st_ino)
+            if key in visited or info.st_dev != device:
+                return 0
+            visited.add(key)
+            total = info.st_blocks * 512
+            if stat.S_ISDIR(info.st_mode):
+                with os.scandir(entry) as children:
+                    total += sum(blocks(Path(child.path)) for child in children)
+            return total
+        except FileNotFoundError:
+            return 0
+    return blocks(path)
+
+
+def terminate(child, descendants):
+    for pid in set(descendants) - {child.pid}:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    try:
+        os.killpg(child.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def run(scratch, name, timeout, allocation_cap, command):
@@ -57,38 +87,35 @@ def run(scratch, name, timeout, allocation_cap, command):
     with log.open("xb") as out:
         child = subprocess.Popen(command, env=env, stdout=out, stderr=subprocess.STDOUT,
                                  start_new_session=True)
-        while child.poll() is None:
-            rss = rss_tree(child.pid)
-            peak_rss = max(peak_rss, max(rss.values(), default=0))
-            peak_sum = max(peak_sum, sum(rss.values()))
-            now = time.monotonic()
-            if now >= next_disk:
-                blocks = allocated(case)
-                peak_blocks = max(peak_blocks, blocks)
-                if blocks > allocation_cap or allocated(scratch) > 12 * GIB:
-                    stop = "allocated scratch cap"
-                if shutil.disk_usage(scratch).free < 48 * GIB:
-                    stop = "free ext4 space floor"
-                next_disk = now + 5
-            available = int(re.search(r"^MemAvailable:\s+(\d+)", Path("/proc/meminfo").read_text(), re.M)[1])
-            if now - started >= timeout:
-                stop = "wall timeout"
-            elif log.stat().st_size > LOG_LIMIT:
-                stop = "log cap"
-            elif peak_rss > 1536 * 1024 or peak_sum > 3072 * 1024 or available < 2048 * 1024:
-                stop = "RSS cap or available memory floor"
-            if stop:
-                for pid in set(rss) - {child.pid}:
-                    try:
-                        os.kill(pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                try:
-                    os.killpg(child.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                break
-            time.sleep(1)
+        try:
+            while child.poll() is None:
+                rss = rss_tree(child.pid)
+                peak_rss = max(peak_rss, max(rss.values(), default=0))
+                peak_sum = max(peak_sum, sum(rss.values()))
+                now = time.monotonic()
+                if now >= next_disk:
+                    blocks = allocated(case)
+                    peak_blocks = max(peak_blocks, blocks)
+                    if blocks > allocation_cap or allocated(scratch) > 12 * GIB:
+                        stop = "allocated scratch cap"
+                    if shutil.disk_usage(scratch).free < 48 * GIB:
+                        stop = "free ext4 space floor"
+                    next_disk = now + 5
+                available = int(re.search(r"^MemAvailable:\s+(\d+)", Path("/proc/meminfo").read_text(), re.M)[1])
+                if now - started >= timeout:
+                    stop = "wall timeout"
+                elif log.stat().st_size > LOG_LIMIT:
+                    stop = "log cap"
+                elif peak_rss > 1536 * 1024 or peak_sum > 3072 * 1024 or available < 2048 * 1024:
+                    stop = "RSS cap or available memory floor"
+                if stop:
+                    terminate(child, rss)
+                    break
+                time.sleep(1)
+        except Exception as error:
+            stop = f"supervisor error: {type(error).__name__}: {error}"
+            terminate(child, {child.pid})
+            print(stop, file=sys.stderr)
         code = child.wait()
     raw = log.read_bytes()
     counts = {k: int(v) for k, v in re.findall(rb"^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$", raw, re.M)}
