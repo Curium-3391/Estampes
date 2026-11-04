@@ -29,5 +29,5 @@ for name in ['phase-history-25','phase-document-8']:
   if m['operation']=='commit' and m['ordinal']!=(25 if name=='phase-history-25' else 1):continue
   for phase,p in m.get('phaseData',{}).items():
    op=p['operations'];mem=p.get('memory',{});get=lambda key,field:op.get(key,{}).get(field,0)
-   lines.append(f"| {name} / {m['operation']}-{m['ordinal']} / {phase} | {p['wallMs']:.1f} | {p['userUs']/1000:.1f} / {p['systemUs']/1000:.1f} | {get('fs.lstat','calls')} | {get('fd.read','bytes')+get('fd.readFile','bytes')} | {get('sha256.update','bytes')} | {get('canonicalJson','bytes')} | {mem.get('heapUsed')} / {mem.get('external')} |")
+   lines.append(f"| {name} / PID {m['pid']} / {m['operation']}-{m['ordinal']} / {phase} | {p['wallMs']:.1f} | {p['userUs']/1000:.1f} / {p['systemUs']/1000:.1f} | {get('fs.lstat','calls')} | {get('fd.read','bytes')+get('fd.readFile','bytes')} | {get('sha256.update','bytes')} | {get('canonicalJson','bytes')} | {mem.get('heapUsed')} / {mem.get('external')} |")
 (OUT/'RESULTS.md').write_text('\n'.join(lines)+'\n')

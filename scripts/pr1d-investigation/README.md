@@ -35,7 +35,7 @@ measure cumulative allocation, transient peak or every string clone. RSS is
 sampled/HWM. No dropping kernel caches: cold means a fresh JS worker/cache.
 
 G2 logs record real returned result, selected progress, clock, runtime pins and
-last completed stages before diagnostic reads. Unexpected post-grace results
+last completed stages before diagnostic reads. Unexpected fixture results (waiting-grace before eligibility, complete after eligibility)
 write a failure marker before full read-only inspection. The fixture kills the
 writer and waits, validates scratch/device/ownership and inventories every file,
 then copies the bytes and records original inode identities and SHA-256. The copy

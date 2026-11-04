@@ -59,6 +59,7 @@ def run(name,seconds,command,measure=False,extra=None):
                 break
             time.sleep(.5)
         code=child.wait()
+    allocation=max(allocation,allocated(scratch))
     raw=log.read_bytes();record=dict(name=name,command=command,environment={k:env[k] for k in ['PR1D_SCRATCH','PR1D_OUTPUT','TMPDIR','PATH']},measure=measure,extra=extra,startedUTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(time.time()-(time.monotonic()-start))),wallSeconds=time.monotonic()-start,exitCode=code,stop=stop,budgetSeconds=seconds,peakProcessRssKiB=peak,peakTreeRssKiB=tree,perProcessHwmKiB=pid_peaks,peakAllocatedBytes=allocation,scratch=str(scratch),log=str(log.relative_to(out)),sha256=hashlib.sha256(raw).hexdigest())
     with (out/'runs.jsonl').open('a') as f:f.write(json.dumps(record)+'\n')
     print(json.dumps(record),flush=True)

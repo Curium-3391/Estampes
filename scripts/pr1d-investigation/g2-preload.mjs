@@ -2,6 +2,7 @@
 import { appendFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertScratchStore } from './scratch.mjs';
+import { expectedFixtureG2State } from './g2-expectation.mjs';
 if(process.env.PR1D_G2_PRESERVE==='1'&&process.argv[1]?.endsWith('/persistence/worker.js')){
  const root=process.argv[2];await assertScratchStore(root);
  const {ManagedFiles}=await import('../../src/persistence/filesystem.js');
@@ -28,7 +29,7 @@ if(process.env.PR1D_G2_PRESERVE==='1'&&process.argv[1]?.endsWith('/persistence/w
   // Result and in-memory selected identity are recorded before diagnostic I/O.
   emit('returned',{result,id,envelope:current.envelope,progress,clock,trace,
    pins:{epoch:manager.pins.epoch,sessions:[...manager.pins.sessions.values()].map(p=>({id:p.id,kind:p.kind,paths:[...p.files.keys()],expiresAt:p.expiresAt,active:p.active,closing:p.closing}))}});
-  const unexpected=result.state!=='complete'&&progress?.quarantinedAtMs!==null&&clock.nowMs>=progress.quarantinedAtMs+86400000&&clock.canAge;
+  const unexpected=result.state!==expectedFixtureG2State(progress,clock);
   if(unexpected){
    // Signal preservation before any fallible selected-state inspection.
    writeFileSync(join(out,`failure-${name}.json`),JSON.stringify({root,id,result,envelope:current.envelope,progress,clock,trace})+'\n',{flag:'wx',mode:0o600});

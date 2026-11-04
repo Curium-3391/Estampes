@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, rm, readFile, writeFile, symlink, access } from 'node:f
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { assertScratchStore, safeInventory } from '../scripts/pr1d-investigation/scratch.mjs';
+import { expectedFixtureG2State } from '../scripts/pr1d-investigation/g2-expectation.mjs';
 import { preserveG2Failure } from '../scripts/pr1d-investigation/preserve-g2.mjs';
 import { openIsolatedStore } from '../src/persistence/lease.js';
 import { document, command, actor, epoch } from './fixtures/uva-persistence.mjs';
@@ -50,4 +51,11 @@ test('opt-in teardown seals stopped selected Store before one restart and same-p
  const retry=JSON.parse(await readFile(join(bundle,'retry.json')));assert.equal(retry.open.state,'ready');assert.equal(retry.step.state,'complete');
  const inventory=JSON.parse(await readFile(join(bundle,'before-inventory.json')));assert.ok(inventory.files.every(f=>f.sha256&&f.dev&&f.ino));
  await access(join(root,'storage-format.json'));assert.notDeepEqual(await readFile(join(root,'visual-registry/CURRENT.json')),before);
+});
+
+test('G2 evidence oracle covers both early-grace and terminal assertion failures',()=>{
+ const progress={quarantinedAtMs:TIME};
+ assert.equal(expectedFixtureG2State(progress,{nowMs:TIME,canAge:true}),'waiting-grace');
+ assert.equal(expectedFixtureG2State(progress,{nowMs:TIME+DAY,canAge:true}),'complete');
+ assert.equal(expectedFixtureG2State(progress,{nowMs:TIME+DAY,canAge:false}),'waiting-grace');
 });
