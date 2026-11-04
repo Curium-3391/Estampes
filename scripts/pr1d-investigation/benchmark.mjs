@@ -17,7 +17,8 @@ const options={profile:'linux-process-crash-test',purpose:'isolated-pr1c-testing
 const emit=(event,data)=>console.log(JSON.stringify({event,...data}));
 let store,closed=false;
 async function flushProfile(){if(process.env.PR1D_MEASURE!=='1')return;process.kill(store.pid,'SIGUSR2');const done=join(process.env.PR1D_OUTPUT,`profile-${store.pid}.done`);for(let n=0;n<200;n++){try{await access(done);return;}catch{await new Promise(r=>setTimeout(r,50));}}throw Error('Profile flush timed out');}
-async function open(label){const start=performance.now();store=await openIsolatedStore(root,options);closed=false;emit('startup',{label,pid:store.pid,wallMs:performance.now()-start,status:store.status});assert.equal(store.status.state,'ready',JSON.stringify(store.status.problem));}
+async function workerMemory(){try{const s=await readFile(`/proc/${store.pid}/status`,'utf8');return {pid:store.pid,rssKiB:Number(s.match(/^VmRSS:\s+(\d+)/m)?.[1]??0),hwmKiB:Number(s.match(/^VmHWM:\s+(\d+)/m)?.[1]??0)};}catch{return null;}}
+async function open(label){const start=performance.now();store=await openIsolatedStore(root,options);closed=false;emit('startup',{label,pid:store.pid,wallMs:performance.now()-start,status:store.status,workerMemory:await workerMemory()});assert.equal(store.status.state,'ready',JSON.stringify(store.status.problem));}
 async function close(){await flushProfile();await store.close();closed=true;}
 async function directProbe(){
  const start=performance.now();const child=spawn('/usr/bin/flock',['-n','-E','73','-F',join(root,'WRITER.lock'),process.execPath,fileURLToPath(new URL('./cold-probe.mjs',import.meta.url)),root],{stdio:['ignore','pipe','pipe']});
@@ -34,9 +35,9 @@ try {
   lastCommand=command([d],n,n===1?null:n-1);const start=performance.now();
   const result=await store.commit(lastCommand,actor(n),await epoch(store));
   const elapsed=performance.now()-start;latencies.push(elapsed);lastAck=result.ack;refs.push(result.ack.revisionVector[0]);
-  const diag=await store.diagnostics();emit('commit',{n,wallMs:elapsed,transaction:diag.performance.transactions.at(-1),verification:diag.performance.verification});assert.equal(result.ack.durability,'process-crash-test');
+  const diag=await store.diagnostics();emit('commit',{n,wallMs:elapsed,transaction:diag.performance.transactions.at(-1),verification:diag.performance.verification,workerMemory:await workerMemory()});assert.equal(result.ack.durability,'process-crash-test');
  }
- const usage=await new ManagedFiles(root).usage();emit('warm-summary',{documentJsonBytes:Buffer.byteLength(canonicalJson(d)),usage,latencies});await close();
+ const usage=await new ManagedFiles(root).usage();emit('warm-summary',{documentJsonBytes:Buffer.byteLength(canonicalJson(d)),usage,latencies,workerMemory:await workerMemory()});await close();
  await directProbe();
  const start=performance.now();try{await open('cold-client');}catch(e){emit('cold-client-error',{wallMs:performance.now()-start,code:e.code,message:e.message});throw e;}
  const replay=await store.commit(lastCommand,actor(999),await epoch(store));assert.equal(replay.replayed,true);assert.deepEqual(replay.ack,lastAck);await close();

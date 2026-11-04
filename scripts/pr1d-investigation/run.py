@@ -22,7 +22,7 @@ def run(name,seconds,command,measure=False,extra=None):
     (case/'input-sha256.json').write_text(json.dumps(inputs,indent=2)+'\n')
     if measure:env.update(PR1D_MEASURE='1',NODE_OPTIONS='--import='+str(HERE/'profile.mjs'))
     if extra:env.update(extra)
-    log=case/'raw.log';start=time.monotonic();stop=None;peak=tree=allocation=0;next_disk=0;seen=set()
+    log=case/'raw.log';start=time.monotonic();stop=None;peak=tree=allocation=0;next_disk=0;seen=set();pid_peaks={}
     with log.open('xb') as stream:
         child=subprocess.Popen(command,cwd=REPO,env=env,stdout=stream,stderr=subprocess.STDOUT,start_new_session=True)
         while child.poll() is None:
@@ -38,6 +38,8 @@ def run(name,seconds,command,measure=False,extra=None):
                 if expanded==descendants:break
                 descendants=expanded
             seen|=descendants
+            for p,_,_,h in rows:
+                if p in descendants:pid_peaks[p]=max(pid_peaks.get(p,0),h)
             peak=max(peak,max((h for p,_,_,h in rows if p in descendants),default=0));tree=max(tree,sum(r for p,_,r,_ in rows if p in descendants))
             now=time.monotonic()
             if now>=next_disk:
@@ -57,7 +59,7 @@ def run(name,seconds,command,measure=False,extra=None):
                 break
             time.sleep(.5)
         code=child.wait()
-    raw=log.read_bytes();record=dict(name=name,command=command,environment={k:env[k] for k in ['PR1D_SCRATCH','PR1D_OUTPUT','TMPDIR','PATH']},measure=measure,extra=extra,startedUTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(time.time()-(time.monotonic()-start))),wallSeconds=time.monotonic()-start,exitCode=code,stop=stop,budgetSeconds=seconds,peakProcessRssKiB=peak,peakTreeRssKiB=tree,peakAllocatedBytes=allocation,scratch=str(scratch),log=str(log.relative_to(out)),sha256=hashlib.sha256(raw).hexdigest())
+    raw=log.read_bytes();record=dict(name=name,command=command,environment={k:env[k] for k in ['PR1D_SCRATCH','PR1D_OUTPUT','TMPDIR','PATH']},measure=measure,extra=extra,startedUTC=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(time.time()-(time.monotonic()-start))),wallSeconds=time.monotonic()-start,exitCode=code,stop=stop,budgetSeconds=seconds,peakProcessRssKiB=peak,peakTreeRssKiB=tree,perProcessHwmKiB=pid_peaks,peakAllocatedBytes=allocation,scratch=str(scratch),log=str(log.relative_to(out)),sha256=hashlib.sha256(raw).hexdigest())
     with (out/'runs.jsonl').open('a') as f:f.write(json.dumps(record)+'\n')
     print(json.dumps(record),flush=True)
     # Passing disposable benchmarks can be removed after exact evidence capture.

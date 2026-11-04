@@ -19,6 +19,8 @@ fresh owned scratch; no production writer activation or source optimization.
 
 Output names must be fresh; existing runs are not overwritten. `runs.jsonl`
 records exact commands, safe environment selectors, exits, budgets and hashes.
+New invocations also record input-sha256.json; the first history probes retain
+the pre-edit baseline seal and raw measurements instead of a retroactive input log.
 Successful scratch is removed; failed scratch and captured Stores remain.
 Profiled workers save counters per open/commit and CPU/heap on SIGUSR2. A direct
 cold probe owns real flock but has its own 60 s cap, separate from the unchanged
@@ -41,7 +43,8 @@ is never opened for GC: copied inode identities do not carry deletion authority.
 After before/ is sealed, a single cold restart and same-plan step may execute
 on the original disposable Store, bounded at 60 s. Both snapshots and retry exit
 or error are retained. Inspection errors retain the original Store without retry.
-No observer calls recovery or GC while inspecting selected state.
+No observer calls recovery or GC while inspecting selected state. A thrown GC
+error also triggers preservation; its original exception continues to the test.
 
 The fixture has only an opt-in teardown hook. Original assertions are unchanged.
 The preservation test independently exercises ownership and alias rejection plus

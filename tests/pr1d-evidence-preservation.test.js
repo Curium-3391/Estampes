@@ -13,7 +13,7 @@ import { TIME, DAY } from './fixtures/uva-lifecycle.mjs';
 async function scratch(t){
  const parent=await mkdtemp(join(tmpdir(),'pr1d-preserve-test-'));
  const old={...Object.fromEntries(['PR1D_SCRATCH','PR1D_OUTPUT','PR1D_G2_PRESERVE'].map(k=>[k,process.env[k]]))};
- const out=join(parent,'output');await mkdir(out,{mode:0o700});
+ const out=process.env.PR1D_OUTPUT?join(process.env.PR1D_OUTPUT,basename(parent)):join(parent,'output');await mkdir(out,{mode:0o700});
  process.env.PR1D_SCRATCH=parent;process.env.PR1D_OUTPUT=out;process.env.PR1D_G2_PRESERVE='1';
  t.after(async()=>{for(const [k,v]of Object.entries(old))if(v===undefined)delete process.env[k];else process.env[k]=v;await rm(parent,{recursive:true,force:true});});
  return {parent,out};

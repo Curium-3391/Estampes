@@ -1,6 +1,6 @@
 // Fixture teardown support, inert unless explicitly enabled by the bounded runner.
 import assert from 'node:assert/strict';
-import { access, mkdir, cp, readFile, writeFile, lstat } from 'node:fs/promises';
+import { access, mkdir, cp, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, basename, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
