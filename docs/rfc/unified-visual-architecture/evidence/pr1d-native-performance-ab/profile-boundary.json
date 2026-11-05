@@ -1,0 +1,10 @@
+{
+  "pausedSupervisorPid": 10035,
+  "state": "T",
+  "allPlainWorkersExited": true,
+  "profilesStarted": false,
+  "oldBenchmarkSha256": "b721182d3895e5a0a2d4e641ddc24da93444b78bb3a4f74f3cdcd1035608a8fb",
+  "profileBenchmarkSha256": "fff17eb0a5ef20f698f0a67c221eaedad3ac6bfbc3d281a225b4ef7927fb2093",
+  "UTC": "2026-11-05T17:20:38Z",
+  "change": "Only direct-helper argv order, to activate the original profiler on owned Store argv[2]. No plain run repeated."
+}

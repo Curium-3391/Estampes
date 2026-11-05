@@ -1,0 +1,19 @@
+{
+  "branch": "codex/pr1d-native-performance-ab-adjudication",
+  "baseline": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+  "candidate": "4814daf2378e9619f171c02a65792062957a8e99",
+  "protocolCommit": "88f9c37b021731a779bbbb02cc24d7e67e9bf212",
+  "profileAdapterCommit": "f79ebe720f30be741ee5b3be6715e80ffb4eed1a",
+  "plainAttempts": 12,
+  "plainCompleteSuccess": 11,
+  "plainFailures": 1,
+  "pairedComparisonsWithTerminalResults": 6,
+  "pairsWithBothFullSuccess": 5,
+  "requiredPlainNotAttempted": 0,
+  "verdict": "INCONCLUSIVE \u2014 DEFAULT TO BASELINE",
+  "production": "NOT QUALIFIED",
+  "engineeringExit": "BLOCKED",
+  "authorization": "User explicitly requested \u5b8c\u6210\u5f8cpush; independent evidence branch only; no main merge or runtime changes.",
+  "finalCommitResolution": "git log -1 --format=%H -- docs/rfc/unified-visual-architecture/PR-1D-NATIVE-PERFORMANCE-AB-REPORT.md; verify full remote HEAD and clean worktree after push.",
+  "readOnlyPostmortem": "A separate bounded read-only inspection of the archived/stopped baseline timeout Store; not a client restart, recovery, GC or benchmark retry."
+}

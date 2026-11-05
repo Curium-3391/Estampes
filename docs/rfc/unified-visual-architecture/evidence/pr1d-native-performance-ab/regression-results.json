@@ -1,0 +1,306 @@
+{
+  "runs": [
+    {
+      "name": "canonical-parity",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "baseline-negatives",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 60,
+        "pass": 59,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "HARNESS_SETUP_DEFECT \u2014 copied test tree lacks server.js; 59 functional assertions pass; all 95 source-index hashes independently match."
+    },
+    {
+      "name": "candidate-negatives",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 60,
+        "pass": 59,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "HARNESS_SETUP_DEFECT \u2014 same omission and same 59 functional passes; no B-only difference."
+    },
+    {
+      "name": "document-8-pair-1-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-8-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-8-pair-2-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-8-pair-2-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-16-pair-1-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-16-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-32-pair-1-baseline",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {},
+      "classification": "PERFORMANCE_BLOCKER \u2014 original 30 s cold-client timeout; original Store retained and archived; later predeclared pair was not an ad hoc retry."
+    },
+    {
+      "name": "document-32-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-32-pair-2-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-32-pair-2-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "history-100-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "history-100-pair-1-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-8-profile-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "document-8-profile-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    },
+    {
+      "name": "g2-native-once",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "candidate-native-integrity-crash",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 187,
+        "pass": 187,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r1-h01",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r1-independent",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r2-storage",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 14,
+        "pass": 14,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r2-cache",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 8,
+        "pass": 8,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r2-ack",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r3-adversarial",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 8,
+        "pass": 7,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "HISTORICAL_STALE_ORACLE \u2014 pre-ACK post-publication mutation fences/no ACK, preserves published CURRENT rather than rolling back."
+    },
+    {
+      "name": "r3-metadata",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 2,
+        "pass": 1,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "HISTORICAL_STALE_ORACLE \u2014 same-verification mutation raises INTEGRITY_ERROR rather than returning an aliased proof."
+    },
+    {
+      "name": "r3-publication",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "r3-backup",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "classification": "PASS"
+    },
+    {
+      "name": "stopped-timeout-read-only",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "classification": "PASS"
+    }
+  ],
+  "currentNative": {
+    "suite": 187,
+    "separateOriginalG2": 1,
+    "fail": 0,
+    "skip": 0
+  },
+  "G2": "C \u2014 UNRESOLVED INTERMITTENT",
+  "allGreenClaim": false
+}

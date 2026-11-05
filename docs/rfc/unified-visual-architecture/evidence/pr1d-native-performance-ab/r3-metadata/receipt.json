@@ -1,0 +1,48 @@
+{
+  "name": "r3-metadata",
+  "command": [
+    "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "/home/estampes/projects/pr1d-native-candidate/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs"
+  ],
+  "cwd": "/home/estampes/projects/pr1d-native-candidate",
+  "environment": {
+    "HOME": "/home/estampes",
+    "USER": "estampes",
+    "LOGNAME": "estampes",
+    "LANG": "C.UTF-8",
+    "TZ": "Asia/Taipei",
+    "PATH": "/home/estampes/.nvm/versions/node/v22.23.4/bin:/usr/bin:/bin",
+    "TMPDIR": "/home/estampes/pr1d-native-ab-kqt5xtx6",
+    "PR1D_SCRATCH": "/home/estampes/pr1d-native-ab-kqt5xtx6",
+    "PR1D_OUTPUT": "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-metadata",
+    "PR1D_SOURCE": "/home/estampes/projects/pr1d-native-candidate",
+    "PR1D_ACCEPT_ROOT": "/home/estampes/pr1d-native-ab-kqt5xtx6",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "startedUTC": "2026-11-05T17:44:34Z",
+  "wallSeconds": 0.40851900000006935,
+  "exitCode": 1,
+  "stop": null,
+  "budgetSeconds": 600,
+  "peakProcessRssKiB": 14080,
+  "peakTreeRssKiB": 14080,
+  "perProcessHwmKiB": {
+    "20559": 14080
+  },
+  "peakAllocatedBytes": 0,
+  "scratch": "/home/estampes/pr1d-native-ab-kqt5xtx6",
+  "log": "r3-metadata/raw.log",
+  "sha256": "ac94d94be94f8a39b87282d84061522f2a24ed7ca8fd5e4a86f51de2ee62347b",
+  "inputManifestSha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e",
+  "counts": {
+    "tests": 2,
+    "pass": 1,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "tickHz": 100
+}

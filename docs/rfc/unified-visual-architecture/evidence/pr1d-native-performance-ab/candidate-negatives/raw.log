@@ -1,0 +1,384 @@
+TAP version 13
+# Subtest: JSON schema canonical copy preserves Unicode, numeric and prototype-key bytes
+ok 1 - JSON schema canonical copy preserves Unicode, numeric and prototype-key bytes
+  ---
+  duration_ms: 3.61506
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects prototype before encoding
+ok 2 - canonical copy rejects prototype before encoding
+  ---
+  duration_ms: 1.211925
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects proxy before encoding
+ok 3 - canonical copy rejects proxy before encoding
+  ---
+  duration_ms: 0.21945
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects accessor before encoding
+ok 4 - canonical copy rejects accessor before encoding
+  ---
+  duration_ms: 0.227975
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects symbol before encoding
+ok 5 - canonical copy rejects symbol before encoding
+  ---
+  duration_ms: 0.331284
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects hidden before encoding
+ok 6 - canonical copy rejects hidden before encoding
+  ---
+  duration_ms: 0.283433
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects sparse before encoding
+ok 7 - canonical copy rejects sparse before encoding
+  ---
+  duration_ms: 0.3168
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects decorated array before encoding
+ok 8 - canonical copy rejects decorated array before encoding
+  ---
+  duration_ms: 0.237783
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects cycle before encoding
+ok 9 - canonical copy rejects cycle before encoding
+  ---
+  duration_ms: 0.56375
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 0 before encoding
+ok 10 - canonical copy rejects non-JSON 0 before encoding
+  ---
+  duration_ms: 0.888617
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 1 before encoding
+ok 11 - canonical copy rejects non-JSON 1 before encoding
+  ---
+  duration_ms: 0.367767
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 2 before encoding
+ok 12 - canonical copy rejects non-JSON 2 before encoding
+  ---
+  duration_ms: 0.153909
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 3 before encoding
+ok 13 - canonical copy rejects non-JSON 3 before encoding
+  ---
+  duration_ms: 0.113483
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 4 before encoding
+ok 14 - canonical copy rejects non-JSON 4 before encoding
+  ---
+  duration_ms: 0.10395
+  type: 'test'
+  ...
+# Subtest: canonical copy rejects non-JSON 5 before encoding
+ok 15 - canonical copy rejects non-JSON 5 before encoding
+  ---
+  duration_ms: 0.103583
+  type: 'test'
+  ...
+# Subtest: canonical copy preserves exact byte, nesting and node limits
+ok 16 - canonical copy preserves exact byte, nesting and node limits
+  ---
+  duration_ms: 1.097342
+  type: 'test'
+  ...
+# Subtest: async JSON schema entry cannot retain a mutable value between guard and encoding
+ok 17 - async JSON schema entry cannot retain a mutable value between guard and encoding
+  ---
+  duration_ms: 0.532217
+  type: 'test'
+  ...
+# Subtest: JSON transform does not replace strict Document validation
+ok 18 - JSON transform does not replace strict Document validation
+  ---
+  duration_ms: 9.640678
+  type: 'test'
+  ...
+# Subtest: PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+ok 19 - PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+  ---
+  duration_ms: 7.261194
+  type: 'test'
+  ...
+# Subtest: asset aliases validate full SHA and cannot become Document identities
+ok 20 - asset aliases validate full SHA and cannot become Document identities
+  ---
+  duration_ms: 2.849643
+  type: 'test'
+  ...
+# Subtest: legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+ok 21 - legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+  ---
+  duration_ms: 3.643568
+  type: 'test'
+  ...
+# Subtest: import identity tables reject source/target collisions without conflating different domains
+ok 22 - import identity tables reject source/target collisions without conflating different domains
+  ---
+  duration_ms: 4.80251
+  type: 'test'
+  ...
+# Subtest: graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+ok 23 - graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+  ---
+  duration_ms: 18.896539
+  type: 'test'
+  ...
+# Subtest: scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+ok 24 - scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+  ---
+  duration_ms: 72.529532
+  type: 'test'
+  ...
+# Subtest: strict read records preserve opacity zero, precision, locking and reject unknown fields
+ok 25 - strict read records preserve opacity zero, precision, locking and reject unknown fields
+  ---
+  duration_ms: 14.196972
+  type: 'test'
+  ...
+# Subtest: duplicates and all layer membership inconsistencies are rejected
+ok 26 - duplicates and all layer membership inconsistencies are rejected
+  ---
+  duration_ms: 6.07136
+  type: 'test'
+  ...
+# Subtest: frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+ok 27 - frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+  ---
+  duration_ms: 5.361035
+  type: 'test'
+  ...
+# Subtest: finite geometry and normalized bounds reject invalid coordinates without clamping
+ok 28 - finite geometry and normalized bounds reject invalid coordinates without clamping
+  ---
+  duration_ms: 1.930134
+  type: 'test'
+  ...
+# Subtest: imported authors remain unknown with complete original source, never active module owners
+ok 29 - imported authors remain unknown with complete original source, never active module owners
+  ---
+  duration_ms: 1.381325
+  type: 'test'
+  ...
+# Subtest: unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+ok 30 - unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+  ---
+  duration_ms: 0.546517
+  type: 'test'
+  ...
+# Subtest: creator/source history and sticky user audit cannot be overwritten
+ok 31 - creator/source history and sticky user audit cannot be overwritten
+  ---
+  duration_ms: 1.178467
+  type: 'test'
+  ...
+# Subtest: trusted actor shape and grant intersection are not caller-granted permissions
+ok 32 - trusted actor shape and grant intersection are not caller-granted permissions
+  ---
+  duration_ms: 1.048851
+  type: 'test'
+  ...
+# Subtest: production wire schemas accept formal EX-04 but reject forged actor fields at every level
+ok 33 - production wire schemas accept formal EX-04 but reject forged actor fields at every level
+  ---
+  duration_ms: 17.056056
+  type: 'test'
+  ...
+# Subtest: existing-annotation input uses entity OCC and validates geometry against stored type
+ok 34 - existing-annotation input uses entity OCC and validates geometry against stored type
+  ---
+  duration_ms: 0.965708
+  type: 'test'
+  ...
+# Subtest: Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+ok 35 - Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+  ---
+  duration_ms: 0.932342
+  type: 'test'
+  ...
+# Subtest: embed object and canonical binding agree, child is authoritative and independently identified
+ok 36 - embed object and canonical binding agree, child is authoritative and independently identified
+  ---
+  duration_ms: 12.648812
+  type: 'test'
+  ...
+# Subtest: fresh cross-document targets must exist; unresolved materialized status never grants access
+ok 37 - fresh cross-document targets must exist; unresolved materialized status never grants access
+  ---
+  duration_ms: 7.67947
+  type: 'test'
+  ...
+# Subtest: embed cycles and depth are checked on supplied after-state snapshots
+ok 38 - embed cycles and depth are checked on supplied after-state snapshots
+  ---
+  duration_ms: 17.377072
+  type: 'test'
+  ...
+# Subtest: snapshot refusal uses closed redacted projections and cannot imply raster success
+ok 39 - snapshot refusal uses closed redacted projections and cannot imply raster success
+  ---
+  duration_ms: 2.160676
+  type: 'test'
+  ...
+# Subtest: six-root CommitRoot cannot use missing/extra/self-referential descriptors
+ok 40 - six-root CommitRoot cannot use missing/extra/self-referential descriptors
+  ---
+  duration_ms: 3.19706
+  type: 'test'
+  ...
+# Subtest: CURRENT checksum is canonical, excludes itself and matches exactly one root
+ok 41 - CURRENT checksum is canonical, excludes itself and matches exactly one root
+  ---
+  duration_ms: 1.132725
+  type: 'test'
+  ...
+# Subtest: recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+ok 42 - recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+  ---
+  duration_ms: 2.302392
+  type: 'test'
+  ...
+# Subtest: adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+ok 43 - adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+  ---
+  duration_ms: 0.793467
+  type: 'test'
+  ...
+# Subtest: JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+ok 44 - JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+  ---
+  duration_ms: 50.524575
+  type: 'test'
+  ...
+# Subtest: 95 pre-existing production/config files still match the verified baseline
+not ok 45 - 95 pre-existing production/config files still match the verified baseline
+  ---
+  duration_ms: 0.813083
+  type: 'test'
+  location: '/home/estampes/projects/pr1d-negative-candidate/tests/documents-foundation.test.js:201:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/home/estampes/projects/pr1d-negative-candidate/server.js'"
+  code: 'ENOENT'
+  stack: |-
+    Object.openSync (node:fs:560:18)
+    readFileSync (node:fs:444:35)
+    TestContext.<anonymous> (file:///home/estampes/projects/pr1d-negative-candidate/tests/documents-foundation.test.js:203:75)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: removed annotation anchors retain invalid references only with explicit matching tombstones
+ok 46 - removed annotation anchors retain invalid references only with explicit matching tombstones
+  ---
+  duration_ms: 7.462861
+  type: 'test'
+  ...
+# Subtest: interaction/gesture references and canonical axes associations are checked
+ok 47 - interaction/gesture references and canonical axes associations are checked
+  ---
+  duration_ms: 6.376427
+  type: 'test'
+  ...
+# Subtest: binding UUID collisions across parent Documents cannot create two canonical records
+ok 48 - binding UUID collisions across parent Documents cannot create two canonical records
+  ---
+  duration_ms: 2.854501
+  type: 'test'
+  ...
+# Subtest: repeated embed edges cannot amplify bounded traversal exponentially
+ok 49 - repeated embed edges cannot amplify bounded traversal exponentially
+  ---
+  duration_ms: 90.95023
+  type: 'test'
+  ...
+# Subtest: external provenance profile cannot be self-promoted and import evidence never becomes current verification
+ok 50 - external provenance profile cannot be self-promoted and import evidence never becomes current verification
+  ---
+  duration_ms: 2.001176
+  type: 'test'
+  ...
+# Subtest: mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+ok 51 - mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+  ---
+  duration_ms: 2.358217
+  type: 'test'
+  ...
+# Subtest: arbitrary JSON metadata in parsed records is detached from its input snapshot
+ok 52 - arbitrary JSON metadata in parsed records is detached from its input snapshot
+  ---
+  duration_ms: 0.462733
+  type: 'test'
+  ...
+# Subtest: F-01 partial snapshots report a missing active external dependency without inventing a target
+ok 53 - F-01 partial snapshots report a missing active external dependency without inventing a target
+  ---
+  duration_ms: 33.273086
+  type: 'test'
+  ...
+# Subtest: F-01 a declared complete closure rejects missing active dependencies and accepts coherent provided children
+ok 54 - F-01 a declared complete closure rejects missing active dependencies and accepts coherent provided children
+  ---
+  duration_ms: 11.243378
+  type: 'test'
+  ...
+# Subtest: F-01 missing targets in supplied Documents remain errors even in partial mode
+ok 55 - F-01 missing targets in supplied Documents remain errors even in partial mode
+  ---
+  duration_ms: 4.162859
+  type: 'test'
+  ...
+# Subtest: F-01 closure declarations are exact revision/hash sets, not caller assertions of validity
+ok 56 - F-01 closure declarations are exact revision/hash sets, not caller assertions of validity
+  ---
+  duration_ms: 2.232726
+  type: 'test'
+  ...
+# Subtest: F-01 explicitly unresolved and historical references are preserved and reported in complete closure
+ok 57 - F-01 explicitly unresolved and historical references are preserved and reported in complete closure
+  ---
+  duration_ms: 24.947825
+  type: 'test'
+  ...
+# Subtest: F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits
+ok 58 - F-01 neither validation mode bypasses canonical bindings, ownership or embed cycle limits
+  ---
+  duration_ms: 10.761487
+  type: 'test'
+  ...
+# Subtest: F-02 JSON record recovery never attests source-file bytes, assets or successful migration
+ok 59 - F-02 JSON record recovery never attests source-file bytes, assets or successful migration
+  ---
+  duration_ms: 16.008213
+  type: 'test'
+  ...
+# Subtest: F-02 mapped, editableComplete and rawRecoverable are independent statements
+ok 60 - F-02 mapped, editableComplete and rawRecoverable are independent statements
+  ---
+  duration_ms: 5.507244
+  type: 'test'
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 59
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1023.534662

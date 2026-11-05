@@ -1,0 +1,145 @@
+TAP version 13
+# Subtest: native independent SIGKILL / temporary-claim.after-dir-fsync
+ok 1 - native independent SIGKILL / temporary-claim.after-dir-fsync
+  ---
+  duration_ms: 2615.16789
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.before-write
+ok 2 - native independent SIGKILL / staged.before-write
+  ---
+  duration_ms: 2639.16378
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.after-file-fsync
+ok 3 - native independent SIGKILL / staged.after-file-fsync
+  ---
+  duration_ms: 2654.74899
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.before-rename
+ok 4 - native independent SIGKILL / staged.before-rename
+  ---
+  duration_ms: 2648.26692
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.after-rename
+ok 5 - native independent SIGKILL / staged.after-rename
+  ---
+  duration_ms: 2548.05183
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.before-dir-fsync
+ok 6 - native independent SIGKILL / staged.before-dir-fsync
+  ---
+  duration_ms: 2584.98207
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / staged.after-dir-fsync
+ok 7 - native independent SIGKILL / staged.after-dir-fsync
+  ---
+  duration_ms: 2579.76315
+  type: 'test'
+  ...
+# Subtest: native independent SIGKILL / before-ack
+ok 8 - native independent SIGKILL / before-ack
+  ---
+  duration_ms: 2475.84069
+  type: 'test'
+  ...
+# Subtest: native regression: interrupted attributed G2 drain / gc.before-quarantine
+ok 9 - native regression: interrupted attributed G2 drain / gc.before-quarantine
+  ---
+  duration_ms: 9888.02046
+  type: 'test'
+  ...
+# {"point":"gc.before-quarantine","claimExists":false,"staleTemporaryProof":null,"documents":1,"ledger":1,"nextGcProblem":null,"writerState":"ready"}
+# Subtest: native regression: interrupted attributed G2 drain / gc.after-rename
+ok 10 - native regression: interrupted attributed G2 drain / gc.after-rename
+  ---
+  duration_ms: 9618.25662
+  type: 'test'
+  ...
+# {"point":"gc.after-rename","claimExists":false,"staleTemporaryProof":null,"documents":1,"ledger":1,"nextGcProblem":null,"writerState":"ready"}
+# Subtest: native regression: interrupted attributed G2 drain / gc.after-unlink
+ok 11 - native regression: interrupted attributed G2 drain / gc.after-unlink
+  ---
+  duration_ms: 16487.380407
+  type: 'test'
+  ...
+# {"point":"gc.after-unlink","claimExists":false,"staleTemporaryProof":null,"documents":1,"ledger":1,"nextGcProblem":null,"writerState":"ready"}
+# Subtest: native attribution corruption safely preserves bytes / claim-schema
+ok 12 - native attribution corruption safely preserves bytes / claim-schema
+  ---
+  duration_ms: 1733.25168
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / claim-hash
+ok 13 - native attribution corruption safely preserves bytes / claim-hash
+  ---
+  duration_ms: 3410.29654
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / temporary-bytes
+ok 14 - native attribution corruption safely preserves bytes / temporary-bytes
+  ---
+  duration_ms: 6691.065254
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / claim-missing
+ok 15 - native attribution corruption safely preserves bytes / claim-missing
+  ---
+  duration_ms: 881.688162
+  type: 'test'
+  ...
+# Subtest: native attribution corruption safely preserves bytes / journal-missing
+ok 16 - native attribution corruption safely preserves bytes / journal-missing
+  ---
+  duration_ms: 1320.375378
+  type: 'test'
+  ...
+# Subtest: native SIGKILL inside actual startup classification read
+ok 17 - native SIGKILL inside actual startup classification read
+  ---
+  duration_ms: 1614.109532
+  type: 'test'
+  ...
+# Subtest: native SIGKILL inside actual startup history read
+ok 18 - native SIGKILL inside actual startup history read
+  ---
+  duration_ms: 2795.454624
+  type: 'test'
+  ...
+# Subtest: native cache invalidates atomic physical replacement / historical-locator-page
+ok 19 - native cache invalidates atomic physical replacement / historical-locator-page
+  ---
+  duration_ms: 2777.447072
+  type: 'test'
+  ...
+# Subtest: native cache invalidates atomic physical replacement / historical-generation
+ok 20 - native cache invalidates atomic physical replacement / historical-generation
+  ---
+  duration_ms: 2883.384213
+  type: 'test'
+  ...
+# Subtest: native reused transaction owner with competing claims fails closed
+ok 21 - native reused transaction owner with competing claims fails closed
+  ---
+  duration_ms: 998.276914
+  type: 'test'
+  ...
+# Subtest: partial native temporary write: owned bytes survive SIGKILL with no false ACK
+ok 22 - partial native temporary write: owned bytes survive SIGKILL with no false ACK
+  ---
+  duration_ms: 1699.431383
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 83736.237465

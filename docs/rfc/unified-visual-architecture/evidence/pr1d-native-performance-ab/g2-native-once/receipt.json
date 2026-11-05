@@ -1,0 +1,60 @@
+{
+  "name": "g2-native-once",
+  "command": [
+    "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-name-pattern=R3-B1 / four interrupted recovery epochs preserve exact claims and retry / current.before-rename$",
+    "/home/estampes/projects/pr1d-native-regressions/tests/persistence-state-machine.test.js"
+  ],
+  "cwd": "/home/estampes/projects/pr1d-native-candidate",
+  "environment": {
+    "HOME": "/home/estampes",
+    "USER": "estampes",
+    "LOGNAME": "estampes",
+    "LANG": "C.UTF-8",
+    "TZ": "Asia/Taipei",
+    "PATH": "/home/estampes/.nvm/versions/node/v22.23.4/bin:/usr/bin:/bin",
+    "TMPDIR": "/home/estampes/pr1d-native-ab-ixc0i6ir",
+    "PR1D_SCRATCH": "/home/estampes/pr1d-native-ab-ixc0i6ir",
+    "PR1D_OUTPUT": "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once",
+    "PR1D_SOURCE": "/home/estampes/projects/pr1d-native-candidate",
+    "PR1D_ACCEPT_ROOT": "/home/estampes/pr1d-native-ab-ixc0i6ir",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PR1D_G2_PRESERVE": "1",
+    "NODE_OPTIONS": "--import=/home/estampes/projects/pr1d-native-candidate/scripts/pr1d-investigation/g2-preload.mjs"
+  },
+  "startedUTC": "2026-11-05T17:21:23Z",
+  "wallSeconds": 15.599950815999819,
+  "exitCode": 0,
+  "stop": null,
+  "budgetSeconds": 420,
+  "peakProcessRssKiB": 86820,
+  "peakTreeRssKiB": 216168,
+  "perProcessHwmKiB": {
+    "12824": 48116,
+    "12830": 86820,
+    "12841": 81184,
+    "12857": 79172,
+    "12868": 80748,
+    "12879": 84556,
+    "12890": 83780,
+    "12901": 84132,
+    "12912": 86348,
+    "12924": 84580
+  },
+  "peakAllocatedBytes": 925696,
+  "scratch": "/home/estampes/pr1d-native-ab-ixc0i6ir",
+  "log": "g2-native-once/raw.log",
+  "sha256": "8b5d3e654f851977390c977fb44a98e6f7b3401a9d0c64a028bc8afd8b572cd1",
+  "inputManifestSha256": "59310e840e7f5ff4a60a3df8f05e1b5da5802b77349d7c45b55daf7a504ff7bd",
+  "counts": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "tickHz": 100
+}

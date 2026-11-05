@@ -1,0 +1,43 @@
+[
+  {
+    "command": [
+      "python3",
+      "scripts/pr1d-native-ab/analyze.py"
+    ],
+    "exitCode": 0,
+    "seconds": 0.07967114999974001,
+    "log": "analysis-derivation.log",
+    "sha256": "9c79a5ee7b6144d6c6eb47d79e7bbeed6cf384a308b169071379a311611d917d"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/pr1d-native-ab/profiles.py"
+    ],
+    "exitCode": 0,
+    "seconds": 0.05194709999977931,
+    "log": "profiles-derivation.log",
+    "sha256": "5fb01384b12805be7233ad36c14a209346f8dd0dfb5d9d87a0195bd3a06be9cd"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/pr1d-native-ab/verify.py"
+    ],
+    "exitCode": 0,
+    "seconds": 1.3111052399999608,
+    "log": "integrity-derivation.log",
+    "sha256": "a661a74e07fef06cb1dc0ff3c083a6319611e6b76dd491122c1bd8b50b6ffe24"
+  },
+  {
+    "command": [
+      "python3",
+      "scripts/pr1d-native-ab/report.py",
+      "INCONCLUSIVE"
+    ],
+    "exitCode": 0,
+    "seconds": 0.03523536000011518,
+    "log": "report-derivation.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

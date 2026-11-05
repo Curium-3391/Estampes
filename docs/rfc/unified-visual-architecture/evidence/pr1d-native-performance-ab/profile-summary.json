@@ -1,0 +1,3446 @@
+{
+  "baseline": {
+    "receipt": {
+      "name": "document-8-profile-baseline",
+      "command": [
+        "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+        "/home/estampes/projects/Estampes/scripts/pr1d-native-ab/benchmark.mjs",
+        "document",
+        "8"
+      ],
+      "cwd": "/home/estampes/projects/pr1d-native-baseline",
+      "environment": {
+        "HOME": "/home/estampes",
+        "USER": "estampes",
+        "LOGNAME": "estampes",
+        "LANG": "C.UTF-8",
+        "TZ": "Asia/Taipei",
+        "PATH": "/home/estampes/.nvm/versions/node/v22.23.4/bin:/usr/bin:/bin",
+        "TMPDIR": "/home/estampes/pr1d-native-ab-w1yjewj5",
+        "PR1D_SCRATCH": "/home/estampes/pr1d-native-ab-w1yjewj5",
+        "PR1D_OUTPUT": "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline",
+        "PR1D_SOURCE": "/home/estampes/projects/pr1d-native-baseline",
+        "PR1D_ACCEPT_ROOT": "/home/estampes/pr1d-native-ab-w1yjewj5",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PR1D_MEASURE": "1",
+        "NODE_OPTIONS": "--import=/home/estampes/projects/pr1d-native-baseline/scripts/pr1d-investigation/profile.mjs"
+      },
+      "startedUTC": "2026-11-05T17:20:38Z",
+      "wallSeconds": 24.92708620800022,
+      "exitCode": 0,
+      "stop": null,
+      "budgetSeconds": 180,
+      "peakProcessRssKiB": 346020,
+      "peakTreeRssKiB": 567892,
+      "perProcessHwmKiB": {
+        "12691": 344432,
+        "12702": 346020,
+        "12719": 205428,
+        "12731": 255124
+      },
+      "peakAllocatedBytes": 8675328,
+      "scratch": "/home/estampes/pr1d-native-ab-w1yjewj5",
+      "log": "document-8-profile-baseline/raw.log",
+      "sha256": "a845886860b317a7c52c91235dd98372c1fa0dfbf8a273f59bbba4e1bd26e38c",
+      "inputManifestSha256": "31e8078751e117db06e816e8f80b0e65f21d4431bbe41daba97cf97cead81eb3",
+      "counts": {},
+      "tickHz": 100
+    },
+    "operations": [
+      {
+        "pid": 12702,
+        "operation": "open",
+        "ordinal": 0,
+        "operations": {
+          "fs.lstat": {
+            "calls": 695,
+            "ms": 81.22941999999995,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 2,
+            "ms": 0.41048399999999674,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 7,
+            "ms": 1.2824160000000688,
+            "bytes": 0
+          },
+          "parse": {
+            "calls": 110,
+            "ms": 22.23815799999943,
+            "bytes": 0
+          },
+          "assertJson": {
+            "calls": 133,
+            "ms": 4.012703999999985,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 107,
+            "ms": 4.251227999999969,
+            "bytes": 32349
+          },
+          "sha256.update": {
+            "calls": 150,
+            "ms": 0.5109540000000266,
+            "bytes": 38190
+          },
+          "fs.mkdir": {
+            "calls": 62,
+            "ms": 13.694272999999782,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 144,
+            "ms": 22.903286999999864,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 87,
+            "ms": 157.76450300000005,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 32,
+            "ms": 5.9055350000001,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 16,
+            "ms": 2.761183999999787,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 16,
+            "ms": 3.23592699999989,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 14,
+            "ms": 29.817244999999843,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 3.062494000000015,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 1.8272830000000226,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 2.22603399999997,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 114,
+            "ms": 57.93233599999974,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 114,
+            "ms": 12.89236900000003,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 12,
+            "ms": 2.9913600000000997,
+            "bytes": 3213
+          },
+          "ManagedFiles.bytes": {
+            "calls": 12,
+            "ms": 29.30483099999981,
+            "bytes": 0
+          },
+          "ManagedFiles.json": {
+            "calls": 12,
+            "ms": 30.84272199999998,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 13,
+            "ms": 30.02954699999998,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 1,
+            "ms": 0.15821600000003855,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 90,
+            "ms": 9.733801999998946,
+            "bytes": 12017
+          },
+          "ManagedFiles.digest": {
+            "calls": 45,
+            "ms": 80.5560380000004,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 1,
+            "ms": 2.2302510000000666,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 1,
+            "ms": 2.7694340000000466,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 3,
+            "ms": 62.127276000000165,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "mkdir.before-dir-fsync": 7,
+          "mkdir.after-dir-fsync": 7,
+          "temporary-claim.before-write": 16,
+          "temporary-claim.before-file-fsync": 16,
+          "temporary-claim.after-file-fsync": 16,
+          "temporary-claim.before-dir-fsync": 32,
+          "temporary-claim.after-dir-fsync": 32,
+          "bootstrap.before-write": 1,
+          "bootstrap.before-file-fsync": 1,
+          "bootstrap.after-file-fsync": 1,
+          "bootstrap.before-rename": 1,
+          "bootstrap.after-rename": 1,
+          "bootstrap.before-dir-fsync": 1,
+          "bootstrap.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 16,
+          "temporary-claim.after-unlink": 16,
+          "before-intent": 1,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "after-intent-durable": 1,
+          "staged.before-write": 10,
+          "staged.before-file-fsync": 10,
+          "staged.after-file-fsync": 10,
+          "staged.before-rename": 10,
+          "staged.after-rename": 10,
+          "staged.before-dir-fsync": 10,
+          "staged.after-dir-fsync": 10,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-file-fsync": 1,
+          "outcome.after-file-fsync": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "outcome.before-dir-fsync": 1,
+          "outcome.after-dir-fsync": 1,
+          "before-ack": 1
+        },
+        "audits": 2,
+        "lastStage": "before-ack",
+        "wallMs": 417.520099,
+        "cpuUs": {
+          "user": 236815,
+          "system": 103787
+        },
+        "memory": {
+          "rss": 88047616,
+          "heapTotal": 32759808,
+          "heapUsed": 14420192,
+          "external": 2436856,
+          "arrayBuffers": 129689
+        },
+        "maxRSSKiB": 85984,
+        "verification": {
+          "snapshotLoads": 1,
+          "versionHits": 0,
+          "versionMisses": 0,
+          "recordHits": 0,
+          "registryHits": 0,
+          "registryMaterializations": 1,
+          "versionReconstructions": 0,
+          "reconstructedMs": 0,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 0,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 12,
+          "contentHashChecks": 12
+        },
+        "transaction": {
+          "mode": "genesis",
+          "buildAndPreflightMs": 10.969292999999993,
+          "stageAndPrepareMs": 197.962356,
+          "candidateVerificationMs": 65.53131899999994,
+          "currentPublicationMs": 33.81043,
+          "postPublicationMs": 49.38084099999992,
+          "totalMs": 357.693839
+        },
+        "open": null
+      },
+      {
+        "pid": 12702,
+        "operation": "commit",
+        "ordinal": 1,
+        "operations": {
+          "assertJson": {
+            "calls": 312,
+            "ms": 3222.3537129999995,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 256,
+            "ms": 1870.808613999999,
+            "bytes": 100748162
+          },
+          "parse": {
+            "calls": 197,
+            "ms": 2177.6924359999994,
+            "bytes": 0
+          },
+          "sha256.update": {
+            "calls": 326,
+            "ms": 314.7006979999969,
+            "bytes": 134329947
+          },
+          "LifecycleManager.admit": {
+            "calls": 1,
+            "ms": 0.24062500000013642,
+            "bytes": 0
+          },
+          "fs.lstat": {
+            "calls": 1309,
+            "ms": 155.18452199997932,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 230,
+            "ms": 115.11823400000958,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 218,
+            "ms": 33.297094000007746,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 230,
+            "ms": 26.1741360000035,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 34,
+            "ms": 12.822519000001193,
+            "bytes": 8400472
+          },
+          "ManagedFiles.bytes": {
+            "calls": 34,
+            "ms": 104.09337899999673,
+            "bytes": 0
+          },
+          "ManagedFiles.json": {
+            "calls": 32,
+            "ms": 330.11711000000014,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 40,
+            "ms": 73.64170900000181,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 15,
+            "ms": 53.699716999999055,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 32.05482999999958,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 8,
+            "ms": 2.052050999999665,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 6.551234000000022,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 1,
+            "ms": 0.15959200000042983,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 6.814867999999933,
+            "bytes": 0
+          },
+          "fs.mkdir": {
+            "calls": 80,
+            "ms": 15.893535000000611,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 103,
+            "ms": 3517.5725739999984,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 38,
+            "ms": 29.82045699999435,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 19,
+            "ms": 3.523391000000629,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 19,
+            "ms": 4.089345000000776,
+            "bytes": 0
+          },
+          "ManagedFiles.resync": {
+            "calls": 2,
+            "ms": 2.0091510000002017,
+            "bytes": 0
+          },
+          "VerificationCache.valid": {
+            "calls": 2,
+            "ms": 0.18764200000077835,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 172,
+            "ms": 32.704650999997284,
+            "bytes": 41977250
+          },
+          "ManagedFiles.digest": {
+            "calls": 81,
+            "ms": 257.0131089999959,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 3,
+            "ms": 28.081538000001274,
+            "bytes": 0
+          },
+          "VerificationCache.remember": {
+            "calls": 1,
+            "ms": 24.537796000000526,
+            "bytes": 0
+          },
+          "ManagedFiles.checkFingerprint": {
+            "calls": 2,
+            "ms": 2.667409000000589,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 2,
+            "ms": 2.682992000000013,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 1,
+            "ms": 4.245817000000898,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 3,
+            "ms": 179.12778600000092,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "before-intent": 1,
+          "mkdir.before-dir-fsync": 4,
+          "mkdir.after-dir-fsync": 4,
+          "temporary-claim.before-write": 19,
+          "temporary-claim.before-file-fsync": 19,
+          "temporary-claim.after-file-fsync": 19,
+          "temporary-claim.before-dir-fsync": 38,
+          "temporary-claim.after-dir-fsync": 38,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 19,
+          "temporary-claim.after-unlink": 19,
+          "after-intent-durable": 1,
+          "staged.before-write": 14,
+          "staged.before-file-fsync": 16,
+          "staged.after-file-fsync": 16,
+          "staged.before-rename": 14,
+          "staged.after-rename": 14,
+          "staged.before-dir-fsync": 16,
+          "staged.after-dir-fsync": 16,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-file-fsync": 1,
+          "outcome.after-file-fsync": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "outcome.before-dir-fsync": 1,
+          "outcome.after-dir-fsync": 1,
+          "before-ack": 1
+        },
+        "audits": 1,
+        "lastStage": "before-ack",
+        "wallMs": 8122.816796000001,
+        "cpuUs": {
+          "user": 4612408,
+          "system": 586192
+        },
+        "memory": {
+          "rss": 221638656,
+          "heapTotal": 125632512,
+          "heapUsed": 96344656,
+          "external": 36164766,
+          "arrayBuffers": 33857559
+        },
+        "maxRSSKiB": 346020,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 1,
+          "versionMisses": 1,
+          "recordHits": 1,
+          "registryHits": 1,
+          "registryMaterializations": 2,
+          "versionReconstructions": 1,
+          "reconstructedMs": 379.6465419999995,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 2,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 35,
+          "contentHashChecks": 36
+        },
+        "transaction": {
+          "mode": "content",
+          "buildAndPreflightMs": 1653.4499509999998,
+          "stageAndPrepareMs": 3403.995358,
+          "candidateVerificationMs": 1833.3936619999995,
+          "currentPublicationMs": 163.72265100000004,
+          "postPublicationMs": 305.1453650000003,
+          "totalMs": 7359.716335
+        },
+        "open": null
+      },
+      {
+        "pid": 12719,
+        "operation": "open",
+        "ordinal": 0,
+        "operations": {
+          "fs.lstat": {
+            "calls": 2174,
+            "ms": 313.34467799999436,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 2,
+            "ms": 0.45750799999999003,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 41,
+            "ms": 7.034593000000285,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 380,
+            "ms": 252.04506399999676,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 313,
+            "ms": 53.97234000000324,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 380,
+            "ms": 52.722647000003406,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 82,
+            "ms": 25.248396999998164,
+            "bytes": 8426668
+          },
+          "sha256.update": {
+            "calls": 487,
+            "ms": 268.97669900000767,
+            "bytes": 100833757
+          },
+          "ManagedFiles.bytes": {
+            "calls": 82,
+            "ms": 232.85170400000138,
+            "bytes": 0
+          },
+          "assertJson": {
+            "calls": 465,
+            "ms": 2721.7664390000027,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 407,
+            "ms": 1394.9620299999995,
+            "bytes": 75637294
+          },
+          "ManagedFiles.json": {
+            "calls": 75,
+            "ms": 432.27660399999684,
+            "bytes": 0
+          },
+          "parse": {
+            "calls": 278,
+            "ms": 1870.8614059999993,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 79,
+            "ms": 178.6323350000023,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 26,
+            "ms": 152.47469200000043,
+            "bytes": 0
+          },
+          "VerificationCache.valid": {
+            "calls": 4,
+            "ms": 22.005871000000184,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 228,
+            "ms": 44.52361200000314,
+            "bytes": 50377942
+          },
+          "ManagedFiles.digest": {
+            "calls": 108,
+            "ms": 445.47119200000304,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 4,
+            "ms": 34.89163900000017,
+            "bytes": 0
+          },
+          "VerificationCache.remember": {
+            "calls": 1,
+            "ms": 29.108021000000008,
+            "bytes": 0
+          },
+          "ManagedFiles.checkFingerprint": {
+            "calls": 6,
+            "ms": 33.829498999999714,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 4,
+            "ms": 12.515434999999798,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 2,
+            "ms": 7.141384000000016,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 4,
+            "ms": 341.7896689999998,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 123,
+            "ms": 1434.9172250000033,
+            "bytes": 0
+          },
+          "ManagedFiles.resync": {
+            "calls": 31,
+            "ms": 79.65724700000192,
+            "bytes": 0
+          },
+          "fs.mkdir": {
+            "calls": 61,
+            "ms": 11.68988599999966,
+            "bytes": 0
+          },
+          "IntentJournal.recover": {
+            "calls": 1,
+            "ms": 57.34218400000009,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 51.68552399999953,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 10.215150999999878,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 10.739668000000165,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 24,
+            "ms": 4.869332000000213,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 12,
+            "ms": 2.4844429999998283,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 12,
+            "ms": 2.6017760000004273,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "recovery.before-file-fsync": 24,
+          "recovery.after-file-fsync": 24,
+          "recovery.before-dir-fsync": 24,
+          "recovery.after-dir-fsync": 24,
+          "recovery.before-outcome": 2,
+          "outcome.before-file-fsync": 3,
+          "outcome.after-file-fsync": 3,
+          "outcome.before-dir-fsync": 3,
+          "outcome.after-dir-fsync": 3,
+          "before-intent": 1,
+          "mkdir.before-dir-fsync": 1,
+          "mkdir.after-dir-fsync": 1,
+          "temporary-claim.before-write": 12,
+          "temporary-claim.before-file-fsync": 12,
+          "temporary-claim.after-file-fsync": 12,
+          "temporary-claim.before-dir-fsync": 24,
+          "temporary-claim.after-dir-fsync": 24,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 12,
+          "temporary-claim.after-unlink": 12,
+          "after-intent-durable": 1,
+          "staged.before-file-fsync": 12,
+          "staged.after-file-fsync": 12,
+          "staged.before-dir-fsync": 12,
+          "staged.after-dir-fsync": 12,
+          "staged.before-write": 7,
+          "staged.before-rename": 7,
+          "staged.after-rename": 7,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "before-ack": 1
+        },
+        "audits": 2,
+        "lastStage": "before-ack",
+        "wallMs": 5539.204133,
+        "cpuUs": {
+          "user": 4165361,
+          "system": 532027
+        },
+        "memory": {
+          "rss": 159641600,
+          "heapTotal": 74989568,
+          "heapUsed": 46290528,
+          "external": 15187538,
+          "arrayBuffers": 12894368
+        },
+        "maxRSSKiB": 205428,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 3,
+          "versionMisses": 1,
+          "recordHits": 3,
+          "registryHits": 2,
+          "registryMaterializations": 3,
+          "versionReconstructions": 1,
+          "reconstructedMs": 349.41423,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 47,
+          "contentHashChecks": 49
+        },
+        "transaction": {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 68.3730770000002,
+          "stageAndPrepareMs": 818.6714609999999,
+          "candidateVerificationMs": 1679.851055,
+          "currentPublicationMs": 476.3690999999999,
+          "postPublicationMs": 422.4603820000002,
+          "totalMs": 3465.7794340000005
+        },
+        "open": {
+          "verifyCommittedMs": 1896.3113799999999
+        }
+      },
+      {
+        "pid": 12731,
+        "operation": "open",
+        "ordinal": 0,
+        "operations": {
+          "fs.lstat": {
+            "calls": 2458,
+            "ms": 339.420101999995,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 2,
+            "ms": 0.45558400000010124,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 44,
+            "ms": 8.498695999997551,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 428,
+            "ms": 262.4582010000005,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 347,
+            "ms": 54.40444599999262,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 428,
+            "ms": 59.024176999999554,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 94,
+            "ms": 34.19707499999879,
+            "bytes": 8435400
+          },
+          "sha256.update": {
+            "calls": 542,
+            "ms": 250.51597300000674,
+            "bytes": 100861267
+          },
+          "ManagedFiles.bytes": {
+            "calls": 94,
+            "ms": 340.48003000000176,
+            "bytes": 0
+          },
+          "assertJson": {
+            "calls": 516,
+            "ms": 2652.0326860000046,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 453,
+            "ms": 1459.7623930000004,
+            "bytes": 75658716
+          },
+          "ManagedFiles.json": {
+            "calls": 86,
+            "ms": 603.5854889999994,
+            "bytes": 0
+          },
+          "parse": {
+            "calls": 308,
+            "ms": 1768.2008830000036,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 88,
+            "ms": 278.5258219999979,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 26,
+            "ms": 240.48057400000027,
+            "bytes": 0
+          },
+          "VerificationCache.valid": {
+            "calls": 4,
+            "ms": 26.655755000000227,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 252,
+            "ms": 37.16515899999263,
+            "bytes": 50385322
+          },
+          "ManagedFiles.digest": {
+            "calls": 120,
+            "ms": 361.3588640000039,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 4,
+            "ms": 37.190548000000035,
+            "bytes": 0
+          },
+          "VerificationCache.remember": {
+            "calls": 1,
+            "ms": 30.674972000000025,
+            "bytes": 0
+          },
+          "ManagedFiles.checkFingerprint": {
+            "calls": 6,
+            "ms": 29.714581000000862,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 4,
+            "ms": 3.7227670000002036,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 2,
+            "ms": 7.79377599999998,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 4,
+            "ms": 272.8769510000002,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 133,
+            "ms": 119.98975700000028,
+            "bytes": 0
+          },
+          "ManagedFiles.resync": {
+            "calls": 36,
+            "ms": 42.86269899999934,
+            "bytes": 0
+          },
+          "fs.mkdir": {
+            "calls": 63,
+            "ms": 10.785593000001427,
+            "bytes": 0
+          },
+          "IntentJournal.recover": {
+            "calls": 1,
+            "ms": 41.471382000000176,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 53.03449200000023,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 9.393267999999807,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 9.952252000000044,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 24,
+            "ms": 4.486349000002065,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 12,
+            "ms": 2.1875319999994645,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 12,
+            "ms": 2.5557569999996304,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "recovery.before-file-fsync": 28,
+          "recovery.after-file-fsync": 28,
+          "recovery.before-dir-fsync": 28,
+          "recovery.after-dir-fsync": 28,
+          "recovery.before-outcome": 3,
+          "outcome.before-file-fsync": 4,
+          "outcome.after-file-fsync": 4,
+          "outcome.before-dir-fsync": 4,
+          "outcome.after-dir-fsync": 4,
+          "before-intent": 1,
+          "mkdir.before-dir-fsync": 1,
+          "mkdir.after-dir-fsync": 1,
+          "temporary-claim.before-write": 12,
+          "temporary-claim.before-file-fsync": 12,
+          "temporary-claim.after-file-fsync": 12,
+          "temporary-claim.before-dir-fsync": 24,
+          "temporary-claim.after-dir-fsync": 24,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 12,
+          "temporary-claim.after-unlink": 12,
+          "after-intent-durable": 1,
+          "staged.before-file-fsync": 12,
+          "staged.after-file-fsync": 12,
+          "staged.before-dir-fsync": 12,
+          "staged.after-dir-fsync": 12,
+          "staged.before-write": 7,
+          "staged.before-rename": 7,
+          "staged.after-rename": 7,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "before-ack": 1
+        },
+        "audits": 2,
+        "lastStage": "before-ack",
+        "wallMs": 4337.172619999999,
+        "cpuUs": {
+          "user": 4299748,
+          "system": 557607
+        },
+        "memory": {
+          "rss": 160071680,
+          "heapTotal": 75513856,
+          "heapUsed": 46743096,
+          "external": 15238881,
+          "arrayBuffers": 12931714
+        },
+        "maxRSSKiB": 218816,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 3,
+          "versionMisses": 1,
+          "recordHits": 3,
+          "registryHits": 2,
+          "registryMaterializations": 3,
+          "versionReconstructions": 1,
+          "reconstructedMs": 417.5516319999999,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 53,
+          "contentHashChecks": 55
+        },
+        "transaction": {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 68.9541519999998,
+          "stageAndPrepareMs": 161.26497599999993,
+          "candidateVerificationMs": 1561.406153,
+          "currentPublicationMs": 75.87021999999979,
+          "postPublicationMs": 111.30745900000056,
+          "totalMs": 1978.854843
+        },
+        "open": {
+          "verifyCommittedMs": 2106.640304
+        }
+      },
+      {
+        "pid": 12731,
+        "operation": "commit",
+        "ordinal": 1,
+        "operations": {
+          "assertJson": {
+            "calls": 11,
+            "ms": 576.963749999999,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 4,
+            "ms": 338.1923030000007,
+            "bytes": 16778434
+          },
+          "parse": {
+            "calls": 6,
+            "ms": 518.7159899999997,
+            "bytes": 0
+          },
+          "sha256.update": {
+            "calls": 3,
+            "ms": 22.344304000000193,
+            "bytes": 8389824
+          }
+        },
+        "stages": {},
+        "wallMs": 745.3013579999997,
+        "cpuUs": {
+          "user": 767315,
+          "system": 78827
+        },
+        "memory": {
+          "rss": 210583552,
+          "heapTotal": 116973568,
+          "heapUsed": 80107704,
+          "external": 2387424,
+          "arrayBuffers": 84812
+        },
+        "maxRSSKiB": 255124,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 3,
+          "versionMisses": 1,
+          "recordHits": 3,
+          "registryHits": 2,
+          "registryMaterializations": 3,
+          "versionReconstructions": 1,
+          "reconstructedMs": 417.5516319999999,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 53,
+          "contentHashChecks": 55
+        },
+        "transaction": {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 68.9541519999998,
+          "stageAndPrepareMs": 161.26497599999993,
+          "candidateVerificationMs": 1561.406153,
+          "currentPublicationMs": 75.87021999999979,
+          "postPublicationMs": 111.30745900000056,
+          "totalMs": 1978.854843
+        },
+        "open": {
+          "verifyCommittedMs": 2106.640304
+        }
+      }
+    ],
+    "cpu": [
+      {
+        "file": "cpu-12702.json.gz",
+        "samples": 894,
+        "sampledGarbageCollectorUs": 50639,
+        "topSampledFramesUs": [
+          {
+            "function": "(idle)",
+            "url": "",
+            "sampledUs": 4280975
+          },
+          {
+            "function": "visit",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 1764848
+          },
+          {
+            "function": "addString",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 1383267
+          },
+          {
+            "function": "encode",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 473324
+          },
+          {
+            "function": "update",
+            "url": "",
+            "sampledUs": 311803
+          },
+          {
+            "function": "",
+            "url": "",
+            "sampledUs": 120763
+          },
+          {
+            "function": "measured_assertJson",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 70385
+          },
+          {
+            "function": "lstat",
+            "url": "",
+            "sampledUs": 70325
+          },
+          {
+            "function": "(garbage collector)",
+            "url": "",
+            "sampledUs": 50639
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 40205
+          },
+          {
+            "function": "lstat",
+            "url": "node:internal/fs/promises",
+            "sampledUs": 40182
+          },
+          {
+            "function": "fs.<computed>",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/scripts/pr1d-investigation/profile.mjs",
+            "sampledUs": 40175
+          },
+          {
+            "function": "post",
+            "url": "node:inspector",
+            "sampledUs": 39980
+          },
+          {
+            "function": "read",
+            "url": "",
+            "sampledUs": 20157
+          },
+          {
+            "function": "(program)",
+            "url": "",
+            "sampledUs": 20157
+          }
+        ],
+        "interpretation": "Profile interval includes idle/RPC waits/bootstrap. Sampled deltas are not independent operation timers."
+      },
+      {
+        "file": "cpu-12719.json.gz",
+        "samples": 552,
+        "sampledGarbageCollectorUs": 30391,
+        "topSampledFramesUs": [
+          {
+            "function": "(idle)",
+            "url": "",
+            "sampledUs": 1688435
+          },
+          {
+            "function": "addString",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 1392621
+          },
+          {
+            "function": "visit",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 1354587
+          },
+          {
+            "function": "encode",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 280612
+          },
+          {
+            "function": "update",
+            "url": "",
+            "sampledUs": 270298
+          },
+          {
+            "function": "(program)",
+            "url": "",
+            "sampledUs": 70120
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 52112
+          },
+          {
+            "function": "lstat",
+            "url": "",
+            "sampledUs": 50293
+          },
+          {
+            "function": "",
+            "url": "",
+            "sampledUs": 50246
+          },
+          {
+            "function": "(garbage collector)",
+            "url": "",
+            "sampledUs": 30391
+          },
+          {
+            "function": "lstat",
+            "url": "node:internal/fs/promises",
+            "sampledUs": 30302
+          },
+          {
+            "function": "post",
+            "url": "node:inspector",
+            "sampledUs": 27925
+          },
+          {
+            "function": "add",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/scripts/pr1d-investigation/profile.mjs",
+            "sampledUs": 20133
+          },
+          {
+            "function": "openFileHandle",
+            "url": "",
+            "sampledUs": 20079
+          },
+          {
+            "function": "promiseInitHook",
+            "url": "node:internal/async_hooks",
+            "sampledUs": 16866
+          }
+        ],
+        "interpretation": "Profile interval includes idle/RPC waits/bootstrap. Sampled deltas are not independent operation timers."
+      },
+      {
+        "file": "cpu-12731.json.gz",
+        "samples": 543,
+        "sampledGarbageCollectorUs": 60505,
+        "topSampledFramesUs": [
+          {
+            "function": "visit",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 1623396
+          },
+          {
+            "function": "addString",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 1609498
+          },
+          {
+            "function": "(idle)",
+            "url": "",
+            "sampledUs": 625973
+          },
+          {
+            "function": "encode",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 422782
+          },
+          {
+            "function": "update",
+            "url": "",
+            "sampledUs": 258085
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "sampledUs": 90573
+          },
+          {
+            "function": "",
+            "url": "",
+            "sampledUs": 80491
+          },
+          {
+            "function": "post",
+            "url": "node:inspector",
+            "sampledUs": 61037
+          },
+          {
+            "function": "(garbage collector)",
+            "url": "",
+            "sampledUs": 60505
+          },
+          {
+            "function": "(program)",
+            "url": "",
+            "sampledUs": 60334
+          },
+          {
+            "function": "lstat",
+            "url": "",
+            "sampledUs": 51904
+          },
+          {
+            "function": "bytes",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/filesystem.js",
+            "sampledUs": 44097
+          },
+          {
+            "function": "inst._zod.parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/node_modules/zod/v4/core/schemas.js",
+            "sampledUs": 40278
+          },
+          {
+            "function": "promiseAfterHook",
+            "url": "node:internal/async_hooks",
+            "sampledUs": 20570
+          },
+          {
+            "function": "compile",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/node_modules/zod/v4/core/doc.js",
+            "sampledUs": 20194
+          }
+        ],
+        "interpretation": "Profile interval includes idle/RPC waits/bootstrap. Sampled deltas are not independent operation timers."
+      }
+    ],
+    "heap": [
+      {
+        "file": "heap-12702.json.gz",
+        "sampledRetainedBytes": 16777248,
+        "topSites": [
+          {
+            "function": "json",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/filesystem.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "(root)",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "materialize",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "closure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "validateCompleteDocumentClosure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "analyzeReferences",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "indexDocuments",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "map",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "parseVisualDocument",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/schema.js",
+            "bytes": 0
+          },
+          {
+            "function": "parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "globalThis.__pr1dMeasure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "measured_parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "safeParse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/node_modules/zod/v4/classic/schemas.js",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "1 MiB sampling; retained allocations at stop, not cumulative allocation or transient peak."
+      },
+      {
+        "file": "heap-12719.json.gz",
+        "sampledRetainedBytes": 17825848,
+        "topSites": [
+          {
+            "function": "json",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/filesystem.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "#onMessage",
+            "url": "node:inspector",
+            "bytes": 1048600
+          },
+          {
+            "function": "(root)",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "materialize",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "closure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "validateCompleteDocumentClosure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "analyzeReferences",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "indexDocuments",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "map",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "parseVisualDocument",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/schema.js",
+            "bytes": 0
+          },
+          {
+            "function": "parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "globalThis.__pr1dMeasure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "measured_parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "1 MiB sampling; retained allocations at stop, not cumulative allocation or transient peak."
+      },
+      {
+        "file": "heap-12731.json.gz",
+        "sampledRetainedBytes": 16777248,
+        "topSites": [
+          {
+            "function": "json",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/filesystem.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "(root)",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "materialize",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "closure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "validateCompleteDocumentClosure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "analyzeReferences",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "indexDocuments",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "map",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "parseVisualDocument",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/schema.js",
+            "bytes": 0
+          },
+          {
+            "function": "parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "globalThis.__pr1dMeasure",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "measured_parse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "safeParse",
+            "url": "file:///home/estampes/projects/pr1d-native-baseline/node_modules/zod/v4/classic/schemas.js",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "1 MiB sampling; retained allocations at stop, not cumulative allocation or transient peak."
+      }
+    ]
+  },
+  "candidate": {
+    "receipt": {
+      "name": "document-8-profile-candidate",
+      "command": [
+        "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+        "/home/estampes/projects/Estampes/scripts/pr1d-native-ab/benchmark.mjs",
+        "document",
+        "8"
+      ],
+      "cwd": "/home/estampes/projects/pr1d-native-candidate",
+      "environment": {
+        "HOME": "/home/estampes",
+        "USER": "estampes",
+        "LOGNAME": "estampes",
+        "LANG": "C.UTF-8",
+        "TZ": "Asia/Taipei",
+        "PATH": "/home/estampes/.nvm/versions/node/v22.23.4/bin:/usr/bin:/bin",
+        "TMPDIR": "/home/estampes/pr1d-native-ab-z8niuo3e",
+        "PR1D_SCRATCH": "/home/estampes/pr1d-native-ab-z8niuo3e",
+        "PR1D_OUTPUT": "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate",
+        "PR1D_SOURCE": "/home/estampes/projects/pr1d-native-candidate",
+        "PR1D_ACCEPT_ROOT": "/home/estampes/pr1d-native-ab-z8niuo3e",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PR1D_MEASURE": "1",
+        "NODE_OPTIONS": "--import=/home/estampes/projects/pr1d-native-candidate/scripts/pr1d-investigation/profile.mjs"
+      },
+      "startedUTC": "2026-11-05T17:21:03Z",
+      "wallSeconds": 17.492493412000385,
+      "exitCode": 0,
+      "stop": null,
+      "budgetSeconds": 180,
+      "peakProcessRssKiB": 347120,
+      "peakTreeRssKiB": 568680,
+      "perProcessHwmKiB": {
+        "12771": 287888,
+        "12782": 347120,
+        "12797": 197288,
+        "12809": 209380
+      },
+      "peakAllocatedBytes": 8675328,
+      "scratch": "/home/estampes/pr1d-native-ab-z8niuo3e",
+      "log": "document-8-profile-candidate/raw.log",
+      "sha256": "03e60a5c94cdaad28c25f9b40b28d0f00e680acb283f62bae17ef44aa75a1983",
+      "inputManifestSha256": "59310e840e7f5ff4a60a3df8f05e1b5da5802b77349d7c45b55daf7a504ff7bd",
+      "counts": {},
+      "tickHz": 100
+    },
+    "operations": [
+      {
+        "pid": 12782,
+        "operation": "open",
+        "ordinal": 0,
+        "operations": {
+          "fs.lstat": {
+            "calls": 695,
+            "ms": 84.05890799999904,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 2,
+            "ms": 0.3952669999999898,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 7,
+            "ms": 1.3081740000000082,
+            "bytes": 0
+          },
+          "parse": {
+            "calls": 110,
+            "ms": 19.847388000000365,
+            "bytes": 0
+          },
+          "assertJson": {
+            "calls": 133,
+            "ms": 3.6303729999999916,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 107,
+            "ms": 3.944970000000069,
+            "bytes": 32349
+          },
+          "sha256.update": {
+            "calls": 150,
+            "ms": 0.505913999999251,
+            "bytes": 38190
+          },
+          "fs.mkdir": {
+            "calls": 62,
+            "ms": 12.580616999999847,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 144,
+            "ms": 23.50636200000079,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 87,
+            "ms": 173.36526099999958,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 32,
+            "ms": 6.2410360000000935,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 16,
+            "ms": 2.843408000000153,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 16,
+            "ms": 2.925544999999886,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 14,
+            "ms": 27.73173899999989,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 2.912618000000009,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 1.909050000000036,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 2.32970899999998,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 114,
+            "ms": 61.65546699999908,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 114,
+            "ms": 12.994761999999014,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 12,
+            "ms": 2.6492589999999723,
+            "bytes": 3213
+          },
+          "ManagedFiles.bytes": {
+            "calls": 12,
+            "ms": 27.851089,
+            "bytes": 0
+          },
+          "ManagedFiles.json": {
+            "calls": 12,
+            "ms": 29.18419599999993,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 13,
+            "ms": 28.13782200000003,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 1,
+            "ms": 0.09230800000000272,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 90,
+            "ms": 10.123392999999396,
+            "bytes": 12017
+          },
+          "ManagedFiles.digest": {
+            "calls": 45,
+            "ms": 86.27961199999999,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 1,
+            "ms": 2.731576000000018,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 1,
+            "ms": 3.1733179999999948,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 3,
+            "ms": 61.635302000000024,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "mkdir.before-dir-fsync": 7,
+          "mkdir.after-dir-fsync": 7,
+          "temporary-claim.before-write": 16,
+          "temporary-claim.before-file-fsync": 16,
+          "temporary-claim.after-file-fsync": 16,
+          "temporary-claim.before-dir-fsync": 32,
+          "temporary-claim.after-dir-fsync": 32,
+          "bootstrap.before-write": 1,
+          "bootstrap.before-file-fsync": 1,
+          "bootstrap.after-file-fsync": 1,
+          "bootstrap.before-rename": 1,
+          "bootstrap.after-rename": 1,
+          "bootstrap.before-dir-fsync": 1,
+          "bootstrap.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 16,
+          "temporary-claim.after-unlink": 16,
+          "before-intent": 1,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "after-intent-durable": 1,
+          "staged.before-write": 10,
+          "staged.before-file-fsync": 10,
+          "staged.after-file-fsync": 10,
+          "staged.before-rename": 10,
+          "staged.after-rename": 10,
+          "staged.before-dir-fsync": 10,
+          "staged.after-dir-fsync": 10,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-file-fsync": 1,
+          "outcome.after-file-fsync": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "outcome.before-dir-fsync": 1,
+          "outcome.after-dir-fsync": 1,
+          "before-ack": 1
+        },
+        "audits": 2,
+        "lastStage": "before-ack",
+        "wallMs": 429.8499089999999,
+        "cpuUs": {
+          "user": 250889,
+          "system": 85522
+        },
+        "memory": {
+          "rss": 87756800,
+          "heapTotal": 33021952,
+          "heapUsed": 14395088,
+          "external": 2435791,
+          "arrayBuffers": 128624
+        },
+        "maxRSSKiB": 85700,
+        "verification": {
+          "snapshotLoads": 1,
+          "versionHits": 0,
+          "versionMisses": 0,
+          "recordHits": 0,
+          "registryHits": 0,
+          "registryMaterializations": 1,
+          "versionReconstructions": 0,
+          "reconstructedMs": 0,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 0,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 12,
+          "contentHashChecks": 12
+        },
+        "transaction": {
+          "mode": "genesis",
+          "buildAndPreflightMs": 10.45183499999996,
+          "stageAndPrepareMs": 189.29866300000003,
+          "candidateVerificationMs": 58.238317999999936,
+          "currentPublicationMs": 62.787275999999906,
+          "postPublicationMs": 62.129659999999944,
+          "totalMs": 382.94837699999994
+        },
+        "open": null
+      },
+      {
+        "pid": 12782,
+        "operation": "commit",
+        "ordinal": 1,
+        "operations": {
+          "assertJson": {
+            "calls": 307,
+            "ms": 2739.935708000001,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 256,
+            "ms": 1934.6312539999985,
+            "bytes": 100748162
+          },
+          "parse": {
+            "calls": 197,
+            "ms": 1664.5263139999997,
+            "bytes": 0
+          },
+          "sha256.update": {
+            "calls": 326,
+            "ms": 311.834646999994,
+            "bytes": 134329947
+          },
+          "LifecycleManager.admit": {
+            "calls": 1,
+            "ms": 0.3434749999998985,
+            "bytes": 0
+          },
+          "fs.lstat": {
+            "calls": 1309,
+            "ms": 150.83093599998574,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 230,
+            "ms": 116.43657799999619,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 218,
+            "ms": 32.95765400000323,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 230,
+            "ms": 25.008229000002757,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 34,
+            "ms": 13.08220600000027,
+            "bytes": 8400472
+          },
+          "ManagedFiles.bytes": {
+            "calls": 34,
+            "ms": 101.17526499999872,
+            "bytes": 0
+          },
+          "ManagedFiles.json": {
+            "calls": 32,
+            "ms": 349.489303000001,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 40,
+            "ms": 69.9537769999979,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 15,
+            "ms": 50.08685699999978,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 28.782237999999325,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 8,
+            "ms": 1.4699690000002192,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 5.3572750000003,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 1,
+            "ms": 0.15216599999985192,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 5.63062600000012,
+            "bytes": 0
+          },
+          "fs.mkdir": {
+            "calls": 80,
+            "ms": 14.281119000000217,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 103,
+            "ms": 231.3447080000028,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 38,
+            "ms": 19.40272300000197,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 19,
+            "ms": 3.3072429999988344,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 19,
+            "ms": 3.6179929999993874,
+            "bytes": 0
+          },
+          "ManagedFiles.resync": {
+            "calls": 2,
+            "ms": 1.9711080000001857,
+            "bytes": 0
+          },
+          "VerificationCache.valid": {
+            "calls": 2,
+            "ms": 0.22119200000042838,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 172,
+            "ms": 25.827636000004077,
+            "bytes": 41977250
+          },
+          "ManagedFiles.digest": {
+            "calls": 81,
+            "ms": 243.89845399999422,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 3,
+            "ms": 36.73661499999889,
+            "bytes": 0
+          },
+          "VerificationCache.remember": {
+            "calls": 1,
+            "ms": 29.103622000000087,
+            "bytes": 0
+          },
+          "ManagedFiles.checkFingerprint": {
+            "calls": 2,
+            "ms": 1.983208000000559,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 2,
+            "ms": 1.9488340000007156,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 1,
+            "ms": 8.454875999999786,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 3,
+            "ms": 155.52187399999912,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "before-intent": 1,
+          "mkdir.before-dir-fsync": 4,
+          "mkdir.after-dir-fsync": 4,
+          "temporary-claim.before-write": 19,
+          "temporary-claim.before-file-fsync": 19,
+          "temporary-claim.after-file-fsync": 19,
+          "temporary-claim.before-dir-fsync": 38,
+          "temporary-claim.after-dir-fsync": 38,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 19,
+          "temporary-claim.after-unlink": 19,
+          "after-intent-durable": 1,
+          "staged.before-write": 14,
+          "staged.before-file-fsync": 16,
+          "staged.after-file-fsync": 16,
+          "staged.before-rename": 14,
+          "staged.after-rename": 14,
+          "staged.before-dir-fsync": 16,
+          "staged.after-dir-fsync": 16,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-file-fsync": 1,
+          "outcome.after-file-fsync": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "outcome.before-dir-fsync": 1,
+          "outcome.after-dir-fsync": 1,
+          "before-ack": 1
+        },
+        "audits": 1,
+        "lastStage": "before-ack",
+        "wallMs": 4328.868077,
+        "cpuUs": {
+          "user": 4083373,
+          "system": 535150
+        },
+        "memory": {
+          "rss": 188915712,
+          "heapTotal": 91783168,
+          "heapUsed": 62700320,
+          "external": 36164766,
+          "arrayBuffers": 33857559
+        },
+        "maxRSSKiB": 347120,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 1,
+          "versionMisses": 1,
+          "recordHits": 1,
+          "registryHits": 1,
+          "registryMaterializations": 2,
+          "versionReconstructions": 1,
+          "reconstructedMs": 410.29199700000026,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 2,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 35,
+          "contentHashChecks": 36
+        },
+        "transaction": {
+          "mode": "content",
+          "buildAndPreflightMs": 1435.041341,
+          "stageAndPrepareMs": 344.9994700000002,
+          "candidateVerificationMs": 1681.8357299999993,
+          "currentPublicationMs": 66.57897799999955,
+          "postPublicationMs": 134.40333699999974,
+          "totalMs": 3662.869764
+        },
+        "open": null
+      },
+      {
+        "pid": 12797,
+        "operation": "open",
+        "ordinal": 0,
+        "operations": {
+          "fs.lstat": {
+            "calls": 2174,
+            "ms": 270.299120000013,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 2,
+            "ms": 0.41057500000010805,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 41,
+            "ms": 6.650969000000487,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 380,
+            "ms": 208.1702720000025,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 313,
+            "ms": 46.671992999999674,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 380,
+            "ms": 45.34494500000315,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 82,
+            "ms": 29.357353000001297,
+            "bytes": 8426668
+          },
+          "sha256.update": {
+            "calls": 487,
+            "ms": 233.8172459999996,
+            "bytes": 100833757
+          },
+          "ManagedFiles.bytes": {
+            "calls": 82,
+            "ms": 233.49675700000157,
+            "bytes": 0
+          },
+          "assertJson": {
+            "calls": 461,
+            "ms": 2090.479819000002,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 407,
+            "ms": 1370.8907050000016,
+            "bytes": 75637294
+          },
+          "ManagedFiles.json": {
+            "calls": 75,
+            "ms": 467.5228039999978,
+            "bytes": 0
+          },
+          "parse": {
+            "calls": 278,
+            "ms": 1225.191830000001,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 79,
+            "ms": 179.2445700000004,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 26,
+            "ms": 154.64957500000014,
+            "bytes": 0
+          },
+          "VerificationCache.valid": {
+            "calls": 4,
+            "ms": 25.27763600000003,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 228,
+            "ms": 33.505825000002915,
+            "bytes": 50377942
+          },
+          "ManagedFiles.digest": {
+            "calls": 108,
+            "ms": 323.0132199999988,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 4,
+            "ms": 33.39627999999982,
+            "bytes": 0
+          },
+          "VerificationCache.remember": {
+            "calls": 1,
+            "ms": 27.744295999999963,
+            "bytes": 0
+          },
+          "ManagedFiles.checkFingerprint": {
+            "calls": 6,
+            "ms": 28.03552000000036,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 4,
+            "ms": 3.388459000000239,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 2,
+            "ms": 6.819910000000164,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 4,
+            "ms": 241.22270400000002,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 123,
+            "ms": 150.61935799999787,
+            "bytes": 0
+          },
+          "ManagedFiles.resync": {
+            "calls": 31,
+            "ms": 60.09649299999887,
+            "bytes": 0
+          },
+          "fs.mkdir": {
+            "calls": 61,
+            "ms": 10.773952000000463,
+            "bytes": 0
+          },
+          "IntentJournal.recover": {
+            "calls": 1,
+            "ms": 43.08663999999976,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 46.9565319999997,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 9.368060000000241,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 9.774602000000414,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 24,
+            "ms": 4.615326000001005,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 12,
+            "ms": 2.3264089999993303,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 12,
+            "ms": 2.490400999999565,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "recovery.before-file-fsync": 24,
+          "recovery.after-file-fsync": 24,
+          "recovery.before-dir-fsync": 24,
+          "recovery.after-dir-fsync": 24,
+          "recovery.before-outcome": 2,
+          "outcome.before-file-fsync": 3,
+          "outcome.after-file-fsync": 3,
+          "outcome.before-dir-fsync": 3,
+          "outcome.after-dir-fsync": 3,
+          "before-intent": 1,
+          "mkdir.before-dir-fsync": 1,
+          "mkdir.after-dir-fsync": 1,
+          "temporary-claim.before-write": 12,
+          "temporary-claim.before-file-fsync": 12,
+          "temporary-claim.after-file-fsync": 12,
+          "temporary-claim.before-dir-fsync": 24,
+          "temporary-claim.after-dir-fsync": 24,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 12,
+          "temporary-claim.after-unlink": 12,
+          "after-intent-durable": 1,
+          "staged.before-file-fsync": 12,
+          "staged.after-file-fsync": 12,
+          "staged.before-dir-fsync": 12,
+          "staged.after-dir-fsync": 12,
+          "staged.before-write": 7,
+          "staged.before-rename": 7,
+          "staged.after-rename": 7,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "before-ack": 1
+        },
+        "audits": 2,
+        "lastStage": "before-ack",
+        "wallMs": 3570.406592,
+        "cpuUs": {
+          "user": 3409611,
+          "system": 494135
+        },
+        "memory": {
+          "rss": 158625792,
+          "heapTotal": 75251712,
+          "heapUsed": 45092208,
+          "external": 15187538,
+          "arrayBuffers": 12894368
+        },
+        "maxRSSKiB": 197288,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 3,
+          "versionMisses": 1,
+          "recordHits": 3,
+          "registryHits": 2,
+          "registryMaterializations": 3,
+          "versionReconstructions": 1,
+          "reconstructedMs": 386.664085,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 47,
+          "contentHashChecks": 49
+        },
+        "transaction": {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 62.34177600000021,
+          "stageAndPrepareMs": 177.90000299999974,
+          "candidateVerificationMs": 1285.380634,
+          "currentPublicationMs": 72.25699500000019,
+          "postPublicationMs": 96.59587300000021,
+          "totalMs": 1694.522673
+        },
+        "open": {
+          "verifyCommittedMs": 1722.562961
+        }
+      },
+      {
+        "pid": 12809,
+        "operation": "open",
+        "ordinal": 0,
+        "operations": {
+          "fs.lstat": {
+            "calls": 2458,
+            "ms": 325.8240009999937,
+            "bytes": 0
+          },
+          "fs.statfs": {
+            "calls": 2,
+            "ms": 0.37198399999988396,
+            "bytes": 0
+          },
+          "fs.readdir": {
+            "calls": 44,
+            "ms": 7.154586999999566,
+            "bytes": 0
+          },
+          "ManagedFiles.info": {
+            "calls": 428,
+            "ms": 250.81991299999788,
+            "bytes": 0
+          },
+          "fs.open": {
+            "calls": 347,
+            "ms": 52.61961699999904,
+            "bytes": 0
+          },
+          "fd.stat": {
+            "calls": 428,
+            "ms": 55.51922899999644,
+            "bytes": 0
+          },
+          "fd.readFile": {
+            "calls": 94,
+            "ms": 29.091608999997504,
+            "bytes": 8435400
+          },
+          "sha256.update": {
+            "calls": 542,
+            "ms": 226.6030789999976,
+            "bytes": 100861267
+          },
+          "ManagedFiles.bytes": {
+            "calls": 94,
+            "ms": 266.7084240000014,
+            "bytes": 0
+          },
+          "assertJson": {
+            "calls": 512,
+            "ms": 2096.938581000001,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 453,
+            "ms": 1401.9759759999997,
+            "bytes": 75658716
+          },
+          "ManagedFiles.json": {
+            "calls": 86,
+            "ms": 482.67401500000017,
+            "bytes": 0
+          },
+          "parse": {
+            "calls": 308,
+            "ms": 1252.2325020000026,
+            "bytes": 0
+          },
+          "PageStore.hashed": {
+            "calls": 88,
+            "ms": 212.854341000001,
+            "bytes": 0
+          },
+          "PageStore.read": {
+            "calls": 26,
+            "ms": 180.41542999999922,
+            "bytes": 0
+          },
+          "VerificationCache.valid": {
+            "calls": 4,
+            "ms": 24.07762800000006,
+            "bytes": 0
+          },
+          "fd.read": {
+            "calls": 252,
+            "ms": 41.171631999995725,
+            "bytes": 50385322
+          },
+          "ManagedFiles.digest": {
+            "calls": 120,
+            "ms": 369.7446150000005,
+            "bytes": 0
+          },
+          "ManagedFiles.proofIdentity": {
+            "calls": 4,
+            "ms": 36.54924899999969,
+            "bytes": 0
+          },
+          "VerificationCache.remember": {
+            "calls": 1,
+            "ms": 29.870688000000087,
+            "bytes": 0
+          },
+          "ManagedFiles.checkFingerprint": {
+            "calls": 6,
+            "ms": 26.897662000000423,
+            "bytes": 0
+          },
+          "VerificationCache.registry": {
+            "calls": 4,
+            "ms": 3.3828669999998056,
+            "bytes": 0
+          },
+          "VerificationCache.rememberRegistry": {
+            "calls": 2,
+            "ms": 7.847584000000097,
+            "bytes": 0
+          },
+          "ManagedFiles.verifyObservations": {
+            "calls": 4,
+            "ms": 282.24198500000034,
+            "bytes": 0
+          },
+          "fd.sync": {
+            "calls": 133,
+            "ms": 123.39371300000221,
+            "bytes": 0
+          },
+          "ManagedFiles.resync": {
+            "calls": 36,
+            "ms": 36.28671599999939,
+            "bytes": 0
+          },
+          "fs.mkdir": {
+            "calls": 63,
+            "ms": 11.321112999997695,
+            "bytes": 0
+          },
+          "IntentJournal.recover": {
+            "calls": 1,
+            "ms": 34.49408000000017,
+            "bytes": 0
+          },
+          "PageStore.update": {
+            "calls": 6,
+            "ms": 58.31559300000026,
+            "bytes": 0
+          },
+          "ManagedFiles.usage": {
+            "calls": 1,
+            "ms": 10.442027000000053,
+            "bytes": 0
+          },
+          "LifecycleManager.reserve": {
+            "calls": 1,
+            "ms": 10.889544000000114,
+            "bytes": 0
+          },
+          "fd.writeFile": {
+            "calls": 24,
+            "ms": 5.048083999999562,
+            "bytes": 0
+          },
+          "fs.rename": {
+            "calls": 12,
+            "ms": 2.2686570000000756,
+            "bytes": 0
+          },
+          "fs.unlink": {
+            "calls": 12,
+            "ms": 2.4143170000011196,
+            "bytes": 0
+          }
+        },
+        "stages": {
+          "recovery.before-file-fsync": 28,
+          "recovery.after-file-fsync": 28,
+          "recovery.before-dir-fsync": 28,
+          "recovery.after-dir-fsync": 28,
+          "recovery.before-outcome": 3,
+          "outcome.before-file-fsync": 4,
+          "outcome.after-file-fsync": 4,
+          "outcome.before-dir-fsync": 4,
+          "outcome.after-dir-fsync": 4,
+          "before-intent": 1,
+          "mkdir.before-dir-fsync": 1,
+          "mkdir.after-dir-fsync": 1,
+          "temporary-claim.before-write": 12,
+          "temporary-claim.before-file-fsync": 12,
+          "temporary-claim.after-file-fsync": 12,
+          "temporary-claim.before-dir-fsync": 24,
+          "temporary-claim.after-dir-fsync": 24,
+          "intent.before-write": 1,
+          "intent.before-file-fsync": 1,
+          "intent.after-file-fsync": 1,
+          "intent.before-rename": 1,
+          "intent.after-rename": 1,
+          "intent.before-dir-fsync": 1,
+          "intent.after-dir-fsync": 1,
+          "temporary-claim.before-unlink": 12,
+          "temporary-claim.after-unlink": 12,
+          "after-intent-durable": 1,
+          "staged.before-file-fsync": 12,
+          "staged.after-file-fsync": 12,
+          "staged.before-dir-fsync": 12,
+          "staged.after-dir-fsync": 12,
+          "staged.before-write": 7,
+          "staged.before-rename": 7,
+          "staged.after-rename": 7,
+          "after-staged-writes": 1,
+          "root.before-write": 1,
+          "root.before-file-fsync": 1,
+          "root.after-file-fsync": 1,
+          "root.before-rename": 1,
+          "root.after-rename": 1,
+          "root.before-dir-fsync": 1,
+          "root.after-dir-fsync": 1,
+          "prepared.before-write": 1,
+          "prepared.before-file-fsync": 1,
+          "prepared.after-file-fsync": 1,
+          "prepared.before-rename": 1,
+          "prepared.after-rename": 1,
+          "prepared.before-dir-fsync": 1,
+          "prepared.after-dir-fsync": 1,
+          "after-prepared": 1,
+          "current.before-write": 1,
+          "current.before-file-fsync": 1,
+          "current.after-file-fsync": 1,
+          "current.before-rename": 1,
+          "current.after-rename": 1,
+          "current.before-dir-fsync": 1,
+          "current.after-dir-fsync": 1,
+          "after-publication-durable": 1,
+          "outcome.before-write": 1,
+          "outcome.before-rename": 1,
+          "outcome.after-rename": 1,
+          "before-ack": 1
+        },
+        "audits": 2,
+        "lastStage": "before-ack",
+        "wallMs": 3652.40088,
+        "cpuUs": {
+          "user": 3476936,
+          "system": 509293
+        },
+        "memory": {
+          "rss": 158765056,
+          "heapTotal": 74989568,
+          "heapUsed": 46697904,
+          "external": 15238881,
+          "arrayBuffers": 12931714
+        },
+        "maxRSSKiB": 209380,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 3,
+          "versionMisses": 1,
+          "recordHits": 3,
+          "registryHits": 2,
+          "registryMaterializations": 3,
+          "versionReconstructions": 1,
+          "reconstructedMs": 367.757466,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 53,
+          "contentHashChecks": 55
+        },
+        "transaction": {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 74.99581200000011,
+          "stageAndPrepareMs": 178.0273269999998,
+          "candidateVerificationMs": 1313.9282979999998,
+          "currentPublicationMs": 87.31278800000018,
+          "postPublicationMs": 115.90096799999992,
+          "totalMs": 1770.233944
+        },
+        "open": {
+          "verifyCommittedMs": 1732.7985549999999
+        }
+      },
+      {
+        "pid": 12809,
+        "operation": "commit",
+        "ordinal": 1,
+        "operations": {
+          "assertJson": {
+            "calls": 10,
+            "ms": 449.992381,
+            "bytes": 0
+          },
+          "canonicalJson": {
+            "calls": 4,
+            "ms": 312.4955660000014,
+            "bytes": 16778434
+          },
+          "parse": {
+            "calls": 6,
+            "ms": 371.3067090000004,
+            "bytes": 0
+          },
+          "sha256.update": {
+            "calls": 3,
+            "ms": 20.06913700000041,
+            "bytes": 8389824
+          }
+        },
+        "stages": {},
+        "wallMs": 583.6710910000002,
+        "cpuUs": {
+          "user": 594001,
+          "system": 68566
+        },
+        "memory": {
+          "rss": 219779072,
+          "heapTotal": 133767168,
+          "heapUsed": 96866648,
+          "external": 2350841,
+          "arrayBuffers": 48268
+        },
+        "maxRSSKiB": 214628,
+        "verification": {
+          "snapshotLoads": 2,
+          "versionHits": 3,
+          "versionMisses": 1,
+          "recordHits": 3,
+          "registryHits": 2,
+          "registryMaterializations": 3,
+          "versionReconstructions": 1,
+          "reconstructedMs": 367.757466,
+          "proofEvictions": 0,
+          "metadataPathsTraversed": 6,
+          "deltaApplications": 0,
+          "operationPrefixHits": 0,
+          "physicalFingerprintChecks": 53,
+          "contentHashChecks": 55
+        },
+        "transaction": {
+          "mode": "recovery-epoch",
+          "buildAndPreflightMs": 74.99581200000011,
+          "stageAndPrepareMs": 178.0273269999998,
+          "candidateVerificationMs": 1313.9282979999998,
+          "currentPublicationMs": 87.31278800000018,
+          "postPublicationMs": 115.90096799999992,
+          "totalMs": 1770.233944
+        },
+        "open": {
+          "verifyCommittedMs": 1732.7985549999999
+        }
+      }
+    ],
+    "cpu": [
+      {
+        "file": "cpu-12782.json.gz",
+        "samples": 515,
+        "sampledGarbageCollectorUs": 50509,
+        "topSampledFramesUs": [
+          {
+            "function": "addString",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 1380047
+          },
+          {
+            "function": "visit",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 1378690
+          },
+          {
+            "function": "(idle)",
+            "url": "",
+            "sampledUs": 954080
+          },
+          {
+            "function": "encode",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 453563
+          },
+          {
+            "function": "update",
+            "url": "",
+            "sampledUs": 322527
+          },
+          {
+            "function": "",
+            "url": "",
+            "sampledUs": 80730
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 70398
+          },
+          {
+            "function": "(program)",
+            "url": "",
+            "sampledUs": 60344
+          },
+          {
+            "function": "(garbage collector)",
+            "url": "",
+            "sampledUs": 50509
+          },
+          {
+            "function": "post",
+            "url": "node:inspector",
+            "sampledUs": 36961
+          },
+          {
+            "function": "openFileHandle",
+            "url": "",
+            "sampledUs": 30227
+          },
+          {
+            "function": "lstat",
+            "url": "node:internal/fs/promises",
+            "sampledUs": 30194
+          },
+          {
+            "function": "parseChannelMessages",
+            "url": "node:internal/child_process/serialization",
+            "sampledUs": 30178
+          },
+          {
+            "function": "assertOwnedWriterLease",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/platform.js",
+            "sampledUs": 20280
+          },
+          {
+            "function": "lstat",
+            "url": "",
+            "sampledUs": 20154
+          }
+        ],
+        "interpretation": "Profile interval includes idle/RPC waits/bootstrap. Sampled deltas are not independent operation timers."
+      },
+      {
+        "file": "cpu-12797.json.gz",
+        "samples": 356,
+        "sampledGarbageCollectorUs": 30418,
+        "topSampledFramesUs": [
+          {
+            "function": "addString",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 1167343
+          },
+          {
+            "function": "visit",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 905556
+          },
+          {
+            "function": "encode",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 342336
+          },
+          {
+            "function": "(idle)",
+            "url": "",
+            "sampledUs": 341863
+          },
+          {
+            "function": "update",
+            "url": "",
+            "sampledUs": 211444
+          },
+          {
+            "function": "",
+            "url": "",
+            "sampledUs": 100753
+          },
+          {
+            "function": "lstat",
+            "url": "",
+            "sampledUs": 80479
+          },
+          {
+            "function": "(program)",
+            "url": "",
+            "sampledUs": 40245
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 37230
+          },
+          {
+            "function": "(garbage collector)",
+            "url": "",
+            "sampledUs": 30418
+          },
+          {
+            "function": "post",
+            "url": "node:inspector",
+            "sampledUs": 29455
+          },
+          {
+            "function": "FastBuffer",
+            "url": "node:internal/buffer",
+            "sampledUs": 20146
+          },
+          {
+            "function": "openFileHandle",
+            "url": "",
+            "sampledUs": 20133
+          },
+          {
+            "function": "read",
+            "url": "",
+            "sampledUs": 20126
+          },
+          {
+            "function": "open",
+            "url": "node:internal/fs/promises",
+            "sampledUs": 20086
+          }
+        ],
+        "interpretation": "Profile interval includes idle/RPC waits/bootstrap. Sampled deltas are not independent operation timers."
+      },
+      {
+        "file": "cpu-12809.json.gz",
+        "samples": 455,
+        "sampledGarbageCollectorUs": 91765,
+        "topSampledFramesUs": [
+          {
+            "function": "addString",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 1325526
+          },
+          {
+            "function": "visit",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 1185015
+          },
+          {
+            "function": "(idle)",
+            "url": "",
+            "sampledUs": 602771
+          },
+          {
+            "function": "encode",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 392919
+          },
+          {
+            "function": "update",
+            "url": "",
+            "sampledUs": 241242
+          },
+          {
+            "function": "(garbage collector)",
+            "url": "",
+            "sampledUs": 91765
+          },
+          {
+            "function": "",
+            "url": "",
+            "sampledUs": 90489
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "sampledUs": 68801
+          },
+          {
+            "function": "(program)",
+            "url": "",
+            "sampledUs": 60252
+          },
+          {
+            "function": "lstat",
+            "url": "",
+            "sampledUs": 50248
+          },
+          {
+            "function": "post",
+            "url": "node:inspector",
+            "sampledUs": 30227
+          },
+          {
+            "function": "read",
+            "url": "",
+            "sampledUs": 30208
+          },
+          {
+            "function": "parseChannelMessages",
+            "url": "node:internal/child_process/serialization",
+            "sampledUs": 20175
+          },
+          {
+            "function": "writeChannelMessage",
+            "url": "node:internal/child_process/serialization",
+            "sampledUs": 20146
+          },
+          {
+            "function": "fstat",
+            "url": "node:internal/fs/promises",
+            "sampledUs": 20130
+          }
+        ],
+        "interpretation": "Profile interval includes idle/RPC waits/bootstrap. Sampled deltas are not independent operation timers."
+      }
+    ],
+    "heap": [
+      {
+        "file": "heap-12782.json.gz",
+        "sampledRetainedBytes": 18875168,
+        "topSites": [
+          {
+            "function": "json",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "",
+            "bytes": 1048960
+          },
+          {
+            "function": "memoryUsage",
+            "url": "node:internal/process/per_thread",
+            "bytes": 1048960
+          },
+          {
+            "function": "(root)",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "read",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/pages.js",
+            "bytes": 0
+          },
+          {
+            "function": "parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "globalThis.__pr1dMeasure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "measured_parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "safeParse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/node_modules/zod/v4/classic/schemas.js",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/node_modules/zod/v4/core/parse.js",
+            "bytes": 0
+          },
+          {
+            "function": "inst._zod.parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/node_modules/zod/v4/core/schemas.js",
+            "bytes": 0
+          },
+          {
+            "function": "inst._zod.run",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/node_modules/zod/v4/core/schemas.js",
+            "bytes": 0
+          },
+          {
+            "function": "materialize",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/records.js",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "1 MiB sampling; retained allocations at stop, not cumulative allocation or transient peak."
+      },
+      {
+        "file": "heap-12797.json.gz",
+        "sampledRetainedBytes": 18875704,
+        "topSites": [
+          {
+            "function": "json",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "syncDirectory",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js",
+            "bytes": 1049664
+          },
+          {
+            "function": "inst._zod.parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/node_modules/zod/v4/core/schemas.js",
+            "bytes": 1048792
+          },
+          {
+            "function": "(root)",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "materialize",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "closure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "validateCompleteDocumentClosure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "indexDocuments",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "map",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "parseVisualDocument",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/schema.js",
+            "bytes": 0
+          },
+          {
+            "function": "parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "globalThis.__pr1dMeasure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "measured_parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "1 MiB sampling; retained allocations at stop, not cumulative allocation or transient peak."
+      },
+      {
+        "file": "heap-12809.json.gz",
+        "sampledRetainedBytes": 17827584,
+        "topSites": [
+          {
+            "function": "json",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 8388624
+          },
+          {
+            "function": "then",
+            "url": "",
+            "bytes": 1050336
+          },
+          {
+            "function": "(root)",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "materialize",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "closure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/persistence/records.js",
+            "bytes": 0
+          },
+          {
+            "function": "validateCompleteDocumentClosure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "analyzeReferences",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "indexDocuments",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/integrity.js",
+            "bytes": 0
+          },
+          {
+            "function": "map",
+            "url": "",
+            "bytes": 0
+          },
+          {
+            "function": "parseVisualDocument",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/schema.js",
+            "bytes": 0
+          },
+          {
+            "function": "parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 0
+          },
+          {
+            "function": "globalThis.__pr1dMeasure",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/scripts/pr1d-investigation/profile.mjs",
+            "bytes": 0
+          },
+          {
+            "function": "measured_parse",
+            "url": "file:///home/estampes/projects/pr1d-native-candidate/src/documents/validation.js",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "1 MiB sampling; retained allocations at stop, not cumulative allocation or transient peak."
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "command": [
+      "cat",
+      "/sys/fs/cgroup/init.scope/cpu.max",
+      "/sys/fs/cgroup/init.scope/memory.max",
+      "/sys/fs/cgroup/init.scope/memory.swap.max",
+      "/sys/fs/cgroup/init.scope/pids.max"
+    ],
+    "exitCode": 0,
+    "output": "max 100000\nmax\nmax\n9475\n"
+  },
+  {
+    "command": [
+      "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+      "-NoProfile",
+      "-Command",
+      "Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free | ConvertTo-Json -Compress"
+    ],
+    "exitCode": 0,
+    "output": "[{\"Name\":\"C\",\"Used\":185428406272,\"Free\":63471886336},{\"Name\":\"D\",\"Used\":277436420096,\"Free\":722763522048},{\"Name\":\"E\",\"Used\":128664879104,\"Free\":111390863360},{\"Name\":\"G\",\"Used\":188602003456,\"Free\":60298289152}]\n"
+  }
+]

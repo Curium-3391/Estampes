@@ -1,0 +1,992 @@
+{
+  "baseline": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+  "candidate": "4814daf2378e9619f171c02a65792062957a8e99",
+  "protocol": {
+    "protocolCommit": "88f9c37b021731a779bbbb02cc24d7e67e9bf212",
+    "protocolSha256": "31832824f653a4af2d722d8a888901494da2c3019e81d3a05b284ab0e5ebbc09",
+    "startedUTC": "2026-11-05T16:45:47Z"
+  },
+  "files": [
+    {
+      "path": "docs/rfc/unified-visual-architecture/PR-1D-NATIVE-PERFORMANCE-AB-REPORT.md",
+      "bytes": 20596,
+      "sha256": "f09b36e6a7995b8b4a37fdfd03e15ec0dc7bed4ac2dfa9eb4c99c3b795dcf3dc"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/README.md",
+      "bytes": 1564,
+      "sha256": "21f47479e70425c632daeab8d6f1d87fabc1cbaa0b69407dc1ac83ae0536b77c"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/analyze.py",
+      "bytes": 5773,
+      "sha256": "b02e16d6221ee31199a4138ce4af93e90a62e97214cefc14db4b237c6ce8da52"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/benchmark.mjs",
+      "bytes": 7606,
+      "sha256": "fff17eb0a5ef20f698f0a67c221eaedad3ac6bfbc3d281a225b4ef7927fb2093"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/capture.py",
+      "bytes": 2624,
+      "sha256": "50f912eb1596f56d65fe76d1e6635d25b42863a4f3201bf1db1ff3aec50f6d17"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/inspect-timeout.mjs",
+      "bytes": 2495,
+      "sha256": "9328c704ef387c83c188f7a03586657e6cc74c0e8da733bd1d07959184aa37b5"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/manifest.py",
+      "bytes": 1688,
+      "sha256": "20bfae3836c0e7d3c5f90ef766b1a7284e55b1baa2cd19b2d8ba2a7db9504419"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/parity.mjs",
+      "bytes": 1567,
+      "sha256": "f8562d1e4c9bc5f9c1a64d60a8f235d0d7dd05aa547270f8414520f4b10f55d4"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/profiles.py",
+      "bytes": 2135,
+      "sha256": "547a340e3325d66c5f3f4ee714acefc0fd9e8d8f42b3fc11fab34917a60d1592"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/report.py",
+      "bytes": 21075,
+      "sha256": "9f0fb62d92456744b533cf426557fe97fe6b5915816e4974c4a6cbd4ab66bc62"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/run.py",
+      "bytes": 11837,
+      "sha256": "53a0590c2734b0ce5676db6814b3ecc2c281086fda2c7e7740de30c8bb6d5c74"
+    },
+    {
+      "path": "scripts/pr1d-native-ab/verify.py",
+      "bytes": 4637,
+      "sha256": "5fd0bdf5a6600c7cff3674428f7721cd1d8824e4653a5c18c0c11b6e18609fdb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/.gitattributes",
+      "bytes": 216,
+      "sha256": "d871b2f988ad48a4ff7ba4804fdac72f9c86ffe673becdae180a45cd7c441a67"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/PROFILE-ADAPTER-NOTE.md",
+      "bytes": 1553,
+      "sha256": "4c48339b48fa996ee45345f2184bb838d24f46fee562ce5861c3a12499835412"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/PROTOCOL.md",
+      "bytes": 6709,
+      "sha256": "31832824f653a4af2d722d8a888901494da2c3019e81d3a05b284ab0e5ebbc09"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/analysis-derivation.log",
+      "bytes": 6164,
+      "sha256": "9c79a5ee7b6144d6c6eb47d79e7bbeed6cf384a308b169071379a311611d917d"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/baseline-negatives/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "1799c7bb83e9b33e0520b05a357d58c8a8e86343540dc7a8ae2d04a88fbba9ea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/baseline-negatives/raw.log",
+      "bytes": 14240,
+      "sha256": "d02af79d405f9ee74966bcc5be163b98996f1a1c41b6c52cfecc94e92a1893c1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/baseline-negatives/receipt.json",
+      "bytes": 1879,
+      "sha256": "ce800588020be1a28e83ef63ec375a4dabe37ed0e52918cb6d6bac62833af9aa"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/baseline-negatives/rss-samples.json",
+      "bytes": 369,
+      "sha256": "74d189fe8d0aa0d2c63024a7e59f58e6e2be0f6018ae9fe80953fe878f3084ed"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-native-integrity-crash/input-sha256.json",
+      "bytes": 14849,
+      "sha256": "566faa19bf987fb43af18bc9351475c8c5ae86ee1d5660787c3f0f3f6426f75e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-native-integrity-crash/raw.log",
+      "bytes": 59870,
+      "sha256": "4c7f95ace1d1368bb9f87bebc02148bd653c2658baed6bdcbbd062a330914ad4"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-native-integrity-crash/receipt.json",
+      "bytes": 11225,
+      "sha256": "8a772b795df3767ad2f7b3f77f4753ef6033d6e68574a661e9d495721975007c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-native-integrity-crash/rss-samples.json",
+      "bytes": 345412,
+      "sha256": "47c3a692f7bbf96c130f6293f25804676eeb3ad400db73636ef84b6f67f9db32"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-negatives/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "3c0c0a6f1a79cba0df530fd6da74f500180cfc84e4a4ef77faac69afa065f344"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-negatives/raw.log",
+      "bytes": 14238,
+      "sha256": "7b57833a7b74abfe69ced9177904a251de07e79316e865e255c28df2757b6d0c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-negatives/receipt.json",
+      "bytes": 1886,
+      "sha256": "7cededf16db6f6b00cddbb1f8e75cdc726c236e23bf03a517bfa03dda9507775"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-negatives/rss-samples.json",
+      "bytes": 370,
+      "sha256": "fb1662ffff42043d2e1d7606f1d6ca4d3f05057405d874a6078a71876f57e352"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/canonical-parity/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "3c0c0a6f1a79cba0df530fd6da74f500180cfc84e4a4ef77faac69afa065f344"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/canonical-parity/raw.log",
+      "bytes": 572,
+      "sha256": "8550d9951fbfb3b049b26fe931d6a846134731a3ff3f1e06c34fd73b170d53ea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/canonical-parity/receipt.json",
+      "bytes": 1575,
+      "sha256": "6c1f540ebacbe88648fce9854c555b6edd1712eb558f9e9dc911069851dd28cc"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/canonical-parity/rss-samples.json",
+      "bytes": 4124,
+      "sha256": "b91c8c3508a9d631cd9a6fc6d814b542fc74a7d651cd2ed6b380afa7d67d874c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/clock-domain-observation.json",
+      "bytes": 444,
+      "sha256": "b989e064e1bb632b9d00d3b7d11bf9bbcb855a606a04e638d4d4ffa0f08e18ef"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/docs/raw.log",
+      "bytes": 67,
+      "sha256": "a2e66980d86ec06148ab1b3665670875402fb9bcd0952afaacfe04bf2cb237b8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/docs-final-report/raw.log",
+      "bytes": 67,
+      "sha256": "a2e66980d86ec06148ab1b3665670875402fb9bcd0952afaacfe04bf2cb237b8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/node-syntax-benchmark/raw.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/node-syntax-inspect-timeout/raw.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/node-syntax-parity/raw.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/python-final-report/raw.log",
+      "bytes": 30,
+      "sha256": "adbd44448a93d2bbd6cc124ebf20d48cedc94f5d74b3f379cc6ad52f63fab964"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/python-syntax/raw.log",
+      "bytes": 17,
+      "sha256": "80e9d702947569461452c8ea384ba659cf89ba5539741c2219a506f97750536f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/release/raw.log",
+      "bytes": 121,
+      "sha256": "96f49fdce3cb8bc2397e364cdac64662a9c3aa6e5f666559179543db4f9e9026"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/whitespace-final/raw.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks/whitespace-initial/raw.log",
+      "bytes": 1300,
+      "sha256": "35a484c0d449339abbb0585094287b00b10d7e5368d4205c52ed1b8ffdaa476e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery-checks.json",
+      "bytes": 3726,
+      "sha256": "e209603a6c1fea0115433de2205520356b13222a8bdfaa85377221136b8b0308"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/delivery.json",
+      "bytes": 1120,
+      "sha256": "8ca492b82848f9d74296c58669c248588c18b2146f16fbd1e3db3ce67dad731f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/derivation-commands.json",
+      "bytes": 1086,
+      "sha256": "cf5c6bec924460bffa121fc3054f70b5e230972e0b7c5de47ff459e16142fd46"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-baseline/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "1799c7bb83e9b33e0520b05a357d58c8a8e86343540dc7a8ae2d04a88fbba9ea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-baseline/raw.log",
+      "bytes": 27682,
+      "sha256": "372383557f2cea3fc625d0ce558078bb9ed23357cd81b460b62fac3e8f43d87b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-baseline/receipt.json",
+      "bytes": 1600,
+      "sha256": "3033ddb6c02c40c452cd4e2c8fae414093f720f3f19c8c39a34015a3b3715636"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-baseline/rss-samples.json",
+      "bytes": 10755,
+      "sha256": "f631b64b30f1238d2d2b3f6374ba586bb08ba2a705a512e31409e70d950bbf7b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-candidate/input-sha256.json",
+      "bytes": 14374,
+      "sha256": "a40a62dc9d4387eba268bb455ee0bb269c0a99e5e722e2ba728ec7129c08d57f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-candidate/raw.log",
+      "bytes": 27710,
+      "sha256": "9b200a7ed2655b425faa36ed31a6b136c676809d901d3223b02e81382094b0a3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-candidate/receipt.json",
+      "bytes": 1606,
+      "sha256": "cca2b02f8f7dc9f096477bb2b90204680e81ae28685b30ee4253ab29baf462a3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-candidate/rss-samples.json",
+      "bytes": 12706,
+      "sha256": "32034ae8f3808ce330acef3b248f9c369e6537d1da308b17ee3fdb812d1aa598"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline/input-sha256.json",
+      "bytes": 14374,
+      "sha256": "30c59dac7851d681ab5851819870d331af19384d3a04f67ca8e9dbb1939b837f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline/raw.log",
+      "bytes": 14834,
+      "sha256": "770ceb63bff7b524d9f836f48164b3e7c16c72573fa276024e9bd496cea29a0b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline/receipt.json",
+      "bytes": 1600,
+      "sha256": "33feb4d3ac67a33b80dae7125b83edf04ea30e4797c0bc88a75126eee8b912ce"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline/rss-samples.json",
+      "bytes": 24412,
+      "sha256": "a0becdafee00bc9812889e2bf50f33a43866ee1a7674d2cc3111bc6c8288bec5"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline-failed-store.tar.gz",
+      "bytes": 42423,
+      "sha256": "f32b1ab9740e6204ef499c60fc800933ae441bf8faff2f7bcfa01a75d2a87131"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-candidate/input-sha256.json",
+      "bytes": 14492,
+      "sha256": "af7706c8d171ad8d415d44c3fee698e729550cf59be4f037ad239000175bd5c9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-candidate/raw.log",
+      "bytes": 27694,
+      "sha256": "4ea994af376771b114a58caa02bed8050d2dab4bc3870c4d2add4e6c28b38e64"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-candidate/receipt.json",
+      "bytes": 1606,
+      "sha256": "9845bb65973c8acdefc6b5c7f62692dbf0987e2a9d307f016bd941fb2c72acd2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-candidate/rss-samples.json",
+      "bytes": 28805,
+      "sha256": "e538b0382a56c079f95d6c94a6001e8818c64d438cbcdfcdaed4dc972565c2df"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-baseline/input-sha256.json",
+      "bytes": 14492,
+      "sha256": "7f024fd27511bc53ee8edeabb3b379291dcb9087b9cae723bf435695b8d91cb6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-baseline/raw.log",
+      "bytes": 27701,
+      "sha256": "3bc13801b8a5c2244b176f2462ecb8d1052a0cf8d5d25031cc8205df79263c12"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-baseline/receipt.json",
+      "bytes": 1601,
+      "sha256": "e2cff55950ffd6a098a8b36e571079adc957103220d5d77c29713e7b94ed7a49"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-baseline/rss-samples.json",
+      "bytes": 23287,
+      "sha256": "1926257351028d3550159f2bde66a9a8d81125ee4a9fde65fbe9c983b58b8b3c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-candidate/input-sha256.json",
+      "bytes": 14492,
+      "sha256": "af7706c8d171ad8d415d44c3fee698e729550cf59be4f037ad239000175bd5c9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-candidate/raw.log",
+      "bytes": 27627,
+      "sha256": "9d83adb487b77e2d98a7930c72ff3ae8b360a901fabfaaee31d464510efb2962"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-candidate/receipt.json",
+      "bytes": 1605,
+      "sha256": "cdfc4cef829a3f512ab74bda1096c5f87209e5b053dd92099a797ea838b38a92"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-candidate/rss-samples.json",
+      "bytes": 20270,
+      "sha256": "7a7973e00d2a36feafb58eb9b9e1cba50980207ffb0f07b75a8862cb368c701e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-baseline/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "1799c7bb83e9b33e0520b05a357d58c8a8e86343540dc7a8ae2d04a88fbba9ea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-baseline/raw.log",
+      "bytes": 27691,
+      "sha256": "41a1a0e33d1c39c952581fd10104c2f4725bdfe15dc36dd4e9204e90e88fc418"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-baseline/receipt.json",
+      "bytes": 1596,
+      "sha256": "edf96f845bef4cb2c15afa3ded51883e282824634b17207f2475ecbf4247befa"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-baseline/rss-samples.json",
+      "bytes": 6938,
+      "sha256": "aebcab75dce2cd1dc22c0a83c32b5411ede5a00aa1ef1c3ef602f645425bf67b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-candidate/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "3c0c0a6f1a79cba0df530fd6da74f500180cfc84e4a4ef77faac69afa065f344"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-candidate/raw.log",
+      "bytes": 27661,
+      "sha256": "a883bc6d08838906cd7f8e936afd2044693327b22544221942cd137a9973ea99"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-candidate/receipt.json",
+      "bytes": 1601,
+      "sha256": "647cc54dc3d5f8477424f67b273acf59fa0f776bf8bc6da239dd313caeb8d070"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-candidate/rss-samples.json",
+      "bytes": 5486,
+      "sha256": "8e94be611b535084445bcf14a5aeae906760fe6f677486c026e1e081ffc81ced"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-baseline/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "1799c7bb83e9b33e0520b05a357d58c8a8e86343540dc7a8ae2d04a88fbba9ea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-baseline/raw.log",
+      "bytes": 27684,
+      "sha256": "13a4c00a4d3a0d94c855c132c27fce54df0961dfe76207b7087fab3ac8130934"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-baseline/receipt.json",
+      "bytes": 1596,
+      "sha256": "3f9004b5b3ceb60d41aa82e3168b837956c36ee04f6e259392971cc142b9a789"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-baseline/rss-samples.json",
+      "bytes": 5842,
+      "sha256": "1c24bc6f4db9618a88daca46074c23f09ad5bb30604ad9a5e43dc75fca70a3fc"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-candidate/input-sha256.json",
+      "bytes": 14255,
+      "sha256": "3c0c0a6f1a79cba0df530fd6da74f500180cfc84e4a4ef77faac69afa065f344"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-candidate/raw.log",
+      "bytes": 27668,
+      "sha256": "386713ac03bdf40d0216aedaa11ed61e8f5fd13552cfbdd3719596f3a956510f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-candidate/receipt.json",
+      "bytes": 1601,
+      "sha256": "1a16de10008516c2a23b1764d5b6e9fe962ed93816763cfb48d540a31668dfcf"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-candidate/rss-samples.json",
+      "bytes": 5401,
+      "sha256": "edbb537cfc2add6f87c2bedfa52806c110918b3e080679e1a71ddea8eee8b245"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/cpu-12702.json.gz",
+      "bytes": 12154,
+      "sha256": "c9c5a066c188f91b427d1f8a2f8fa3bed530c8d3b7a3407a2685aef01ce3dc07"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/cpu-12719.json.gz",
+      "bytes": 8213,
+      "sha256": "9480918d2976b4b0930af2f456456815b2b3019fc47cf538493f4fe8dfb25ff2"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/cpu-12731.json.gz",
+      "bytes": 9811,
+      "sha256": "098978b32359e461496304c607894b3fa2bcaf6683a2250cf9c924c53bcf37d5"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/heap-12702.json.gz",
+      "bytes": 813,
+      "sha256": "621718c2283094bd5c4b02df4d38a0a3805d6353fb9d55def6e3ad867eb76300"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/heap-12719.json.gz",
+      "bytes": 1011,
+      "sha256": "c1eb6ff0b6b6ff0005f2dd34a9503da63fdcace212aa8d4aa72f2baab5ef2b6b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/heap-12731.json.gz",
+      "bytes": 811,
+      "sha256": "1e84ac4958b7fc6d76e5d69403e9b7be626d762a11e9f3aab3399116407d95fa"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/input-sha256.json",
+      "bytes": 14849,
+      "sha256": "31e8078751e117db06e816e8f80b0e65f21d4431bbe41daba97cf97cead81eb3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/measure-12702.jsonl",
+      "bytes": 9246,
+      "sha256": "7ce4748fa32fc68fda02c435400094d7d7e06291c8535467fdcbd49d2b7c2362"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/measure-12719.jsonl",
+      "bytes": 4917,
+      "sha256": "7e03b1881263d2650cad90979af6e18f0d4722f5a92561ada2f8d75f3cc32578"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/measure-12731.jsonl",
+      "bytes": 6066,
+      "sha256": "ae0d4109834425d9aa6cd503f2930c0e2f1a43400d203714320e2673d3060d0e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/profile-12702.done",
+      "bytes": 9,
+      "sha256": "37a40f08d8548dba289b9b0bb35bcf63b359f6d37ee86044ebc6b6da080b9ec1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/profile-12719.done",
+      "bytes": 9,
+      "sha256": "37a40f08d8548dba289b9b0bb35bcf63b359f6d37ee86044ebc6b6da080b9ec1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/profile-12731.done",
+      "bytes": 9,
+      "sha256": "37a40f08d8548dba289b9b0bb35bcf63b359f6d37ee86044ebc6b6da080b9ec1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/raw.log",
+      "bytes": 27644,
+      "sha256": "a845886860b317a7c52c91235dd98372c1fa0dfbf8a273f59bbba4e1bd26e38c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/receipt.json",
+      "bytes": 1739,
+      "sha256": "41d942fc815483a8fb2e3d3d40f4fd858c40af942e690dd13c1861d9ba8bfa0e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/rss-samples.json",
+      "bytes": 7447,
+      "sha256": "8b23fcaf3f1d6ad9ad01f4d467940c179eee398eec3c61c9ccb7d13e3249d99d"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/cpu-12782.json.gz",
+      "bytes": 10924,
+      "sha256": "7a8afe57ef561a38402879347331d439a368492c0c1f3bda64b3fe7ec23ddb5a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/cpu-12797.json.gz",
+      "bytes": 7425,
+      "sha256": "cc7b984a8ebe6eb27db01da74009b8dc26f74cafa9ff9665d2c26226023adeb6"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/cpu-12809.json.gz",
+      "bytes": 9022,
+      "sha256": "cf15214d9877b04f0f56c4c7d1636f035ac1f02ca9f99f615be2cd14c0919b18"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/heap-12782.json.gz",
+      "bytes": 1047,
+      "sha256": "8cf0c50a701efbf8f6120bfdc24df09cace1ae81b8d0b9ca26e0107039319447"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/heap-12797.json.gz",
+      "bytes": 1065,
+      "sha256": "a07492ade80723c81a26d75c7e919b5c430169ce24b381d65d3221657467a060"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/heap-12809.json.gz",
+      "bytes": 965,
+      "sha256": "233039086acaece8f14086378982c2fc4dc99a0dd7b537729857ca87649e6d92"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/input-sha256.json",
+      "bytes": 14849,
+      "sha256": "59310e840e7f5ff4a60a3df8f05e1b5da5802b77349d7c45b55daf7a504ff7bd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/measure-12782.jsonl",
+      "bytes": 9262,
+      "sha256": "3366ee3a74b12fd2cb9b4ddbacf799351120849c22c311c92675ffa11db88dfd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/measure-12797.jsonl",
+      "bytes": 4894,
+      "sha256": "63f7ea4a5c02d482cf133b9d7ebd90c9aa68780f4eb474190c1bf6caa9667ce4"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/measure-12809.jsonl",
+      "bytes": 6067,
+      "sha256": "ebc9e1ac79c4b7eff2430012d868118e58e2d86b3bba97e98151a6c84047fb0b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/profile-12782.done",
+      "bytes": 9,
+      "sha256": "37a40f08d8548dba289b9b0bb35bcf63b359f6d37ee86044ebc6b6da080b9ec1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/profile-12797.done",
+      "bytes": 9,
+      "sha256": "37a40f08d8548dba289b9b0bb35bcf63b359f6d37ee86044ebc6b6da080b9ec1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/profile-12809.done",
+      "bytes": 9,
+      "sha256": "37a40f08d8548dba289b9b0bb35bcf63b359f6d37ee86044ebc6b6da080b9ec1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/raw.log",
+      "bytes": 27662,
+      "sha256": "03e60a5c94cdaad28c25f9b40b28d0f00e680acb283f62bae17ef44aa75a1983"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/receipt.json",
+      "bytes": 1746,
+      "sha256": "33b3d1da0fd130d6566032f584eefe891374e7d1490c98ba8d65e191aa076162"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/rss-samples.json",
+      "bytes": 5176,
+      "sha256": "1af7ef456567a04dd589ddbf5514c5be941135758effc556da83579737291b64"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/environment.json",
+      "bytes": 18046,
+      "sha256": "443cc7756ab969c185913225143ee701b09d838c2f49a4717c0c3592ca4aa162"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/execution-end.json",
+      "bytes": 67,
+      "sha256": "04c178499361674ebd1df4dc9a51250b76147ad287f223f2faaeb43b87466f24"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/execution-start.json",
+      "bytes": 187,
+      "sha256": "18f9fcfb93e7f489a6be8b194d521969d21c84f1ebe04a627da7652fe55c31ab"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/failed-store-inventories.json",
+      "bytes": 22916,
+      "sha256": "9483c53dc4e567421d57d7143ca7f8c8edce73dd5aa33223b6842b01b2c23e17"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once/g2-estampes-pr1c-pr1d-n4XkQ1.jsonl",
+      "bytes": 98325,
+      "sha256": "a70d17635fcf1a033c4616dd895a01766c62da4a9a010f4dea55553c42bd4095"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once/input-sha256.json",
+      "bytes": 14849,
+      "sha256": "59310e840e7f5ff4a60a3df8f05e1b5da5802b77349d7c45b55daf7a504ff7bd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once/raw.log",
+      "bytes": 388,
+      "sha256": "8b5d3e654f851977390c977fb44a98e6f7b3401a9d0c64a028bc8afd8b572cd1"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once/receipt.json",
+      "bytes": 2086,
+      "sha256": "4d2e35e74ddcdc6c19dcf36a140c91a964b7bd39f124606e6dfdf797fc929d11"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once/rss-samples.json",
+      "bytes": 5808,
+      "sha256": "81a10ae1e3f324fa9efdb7ec1d4cac8c8d5227638db7f03487634fbc52e78aae"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/git-verification.json",
+      "bytes": 6588,
+      "sha256": "15b0fd371c2766b964d17ce67bb655c423e11da2af79d56e5e3b7db2f0c8df0a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-baseline/input-sha256.json",
+      "bytes": 14849,
+      "sha256": "9fcc0ba3f83d3a254da0e3ce28ad459b85407210153ce7b8a03107d6b7fa6a1c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-baseline/raw.log",
+      "bytes": 373244,
+      "sha256": "963461a91fdeee6eaebbcda477f065531de33d4593547b8dbcce9cf9cdcac0ee"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-baseline/receipt.json",
+      "bytes": 1596,
+      "sha256": "671799eeba2e27ef77ccdc836507a4db7e5e553fc066d3cd80ded4e0a0870653"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-baseline/rss-samples.json",
+      "bytes": 225076,
+      "sha256": "276d3ca3dd2ea1aa04d59528afd832f16ae0ae1acc713ab40f2fe09901443528"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-candidate/input-sha256.json",
+      "bytes": 14611,
+      "sha256": "0699627596e73982841ed221946302265aa29ebcbffdc11a02f9d8750fea24cf"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-candidate/raw.log",
+      "bytes": 373275,
+      "sha256": "c1f9d586a6f766de740d773fe65975f36faf83005dac51a89b85c6961766816f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-candidate/receipt.json",
+      "bytes": 1605,
+      "sha256": "7b5ac385fc5ae792f4615bbcf9112db1c402f4fc0d53c8331a1c53e326a2c15e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-candidate/rss-samples.json",
+      "bytes": 205612,
+      "sha256": "505b6306f02d08042ba96fa0e205bdf0c6d2af40566b21b74158a31fb906cc7c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/integrity-derivation.log",
+      "bytes": 608,
+      "sha256": "a661a74e07fef06cb1dc0ff3c083a6319611e6b76dd491122c1bd8b50b6ffe24"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/integrity-verification.json",
+      "bytes": 762244,
+      "sha256": "619484d70c35f188a342c1a01946f22183eeb2292fc373620e9972534570dd26"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/native-harness.json",
+      "bytes": 4599,
+      "sha256": "bc919d7c51460d3971937d39f1c956803cc9977162e35646e97665ed16d45e78"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/native-test-adaptation.diff",
+      "bytes": 22878,
+      "sha256": "5654d156034ee1c19175fb1e468a501ffa489641e28f323c69f571ec125fd6ca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/paired-results.json",
+      "bytes": 334052,
+      "sha256": "7cdbf433373679d5b70d6f0e395d49757b3e147e16ac65801e66468cd058804a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/profile-boundary.json",
+      "bytes": 460,
+      "sha256": "7e7870c7d9452260407ceca386664b8511ddc59ddc4c57303f180efff2806155"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/profile-summary.json",
+      "bytes": 105631,
+      "sha256": "916e5c4ed5f0508d7dc58ed7fb56da5721423560510403749f7d703046ae0e58"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/profiles-derivation.log",
+      "bytes": 160,
+      "sha256": "5fb01384b12805be7233ad36c14a209346f8dd0dfb5d9d87a0195bd3a06be9cd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-h01/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "e57d72939cf737f2f6e2973cca585b4f9b30b9b21fee817ea589402d0b1c081c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-h01/raw.log",
+      "bytes": 2300,
+      "sha256": "7612a6e0bc36d4bddbf97df161ae694eac8a7584faa745480f929394517f257b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-h01/receipt.json",
+      "bytes": 1923,
+      "sha256": "e52d1e185c8cc251559746533ee3cfc174e28e13b2b7855ca1176831adacb079"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-h01/rss-samples.json",
+      "bytes": 4920,
+      "sha256": "299e897bfdb22e33b45de79381235eb82110e091d21c10ad4e48764402253e1b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-independent/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "e57d72939cf737f2f6e2973cca585b4f9b30b9b21fee817ea589402d0b1c081c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-independent/raw.log",
+      "bytes": 4892,
+      "sha256": "ceda9a34007213eb26258115f2adfa46fae2ebbb49aab82bfffaa5aeca7eaa9f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-independent/receipt.json",
+      "bytes": 2916,
+      "sha256": "b1d9a175fd666a8abec9cca16d3c19e41ad963a6b1d4cbec5e27356a636a375c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-independent/rss-samples.json",
+      "bytes": 31970,
+      "sha256": "f5f7670844868d9a5397895da1a4a64e1eb297124b42c2a94a6d6ad7ea107f2c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-ack/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-ack/raw.log",
+      "bytes": 882,
+      "sha256": "c8ca397e5650ea04ed95765bceb9b4b060d4dcdfe51b4fe0d9a0ad6b598b7959"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-ack/receipt.json",
+      "bytes": 1725,
+      "sha256": "77665bcba3a9c5d2a2db575a4201be98a461e4055e54719619a952bcedc8a615"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-ack/rss-samples.json",
+      "bytes": 1007,
+      "sha256": "31a618ae7256d830da47ca6a548b2b800d16f42736c2a56b54f8d64f6f0a72df"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-cache/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-cache/raw.log",
+      "bytes": 5988,
+      "sha256": "23842ac34928680c591cb1ad7a8c4a85f8ef192de73aa394020e4cf0e9c7650a"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-cache/receipt.json",
+      "bytes": 1919,
+      "sha256": "ff48f12c0b4a724272a7e6f374e0507e131f82efb6f19d4389f5b579336626fb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-cache/rss-samples.json",
+      "bytes": 30981,
+      "sha256": "1da6c6ea40f0c6712173957a4f880738b0ea3e538e22d07851184640c8090c1e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-storage/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-storage/raw.log",
+      "bytes": 4146,
+      "sha256": "fe01053c1a70cd84310b42cd461267afac4cebe0b6ecaf4dd2c15df984dcc058"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-storage/receipt.json",
+      "bytes": 2689,
+      "sha256": "7f70d55a8fa77d5cf2acc073f6a3aa6171f1cc1422720a5f171860a837b32fcb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-storage/rss-samples.json",
+      "bytes": 51140,
+      "sha256": "c93c09f5e02a36667783099c715614ad773198e662c25d89560f09818fd186f8"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-adversarial/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-adversarial/raw.log",
+      "bytes": 8956,
+      "sha256": "af7220e08a0d8c34c64fea2ddf18a3a6fd909b3323b2d7261bd29f5566e46243"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-adversarial/receipt.json",
+      "bytes": 2273,
+      "sha256": "b4e3ca61e1f042781706a3622e2de4a8dabb054b84695a6eda065e9923198aa3"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-adversarial/rss-samples.json",
+      "bytes": 14591,
+      "sha256": "fcfe812b51e621c22e97d40ee4d66e3089995b93ccf00d4a73bfa08fa101173c"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-backup/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-backup/raw.log",
+      "bytes": 639,
+      "sha256": "2cea70cd61aad581b93df70857e00eed64fb36d754144f68c7f074e340b7a5eb"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-backup/receipt.json",
+      "bytes": 1713,
+      "sha256": "0b7cd2cbcfe33d48c6fb3cced90a33281af304b89e9b0dae8583d380d9d3c442"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-backup/rss-samples.json",
+      "bytes": 2029,
+      "sha256": "2b9d22950020bbd802520c1cdf48982c2306c7fa5f57d0ef7195760d3eb09dea"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-metadata/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-metadata/raw.log",
+      "bytes": 1888,
+      "sha256": "ac94d94be94f8a39b87282d84061522f2a24ed7ca8fd5e4a86f51de2ee62347b"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-metadata/receipt.json",
+      "bytes": 1663,
+      "sha256": "6e53f3c23abfdba00600208b62127e1c7fb698cf85a62d5360a9c2bfce2ff48f"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-metadata/rss-samples.json",
+      "bytes": 49,
+      "sha256": "5d0f2d4741c5b80df6ca24ff4025fd7533aa6c1c29d49771b4005799c6aa39e5"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-publication/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "119e792c88e11eec3b0faa7c0b7bc86ab28c6d3e593d4c2364595c5d83a5c14e"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-publication/raw.log",
+      "bytes": 1599,
+      "sha256": "4067ecbb59f310b84625897dfb5aeb6644cd32ef27a41c2ac85c26f89c37eedd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-publication/receipt.json",
+      "bytes": 1939,
+      "sha256": "6492a2c356406b72536fe916a43cbcee389c311f4a216815d3c29fbb84a66945"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-publication/rss-samples.json",
+      "bytes": 8932,
+      "sha256": "ad5ab6c23a6f2c8d75bc7a24e666f9fe4aa2a1a2dd1ff1da1a3d9200b343abfd"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/regression-results.json",
+      "bytes": 6658,
+      "sha256": "0333bc04876561cc51d53f912ef7a2f1c723880c3ff6958ed7bb6a5cd2c42bca"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/report-derivation.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/resource-supplement.json",
+      "bytes": 820,
+      "sha256": "3f18d8d3178eb4258ca56702139a51a39cbc34606d16153da6869d527de979dc"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/runs.jsonl",
+      "bytes": 55326,
+      "sha256": "acddf8899ddb5f23df353a6955cab70676be9bc0cab54316d75035eccb578676"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/source-verification.json",
+      "bytes": 1666,
+      "sha256": "f205b6ad536238d8de3189566f6923e1a9ef7eccfe83e9be59b35fcc9089cad7"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/stopped-timeout-read-only/input-sha256.json",
+      "bytes": 14977,
+      "sha256": "4ec28dfb22c5cc2767dc92d3682142497de2c91cd2e4f9ad5394ae15c57bb9a9"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/stopped-timeout-read-only/raw.log",
+      "bytes": 726,
+      "sha256": "86cbeaadc0ad80e6c965fbf499c49dd198812058bef72f4a29fa4489c4a031a4"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/stopped-timeout-read-only/receipt.json",
+      "bytes": 1781,
+      "sha256": "452ef2424ab456c47572883f28ee663f00bf919be07f61fdb4427150f229e3a0"
+    },
+    {
+      "path": "docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/stopped-timeout-read-only/rss-samples.json",
+      "bytes": 735,
+      "sha256": "1ed5cba106cc448c41a72b7f2dbfa6187d9faa7d3886530f577efbc01508a4dc"
+    }
+  ],
+  "runCount": 29,
+  "nonzeroRuns": [
+    {
+      "name": "baseline-negatives",
+      "exitCode": 1,
+      "stop": null
+    },
+    {
+      "name": "candidate-negatives",
+      "exitCode": 1,
+      "stop": null
+    },
+    {
+      "name": "document-32-pair-1-baseline",
+      "exitCode": 1,
+      "stop": null
+    },
+    {
+      "name": "r3-adversarial",
+      "exitCode": 1,
+      "stop": null
+    },
+    {
+      "name": "r3-metadata",
+      "exitCode": 1,
+      "stop": null
+    }
+  ],
+  "verdict": "INCONCLUSIVE \u2014 DEFAULT TO BASELINE",
+  "production": "NOT QUALIFIED",
+  "scope": "All new evidence, independent harness/analysis scripts and final report; excludes manifest.json itself. All 2,469 original candidate files independently sealed in integrity-verification.json. Final commit resolved by git log on report path."
+}

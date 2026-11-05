@@ -1,0 +1,8 @@
+{
+  "startUTC": "2026-11-05T16:45:47Z",
+  "endUTC": "2026-11-05T17:45:07Z",
+  "utcElapsedSeconds": 3560.0,
+  "recordedMonotonicExecutionSeconds": 3266.26774871,
+  "differenceSeconds": 293.73225129,
+  "cause": "UNKNOWN. UTC versus monotonic clock-domain divergence; no sample excluded or latency rescaled. All benchmark latency and resource timers use performance.now/time.monotonic; this does not prove stable host scheduling or wall clock."
+}

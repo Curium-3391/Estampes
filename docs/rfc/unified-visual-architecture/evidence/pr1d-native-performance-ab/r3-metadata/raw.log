@@ -1,0 +1,37 @@
+TAP version 13
+# Subtest: same-inode rewrite after FD open and before the first read is rejected
+ok 1 - same-inode rewrite after FD open and before the first read is rejected
+  ---
+  duration_ms: 13.09779
+  type: 'test'
+  ...
+# {"before":"2096:123749:7:1793900674496899780:1793900674496899780","after":"2096:123749:10:1793900674500499780:1793900674500499780"}
+# Subtest: record real ext4 timestamp coalescing during bounded same-size rewrites
+not ok 2 - record real ext4 timestamp coalescing during bounded same-size rewrites
+  ---
+  duration_ms: 13.37139
+  type: 'test'
+  location: '/home/estampes/projects/pr1d-native-candidate/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs:43:1'
+  failureType: 'testCodeFailure'
+  error: 'Managed file changed within verification'
+  code: 'INTEGRITY_ERROR'
+  name: 'PersistenceError'
+  stack: |-
+    fail (file:///home/estampes/projects/pr1d-native-candidate/src/persistence/errors.js:6:57)
+    ManagedFiles.observed (file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js:30:106)
+    ManagedFiles.digest (file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js:146:111)
+    async ManagedFiles.proofIdentity (file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js:37:82)
+    async ManagedFiles.proofFingerprint (file:///home/estampes/projects/pr1d-native-candidate/src/persistence/filesystem.js:43:40)
+    async TestContext.<anonymous> (file:///home/estampes/projects/pr1d-native-candidate/docs/rfc/unified-visual-architecture/evidence/pr1d-native-round3/metadata-boundary.mjs:56:24)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 177.8796

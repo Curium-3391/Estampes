@@ -1,0 +1,300 @@
+{
+  "completedPairs": 5,
+  "completedPlainRuns": 11,
+  "runs": [
+    {
+      "name": "canonical-parity",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 17.04608061800002
+    },
+    {
+      "name": "baseline-negatives",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 60,
+        "pass": 59,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 1.2198810589999312
+    },
+    {
+      "name": "candidate-negatives",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 60,
+        "pass": 59,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 1.223205259999986
+    },
+    {
+      "name": "document-8-pair-1-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 22.335617586000012
+    },
+    {
+      "name": "document-8-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 17.666499164000015
+    },
+    {
+      "name": "document-8-pair-2-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 17.460776390999968
+    },
+    {
+      "name": "document-8-pair-2-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 18.908158966999963
+    },
+    {
+      "name": "document-16-pair-1-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 34.75303545199995
+    },
+    {
+      "name": "document-16-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 40.824980031999985
+    },
+    {
+      "name": "document-32-pair-1-baseline",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 75.86502457900008
+    },
+    {
+      "name": "document-32-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 91.59284553700002
+    },
+    {
+      "name": "document-32-pair-2-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 65.43779656000004
+    },
+    {
+      "name": "document-32-pair-2-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 75.27541118399995
+    },
+    {
+      "name": "history-100-pair-1-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 655.9445844709999
+    },
+    {
+      "name": "history-100-pair-1-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 786.219993766
+    },
+    {
+      "name": "document-8-profile-baseline",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 24.92708620800022
+    },
+    {
+      "name": "document-8-profile-candidate",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 17.492493412000385
+    },
+    {
+      "name": "g2-native-once",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 15.599950815999819
+    },
+    {
+      "name": "candidate-native-integrity-crash",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 187,
+        "pass": 187,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 891.6359685879997
+    },
+    {
+      "name": "r1-h01",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 13.155366329999651
+    },
+    {
+      "name": "r1-independent",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 83.79950599700032
+    },
+    {
+      "name": "r2-storage",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 14,
+        "pass": 14,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 132.9920281630002
+    },
+    {
+      "name": "r2-cache",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 8,
+        "pass": 8,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 92.89743677999968
+    },
+    {
+      "name": "r2-ack",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 2.8401245100003507
+    },
+    {
+      "name": "r3-adversarial",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 8,
+        "pass": 7,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 38.611667879999914
+    },
+    {
+      "name": "r3-metadata",
+      "exitCode": 1,
+      "stop": null,
+      "counts": {
+        "tests": 2,
+        "pass": 1,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 0.40851900000006935
+    },
+    {
+      "name": "r3-publication",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 23.65070211000011
+    },
+    {
+      "name": "r3-backup",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "wallSeconds": 5.677368659999956
+    },
+    {
+      "name": "stopped-timeout-read-only",
+      "exitCode": 0,
+      "stop": null,
+      "counts": {},
+      "wallSeconds": 3.244239539999853
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+[
+  {
+    "command": [
+      "git",
+      "rev-parse",
+      "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0^{commit}",
+      "4814daf2378e9619f171c02a65792062957a8e99^{commit}"
+    ],
+    "exitCode": 0,
+    "output": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0\n4814daf2378e9619f171c02a65792062957a8e99\n"
+  },
+  {
+    "command": [
+      "git",
+      "merge-base",
+      "--is-ancestor",
+      "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+      "4814daf2378e9619f171c02a65792062957a8e99"
+    ],
+    "exitCode": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--name-only",
+      "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+      "4814daf2378e9619f171c02a65792062957a8e99",
+      "--",
+      "src"
+    ],
+    "exitCode": 0,
+    "output": "src/documents/validation.js\n"
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--exit-code",
+      "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+      "4814daf2378e9619f171c02a65792062957a8e99",
+      "--",
+      "scripts/pr1d-investigation",
+      "tests/fixtures"
+    ],
+    "exitCode": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "git",
+      "rev-parse",
+      "origin/fix/unified-visual-architecture-pr1d-performance-remediation"
+    ],
+    "exitCode": 0,
+    "output": "4814daf2378e9619f171c02a65792062957a8e99\n"
+  },
+  {
+    "command": [
+      "git",
+      "status",
+      "--short",
+      "--branch"
+    ],
+    "exitCode": 0,
+    "output": "## codex/pr1d-native-performance-ab-adjudication\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/.gitattributes\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/analysis-derivation.log\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/baseline-negatives/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-native-integrity-crash/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-negatives/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/canonical-parity/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/clock-domain-observation.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/derivation-commands.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-16-pair-1-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline-failed-store.tar.gz\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-1-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-32-pair-2-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-1-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-pair-2-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/document-8-profile-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/execution-end.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/execution-start.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/failed-store-inventories.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/g2-native-once/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-baseline/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/history-100-pair-1-candidate/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/native-harness.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/native-test-adaptation.diff\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/paired-results.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/profile-boundary.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/profile-summary.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/profiles-derivation.log\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-h01/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r1-independent/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-ack/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-cache/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r2-storage/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-adversarial/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-backup/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-metadata/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/r3-publication/\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/resource-supplement.json\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/runs.jsonl\n?? docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/stopped-timeout-read-only/\n?? scripts/pr1d-native-ab/analyze.py\n?? scripts/pr1d-native-ab/capture.py\n?? scripts/pr1d-native-ab/inspect-timeout.mjs\n?? scripts/pr1d-native-ab/profiles.py\n?? scripts/pr1d-native-ab/report.py\n?? scripts/pr1d-native-ab/verify.py\n"
+  },
+  {
+    "command": [
+      "git",
+      "worktree",
+      "list"
+    ],
+    "exitCode": 0,
+    "output": "/home/estampes/projects/Estampes               f79ebe7 [codex/pr1d-native-performance-ab-adjudication]\n/home/estampes/projects/pr1d-native-baseline   d9aaa49 (detached HEAD)\n/home/estampes/projects/pr1d-native-candidate  4814daf (detached HEAD)\n"
+  }
+]

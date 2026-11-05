@@ -1,0 +1,635 @@
+[
+  {
+    "case": "document-32-pair-1-baseline",
+    "originalStore": "/home/estampes/pr1d-native-ab-ncum6ak3/estampes-pr1c-native-ab-xyFykO",
+    "files": [
+      {
+        "path": "WRITER.lock",
+        "device": 2096,
+        "inode": 110273,
+        "bytes": 0,
+        "allocatedBytes": 0,
+        "mode": "0o644",
+        "mtimeNs": 1793897338024076484,
+        "ctimeNs": 1793897338024076484,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "storage-format.json",
+        "device": 2096,
+        "inode": 110277,
+        "bytes": 302,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338233076552,
+        "ctimeNs": 1793897338236743220,
+        "sha256": "e8c69f6cbf24d8b845aeebe345fab0831d28a2b3e57830b233d9bd3cc7eab716"
+      },
+      {
+        "path": "visual-documents/00000001-0000-4000-8000-000000000001/generations/1-c761c78c02d51c122d5cafbe117c1d399b43b623b6c68afa70b46e7fc42723a7.json",
+        "device": 2096,
+        "inode": 110303,
+        "bytes": 33555281,
+        "allocatedBytes": 33558528,
+        "mode": "0o600",
+        "mtimeNs": 1793897352342355267,
+        "ctimeNs": 1793897352489021982,
+        "sha256": "c761c78c02d51c122d5cafbe117c1d399b43b623b6c68afa70b46e7fc42723a7"
+      },
+      {
+        "path": "visual-registry/CURRENT.json",
+        "device": 2096,
+        "inode": 110331,
+        "bytes": 225,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897383539505430,
+        "ctimeNs": 1793897383777838842,
+        "sha256": "0f288d6b54eddc9352716469f0144a6844a825c31097f574de7a5a4d5515c40c"
+      },
+      {
+        "path": "visual-registry/pages/0a173db196bc4f9d09b77476210629fd905a2c29f3423a205e5d9d15d738e2fc.json",
+        "device": 2096,
+        "inode": 110313,
+        "bytes": 425,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352639355364,
+        "ctimeNs": 1793897352643022032,
+        "sha256": "0a173db196bc4f9d09b77476210629fd905a2c29f3423a205e5d9d15d738e2fc"
+      },
+      {
+        "path": "visual-registry/pages/1045b29ddd116e6d635db5ae178b7519806d571bd0aa023f562fcffe6877df23.json",
+        "device": 2096,
+        "inode": 110325,
+        "bytes": 283,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372622695264,
+        "ctimeNs": 1793897372630028600,
+        "sha256": "1045b29ddd116e6d635db5ae178b7519806d571bd0aa023f562fcffe6877df23"
+      },
+      {
+        "path": "visual-registry/pages/13b8a39520191513a1487971fe36532da630e8108f1f183a0e2195cb9b3a945a.json",
+        "device": 2096,
+        "inode": 110292,
+        "bytes": 209,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338394409939,
+        "ctimeNs": 1793897338394409939,
+        "sha256": "13b8a39520191513a1487971fe36532da630e8108f1f183a0e2195cb9b3a945a"
+      },
+      {
+        "path": "visual-registry/pages/1ad8025be43fd729a953a82a0a33f5a4c59ac6fab768dc6e62556ff2bf47e402.json",
+        "device": 2096,
+        "inode": 110326,
+        "bytes": 398,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372637361935,
+        "ctimeNs": 1793897372641028603,
+        "sha256": "1ad8025be43fd729a953a82a0a33f5a4c59ac6fab768dc6e62556ff2bf47e402"
+      },
+      {
+        "path": "visual-registry/pages/231ac7c6e9d8cf7c5fa8620dfe77153a7fc097e746016c51d9b8bd8bac6088a5.json",
+        "device": 2096,
+        "inode": 110305,
+        "bytes": 136,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352507355321,
+        "ctimeNs": 1793897352511021989,
+        "sha256": "231ac7c6e9d8cf7c5fa8620dfe77153a7fc097e746016c51d9b8bd8bac6088a5"
+      },
+      {
+        "path": "visual-registry/pages/2359c1b5c06a037970da91f42147ad408ed0fe210b17a36c15db7aeb4d32e42b.json",
+        "device": 2096,
+        "inode": 110308,
+        "bytes": 1061,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352558688671,
+        "ctimeNs": 1793897352566022007,
+        "sha256": "2359c1b5c06a037970da91f42147ad408ed0fe210b17a36c15db7aeb4d32e42b"
+      },
+      {
+        "path": "visual-registry/pages/2737f9d4eff69e72f71bb243317bec0970af9c9b72bf3fd97b91a891a9708b4d.json",
+        "device": 2096,
+        "inode": 110323,
+        "bytes": 137,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372589695253,
+        "ctimeNs": 1793897372593361921,
+        "sha256": "2737f9d4eff69e72f71bb243317bec0970af9c9b72bf3fd97b91a891a9708b4d"
+      },
+      {
+        "path": "visual-registry/pages/34cd7680775879d766377319f916fa4f2e24c9c585efca441cf07bdaea328059.json",
+        "device": 2096,
+        "inode": 110322,
+        "bytes": 283,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372567695246,
+        "ctimeNs": 1793897372571361914,
+        "sha256": "34cd7680775879d766377319f916fa4f2e24c9c585efca441cf07bdaea328059"
+      },
+      {
+        "path": "visual-registry/pages/375b8fe217d5f36e1d5588327df3f90e7e9d6c9e8204848182004dbd63a9589f.json",
+        "device": 2096,
+        "inode": 110306,
+        "bytes": 577,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352522021993,
+        "ctimeNs": 1793897352525688660,
+        "sha256": "375b8fe217d5f36e1d5588327df3f90e7e9d6c9e8204848182004dbd63a9589f"
+      },
+      {
+        "path": "visual-registry/pages/3795e7c53a8703e092a0dbafc955bea66bcb32e9b5105efdeab6de4f2ea59d30.json",
+        "device": 2096,
+        "inode": 110316,
+        "bytes": 353,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352679688711,
+        "ctimeNs": 1793897352683355379,
+        "sha256": "3795e7c53a8703e092a0dbafc955bea66bcb32e9b5105efdeab6de4f2ea59d30"
+      },
+      {
+        "path": "visual-registry/pages/3be87007ec7f5e3c511a4b8091746a00863f4de6275ba5612cf7ced494f9dc5b.json",
+        "device": 2096,
+        "inode": 110324,
+        "bytes": 514,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372611695260,
+        "ctimeNs": 1793897372611695260,
+        "sha256": "3be87007ec7f5e3c511a4b8091746a00863f4de6275ba5612cf7ced494f9dc5b"
+      },
+      {
+        "path": "visual-registry/pages/3c37610350b39c47090ad619c47c23c0f170fd8a1b2e130f75a4a8953c145fcd.json",
+        "device": 2096,
+        "inode": 110314,
+        "bytes": 452,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352654022036,
+        "ctimeNs": 1793897352657688704,
+        "sha256": "3c37610350b39c47090ad619c47c23c0f170fd8a1b2e130f75a4a8953c145fcd"
+      },
+      {
+        "path": "visual-registry/pages/460f9be00ca5a29823297f54398a85af3192e91021e97c4858d689eb88e0d5af.json",
+        "device": 2096,
+        "inode": 110285,
+        "bytes": 283,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338306409910,
+        "ctimeNs": 1793897338310076577,
+        "sha256": "460f9be00ca5a29823297f54398a85af3192e91021e97c4858d689eb88e0d5af"
+      },
+      {
+        "path": "visual-registry/pages/5465dde8c2d8341798934c59174b367ea465aafef9f920c5489691b5c2af6a3f.json",
+        "device": 2096,
+        "inode": 110290,
+        "bytes": 398,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338372409931,
+        "ctimeNs": 1793897338372409931,
+        "sha256": "5465dde8c2d8341798934c59174b367ea465aafef9f920c5489691b5c2af6a3f"
+      },
+      {
+        "path": "visual-registry/pages/5beed14ae389edbf1091adf831f4207bf2b2b8c4b8e4cf59cf5c788f498d7166.json",
+        "device": 2096,
+        "inode": 110288,
+        "bytes": 514,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338346743256,
+        "ctimeNs": 1793897338346743256,
+        "sha256": "5beed14ae389edbf1091adf831f4207bf2b2b8c4b8e4cf59cf5c788f498d7166"
+      },
+      {
+        "path": "visual-registry/pages/603bc75903da431992bb0601cd25797c0b270b2ee4ff0ff5c8faaaebd686ae12.json",
+        "device": 2096,
+        "inode": 110310,
+        "bytes": 576,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352584355346,
+        "ctimeNs": 1793897352588022014,
+        "sha256": "603bc75903da431992bb0601cd25797c0b270b2ee4ff0ff5c8faaaebd686ae12"
+      },
+      {
+        "path": "visual-registry/pages/60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b.json",
+        "device": 2096,
+        "inode": 110283,
+        "bytes": 65,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338280743235,
+        "ctimeNs": 1793897338284409902,
+        "sha256": "60c6b1ab95bb5790d0f682ec615868316f6f68b1cd8bdd99048feb87ab91418b"
+      },
+      {
+        "path": "visual-registry/pages/6529c3f3d0d8ec90c5c2196e9d107b9601b1e7cdd07a9d9f814a160520d744d3.json",
+        "device": 2096,
+        "inode": 110289,
+        "bytes": 139,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338361409928,
+        "ctimeNs": 1793897338361409928,
+        "sha256": "6529c3f3d0d8ec90c5c2196e9d107b9601b1e7cdd07a9d9f814a160520d744d3"
+      },
+      {
+        "path": "visual-registry/pages/662d8f09ed616379725949d4b68fbd2aadcc478e49838ec725e5171c1f6287d4.json",
+        "device": 2096,
+        "inode": 110304,
+        "bytes": 363,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352496355317,
+        "ctimeNs": 1793897352500021985,
+        "sha256": "662d8f09ed616379725949d4b68fbd2aadcc478e49838ec725e5171c1f6287d4"
+      },
+      {
+        "path": "visual-registry/pages/6eb706412dcc2f19641c8843c789535364a74b019fdface17df8076fbe69f850.json",
+        "device": 2096,
+        "inode": 110311,
+        "bytes": 211,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352599022018,
+        "ctimeNs": 1793897352602688686,
+        "sha256": "6eb706412dcc2f19641c8843c789535364a74b019fdface17df8076fbe69f850"
+      },
+      {
+        "path": "visual-registry/pages/711c223567cd521d071303cfbf043c1db380fdee3bbe9669197d6305c17f71cb.json",
+        "device": 2096,
+        "inode": 110312,
+        "bytes": 398,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352628355361,
+        "ctimeNs": 1793897352632022029,
+        "sha256": "711c223567cd521d071303cfbf043c1db380fdee3bbe9669197d6305c17f71cb"
+      },
+      {
+        "path": "visual-registry/pages/926aa760b4be3fea1dce70db55384998f6f631ac445c4572a1679d7fa28a4565.json",
+        "device": 2096,
+        "inode": 110327,
+        "bytes": 425,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372648361939,
+        "ctimeNs": 1793897372652028607,
+        "sha256": "926aa760b4be3fea1dce70db55384998f6f631ac445c4572a1679d7fa28a4565"
+      },
+      {
+        "path": "visual-registry/pages/a019ed85d10eea911c14ea192ec8822c44c7dfd7fbdd7a9b970367153b4df0a9.json",
+        "device": 2096,
+        "inode": 110291,
+        "bytes": 452,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338383409935,
+        "ctimeNs": 1793897338383409935,
+        "sha256": "a019ed85d10eea911c14ea192ec8822c44c7dfd7fbdd7a9b970367153b4df0a9"
+      },
+      {
+        "path": "visual-registry/pages/a069638faef6cc7640aadb14473f190fc85eca923d1c2c4f0d3a69811d86f106.json",
+        "device": 2096,
+        "inode": 110286,
+        "bytes": 137,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338321076581,
+        "ctimeNs": 1793897338324743249,
+        "sha256": "a069638faef6cc7640aadb14473f190fc85eca923d1c2c4f0d3a69811d86f106"
+      },
+      {
+        "path": "visual-registry/pages/a8f308045c79dd865385f5b2178f6476c8da407540d1540a5dd6d0a574aaa757.json",
+        "device": 2096,
+        "inode": 110309,
+        "bytes": 134,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352573355343,
+        "ctimeNs": 1793897352577022011,
+        "sha256": "a8f308045c79dd865385f5b2178f6476c8da407540d1540a5dd6d0a574aaa757"
+      },
+      {
+        "path": "visual-registry/pages/af885a5c0d6e2444b6d8382af1ce75472e7d2c996569fbd7784e32eb503b1e27.json",
+        "device": 2096,
+        "inode": 110284,
+        "bytes": 64,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338291743238,
+        "ctimeNs": 1793897338295409906,
+        "sha256": "af885a5c0d6e2444b6d8382af1ce75472e7d2c996569fbd7784e32eb503b1e27"
+      },
+      {
+        "path": "visual-registry/pages/b3ffed4eda05368b6c6eb49179d4d1f264173b8227c1b8676500fb6a29c199be.json",
+        "device": 2096,
+        "inode": 110328,
+        "bytes": 425,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372666695278,
+        "ctimeNs": 1793897372674028614,
+        "sha256": "b3ffed4eda05368b6c6eb49179d4d1f264173b8227c1b8676500fb6a29c199be"
+      },
+      {
+        "path": "visual-registry/pages/cf18831671f35aae731cb1897ca7a2cb69a21d926790ccbca6a2a4a3b851e38b.json",
+        "device": 2096,
+        "inode": 110287,
+        "bytes": 63,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338332076585,
+        "ctimeNs": 1793897338335743253,
+        "sha256": "cf18831671f35aae731cb1897ca7a2cb69a21d926790ccbca6a2a4a3b851e38b"
+      },
+      {
+        "path": "visual-registry/pages/e7d42cad2e19c47f4da00a7ca415f83ad1517901852688480a7f8a06d5935e7e.json",
+        "device": 2096,
+        "inode": 110315,
+        "bytes": 452,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352668688707,
+        "ctimeNs": 1793897352668688707,
+        "sha256": "e7d42cad2e19c47f4da00a7ca415f83ad1517901852688480a7f8a06d5935e7e"
+      },
+      {
+        "path": "visual-registry/pages/f356d653bc8d9f9a0dee9bc42d522f18b1c862eff8e686dd41a462f996df9449.json",
+        "device": 2096,
+        "inode": 110307,
+        "bytes": 135,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352536688664,
+        "ctimeNs": 1793897352536688664,
+        "sha256": "f356d653bc8d9f9a0dee9bc42d522f18b1c862eff8e686dd41a462f996df9449"
+      },
+      {
+        "path": "visual-registry/roots/282b0bd77268f37dd363818d98c1e875aecfc2eae4990bcf9c570e9684bfb472.json",
+        "device": 2096,
+        "inode": 110294,
+        "bytes": 664,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338412743278,
+        "ctimeNs": 1793897338412743278,
+        "sha256": "282b0bd77268f37dd363818d98c1e875aecfc2eae4990bcf9c570e9684bfb472"
+      },
+      {
+        "path": "visual-registry/roots/2c1358f63ed652ee64bce763db1f8184af41c96a601aac6c06de9e5b0992fd23.json",
+        "device": 2096,
+        "inode": 110317,
+        "bytes": 726,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352698022050,
+        "ctimeNs": 1793897352698022050,
+        "sha256": "2c1358f63ed652ee64bce763db1f8184af41c96a601aac6c06de9e5b0992fd23"
+      },
+      {
+        "path": "visual-registry/roots/549084ae44c0375109ff0910f941cb7b566260ae4329fb00caf8ac789a2ed245.json",
+        "device": 2096,
+        "inode": 110329,
+        "bytes": 726,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372685028618,
+        "ctimeNs": 1793897372685028618,
+        "sha256": "549084ae44c0375109ff0910f941cb7b566260ae4329fb00caf8ac789a2ed245"
+      },
+      {
+        "path": "visual-transactions/138f4066-23ef-4887-8881-31ddb042c981/intent.json",
+        "device": 2096,
+        "inode": 110299,
+        "bytes": 3975,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352151688538,
+        "ctimeNs": 1793897352151688538,
+        "sha256": "cc529d369e2565450e61b0e333ce960d85978e42cef62bae7065c27a3e8287ca"
+      },
+      {
+        "path": "visual-transactions/138f4066-23ef-4887-8881-31ddb042c981/outcome.json",
+        "device": 2096,
+        "inode": 110302,
+        "bytes": 314,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897362220358513,
+        "ctimeNs": 1793897362220358513,
+        "sha256": "99ad1dfd2df20a654224027df8aaf5a0f92b131b0f7608ca6e8f6ea5efac5dd2"
+      },
+      {
+        "path": "visual-transactions/138f4066-23ef-4887-8881-31ddb042c981/prepared.json",
+        "device": 2096,
+        "inode": 110318,
+        "bytes": 178,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897352712688722,
+        "ctimeNs": 1793897352712688722,
+        "sha256": "d5df4c16ca85ced558dbdb75d0a1d1b9d42a19acbdc43d2641402e63a26d2a8b"
+      },
+      {
+        "path": "visual-transactions/c0d6adf8-d375-417b-8ef4-30503d4489a2/intent.json",
+        "device": 2096,
+        "inode": 110333,
+        "bytes": 2906,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897398415176985,
+        "ctimeNs": 1793897399863510794,
+        "sha256": "2313e9165307a92f15c141bf651e6138faa80bf913d930bb7954a346fdce7240"
+      },
+      {
+        "path": "visual-transactions/d184a41d-11ee-49a4-9501-bc4c0898d04f/intent.json",
+        "device": 2096,
+        "inode": 110280,
+        "bytes": 2456,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338262409895,
+        "ctimeNs": 1793897338262409895,
+        "sha256": "1e4aba3eb38e977d017703530fc9c7d04a1954b7659a0b3d2e02f7509ce6c107"
+      },
+      {
+        "path": "visual-transactions/d184a41d-11ee-49a4-9501-bc4c0898d04f/outcome.json",
+        "device": 2096,
+        "inode": 110297,
+        "bytes": 314,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338552076657,
+        "ctimeNs": 1793897338555743325,
+        "sha256": "098c36fa0497656d0b8bd6716a60673e287f64084687e56b1738f60fd88c7228"
+      },
+      {
+        "path": "visual-transactions/d184a41d-11ee-49a4-9501-bc4c0898d04f/prepared.json",
+        "device": 2096,
+        "inode": 110295,
+        "bytes": 178,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897338423743282,
+        "ctimeNs": 1793897338427409949,
+        "sha256": "4a560fa5bebec2eee3428c2ceb3a2710f70930b837d8d168cd8c5c6d18383461"
+      },
+      {
+        "path": "visual-transactions/f1dbdd64-6c92-471e-9ef9-90b45ff1c321/intent.json",
+        "device": 2096,
+        "inode": 110321,
+        "bytes": 2906,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372545695239,
+        "ctimeNs": 1793897372549361906,
+        "sha256": "4ac635441647f24ac8a9c3c9994403b90773abc64d491fa4ed27fdc5ce9e8cd1"
+      },
+      {
+        "path": "visual-transactions/f1dbdd64-6c92-471e-9ef9-90b45ff1c321/outcome.json",
+        "device": 2096,
+        "inode": 110320,
+        "bytes": 314,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897384104172283,
+        "ctimeNs": 1793897384203172315,
+        "sha256": "b9a3636618627daa1aca68ecf95fb858b6c1f96061593f030c3b954908f9a5c0"
+      },
+      {
+        "path": "visual-transactions/f1dbdd64-6c92-471e-9ef9-90b45ff1c321/prepared.json",
+        "device": 2096,
+        "inode": 110330,
+        "bytes": 178,
+        "allocatedBytes": 4096,
+        "mode": "0o600",
+        "mtimeNs": 1793897372696028621,
+        "ctimeNs": 1793897372699695289,
+        "sha256": "1b5985b40a43754fd0b2d79b0f69219d214afe0bf9603b45f07f97a82c7d0de3"
+      }
+    ],
+    "directories": [
+      {
+        "path": "visual-documents",
+        "device": 2096,
+        "inode": 110298,
+        "mode": "0o700",
+        "mtimeNs": 1793897352159021873,
+        "ctimeNs": 1793897352159021873
+      },
+      {
+        "path": "visual-documents/00000001-0000-4000-8000-000000000001",
+        "device": 2096,
+        "inode": 110300,
+        "mode": "0o700",
+        "mtimeNs": 1793897352162688541,
+        "ctimeNs": 1793897352162688541
+      },
+      {
+        "path": "visual-documents/00000001-0000-4000-8000-000000000001/generations",
+        "device": 2096,
+        "inode": 110301,
+        "mode": "0o700",
+        "mtimeNs": 1793897352489021982,
+        "ctimeNs": 1793897352489021982
+      },
+      {
+        "path": "visual-registry",
+        "device": 2096,
+        "inode": 110279,
+        "mode": "0o700",
+        "mtimeNs": 1793897383777838842,
+        "ctimeNs": 1793897383777838842
+      },
+      {
+        "path": "visual-registry/pages",
+        "device": 2096,
+        "inode": 110281,
+        "mode": "0o700",
+        "mtimeNs": 1793897372674028614,
+        "ctimeNs": 1793897372674028614
+      },
+      {
+        "path": "visual-registry/roots",
+        "device": 2096,
+        "inode": 110282,
+        "mode": "0o700",
+        "mtimeNs": 1793897372685028618,
+        "ctimeNs": 1793897372685028618
+      },
+      {
+        "path": "visual-temporaries",
+        "device": 2096,
+        "inode": 110274,
+        "mode": "0o700",
+        "mtimeNs": 1793897338222076549,
+        "ctimeNs": 1793897338222076549
+      },
+      {
+        "path": "visual-temporaries/claims",
+        "device": 2096,
+        "inode": 110275,
+        "mode": "0o700",
+        "mtimeNs": 1793897405194845879,
+        "ctimeNs": 1793897405194845879
+      },
+      {
+        "path": "visual-transactions",
+        "device": 2096,
+        "inode": 110276,
+        "mode": "0o700",
+        "mtimeNs": 1793897395390175991,
+        "ctimeNs": 1793897395390175991
+      },
+      {
+        "path": "visual-transactions/138f4066-23ef-4887-8881-31ddb042c981",
+        "device": 2096,
+        "inode": 110293,
+        "mode": "0o700",
+        "mtimeNs": 1793897362220358513,
+        "ctimeNs": 1793897362220358513
+      },
+      {
+        "path": "visual-transactions/c0d6adf8-d375-417b-8ef4-30503d4489a2",
+        "device": 2096,
+        "inode": 110319,
+        "mode": "0o700",
+        "mtimeNs": 1793897399863510794,
+        "ctimeNs": 1793897399863510794
+      },
+      {
+        "path": "visual-transactions/d184a41d-11ee-49a4-9501-bc4c0898d04f",
+        "device": 2096,
+        "inode": 110278,
+        "mode": "0o700",
+        "mtimeNs": 1793897338555743325,
+        "ctimeNs": 1793897338555743325
+      },
+      {
+        "path": "visual-transactions/f1dbdd64-6c92-471e-9ef9-90b45ff1c321",
+        "device": 2096,
+        "inode": 110296,
+        "mode": "0o700",
+        "mtimeNs": 1793897384203172315,
+        "ctimeNs": 1793897384203172315
+      }
+    ],
+    "logicalBytes": 33581705,
+    "archive": "document-32-pair-1-baseline-failed-store.tar.gz",
+    "archiveSha256": "f32b1ab9740e6204ef499c60fc800933ae441bf8faff2f7bcfa01a75d2a87131",
+    "policy": "Original stopped Store retained, only read-only stat/read/archive. No coordinator open, recovery or GC. Copied bytes carry no physical deletion/continuation authority."
+  }
+]

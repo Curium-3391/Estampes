@@ -1,0 +1,53 @@
+{
+  "name": "candidate-negatives",
+  "command": [
+    "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+    "--test",
+    "--test-concurrency=1",
+    "/home/estampes/projects/pr1d-negative-candidate/tests/document-canonical-remediation.test.js",
+    "/home/estampes/projects/pr1d-negative-candidate/tests/documents-foundation.test.js",
+    "/home/estampes/projects/pr1d-negative-candidate/tests/documents-review.test.js"
+  ],
+  "cwd": "/home/estampes/projects/pr1d-native-candidate",
+  "environment": {
+    "HOME": "/home/estampes",
+    "USER": "estampes",
+    "LOGNAME": "estampes",
+    "LANG": "C.UTF-8",
+    "TZ": "Asia/Taipei",
+    "PATH": "/home/estampes/.nvm/versions/node/v22.23.4/bin:/usr/bin:/bin",
+    "TMPDIR": "/home/estampes/pr1d-native-ab-86_kgkbg",
+    "PR1D_SCRATCH": "/home/estampes/pr1d-native-ab-86_kgkbg",
+    "PR1D_OUTPUT": "/home/estampes/projects/Estampes/docs/rfc/unified-visual-architecture/evidence/pr1d-native-performance-ab/candidate-negatives",
+    "PR1D_SOURCE": "/home/estampes/projects/pr1d-native-candidate",
+    "PR1D_ACCEPT_ROOT": "/home/estampes/pr1d-native-ab-86_kgkbg",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "startedUTC": "2026-11-05T16:46:08Z",
+  "wallSeconds": 1.223205259999986,
+  "exitCode": 1,
+  "stop": null,
+  "budgetSeconds": 180,
+  "peakProcessRssKiB": 125244,
+  "peakTreeRssKiB": 180528,
+  "perProcessHwmKiB": {
+    "10097": 56820,
+    "10103": 67228,
+    "10110": 125244,
+    "10117": 82208
+  },
+  "peakAllocatedBytes": 0,
+  "scratch": "/home/estampes/pr1d-native-ab-86_kgkbg",
+  "log": "candidate-negatives/raw.log",
+  "sha256": "7b57833a7b74abfe69ced9177904a251de07e79316e865e255c28df2757b6d0c",
+  "inputManifestSha256": "3c0c0a6f1a79cba0df530fd6da74f500180cfc84e4a4ef77faac69afa065f344",
+  "counts": {
+    "tests": 60,
+    "pass": 59,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "tickHz": 100
+}

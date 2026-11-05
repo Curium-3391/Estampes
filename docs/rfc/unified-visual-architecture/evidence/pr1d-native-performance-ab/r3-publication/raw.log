@@ -1,0 +1,24 @@
+TAP version 13
+# Subtest: native selected proof survives three commits then rejects missing on-disk evidence
+ok 1 - native selected proof survives three commits then rejects missing on-disk evidence
+  ---
+  duration_ms: 8061.64101
+  type: 'test'
+  ...
+# {"damage":"missing","evidencePath":"visual-registry/pages/39b8ca011c7268ccd1b5a0c9f65b5851010eacd78d218952b8926c77590c83fa.json","current":{"generation":9,"rootHash":"44bec4abe3976af8242b542872082f6d423ccfec79f86d66e5489abfcaa31581","commitId":"tx:e5ee8700-7b25-47a7-a4a1-39c6b4984ef4","checksum":"7c3b387fee4c3920c67a757df1795464bc51e3bd24d521634c90ffbe99725bca"},"ledger":4,"problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Content-addressed metadata cannot be verified"}}
+# Subtest: native selected proof survives three commits then rejects corrupt on-disk evidence
+ok 2 - native selected proof survives three commits then rejects corrupt on-disk evidence
+  ---
+  duration_ms: 15176.75517
+  type: 'test'
+  ...
+# {"damage":"corrupt","evidencePath":"visual-registry/pages/c9e6dffaa57936ad8c69a28eafd09bffba2c92aa7df11aac6fcbb9f227a1c906.json","current":{"generation":9,"rootHash":"fd3656fefd756007d94bbf15f66c4640731f85c96517ef2ce7b232fbd5ed766d","commitId":"tx:89977805-0a21-4c9f-9d25-baa9bbf9fdba","checksum":"3bbeeefa11725f808af193aee2882381ef468618799fc0fe10b8743a01b6666a"},"ledger":4,"problem":{"code":"RECOVERY_REQUIRED","cause":"INTEGRITY_ERROR","message":"Content-addressed metadata cannot be verified"}}
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 23414.12415

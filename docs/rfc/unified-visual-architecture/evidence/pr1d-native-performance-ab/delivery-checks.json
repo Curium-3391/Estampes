@@ -1,0 +1,121 @@
+[
+  {
+    "name": "whitespace-initial",
+    "command": [
+      "git",
+      "diff",
+      "--cached",
+      "--check"
+    ],
+    "exitCode": 2,
+    "seconds": 0.023723010000139766,
+    "log": "delivery-checks/whitespace-initial/raw.log",
+    "sha256": "35a484c0d449339abbb0585094287b00b10d7e5368d4205c52ed1b8ffdaa476e"
+  },
+  {
+    "name": "docs",
+    "command": [
+      "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+      "scripts/check-docs.mjs"
+    ],
+    "exitCode": 0,
+    "seconds": 0.23494148999998288,
+    "log": "delivery-checks/docs/raw.log",
+    "sha256": "a2e66980d86ec06148ab1b3665670875402fb9bcd0952afaacfe04bf2cb237b8"
+  },
+  {
+    "name": "release",
+    "command": [
+      "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+      "scripts/check-release.mjs"
+    ],
+    "exitCode": 0,
+    "seconds": 0.037412099999528436,
+    "log": "delivery-checks/release/raw.log",
+    "sha256": "96f49fdce3cb8bc2397e364cdac64662a9c3aa6e5f666559179543db4f9e9026"
+  },
+  {
+    "name": "python-syntax",
+    "command": [
+      "python3",
+      "-c",
+      "import ast,pathlib; files=list(pathlib.Path('scripts/pr1d-native-ab').glob('*.py')); [ast.parse(p.read_text(),filename=str(p)) for p in files]; print('Python AST OK:',len(files))"
+    ],
+    "exitCode": 0,
+    "seconds": 0.04046615999959613,
+    "log": "delivery-checks/python-syntax/raw.log",
+    "sha256": "80e9d702947569461452c8ea384ba659cf89ba5539741c2219a506f97750536f"
+  },
+  {
+    "name": "node-syntax-benchmark",
+    "command": [
+      "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+      "--check",
+      "scripts/pr1d-native-ab/benchmark.mjs"
+    ],
+    "exitCode": 0,
+    "seconds": 0.02922930000022461,
+    "log": "delivery-checks/node-syntax-benchmark/raw.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "node-syntax-inspect-timeout",
+    "command": [
+      "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+      "--check",
+      "scripts/pr1d-native-ab/inspect-timeout.mjs"
+    ],
+    "exitCode": 0,
+    "seconds": 0.029986470000039844,
+    "log": "delivery-checks/node-syntax-inspect-timeout/raw.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "node-syntax-parity",
+    "command": [
+      "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+      "--check",
+      "scripts/pr1d-native-ab/parity.mjs"
+    ],
+    "exitCode": 0,
+    "seconds": 0.02732570999978634,
+    "log": "delivery-checks/node-syntax-parity/raw.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "whitespace-final",
+    "command": [
+      "git",
+      "diff",
+      "--cached",
+      "--check"
+    ],
+    "exitCode": 0,
+    "seconds": 0.016934309999669495,
+    "log": "delivery-checks/whitespace-final/raw.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "docs-final-report",
+    "command": [
+      "/home/estampes/.nvm/versions/node/v22.23.4/bin/node",
+      "scripts/check-docs.mjs"
+    ],
+    "exitCode": 0,
+    "seconds": 0.30196593000073335,
+    "log": "delivery-checks/docs-final-report/raw.log",
+    "sha256": "a2e66980d86ec06148ab1b3665670875402fb9bcd0952afaacfe04bf2cb237b8"
+  },
+  {
+    "name": "python-final-report",
+    "command": [
+      "python3",
+      "-c",
+      "import ast,pathlib; ast.parse(pathlib.Path('scripts/pr1d-native-ab/report.py').read_text()); print('Final report generator AST OK')"
+    ],
+    "exitCode": 0,
+    "seconds": 0.036522270000205026,
+    "log": "delivery-checks/python-final-report/raw.log",
+    "sha256": "adbd44448a93d2bbd6cc124ebf20d48cedc94f5d74b3f379cc6ad52f63fab964"
+  }
+]

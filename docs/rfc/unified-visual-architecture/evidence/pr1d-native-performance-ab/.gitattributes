@@ -1,0 +1,4 @@
+# Preserve raw TAP bytes, including historical assertion diff whitespace.
+**/raw.log -whitespace
+# Keep exact diff context markers; original and transformed hashes are sealed.
+native-test-adaptation.diff -whitespace
