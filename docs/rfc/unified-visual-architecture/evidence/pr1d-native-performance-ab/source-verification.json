@@ -1,0 +1,17 @@
+{
+  "baseline": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+  "candidate": "4814daf2378e9619f171c02a65792062957a8e99",
+  "candidateDescendsFromBaseline": true,
+  "originalFilesChecked": 1806,
+  "changedExistingFiles": [
+    {
+      "path": "src/documents/validation.js",
+      "baselineBlob": "a7a078e0943e08ec4329cafe75359bd9a9015d9d",
+      "candidateBlob": "43bed06ed2e258e7ab1472baa70662da5a5d970d"
+    }
+  ],
+  "productionDiff": "diff --git a/src/documents/validation.js b/src/documents/validation.js\nindex a7a078e..43bed06 100644\n--- a/src/documents/validation.js\n+++ b/src/documents/validation.js\n@@ -77,7 +77,12 @@ function jsonGuardSchema(limits) {\n     catch (e) { if (!(e instanceof DocumentValidationError)) throw e; issue(ctx, e.code, e.message, e.path); }\n   });\n }\n-export const jsonSchema = limits => jsonGuardSchema(limits).transform(value => JSON.parse(canonicalJson(value, limits)));\n+export const jsonSchema = limits => z.unknown().transform((value, ctx) => {\n+  // canonicalJson performs the complete guard synchronously before encoding.\n+  // Keep validation and the detached copy in one call, without a second scan.\n+  try { return JSON.parse(canonicalJson(value, limits)); }\n+  catch (e) { if (!(e instanceof DocumentValidationError)) throw e; issue(ctx, e.code, e.message, e.path); return z.NEVER; }\n+});\n export const bounded = (schema, limits) => jsonGuardSchema(limits).pipe(schema);\n export function issue(ctx, code, message, path = []) {\n   ctx.addIssue({ code: \"custom\", message, path, params: { documentCode: code } });\n",
+  "G2ToolsAndFixtureUnchanged": true,
+  "optimizationA": false,
+  "optimizationC": false
+}
