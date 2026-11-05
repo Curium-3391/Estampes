@@ -17,8 +17,8 @@ const {document,command,actor,epoch}=await imp('tests/fixtures/uva-persistence.m
 const emit=(event,data)=>console.log(JSON.stringify({event,...data}));
 const hash=v=>createHash('sha256').update(v).digest('hex');
 const options={profile:'linux-local-durable',purpose:'isolated-pr1c-testing',lifecycle:{enabled:true,autoMaintenance:false}};
-if(process.argv[2]==='direct'){
- const root=process.argv[3];
+if(process.argv[3]==='direct'){
+ const root=process.argv[2];
  const {assertScratchStore}=await imp('scripts/pr1d-investigation/scratch.mjs');await assertScratchStore(root);
  const {inspectPlatform}=await imp('src/persistence/platform.js');
  const {CommitCoordinator}=await imp('src/persistence/coordinator.js');
@@ -59,7 +59,7 @@ if(process.argv[2]==='direct'){
    emit('commit',{n,wallMs,parentCpuUs,workerCpuTicks:{user:workerAfter.userTicks-workerBefore.userTicks,system:workerAfter.systemTicks-workerBefore.systemTicks},ack:lastAck,transaction:diag.performance.transactions.at(-1),verification:diag.performance.verification,workerMemory:await mem()});
   }
   const warmCurrent=await current();emit('warm-summary',{documentJsonBytes:Buffer.byteLength(canonicalJson(d)),usage:await new ManagedFiles(root).usage(),latencies,workerMemory:await mem(),selectedCurrent:warmCurrent});await close();
-  const start=performance.now(),child=spawn('/usr/bin/flock',['-n','-E','73','-F',join(root,'WRITER.lock'),process.execPath,fileURLToPath(import.meta.url),'direct',root],{stdio:['ignore','pipe','pipe']});
+  const start=performance.now(),child=spawn('/usr/bin/flock',['-n','-E','73','-F',join(root,'WRITER.lock'),process.execPath,fileURLToPath(import.meta.url),root,'direct'],{stdio:['ignore','pipe','pipe']});
   let out='',err='';child.stdout.on('data',b=>out+=b);child.stderr.on('data',b=>err+=b);const timer=setTimeout(()=>child.kill('SIGKILL'),60000);
   const result=await new Promise(resolve=>child.on('exit',(code,signal)=>resolve({code,signal})));clearTimeout(timer);
   emit('direct-cold',{...result,wallMs:performance.now()-start,out,err});assert.equal(result.code,0);
