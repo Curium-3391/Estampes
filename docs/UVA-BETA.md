@@ -32,6 +32,12 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
   is **not** a way to make UVA the writer: that needs the storage cost fixed first
   (qualification issues #88–#91).
 - Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
+- **Commit budget.** The store's cold start grows with its whole commit history, and
+  the engine refuses a writer that takes longer than 30 s to start. The mirror
+  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 60) and
+  reports `budgetExhausted` in `diagnostics.mirror`. The canvas is unaffected.
+  Export what you need and start a new `ESTAMPES_UVA_BETA_DIR` to continue. If a
+  UVA store cannot start at all, the server logs it and runs without UVA.
 
 ## Enable on Linux
 
@@ -181,6 +187,36 @@ Set `ESTAMPES_UVA_BETA=0` and restart to return to legacy operation. Keep
 For Compose, remove the opt-in overlay and retain both volumes; add
 `ESTAMPES_UVA_BETA_DIR=/uva-beta` and retain its mount if serving saved exports
 while disabled. Re-enabling with the same directory/profile reopens Beta state.
+
+## Durability qualification (what was measured)
+
+`node scripts/uva-qualify.mjs` produces raw evidence for the canvas mirror's store:
+a long history, repeated `SIGKILL` of a committing process, a full filesystem, an
+export and recovery round trip, and many documents. Results on a Linux 6.18
+container (ext4 root, `linux-process-crash-test` profile, Node 22), one image of
+640×400 with up to 120 marks:
+
+| Check | Result |
+|---|---|
+| Acknowledged revision lost after kill | 0 in 6 trials of up to 8 kills each |
+| Store left read-only after a kill | 1 of 6 trials, and 3 of 3 earlier probes; data intact and exportable each time |
+| 60 / 100 commits: cold start, disk | 7 s, 4.7 MB / 12 s, 12 MB (two runs in parallel) |
+| About 200 commits | cold start exceeds the 30 s engine limit; about 100 MB on disk |
+| Filesystem full | commit refused with `STORAGE_UNAVAILABLE`, nothing acknowledged lost; restart while full opens read-only; writes resume once space is freed |
+| Export, then recover into a fresh store | hashes match, document restored |
+| 40 documents, then restart | all 40 listed; cold start 8 s |
+
+Findings that remain open:
+
+- A writer killed between creating a file and writing it leaves a zero-byte claim or
+  temporary file. Recovery treats that as corruption and the store stays read-only
+  (`read-only-recovery`) until it is exported and recovered. A narrow fix exists but
+  the recovery engine is hash-sealed, so it waits for an explicit decision.
+- Two interrupted CURRENT publications with no successful commit in between also
+  leave the store read-only ("Conflicting CURRENT claim lacks a selected terminal
+  classification"). This is the territory of issue #90.
+- Not provable in a container: host power loss, real ext4/XFS fsync ordering,
+  physical ENOSPC, near-64 MiB cold start (issues #89 and #91).
 
 ## Evidence and reporting
 

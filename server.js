@@ -2896,7 +2896,14 @@ moduleHost = await createModuleHost({
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
 });
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
-uvaService = await createUvaService({ enabled: config.uvaBeta, mirror: config.uvaBeta && config.uvaMirror, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
+// A UVA store that cannot start (for example a history too long to open within
+// the engine's startup limit) must never keep the whole server down: the legacy
+// canvas does not depend on it.
+const startUva = (options) => createUvaService(options).catch((error) => {
+  log("error", "[uva] could not start; continuing without UVA. The canvas is unaffected. Export the workspaces from a copy, or start a new ESTAMPES_UVA_BETA_DIR.", { code: error.code, error: error.message });
+  return createUvaService({ enabled: false });
+});
+uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: config.uvaBeta, mirror: config.uvaBeta && config.uvaMirror, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
   legacyItems: async (op) => {
     let entries;
     if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }

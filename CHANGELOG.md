@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- UVA durability qualification: `scripts/uva-qualify.mjs` (history, SIGKILL, full
+  filesystem, export/recovery, many documents) and the measured results in
+  `docs/UVA-BETA.md`. The mirror now stops at `ESTAMPES_UVA_MIRROR_MAX_COMMITS`
+  commits (default 60), because a store with about 200 commits could not start within
+  the engine's 30 s limit, and a UVA store that cannot start no longer stops the
+  server.
+
 - Opt-in UVA Experimental Beta: shared GPT/Workbench image workspaces, editable
   annotations and layers, existing visual-module execution, signed revision-safe
   CommitRoot transactions, explicit legacy copies and saved logical export/recovery.

@@ -94,3 +94,22 @@ test('a burst of canvas edits becomes a few checkpoints, not one commit per edit
   const doc = (await stack.call('experimental_workspace', { action: 'open', documentId: list[0].id })).structuredContent.document;
   assert.equal(doc.scenes[0].annotations.length, 12);
 });
+
+test('the mirror stops at its commit budget, says so, and never touches the canvas', { timeout: 90000 }, async t => {
+  const beta = await mkdtemp(join(tmpdir(), 'uva-mirror-budget-'));
+  const stack = await startStack({ cas: false, env: { ...env(beta), ESTAMPES_UVA_MIRROR_MAX_COMMITS: '2' } });
+  t.after(async () => { await stack.close(); await rm(beta, { recursive: true, force: true }); });
+  const imageId = await upload(stack, '#884422');
+  const status = async () => (await stack.call('experimental_workspace', { action: 'list' })).structuredContent;
+  // A budget of 2 allows exactly two mirror writes; the third is refused.
+  const edit = id => stack.call('present_visual', { imageId, annotations: [{ id, type: 'point', x: .2, y: .2, label: 'mark ' + id }] });
+  await edit('b1');
+  await until(async () => (await status()).workspaces[0]);
+  await edit('b2');
+  await until(async () => (await status()).workspaces[0]?.revision >= 2);
+  await edit('b3');
+  const diag = await until(async () => { const d = (await status()).diagnostics.mirror; return d.budgetExhausted && d; });
+  assert.match(String(diag.lastError ?? ''), /budget/i);
+  const state = (await stack.call('get_visual_state', { imageId })).structuredContent;
+  assert.match(JSON.stringify(state), /mark b3/); // the canvas itself kept the second mark
+});

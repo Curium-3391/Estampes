@@ -51,7 +51,7 @@ function checkLimits(d,limits=BETA_LIMITS){
 // mirror: the legacy canvas stays the writer; checkpoints of it are copied into
 // UVA documents (see syncCanvas). Mirror documents are read-only through UVA.
 export const MIRROR_LIMITS = Object.freeze({ ...BETA_LIMITS, workspaces:64, revisions:1_000_000, annotations:512 });
-export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false}={}){
+export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=60}={}){
   if(!enabled)return {enabled:false,async dispatch(){fail('UNSUPPORTED_TARGET','UVA Experimental Beta is disabled; legacy remains available');},async close(){}};
   if(!root||!['linux-process-crash-test','linux-local-durable'].includes(profile))fail('UNSUPPORTED_STORAGE','Set ESTAMPES_UVA_BETA_DIR and an explicit ESTAMPES_UVA_BETA_PROFILE (linux-process-crash-test is NOT durable)');
   const limits=mirror?MIRROR_LIMITS:BETA_LIMITS;
@@ -272,6 +272,10 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; mirror paused');
     const prior=s.documents.find(d=>d.provenance?.legacySetKey===key&&d.extensions?.[MIRROR_KEY]);
     if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash)return {status:'unchanged',documentId:prior.id,revision:prior.revision};
+    // Cold start (and disk) grow with the store's total commit history, and the
+    // engine refuses to start a writer that takes over 30 s. Stop early, visibly.
+    const commits=(await store.diagnostics()).contentCommits;
+    if(commits>=mirrorMaxCommits){mirrorState={...mirrorState,budgetExhausted:true,commits};fail('LIMIT','Mirror history budget reached ('+commits+'/'+mirrorMaxCommits+' commits). Export what you need, then start a new ESTAMPES_UVA_BETA_DIR; the canvas is unaffected.');}
     const time=now(),asset=await putAsset(bytes);
     if(source.imageId!==asset.legacyImageId)fail('INTEGRITY_ERROR','Legacy source bytes and image identity disagree');
     const docId=prior?.id??allocated('doc','mirror:'+key),sceneId=prior?.scenes[0].id??allocated('scene','mirror:'+key),layerId=allocated('layer','mirror:'+key);
