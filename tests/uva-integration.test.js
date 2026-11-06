@@ -49,6 +49,7 @@ test('D: stale signed commits conflict, exact retries return original ACK, tampe
  await assert.rejects(f.call({action:'commit',prepared:two.prepared}),/revision/i);
  const altered=structuredClone(one.prepared);altered.plan.command.changes[0].document.title='Forged';await assert.rejects(f.call({action:'commit',prepared:altered}),e=>e.code==='FORBIDDEN');
  assert.equal((await f.call({action:'open',documentId:d.id})).document.title,'One');
+ const asset=d.scenes[0].background.asset.assetId.slice(13);await rm(join(f.root,'assets',asset));const replay=await f.call({action:'commit',prepared:one.prepared});assert.deepEqual(replay.ack,r.ack);assert.equal(replay.assetErrors[0].code,'STORAGE_UNAVAILABLE');
 });
 test('E: interrupted real writer, recovery and original signed request replay keep Ledger/ACK identity',async t=>{
  const f=await fixture(t);const d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;
@@ -70,6 +71,9 @@ test('G: existing Graph router uses shared scene, grants and editable objects',a
  r=await f.edit(d,{type:'module',module:'org.estampes.graph',capability:'update_plot',params:{object:plot.id,expression:'sin(x)'}});d=r.document;
  assert.equal(d.scenes[0].objects.find(o=>o.id===plot.id).props.expression,'sin(x)');
  assert.equal((await f.call({action:'open',documentId:d.id})).document.revision,d.revision);
+ const p=await f.call({action:'prepare',documentId:d.id,expectedRevision:d.revision,requestId:requestId(),operation:{type:'module',module:'org.estampes.graph',capability:'update_plot',params:{object:plot.id,expression:'sin(2*x)'}}});
+ const accepted=await f.call({action:'commit',prepared:p.prepared});await f.host.registry.setRecord('org.estampes.graph',{state:'disabled',granted:[]});
+ assert.deepEqual((await f.call({action:'commit',prepared:p.prepared})).ack,accepted.ack);
 });
 test('H/I: unsupported durable mount, limits, exported assets and disabled legacy boundary',async t=>{
  const f=await fixture(t);const d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;

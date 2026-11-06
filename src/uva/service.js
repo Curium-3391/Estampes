@@ -207,10 +207,16 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const {plan,token}=prepared??{};
     if(!plan||plan.author!==author||plan.schema!=='estampes.uva-plan/1'||!/^[0-9a-f]{64}$/.test(token??''))fail('FORBIDDEN','Invalid prepared command');
     const expected=createHmac('sha256',signingKey).update(canonicalJson(plan)).digest();if(!timingSafeEqual(expected,Buffer.from(token,'hex')))fail('FORBIDDEN','Prepared command was changed');
-    const d=plan.command.changes[0].document;checkLimits(d);await verifyAssets(d);
-    const s=await snapshot();
+    const change=plan.command.changes[0],d=change.document;checkLimits(d);
+    const s=await snapshot(),current=s.documents.find(x=>x.id===d.id);
+    // If the observed revision has advanced, this exact command can only
+    // replay or conflict inside the Ledger authority; it cannot publish a new
+    // effect. Do not make an already accepted ACK depend on later module grants
+    // or image availability. The returned view separately reports asset errors.
+    const replayOnly=Boolean(current&&current.revision!==change.expectedRevision);
+    if(!replayOnly)await verifyAssets(d);
     if(!s.documents.some(x=>x.id===d.id)&&s.documents.length>=BETA_LIMITS.workspaces)fail('LIMIT','Workspace limit reached');
-    for(const r of plan.requirements){const m=moduleHost?.registry.get(r.module);if(!m||m.record.state!=='enabled'||m.manifest.version!==r.version||!same(m.record.granted,r.granted))fail('FORBIDDEN','Module grant/version changed; prepare again');}
+    for(const r of replayOnly?[]:plan.requirements){const m=moduleHost?.registry.get(r.module);if(!m||m.record.state!=='enabled'||m.manifest.version!==r.version||!same(m.record.granted,r.granted))fail('FORBIDDEN','Module grant/version changed; prepare again');}
     const actor={principal:principal(author),authenticatedOwnerId:OWNER,origin:author==='user'?'app-user':'model-tool',effectiveGrants:[],targetScope:[],grantRevision:1,executionId:createId('exec')};
     const result=await store.commit(plan.command,actor,s.authority.epoch);
     return {...await view(d.id),ack:result.ack,replayed:result.replayed};

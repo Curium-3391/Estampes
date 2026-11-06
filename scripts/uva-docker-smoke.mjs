@@ -27,7 +27,7 @@ try{
  check(written.ack.durability==='process-crash-test','explicit non-durable ACK');
  const saved=await call('experimental_workspace',{action:'export',documentId:id});
  const expected=Buffer.from(await (await fetch(saved.url)).arrayBuffer());check(expected.length>0,'saved logical export with original image');
- await client.close();docker('restart',name);await connect();
+ await client.close();docker('restart',name);port=docker('port',name,'8787/tcp').split(':').at(-1);await connect();
  const reopened=await call('experimental_workspace',{action:'open',documentId:id});check(JSON.stringify(reopened.document)===JSON.stringify(written.document),'reopen after real container restart');
  const retry=await call('experimental_workspace',{action:'commit',prepared:p.prepared});check(JSON.stringify(retry.ack)===JSON.stringify(written.ack),'restart preserves exact Ledger ACK replay');
  await client.close();docker('rm','-f',name);await start(false);
