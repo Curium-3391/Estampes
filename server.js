@@ -2473,7 +2473,7 @@ function makeServer() {
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
-  registerUvaTools(server, { service: uvaService, visualUri: VISUAL_URI, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
+  registerUvaTools(server, { service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
   return server;
 }
 

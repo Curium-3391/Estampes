@@ -10,7 +10,14 @@ function uvaLauncher(){
 function uvaNode(tag,attrs={}){const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs))if(v!==undefined)n.setAttribute(k,String(v));return n;}
 function uvaScene(){return uva.doc?.scenes.find(s=>s.id===uva.scene)??uva.doc?.scenes[0];}
 function uvaStatus(message,error=false){const el=document.querySelector('#uva-status');if(el){el.textContent=message;el.setAttribute('role',error?'alert':'status');}}
-async function uvaCall(args){return wbCall('uva_user_command',args);}
+async function uvaDecode(r){
+ if(!r.transport)return r;const first=r.transport;let data=first.data,next=first.next;
+ while(next<first.total){const part=(await wbCall('uva_user_command',{action:'read_chunk',transportId:first.id,offset:next})).transport;
+  if(!part||part.id!==first.id||part.offset!==next||part.total!==first.total||part.next<=next)throw Error('分段資料不一致；請重新開啟');data+=part.data;next=part.next;
+ }
+ return JSON.parse(data);
+}
+async function uvaCall(args){return uvaDecode(await wbCall('uva_user_command',args));}
 function uvaShow(){
  if(!UVA_BETA_ENABLED)return;
  uva.shown=true;wbEl.hidden=false;wbArea.hidden=true;
@@ -19,6 +26,7 @@ function uvaShow(){
 }
 function uvaAccept(r){
  if(r?.kind!=='estampes.uva/1'||r.code)return;
+ if(r.transport){uvaDecode(r).then(uvaAccept).catch(e=>uvaStatus(e.message,true));return;}
  if(r.document&&!r.prepared){uva.doc=r.document;uva.pending=null;uva.renderKey=null;}
  uvaShow();
 }
@@ -109,7 +117,7 @@ async function uvaPaint(){
   try{uva.renderData=await uvaCall({action:'render',documentId:docId,sceneId:s.id});if(!uva.shown||uva.doc?.id!==docId||uvaScene()?.id!==s.id)return;uva.renderKey=key;}catch(e){uvaStatus(e.message,true);return;}
  }
  const svg=uvaNode('svg',{id:'uva-canvas',viewBox:'0 0 '+s.extent.width+' '+s.extent.height,width:Math.min(760,s.extent.width)*uva.zoom,height:Math.min(760,s.extent.width)*uva.zoom*s.extent.height/s.extent.width,style:'display:block;touch-action:none;user-select:none'});
- svg.append(uvaNode('image',{href:'data:image/png;base64,'+uva.renderData.image.data,width:s.extent.width,height:s.extent.height}));
+ svg.append(uvaNode('image',{href:'data:'+uva.renderData.image.mimeType+';base64,'+uva.renderData.image.data,width:s.extent.width,height:s.extent.height}));
  svg.append(uvaNode('image',{href:'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(uva.renderData.objectsSvg))),width:s.extent.width,height:s.extent.height}));
  for(const l of s.layers){
   if(!l.visible)continue;const group=uvaNode('g',{'data-layer':l.id,opacity:l.opacity});svg.append(group);

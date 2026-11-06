@@ -84,3 +84,21 @@ test('Workbench file chooser creates and extends a persistent multi-image worksp
  const list=await stack.call('experimental_workspace',{action:'list'});assert.equal(list.structuredContent.workspaces[0].items,3);
  assert.deepEqual(w.errors,[]);
 });
+
+test('Real high-entropy image fits Host budget and Workbench reassembles bounded pixel chunks',{skip:noBrowser,timeout:90000},async t=>{
+ const beta=await mkdtemp(join(tmpdir(),'uva-photo-'));
+ const stack=await startStack({cas:false,env:{ESTAMPES_UVA_BETA:'1',ESTAMPES_UVA_BETA_DIR:beta,ESTAMPES_UVA_BETA_PROFILE:'linux-process-crash-test',ESTAMPES_RATE_LIMIT_PER_MIN:'0'}});
+ t.after(async()=>{await stack.close();await rm(beta,{recursive:true,force:true});});
+ const {randomBytes}=await import('node:crypto');
+ const buffer=await sharp(randomBytes(640*480*3),{raw:{width:640,height:480,channels:3}}).jpeg({quality:90}).toBuffer(),data=buffer.toString('base64');
+ let uploadId,imageId;for(let offset=0;offset<data.length;offset+=400000){const r=await stack.call('upload_visual_image',{...(uploadId?{uploadId}:{}),total:data.length,offset,data:data.slice(offset,offset+400000)});assert.ok(!r.isError);uploadId=r.structuredContent.uploadId;imageId=r.structuredContent.imageId??imageId;}
+ const p=await stack.call('experimental_workspace',{action:'prepare',requestId:requestId(),operation:{type:'create',imageIds:[imageId]}});assert.ok(!p.isError,JSON.stringify(p));
+ const c=await stack.call('experimental_workspace',{action:'commit',prepared:p.structuredContent.prepared}),id=c.structuredContent.document.id;assert.ok(id);
+ const model=await stack.call('experimental_workspace',{action:'render',documentId:id});assert.ok(!model.isError,JSON.stringify(model));assert.ok(JSON.stringify(model).length<=145000);assert.equal(model.structuredContent.coordinateSystem,'normalized-top-left');assert.ok(model.content.some(c=>c.type==='image'));
+ const first=await stack.call('uva_user_command',{action:'render',documentId:id});assert.ok(!first.isError);assert.ok(first.structuredContent.transport);assert.ok(JSON.stringify(first).length<=145000);
+ let all=first.structuredContent.transport.data,next=first.structuredContent.transport.next;const tr=first.structuredContent.transport;
+ while(next<tr.total){const r=await stack.call('uva_user_command',{action:'read_chunk',transportId:tr.id,offset:next});assert.ok(!r.isError);assert.ok(JSON.stringify(r).length<=145000);assert.equal(r.structuredContent.transport.offset,next);all+=r.structuredContent.transport.data;next=r.structuredContent.transport.next;}
+ const pixels=JSON.parse(all);assert.equal(pixels.revision,c.structuredContent.revision);assert.equal((await sharp(Buffer.from(pixels.image.data,'base64')).metadata()).width,640);
+ const w=await stack.open({result:()=>stack.call('experimental_workspace',{action:'open',documentId:id})});await w.frame.locator('#uva-canvas').waitFor();
+ assert.ok((await w.frame.locator('#uva-canvas image').first().getAttribute('href')).length>145000);assert.deepEqual(w.errors,[]);
+});
