@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile, mkdir, link } from "node:fs/promises";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { lifecycleFixture, document, command, actor, epoch, titleEdit, TIME, DAY } from "./fixtures/uva-lifecycle.mjs";
@@ -69,13 +69,87 @@ test("PR-1D: bootstrap claim left after rename is completed idempotently on rest
   assert.equal(store.status.state,"ready",JSON.stringify(store.status.problem));assert.equal((await store.snapshot()).documents.length,0);assert.deepEqual(await readdir(join(root,"visual-temporaries/claims")),[]);
 });
 
-test("PR-1D: two durable claims for one target are ambiguous and fail closed",async t=>{
+test("qualification: a writer killed after creating, before writing, a claim file leaves an empty claim that recovery removes",async t=>{
+  const f=await lifecycleFixture(t),claimId=randomUUID(),path="visual-temporaries/claims/"+claimId+".json";
+  await mkdir(join(f.root,"visual-temporaries/claims"),{recursive:true,mode:0o700});await writeFile(join(f.root,path),"",{mode:0o600});
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  assert.equal(await new ManagedFiles(f.root).exists(path),false);
+});
+
+test("qualification: an empty claim next to a temporary file carrying its identity still fails closed",async t=>{
+  const f=await lifecycleFixture(t),claimId=randomUUID();
+  await mkdir(join(f.root,"visual-temporaries/claims"),{recursive:true,mode:0o700});
+  await writeFile(join(f.root,"visual-temporaries/claims/"+claimId+".json"),"",{mode:0o600});
+  await writeFile(join(f.root,"visual-registry/CURRENT.json.tmp-"+claimId),"{}",{mode:0o600});
+  await f.reopen();assert.equal(f.store.status.state,"read-only-recovery");
+});
+
+test("qualification: a truncated non-empty claim still fails closed",async t=>{
+  const f=await lifecycleFixture(t),claimId=randomUUID();
+  await mkdir(join(f.root,"visual-temporaries/claims"),{recursive:true,mode:0o700});
+  await writeFile(join(f.root,"visual-temporaries/claims/"+claimId+".json"),'{"schema":"estampes.tem',{mode:0o600});
+  await f.reopen();assert.equal(f.store.status.state,"read-only-recovery");
+});
+
+test("qualification: a zero-byte temporary of an uncommitted transaction is an interrupted write and does not wedge the store",async t=>{
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root),claimId=randomUUID(),finalPath="visual-registry/pages/"+"a".repeat(64)+".json";
+  const claim={schema:"estampes.temporary-claim/1",claimId,owner:{kind:"transaction",id:randomUUID()},finalPath,temporaryPath:finalPath+".tmp-"+claimId,hash:"b".repeat(64),bytes:120,label:"page"};
+  await files.durableCreate("visual-temporaries/claims/"+claimId+".json",Buffer.from(canonicalJson(claim)),"test-claim");
+  await writeFile(join(f.root,claim.temporaryPath),"",{mode:0o600});
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  const next=document(),result=await f.store.commit(command([next]),actor(),await epoch(f.store));assert.ok(result.ack);
+});
+
+test("qualification: a partly written temporary of an uncommitted transaction is removed at open",async t=>{
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root),claimId=randomUUID(),finalPath="visual-registry/pages/"+"a".repeat(64)+".json";
+  const claim={schema:"estampes.temporary-claim/1",claimId,owner:{kind:"transaction",id:randomUUID()},finalPath,temporaryPath:finalPath+".tmp-"+claimId,hash:"b".repeat(64),bytes:120,label:"page"};
+  await files.durableCreate("visual-temporaries/claims/"+claimId+".json",Buffer.from(canonicalJson(claim)),"test-claim");
+  await writeFile(join(f.root,claim.temporaryPath),"{partial",{mode:0o600});
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  assert.equal(await files.exists(claim.temporaryPath),false);
+});
+
+test("qualification: a staged claim left by an interrupted create is removed at open",async t=>{
+  const f=await lifecycleFixture(t),claimId=randomUUID(),path="visual-temporaries/claims/"+claimId+".json.partial";
+  await mkdir(join(f.root,"visual-temporaries/claims"),{recursive:true,mode:0o700});await writeFile(join(f.root,path),'{"sche',{mode:0o600});
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  assert.equal(await new ManagedFiles(f.root).exists(path),false);
+});
+
+test("qualification: a claim interrupted between link and unlink (two names, one inode) is recovered",async t=>{
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root),claimId=randomUUID(),finalPath="visual-registry/pages/"+"c".repeat(64)+".json";
+  const claim={schema:"estampes.temporary-claim/1",claimId,owner:{kind:"transaction",id:randomUUID()},finalPath,temporaryPath:finalPath+".tmp-"+claimId,hash:"d".repeat(64),bytes:3,label:"page"};
+  const path="visual-temporaries/claims/"+claimId+".json";
+  await files.durableCreate(path,Buffer.from(canonicalJson(claim)),"test-claim");
+  await link(join(f.root,path),join(f.root,path+".partial"));
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  assert.equal(await files.exists(path+".partial"),false);
+});
+
+test("qualification: two never-classified aborted CURRENT claims are closed at open",async t=>{
+  const f=await lifecycleFixture(t),files=new ManagedFiles(f.root);
+  for(let i=0;i<2;i++){const claimId=randomUUID(),body=Buffer.from('{"never":"published-'+i+'"}');
+    const claim={schema:"estampes.temporary-claim/1",claimId,owner:{kind:"transaction",id:randomUUID()},finalPath:"visual-registry/CURRENT.json",temporaryPath:"visual-registry/CURRENT.json.tmp-"+claimId,hash:createHash("sha256").update(body).digest("hex"),bytes:body.length,label:"current"};
+    await files.durableCreate("visual-temporaries/claims/"+claimId+".json",Buffer.from(canonicalJson(claim)),"test-claim");
+    await writeFile(join(f.root,claim.temporaryPath),body,{mode:0o600});}
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  const next=document(),result=await f.store.commit(command([next]),actor(),await epoch(f.store));assert.ok(result.ack);
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+});
+
+// Changed by the engine rework: a CURRENT claim whose transaction never became a
+// commit member was never published (publication puts the membership in the very
+// root CURRENT names), so several of them are closed as aborted rather than
+// leaving the store read-only. A claim that matches CURRENT without membership
+// still fails closed (H-01 tests below).
+test("PR-1D: two never-published durable claims for CURRENT are closed as aborted",async t=>{
   const f=await lifecycleFixture(t),files=new ManagedFiles(f.root),owner=id=>({kind:"transaction",id});
   for(const claimId of [randomUUID(),randomUUID()]){
     const claim={schema:"estampes.temporary-claim/1",claimId,owner:owner(randomUUID()),finalPath:"visual-registry/CURRENT.json",temporaryPath:"visual-registry/CURRENT.json.tmp-"+claimId,hash:"a".repeat(64),bytes:1,label:"conflict"};
     await files.durableCreate("visual-temporaries/claims/"+claimId+".json",Buffer.from(canonicalJson(claim)),"test-claim");
   }
-  await f.reopen();assert.equal(f.store.status.state,"read-only-recovery");
+  await f.reopen();assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
+  assert.deepEqual(f.store.status.recovery.filter(r=>r.claimId).map(r=>r.outcome),["aborted","aborted"]);
 });
 
 for(const laterCommit of [false,true])test("PR-1D native finding H-01: superseded CURRENT claim retains exact historical publication proof / later="+laterCommit,async t=>{

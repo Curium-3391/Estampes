@@ -74,7 +74,7 @@ async function history(n) {
     maintenance: diag.maintenance, state: diag.state, coldOpenMs, peakRssMb: rss(),
   };
   result.pass = !failure && reopened === revision && diag.state === 'ready';
-  await rm(dir, { recursive: true, force: true });
+  if (arg('keep')) { result.keptAt = dir; } else await rm(dir, { recursive: true, force: true });
   return result;
 }
 

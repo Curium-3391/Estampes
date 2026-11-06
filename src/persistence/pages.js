@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { hashJson, parse, ContentHashSchema, canonicalJson } from "../documents/validation.js";
 import { integrity, fail } from "./errors.js";
+import { physicalFingerprint } from "./filesystem.js";
+const PAGE_PROOF_BYTES=64*1024*1024;
 const kindSchema=z.enum(["registry","locator","ledger","commitIndex","retention","authority"]);
 const rootSchema=z.object({schema:z.literal("estampes.index-root/1"),kind:kindSchema,
   buckets:z.record(z.string().regex(/^[0-9a-f]{2}$/),ContentHashSchema)}).strict();
@@ -13,8 +15,18 @@ export class PageStore {
   async hashed(hash,folder="visual-registry/pages",limit=4*1024*1024){
     parse(ContentHashSchema,hash);const path=folder+"/"+hash+".json";this.track.add(path);
     if(this.cache.has(path))return this.cache.get(path).value;
+    const proofs=!this.plan&&this.io.observations?this.io.pageProofs:null,proof=proofs?.entries.get(path);
+    if(proof){
+      try{const info=await this.io.info(path);
+        if(physicalFingerprint(info)===proof.fingerprint&&info.bytes===proof.bytes){this.io.observed(path,info,proof.contentHash);return proof.value;}
+      }catch(e){if(e.code!=="ENOENT")throw e;}
+      proofs.entries.delete(path);proofs.bytes-=proof.bytes;
+    }
     try {
       const value=await (this.plan??this.io).json(path,limit);integrity(hashJson(value)===hash,"Content-addressed metadata hash mismatch");
+      const identity=proofs&&this.io.jsonIdentities?.get(value),fingerprint=proofs&&this.io.observations.get(path);
+      if(identity&&fingerprint&&identity.bytes<=PAGE_PROOF_BYTES/16){proofs.entries.set(path,{value,fingerprint,contentHash:identity.hash,bytes:identity.bytes});proofs.bytes+=identity.bytes;
+        while(proofs.bytes>PAGE_PROOF_BYTES){const [oldest,old]=proofs.entries.entries().next().value;proofs.entries.delete(oldest);proofs.bytes-=old.bytes;}}
       const bytes=Buffer.byteLength(canonicalJson(value));this.cache.set(path,{value,bytes});this.cacheState.bytes+=bytes;
       while(this.cacheState.bytes>4*1024**2){const key=this.cache.keys().next().value;this.cacheState.bytes-=this.cache.get(key).bytes;this.cache.delete(key);}return value;
     }catch(e){fail("INTEGRITY_ERROR","Content-addressed metadata cannot be verified",{storageIntegrity:true,cause:e.code??"IO_ERROR"});}

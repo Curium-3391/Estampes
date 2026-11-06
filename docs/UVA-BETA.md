@@ -34,7 +34,7 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
 - Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
 - **Commit budget.** The store's cold start grows with its whole commit history, and
   the engine refuses a writer that takes longer than 30 s to start. The mirror
-  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 60) and
+  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 300) and
   reports `budgetExhausted` in `diagnostics.mirror`. The canvas is unaffected.
   Export what you need and start a new `ESTAMPES_UVA_BETA_DIR` to continue. If a
   UVA store cannot start at all, the server logs it and runs without UVA.
@@ -196,27 +196,42 @@ export and recovery round trip, and many documents. Results on a Linux 6.18
 container (ext4 root, `linux-process-crash-test` profile, Node 22), one image of
 640×400 with up to 120 marks:
 
-| Check | Result |
-|---|---|
-| Acknowledged revision lost after kill | 0 in 6 trials of up to 8 kills each |
-| Store left read-only after a kill | 1 of 6 trials, and 3 of 3 earlier probes; data intact and exportable each time |
-| 60 / 100 commits: cold start, disk | 7 s, 4.7 MB / 12 s, 12 MB (two runs in parallel) |
-| About 200 commits | cold start exceeds the 30 s engine limit; about 100 MB on disk |
-| Filesystem full | commit refused with `STORAGE_UNAVAILABLE`, nothing acknowledged lost; restart while full opens read-only; writes resume once space is freed |
-| Export, then recover into a fresh store | hashes match, document restored |
-| 40 documents, then restart | all 40 listed; cold start 8 s |
+| Check | Before the engine rework | After |
+|---|---|---|
+| Acknowledged revision lost after kill | 0 in 6 trials | 0 in 18 trials (180 kills) |
+| Store left read-only after a kill | 1 in 6 trials, 3 of 3 earlier probes | 0 in 18 trials |
+| 150 commits: one commit | 4.4 s | 1.9 s |
+| 300 commits: cold start | over the 30 s limit from about 200 commits | 9.7 s |
+| 300 commits: commit latency p50 / p95 | not reachable | 2.2 s / 3.3 s |
+| Disk per commit (120-mark canvas) | about 0.5 MB, growing with history | about 0.11 MB, constant |
+| Filesystem full | refused with `STORAGE_UNAVAILABLE`, nothing lost; writes resume once space is freed | unchanged |
+| Export, then recover into a fresh store | hashes match | unchanged |
 
-Findings that remain open:
+What the rework changed (all in `src/persistence/`, owner-authorized; the sealed
+hashes and the reason are recorded in
+`docs/rfc/unified-visual-architecture/evidence/pr1b-runtime-source-index.json`):
 
-- A writer killed between creating a file and writing it leaves a zero-byte claim or
-  temporary file. Recovery treats that as corruption and the store stays read-only
-  (`read-only-recovery`) until it is exported and recovered. A narrow fix exists but
-  the recovery engine is hash-sealed, so it waits for an explicit decision.
-- Two interrupted CURRENT publications with no successful commit in between also
-  leave the store read-only ("Conflicting CURRENT claim lacks a selected terminal
-  classification"). This is the territory of issue #90.
-- Not provable in a container: host power loss, real ext4/XFS fsync ordering,
-  physical ENOSPC, near-64 MiB cold start (issues #89 and #91).
+- **Crash safety.** Claim files are written under a `.partial` name and linked into
+  place when complete. On open, leftovers that cannot be published (partial claims,
+  zero-byte claims, torn temporaries of uncommitted transactions, CURRENT claims of
+  transactions that never became members) are closed as aborted instead of leaving
+  the store read-only. Anything tied to a committed transaction still fails closed.
+- **Bounded store-wide recovery points:** the newest 20 plus named checkpoints, as
+  the storage RFC specifies. Every Document's own history stays lossless.
+- **Verification that does not grow with history.** Open and commit verify the
+  root, every index, the current closure, retained recovery points and the Ledger,
+  but reconstruct historical Document versions only when they are read; GC, backup
+  and the `verify` maintenance action still verify all history. Settled
+  transactions are not re-synced on every open. Verified index pages are reused
+  while their physical fingerprint is unchanged, and dependencies are re-checked by
+  fingerprint (device, inode, size, mtime, ctime) instead of being hashed again.
+- **Shorter delta chains:** a full copy every 32 revisions.
+
+Still open: cold start and commit time still grow slowly with history (the
+transaction journal and the Ledger are read in full at open; journal compaction is
+part of maintenance, which stays off in the Beta). Not provable in a container:
+host power loss, real ext4/XFS fsync ordering, physical ENOSPC, near-64 MiB cold
+start (issues #89 and #91).
 
 ## Evidence and reporting
 

@@ -27,9 +27,20 @@ export async function registerTemporary(files,finalPath,bytes,label,ownerInput){
 }
 
 async function inventory(files,gcOwnedPaths=new Set()){
-  const claims=new Map(),claimDir="visual-temporaries/claims";
-  if(await files.exists(claimDir))for(const name of await readdir(files.path(claimDir))){
+  const claims=new Map(),emptyClaims=new Map(),claimDir="visual-temporaries/claims";
+  // A claim is staged as <id>.json.partial and linked into place only when
+  // complete (ManagedFiles.durableCreate). A leftover partial owns nothing; it is
+  // removed first, because one interrupted between link and unlink still shares
+  // the claim's inode and would make the claim look multiply linked.
+  const listed=await files.exists(claimDir)?await readdir(files.path(claimDir)):[];
+  for(const name of listed)if(/^[0-9a-f-]{36}\.json\.partial$/.test(name))await files.remove(claimDir+"/"+name,"claim-partial");
+  for(const name of listed){
+    if(/^[0-9a-f-]{36}\.json\.partial$/.test(name))continue;
     if(!/^[0-9a-f-]{36}\.json$/.test(name))fail("INTEGRITY_ERROR","Unknown temporary claim filename",{storageIntegrity:true});
+    // Stores written before claims were staged can hold a zero-byte claim from the
+    // same interruption. Its temporary was never created (that happens only after
+    // the claim is durable), so it owns nothing; checked against the tree below.
+    if((await files.info(claimDir+"/"+name)).bytes===0){emptyClaims.set(name.slice(0,-5),claimDir+"/"+name);continue;}
     const claim=parse(TemporaryClaimSchema,await files.json(claimDir+"/"+name,16*1024));
     integrity(name===claim.claimId+".json"&&claim.temporaryPath===claim.finalPath+".tmp-"+claim.claimId,"Temporary claim identity mismatch");
     integrity(!claims.has(claim.temporaryPath),"Temporary path has conflicting owners");claims.set(claim.temporaryPath,claim);
@@ -40,6 +51,10 @@ async function inventory(files,gcOwnedPaths=new Set()){
     const st=await lstat(path);files.validateEntry(st);
     if(st.isDirectory())await walk(path);else if(/\.tmp-[0-9a-f]{8}-[0-9a-f-]{27}$/.test(name))found.push(name);
   }};await walk(files.root);
+  for(const [id,claimPath] of emptyClaims){
+    integrity(!found.some(path=>path.endsWith(".tmp-"+id)),"Empty temporary claim has a temporary file");
+    await files.remove(claimPath,"temporary-claim");
+  }
   for(const path of found)if(!claims.has(path)&&!gcOwnedPaths.has(path))fail("INTEGRITY_ERROR","Unattributed atomic temporary file",{storageIntegrity:true,path});
   return claims;
 }
@@ -120,8 +135,16 @@ export async function classifyTemporaryClaims(files,snapshot){
       outcomes.push({claimId:claim.claimId,owner:"tx:"+claim.owner.id,outcome:"gc-owned",temporary:await files.exists(claim.temporaryPath),final:false});continue;}
     if(claim.finalPath!=="visual-registry/CURRENT.json")integrity(!finalOwners.has(claim.finalPath),"Atomic target has conflicting temporary owners");
     const group=finalOwners.get(claim.finalPath)??[];finalOwners.set(claim.finalPath,group);
-    const tx="tx:"+claim.owner.id,member=snapshot.indices.commitIndex.get(tx),temporary=await files.exists(claim.temporaryPath),final=await files.exists(claim.finalPath);
-    if(temporary){const digest=await files.digest(claim.temporaryPath);integrity(digest.hash===claim.hash&&digest.bytes===claim.bytes,"Attributed temporary hash mismatch");}
+    const tx="tx:"+claim.owner.id,member=snapshot.indices.commitIndex.get(tx);let temporary=await files.exists(claim.temporaryPath);const final=await files.exists(claim.finalPath);
+    if(temporary){const digest=await files.digest(claim.temporaryPath);
+      if(digest.hash!==claim.hash||digest.bytes!==claim.bytes){
+        // Bytes are fsynced before the rename, so a temporary that differs from its
+        // claim is a write the process never finished. It holds nothing unique
+        // unless its transaction committed, which stays fatal.
+        integrity(!member,"Attributed temporary hash mismatch");
+        await files.remove(claim.temporaryPath,"torn-temporary",{expected:digest});temporary=false;
+      }
+    }
     let finalMatches=false;if(final){const digest=await files.digest(claim.finalPath);finalMatches=digest.hash===claim.hash&&digest.bytes===claim.bytes;}
     const publication=member&&claim.finalPath==="visual-registry/CURRENT.json"?await selectedPublication(files,snapshot,claim,member):undefined;
     if(claim.finalPath==="visual-registry/CURRENT.json"&&finalMatches)integrity(member&&publication,"Matching CURRENT bytes lack exact selected transaction ownership");
@@ -144,8 +167,14 @@ export async function classifyTemporaryClaims(files,snapshot){
       }else{
         // A prior selected recovery classification can also own an aborted
         // temporary. It never becomes publication evidence or a CURRENT owner.
+        // A claim classified before must match that classification exactly. A
+        // new one is aborted only when its transaction never became a member:
+        // a temporary that still exists was never renamed into CURRENT. Repeated
+        // interruptions (including of the recovery epoch itself) therefore close
+        // here instead of wedging the store.
         const prior=snapshot.indices.retention.get("temporary:"+claim.claimId);
-        integrity(outcome==="aborted"&&prior&&sameClaim(prior,claim)&&prior.outcome==="aborted"&&prior.classifiedGeneration<snapshot.root.generation,"Conflicting CURRENT claim lacks a selected terminal classification");
+        if(prior)integrity(outcome==="aborted"&&sameClaim(prior,claim)&&prior.outcome==="aborted"&&prior.classifiedGeneration<snapshot.root.generation,"Conflicting CURRENT claim lacks a selected terminal classification");
+        else integrity(outcome==="aborted"&&!snapshot.indices.commitIndex.has("tx:"+claim.owner.id),"Conflicting CURRENT claim lacks a selected terminal classification");
       }
     }
     published.sort((a,b)=>a.generation-b.generation);

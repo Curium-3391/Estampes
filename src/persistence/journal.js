@@ -38,6 +38,10 @@ export class IntentJournal {
       if(await this.files.exists(path+"/outcome.json")){
         const old=parse(outcomeSchema,await this.files.json(path+"/outcome.json"));integrity(old.commitId===id&&old.outcome===(member?"committed":"aborted"),"Outcome contradicts selected committed root; refusing rollback");
         if(member)integrity(old.membership?.generation===member.generation&&old.membership.registryRootHash===member.registryRootHash&&old.membership.resultHash===member.resultHash,"Outcome membership mismatch");
+        // A matching outcome is only ever made visible by an atomic write (fsync,
+        // rename, directory fsync) after its intent: this transaction is settled.
+        // Re-syncing every settled transaction made each open O(history) fsyncs.
+        outcomes.push({commitId:id,outcome:member?"committed":"aborted"});continue;
       }
       await this.files.resync(path+"/intent.json");
       await this.files.point("recovery.before-outcome",{commitId:id});await this.outcome(id,member);
