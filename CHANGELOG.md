@@ -22,6 +22,9 @@
   An image whose legacy canvas had an image layer was refused with
   `UNSUPPORTED_TARGET` ("Legacy PNG object needs verified asset intake");
   migrating legacy marks and layers stays the job of `import`.
+- Fix: inline in ChatGPT the UVA view collapsed to a thin strip. The host sizes
+  the frame from the content, and the view capped its own height in `vh`, which
+  shrank with the frame. The caps are now content-based (stage at least 480px).
 
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).

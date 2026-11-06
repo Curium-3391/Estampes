@@ -140,3 +140,18 @@ test('create from an image starts from its pixels even when its legacy canvas ha
  assert.ok(uris.includes(tool._meta.ui.resourceUri));
  assert.ok(uris.some(u=>/^ui:\/\/estampes\/visual-surface-v\d+\.html$/.test(u)&&!/v040|v198/.test(u)),'plain versioned URI stays registered');
 });
+test('inline UVA view keeps its height in a short host frame (hosts size the frame from content)',{skip:noBrowser,timeout:60000},async t=>{
+ const beta=await mkdtemp(join(tmpdir(),'uva-height-'));
+ const stack=await startStack({cas:false,env:{ESTAMPES_UVA_BETA:'1',ESTAMPES_UVA_BETA_DIR:beta,ESTAMPES_UVA_BETA_PROFILE:'linux-process-crash-test',ESTAMPES_RATE_LIMIT_PER_MIN:'0'}});
+ t.after(async()=>{await stack.close();await rm(beta,{recursive:true,force:true});});
+ const data=(await sharp({create:{width:400,height:600,channels:3,background:'#557733'}}).png().toBuffer()).toString('base64');
+ const imageId=(await stack.call('upload_visual_image',{total:data.length,offset:0,data,fileName:'tall.png'})).structuredContent.imageId;
+ const p=await stack.call('experimental_workspace',{action:'prepare',requestId:requestId(),operation:{type:'create',imageIds:[imageId]}});
+ const id=(await stack.call('experimental_workspace',{action:'commit',prepared:p.structuredContent.prepared})).structuredContent.document.id;
+ const w=await stack.open({globals:true,result:()=>stack.call('experimental_workspace',{action:'open',documentId:id})});
+ await w.page.evaluate(()=>{document.getElementById('w').style.height='80px';});
+ await w.frame.locator('#uva-canvas').waitFor({state:'attached'});
+ const heights=await w.frame.locator('#uva-workspace').evaluate(el=>({root:el.getBoundingClientRect().height,stage:document.querySelector('#uva-stage').getBoundingClientRect().height,doc:document.documentElement.scrollHeight}));
+ assert.ok(heights.stage>=300,JSON.stringify(heights));
+ assert.ok(heights.doc>=500,JSON.stringify(heights));
+});
