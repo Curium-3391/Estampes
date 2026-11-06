@@ -234,3 +234,15 @@ explicitly non-native process-crash Beta profile tested above. Live Host and
 native qualification remain separate, unperformed gates. Production guarantees:
 **NOT QUALIFIED**. Final PR URL, CI and main integration status are recorded in
 the delivery addendum below; local completion does not bypass CI/review policy.
+
+### Delivery addendum
+
+Branch `feat/uva-full-workbench-integration` was pushed. Integration PR:
+[**#92**](https://github.com/Curium-3391/Estampes/pull/92), targeting `main`.
+Final implementation/evidence commits include `89d83aa` (replay after grant/asset
+changes) and `3bf1796` (evidence and operating guide). At PR creation, main remains
+`7fb9b73442401fc32a7034888deaf49303e582a6`; no conflicts or unrelated changes were
+discarded. Repository main is unprotected and its ruleset list is empty, but this
+assignment still requires CI success before merge. Main integration is **PENDING
+CI**; consult PR #92 for the authoritative final merge/check state. No deployed
+installation has been enabled or migrated.
