@@ -1353,6 +1353,7 @@ async function completeViews(list){
  }
 }
 function applyResult(result){
+ if(result?.structuredContent?.kind==="estampes.uva/1"){uvaAccept(result.structuredContent);return;}
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
  gotResult=true;
  // An empty canvas waiting for the user's own picture.

@@ -33,13 +33,13 @@ window.load=(html,result)=>{f.onload=()=>setTimeout(()=>f.contentWindow.postMess
 
 async function freePort() { const s = createServer(); await new Promise((r) => s.listen(0, "127.0.0.1", r)); const p = s.address().port; await new Promise((r) => s.close(r)); return p; }
 
-export async function startStack({ cas = true } = {}) {
+export async function startStack({ cas = true, env = {} } = {}) {
   const dir = await mkdtemp(join(tmpdir(), "estampes-e2e-"));
   const sock = join(dir, "cas.sock");
   const casProc = cas ? spawn(python, ["-m", "estampes_cas"], { cwd: "cas-service", env: { ...process.env, ESTAMPES_CAS_SOCKET: sock, PYTHONPATH: "cas-service" }, stdio: "ignore" }) : null;
   if (cas) for (let i = 0; i < 100; i++) { try { await access(sock); break; } catch { await sleep(100); } }
   const port = await freePort();
-  const server = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), env: { ...process.env, PORT: String(port), ESTAMPES_STORAGE_DIR: dir, ...(cas ? { ESTAMPES_CAS_SOCKET: sock } : {}), ESTAMPES_ALLOW_OPEN: "1", ESTAMPES_REQUIRE_KEY: "0" }, stdio: "ignore" });
+  const server = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), env: { ...process.env, PORT: String(port), ESTAMPES_STORAGE_DIR: dir, ...(cas ? { ESTAMPES_CAS_SOCKET: sock } : {}), ESTAMPES_ALLOW_OPEN: "1", ESTAMPES_REQUIRE_KEY: "0", ...env }, stdio: "ignore" });
   for (let i = 0; i < 100; i++) { try { if ((await fetch("http://127.0.0.1:" + port + "/")).ok) break; } catch {} await sleep(100); }
   const client = new Client({ name: "e2e", version: "0" }, { versionNegotiation: { mode: "auto" } });
   await client.connect(new StreamableHTTPClientTransport(new URL("http://127.0.0.1:" + port + "/mcp")));
