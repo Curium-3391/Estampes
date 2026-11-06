@@ -280,7 +280,10 @@ was not a storage-engine physical ENOSPC acceptance experiment.
 head check succeeded, at merge commit
 `7c10965dd66b7b2aa58dc792e3a4b703d2c7fcd4`. Tested feature head was
 `aa4e376c0e69f1e126faa04ef9d88821a01de5a5`. Both push/PR check sets reported
-success for Node, CAS/browser and documentation checks; see
+success for Node, CAS/browser and documentation checks. The final Node CI job
+recorded 531 tests: 508 pass, 0 fail, 23 skip; browser dependencies are installed
+in the separate passing CAS/browser job. These counts are distinct from the
+fully browser-enabled local run recorded above. See
 [M0 checks run 427](https://github.com/Curium-3391/Estampes/actions/runs/42164544575).
 The final exact-head Docker image was also rebuilt and all ten smoke checks
 passed. The earlier PENDING CI paragraph records the state at PR creation and is
