@@ -14,6 +14,14 @@
   applied after the script has finished, and every bridge request other than
   `ui/initialize` waits for the handshake. The browser test host can deliver
   results the ChatGPT way and refuses requests sent before the handshake.
+- Fix: the canvas widget URI now also carries a hash of the HTML served
+  (`visual-surface-vXYZ-<hash>.html`). ChatGPT caches templates by URI, so a widget
+  fix without a version bump never reached it. The plain versioned URI stays
+  registered for saved conversations.
+- Fix: UVA `create`/`item.add` from `imageIds` start from the images' pixels only.
+  An image whose legacy canvas had an image layer was refused with
+  `UNSUPPORTED_TARGET` ("Legacy PNG object needs verified asset intake");
+  migrating legacy marks and layers stays the job of `import`.
 
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).

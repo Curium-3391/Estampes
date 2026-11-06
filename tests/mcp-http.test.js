@@ -56,7 +56,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(version.visualInputFormat,"mcp-image-content-png");
     assert.equal(version.visualModelVisibility,"host-dependent-unverified");
     assert.equal(version.annotationProtocol,"0.2-draft");
-    assert.equal(version.visualResourceUri,"ui://estampes/visual-surface-"+TAG+".html");
+    assert.match(version.visualResourceUri,new RegExp("^ui://estampes/visual-surface-"+TAG+"-[0-9a-f]{12}\\.html$"));
     assert.equal(version.visualTool,"present_visual");
     assert.equal(version.visualValidationTool,"validate_visual_annotations");
     assert.equal(version.uiResourceUri,"ui://estampes/number-line-v031.html");
@@ -93,7 +93,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.match(visualTool.description,/never ask without one/);
     assert.match(visualTool.description,/Choose color, size and pen YOURSELF/);
     assert.match(visualTool.description,/Do NOT also call present_visual_evidence/);
-    assert.equal(visualTool._meta?.ui?.resourceUri,"ui://estampes/visual-surface-"+TAG+".html");
+    assert.equal(visualTool._meta?.ui?.resourceUri,version.visualResourceUri);
     const visualAnnotation={id:"a1",type:"rect",x:0.10,y:0.20,x2:0.35,y2:0.66,label:"Example"};
     const visual=await client.callTool({name:"present_visual",arguments:{
       scene:"shapes",annotations:[visualAnnotation]
