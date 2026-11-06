@@ -198,9 +198,15 @@ test("JSON byte budgets include escaping and UTF-8; canonical raw fields cannot 
   fail(()=>parseDocumentJson(" ".repeat(64*1024*1024+1)),"LIMIT");
   fail(()=>parse(CommitRootSchema,{...root(),extra:"x".repeat(65536)}),"LIMIT");
 });
-test("95 pre-existing production/config files still match the verified baseline", () => {
-  const inventory=JSON.parse(readFileSync(new URL("../docs/rfc/unified-visual-architecture/evidence/source-index.json",import.meta.url),"utf8"));
-  for(const f of inventory.files)assert.equal(createHash("sha256").update(readFileSync(new URL("../"+f.path,import.meta.url))).digest("hex"),f.sha256,f.path);
+// The original isolation seal is preserved in source-index.json. PR-1B
+// authorizes product integration and must preserve newer main, so protect its
+// untouched files and explicitly enumerate the allowed integration seams.
+test("PR-1B preserves newer main outside declared integration seams and the exact non-Optimization-B runtime", () => {
+  const base=new URL("../docs/rfc/unified-visual-architecture/evidence/",import.meta.url);
+  const legacy=JSON.parse(readFileSync(new URL("pr1b-legacy-source-index.json",base),"utf8"));
+  const runtime=JSON.parse(readFileSync(new URL("pr1b-runtime-source-index.json",base),"utf8"));
+  for(const f of [...legacy.files.filter(f=>!legacy.authorizedIntegrationSeams.includes(f.path)),...runtime.files])
+    assert.equal(createHash("sha256").update(readFileSync(new URL("../"+f.path,import.meta.url))).digest("hex"),f.sha256,f.path);
 });
 test("removed annotation anchors retain invalid references only with explicit matching tombstones", () => {
   const d=populated(),s=d.scenes[0],a=s.annotations[0];a.anchor={space:"world",frameRef:{documentId:d.id,sceneId:s.id,kind:"frame",id:"removed-frame"}};

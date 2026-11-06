@@ -61,7 +61,7 @@ retryable只表示同request安全重查或重試的可能，不授權content自
 
 ## Phase 0.1 — Authoritative Supplements / Wire Rules
 
-[ANNOTATION-POLICY](ANNOTATION-POLICY.md)是R-01/R-02矩陣與provenance/claimstate唯一細則；[EMBED-CONTRACT](EMBED-CONTRACT.md)是R-04 persistedschema與operation細則；[STORAGE-LIFECYCLE](STORAGE-LIFECYCLE.md)與[AUTHORITY-CUTOVER](AUTHORITY-CUTOVER.md)定義R-03/R-06的內部保留/authority，不由flags替代。推薦皆未核准。
+[ANNOTATION-POLICY](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/ANNOTATION-POLICY.md)是R-01/R-02矩陣與provenance/claimstate唯一細則；[EMBED-CONTRACT](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/EMBED-CONTRACT.md)是R-04 persistedschema與operation細則；[STORAGE-LIFECYCLE](STORAGE-LIFECYCLE.md)與[AUTHORITY-CUTOVER](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/AUTHORITY-CUTOVER.md)定義R-03/R-06的內部保留/authority，不由flags替代。推薦皆未核准。
 
 Permission annotation.write.owned只給module新Annotation命令，不允clientpayload擴權。SharedProvenance.author為user/assistant/module/unknown，由createdBy推導；不可變createdBy、獨立ownership及lastEditedBy是正式schema，legacydata按policytable映射。Layers新增module author時由server stamp，legacyresponse維持assistant投影並在metadata保module來源，不以layerauthor授權。
 
@@ -69,7 +69,7 @@ Operation新增annotation.authorize-edit（owner-only、targetRef/allowedActor/a
 
 版本欄位正式對照：create/open/export使用requestId；create沒有expectedDocRevision因目標尚不存在；open用expectedSurfaceRevision；execute_module新target用expectedDocumentRevision（內部expectedRevision），CAS另加expectedNotebookRevision；edit/read/export doc-scoped使用expectedRevision；embed使用expectedParentRevision/expectedSourceRevision。expectedDocRevision不是合法wire名稱；legacy execute_module expectedRevision仍為scene axis，與newtarget不混傳。Ref回傳包含documentId/sceneId/kind/id，CAS例不自動adopt別moduleplot。
 
-[proposed-contracts.mjs](evidence/proposed-contracts.mjs)是文件專用closedschemas，驗九個正式API流程、Provenance、Embed結構與negativecases，**不是完整productionAPIvalidator**；其他operations依上述文字完整contract由相依PR增加runtimevalidators/tests。可驗證JSON與示意JSON分類由[validator](evidence/validate-contract-examples.mjs)強制；TS是readmodel投影而非compiler-certifiedAPI，型別別名須引用本supplement，不可另寫衝突enum。
+[proposed-contracts.mjs](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/proposed-contracts.mjs)是文件專用closedschemas，驗九個正式API流程、Provenance、Embed結構與negativecases，**不是完整productionAPIvalidator**；其他operations依上述文字完整contract由相依PR增加runtimevalidators/tests。可驗證JSON與示意JSON分類由[validator](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/validate-contract-examples.mjs)強制；TS是readmodel投影而非compiler-certifiedAPI，型別別名須引用本supplement，不可另寫衝突enum。
 
 ## Phase 0.2 — Final Gate Corrections
 

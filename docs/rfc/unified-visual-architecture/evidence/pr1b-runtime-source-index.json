@@ -1,0 +1,121 @@
+{
+  "baseline": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+  "files": [
+    {
+      "path": "src/documents/embed-schema.js",
+      "sha256": "85f3427282080c6765db236d859510d49b68802dc0b65bcbc69dbbcb8e2ac7a6"
+    },
+    {
+      "path": "src/documents/identity.js",
+      "sha256": "7322133c7d0802b9f67a0c21e2a61bf5da1a77f2914a9c959a40081e41e2a198"
+    },
+    {
+      "path": "src/documents/input-schema.js",
+      "sha256": "9cae54e2d4a0b8c177a346934536a4ba64ab77a00b8db5f40818cb9634494420"
+    },
+    {
+      "path": "src/documents/integrity.js",
+      "sha256": "627a9e1f884472fc95222bb329edf5182920a2a5c5b3816138b3f14224262452"
+    },
+    {
+      "path": "src/documents/legacy-shadow.js",
+      "sha256": "f4b13f9fef6c30bf366c591d8e8c982e1be471f413b79f05102614d65e2b5870"
+    },
+    {
+      "path": "src/documents/provenance.js",
+      "sha256": "3bf7e990da213f436d081573cb25d4eb176329b7ec9083f7685a6a8bd47111ef"
+    },
+    {
+      "path": "src/documents/references.js",
+      "sha256": "fa2743024609380221316882bb491e1e406e4e98f243b2a0d80760b4392537ce"
+    },
+    {
+      "path": "src/documents/schema.js",
+      "sha256": "e7f1379a2be0fb33fe32a0b3455618454774a7a82b0ec80953f05d65751ede84"
+    },
+    {
+      "path": "src/documents/validation.js",
+      "sha256": "10bfd506b5fb4be7aeeadfaa9dca5ec1b6cf6751fa2374b98471224779e89f93"
+    },
+    {
+      "path": "src/persistence/archive.js",
+      "sha256": "e342fb129ab00a7dd20ebbc579bca2adab961d3dbc8192baff7fd26639bbc429"
+    },
+    {
+      "path": "src/persistence/backup.js",
+      "sha256": "c3dac852862d587506315606b9e5c7de27c93c0a15318e1433acaaaa14fceeec"
+    },
+    {
+      "path": "src/persistence/capacity.js",
+      "sha256": "62c6df848202f5f5b272e30778477987a4d3ff426a54d8cca55e556c1f0df3e4"
+    },
+    {
+      "path": "src/persistence/commit-root-schema.js",
+      "sha256": "2d60a243e64d0c817138426f1f16f6387fd05d0b918f89310eda7a484e2cd328"
+    },
+    {
+      "path": "src/persistence/coordinator.js",
+      "sha256": "1e1e49bfb04fef463c638bfe1977ed07c9d54206f50e6e313513e8b1cbd7fad8"
+    },
+    {
+      "path": "src/persistence/errors.js",
+      "sha256": "7dbaa84e43b6b37b4b9e7d155205015185c079e83306f286c66be9e6bd57fec2"
+    },
+    {
+      "path": "src/persistence/filesystem.js",
+      "sha256": "6c31e7e0c3a164ade79dedbf3d1a9ae29c5d8db70e5466f54022cf958c89d831"
+    },
+    {
+      "path": "src/persistence/gc.js",
+      "sha256": "ad5888cc5d4a30eb6c1aeaa2b4c90cbc173835d9f2998300425c7268b4fd3366"
+    },
+    {
+      "path": "src/persistence/journal.js",
+      "sha256": "bf9a699bed182e37325594aa0e7c78dcd26ce510ac79567e5196c2819a876858"
+    },
+    {
+      "path": "src/persistence/lease.js",
+      "sha256": "b2fbdc8e76987480c733aeda2b4f97c740068478c9fce112efbd7289a8afaca6"
+    },
+    {
+      "path": "src/persistence/lifecycle-state.js",
+      "sha256": "d848b54b939b5d6a31b91e50afe0e81b264f7d1b43395d11f06eef6e9788dcf1"
+    },
+    {
+      "path": "src/persistence/lifecycle.js",
+      "sha256": "623494b3feaece422f48d8898059081ab28940af29cf40a122055a38e42202f3"
+    },
+    {
+      "path": "src/persistence/ownership.js",
+      "sha256": "62c65c6e9bcff553eca170c82b76f4b8e00ee954fc54459dd53393442b067d33"
+    },
+    {
+      "path": "src/persistence/pages.js",
+      "sha256": "289359bcbdf263713e7bf56657b877265bc255a192926f0276721cc4312dab46"
+    },
+    {
+      "path": "src/persistence/pins.js",
+      "sha256": "e28e866918f25d2a272c532d5444f04943b70a2245c1bd24cd6fcdd1381addb7"
+    },
+    {
+      "path": "src/persistence/platform.js",
+      "sha256": "44a05deab0975d0edd01b4a92b8725d12900e7cc8d66e187f7a734e53efaf95f"
+    },
+    {
+      "path": "src/persistence/records.js",
+      "sha256": "3f419d579e58d328af15dd106a56a80d1cbe16ec2bfc751eed9479cf145cdfe2"
+    },
+    {
+      "path": "src/persistence/restore-worker.js",
+      "sha256": "3b2edd0617aada3c0ee069cc1a1940f7f2778f3bf863b34b420ca456f9c744eb"
+    },
+    {
+      "path": "src/persistence/temporary-attribution.js",
+      "sha256": "42f240dda1198c27ee60c1e486f9b3a69f839362b2ba1386af3dce1fcf1b1fd3"
+    },
+    {
+      "path": "src/persistence/worker.js",
+      "sha256": "624f5c331e5eba8bfb04477a635052ad6870ad51fa2717ac9e9e3370628364af"
+    }
+  ]
+}

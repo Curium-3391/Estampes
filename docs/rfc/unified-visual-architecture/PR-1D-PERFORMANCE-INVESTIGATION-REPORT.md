@@ -24,8 +24,8 @@ evidence and diagnostic harnesses. The production source, original test assertio
 reports and historical evidence remain unchanged. Only the existing lifecycle fixture
 gets an opt-in teardown support hook. No historical branch was merged or rebased.
 
-[Baseline commands](evidence/pr1d-performance-investigation/baseline.log) and
-[pre-edit source/test/all-tracked-file SHA-256](evidence/pr1d-performance-investigation/baseline-sha256.json)
+[Baseline commands](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/baseline.log) and
+[pre-edit source/test/all-tracked-file SHA-256](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/baseline-sha256.json)
 fix the inputs. The final manifest verifies all baseline bytes and explicitly names
 the one authorized fixture modification. Initial matrix runs precede per-run harness
 input manifests; their production/test input is the sealed baseline plus the described
@@ -75,7 +75,7 @@ that successor Store; these are separately reported operations, not identical re
 
 ## Cost model and results
 
-[Execution cost/invariant map](evidence/pr1d-performance-investigation/COST-MODEL.md)
+[Execution cost/invariant map](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/COST-MODEL.md)
 maps admission, Ledger, schema/closure, Full/Delta, canonical encoding/hash, staging,
 fsync, candidate/history verification, CURRENT publication, post-publication and ACK;
 and lease, physical recovery, CURRENT/root closure, journal/claims, Ledger/history,
@@ -107,9 +107,9 @@ Document ratios for 1/8/16/32 MiB are 0.919/1.032/0.918/1.011. Ratios below one 
 single-pair run-order/noise confounding, not negative profiler overhead. We do not use
 profiled timing as uninstrumented throughput or claim a causal overhead constant.
 Full phase totals, direct recovery, syscall/hash/JSON/schema counts and CPU/memory files
-are in [RESULTS](evidence/pr1d-performance-investigation/RESULTS.md) and summary.json.
+are in [RESULTS](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/RESULTS.md) and summary.json.
 
-![Measured tmpfs scaling](evidence/pr1d-performance-investigation/scaling.png)
+![Measured tmpfs scaling](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/scaling.png)
 
 Memory evidence: 16 MiB sampled retained allocation is about 33.0 MiB, with ~16 MiB
 at filesystem.js JSON.parse and another ~16 MiB at validation.js jsonSchema canonical
@@ -277,9 +277,9 @@ cross-Store/binary integration, backup continuation, and VM/block-device/host po
 remain independent. No PR-1B, Unified Writer activation, main merge or Production Qualified
 claim. Historical smaller passing gates remain historical evidence, not new acceptance here.
 
-[Runs/exits/log hashes](evidence/pr1d-performance-investigation/runs.jsonl) ·
-[Derived full counters/profiles](evidence/pr1d-performance-investigation/summary.json) ·
-[Final SHA-256 seal](evidence/pr1d-performance-investigation/manifest.json) ·
+[Runs/exits/log hashes](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/runs.jsonl) ·
+[Derived full counters/profiles](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/summary.json) ·
+[Final SHA-256 seal](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-performance-investigation/manifest.json) ·
 [Reproduction](../../../scripts/pr1d-investigation/README.md).
 
 ## Git delivery

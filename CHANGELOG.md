@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Opt-in UVA Experimental Beta: shared GPT/Workbench image workspaces, editable
+  annotations and layers, existing visual-module execution, signed revision-safe
+  CommitRoot transactions, explicit legacy copies and saved logical export/recovery.
+- Legacy remains default. Beta uses separate storage, conservative limits and
+  explicit profiles; production durability/performance qualification remains open.
+
+
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
 
 

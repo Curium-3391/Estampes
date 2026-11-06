@@ -164,3 +164,14 @@ Invalid values fall back to the default and are reported in the log at startup.
 - The rate limiter is in memory and per instance; it resets on restart.
 - One process per storage folder: two containers must not share a volume.
 - If the host cannot show a widget, inspect tool discovery, MCP responses, the `ui://` resource, and the MCP Apps bridge handshake.
+
+## Optional UVA Experimental Beta
+
+Legacy remains the default writer. `ESTAMPES_UVA_BETA=1` opts in;
+`ESTAMPES_UVA_BETA_DIR` must name a separate private directory with an existing
+trusted parent. `ESTAMPES_UVA_BETA_PROFILE` must be explicitly set to
+`linux-process-crash-test` (NOT power-loss durable), or the existing strict
+`linux-local-durable` Linux ext4/XFS profile (production NOT QUALIFIED). There is
+no silent profile fallback, directory adoption, or automatic migration. Full
+instructions, Docker overlay, platform matrix, export/recovery and rollback are
+in [UVA Experimental Beta](UVA-BETA.md).

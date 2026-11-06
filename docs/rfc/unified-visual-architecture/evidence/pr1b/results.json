@@ -1,0 +1,33 @@
+{
+  "node": "22.23.4",
+  "full": {
+    "tests": 530,
+    "pass": 527,
+    "fail": 0,
+    "skipped": 3
+  },
+  "beta": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "skipped": 0
+  },
+  "casPython": {
+    "tests": 17,
+    "pass": 17,
+    "fail": 0
+  },
+  "dockerSmoke": {
+    "checks": 10,
+    "pass": 10
+  },
+  "nativeDurability": "NOT QUALIFIED",
+  "liveChatGPTHost": "NOT RUN",
+  "initialNode24": {
+    "tests": 530,
+    "pass": 520,
+    "fail": 7,
+    "skipped": 3,
+    "cause": "Three omitted fault-injection fixture modules; restored byte-for-byte from d9aaa49f before final Node 22 suite"
+  }
+}

@@ -1,6 +1,6 @@
 # PR-1A — Isolated Schema / Read-only Projection Interface
 
-Authority：[有限維護者授權](PR-1A-AUTHORIZATION.md)與Phase0.2契約。CURRENT僅為下列隔離函式／schemas；現有工具未import它們。真正writer、runtime authorization、Graph Viewer、Scene mutation與migration仍PROPOSED。本頁固定機械表示，不重新選架構。
+Authority：[有限維護者授權](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/PR-1A-AUTHORIZATION.md)與Phase0.2契約。CURRENT僅為下列隔離函式／schemas；現有工具未import它們。真正writer、runtime authorization、Graph Viewer、Scene mutation與migration仍PROPOSED。本頁固定機械表示，不重新選架構。
 
 ## Modules / exact interfaces
 
@@ -57,4 +57,4 @@ Link需caller明確bindingId與完整target allocation，無法提供就block；
 
 Current APIs新增 `validatePartialDocumentSnapshots(documents)`：缺外部Document回missingDependencies（required/reason/target），不聲稱completeClosure；已提供Document內缺active Scene/entity仍拒絕。`validateCompleteDocumentClosure(documents,declaration)` required declaration為estampes.document-closure/1、storeInstanceId、generation與exact documentId/revision/contentHash列表；逐hash、唯一owner、active Ref、canonicalBinding與Embed DAG驗證，缺required依賴拒絕。顯式unresolved/historical缺target仍列report、不升級fresh；current confirmed/rejected/independently-verified ClaimContext的source refs必須存在，stale/unverified context可列historical缺依賴；complete限**Document模型closure**，不是asset bytes／CAS Notebook／repository-wide／authorization證明。Caller必由同一root產生declaration；PR-1C須在coordinator讀全registry後建立，不能採用client自稱closure。原validateDocumentReferences保持strict supplied-snapshots compatibility語意，沒有新repository-complete宣稱。
 
-Shadow report現在明列mapped、migrationCompleted=false、recoveryScope=json-record-only、originalFileBytesVerified=false、binaryAssetsVerified=false。rawRecoverable只表示sidecar可還原輸入JSON record；canonical-json/sha256不是source-file bytes hash。mapped只代表read schema合法，editableComplete只代表本次支持欄位未有archive/issues；三者不互相推論，不保證外部binary/asset、全格式migration或磁碟durability。Blocked永遠document=null／mapped=false／editableComplete=false，raw仍可保留。見[review report](PR-1A-REMEDIATION-REPORT.md)。
+Shadow report現在明列mapped、migrationCompleted=false、recoveryScope=json-record-only、originalFileBytesVerified=false、binaryAssetsVerified=false。rawRecoverable只表示sidecar可還原輸入JSON record；canonical-json/sha256不是source-file bytes hash。mapped只代表read schema合法，editableComplete只代表本次支持欄位未有archive/issues；三者不互相推論，不保證外部binary/asset、全格式migration或磁碟durability。Blocked永遠document=null／mapped=false／editableComplete=false，raw仍可保留。見[review report](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/PR-1A-REMEDIATION-REPORT.md)。

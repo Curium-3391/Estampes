@@ -99,3 +99,12 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 ## License
 
 [Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.
+
+### UVA Experimental Beta
+
+An opt-in Workbench editor now connects real images, editable annotations/layers,
+Graph and GPT to the same CommitRoot-backed document. Legacy remains the default;
+existing data are copied only on explicit import. Set `ESTAMPES_UVA_BETA=1`, a
+separate `ESTAMPES_UVA_BETA_DIR` and an explicit `ESTAMPES_UVA_BETA_PROFILE` to
+activate it. Production qualification is **NOT QUALIFIED**. See
+[setup, limitations, export and rollback](docs/UVA-BETA.md).

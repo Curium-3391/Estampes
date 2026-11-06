@@ -1,0 +1,17 @@
+{
+  "image": "estampes:uva-beta",
+  "checks": [
+    "unprivileged uid 1000",
+    "Node 22 runtime",
+    "explicit non-durable ACK",
+    "saved logical export with original image",
+    "reopen after real container restart",
+    "restart preserves exact Ledger ACK replay",
+    "Beta disabled by default path",
+    "legacy tool contract survives",
+    "original legacy image still accessible",
+    "saved export accessible with Beta disabled"
+  ],
+  "production": "NOT QUALIFIED",
+  "host": "Docker in managed Linux environment; not native host/power-loss acceptance"
+}

@@ -90,3 +90,16 @@ Kept for older conversations and regression tests; new conversations do not need
 | `/export/<hash>/image.jpg`, `/export/<hash>/marks.svg` | Downloads; signed with `?sig=` when a key is set. |
 | `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/register`, `/oauth/authorize`, `/oauth/token` | OAuth 2.1 sign-in (PKCE, dynamic registration, client ID metadata documents) for hosts such as Claude; only when a key is set. See [Connecting Claude](DEPLOYMENT.md#connecting-claude). |
 | `/healthz`, `/version` | Public health check and build summary. |
+
+## UVA Experimental Beta (opt-in)
+
+`experimental_workspace` exposes versioned `estampes.uva/1` state and commands:
+`list`, `open`, `status`, `render`, `modules`, `prepare`, `commit`, `export`.
+GPT and the Workbench use the same authoritative document. `prepare` returns a
+signed command; `commit` requires that exact value. Stale revisions reject writes;
+unchanged retry payloads retain their Ledger ACK. It is registered only when Beta
+is explicitly enabled. Existing workspace/visual tool contracts remain intact.
+
+`uva_user_command` is the app-only entrypoint for the same command service; it
+attributes edits to the user without accepting caller-provided author fields.
+See [UVA Beta](UVA-BETA.md) for operation examples, limits and recovery boundaries.

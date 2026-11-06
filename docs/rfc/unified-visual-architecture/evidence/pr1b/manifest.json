@@ -1,0 +1,65 @@
+{
+  "scope": "PR-1B integration evidence; not production acceptance",
+  "files": [
+    {
+      "path": "docker-smoke.json",
+      "sha256": "fd8f42e40e384231f75718fe6af9ec474a4eaa975afbe35b435a597b4cd260c6",
+      "bytes": 568
+    },
+    {
+      "path": "final-contracts.tap",
+      "sha256": "d02bb80713a11b73a0e70a88dacba5e0d05c008a711ace34cc7bd18287e8a586",
+      "bytes": 8263
+    },
+    {
+      "path": "cas-python.log",
+      "sha256": "f5cdd7341db4727288c3a8c2d2ecdda69d98d33002f2bad0835bf4a39f040e40",
+      "bytes": 3688
+    },
+    {
+      "path": "beta-integration.log",
+      "sha256": "416c822d8aab21a31aede917c7ca929d5a34516e6608505fefe0f7ad8c48535f",
+      "bytes": 2095
+    },
+    {
+      "path": "release-check.log",
+      "sha256": "c093d8381b49f7dedc08b6fc34599d5ed9359ef92cdb412dd7e96300285b3471",
+      "bytes": 188
+    },
+    {
+      "path": "node22-full.tap",
+      "sha256": "ba7733a676126ffba0362ffe8106ad4183b2484b7ccdc6cca67846a1d888b55d",
+      "bytes": 136729
+    },
+    {
+      "path": "uva-beta-workbench.png",
+      "sha256": "45a6b5be5bbf80612f37c7c23c39aac99b6f336deabbd35b1784cdc4e770af8e",
+      "bytes": 75158
+    },
+    {
+      "path": "source-refs.json",
+      "sha256": "738495787aa0f2552fb2fc733ab2226529949af5137bafebe32e1181c7197265",
+      "bytes": 4025
+    },
+    {
+      "path": "docs-check.log",
+      "sha256": "a2170ad9372dba520cfac5445e1807a41185744c918395913aa0d71082e4c50a",
+      "bytes": 127
+    },
+    {
+      "path": "initial-node24-missing-fixtures.log.gz",
+      "sha256": "23a7589c889c6721be9ee8cb92dffde9d3e9f6a6710c570895f64d623a000a26",
+      "bytes": 23967
+    },
+    {
+      "path": "results.json",
+      "sha256": "9597fb6df57041fdcce9d0aacfa3be34d9d649930313703be6dd2ff8d9d2e054",
+      "bytes": 605
+    },
+    {
+      "path": "docker-smoke.log",
+      "sha256": "fd8f42e40e384231f75718fe6af9ec474a4eaa975afbe35b435a597b4cd260c6",
+      "bytes": 568
+    }
+  ]
+}

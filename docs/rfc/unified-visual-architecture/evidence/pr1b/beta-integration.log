@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: A/B/C/F: real assets, GPT/user edits, layers, non-destructive import and restart
+ok 1 - A/B/C/F: real assets, GPT/user edits, layers, non-destructive import and restart
+  ---
+  duration_ms: 2451.124136
+  type: 'test'
+  ...
+# Subtest: D: stale signed commits conflict, exact retries return original ACK, tampering rejected
+ok 2 - D: stale signed commits conflict, exact retries return original ACK, tampering rejected
+  ---
+  duration_ms: 689.998817
+  type: 'test'
+  ...
+# Subtest: E: interrupted real writer, recovery and original signed request replay keep Ledger/ACK identity
+ok 3 - E: interrupted real writer, recovery and original signed request replay keep Ledger/ACK identity
+  ---
+  duration_ms: 975.015462
+  type: 'test'
+  ...
+# Subtest: G: existing Graph router uses shared scene, grants and editable objects
+ok 4 - G: existing Graph router uses shared scene, grants and editable objects
+  ---
+  duration_ms: 921.945168
+  type: 'test'
+  ...
+# Subtest: H/I: unsupported durable mount, limits, exported assets and disabled legacy boundary
+ok 5 - H/I: unsupported durable mount, limits, exported assets and disabled legacy boundary
+  ---
+  duration_ms: 418.520185
+  type: 'test'
+  ...
+# Subtest: Beta caps are exercised through real commits; locked edits, missing assets, and saved recovery fail safely
+ok 6 - Beta caps are exercised through real commits; locked edits, missing assets, and saved recovery fail safely
+  ---
+  duration_ms: 10380.306319
+  type: 'test'
+  ...
+# Subtest: A–D/F/G browser: editable GPT/user image workspace, layers, Graph, stale writes and reopen
+ok 7 - A–D/F/G browser: editable GPT/user image workspace, layers, Graph, stale writes and reopen
+  ---
+  duration_ms: 10608.78186
+  type: 'test'
+  ...
+# Subtest: Workbench file chooser creates and extends a persistent multi-image workspace
+ok 8 - Workbench file chooser creates and extends a persistent multi-image workspace
+  ---
+  duration_ms: 2998.70965
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 30641.912031
