@@ -20,10 +20,12 @@ async function uvaDecode(r){
  return JSON.parse(data);
 }
 async function uvaCall(args){return uvaDecode(await wbCall('uva_user_command',args));}
+// No viewport-relative caps here: inline, the host sizes the frame from the
+// content, so a vh limit shrinks with the frame and collapses it to a strip.
 function uvaShow(){
  if(!UVA_BETA_ENABLED)return;
  uva.shown=true;wbEl.hidden=false;wbArea.hidden=true;
- if(!uvaRoot){uvaRoot=h('section',{id:'uva-workspace','aria-label':'UVA Experimental Beta',style:'padding:12px;border:1px solid #8886;border-radius:10px;overflow:auto;max-height:85vh'});wbEl.append(uvaRoot);}
+ if(!uvaRoot){uvaRoot=h('section',{id:'uva-workspace','aria-label':'UVA Experimental Beta',style:'padding:12px;border:1px solid #8886;border-radius:10px'});wbEl.append(uvaRoot);}
  uvaRoot.hidden=false;uvaDraw();uvaList();
 }
 function uvaAccept(r){
@@ -102,7 +104,7 @@ function uvaDraw(){
   const fields=(a.type==='polyline'?[]:['x','y',...(a.type==='rect'||a.type==='arrow'?['x2','y2']:[])]).filter(k=>a.geometry[k]!==undefined).map(k=>h('input',{id:'uva-'+k,type:'number',step:.01,min:0,max:1,value:a.geometry[k],'aria-label':k,style:'width:85px'}));
   uvaRoot.append(h('div',{},label,color,points,...fields,h('button',{id:'uva-save-annotation',onclick:()=>{const geometry={...a.geometry};for(const f of fields)geometry[f.id.slice(4)]=Number(f.value);if(points){try{geometry.points=JSON.parse(points.value);if(geometry.x!==undefined){geometry.x=Math.min(...geometry.points.map(p=>p.x));geometry.y=Math.min(...geometry.points.map(p=>p.y));geometry.x2=Math.max(...geometry.points.map(p=>p.x));geometry.y2=Math.max(...geometry.points.map(p=>p.y));}}catch(e){uvaStatus('頂點格式錯誤：'+e.message,true);return;}}uvaEdit({type:'annotation.update',sceneId:scene.id,id:a.id,annotation:{label:label.value,style:{...a.style,color:color.value},geometry}});}},'儲存標註'),h('button',{id:'uva-delete-annotation',onclick:()=>uvaEdit({type:'annotation.remove',sceneId:scene.id,id:a.id})},'刪除標註')));
  }
- uvaRoot.append(h('div',{id:'uva-stage',style:'overflow:auto;max-height:54vh;border:1px solid #8885;background:#ddd;touch-action:none'}));uvaPaint();
+ uvaRoot.append(h('div',{id:'uva-stage',style:'overflow:auto;max-height:max(480px,54vh);border:1px solid #8885;background:#ddd;touch-action:none'}));uvaPaint();
  const modules=h('details',{id:'uva-modules'},h('summary',{},'模組／共享視覺項目'),h('div',{id:'uva-module-content'},'載入模組…'));uvaRoot.append(modules);
  uvaCall({action:'modules'}).then(r=>{
   const content=document.querySelector('#uva-module-content');if(!content)return;content.replaceChildren();
