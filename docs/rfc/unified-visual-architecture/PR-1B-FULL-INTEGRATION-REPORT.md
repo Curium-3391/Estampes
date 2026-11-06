@@ -272,3 +272,19 @@ checks passed again. An intermediate infrastructure ENOSPC occurred after repeat
 Docker VFS builds filled the 8 GiB executor disk; only this task's old images and
 verified task-created build records were removed before the passing rerun. This
 was not a storage-engine physical ENOSPC acceptance experiment.
+
+
+### Confirmed main integration
+
+**Main integration: MERGED.** PR #92 was merged through GitHub after every latest
+head check succeeded, at merge commit
+`7c10965dd66b7b2aa58dc792e3a4b703d2c7fcd4`. Tested feature head was
+`aa4e376c0e69f1e126faa04ef9d88821a01de5a5`. Both push/PR check sets reported
+success for Node, CAS/browser and documentation checks; see
+[M0 checks run 427](https://github.com/Curium-3391/Estampes/actions/runs/42164544575).
+The final exact-head Docker image was also rebuilt and all ten smoke checks
+passed. The earlier PENDING CI paragraph records the state at PR creation and is
+superseded by this confirmation. The worktree was clean and remote main ancestry
+was verified after merge. Beta remains opt-in, the original writer remains the
+default, and production qualification remains **NOT QUALIFIED**. No release tag
+or deployment activation was performed.
