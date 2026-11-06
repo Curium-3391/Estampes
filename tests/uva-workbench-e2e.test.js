@@ -109,3 +109,17 @@ test('Real high-entropy image fits Host budget and Workbench reassembles bounded
  const w=await stack.open({result:()=>stack.call('experimental_workspace',{action:'open',documentId:id})});await w.frame.locator('#uva-canvas').waitFor();
  assert.ok((await w.frame.locator('#uva-canvas image').first().getAttribute('href')).length>145000);assert.deepEqual(w.errors,[]);
 });
+test('ChatGPT-style delivery: a UVA result on window.openai waits for the handshake before any tool call',{skip:noBrowser,timeout:60000},async t=>{
+ const beta=await mkdtemp(join(tmpdir(),'uva-globals-'));
+ const stack=await startStack({cas:false,env:{ESTAMPES_UVA_BETA:'1',ESTAMPES_UVA_BETA_DIR:beta,ESTAMPES_UVA_BETA_PROFILE:'linux-process-crash-test',ESTAMPES_RATE_LIMIT_PER_MIN:'0'}});
+ t.after(async()=>{await stack.close();await rm(beta,{recursive:true,force:true});});
+ const w=await stack.open({globals:true,result:()=>stack.call('experimental_workspace',{action:'list'})}),frame=w.frame;
+ await frame.locator('#uva-workspace').waitFor();
+ await frame.locator('#uva-diagnostics').filter({hasText:'NOT QUALIFIED'}).waitFor();
+ const log=await w.page.evaluate(()=>window.hostLog);
+ assert.equal(log[0],'ui/initialize',JSON.stringify(log));
+ const init=log.indexOf('ui/notifications/initialized');assert.ok(init>0,JSON.stringify(log));
+ assert.ok(!log.slice(0,init).includes('tools/call'),'tool call before handshake: '+JSON.stringify(log));
+ assert.notEqual(await frame.locator('#uva-status').getAttribute('role'),'alert');
+ assert.deepEqual(w.errors,[]);
+});
