@@ -11,7 +11,9 @@ function uvaNode(tag,attrs={}){const n=document.createElementNS('http://www.w3.o
 function uvaScene(){return uva.doc?.scenes.find(s=>s.id===uva.scene)??uva.doc?.scenes[0];}
 function uvaStatus(message,error=false){const el=document.querySelector('#uva-status');if(el){el.textContent=message;el.setAttribute('role',error?'alert':'status');}}
 async function uvaDecode(r){
- if(!r.transport)return r;const first=r.transport;let data=first.data,next=first.next;
+ if(!r.transport)return r;
+ if(r.transport.offset!==0)return uvaDecode(await wbCall('uva_user_command',{action:'read_chunk',transportId:r.transport.id,offset:0}));
+ const first=r.transport;let data=first.data,next=first.next;
  while(next<first.total){const part=(await wbCall('uva_user_command',{action:'read_chunk',transportId:first.id,offset:next})).transport;
   if(!part||part.id!==first.id||part.offset!==next||part.total!==first.total||part.next<=next)throw Error('分段資料不一致；請重新開啟');data+=part.data;next=part.next;
  }
@@ -112,9 +114,10 @@ function uvaDraw(){
 }
 async function uvaPaint(){
  const s=uvaScene(),stage=document.querySelector('#uva-stage');if(!s||!stage)return;
- const docId=uva.doc.id,key=docId+':'+s.id+':'+uva.doc.revision;
+ const docId=uva.doc.id,revision=uva.doc.revision,key=docId+':'+s.id+':'+revision;
  if(uva.renderKey!==key){
-  try{uva.renderData=await uvaCall({action:'render',documentId:docId,sceneId:s.id});if(!uva.shown||uva.doc?.id!==docId||uvaScene()?.id!==s.id)return;uva.renderKey=key;}catch(e){uvaStatus(e.message,true);return;}
+  try{const fetched=await uvaCall({action:'render',documentId:docId,sceneId:s.id});if(!uva.shown||uva.doc?.id!==docId||uvaScene()?.id!==s.id||uva.doc.revision!==revision||stage!==document.querySelector('#uva-stage'))return;
+   if(fetched.revision!==revision){uvaStatus('工作區已變更；請重新整理後檢查。',true);return;}uva.renderData=fetched;uva.renderKey=key;}catch(e){uvaStatus(e.message,true);return;}
  }
  const svg=uvaNode('svg',{id:'uva-canvas',viewBox:'0 0 '+s.extent.width+' '+s.extent.height,width:Math.min(760,s.extent.width)*uva.zoom,height:Math.min(760,s.extent.width)*uva.zoom*s.extent.height/s.extent.width,style:'display:block;touch-action:none;user-select:none'});
  svg.append(uvaNode('image',{href:'data:'+uva.renderData.image.mimeType+';base64,'+uva.renderData.image.data,width:s.extent.width,height:s.extent.height}));
@@ -139,7 +142,7 @@ async function uvaPaint(){
  svg.addEventListener('pointermove',e=>{if(!uva.drag)return;uva.drag.last=point(e);if(uva.drag.points.length<128)uva.drag.points.push(uva.drag.last);if(uva.mode==='pan'){stage.scrollLeft=uva.drag.left+uva.drag.px-e.clientX;stage.scrollTop=uva.drag.top+uva.drag.py-e.clientY;}});
  svg.addEventListener('pointercancel',()=>{uva.drag=null;});
  svg.addEventListener('pointerup',e=>{
-  const d=uva.drag;uva.drag=null;if(!d)return;const p=point(e);
+  const d=uva.drag;uva.drag=null;if(!d)return;if(uva.doc.revision!==revision){uvaStatus('工作區已變更；這次拖曳尚未儲存，請重新整理。',true);return;}const p=point(e);
   if(uva.mode==='pan')return;
   if(uva.mode==='select'){
    if(!d.target)return;uva.selected=d.target;const a=s.annotations.find(a=>a.id===d.target),dx=p.x-d.start.x,dy=p.y-d.start.y;
