@@ -1,0 +1,4391 @@
+{
+  "status": "CURRENT",
+  "commit": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "method": "lexical inventory; not proof of runtime reachability",
+  "files": [
+    {
+      "path": "server.js",
+      "sha256": "d8e02ddddd43c6f47e46dfba6b1fc5cf48756715ad6fe1e6e405c61613b46cc0",
+      "lines": 2910,
+      "imports": [
+        "node:http",
+        "node:fs",
+        "node:path",
+        "node:url",
+        "@modelcontextprotocol/server",
+        "@modelcontextprotocol/node",
+        "@modelcontextprotocol/ext-apps/server",
+        "zod",
+        "./src/geometry.js",
+        "./src/scene-catalog.js",
+        "./src/interaction-protocol.js",
+        "./src/gesture-groups.js",
+        "./src/visual-input.js",
+        "./src/canvas-state.js",
+        "./src/assessment.js",
+        "./src/mark-render.js",
+        "./src/marks-file.js",
+        "./src/image-store.js",
+        "./src/bundle.js",
+        "./src/config.js",
+        "./src/protocol.js",
+        "./src/tunnel.js",
+        "./src/security.js",
+        "./src/workspace.js",
+        "./src/storage.js",
+        "./src/image/view.js",
+        "./src/image/transform.js",
+        "./src/image/register.js",
+        "./src/image/quality.js",
+        "./src/image/engines.js",
+        "./src/image/pdf.js",
+        "./src/image/measure.js",
+        "./src/image-ops.js",
+        "./src/modules/index.js",
+        "./src/modules/admin.js",
+        "sharp",
+        "./src/result-budget.js",
+        "node:crypto",
+        "./src/oauth.js",
+        "./src/modules/mcp-tools.js",
+        "./src/scene/canvas-render.js",
+        "./src/scene/compose.js",
+        "./src/scene/blank-canvas.js",
+        "./src/cas/client.js",
+        "./src/cas/notebooks.js",
+        "./src/surface/store.js",
+        "./src/surface/service.js",
+        "./src/surface/widget-source.js",
+        "./src/surface/bundle-extras.js",
+        "./src/surface/refresh.js",
+        "./src/surface/mcp-tools.js",
+        "./src/builtin-modules/cas/index.js",
+        "./src/scene/scene-ops.js",
+        " + plan.source.ref + ",
+        ", summary: r.summary, warnings: r.warnings, verified: r.verified, repeated: !!r.repeated, ...(installed ? { surface: installed.surface, notebooks: installed.notebooks } : {}) },\n        };\n      } catch (error) { return { isError: true, content: [{ type: ",
+        " + keyInfo.path + "
+      ],
+      "symbols": [
+        {
+          "name": "readMarksFile",
+          "line": 229
+        },
+        {
+          "name": "loadImageInput",
+          "line": 244
+        },
+        {
+          "name": "resolveFrame",
+          "line": 255
+        },
+        {
+          "name": "remember",
+          "line": 266
+        },
+        {
+          "name": "claimSummary",
+          "line": 334
+        },
+        {
+          "name": "compactMark",
+          "line": 343
+        },
+        {
+          "name": "logSizes",
+          "line": 418
+        },
+        {
+          "name": "budgetViews",
+          "line": 445
+        },
+        {
+          "name": "presentPair",
+          "line": 454
+        },
+        {
+          "name": "wsPixels",
+          "line": 520
+        },
+        {
+          "name": "presentWorkspace",
+          "line": 533
+        },
+        {
+          "name": "makeServer",
+          "line": 594
+        },
+        {
+          "name": "canvasPayload",
+          "line": 2479
+        },
+        {
+          "name": "corsOrigin",
+          "line": 2514
+        },
+        {
+          "name": "authorized",
+          "line": 2520
+        },
+        {
+          "name": "requestOrigin",
+          "line": 2531
+        },
+        {
+          "name": "handleOAuth",
+          "line": 2550
+        },
+        {
+          "name": "rateLimited",
+          "line": 2609
+        },
+        {
+          "name": "storageHealth",
+          "line": 2842
+        }
+      ]
+    },
+    {
+      "path": "src/assessment.js",
+      "sha256": "e0cbb9454551ef826071c982fda9f0b0d8fe06032b37b9a2db077393a6d65749",
+      "lines": 166,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "CONFIDENCE",
+          "line": 12
+        },
+        {
+          "name": "EVIDENCE_KINDS",
+          "line": 13
+        },
+        {
+          "name": "OBSERVERS",
+          "line": 14
+        },
+        {
+          "name": "VERIFICATION",
+          "line": 15
+        },
+        {
+          "name": "MAX_EVIDENCE",
+          "line": 16
+        },
+        {
+          "name": "cleanEvidence",
+          "line": 25
+        },
+        {
+          "name": "cleanAmbiguities",
+          "line": 48
+        },
+        {
+          "name": "assessmentInput",
+          "line": 55
+        },
+        {
+          "name": "verificationOf",
+          "line": 68
+        },
+        {
+          "name": "needsReview",
+          "line": 74
+        },
+        {
+          "name": "evidenceCount",
+          "line": 76
+        },
+        {
+          "name": "markRegion",
+          "line": 85
+        },
+        {
+          "name": "iou",
+          "line": 91
+        },
+        {
+          "name": "IOU_MATCH",
+          "line": 99
+        },
+        {
+          "name": "sameRegion",
+          "line": 100
+        },
+        {
+          "name": "evidenceKey",
+          "line": 127
+        },
+        {
+          "name": "rejectionOf",
+          "line": 129
+        },
+        {
+          "name": "findRejection",
+          "line": 142
+        },
+        {
+          "name": "bringsNewEvidence",
+          "line": 147
+        },
+        {
+          "name": "addRejection",
+          "line": 150
+        },
+        {
+          "name": "dropRejections",
+          "line": 158
+        },
+        {
+          "name": "rejectionText",
+          "line": 163
+        }
+      ]
+    },
+    {
+      "path": "src/builtin-modules/astrometry/index.js",
+      "sha256": "ce401416085b86460691d8f9c0806acb85faf97e0bb2bbda579a288b3d359e7e",
+      "lines": 179,
+      "imports": [
+        "node:fs",
+        "./skymap.js"
+      ],
+      "symbols": [
+        {
+          "name": "manifest",
+          "line": 7
+        },
+        {
+          "name": "settings",
+          "line": 11
+        },
+        {
+          "name": "imageKind",
+          "line": 14
+        },
+        {
+          "name": "login",
+          "line": 23
+        },
+        {
+          "name": "uploadOptions",
+          "line": 29
+        },
+        {
+          "name": "waitFor",
+          "line": 43
+        },
+        {
+          "name": "pickMarks",
+          "line": 58
+        },
+        {
+          "name": "hms",
+          "line": 78
+        },
+        {
+          "name": "dms",
+          "line": 82
+        },
+        {
+          "name": "skyPosition",
+          "line": 89
+        },
+        {
+          "name": "run",
+          "line": 98
+        }
+      ]
+    },
+    {
+      "path": "src/builtin-modules/astrometry/skymap.js",
+      "sha256": "69f45b505e4faf1a804e7767ca30bbf4b926e787298106b90f9f9012dd19396b",
+      "lines": 61,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "hammer",
+          "line": 9
+        },
+        {
+          "name": "offsetToSky",
+          "line": 17
+        },
+        {
+          "name": "fieldOutline",
+          "line": 28
+        },
+        {
+          "name": "skyMapOperations",
+          "line": 36
+        }
+      ]
+    },
+    {
+      "path": "src/builtin-modules/cas/index.js",
+      "sha256": "4bc284989c29c791e5abd1a68fd31e2c36001fe367fa0f888c84ac8320f4639a",
+      "lines": 229,
+      "imports": [
+        "node:fs",
+        "../graph/index.js",
+        "../../cas/client.js",
+        "../../cas/notebooks.js",
+        "../../cas/bridge.js",
+        "../../scene/expression.js",
+        "../../scene/scene-ops.js"
+      ],
+      "symbols": [
+        {
+          "name": "manifest",
+          "line": 13
+        },
+        {
+          "name": "notebookStore",
+          "line": 17
+        },
+        {
+          "name": "configure",
+          "line": 18
+        },
+        {
+          "name": "casStatus",
+          "line": 19
+        },
+        {
+          "name": "envOf",
+          "line": 31
+        },
+        {
+          "name": "requestOf",
+          "line": 37
+        },
+        {
+          "name": "compute",
+          "line": 47
+        },
+        {
+          "name": "writeCell",
+          "line": 61
+        },
+        {
+          "name": "calculate",
+          "line": 74
+        },
+        {
+          "name": "reply",
+          "line": 102
+        },
+        {
+          "name": "define",
+          "line": 110
+        },
+        {
+          "name": "getNotebook",
+          "line": 137
+        },
+        {
+          "name": "recompute",
+          "line": 147
+        },
+        {
+          "name": "plotResult",
+          "line": 172
+        },
+        {
+          "name": "setOptions",
+          "line": 194
+        },
+        {
+          "name": "run",
+          "line": 203
+        },
+        {
+          "name": "after",
+          "line": 216
+        }
+      ]
+    },
+    {
+      "path": "src/builtin-modules/graph/index.js",
+      "sha256": "457d58cd294e3917a93c0f75fec165c87cbd43d8f1ab77a6650b5ab54f340307",
+      "lines": 101,
+      "imports": [
+        "node:fs",
+        "../../scene/expression.js"
+      ],
+      "symbols": [
+        {
+          "name": "manifest",
+          "line": 7
+        },
+        {
+          "name": "pickAxes",
+          "line": 12
+        },
+        {
+          "name": "fitRange",
+          "line": 24
+        },
+        {
+          "name": "newAxes",
+          "line": 37
+        },
+        {
+          "name": "run",
+          "line": 48
+        }
+      ]
+    },
+    {
+      "path": "src/bundle.js",
+      "sha256": "a89aa94c0734ae1f07504aab266dde714defca230696b445f7839d5a09a800f9",
+      "lines": 273,
+      "imports": [
+        "node:crypto",
+        "sharp",
+        "./zip.js",
+        "./canvas-state.js",
+        "./scene-catalog.js",
+        "./image-store.js",
+        "./storage.js",
+        "./workspace.js"
+      ],
+      "symbols": [
+        {
+          "name": "BUNDLE_FORMAT",
+          "line": 28
+        },
+        {
+          "name": "exportBundle",
+          "line": 36
+        },
+        {
+          "name": "cleanMark",
+          "line": 105
+        },
+        {
+          "name": "cleanSet",
+          "line": 132
+        },
+        {
+          "name": "importBundle",
+          "line": 173
+        }
+      ]
+    },
+    {
+      "path": "src/canvas-state.js",
+      "sha256": "b3825f40e01f5bee9defc2b900e7b94dbfe357bb4e5a23292f24ac4643f0396e",
+      "lines": 622,
+      "imports": [
+        "./image/transform.js",
+        "./scene-catalog.js",
+        "./assessment.js",
+        " + JSON.stringify(link.from) + "
+      ],
+      "symbols": [
+        {
+          "name": "canvasMarks",
+          "line": 13
+        },
+        {
+          "name": "newLayer",
+          "line": 23
+        },
+        {
+          "name": "layerFor",
+          "line": 32
+        },
+        {
+          "name": "moduleLayer",
+          "line": 38
+        },
+        {
+          "name": "markLocked",
+          "line": 50
+        },
+        {
+          "name": "canvasLayers",
+          "line": 57
+        },
+        {
+          "name": "fromFrame",
+          "line": 69
+        },
+        {
+          "name": "storeUserMarks",
+          "line": 85
+        },
+        {
+          "name": "snapshotCanvas",
+          "line": 104
+        },
+        {
+          "name": "claimOf",
+          "line": 117
+        },
+        {
+          "name": "settleClaimData",
+          "line": 120
+        },
+        {
+          "name": "settleClaim",
+          "line": 139
+        },
+        {
+          "name": "applyCanvasChanges",
+          "line": 154
+        },
+        {
+          "name": "applyChanges",
+          "line": 159
+        },
+        {
+          "name": "LAYER_NAME_MAX",
+          "line": 219
+        },
+        {
+          "name": "editCanvas",
+          "line": 222
+        },
+        {
+          "name": "takeUserEdits",
+          "line": 277
+        },
+        {
+          "name": "importMarks",
+          "line": 288
+        },
+        {
+          "name": "LINK_CONFIDENCE",
+          "line": 318
+        },
+        {
+          "name": "setKeyOf",
+          "line": 324
+        },
+        {
+          "name": "LINK_REVIEW",
+          "line": 325
+        },
+        {
+          "name": "linksOf",
+          "line": 327
+        },
+        {
+          "name": "pairLinks",
+          "line": 333
+        },
+        {
+          "name": "applyPairChanges",
+          "line": 345
+        },
+        {
+          "name": "linkRef",
+          "line": 436
+        },
+        {
+          "name": "reviewLink",
+          "line": 439
+        },
+        {
+          "name": "reviewFinding",
+          "line": 458
+        },
+        {
+          "name": "workspaceLinks",
+          "line": 485
+        },
+        {
+          "name": "linkStoreFor",
+          "line": 498
+        },
+        {
+          "name": "applyWorkspaceChanges",
+          "line": 512
+        },
+        {
+          "name": "reviewWorkspaceLink",
+          "line": 617
+        }
+      ]
+    },
+    {
+      "path": "src/cas/bridge.js",
+      "sha256": "22a52fd47ad37d91300cc902b145e7d67e4df039e6bd048276966520be19a039",
+      "lines": 70,
+      "imports": [
+        "../scene/expression.js"
+      ],
+      "symbols": [
+        {
+          "name": "BridgeError",
+          "line": 7
+        },
+        {
+          "name": "freeSymbols",
+          "line": 14
+        },
+        {
+          "name": "astToGraph",
+          "line": 24
+        },
+        {
+          "name": "checkPlottable",
+          "line": 61
+        }
+      ]
+    },
+    {
+      "path": "src/cas/client.js",
+      "sha256": "1e96994b5d9853e74e0004cd27f54baeeb9a49ba8ac1cd0984818e4ea65730bb",
+      "lines": 52,
+      "imports": [
+        "node:net",
+        "node:crypto"
+      ],
+      "symbols": [
+        {
+          "name": "CasClientError",
+          "line": 8
+        },
+        {
+          "name": "createCasClient",
+          "line": 14
+        }
+      ]
+    },
+    {
+      "path": "src/cas/notebooks.js",
+      "sha256": "326846a4eead7a5fbe5638a7178ac777739fd2b78ddb28b147366e21de60867c",
+      "lines": 173,
+      "imports": [
+        "node:fs/promises",
+        "node:path",
+        "node:crypto"
+      ],
+      "symbols": [
+        {
+          "name": "NOTEBOOK_SCHEMA",
+          "line": 10
+        },
+        {
+          "name": "MAX_CELLS",
+          "line": 11
+        },
+        {
+          "name": "NOTEBOOK_ID",
+          "line": 12
+        },
+        {
+          "name": "CELL_ID",
+          "line": 13
+        },
+        {
+          "name": "NotebookError",
+          "line": 16
+        },
+        {
+          "name": "createNotebooks",
+          "line": 20
+        },
+        {
+          "name": "cellSummary",
+          "line": 118
+        },
+        {
+          "name": "cleanImported",
+          "line": 137
+        }
+      ]
+    },
+    {
+      "path": "src/config.js",
+      "sha256": "cf824a41a6ddab1209dd143c846207ac4ca545cbc9d344144fbf83376f091162",
+      "lines": 71,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "num",
+          "line": 6
+        },
+        {
+          "name": "config",
+          "line": 19
+        },
+        {
+          "name": "configWarnings",
+          "line": 62
+        },
+        {
+          "name": "log",
+          "line": 66
+        }
+      ]
+    },
+    {
+      "path": "src/geometry.js",
+      "sha256": "6f60113b5386f542f6a2460cc8ff94ce01c251404900c5256b9d1802e28a467c",
+      "lines": 13,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "MIN",
+          "line": 2
+        },
+        {
+          "name": "MAX",
+          "line": 3
+        },
+        {
+          "name": "clamp",
+          "line": 4
+        },
+        {
+          "name": "valueToX",
+          "line": 5
+        },
+        {
+          "name": "xToValue",
+          "line": 6
+        },
+        {
+          "name": "nearestTick",
+          "line": 7
+        },
+        {
+          "name": "validateTick",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "path": "src/gesture-groups.js",
+      "sha256": "ff402ceaa530f7aca0abbc0928cad9cfc48f3b18641af666ecdce3e585249b76",
+      "lines": 178,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "GESTURE_MEANINGS",
+          "line": 9
+        },
+        {
+          "name": "GESTURE_VERDICTS",
+          "line": 10
+        },
+        {
+          "name": "groupKey",
+          "line": 14
+        },
+        {
+          "name": "strokeOf",
+          "line": 29
+        },
+        {
+          "name": "nearestOnPath",
+          "line": 39
+        },
+        {
+          "name": "junction",
+          "line": 51
+        },
+        {
+          "name": "quick",
+          "line": 59
+        },
+        {
+          "name": "directionInto",
+          "line": 67
+        },
+        {
+          "name": "arrowheadOf",
+          "line": 81
+        },
+        {
+          "name": "describe",
+          "line": 102
+        },
+        {
+          "name": "gestureGroups",
+          "line": 115
+        },
+        {
+          "name": "recordGestureDecision",
+          "line": 172
+        }
+      ]
+    },
+    {
+      "path": "src/image/engines.js",
+      "sha256": "f6a9194d22949c654346392f4f1e82650474645062fb92ac71f55b4e375a4ccd",
+      "lines": 345,
+      "imports": [
+        "../image-ops.js",
+        "./view.js",
+        "./ops-extra.js"
+      ],
+      "symbols": [
+        {
+          "name": "ENGINE_API",
+          "line": 18
+        },
+        {
+          "name": "registerEngine",
+          "line": 21
+        },
+        {
+          "name": "getEngine",
+          "line": 27
+        },
+        {
+          "name": "listEngines",
+          "line": 28
+        },
+        {
+          "name": "runEngine",
+          "line": 38
+        },
+        {
+          "name": "binaryMask",
+          "line": 63
+        },
+        {
+          "name": "labelComponents",
+          "line": 93
+        }
+      ]
+    },
+    {
+      "path": "src/image/geometry.js",
+      "sha256": "f1a918b6d060359e6d6ae6972c8753482acc9484635a4c4812996b7fd81ffb54",
+      "lines": 194,
+      "imports": [
+        "../config.js",
+        "../image-ops.js",
+        "./transform.js"
+      ],
+      "symbols": [
+        {
+          "name": "GEOMETRY_OPS",
+          "line": 13
+        },
+        {
+          "name": "warp",
+          "line": 17
+        },
+        {
+          "name": "estimateSkew",
+          "line": 49
+        },
+        {
+          "name": "rotateBy",
+          "line": 111
+        },
+        {
+          "name": "geometryStage",
+          "line": 130
+        }
+      ]
+    },
+    {
+      "path": "src/image/measure.js",
+      "sha256": "bca14a1fa73e77c60b745fa2a9df5611706d94bb337f474cec1c3c0f950e2773",
+      "lines": 87,
+      "imports": [
+        "./transform.js"
+      ],
+      "symbols": [
+        {
+          "name": "MEASURE_VERSION",
+          "line": 9
+        },
+        {
+          "name": "UNITS",
+          "line": 10
+        },
+        {
+          "name": "toSpacePixels",
+          "line": 16
+        },
+        {
+          "name": "spaceToNormalized",
+          "line": 27
+        },
+        {
+          "name": "defaultSigma",
+          "line": 35
+        },
+        {
+          "name": "calibrate",
+          "line": 41
+        },
+        {
+          "name": "measure",
+          "line": 51
+        }
+      ]
+    },
+    {
+      "path": "src/image/ops-extra.js",
+      "sha256": "3eb227c3a13c9cbdcb26583da1e8348c44ce5ee12e6c50701aa31562ec7773ab",
+      "lines": 211,
+      "imports": [
+        "../image-ops.js"
+      ],
+      "symbols": [
+        {
+          "name": "gamma",
+          "line": 21
+        },
+        {
+          "name": "levels",
+          "line": 31
+        },
+        {
+          "name": "whiteBalance",
+          "line": 47
+        },
+        {
+          "name": "rgbToHsv",
+          "line": 69
+        },
+        {
+          "name": "rgbToLab",
+          "line": 75
+        },
+        {
+          "name": "channel",
+          "line": 85
+        },
+        {
+          "name": "flatField",
+          "line": 110
+        },
+        {
+          "name": "morphPass",
+          "line": 126
+        },
+        {
+          "name": "morphology",
+          "line": 146
+        },
+        {
+          "name": "canny",
+          "line": 161
+        },
+        {
+          "name": "applyExtraOp",
+          "line": 199
+        },
+        {
+          "name": "EXTRA_OP_NAMES",
+          "line": 211
+        }
+      ]
+    },
+    {
+      "path": "src/image/pdf.js",
+      "sha256": "269d399624dbf60e5c9c737bbf9301d0508b3d22d4fc5c1d0788e71a19c59ef8",
+      "lines": 132,
+      "imports": [
+        "node:crypto",
+        "node:module",
+        "node:path",
+        "../config.js"
+      ],
+      "symbols": [
+        {
+          "name": "PDF_VERSION",
+          "line": 14
+        },
+        {
+          "name": "MAX_DPI",
+          "line": 15
+        },
+        {
+          "name": "MAX_PAGES",
+          "line": 16
+        },
+        {
+          "name": "pdfEngine",
+          "line": 19
+        },
+        {
+          "name": "pdfAvailable",
+          "line": 33
+        },
+        {
+          "name": "isPdf",
+          "line": 35
+        },
+        {
+          "name": "CanvasFactory",
+          "line": 39
+        },
+        {
+          "name": "standardFontsUrl",
+          "line": 50
+        },
+        {
+          "name": "openDocument",
+          "line": 57
+        },
+        {
+          "name": "pdfInfo",
+          "line": 71
+        },
+        {
+          "name": "renderPdfPage",
+          "line": 86
+        }
+      ]
+    },
+    {
+      "path": "src/image/quality.js",
+      "sha256": "2f68dd34d8543527f1c054616681df3a92a0d4ec9f6bd208223f3f410ad2a088",
+      "lines": 87,
+      "imports": [
+        "sharp",
+        "../image-ops.js",
+        "./geometry.js"
+      ],
+      "symbols": [
+        {
+          "name": "QUALITY_VERSION",
+          "line": 11
+        },
+        {
+          "name": "measureQuality",
+          "line": 13
+        },
+        {
+          "name": "advise",
+          "line": 62
+        },
+        {
+          "name": "clippingMap",
+          "line": 76
+        }
+      ]
+    },
+    {
+      "path": "src/image/register.js",
+      "sha256": "b9aede96cc8a3cc4326d77afa4d1cea698f3a63eea8164c315e9088be5ce2d0d",
+      "lines": 340,
+      "imports": [
+        "node:crypto",
+        "sharp",
+        "../image-store.js",
+        "../image-ops.js",
+        "./transform.js",
+        "./geometry.js"
+      ],
+      "symbols": [
+        {
+          "name": "REGISTER_VERSION",
+          "line": 17
+        },
+        {
+          "name": "MODELS",
+          "line": 18
+        },
+        {
+          "name": "rng",
+          "line": 24
+        },
+        {
+          "name": "grayAt",
+          "line": 35
+        },
+        {
+          "name": "harris",
+          "line": 42
+        },
+        {
+          "name": "describe",
+          "line": 82
+        },
+        {
+          "name": "features",
+          "line": 105
+        },
+        {
+          "name": "match",
+          "line": 117
+        },
+        {
+          "name": "ransac",
+          "line": 138
+        },
+        {
+          "name": "hullArea",
+          "line": 166
+        },
+        {
+          "name": "residualGrid",
+          "line": 181
+        },
+        {
+          "name": "registerPair",
+          "line": 194
+        },
+        {
+          "name": "compareView",
+          "line": 261
+        },
+        {
+          "name": "overlapMetrics",
+          "line": 316
+        }
+      ]
+    },
+    {
+      "path": "src/image/transform.js",
+      "sha256": "89c2ed9a71c2459a0b443ead3ca9a33380fac3acc53255e8b82a0cf3312c541b",
+      "lines": 222,
+      "imports": [
+        "normalized"
+      ],
+      "symbols": [
+        {
+          "name": "SPACES",
+          "line": 12
+        },
+        {
+          "name": "identity",
+          "line": 13
+        },
+        {
+          "name": "translate",
+          "line": 14
+        },
+        {
+          "name": "scale",
+          "line": 15
+        },
+        {
+          "name": "rotate",
+          "line": 18
+        },
+        {
+          "name": "multiply",
+          "line": 29
+        },
+        {
+          "name": "chain",
+          "line": 36
+        },
+        {
+          "name": "apply",
+          "line": 38
+        },
+        {
+          "name": "invert",
+          "line": 48
+        },
+        {
+          "name": "condition",
+          "line": 61
+        },
+        {
+          "name": "isAffine",
+          "line": 68
+        },
+        {
+          "name": "solve",
+          "line": 72
+        },
+        {
+          "name": "leastSquares",
+          "line": 91
+        },
+        {
+          "name": "normalizer",
+          "line": 105
+        },
+        {
+          "name": "fitTransform",
+          "line": 115
+        },
+        {
+          "name": "reprojectionErrors",
+          "line": 162
+        },
+        {
+          "name": "percentile",
+          "line": 169
+        },
+        {
+          "name": "roundMatrix",
+          "line": 176
+        },
+        {
+          "name": "step",
+          "line": 180
+        },
+        {
+          "name": "composeSteps",
+          "line": 186
+        },
+        {
+          "name": "graphSummary",
+          "line": 190
+        },
+        {
+          "name": "axisAligned",
+          "line": 206
+        },
+        {
+          "name": "mapMark",
+          "line": 208
+        }
+      ]
+    },
+    {
+      "path": "src/image/view.js",
+      "sha256": "165a2f2f4b51738c615a9afba6c119c3f78f126abb87552b6cc8591f7a9086a1",
+      "lines": 245,
+      "imports": [
+        "node:crypto",
+        "sharp",
+        "../config.js",
+        "../image-store.js",
+        "../image-ops.js",
+        "./transform.js",
+        "./geometry.js",
+        "./ops-extra.js"
+      ],
+      "symbols": [
+        {
+          "name": "VIEW_API",
+          "line": 22
+        },
+        {
+          "name": "SAMPLING_MODES",
+          "line": 23
+        },
+        {
+          "name": "OUTPUT_FORMATS",
+          "line": 24
+        },
+        {
+          "name": "MAX_DELIVERY_SIDE",
+          "line": 25
+        },
+        {
+          "name": "OP_VERSIONS",
+          "line": 29
+        },
+        {
+          "name": "opVersion",
+          "line": 36
+        },
+        {
+          "name": "canonical",
+          "line": 43
+        },
+        {
+          "name": "normalizeSpec",
+          "line": 46
+        },
+        {
+          "name": "analysisCrop",
+          "line": 66
+        },
+        {
+          "name": "analysisFor",
+          "line": 110
+        },
+        {
+          "name": "encodeView",
+          "line": 119
+        },
+        {
+          "name": "renderView",
+          "line": 134
+        },
+        {
+          "name": "rememberView",
+          "line": 219
+        },
+        {
+          "name": "findView",
+          "line": 227
+        },
+        {
+          "name": "frameFromView",
+          "line": 231
+        }
+      ]
+    },
+    {
+      "path": "src/image-ops.js",
+      "sha256": "b5e23be902b4369a7e99ee5d21d5e002b07cec8b326cb3f46f4006ec1cb2baa6",
+      "lines": 337,
+      "imports": [
+        "sharp",
+        "./pixel-font.js",
+        "./image-store.js"
+      ],
+      "symbols": [
+        {
+          "name": "OUTPUT_LONG_SIDE",
+          "line": 9
+        },
+        {
+          "name": "MAX_UPSCALE",
+          "line": 10
+        },
+        {
+          "name": "OP_NAMES",
+          "line": 11
+        },
+        {
+          "name": "regionToPixels",
+          "line": 19
+        },
+        {
+          "name": "pixelsToRegion",
+          "line": 32
+        },
+        {
+          "name": "rawImage",
+          "line": 37
+        },
+        {
+          "name": "fromRaw",
+          "line": 41
+        },
+        {
+          "name": "sameBands",
+          "line": 44
+        },
+        {
+          "name": "toGray",
+          "line": 45
+        },
+        {
+          "name": "otsu",
+          "line": 47
+        },
+        {
+          "name": "clahe",
+          "line": 70
+        },
+        {
+          "name": "threshold",
+          "line": 115
+        },
+        {
+          "name": "edges",
+          "line": 131
+        },
+        {
+          "name": "applyOp",
+          "line": 151
+        },
+        {
+          "name": "encode",
+          "line": 167
+        },
+        {
+          "name": "prepare",
+          "line": 179
+        },
+        {
+          "name": "processImage",
+          "line": 190
+        },
+        {
+          "name": "rowLabel",
+          "line": 203
+        },
+        {
+          "name": "cellCenter",
+          "line": 206
+        },
+        {
+          "name": "overlayGrid",
+          "line": 217
+        },
+        {
+          "name": "previewImage",
+          "line": 253
+        },
+        {
+          "name": "DISPLAY_LONG_SIDE",
+          "line": 259
+        },
+        {
+          "name": "displayImage",
+          "line": 260
+        },
+        {
+          "name": "widgetImage",
+          "line": 276
+        },
+        {
+          "name": "VIEW_LONG_SIDE",
+          "line": 298
+        },
+        {
+          "name": "compactForDisplay",
+          "line": 299
+        },
+        {
+          "name": "regionTile",
+          "line": 315
+        }
+      ]
+    },
+    {
+      "path": "src/image-store.js",
+      "sha256": "772a058383f7516569749a8d67b97be7ea36dc39a2313f6f77e21c4075cd5cfa",
+      "lines": 198,
+      "imports": [
+        "node:crypto",
+        "node:dns/promises",
+        "node:net",
+        "sharp",
+        "./config.js"
+      ],
+      "symbols": [
+        {
+          "name": "MAX_DOWNLOAD_BYTES",
+          "line": 14
+        },
+        {
+          "name": "MAX_INPUT_PIXELS",
+          "line": 15
+        },
+        {
+          "name": "WORKING_LONG_SIDE",
+          "line": 16
+        },
+        {
+          "name": "isPrivateAddress",
+          "line": 27
+        },
+        {
+          "name": "assertPublicHttpsUrl",
+          "line": 43
+        },
+        {
+          "name": "readLimited",
+          "line": 56
+        },
+        {
+          "name": "downloadImage",
+          "line": 70
+        },
+        {
+          "name": "prune",
+          "line": 92
+        },
+        {
+          "name": "sha256Of",
+          "line": 107
+        },
+        {
+          "name": "imageIdOf",
+          "line": 108
+        },
+        {
+          "name": "registerImage",
+          "line": 111
+        },
+        {
+          "name": "describeSource",
+          "line": 155
+        },
+        {
+          "name": "getImage",
+          "line": 178
+        },
+        {
+          "name": "entrySharp",
+          "line": 191
+        },
+        {
+          "name": "hasImage",
+          "line": 194
+        },
+        {
+          "name": "clearImages",
+          "line": 196
+        }
+      ]
+    },
+    {
+      "path": "src/interaction-protocol.js",
+      "sha256": "65d53c031e4840dd46e9a4620384ad0e5e1778fc26a9a3cc3bb1172e6063ab79",
+      "lines": 246,
+      "imports": [
+        "./scene-catalog.js",
+        "./gesture-groups.js"
+      ],
+      "symbols": [
+        {
+          "name": "PROTOCOL_VERSION",
+          "line": 6
+        },
+        {
+          "name": "INTENTS",
+          "line": 7
+        },
+        {
+          "name": "INTENT_LABELS",
+          "line": 11
+        },
+        {
+          "name": "SCENE_META",
+          "line": 20
+        },
+        {
+          "name": "INTENT_ACTIONS",
+          "line": 25
+        },
+        {
+          "name": "ARROW_HINTS",
+          "line": 38
+        },
+        {
+          "name": "arrowHintFor",
+          "line": 39
+        },
+        {
+          "name": "arrowDirection",
+          "line": 45
+        },
+        {
+          "name": "strokeFacts",
+          "line": 55
+        },
+        {
+          "name": "buildAnnotationEvent",
+          "line": 72
+        },
+        {
+          "name": "arrowLines",
+          "line": 160
+        },
+        {
+          "name": "gestureLines",
+          "line": 175
+        },
+        {
+          "name": "formatAnnotationChatMessage",
+          "line": 189
+        }
+      ]
+    },
+    {
+      "path": "src/mark-render.js",
+      "sha256": "3b49db4fd58e849f01fd1cd9f2088218e9115a37287533149aa134fc33273ef8",
+      "lines": 132,
+      "imports": [
+        "sharp",
+        "./image-store.js",
+        "./image-ops.js",
+        "./pixel-font.js"
+      ],
+      "symbols": [
+        {
+          "name": "inkUnits",
+          "line": 19
+        },
+        {
+          "name": "inkReport",
+          "line": 33
+        },
+        {
+          "name": "marksRegion",
+          "line": 50
+        },
+        {
+          "name": "pathData",
+          "line": 58
+        },
+        {
+          "name": "markSvg",
+          "line": 73
+        },
+        {
+          "name": "renderVerification",
+          "line": 101
+        }
+      ]
+    },
+    {
+      "path": "src/marks-file.js",
+      "sha256": "8648c8e2f4d47697e6fdaf806766689264dbb2cc1e9cb483e591554a9da36fb3",
+      "lines": 69,
+      "imports": [
+        "./mark-render.js",
+        "./protocol.js",
+        "./scene/scene-ops.js",
+        "./scene/objects.js"
+      ],
+      "symbols": [
+        {
+          "name": "MARKS_FORMAT",
+          "line": 10
+        },
+        {
+          "name": "exportMarksSvg",
+          "line": 18
+        },
+        {
+          "name": "parseMarksFile",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "path": "src/modules/admin.js",
+      "sha256": "75208d5b78b83b8653453d330bea3f0a137e52f0802729c33a0055f744d8c123",
+      "lines": 68,
+      "imports": [
+        "node:crypto",
+        "node:fs/promises",
+        "node:path",
+        "../security.js"
+      ],
+      "symbols": [
+        {
+          "name": "ADMIN_KEY_FILE",
+          "line": 15
+        },
+        {
+          "name": "approvalMac",
+          "line": 20
+        },
+        {
+          "name": "approvalsDir",
+          "line": 21
+        },
+        {
+          "name": "resolveAdminKey",
+          "line": 24
+        },
+        {
+          "name": "writeApproval",
+          "line": 44
+        },
+        {
+          "name": "createAdmin",
+          "line": 51
+        }
+      ]
+    },
+    {
+      "path": "src/modules/audit.js",
+      "sha256": "e27cd0b122f64500c5f23ac635ed47fd906904a2a1779df21878d9355c2d48e9",
+      "lines": 43,
+      "imports": [
+        "node:fs/promises",
+        "node:path"
+      ],
+      "symbols": [
+        {
+          "name": "createAudit",
+          "line": 10
+        }
+      ]
+    },
+    {
+      "path": "src/modules/egress.js",
+      "sha256": "42819bec93136733c33ef6c74147eca1e29e59d7794a35218cee36fd25ae8e96",
+      "lines": 246,
+      "imports": [
+        "node:net",
+        "node:dns",
+        "node:https",
+        "node:crypto",
+        "node:fs/promises",
+        "node:path"
+      ],
+      "symbols": [
+        {
+          "name": "EgressError",
+          "line": 24
+        },
+        {
+          "name": "isPublicAddress",
+          "line": 36
+        },
+        {
+          "name": "safeLookup",
+          "line": 49
+        },
+        {
+          "name": "httpsTransport",
+          "line": 67
+        },
+        {
+          "name": "envName",
+          "line": 95
+        },
+        {
+          "name": "createSecrets",
+          "line": 98
+        },
+        {
+          "name": "createEgress",
+          "line": 122
+        }
+      ]
+    },
+    {
+      "path": "src/modules/index.js",
+      "sha256": "08b55952315c301fd00e758979c2bf340ab11727a6d9bdce4ea0ba07f72cfe67",
+      "lines": 47,
+      "imports": [
+        "node:path",
+        "./audit.js",
+        "./registry.js",
+        "./lifecycle.js",
+        "./router.js",
+        "./runtimes/builtin.js",
+        "./runtimes/declarative.js",
+        "./runtimes/wasm.js",
+        "./runtimes/http.js",
+        "./jobs.js",
+        "./egress.js",
+        "./packages.js",
+        "./admin.js",
+        "../builtin-modules/graph/index.js",
+        "../builtin-modules/astrometry/index.js",
+        "../builtin-modules/cas/index.js"
+      ],
+      "symbols": [
+        {
+          "name": "BUILTIN_MODULES",
+          "line": 21
+        },
+        {
+          "name": "createModuleHost",
+          "line": 26
+        }
+      ]
+    },
+    {
+      "path": "src/modules/jobs.js",
+      "sha256": "e1982aa89a64af912956227809c2aec9e6525273ae503cd7245d8b5162db08f7",
+      "lines": 68,
+      "imports": [
+        "node:fs/promises",
+        "node:path",
+        "node:crypto"
+      ],
+      "symbols": [
+        {
+          "name": "JOB_ID",
+          "line": 12
+        },
+        {
+          "name": "createJobs",
+          "line": 14
+        }
+      ]
+    },
+    {
+      "path": "src/modules/json-schema.js",
+      "sha256": "45efb06d7dc5d93077546126d1e62607c64d6efe9af503ff39d477990cbf8ba6",
+      "lines": 103,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "SCHEMA_KEYWORDS",
+          "line": 6
+        },
+        {
+          "name": "checkSchema",
+          "line": 17
+        },
+        {
+          "name": "validateValue",
+          "line": 61
+        }
+      ]
+    },
+    {
+      "path": "src/modules/lifecycle.js",
+      "sha256": "53aee840da111d3d9e6fbf3b522177b5e1589a53fc5df29ae7ae6f67e629235b",
+      "lines": 128,
+      "imports": [
+        "node:crypto",
+        "./permissions.js",
+        "../security.js"
+      ],
+      "symbols": [
+        {
+          "name": "ACTIONS",
+          "line": 11
+        },
+        {
+          "name": "LifecycleError",
+          "line": 14
+        },
+        {
+          "name": "createLifecycle",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "path": "src/modules/manifest.js",
+      "sha256": "086b5e66bad4447bab5bc43d71a9f9e19709fad04151ce5adcacea0ee1f701ee",
+      "lines": 207,
+      "imports": [
+        "zod",
+        "./json-schema.js",
+        "./permissions.js",
+        "./semver.js"
+      ],
+      "symbols": [
+        {
+          "name": "MODULE_SCHEMA",
+          "line": 10
+        },
+        {
+          "name": "RUNTIME_KINDS",
+          "line": 11
+        },
+        {
+          "name": "CATEGORIES",
+          "line": 12
+        },
+        {
+          "name": "TARGETS",
+          "line": 13
+        },
+        {
+          "name": "MODULE_ID",
+          "line": 17
+        },
+        {
+          "name": "CAPABILITY_ID",
+          "line": 18
+        },
+        {
+          "name": "LATENCIES",
+          "line": 48
+        },
+        {
+          "name": "PANEL_SCHEMA",
+          "line": 81
+        },
+        {
+          "name": "PANEL_KINDS",
+          "line": 82
+        },
+        {
+          "name": "ManifestSchema",
+          "line": 100
+        },
+        {
+          "name": "ManifestError",
+          "line": 134
+        },
+        {
+          "name": "validateManifest",
+          "line": 137
+        },
+        {
+          "name": "localized",
+          "line": 207
+        }
+      ]
+    },
+    {
+      "path": "src/modules/mcp-tools.js",
+      "sha256": "266fa89865dabcc9c9591e9f84ee3171f33f33f17fddfa16705b033f3ebcce8c",
+      "lines": 289,
+      "imports": [
+        "zod",
+        "@modelcontextprotocol/ext-apps/server",
+        "./manifest.js",
+        "./jobs.js",
+        "./permissions.js",
+        "../scene/scene-ops.js",
+        "../scene/preview.js",
+        "../scene/blank-canvas.js"
+      ],
+      "symbols": [
+        {
+          "name": "catalogEntry",
+          "line": 19
+        },
+        {
+          "name": "registerModuleTools",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "path": "src/modules/packages.js",
+      "sha256": "70b083a65843ae4a367b7ef60f93f52b3c3b6e8923f7112dcca68cc631aa7318",
+      "lines": 402,
+      "imports": [
+        "node:crypto",
+        "node:fs/promises",
+        "node:path",
+        "zod",
+        "./manifest.js",
+        "./permissions.js",
+        "./lifecycle.js",
+        "../scene/scene-ops.js",
+        "./json-schema.js",
+        "./runtimes/wasm.js"
+      ],
+      "symbols": [
+        {
+          "name": "PACKAGE_SCHEMA",
+          "line": 33
+        },
+        {
+          "name": "MAX_PACKAGE_BYTES",
+          "line": 34
+        },
+        {
+          "name": "canonical",
+          "line": 46
+        },
+        {
+          "name": "digestOf",
+          "line": 51
+        },
+        {
+          "name": "parseBundle",
+          "line": 53
+        },
+        {
+          "name": "generateSigningKey",
+          "line": 74
+        },
+        {
+          "name": "signBundle",
+          "line": 78
+        },
+        {
+          "name": "verifyBundle",
+          "line": 86
+        },
+        {
+          "name": "atomicWrite",
+          "line": 114
+        },
+        {
+          "name": "selfTest",
+          "line": 123
+        },
+        {
+          "name": "createPackages",
+          "line": 143
+        },
+        {
+          "name": "ensureDirs",
+          "line": 399
+        }
+      ]
+    },
+    {
+      "path": "src/modules/permissions.js",
+      "sha256": "945dcef25bdd4b552c3d058882fa1f736484922eac8688a5a894583fe0c71544",
+      "lines": 37,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "PERMISSIONS",
+          "line": 5
+        },
+        {
+          "name": "PERMISSION_NAMES",
+          "line": 15
+        },
+        {
+          "name": "riskOf",
+          "line": 18
+        },
+        {
+          "name": "permissionDiff",
+          "line": 21
+        },
+        {
+          "name": "describePermission",
+          "line": 27
+        },
+        {
+          "name": "capabilityPermissions",
+          "line": 30
+        },
+        {
+          "name": "missingPermissions",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "path": "src/modules/registry.js",
+      "sha256": "3f784288098d07ebb42be0d7ed38d1634ecaee3bc10167bc3a205ba8e0aa3ff3",
+      "lines": 68,
+      "imports": [
+        "node:fs/promises",
+        "node:path",
+        "./manifest.js"
+      ],
+      "symbols": [
+        {
+          "name": "REGISTRY_STATE",
+          "line": 10
+        },
+        {
+          "name": "STATES",
+          "line": 11
+        },
+        {
+          "name": "atomicWrite",
+          "line": 13
+        },
+        {
+          "name": "createRegistry",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "path": "src/modules/router.js",
+      "sha256": "7fb6bbca21b8a789c5edb5c48111b96418067ab72636e3ad31b538c5b3f7aeba",
+      "lines": 157,
+      "imports": [
+        "zod",
+        "./json-schema.js",
+        "./permissions.js",
+        "../scene/scene-ops.js",
+        "./manifest.js"
+      ],
+      "symbols": [
+        {
+          "name": "ModuleError",
+          "line": 13
+        },
+        {
+          "name": "canvasContext",
+          "line": 27
+        },
+        {
+          "name": "createRouter",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "path": "src/modules/runtimes/builtin.js",
+      "sha256": "b945ea6f1540ab1990e845838c6fb2acbdecbd416c7fd5f7004e82abdbd98506",
+      "lines": 14,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "builtinRuntime",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "path": "src/modules/runtimes/declarative.js",
+      "sha256": "c4219757f89bb5ed8913763d7dab15af72c156c4bea5d9dac0a804072a167753",
+      "lines": 49,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "readPath",
+          "line": 10
+        },
+        {
+          "name": "fillTemplate",
+          "line": 20
+        },
+        {
+          "name": "declarativeRuntime",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "path": "src/modules/runtimes/http.js",
+      "sha256": "3eec014bad422aafa884b24274aa07773464d9886d52b1ebb8402dfbc8b4ded8",
+      "lines": 42,
+      "imports": [
+        "./declarative.js"
+      ],
+      "symbols": [
+        {
+          "name": "createHttpRuntime",
+          "line": 10
+        }
+      ]
+    },
+    {
+      "path": "src/modules/runtimes/wasm-worker.js",
+      "sha256": "0a4fd5f94279dc1b320e21dcdc716bb40e855aa7a676cf4c76191d736f946652",
+      "lines": 27,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "main",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "path": "src/modules/runtimes/wasm.js",
+      "sha256": "fdeb26c3032282b0acbef48ad04a6f52931b1052aada62edfe8ad21777c1ef36",
+      "lines": 139,
+      "imports": [
+        "node:child_process",
+        "node:url"
+      ],
+      "symbols": [
+        {
+          "name": "WASM_ABI",
+          "line": 19
+        },
+        {
+          "name": "MAX_WASM_BYTES",
+          "line": 20
+        },
+        {
+          "name": "WasmError",
+          "line": 25
+        },
+        {
+          "name": "leb",
+          "line": 27
+        },
+        {
+          "name": "declaredSizes",
+          "line": 42
+        },
+        {
+          "name": "inspectWasm",
+          "line": 73
+        },
+        {
+          "name": "wasmFileOf",
+          "line": 95
+        },
+        {
+          "name": "checkWasmPackage",
+          "line": 103
+        },
+        {
+          "name": "runInChild",
+          "line": 108
+        },
+        {
+          "name": "wasmRuntime",
+          "line": 122
+        }
+      ]
+    },
+    {
+      "path": "src/modules/semver.js",
+      "sha256": "ed9fdb0cd7c2adb32e9a19ad54501c7ab70d43d0f0c5574beae71b75443f05fe",
+      "lines": 48,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "parseVersion",
+          "line": 6
+        },
+        {
+          "name": "isVersion",
+          "line": 11
+        },
+        {
+          "name": "compareVersions",
+          "line": 13
+        },
+        {
+          "name": "comparator",
+          "line": 23
+        },
+        {
+          "name": "parseRange",
+          "line": 38
+        },
+        {
+          "name": "satisfies",
+          "line": 48
+        }
+      ]
+    },
+    {
+      "path": "src/oauth.js",
+      "sha256": "9659bea9b0882c773cd4e31952dc596b5efccd8b52ba4eeba234e452c76560d6",
+      "lines": 238,
+      "imports": [
+        "node:crypto",
+        "./security.js"
+      ],
+      "symbols": [
+        {
+          "name": "createOAuth",
+          "line": 26
+        },
+        {
+          "name": "withQuery",
+          "line": 213
+        },
+        {
+          "name": "esc",
+          "line": 219
+        },
+        {
+          "name": "readBody",
+          "line": 224
+        }
+      ]
+    },
+    {
+      "path": "src/pixel-font.js",
+      "sha256": "3bcdfa9bdc423030b88211c2b25032ad19529d39cb3f4e72f2e151690481a78e",
+      "lines": 64,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "GLYPH_WIDTH",
+          "line": 42
+        },
+        {
+          "name": "GLYPH_HEIGHT",
+          "line": 43
+        },
+        {
+          "name": "labelWidth",
+          "line": 46
+        },
+        {
+          "name": "labelSvg",
+          "line": 50
+        }
+      ]
+    },
+    {
+      "path": "src/protocol.js",
+      "sha256": "c5e785eed091e6a20d9898f02574f1f2707029c205c2ef6068857a8458f335d9",
+      "lines": 109,
+      "imports": [
+        "./canvas-state.js",
+        "./assessment.js",
+        "./gesture-groups.js",
+        "./scene/scene-ops.js"
+      ],
+      "symbols": [
+        {
+          "name": "VISUAL_PROTOCOL",
+          "line": 16
+        },
+        {
+          "name": "READABLE_PROTOCOLS",
+          "line": 17
+        },
+        {
+          "name": "COORDINATES",
+          "line": 18
+        },
+        {
+          "name": "protocolMark",
+          "line": 37
+        },
+        {
+          "name": "canvasDocument",
+          "line": 59
+        },
+        {
+          "name": "marksFromDocument",
+          "line": 91
+        }
+      ]
+    },
+    {
+      "path": "src/result-budget.js",
+      "sha256": "4973756cb3dfeb5b2b391389186fc3d2dc39ae1cc3f7d6e095867efd7f773d86",
+      "lines": 113,
+      "imports": [
+        "sharp"
+      ],
+      "symbols": [
+        {
+          "name": "shrinkBlock",
+          "line": 7
+        },
+        {
+          "name": "describeDelivery",
+          "line": 31
+        },
+        {
+          "name": "budgetError",
+          "line": 81
+        },
+        {
+          "name": "fitResult",
+          "line": 88
+        }
+      ]
+    },
+    {
+      "path": "src/scene/blank-canvas.js",
+      "sha256": "d3b50a4c2dfd93420739617461ed952688806f2f132d68ae92bfb39b51475ad9",
+      "lines": 42,
+      "imports": [
+        "node:crypto",
+        "node:zlib",
+        "sharp",
+        "../storage.js"
+      ],
+      "symbols": [
+        {
+          "name": "BACKGROUNDS",
+          "line": 11
+        },
+        {
+          "name": "BLANK_SIZE",
+          "line": 12
+        },
+        {
+          "name": "textChunk",
+          "line": 14
+        },
+        {
+          "name": "withTextChunk",
+          "line": 23
+        },
+        {
+          "name": "blankCanvasBytes",
+          "line": 29
+        },
+        {
+          "name": "createBlankCanvas",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "path": "src/scene/canvas-render.js",
+      "sha256": "54aac87462fc16484711150d54800c151a22d7bb28527e4572a8d3ce57b7513b",
+      "lines": 72,
+      "imports": [
+        "sharp",
+        "node:crypto",
+        "../image-store.js",
+        "../image-ops.js",
+        "../canvas-state.js",
+        "../mark-render.js",
+        "./scene-ops.js",
+        "./objects.js"
+      ],
+      "symbols": [
+        {
+          "name": "canvasRevision",
+          "line": 16
+        },
+        {
+          "name": "canvasReadRequest",
+          "line": 24
+        },
+        {
+          "name": "renderCanvas",
+          "line": 30
+        }
+      ]
+    },
+    {
+      "path": "src/scene/compose.js",
+      "sha256": "a344bc6b6f2df82dc4993f23337988596da2dda1329bae6549369a9835e395d2",
+      "lines": 68,
+      "imports": [
+        "sharp",
+        "./scene-ops.js",
+        "../canvas-state.js",
+        "../storage.js"
+      ],
+      "symbols": [
+        {
+          "name": "png",
+          "line": 7
+        },
+        {
+          "name": "composeCanvas",
+          "line": 14
+        }
+      ]
+    },
+    {
+      "path": "src/scene/expression.js",
+      "sha256": "19dd5492074bd6445191343632202756068aa1b27c0faaf2e9772759c2196f1a",
+      "lines": 203,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "MAX_EXPRESSION_LENGTH",
+          "line": 11
+        },
+        {
+          "name": "CONSTANTS",
+          "line": 14
+        },
+        {
+          "name": "FUNCTIONS",
+          "line": 16
+        },
+        {
+          "name": "ExpressionError",
+          "line": 30
+        },
+        {
+          "name": "tokenize",
+          "line": 34
+        },
+        {
+          "name": "parseExpression",
+          "line": 55
+        },
+        {
+          "name": "splitName",
+          "line": 147
+        },
+        {
+          "name": "evaluate",
+          "line": 160
+        },
+        {
+          "name": "compileExpression",
+          "line": 182
+        },
+        {
+          "name": "usesTrig",
+          "line": 193
+        },
+        {
+          "name": "formatExpression",
+          "line": 201
+        }
+      ]
+    },
+    {
+      "path": "src/scene/objects.js",
+      "sha256": "86ba234471565b06327f5653bf15430d28c070ebf7036dbd7f16970fc61ea4d6",
+      "lines": 406,
+      "imports": [
+        "zod",
+        "./expression.js"
+      ],
+      "symbols": [
+        {
+          "name": "COLOR_NAMES",
+          "line": 14
+        },
+        {
+          "name": "SPACES",
+          "line": 32
+        },
+        {
+          "name": "OBJECT_TYPES",
+          "line": 34
+        },
+        {
+          "name": "OBJECT_TYPE_NAMES",
+          "line": 103
+        },
+        {
+          "name": "validateProps",
+          "line": 105
+        },
+        {
+          "name": "frameOf",
+          "line": 124
+        },
+        {
+          "name": "niceTicks",
+          "line": 135
+        },
+        {
+          "name": "piTicks",
+          "line": 142
+        },
+        {
+          "name": "piText",
+          "line": 150
+        },
+        {
+          "name": "tickText",
+          "line": 157
+        },
+        {
+          "name": "sampleFunction",
+          "line": 171
+        },
+        {
+          "name": "jumps",
+          "line": 224
+        },
+        {
+          "name": "clipToFrame",
+          "line": 234
+        },
+        {
+          "name": "simplify",
+          "line": 253
+        },
+        {
+          "name": "renderAxes",
+          "line": 286
+        },
+        {
+          "name": "renderFunction",
+          "line": 320
+        },
+        {
+          "name": "renderShape",
+          "line": 335
+        },
+        {
+          "name": "renderObject",
+          "line": 368
+        },
+        {
+          "name": "primitivesSvg",
+          "line": 388
+        }
+      ]
+    },
+    {
+      "path": "src/scene/preview.js",
+      "sha256": "d2878fa085a11c6a04f81c36668729885e68aa030f436bf770330c016c395fff",
+      "lines": 4,
+      "imports": [
+        "./canvas-render.js"
+      ],
+      "symbols": [
+        {
+          "name": "renderPreview",
+          "line": 2
+        }
+      ]
+    },
+    {
+      "path": "src/scene/scene-ops.js",
+      "sha256": "44b8b1e651c233405f9a57fb28afc1cd48905370e6383173c108f5577ac5df4e",
+      "lines": 256,
+      "imports": [
+        "zod",
+        "./objects.js",
+        "../canvas-state.js"
+      ],
+      "symbols": [
+        {
+          "name": "SCENE_OPS_PROTOCOL",
+          "line": 11
+        },
+        {
+          "name": "OP_KINDS",
+          "line": 12
+        },
+        {
+          "name": "VISIBILITY",
+          "line": 13
+        },
+        {
+          "name": "MAX_OPS",
+          "line": 14
+        },
+        {
+          "name": "OperationsSchema",
+          "line": 36
+        },
+        {
+          "name": "canvasObjects",
+          "line": 43
+        },
+        {
+          "name": "sceneRevision",
+          "line": 44
+        },
+        {
+          "name": "nextId",
+          "line": 46
+        },
+        {
+          "name": "renderedObjects",
+          "line": 55
+        },
+        {
+          "name": "SceneOpsError",
+          "line": 64
+        },
+        {
+          "name": "applySceneOps",
+          "line": 73
+        },
+        {
+          "name": "compactProps",
+          "line": 215
+        },
+        {
+          "name": "compactObject",
+          "line": 219
+        },
+        {
+          "name": "widgetObjects",
+          "line": 236
+        },
+        {
+          "name": "serializeObjects",
+          "line": 247
+        },
+        {
+          "name": "restoreObjects",
+          "line": 248
+        }
+      ]
+    },
+    {
+      "path": "src/scene-catalog.js",
+      "sha256": "b7e174abeb2442e56444a194c3bc85d0a56e7d38c22b352fba5e10ee0b188813",
+      "lines": 140,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "sceneIds",
+          "line": 4
+        },
+        {
+          "name": "sceneLandmarks",
+          "line": 9
+        },
+        {
+          "name": "landmarkIds",
+          "line": 30
+        },
+        {
+          "name": "MARK_TYPES",
+          "line": 34
+        },
+        {
+          "name": "MAX_POLYLINE_POINTS",
+          "line": 35
+        },
+        {
+          "name": "polylineWithBounds",
+          "line": 41
+        },
+        {
+          "name": "MARK_STATUSES",
+          "line": 56
+        },
+        {
+          "name": "markFindings",
+          "line": 57
+        },
+        {
+          "name": "MARK_COLORS",
+          "line": 65
+        },
+        {
+          "name": "MARK_SIZES",
+          "line": 66
+        },
+        {
+          "name": "MARK_PENS",
+          "line": 67
+        },
+        {
+          "name": "markStyle",
+          "line": 68
+        },
+        {
+          "name": "checkAssistantMark",
+          "line": 76
+        },
+        {
+          "name": "resolveCoordinateAnnotation",
+          "line": 97
+        },
+        {
+          "name": "resolveSceneAnnotation",
+          "line": 118
+        },
+        {
+          "name": "replayUserAnnotation",
+          "line": 134
+        }
+      ]
+    },
+    {
+      "path": "src/security.js",
+      "sha256": "e8026f09b4f95d336e5aaf11b46122c00107f108d54db723b824e59929117a99",
+      "lines": 56,
+      "imports": [
+        "node:crypto",
+        "node:fs/promises",
+        "node:path"
+      ],
+      "symbols": [
+        {
+          "name": "KEY_FILE",
+          "line": 9
+        },
+        {
+          "name": "resolveAccessKey",
+          "line": 15
+        },
+        {
+          "name": "sameSecret",
+          "line": 33
+        },
+        {
+          "name": "clientIp",
+          "line": 42
+        },
+        {
+          "name": "exportSignature",
+          "line": 51
+        },
+        {
+          "name": "exportAllowed",
+          "line": 54
+        }
+      ]
+    },
+    {
+      "path": "src/storage.js",
+      "sha256": "21e42ee6ef3cb830fedbe2a882487dae734849c590d86e328f171b120667fb93",
+      "lines": 274,
+      "imports": [
+        "node:fs/promises",
+        "node:path",
+        "./config.js",
+        "./image-store.js",
+        "./canvas-state.js",
+        "./marks-file.js",
+        "./scene/scene-ops.js"
+      ],
+      "symbols": [
+        {
+          "name": "storageDir",
+          "line": 24
+        },
+        {
+          "name": "useStorageDir",
+          "line": 26
+        },
+        {
+          "name": "SET_ID",
+          "line": 32
+        },
+        {
+          "name": "atomicWrite",
+          "line": 37
+        },
+        {
+          "name": "checkStorage",
+          "line": 43
+        },
+        {
+          "name": "queued",
+          "line": 55
+        },
+        {
+          "name": "flushStorage",
+          "line": 62
+        },
+        {
+          "name": "serializeCanvas",
+          "line": 64
+        },
+        {
+          "name": "restoreCanvas",
+          "line": 81
+        },
+        {
+          "name": "readJson",
+          "line": 100
+        },
+        {
+          "name": "intakeImage",
+          "line": 106
+        },
+        {
+          "name": "ensureImage",
+          "line": 129
+        },
+        {
+          "name": "saveCanvas",
+          "line": 144
+        },
+        {
+          "name": "readSet",
+          "line": 160
+        },
+        {
+          "name": "readSource",
+          "line": 167
+        },
+        {
+          "name": "readMeta",
+          "line": 171
+        },
+        {
+          "name": "saveWorkspaceFile",
+          "line": 178
+        },
+        {
+          "name": "readWorkspaceFile",
+          "line": 187
+        },
+        {
+          "name": "workspaceHistory",
+          "line": 193
+        },
+        {
+          "name": "listWorkspaceFiles",
+          "line": 201
+        },
+        {
+          "name": "restoreDerived",
+          "line": 208
+        },
+        {
+          "name": "saveDerived",
+          "line": 218
+        },
+        {
+          "name": "saveDocument",
+          "line": 232
+        },
+        {
+          "name": "loadDocument",
+          "line": 239
+        },
+        {
+          "name": "readHistory",
+          "line": 244
+        },
+        {
+          "name": "sweepStorage",
+          "line": 253
+        }
+      ]
+    },
+    {
+      "path": "src/surface/bundle-extras.js",
+      "sha256": "f51c750ca9ba326e27458e76f56e2b1194bf0d91c1a66ae8add951392e2f754e",
+      "lines": 44,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "collectBundleExtras",
+          "line": 9
+        },
+        {
+          "name": "installBundleExtras",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": "src/surface/geometry.js",
+      "sha256": "3d6697edc1b17d4561bcf212903444ebdce455bdc06e6a0fc426b517baa56509",
+      "lines": 162,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "SURFACE_SCHEMA",
+          "line": 8
+        },
+        {
+          "name": "PROFILES",
+          "line": 9
+        },
+        {
+          "name": "MAX_PANELS",
+          "line": 10
+        },
+        {
+          "name": "MIN_SIZE",
+          "line": 11
+        },
+        {
+          "name": "SNAP",
+          "line": 12
+        },
+        {
+          "name": "PANEL_ID",
+          "line": 13
+        },
+        {
+          "name": "clamp",
+          "line": 15
+        },
+        {
+          "name": "round3",
+          "line": 16
+        },
+        {
+          "name": "clampRect",
+          "line": 20
+        },
+        {
+          "name": "snapRect",
+          "line": 26
+        },
+        {
+          "name": "overlaps",
+          "line": 38
+        },
+        {
+          "name": "defaultLayout",
+          "line": 43
+        },
+        {
+          "name": "defaultLayouts",
+          "line": 59
+        },
+        {
+          "name": "LayoutError",
+          "line": 63
+        },
+        {
+          "name": "applyOp",
+          "line": 78
+        },
+        {
+          "name": "reconcile",
+          "line": 137
+        },
+        {
+          "name": "profileFor",
+          "line": 157
+        }
+      ]
+    },
+    {
+      "path": "src/surface/layout.js",
+      "sha256": "1d9e3b95d6aa4ffebc25c8fcd8a244525f8d0812f501c016560bb8247702ab51",
+      "lines": 27,
+      "imports": [
+        "zod",
+        "./geometry.js",
+        "./geometry.js"
+      ],
+      "symbols": [
+        {
+          "name": "RectSchema",
+          "line": 9
+        },
+        {
+          "name": "LayoutSchema",
+          "line": 15
+        },
+        {
+          "name": "LayoutsSchema",
+          "line": 22
+        },
+        {
+          "name": "applyLayoutOp",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": "src/surface/mcp-tools.js",
+      "sha256": "ce85f627b4a6a5abd00fb7caa1bdfb83b726b73f374365a8691a98e973f03b3d",
+      "lines": 190,
+      "imports": [
+        "zod",
+        "@modelcontextprotocol/ext-apps/server",
+        "../scene/scene-ops.js",
+        "../cas/notebooks.js",
+        "./store.js",
+        "./refresh.js"
+      ],
+      "symbols": [
+        {
+          "name": "registerSurfaceTools",
+          "line": 26
+        }
+      ]
+    },
+    {
+      "path": "src/surface/refresh.js",
+      "sha256": "06f0f4eae468405016041709327f62d437be39c3fc7f811a16f6ed26e3b6572b",
+      "lines": 69,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "AUTO_REFRESH_AFTER",
+          "line": 15
+        },
+        {
+          "name": "refreshLinks",
+          "line": 17
+        },
+        {
+          "name": "autoRefresh",
+          "line": 64
+        }
+      ]
+    },
+    {
+      "path": "src/surface/service.js",
+      "sha256": "0e89fd01ba14a444d88e09718e3340e661404574e21da1f9c1a27f718ced7d1b",
+      "lines": 86,
+      "imports": [
+        "zod",
+        "../modules/manifest.js",
+        "./layout.js",
+        "./store.js"
+      ],
+      "symbols": [
+        {
+          "name": "ApplySchema",
+          "line": 15
+        },
+        {
+          "name": "createSurfaceService",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "path": "src/surface/store.js",
+      "sha256": "d4366772f797cf6b80d5c3890ac592f2100bdb08ed8358d179bbe41a984e0628",
+      "lines": 106,
+      "imports": [
+        "node:crypto",
+        "node:fs/promises",
+        "node:path",
+        "./layout.js"
+      ],
+      "symbols": [
+        {
+          "name": "SURFACE_ID",
+          "line": 12
+        },
+        {
+          "name": "SurfaceError",
+          "line": 13
+        },
+        {
+          "name": "surfaceIdFor",
+          "line": 16
+        },
+        {
+          "name": "createSurfaceStore",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "path": "src/surface/widget-source.js",
+      "sha256": "d44ac1a2ebb79fe65b851264a7b704865e129d2dbf8def2dbe77e4101de7928e",
+      "lines": 18,
+      "imports": [
+        "node:fs",
+        "node:path",
+        "node:url"
+      ],
+      "symbols": [
+        {
+          "name": "workbenchSource",
+          "line": 10
+        },
+        {
+          "name": "inlineWorkbench",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "path": "src/tunnel.js",
+      "sha256": "86ed5fc24331ccdeb560a8af812c252903222fd3d61f143cea2f3988cb6523cb",
+      "lines": 30,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "readQuickTunnel",
+          "line": 8
+        },
+        {
+          "name": "watchQuickTunnel",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "path": "src/visual-input.js",
+      "sha256": "16f228a14d0e0d08969883d66c285cd35ec62e4eea362fc79ed0aec9dcadfdbf",
+      "lines": 116,
+      "imports": [
+        "node:fs",
+        "node:path",
+        "node:url",
+        "sharp"
+      ],
+      "symbols": [
+        {
+          "name": "SOURCE_WIDTH",
+          "line": 9
+        },
+        {
+          "name": "SOURCE_HEIGHT",
+          "line": 10
+        },
+        {
+          "name": "IMAGE_REVISION",
+          "line": 11
+        },
+        {
+          "name": "SCENE_IDS",
+          "line": 12
+        },
+        {
+          "name": "extractDemoScenes",
+          "line": 21
+        },
+        {
+          "name": "validateFocus",
+          "line": 42
+        },
+        {
+          "name": "sourceSvg",
+          "line": 53
+        },
+        {
+          "name": "calculateCrop",
+          "line": 58
+        },
+        {
+          "name": "overlaySvg",
+          "line": 79
+        },
+        {
+          "name": "createVisualEvidence",
+          "line": 93
+        }
+      ]
+    },
+    {
+      "path": "src/workspace.js",
+      "sha256": "0415a05c73307506cf4336ebddee56701b0f7d17572a6f8d121b45b79213ae28",
+      "lines": 640,
+      "imports": [
+        "node:crypto",
+        "./canvas-state.js",
+        "./storage.js",
+        "./scene/scene-ops.js",
+        "./protocol.js",
+        "./assessment.js",
+        " + entry.derivedFrom?.set });\n  await Promise.all(after.map((doc) => saveWorkspaceFile(doc, { at, kind, token, revision: doc.revision, items: doc.items.length })));\n  return { undoToken: token, revisions: Object.fromEntries(after.map((d) => [d.id, d.revision])) };\n}\n\n// A retried change: what it returned the first time, with the workspace as it is now.\nasync function repeat(prior) {\n  const workspace = await loadWorkspace(prior.result.workspaceId);\n  return { ...prior.result, repeated: true, workspace, check: await inspectWorkspace(workspace) };\n}\n\nfunction checkRevision(doc, expected, what = "
+      ],
+      "symbols": [
+        {
+          "name": "WORKSPACE_PROTOCOL",
+          "line": 34
+        },
+        {
+          "name": "MAX_ITEMS",
+          "line": 35
+        },
+        {
+          "name": "WORKSPACE_ID",
+          "line": 36
+        },
+        {
+          "name": "makeFork",
+          "line": 57
+        },
+        {
+          "name": "parseSetKey",
+          "line": 67
+        },
+        {
+          "name": "ensureSet",
+          "line": 76
+        },
+        {
+          "name": "copySet",
+          "line": 92
+        },
+        {
+          "name": "loadWorkspace",
+          "line": 116
+        },
+        {
+          "name": "resolveRef",
+          "line": 130
+        },
+        {
+          "name": "legacyWorkspace",
+          "line": 142
+        },
+        {
+          "name": "workspaceItems",
+          "line": 153
+        },
+        {
+          "name": "layoutAll",
+          "line": 167
+        },
+        {
+          "name": "placeAfter",
+          "line": 179
+        },
+        {
+          "name": "inspectWorkspace",
+          "line": 189
+        },
+        {
+          "name": "newDoc",
+          "line": 209
+        },
+        {
+          "name": "addItem",
+          "line": 216
+        },
+        {
+          "name": "commitDocs",
+          "line": 227
+        },
+        {
+          "name": "repeat",
+          "line": 244
+        },
+        {
+          "name": "checkRevision",
+          "line": 249
+        },
+        {
+          "name": "seenKey",
+          "line": 257
+        },
+        {
+          "name": "createWorkspace",
+          "line": 267
+        },
+        {
+          "name": "editWorkspace",
+          "line": 288
+        },
+        {
+          "name": "planTransfer",
+          "line": 345
+        },
+        {
+          "name": "stateOf",
+          "line": 418
+        },
+        {
+          "name": "previewTransfer",
+          "line": 429
+        },
+        {
+          "name": "commitTransfer",
+          "line": 442
+        },
+        {
+          "name": "undoChange",
+          "line": 527
+        },
+        {
+          "name": "assetInfo",
+          "line": 566
+        },
+        {
+          "name": "workspaceDocument",
+          "line": 577
+        },
+        {
+          "name": "forkFromData",
+          "line": 607
+        },
+        {
+          "name": "adoptWorkspace",
+          "line": 616
+        },
+        {
+          "name": "findByProvenance",
+          "line": 631
+        },
+        {
+          "name": "getWorkspace",
+          "line": 638
+        },
+        {
+          "name": "clearWorkspaces",
+          "line": 640
+        }
+      ]
+    },
+    {
+      "path": "src/zip.js",
+      "sha256": "04ca1858eac17a1eab76f89d964a6285260c1d10a35fa611640e437d14c6c8b9",
+      "lines": 72,
+      "imports": [
+        "node:zlib"
+      ],
+      "symbols": [
+        {
+          "name": "SAFE_NAME",
+          "line": 12
+        },
+        {
+          "name": "zipFiles",
+          "line": 15
+        },
+        {
+          "name": "unzipFiles",
+          "line": 37
+        }
+      ]
+    },
+    {
+      "path": "public/module-store.html",
+      "sha256": "8704b8ed69cd55c03652424d7cfb62ad4a5594a2dfa7977febf64a679585b5d7",
+      "lines": 253,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "el",
+          "line": 54
+        },
+        {
+          "name": "setTab",
+          "line": 57
+        },
+        {
+          "name": "moduleCard",
+          "line": 60
+        },
+        {
+          "name": "renderList",
+          "line": 72
+        },
+        {
+          "name": "capProfile",
+          "line": 103
+        },
+        {
+          "name": "renderDetail",
+          "line": 114
+        },
+        {
+          "name": "renderPlan",
+          "line": 142
+        },
+        {
+          "name": "eventList",
+          "line": 167
+        },
+        {
+          "name": "renderActivity",
+          "line": 172
+        },
+        {
+          "name": "render",
+          "line": 179
+        },
+        {
+          "name": "call",
+          "line": 185
+        },
+        {
+          "name": "refresh",
+          "line": 190
+        },
+        {
+          "name": "openDetail",
+          "line": 194
+        },
+        {
+          "name": "preparePlan",
+          "line": 199
+        },
+        {
+          "name": "commitPlan",
+          "line": 204
+        },
+        {
+          "name": "tellModel",
+          "line": 214
+        },
+        {
+          "name": "loadActivity",
+          "line": 218
+        },
+        {
+          "name": "applyResult",
+          "line": 223
+        },
+        {
+          "name": "notify",
+          "line": 235
+        },
+        {
+          "name": "request",
+          "line": 236
+        }
+      ]
+    },
+    {
+      "path": "public/number-line.html",
+      "sha256": "25c2236417cfa7ff37044c0ad47d596c81c39e05e8af06da82c255690b7d2026",
+      "lines": 106,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "marker",
+          "line": 34
+        },
+        {
+          "name": "pick",
+          "line": 35
+        },
+        {
+          "name": "fromTool",
+          "line": 36
+        },
+        {
+          "name": "notify",
+          "line": 38
+        },
+        {
+          "name": "request",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "path": "public/visual-evidence.html",
+      "sha256": "097d6a4a0d3bedbbae40106b3bd909c5e52ed21157afd326b035e0d5a999750d",
+      "lines": 145,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "notify",
+          "line": 50
+        },
+        {
+          "name": "request",
+          "line": 51
+        },
+        {
+          "name": "inputReceived",
+          "line": 56
+        },
+        {
+          "name": "switchView",
+          "line": 70
+        },
+        {
+          "name": "showResult",
+          "line": 81
+        },
+        {
+          "name": "hydrateCompat",
+          "line": 99
+        }
+      ]
+    },
+    {
+      "path": "public/visual-surface.html",
+      "sha256": "472c9783aff17eb8fbee2f3b20a25d8e68fd3f1287cb58343a16cb18cb8bd5a7",
+      "lines": 2066,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "layoutPair",
+          "line": 312
+        },
+        {
+          "name": "layoutWorkspace",
+          "line": 320
+        },
+        {
+          "name": "framePoint",
+          "line": 330
+        },
+        {
+          "name": "frameUV",
+          "line": 332
+        },
+        {
+          "name": "sideTitle",
+          "line": 337
+        },
+        {
+          "name": "mapMark",
+          "line": 344
+        },
+        {
+          "name": "sideAt",
+          "line": 355
+        },
+        {
+          "name": "fromServerList",
+          "line": 370
+        },
+        {
+          "name": "viewLinks",
+          "line": 392
+        },
+        {
+          "name": "claimChip",
+          "line": 408
+        },
+        {
+          "name": "evidenceRow",
+          "line": 416
+        },
+        {
+          "name": "evidenceRect",
+          "line": 429
+        },
+        {
+          "name": "showEvidence",
+          "line": 435
+        },
+        {
+          "name": "renderEvidenceBox",
+          "line": 441
+        },
+        {
+          "name": "reviewControls",
+          "line": 448
+        },
+        {
+          "name": "serverLayer",
+          "line": 472
+        },
+        {
+          "name": "saveHidden",
+          "line": 484
+        },
+        {
+          "name": "setLayers",
+          "line": 487
+        },
+        {
+          "name": "renderLayers",
+          "line": 495
+        },
+        {
+          "name": "editOnServer",
+          "line": 531
+        },
+        {
+          "name": "applyServerCanvas",
+          "line": 544
+        },
+        {
+          "name": "layerEdit",
+          "line": 555
+        },
+        {
+          "name": "reorder",
+          "line": 560
+        },
+        {
+          "name": "finishRename",
+          "line": 580
+        },
+        {
+          "name": "polylineMark",
+          "line": 615
+        },
+        {
+          "name": "pathData",
+          "line": 621
+        },
+        {
+          "name": "simplify",
+          "line": 634
+        },
+        {
+          "name": "freehandMark",
+          "line": 647
+        },
+        {
+          "name": "thin",
+          "line": 652
+        },
+        {
+          "name": "renderMarks",
+          "line": 661
+        },
+        {
+          "name": "renderCanvasMarks",
+          "line": 705
+        },
+        {
+          "name": "linkAnchor",
+          "line": 719
+        },
+        {
+          "name": "renderLinks",
+          "line": 723
+        },
+        {
+          "name": "evidenceClick",
+          "line": 754
+        },
+        {
+          "name": "resetFindings",
+          "line": 791
+        },
+        {
+          "name": "findingRowFor",
+          "line": 792
+        },
+        {
+          "name": "focusFinding",
+          "line": 793
+        },
+        {
+          "name": "revealFinding",
+          "line": 801
+        },
+        {
+          "name": "renderFindings",
+          "line": 806
+        },
+        {
+          "name": "setGestures",
+          "line": 911
+        },
+        {
+          "name": "renderGestures",
+          "line": 927
+        },
+        {
+          "name": "decideGesture",
+          "line": 946
+        },
+        {
+          "name": "finishGrouping",
+          "line": 970
+        },
+        {
+          "name": "refreshFocus",
+          "line": 978
+        },
+        {
+          "name": "cropBox",
+          "line": 990
+        },
+        {
+          "name": "renderView",
+          "line": 1001
+        },
+        {
+          "name": "setObjects",
+          "line": 1049
+        },
+        {
+          "name": "renderObjects",
+          "line": 1050
+        },
+        {
+          "name": "restackLayers",
+          "line": 1082
+        },
+        {
+          "name": "cardHidden",
+          "line": 1105
+        },
+        {
+          "name": "renderCards",
+          "line": 1109
+        },
+        {
+          "name": "renderObjectsPanel",
+          "line": 1148
+        },
+        {
+          "name": "editObject",
+          "line": 1205
+        },
+        {
+          "name": "render",
+          "line": 1217
+        },
+        {
+          "name": "renderViewTabs",
+          "line": 1259
+        },
+        {
+          "name": "applyInput",
+          "line": 1273
+        },
+        {
+          "name": "fetchPixels",
+          "line": 1321
+        },
+        {
+          "name": "upgradePhoto",
+          "line": 1335
+        },
+        {
+          "name": "completeViews",
+          "line": 1346
+        },
+        {
+          "name": "applyResult",
+          "line": 1355
+        },
+        {
+          "name": "syncCanvas",
+          "line": 1396
+        },
+        {
+          "name": "syncWorkspace",
+          "line": 1432
+        },
+        {
+          "name": "setCheck",
+          "line": 1462
+        },
+        {
+          "name": "loadCheck",
+          "line": 1468
+        },
+        {
+          "name": "renderCheck",
+          "line": 1480
+        },
+        {
+          "name": "fromPointer",
+          "line": 1488
+        },
+        {
+          "name": "nextLabel",
+          "line": 1508
+        },
+        {
+          "name": "draft",
+          "line": 1512
+        },
+        {
+          "name": "pickMode",
+          "line": 1513
+        },
+        {
+          "name": "applyViewBox",
+          "line": 1523
+        },
+        {
+          "name": "scheduleRender",
+          "line": 1525
+        },
+        {
+          "name": "renderSoon",
+          "line": 1531
+        },
+        {
+          "name": "setCam",
+          "line": 1537
+        },
+        {
+          "name": "canvasPoint",
+          "line": 1542
+        },
+        {
+          "name": "zoomAt",
+          "line": 1543
+        },
+        {
+          "name": "panBy",
+          "line": 1544
+        },
+        {
+          "name": "cancelStroke",
+          "line": 1564
+        },
+        {
+          "name": "pointerEnd",
+          "line": 1587
+        },
+        {
+          "name": "scheduleDetail",
+          "line": 1600
+        },
+        {
+          "name": "loadDetail",
+          "line": 1605
+        },
+        {
+          "name": "distSeg",
+          "line": 1636
+        },
+        {
+          "name": "markDistance",
+          "line": 1639
+        },
+        {
+          "name": "pickMark",
+          "line": 1652
+        },
+        {
+          "name": "shiftWithin",
+          "line": 1663
+        },
+        {
+          "name": "shifted",
+          "line": 1668
+        },
+        {
+          "name": "replaceLocal",
+          "line": 1674
+        },
+        {
+          "name": "editFields",
+          "line": 1679
+        },
+        {
+          "name": "updateMark",
+          "line": 1687
+        },
+        {
+          "name": "deleteMark",
+          "line": 1696
+        },
+        {
+          "name": "restyleSelected",
+          "line": 1707
+        },
+        {
+          "name": "bounds",
+          "line": 1714
+        },
+        {
+          "name": "renderSelection",
+          "line": 1718
+        },
+        {
+          "name": "nudgeSelected",
+          "line": 1755
+        },
+        {
+          "name": "endDrag",
+          "line": 1786
+        },
+        {
+          "name": "strokeFacts",
+          "line": 1797
+        },
+        {
+          "name": "commitMarks",
+          "line": 1829
+        },
+        {
+          "name": "undo",
+          "line": 1830
+        },
+        {
+          "name": "redo",
+          "line": 1831
+        },
+        {
+          "name": "openLink",
+          "line": 1834
+        },
+        {
+          "name": "uploadBytes",
+          "line": 1852
+        },
+        {
+          "name": "toBase64",
+          "line": 1862
+        },
+        {
+          "name": "uploadImage",
+          "line": 1864
+        },
+        {
+          "name": "tellModel",
+          "line": 1895
+        },
+        {
+          "name": "displayMode",
+          "line": 1902
+        },
+        {
+          "name": "notify",
+          "line": 1915
+        },
+        {
+          "name": "request",
+          "line": 1916
+        },
+        {
+          "name": "reviewMessage",
+          "line": 1949
+        },
+        {
+          "name": "editMessage",
+          "line": 1971
+        }
+      ]
+    },
+    {
+      "path": "public/workbench.js",
+      "sha256": "aa5eea69a0ea8c468c6c4d50f4514b38d47bd8e953c109717cb96804b041708c",
+      "lines": 503,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "wbCall",
+          "line": 18
+        },
+        {
+          "name": "wbSync",
+          "line": 24
+        },
+        {
+          "name": "wbLoad",
+          "line": 33
+        },
+        {
+          "name": "setSurface",
+          "line": 37
+        },
+        {
+          "name": "wbApply",
+          "line": 47
+        },
+        {
+          "name": "renderWB",
+          "line": 65
+        },
+        {
+          "name": "decoratePanel",
+          "line": 87
+        },
+        {
+          "name": "renderBar",
+          "line": 94
+        },
+        {
+          "name": "wbReorder",
+          "line": 128
+        },
+        {
+          "name": "canvasPanel",
+          "line": 134
+        },
+        {
+          "name": "buildPanel",
+          "line": 135
+        },
+        {
+          "name": "wirePanel",
+          "line": 148
+        },
+        {
+          "name": "startDrag",
+          "line": 171
+        },
+        {
+          "name": "openMenu",
+          "line": 191
+        },
+        {
+          "name": "closeMenu",
+          "line": 209
+        },
+        {
+          "name": "texToMathML",
+          "line": 218
+        },
+        {
+          "name": "calcState",
+          "line": 283
+        },
+        {
+          "name": "insertAtCaret",
+          "line": 284
+        },
+        {
+          "name": "copyText",
+          "line": 290
+        },
+        {
+          "name": "buildCalcUI",
+          "line": 295
+        },
+        {
+          "name": "buildParams",
+          "line": 349
+        },
+        {
+          "name": "calcParams",
+          "line": 368
+        },
+        {
+          "name": "runCalc",
+          "line": 381
+        },
+        {
+          "name": "stopCalc",
+          "line": 399
+        },
+        {
+          "name": "applyRefresh",
+          "line": 405
+        },
+        {
+          "name": "setAuto",
+          "line": 411
+        },
+        {
+          "name": "refreshLinks",
+          "line": 416
+        },
+        {
+          "name": "runDefine",
+          "line": 424
+        },
+        {
+          "name": "setMsg",
+          "line": 434
+        },
+        {
+          "name": "wbRefresh",
+          "line": 435
+        },
+        {
+          "name": "renderCalc",
+          "line": 436
+        },
+        {
+          "name": "cellView",
+          "line": 458
+        },
+        {
+          "name": "recompute",
+          "line": 485
+        },
+        {
+          "name": "plotCell",
+          "line": 492
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/__init__.py",
+      "sha256": "4bb440ec7b8bfa9d561cd381254362294a0ba806b9b1b0db87ebbf5bbe2ad485",
+      "lines": 5,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": "cas-service/estampes_cas/__main__.py",
+      "sha256": "3aecedb02f8cfa838f5aab966e54316c9445c9553c96138f92968fcac0a91205",
+      "lines": 3,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": "cas-service/estampes_cas/healthcheck.py",
+      "sha256": "fe3c86d308586af7adc3295fb10ecea8d61cc5ea4c36fc155c533b04ca099cea",
+      "lines": 21,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": "cas-service/estampes_cas/interp.py",
+      "sha256": "ee73ca566629250fe43d82d7d90e3f63486ba5c8b8d62a4920c4e33be97a5d65",
+      "lines": 230,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "Context",
+          "line": 25
+        },
+        {
+          "name": "_int",
+          "line": 56
+        },
+        {
+          "name": "_numeric",
+          "line": 63
+        },
+        {
+          "name": "_check_pow",
+          "line": 67
+        },
+        {
+          "name": "to_sympy",
+          "line": 78
+        },
+        {
+          "name": "_args",
+          "line": 144
+        },
+        {
+          "name": "_matrix",
+          "line": 151
+        },
+        {
+          "name": "_expand_def",
+          "line": 164
+        },
+        {
+          "name": "_call",
+          "line": 179
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/latex_in.py",
+      "sha256": "c8da7a7fd553ea3784a673fdfcec6d21a5baa630d511eeeed80c4247eba4069c",
+      "lines": 119,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "tokens",
+          "line": 16
+        },
+        {
+          "name": "Tr",
+          "line": 31
+        },
+        {
+          "name": "latex_to_text",
+          "line": 112
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/limits.py",
+      "sha256": "e1fd828ee41aab02224031b3f6d8be383d753cf271a3ba4f0d365fc99d8c736c",
+      "lines": 44,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "_env",
+          "line": 6
+        },
+        {
+          "name": "Limits",
+          "line": 14
+        },
+        {
+          "name": "CasError",
+          "line": 37
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/ops.py",
+      "sha256": "b9d490f35846362f2ab4d39b28dbe004319614e44299c681e8499b07eedd10c3",
+      "lines": 310,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "as_ast",
+          "line": 22
+        },
+        {
+          "name": "expr",
+          "line": 30
+        },
+        {
+          "name": "one_variable",
+          "line": 34
+        },
+        {
+          "name": "has_bad",
+          "line": 47
+        },
+        {
+          "name": "classify",
+          "line": 51
+        },
+        {
+          "name": "numeric",
+          "line": 73
+        },
+        {
+          "name": "finish",
+          "line": 89
+        },
+        {
+          "name": "run_op",
+          "line": 104
+        },
+        {
+          "name": "solve",
+          "line": 193
+        },
+        {
+          "name": "solve_system",
+          "line": 218
+        },
+        {
+          "name": "matrix_op",
+          "line": 249
+        },
+        {
+          "name": "compute",
+          "line": 285
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/parser.py",
+      "sha256": "5829c3c3fd0a41170d94674a6d53e283c30bb5c1b19e92086ef5fbb094102f24",
+      "lines": 294,
+      "imports": [
+        ", "
+      ],
+      "symbols": [
+        {
+          "name": "lex",
+          "line": 43
+        },
+        {
+          "name": "integer",
+          "line": 74
+        },
+        {
+          "name": "number_node",
+          "line": 80
+        },
+        {
+          "name": "Parser",
+          "line": 90
+        },
+        {
+          "name": "parse",
+          "line": 269
+        },
+        {
+          "name": "_fix_mul",
+          "line": 279
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/protocol.py",
+      "sha256": "1120237f083976c70e4ca0b369fa60367103f9654bfc34e39613c07c15c15a1f",
+      "lines": 24,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "encode",
+          "line": 12
+        },
+        {
+          "name": "read_frame",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/serialize.py",
+      "sha256": "4d834c8c760a2e0e7c8fd5944beacca7ea3add0928cdd01ee51371aa4d421a92",
+      "lines": 87,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "plain",
+          "line": 22
+        },
+        {
+          "name": "latex",
+          "line": 32
+        },
+        {
+          "name": "to_ast",
+          "line": 38
+        },
+        {
+          "name": "text",
+          "line": 86
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/server.py",
+      "sha256": "734bbd11a66e39abc93b08877e4f4fe1a8e8df0a9404a63ac199d356dbd3ab82",
+      "lines": 183,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "Service",
+          "line": 20
+        },
+        {
+          "name": "main",
+          "line": 156
+        },
+        {
+          "name": "run",
+          "line": 178
+        }
+      ]
+    },
+    {
+      "path": "cas-service/estampes_cas/worker.py",
+      "sha256": "962651e370fd8d278b27f6dc01bceb0ed49b01ad0cce128f52aed4212d7058ec",
+      "lines": 53,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "apply_limits",
+          "line": 12
+        },
+        {
+          "name": "child_main",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/docker.yml",
+      "sha256": "3aae7a8ab5aab53485c0cc585060297dfecf5533276c27d3cd8533684eefa3f8",
+      "lines": 100,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": ".github/workflows/docs.yml",
+      "sha256": "76e614c0d3d3c0825f672c602a1d5d8d4e547623964dea5c663458080b37d44d",
+      "lines": 30,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": ".github/workflows/m0.yml",
+      "sha256": "2313ccb7c52c421d6c57f2d0f9f1f65cd31bc373006db086f87e8f91bdca40b6",
+      "lines": 53,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "bda3839caecd574cc8b854d8ed6418c9393ad80e4c3ccaa7f3c4f6baaeb3e133",
+      "lines": 40,
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "d9c002c14877e4ea1675d4544cbfd4d9d4e5962436744d1a6ea01f3e173ae486",
+      "lines": 109,
+      "imports": [],
+      "symbols": []
+    }
+  ]
+}

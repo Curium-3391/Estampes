@@ -1,0 +1,232 @@
+TAP version 13
+# Subtest: PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+ok 1 - PR-1A / UVA-01: UUIDv4 generators and typed parsers keep identity namespaces separate
+  ---
+  duration_ms: 4.751809
+  type: 'test'
+  ...
+# Subtest: asset aliases validate full SHA and cannot become Document identities
+ok 2 - asset aliases validate full SHA and cannot become Document identities
+  ---
+  duration_ms: 4.290341
+  type: 'test'
+  ...
+# Subtest: legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+ok 3 - legacy local IDs retain explicit kind and Scene scope, including opaque historical spelling
+  ---
+  duration_ms: 2.482252
+  type: 'test'
+  ...
+# Subtest: import identity tables reject source/target collisions without conflating different domains
+ok 4 - import identity tables reject source/target collisions without conflating different domains
+  ---
+  duration_ms: 4.096792
+  type: 'test'
+  ...
+# Subtest: graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+ok 5 - graph read model is asset-free and round-trips exact metadata with stable canonical serialization
+  ---
+  duration_ms: 14.898227
+  type: 'test'
+  ...
+# Subtest: scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+ok 6 - scene identities have one owner and a valid default; aggregate caps do not reset per Scene
+  ---
+  duration_ms: 56.155129
+  type: 'test'
+  ...
+# Subtest: strict read records preserve opacity zero, precision, locking and reject unknown fields
+ok 7 - strict read records preserve opacity zero, precision, locking and reject unknown fields
+  ---
+  duration_ms: 9.632695
+  type: 'test'
+  ...
+# Subtest: duplicates and all layer membership inconsistencies are rejected
+ok 8 - duplicates and all layer membership inconsistencies are rejected
+  ---
+  duration_ms: 5.325164
+  type: 'test'
+  ...
+# Subtest: frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+ok 9 - frames resolve local axes, reject cycles and cannot borrow another Scene's frame
+  ---
+  duration_ms: 4.015765
+  type: 'test'
+  ...
+# Subtest: finite geometry and normalized bounds reject invalid coordinates without clamping
+ok 10 - finite geometry and normalized bounds reject invalid coordinates without clamping
+  ---
+  duration_ms: 4.531624
+  type: 'test'
+  ...
+# Subtest: imported authors remain unknown with complete original source, never active module owners
+ok 11 - imported authors remain unknown with complete original source, never active module owners
+  ---
+  duration_ms: 1.293269
+  type: 'test'
+  ...
+# Subtest: unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+ok 12 - unknown historical lineage remains unclaimed until an adoption reference; module ID is insufficient
+  ---
+  duration_ms: 0.340278
+  type: 'test'
+  ...
+# Subtest: creator/source history and sticky user audit cannot be overwritten
+ok 13 - creator/source history and sticky user audit cannot be overwritten
+  ---
+  duration_ms: 3.249961
+  type: 'test'
+  ...
+# Subtest: trusted actor shape and grant intersection are not caller-granted permissions
+ok 14 - trusted actor shape and grant intersection are not caller-granted permissions
+  ---
+  duration_ms: 3.63439
+  type: 'test'
+  ...
+# Subtest: production wire schemas accept formal EX-04 but reject forged actor fields at every level
+ok 15 - production wire schemas accept formal EX-04 but reject forged actor fields at every level
+  ---
+  duration_ms: 13.999716
+  type: 'test'
+  ...
+# Subtest: existing-annotation input uses entity OCC and validates geometry against stored type
+ok 16 - existing-annotation input uses entity OCC and validates geometry against stored type
+  ---
+  duration_ms: 0.759125
+  type: 'test'
+  ...
+# Subtest: Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+ok 17 - Phase0.1 matrix counterexamples are fixed without adding a determinant epsilon
+  ---
+  duration_ms: 0.882182
+  type: 'test'
+  ...
+# Subtest: embed object and canonical binding agree, child is authoritative and independently identified
+ok 18 - embed object and canonical binding agree, child is authoritative and independently identified
+  ---
+  duration_ms: 10.540054
+  type: 'test'
+  ...
+# Subtest: fresh cross-document targets must exist; unresolved materialized status never grants access
+ok 19 - fresh cross-document targets must exist; unresolved materialized status never grants access
+  ---
+  duration_ms: 8.825335
+  type: 'test'
+  ...
+# Subtest: embed cycles and depth are checked on supplied after-state snapshots
+ok 20 - embed cycles and depth are checked on supplied after-state snapshots
+  ---
+  duration_ms: 11.38254
+  type: 'test'
+  ...
+# Subtest: snapshot refusal uses closed redacted projections and cannot imply raster success
+ok 21 - snapshot refusal uses closed redacted projections and cannot imply raster success
+  ---
+  duration_ms: 2.120028
+  type: 'test'
+  ...
+# Subtest: six-root CommitRoot cannot use missing/extra/self-referential descriptors
+ok 22 - six-root CommitRoot cannot use missing/extra/self-referential descriptors
+  ---
+  duration_ms: 2.678404
+  type: 'test'
+  ...
+# Subtest: CURRENT checksum is canonical, excludes itself and matches exactly one root
+ok 23 - CURRENT checksum is canonical, excludes itself and matches exactly one root
+  ---
+  duration_ms: 0.847959
+  type: 'test'
+  ...
+# Subtest: recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+ok 24 - recovery, legacy aliases, ledger keys and logical revisions are structurally strict
+  ---
+  duration_ms: 1.890236
+  type: 'test'
+  ...
+# Subtest: adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+ok 25 - adversarial JSON fails boundedly: cycles, accessors, proxies, symbols, prototypes and depth
+  ---
+  duration_ms: 0.730622
+  type: 'test'
+  ...
+# Subtest: JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+ok 26 - JSON byte budgets include escaping and UTF-8; canonical raw fields cannot pollute prototypes
+  ---
+  duration_ms: 154.148429
+  type: 'test'
+  ...
+# Subtest: PR-1B preserves newer main outside declared integration seams and the exact non-Optimization-B runtime
+ok 27 - PR-1B preserves newer main outside declared integration seams and the exact non-Optimization-B runtime
+  ---
+  duration_ms: 3.603297
+  type: 'test'
+  ...
+# Subtest: removed annotation anchors retain invalid references only with explicit matching tombstones
+ok 28 - removed annotation anchors retain invalid references only with explicit matching tombstones
+  ---
+  duration_ms: 3.66655
+  type: 'test'
+  ...
+# Subtest: interaction/gesture references and canonical axes associations are checked
+ok 29 - interaction/gesture references and canonical axes associations are checked
+  ---
+  duration_ms: 4.293162
+  type: 'test'
+  ...
+# Subtest: binding UUID collisions across parent Documents cannot create two canonical records
+ok 30 - binding UUID collisions across parent Documents cannot create two canonical records
+  ---
+  duration_ms: 5.526095
+  type: 'test'
+  ...
+# Subtest: repeated embed edges cannot amplify bounded traversal exponentially
+ok 31 - repeated embed edges cannot amplify bounded traversal exponentially
+  ---
+  duration_ms: 54.225838
+  type: 'test'
+  ...
+# Subtest: external provenance profile cannot be self-promoted and import evidence never becomes current verification
+ok 32 - external provenance profile cannot be self-promoted and import evidence never becomes current verification
+  ---
+  duration_ms: 1.388939
+  type: 'test'
+  ...
+# Subtest: mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+ok 33 - mutation inputs cannot forge a renderer-resolved anchor pose or verification shortcut
+  ---
+  duration_ms: 3.42493
+  type: 'test'
+  ...
+# Subtest: arbitrary JSON metadata in parsed records is detached from its input snapshot
+ok 34 - arbitrary JSON metadata in parsed records is detached from its input snapshot
+  ---
+  duration_ms: 0.363844
+  type: 'test'
+  ...
+# Subtest: MCP discovers tools, calls show_number_line, and reads its inline UI
+ok 35 - MCP discovers tools, calls show_number_line, and reads its inline UI
+  ---
+  duration_ms: 960.600029
+  type: 'test'
+  ...
+# Subtest: M0.3 widget JavaScript parses
+ok 36 - M0.3 widget JavaScript parses
+  ---
+  duration_ms: 1.172569
+  type: 'test'
+  ...
+# Subtest: M0.3 widget has separate validation and chat paths
+ok 37 - M0.3 widget has separate validation and chat paths
+  ---
+  duration_ms: 0.230615
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1846.359744

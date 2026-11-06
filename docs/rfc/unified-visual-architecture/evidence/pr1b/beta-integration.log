@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: A/B/C/F: real assets, GPT/user edits, layers, non-destructive import and restart
+ok 1 - A/B/C/F: real assets, GPT/user edits, layers, non-destructive import and restart
+  ---
+  duration_ms: 2896.650482
+  type: 'test'
+  ...
+# Subtest: D: stale signed commits conflict, exact retries return original ACK, tampering rejected
+ok 2 - D: stale signed commits conflict, exact retries return original ACK, tampering rejected
+  ---
+  duration_ms: 630.887626
+  type: 'test'
+  ...
+# Subtest: E: interrupted real writer, recovery and original signed request replay keep Ledger/ACK identity
+ok 3 - E: interrupted real writer, recovery and original signed request replay keep Ledger/ACK identity
+  ---
+  duration_ms: 906.554446
+  type: 'test'
+  ...
+# Subtest: G: existing Graph router uses shared scene, grants and editable objects
+ok 4 - G: existing Graph router uses shared scene, grants and editable objects
+  ---
+  duration_ms: 1100.864022
+  type: 'test'
+  ...
+# Subtest: H/I: unsupported durable mount, limits, exported assets and disabled legacy boundary
+ok 5 - H/I: unsupported durable mount, limits, exported assets and disabled legacy boundary
+  ---
+  duration_ms: 391.565183
+  type: 'test'
+  ...
+# Subtest: Beta caps are exercised through real commits; locked edits, missing assets, and saved recovery fail safely
+ok 6 - Beta caps are exercised through real commits; locked edits, missing assets, and saved recovery fail safely
+  ---
+  duration_ms: 10792.567908
+  type: 'test'
+  ...
+# Subtest: A–D/F/G browser: editable GPT/user image workspace, layers, Graph, stale writes and reopen
+ok 7 - A–D/F/G browser: editable GPT/user image workspace, layers, Graph, stale writes and reopen
+  ---
+  duration_ms: 11082.114313
+  type: 'test'
+  ...
+# Subtest: Workbench file chooser creates and extends a persistent multi-image workspace
+ok 8 - Workbench file chooser creates and extends a persistent multi-image workspace
+  ---
+  duration_ms: 5704.489716
+  type: 'test'
+  ...
+# Subtest: Real high-entropy image fits Host budget and Workbench reassembles bounded pixel chunks
+ok 9 - Real high-entropy image fits Host budget and Workbench reassembles bounded pixel chunks
+  ---
+  duration_ms: 2861.666516
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 37462.395971

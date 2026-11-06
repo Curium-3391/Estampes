@@ -45,6 +45,9 @@ import { calibrate, measure, toSpacePixels, spaceToNormalized, defaultSigma, UNI
 import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, widgetImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
+import { createUvaService } from "./src/uva/service.js";
+import { registerUvaTools } from "./src/uva/mcp-tools.js";
+import { serializeCanvas } from "./src/storage.js";
 import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
 import sharp from "sharp";
@@ -2470,6 +2473,7 @@ function makeServer() {
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
+  registerUvaTools(server, { service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
   return server;
 }
 
@@ -2504,7 +2508,7 @@ const port = config.port;
 // it is generated on first start. Set before the server listens.
 let ACCESS_KEY = "";
 // Created at startup, once storage is checked (see below).
-let moduleHost = null, surfaceService = null;
+let moduleHost = null, surfaceService = null, uvaService = null;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -2659,6 +2663,17 @@ const httpServer = createHttpServer((req, res) => {
       workspaceTools: ["create_workspace", "edit_workspace", "merge_workspaces", "split_workspace", "undo_workspace_change", "get_workspace_state", "export_workspace_bundle", "import_workspace_bundle"],
       storage: config.storageDir ? "disk" : "memory",
     }));
+    return;
+  }
+
+  // Saved logical exports remain downloadable with Beta disabled. No writer
+  // is opened and no experimental data are migrated by this read-only path.
+  const uvaExport = /^\/export\/uva\/([0-9a-f]{64})\.zip$/.exec(url.pathname);
+  if (uvaExport && req.method === "GET") {
+    if (!exportAllowed(ACCESS_KEY, uvaExport[1], "uva.zip", url.searchParams.get("sig"))) { res.writeHead(403); res.end("Invalid export signature"); return; }
+    import("./src/uva/exports.js").then(m => m.readSavedExport(config.uvaBetaDir, uvaExport[1])).then(bytes => {
+      res.writeHead(200, { "content-type": "application/zip", "content-disposition": 'attachment; filename="workspace.uva.zip"', "cache-control": "no-store", "x-content-type-options": "nosniff" }); res.end(bytes);
+    }, error => { res.writeHead(404); res.end("Saved export unavailable: " + error.message); });
     return;
   }
 
@@ -2865,6 +2880,15 @@ moduleHost = await createModuleHost({
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
 });
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
+uvaService = await createUvaService({ enabled: config.uvaBeta, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
+  legacyItems: async (op) => {
+    let entries;
+    if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }
+    else entries = await Promise.all((op.imageIds ?? []).map(ensureImage));
+    return Promise.all(entries.map(async entry => ({ canvas: serializeCanvas(entry), bytes: entry.sourceBytes ?? await readSource(entry.imageId) })));
+  },
+});
+if (uvaService.enabled) log("warn", "[uva] Experimental Beta enabled; production NOT QUALIFIED", { profile: config.uvaBetaProfile });
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
   log("warn", "[auth] generated an access key. Connector URL: https://<your host>/mcp?key=" + keyInfo.key +
@@ -2905,6 +2929,6 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
     httpServer.close();
     const force = setTimeout(() => process.exit(0), 8000);
     force.unref();
-    flushStorage().finally(() => process.exit(0));
+    Promise.all([flushStorage(), uvaService?.close()]).finally(() => process.exit(0));
   });
 }

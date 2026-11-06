@@ -1,0 +1,12 @@
+# Explicit overlay; the standard compose deployment remains legacy-only.
+# docker compose -f compose.yaml -f compose.uva-beta.yaml up -d --build
+services:
+  estampes:
+    environment:
+      ESTAMPES_UVA_BETA: "1"
+      ESTAMPES_UVA_BETA_DIR: /uva-beta
+      ESTAMPES_UVA_BETA_PROFILE: ${ESTAMPES_UVA_BETA_PROFILE:?Choose linux-process-crash-test or an eligible linux-local-durable mount explicitly}
+    volumes:
+      - uva-beta:/uva-beta
+volumes:
+  uva-beta:

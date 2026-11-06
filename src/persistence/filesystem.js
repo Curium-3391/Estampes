@@ -1,0 +1,191 @@
+import { open, lstat, mkdir, rename, readFile, readdir, statfs, unlink } from "node:fs/promises";
+import { join, dirname, resolve, relative } from "node:path";
+import { createHash } from "node:crypto";
+import { canonicalJson } from "../documents/validation.js";
+import { fail, integrity } from "./errors.js";
+import { registerTemporary, temporaryClaimPath } from "./temporary-attribution.js";
+import { constants } from "node:fs";
+import { privateDirectory, privateFile, privateAncestry } from "./ownership.js";
+
+export const physicalFingerprint=info=>[info.dev,info.ino,info.bytes,info.mtimeNs,info.ctimeNs].join(":");
+const physicalInfo=st=>({bytes:Number(st.size),allocatedBytes:Number(st.blocks*512n),dev:String(st.dev),ino:String(st.ino),mtimeNs:String(st.mtimeNs),ctimeNs:String(st.ctimeNs)});
+
+export class ManagedFiles {
+  constructor(root, observer = async () => {}) { this.root=root;this.observer=observer;this.fault=null;this.trace=[]; }
+  // A verification operation owns its observations. They are never recovered
+  // from disk or inferred from a later stat of bytes read earlier.
+  observation(){const io=Object.create(this);io.observations=new Map();io.contentProofs=new Map();io.checkedFingerprints=new Set();io.jsonIdentities=new WeakMap();io.metadataCache={records:new Map(),bytes:0};io.fingerprintChecks=0;io.contentHashChecks=0;return io;}
+  async auditBoundary(){this.trust=await privateAncestry(this.root);return this.trust;}
+  validateEntry(st){if(st.isDirectory())privateDirectory(st);else privateFile(st);}
+  async checkFingerprint(name,expected){
+    if(!expected?.hash)return false;
+    let value=this.contentProofs?.get(name),fingerprint=this.observations?.get(name);
+    if(!value){const digest=await this.digest(name);value={hash:digest.hash,contentBytes:digest.bytes};fingerprint=physicalFingerprint(digest);}
+    return fingerprint===expected.fingerprint&&value.hash===expected.hash&&value.contentBytes===expected.contentBytes;
+  }
+  observed(name,info,hash){
+    if(!this.observations)return;
+    const value=physicalFingerprint(info),prior=this.observations.get(name);
+    const content=this.contentProofs.get(name);
+    if((prior&&prior!==value)||(content&&hash&&(content.hash!==hash||content.contentBytes!==info.bytes)))fail("INTEGRITY_ERROR","Managed file changed within verification",{storageIntegrity:true});this.observations.set(name,value);
+    if(hash)this.contentProofs.set(name,{hash,contentBytes:info.bytes});
+  }
+  async proofIdentity(name){
+    if(!this.observations){const io=this.observation();await io.bytes(name);return io.proofIdentity(name);}
+    const expected=this.observations.get(name);
+    if(!this.checkedFingerprints.has(name)){
+      this.fingerprintChecks++;const content=this.contentProofs.get(name),actual=await this.digest(name);
+      if(!content||physicalFingerprint(actual)!==expected||actual.hash!==content.hash||actual.bytes!==content.contentBytes)fail("INTEGRITY_ERROR","Verified content proof changed",{storageIntegrity:true});this.checkedFingerprints.add(name);
+    }
+    const content=this.contentProofs.get(name);
+    if(!expected||!content)fail("INTEGRITY_ERROR","Missing verified content observation",{storageIntegrity:true});return {fingerprint:expected,...content};
+  }
+  async proofFingerprint(name){return (await this.proofIdentity(name)).fingerprint;}
+  async verifyObservations(){for(const [path,fingerprint]of this.observations??[]){
+    this.fingerprintChecks++;const expected=this.contentProofs.get(path),actual=await this.digest(path);
+    if(!expected||physicalFingerprint(actual)!==fingerprint||actual.hash!==expected.hash||actual.bytes!==expected.contentBytes)fail("INTEGRITY_ERROR","Verified dependency changed before publication or ACK",{storageIntegrity:true});
+  }}
+  path(name) {
+    const p=resolve(this.root,name);
+    if (!name || p===this.root || relative(this.root,p).startsWith("..") || name.includes("\\")) fail("INTEGRITY_ERROR","Unsafe managed path");
+    return p;
+  }
+  async point(name, details={}) {
+    this.trace.push(name);if(this.trace.length>4096)this.trace.shift();
+    if(this.fault?.point!==name)return;
+    if(--this.fault.nth>0)return;
+    const fault=this.fault;this.fault=null;
+    await this.observer(name,details);
+    if(fault.mode==="pause")await new Promise(()=>{});
+    const e=new Error("Injected filesystem failure at "+name);e.code=fault.code??"EIO";e.barrier=/fsync|rename/.test(name);throw e;
+  }
+  arm(fault) { this.fault=fault ? { ...fault,nth:fault.nth??1 } : null; }
+  async syncDirectory(path,label) {
+    await this.point(label+".before-dir-fsync");
+    const fd=await open(path,"r");
+    try { await fd.sync(); } catch(e) {e.barrier=true;throw e;} finally {await fd.close();}
+    await this.point(label+".after-dir-fsync");
+  }
+  async ensureDirectory(name) {
+    privateDirectory(await lstat(this.root));
+    if(name===".")return;
+    const path=this.path(name), parts=relative(this.root,path).split("/");let current=this.root;
+    for(const part of parts){const parent=current;current=join(current,part);let made=false;
+      try{await mkdir(current,{mode:0o700});made=true;}catch(e){if(e.code!=="EEXIST")throw e;}
+      const st=await lstat(current);privateDirectory(st);
+      if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Managed tree crosses filesystem devices");
+      if(made)await this.syncDirectory(parent,"mkdir");
+    }
+  }
+  async bytes(name,maxBytes=64*1024*1024) {
+    const path=this.path(name), st=await lstat(path);privateFile(st);integrity(st.size<=maxBytes,"Invalid managed file or byte limit");
+    if(st.dev!==(await lstat(this.root)).dev)fail("UNSUPPORTED_STORAGE","Managed file crosses filesystem devices");
+    // All path components were created under the private store; recheck against symlink substitution.
+    let dir=dirname(path);while(dir!==this.root){privateDirectory(await lstat(dir));dir=dirname(dir);}
+    const before=await this.info(name),fd=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+    try{
+      const opened=await fd.stat({bigint:true});
+      privateFile(opened);integrity(Number(opened.size)<=maxBytes,"Opened managed file exceeds byte limit");
+      integrity(opened.isFile()&&physicalFingerprint(physicalInfo(opened))===physicalFingerprint(before),"Managed path changed before open");
+      const bytes=await fd.readFile();
+      const after=physicalInfo(await fd.stat({bigint:true})),selected=await this.info(name);
+      integrity(bytes.length<=maxBytes&&bytes.length===before.bytes&&physicalFingerprint(before)===physicalFingerprint(after)&&physicalFingerprint(after)===physicalFingerprint(selected),"Managed file changed during read");
+      this.observed(name,after,createHash("sha256").update(bytes).digest("hex"));return bytes;
+    }finally{await fd.close();}
+  }
+  async json(name,maxBytes) {
+    const bytes=await this.bytes(name,maxBytes);let value;
+    try{value=JSON.parse(bytes);}catch{fail("INTEGRITY_ERROR","Malformed managed JSON");}
+    integrity(Buffer.from(canonicalJson(value)).equals(bytes),"Non-canonical managed JSON");
+    if(value&&typeof value==="object")this.jsonIdentities?.set(value,{hash:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});return value;
+  }
+  async exists(name){try{await lstat(this.path(name));return true;}catch(e){if(e.code==="ENOENT")return false;throw e;}}
+  async durableCreate(name,bytes,label){
+    await this.ensureDirectory(dirname(name));await this.point(label+".before-write",{path:name});const fd=await open(this.path(name),"wx",0o600);
+    try{await fd.writeFile(bytes);await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}
+    finally{await fd.close();}await this.syncDirectory(dirname(this.path(name)),label);
+  }
+  async atomic(name,bytes,label,{immutable=false,owner,beforeRename}={}) {
+    await this.ensureDirectory(dirname(name));
+    if(immutable&&await this.exists(name)){
+      if(!(await this.bytes(name)).equals(bytes))fail("INTEGRITY_ERROR","Immutable file collision or corruption",{storageIntegrity:true});
+      // A matching file may be an orphan whose rename was never flushed.
+      // Reusing its bytes never substitutes for the file + directory barriers.
+      await this.resync(name,label);return;
+    }
+    const claim=await registerTemporary(this,name,bytes,label,owner),temporary=claim.temporaryPath,target=this.path(name);
+    await this.point(label+".before-write",{path:name});
+    const fd=await open(this.path(temporary),"wx",0o600);
+    try{await fd.writeFile(bytes);await this.point(label+".before-file-fsync",{path:name});
+      try{await fd.sync();}catch(e){e.barrier=true;throw e;}
+      await this.point(label+".after-file-fsync",{path:name});
+    }finally{await fd.close();}
+    await this.point(label+".before-rename",{path:name});
+    if(beforeRename)await beforeRename();
+    try{await rename(this.path(temporary),target);}catch(e){e.barrier=true;throw e;}
+    await this.point(label+".after-rename",{path:name});
+    await this.syncDirectory(dirname(target),label);
+    await this.remove(temporaryClaimPath(claim.claimId),"temporary-claim");
+  }
+  async resync(name,label="recovery") {
+    const fd=await open(this.path(name),"r");try{await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}finally{await fd.close();}
+    await this.syncDirectory(dirname(this.path(name)),label);
+  }
+  async info(name){
+    const path=this.path(name),st=await lstat(path,{bigint:true}),root=await lstat(this.root,{bigint:true});privateDirectory(root);privateFile(st);if(st.dev!==root.dev)fail("UNSUPPORTED_STORAGE","Physical entry crosses managed device");
+    let dir=dirname(path);while(dir!==this.root){privateDirectory(await lstat(dir));dir=dirname(dir);}
+    return physicalInfo(st);
+  }
+  async digest(name){
+    const info=await this.info(name),fd=await open(this.path(name),constants.O_RDONLY|constants.O_NOFOLLOW),hash=createHash("sha256"),buffer=Buffer.alloc(Math.max(1,Math.min(info.bytes,4*1024*1024)));let offset=0;
+    try{
+      integrity(physicalFingerprint(physicalInfo(await fd.stat({bigint:true})))===physicalFingerprint(info),"Physical file replaced before hash verification");
+      while(offset<info.bytes){const {bytesRead}=await fd.read(buffer,0,Math.min(buffer.length,info.bytes-offset),offset);if(!bytesRead)break;hash.update(buffer.subarray(0,bytesRead));offset+=bytesRead;}
+      const tail=await fd.read(buffer,0,1,offset);integrity(tail.bytesRead===0,"Physical file grew during hash verification");
+      integrity(offset===info.bytes&&physicalFingerprint(physicalInfo(await fd.stat({bigint:true})))===physicalFingerprint(info)&&physicalFingerprint(await this.info(name))===physicalFingerprint(info),"Physical file changed during hash verification");
+      const value={...info,hash:hash.digest("hex")};this.contentHashChecks=(this.contentHashChecks??0)+1;this.observed(name,info,value.hash);return value;
+    }finally{await fd.close();}
+  }
+  async usage(){
+    const inodes=new Set();let logicalBytes=0,allocatedBytes=0,files=0;
+    const walk=async dir=>{const entries=await readdir(dir,{withFileTypes:true});for(const e of entries){
+      const p=join(dir,e.name),st=await lstat(p);integrity(!st.isSymbolicLink()&&(st.isFile()||st.isDirectory()),"Unsafe managed usage entry");
+      const key=st.dev+":"+st.ino;if(!inodes.has(key)){allocatedBytes+=st.blocks*512;inodes.add(key);}
+      if(st.isDirectory())await walk(p);else{logicalBytes+=st.size;files++;}
+    }};await walk(this.root);return {logicalBytes,allocatedBytes,files};
+  }
+  async usedBytes(){return (await this.usage()).allocatedBytes;}
+  async move(from,to,label="gc"){
+    await this.info(from);await this.ensureDirectory(dirname(to));await this.point(label+".before-rename",{from,to});
+    try{await rename(this.path(from),this.path(to));}catch(e){e.barrier=true;throw e;}
+    await this.point(label+".after-rename",{from,to});await this.syncDirectory(dirname(this.path(from)),label);await this.syncDirectory(dirname(this.path(to)),label);
+  }
+  async remove(name,label="gc",{allowMissing=true,expected}={}){
+    await this.point(label+".before-unlink",{path:name});
+    if(expected){const actual=await this.digest(name);if(physicalFingerprint(actual)!==physicalFingerprint(expected)||actual.hash!==expected.hash)fail("INTEGRITY_ERROR","Authorized unlink object was replaced or modified",{storageIntegrity:true});}
+    try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT"||!allowMissing)throw e;}
+    await this.point(label+".after-unlink",{path:name});await this.syncDirectory(dirname(this.path(name)),label);
+  }
+  async preflight(bytes,quota,reserve) {
+    const used=await this.usedBytes(), fs=await statfs(this.root,{bigint:true}), available=fs.bavail*fs.bsize;
+    if(used+bytes+reserve>quota || available<BigInt(bytes+reserve))fail("STORAGE_UNAVAILABLE","Insufficient isolated store quota or free space",{used,required:bytes,reserve,quota});
+  }
+}
+export class StagingPlan {
+  constructor(files){this.files=files;this.records=new Map();this.bytes=0;}
+  addBytes(name,bytes,label="staged"){
+    if(this.records.has(name))integrity(this.records.get(name).bytes.equals(bytes),"Conflicting staged bytes");
+    else{this.records.set(name,{bytes:Buffer.from(bytes),label});this.bytes+=bytes.length;}return name;
+  }
+  add(name,value,limit=4*1024*1024,label="staged") {
+    const bytes=Buffer.from(canonicalJson(value));if(bytes.length>limit)fail("LIMIT","Immutable record exceeds byte limit");
+    if(this.records.has(name))integrity(this.records.get(name).bytes.equals(bytes),"Conflicting staged immutable path");
+    else{this.records.set(name,{bytes,label});this.bytes+=bytes.length;}return name;
+  }
+  blob(value,{folder="visual-registry/pages",limit=4*1024*1024,label="staged"}={}) {
+    const hash=createHash("sha256").update(canonicalJson(value)).digest("hex");this.add(folder+"/"+hash+".json",value,limit,label);return hash;
+  }
+  async json(name,maxBytes){return this.records.has(name)?JSON.parse(this.records.get(name).bytes):this.files.json(name,maxBytes);}
+  allocationEstimate(){const dirs=new Set();let bytes=0;for(const [path,record]of this.records){bytes+=Math.ceil(record.bytes.length/4096)*4096;let dir=dirname(path);while(dir!=="."){dirs.add(dir);dir=dirname(dir);}}return bytes+dirs.size*4096;}
+  async flush(include=()=>true,owner){for(const [path,record]of this.records)if(include(record))await this.files.atomic(path,record.bytes,record.label,{immutable:true,owner});}
+}

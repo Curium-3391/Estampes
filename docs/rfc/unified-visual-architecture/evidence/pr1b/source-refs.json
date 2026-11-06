@@ -1,0 +1,116 @@
+{
+  "selectedRuntime": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+  "main": "7fb9b73442401fc32a7034888deaf49303e582a6",
+  "refs": [
+    {
+      "ref": "origin/codex/pr1c-native-ext4-acceptance",
+      "sha": "58f7789414130085543560147df87e85a62123ea",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/codex/pr1d-final-engineering-acceptance",
+      "sha": "2765ec10c5524f28e594b8456d2341b47fd6d44c",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/codex/pr1d-frozen-lifecycle-qualification",
+      "sha": "616c73c6c4571cd9ebf9eea9e60e21882428b612",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/codex/pr1d-g2-diagnostic-adjudication",
+      "sha": "82ae9081f6e60b4965d56138a8046d5831922e1d",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/codex/pr1d-native-performance-ab-adjudication",
+      "sha": "63ced9de6d7562ecc66a19728be2f2cf164f4b37",
+      "ancestorOfSelectedBaseline": false
+    },
+    {
+      "ref": "origin/codex/pr1d-native-reacceptance-round2",
+      "sha": "a33fe411aac7fe763a9adf5b8d71bf4f77e5f3b0",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/codex/pr1d-native-reacceptance-round3",
+      "sha": "31dae29f1cf7d1e8caf6c670124eed7c7ed91e11",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/codex/pr1d-remediation-native-ext4-acceptance",
+      "sha": "05913e926aa07a528815a5f3f3d2078c108e8833",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/docs/unified-visual-architecture-phase0",
+      "sha": "b42e6afc7ca78b280ad522a93e111ba2ef407cd7",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/docs/unified-visual-architecture-phase0-final-gate",
+      "sha": "1fc6de91d1618e57a492eee1059c54d0bb0f735d",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/docs/unified-visual-architecture-phase0-review",
+      "sha": "df70d2bfb84f5548fb8e7fc81ebfbd0eb4eefadd",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/feat/m047-unified-visual-canvas",
+      "sha": "13fde0dd0bd31cbb878065e36070ec6795d9656c",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/feat/unified-visual-architecture-pr1a",
+      "sha": "7eae7f5748a4c264a7dc996b07f005f95e34ff37",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/feat/unified-visual-architecture-pr1c",
+      "sha": "5549f10586dc17e0a802c42dd6c37ebaa70ad80a",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/feat/unified-visual-architecture-pr1d",
+      "sha": "322038b4b6e24fef0210fc04781e87181f879d8c",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/fix/unified-visual-architecture-pr1d-integrity-hardening",
+      "sha": "b2f853c5e7473a008552ff70c838de3faff07c20",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/fix/unified-visual-architecture-pr1d-native-findings",
+      "sha": "88d892829c7fada3ebbf5db8a2bcdf8c42975c47",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/fix/unified-visual-architecture-pr1d-performance-remediation",
+      "sha": "4814daf2378e9619f171c02a65792062957a8e99",
+      "ancestorOfSelectedBaseline": false
+    },
+    {
+      "ref": "origin/fix/unified-visual-architecture-pr1d-remediation",
+      "sha": "c090d93a9c984f015d1a2a24a3f70df026be7f34",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/fix/unified-visual-architecture-pr1d-state-machine-hardening",
+      "sha": "29d097833688ddb649a88cb2a09f22ba5fadda8e",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/investigate/pr1d-performance-and-g2-evidence",
+      "sha": "d9aaa49f27d195ed53baeb12e95e434f1a7b10b0",
+      "ancestorOfSelectedBaseline": true
+    },
+    {
+      "ref": "origin/main",
+      "sha": "7fb9b73442401fc32a7034888deaf49303e582a6",
+      "ancestorOfSelectedBaseline": true
+    }
+  ]
+}

@@ -82,6 +82,7 @@ function renderWB(){
   el.style.left=rect.x*100+"%";el.style.top=rect.y*100+"%";el.style.width=rect.w*100+"%";el.style.height=rect.h*100+"%";el.style.zIndex=String(pl.z);
  }
  renderBar(open,lay,mobile,solo);
+ uvaLauncher();
  for(const p of open)if(p.kind==="calculator")renderCalc(p);
 }
 function decoratePanel(el,p){
