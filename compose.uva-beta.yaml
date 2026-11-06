@@ -7,7 +7,7 @@ services:
       ESTAMPES_UVA_BETA_DIR: /uva-beta
       ESTAMPES_UVA_BETA_PROFILE: ${ESTAMPES_UVA_BETA_PROFILE:?Choose linux-process-crash-test or an eligible linux-local-durable mount explicitly}
       ESTAMPES_UVA_MIRROR: ${ESTAMPES_UVA_MIRROR:-0}
-      ESTAMPES_UVA_MIRROR_MAX_COMMITS: ${ESTAMPES_UVA_MIRROR_MAX_COMMITS:-60}
+      ESTAMPES_UVA_MIRROR_MAX_COMMITS: ${ESTAMPES_UVA_MIRROR_MAX_COMMITS:-300}
     volumes:
       - uva-beta:/uva-beta
 volumes:

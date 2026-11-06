@@ -177,5 +177,5 @@ instructions, Docker overlay, platform matrix, export/recovery and rollback are
 in [UVA Experimental Beta](UVA-BETA.md).
 `ESTAMPES_UVA_MIRROR=1` (optional, needs the Beta) copies canvas checkpoints into read-only
 UVA documents so GPT reads the same marks; `ESTAMPES_UVA_MIRROR_IDLE_SEC` sets the
-quiet time before a copy; `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 60) caps the mirror's commit
+quiet time before a copy; `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 300) caps the mirror's commit
 history so the store keeps starting quickly. See [Canvas mirror](UVA-BETA.md#canvas-mirror-optional).

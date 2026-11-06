@@ -55,7 +55,7 @@
     },
     {
       "path": "src/persistence/coordinator.js",
-      "sha256": "1e1e49bfb04fef463c638bfe1977ed07c9d54206f50e6e313513e8b1cbd7fad8"
+      "sha256": "902bf1aa9efa7da56b5496cbdcb7cc81ccd713dc98838c94c861f9d40cc012f8"
     },
     {
       "path": "src/persistence/errors.js",
@@ -63,7 +63,7 @@
     },
     {
       "path": "src/persistence/filesystem.js",
-      "sha256": "6c31e7e0c3a164ade79dedbf3d1a9ae29c5d8db70e5466f54022cf958c89d831"
+      "sha256": "8b5ce6152a4d921250f07bd2215be02af3a2739ac7f3892969b3e921eb341d77"
     },
     {
       "path": "src/persistence/gc.js",
@@ -71,7 +71,7 @@
     },
     {
       "path": "src/persistence/journal.js",
-      "sha256": "bf9a699bed182e37325594aa0e7c78dcd26ce510ac79567e5196c2819a876858"
+      "sha256": "77486dd9573075a7556c94646cacae3d4960dac3b47ca9ebe4def1765038fe93"
     },
     {
       "path": "src/persistence/lease.js",
@@ -91,7 +91,7 @@
     },
     {
       "path": "src/persistence/pages.js",
-      "sha256": "289359bcbdf263713e7bf56657b877265bc255a192926f0276721cc4312dab46"
+      "sha256": "5fac61b8cdf0bfa665a9ad3cf40d8a080e41e0cfcaeb107452b6d05f04d77354"
     },
     {
       "path": "src/persistence/pins.js",
@@ -103,7 +103,7 @@
     },
     {
       "path": "src/persistence/records.js",
-      "sha256": "3f419d579e58d328af15dd106a56a80d1cbe16ec2bfc751eed9479cf145cdfe2"
+      "sha256": "8b060fc0eb8da487578e8d0b522a7a5787a9e585be779848d5389f5086967606"
     },
     {
       "path": "src/persistence/restore-worker.js",
@@ -111,11 +111,50 @@
     },
     {
       "path": "src/persistence/temporary-attribution.js",
-      "sha256": "42f240dda1198c27ee60c1e486f9b3a69f839362b2ba1386af3dce1fcf1b1fd3"
+      "sha256": "c8a33e572a1f6d3679bcf47d5d7ff40537e29cd8a685fb0ad0e9cd5d688ff677"
     },
     {
       "path": "src/persistence/worker.js",
       "sha256": "624f5c331e5eba8bfb04477a635052ad6870ad51fa2717ac9e9e3370628364af"
+    }
+  ],
+  "amendments": [
+    {
+      "date": "2026-11-06",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "Engine rework from scripts/uva-qualify.mjs evidence: atomic claim creation and recovery of interrupted writes; closing never-published CURRENT claims at open; bounded whole-store recovery points (20 + named checkpoints); open/commit verification no longer re-verifies all history; settled transactions not re-synced at every open; verified index pages reused; fingerprint-based dependency re-checks under the documented trust model",
+      "files": [
+        {
+          "path": "src/persistence/coordinator.js",
+          "from": "1e1e49bfb04fef463c638bfe1977ed07c9d54206f50e6e313513e8b1cbd7fad8",
+          "to": "902bf1aa9efa7da56b5496cbdcb7cc81ccd713dc98838c94c861f9d40cc012f8"
+        },
+        {
+          "path": "src/persistence/filesystem.js",
+          "from": "6c31e7e0c3a164ade79dedbf3d1a9ae29c5d8db70e5466f54022cf958c89d831",
+          "to": "8b5ce6152a4d921250f07bd2215be02af3a2739ac7f3892969b3e921eb341d77"
+        },
+        {
+          "path": "src/persistence/journal.js",
+          "from": "bf9a699bed182e37325594aa0e7c78dcd26ce510ac79567e5196c2819a876858",
+          "to": "77486dd9573075a7556c94646cacae3d4960dac3b47ca9ebe4def1765038fe93"
+        },
+        {
+          "path": "src/persistence/pages.js",
+          "from": "289359bcbdf263713e7bf56657b877265bc255a192926f0276721cc4312dab46",
+          "to": "5fac61b8cdf0bfa665a9ad3cf40d8a080e41e0cfcaeb107452b6d05f04d77354"
+        },
+        {
+          "path": "src/persistence/records.js",
+          "from": "3f419d579e58d328af15dd106a56a80d1cbe16ec2bfc751eed9479cf145cdfe2",
+          "to": "8b060fc0eb8da487578e8d0b522a7a5787a9e585be779848d5389f5086967606"
+        },
+        {
+          "path": "src/persistence/temporary-attribution.js",
+          "from": "42f240dda1198c27ee60c1e486f9b3a69f839362b2ba1386af3dce1fcf1b1fd3",
+          "to": "c8a33e572a1f6d3679bcf47d5d7ff40537e29cd8a685fb0ad0e9cd5d688ff677"
+        }
+      ]
     }
   ]
 }

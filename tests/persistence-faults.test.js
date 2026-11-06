@@ -83,8 +83,14 @@ test("an aborted prepared generation is never adopted, even when its staged file
 });
 test("interrupted recovery and recovery ENOSPC preserve the selected root and never issue an ACK",async t=>{
   const f=await fixture(t),cmd=command([richDocument()]);await f.store.commit(cmd,actor(),await epoch(f.store));const source=await f.store.snapshot();
+  // Settled transactions are not repaired on every open; remove their outcomes so
+  // each faulted open below has real repair work.
+  const {readdir:list,rm:remove}=await import("node:fs/promises");
+  const unsettle=async()=>{await f.store.close();for(const tx of await list(join(f.root,"visual-transactions")))await remove(join(f.root,"visual-transactions",tx,"outcome.json"),{force:true});};
+  await unsettle();
   await f.reopen({fault:{point:"recovery.before-outcome",mode:"throw",code:"ENOSPC"}});assert.equal(f.store.status.state,"read-only-recovery");
   assert.equal((await readCommittedSnapshot(f.root)).envelope.rootHash,source.envelope.rootHash);
+  await unsettle();
   await f.reopen({fault:{point:"recovery.before-file-fsync",mode:"throw",code:"EIO"}});assert.equal(f.store.status.state,"read-only-recovery");
   await f.reopen();assert.equal(f.store.status.state,"ready");assert.equal((await f.store.diagnostics()).contentCommits,1);assert.deepEqual((await f.store.snapshot()).documents,source.documents);
 });
@@ -111,6 +117,10 @@ test("committed metadata tamper detected during a live write fences the writer b
 test("SIGKILL during recovery outcome repair is idempotent on the next restart",async t=>{
   const f=await fixture(t),cmd=command([richDocument()]);await f.store.commit(cmd,actor(),await epoch(f.store));const before=await f.store.snapshot();await f.store.close();
   const {openIsolatedStore}=await import("../src/persistence/lease.js");
+  // Settled transactions (matching outcome on disk) are no longer repaired on every
+  // open; remove the outcomes so this open has real repair work to be killed in.
+  const {readdir:list,rm:remove}=await import("node:fs/promises");
+  for(const tx of await list(f.root+"/visual-transactions"))await remove(f.root+"/visual-transactions/"+tx+"/outcome.json",{force:true});
   await assert.rejects(openIsolatedStore(f.root,{profile:"linux-process-crash-test",purpose:"isolated-pr1c-testing",fault:{point:"recovery.before-outcome",mode:"pause"}},event=>process.kill(event.pid,"SIGKILL")),e=>e.code==="RECOVERY_REQUIRED");
   await f.reopen();assert.equal(f.store.status.state,"ready");assert.deepEqual((await f.store.snapshot()).documents,before.documents);assert.equal((await f.store.diagnostics()).contentCommits,1);
 });

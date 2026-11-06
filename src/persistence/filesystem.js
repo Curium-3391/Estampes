@@ -1,4 +1,4 @@
-import { open, lstat, mkdir, rename, readFile, readdir, statfs, unlink } from "node:fs/promises";
+import { open, lstat, mkdir, rename, readFile, readdir, statfs, unlink, link } from "node:fs/promises";
 import { join, dirname, resolve, relative } from "node:path";
 import { createHash } from "node:crypto";
 import { canonicalJson } from "../documents/validation.js";
@@ -11,7 +11,10 @@ export const physicalFingerprint=info=>[info.dev,info.ino,info.bytes,info.mtimeN
 const physicalInfo=st=>({bytes:Number(st.size),allocatedBytes:Number(st.blocks*512n),dev:String(st.dev),ino:String(st.ino),mtimeNs:String(st.mtimeNs),ctimeNs:String(st.ctimeNs)});
 
 export class ManagedFiles {
-  constructor(root, observer = async () => {}) { this.root=root;this.observer=observer;this.fault=null;this.trace=[]; }
+  // pageProofs outlives single verifications (observations inherit it): a
+  // content-addressed page that was verified once and whose physical fingerprint
+  // is unchanged is reused instead of being read and hashed again.
+  constructor(root, observer = async () => {}) { this.root=root;this.observer=observer;this.fault=null;this.trace=[];this.pageProofs={entries:new Map(),bytes:0}; }
   // A verification operation owns its observations. They are never recovered
   // from disk or inferred from a later stat of bytes read earlier.
   observation(){const io=Object.create(this);io.observations=new Map();io.contentProofs=new Map();io.checkedFingerprints=new Set();io.jsonIdentities=new WeakMap();io.metadataCache={records:new Map(),bytes:0};io.fingerprintChecks=0;io.contentHashChecks=0;return io;}
@@ -34,16 +37,22 @@ export class ManagedFiles {
     if(!this.observations){const io=this.observation();await io.bytes(name);return io.proofIdentity(name);}
     const expected=this.observations.get(name);
     if(!this.checkedFingerprints.has(name)){
-      this.fingerprintChecks++;const content=this.contentProofs.get(name),actual=await this.digest(name);
-      if(!content||physicalFingerprint(actual)!==expected||actual.hash!==content.hash||actual.bytes!==content.contentBytes)fail("INTEGRITY_ERROR","Verified content proof changed",{storageIntegrity:true});this.checkedFingerprints.add(name);
+      this.fingerprintChecks++;const content=this.contentProofs.get(name),actual=await this.info(name);
+      if(!content||physicalFingerprint(actual)!==expected||actual.bytes!==content.contentBytes)fail("INTEGRITY_ERROR","Verified content proof changed",{storageIntegrity:true});this.checkedFingerprints.add(name);
     }
     const content=this.contentProofs.get(name);
     if(!expected||!content)fail("INTEGRITY_ERROR","Missing verified content observation",{storageIntegrity:true});return {fingerprint:expected,...content};
   }
   async proofFingerprint(name){return (await this.proofIdentity(name)).fingerprint;}
+  // Content was hashed when it was first observed. Under the filesystem trust
+  // model (private tree, trusted UID, PR-1D-FILESYSTEM-TRUST-MODEL.md) any later
+  // write changes the inode's mtime and ctime, which an unprivileged process
+  // cannot set back, so an unchanged physical fingerprint (device, inode, size,
+  // mtime, ctime) proves unchanged content. Re-hashing every dependency, three
+  // times per commit, made each commit cost O(all index and history files).
   async verifyObservations(){for(const [path,fingerprint]of this.observations??[]){
-    this.fingerprintChecks++;const expected=this.contentProofs.get(path),actual=await this.digest(path);
-    if(!expected||physicalFingerprint(actual)!==fingerprint||actual.hash!==expected.hash||actual.bytes!==expected.contentBytes)fail("INTEGRITY_ERROR","Verified dependency changed before publication or ACK",{storageIntegrity:true});
+    this.fingerprintChecks++;const expected=this.contentProofs.get(path),actual=await this.info(path);
+    if(!expected||physicalFingerprint(actual)!==fingerprint||actual.bytes!==expected.contentBytes)fail("INTEGRITY_ERROR","Verified dependency changed before publication or ACK",{storageIntegrity:true});
   }}
   path(name) {
     const p=resolve(this.root,name);
@@ -100,10 +109,16 @@ export class ManagedFiles {
     if(value&&typeof value==="object")this.jsonIdentities?.set(value,{hash:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});return value;
   }
   async exists(name){try{await lstat(this.path(name));return true;}catch(e){if(e.code==="ENOENT")return false;throw e;}}
+  // Create a file that is either absent or complete: write and fsync a .partial
+  // name, then link it into place (link, unlike rename, refuses to replace) and
+  // drop the partial name. Recovery removes partials it finds.
   async durableCreate(name,bytes,label){
-    await this.ensureDirectory(dirname(name));await this.point(label+".before-write",{path:name});const fd=await open(this.path(name),"wx",0o600);
+    await this.ensureDirectory(dirname(name));await this.point(label+".before-write",{path:name});
+    const partial=name+".partial",fd=await open(this.path(partial),"wx",0o600);
     try{await fd.writeFile(bytes);await this.point(label+".before-file-fsync",{path:name});try{await fd.sync();}catch(e){e.barrier=true;throw e;}await this.point(label+".after-file-fsync",{path:name});}
-    finally{await fd.close();}await this.syncDirectory(dirname(this.path(name)),label);
+    finally{await fd.close();}
+    try{await link(this.path(partial),this.path(name));}catch(e){e.barrier=true;throw e;}
+    await unlink(this.path(partial));await this.syncDirectory(dirname(this.path(name)),label);
   }
   async atomic(name,bytes,label,{immutable=false,owner,beforeRename}={}) {
     await this.ensureDirectory(dirname(name));

@@ -102,7 +102,12 @@ export function closure(documents,storeInstanceId,generation){return validateCom
   documents:documents.map(d=>({documentId:d.id,revision:d.revision,contentHash:hashJson(d)}))});}
 export const logicalClosureHash=registry=>hashJson([...registry].filter(([key])=>key.startsWith("entity:")).map(([,value])=>value).sort((a,b)=>a.entityId<b.entityId?-1:a.entityId>b.entityId?1:0));
 
-async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),metrics=null}={}){
+// history:false verifies everything a reader or the next commit depends on (the
+// root, every index, the current closure, retained recovery points, the Ledger)
+// but not every historical Document version. Those are immutable, hash-verified
+// whenever they are reconstructed, and fully re-verified by GC, backup and the
+// explicit verify maintenance action (history:true, the default).
+async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),metrics=null,history=true}={}){
   files=files.observation();
   cache.stats.snapshotLoads++;
   const envelope=parse(CurrentEnvelopeSchema,envelopeInput);
@@ -127,6 +132,12 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   for(const [key,raw]of indices.locator){
     const value=parse(LocatorSchema,raw),ref=value.logical;parse(DocumentIdSchema,ref.entityId);
     integrity(key===hashJson(ref)&&ref.storeInstanceId===root.storeInstanceId,"Locator identity mismatch");
+    // Without history, only the versions the retained registries need are read
+    // (and re-verified through their cached proofs) by materialize below.
+    // Versions verified earlier in this process keep being checked (a cheap
+    // fingerprint walk), so a replaced generation still fences the writer.
+    const known=cache.versions.has(key);
+    if(!history&&!known)continue;
     if(await cache.valid(files,key,value,pages.track)){
       const record=cache.record(key);if(record)versionReads.put(value,record,cache.versions.get(key).paths);
     }else unverified.push([key,value]);
@@ -172,7 +183,7 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   integrity(currentCatalog,"Current registry lacks recovery catalog entry");
   const memberships=new Map(),generations=new Set();
   for(const [key,value]of indices.commitIndex){const entry=parse(CommitIndexEntrySchema,value);
-    integrity(key===entry.commitId&&entry.generation<=root.generation&&!generations.has(entry.generation)&&indices.retention.has("registry:"+entry.registryRootHash),"Invalid commit membership");
+    integrity(key===entry.commitId&&entry.generation<=root.generation&&!generations.has(entry.generation),"Invalid commit membership");
     memberships.set(key,entry);generations.add(entry.generation);
   }
   const current=memberships.get(root.commitId);integrity(current?.generation===root.generation&&current.registryRootHash===root.roots.registry,"Current commit membership is inconsistent");

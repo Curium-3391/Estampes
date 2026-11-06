@@ -18,6 +18,9 @@ import { stageDelta } from "./archive.js";
 import { fail, integrity, PersistenceError } from "./errors.js";
 import { recoverBootstrapTemporary, classifyTemporaryClaims } from "./temporary-attribution.js";
 
+// Whole-store recovery points kept besides named checkpoints (owner decision 2026-11-06).
+export const RECOVERY_POINTS=20;
+export const ANCHOR_SPAN=32;
 const stablePrincipal = actor => {
   const p=actor.principal;
   if(p.kind==="user"||p.kind==="assistant")return {owner:actor.authenticatedOwnerId,kind:p.kind,principalId:p.principalId};
@@ -79,7 +82,7 @@ export class CommitCoordinator {
         const restricted=await this.files.exists("restore-restriction.json");
         if(!restricted)await LifecycleManager.recoverPhysical(this.files);
         const verifyStarted=performance.now();
-        this.current=await loadCommitted(this.files,{cache:this.verification,metrics:this.performance});
+        this.current=await loadCommitted(this.files,{cache:this.verification,metrics:this.performance,history:false});
         this.performance.open={verifyCommittedMs:performance.now()-verifyStarted};
         integrity(this.current.root.storeInstanceId===this.format.storeInstanceId,"Store namespace differs from CURRENT");
         if(this.current.lifecycle||options.lifecycle||this.format.lifecycle)this.installLifecycle(this.current.lifecycle?.options??options.lifecycle??this.format.lifecycle,options.testClockMs);
@@ -153,7 +156,9 @@ export class CommitCoordinator {
           if(this.lifecycle&&oldRef&&hashJson(oldRef)!==hashJson(ref))delta=stageDelta(plan,storedValidatedDocument(before.documents.find(v=>v.id===d.id)),record,oldRef,ref,oldLocator,encoded.length);
           const unchanged=oldRef&&hashJson(oldRef)===hashJson(ref);
           if(unchanged&&sameData(d.bindings,before.documents.find(v=>v.id===d.id).bindings))unchangedDocuments.add(d.id);
-          const operational=this.lifecycle&&d.revision%1000===0;
+          // A full operational copy every ANCHOR_SPAN revisions bounds the delta chain a
+          // reader has to apply; the lossless delta stays recorded beside it.
+          const operational=this.lifecycle&&d.revision%ANCHOR_SPAN===0;
           if(!unchanged&&(!delta||operational)){integrity(encoded.length<=64*1024*1024,"Document record exceeds byte limit");plan.addBytes(versionPath(ref),encoded);}
           registryChanges.set("entity:"+d.id,ref);after.push(ref);
           locatorChanges.set(hashJson(ref),unchanged?oldLocator:delta&&!operational?delta:{logical:ref,kind:"full",relativePath:versionPath(ref),bytes:encoded.length,...(delta?{alternative:delta}:{})});
@@ -176,7 +181,7 @@ export class CommitCoordinator {
       for(const [key,value]of overrides.ledgerChanges??[])ledgerChange.set(key,value);
       roots.ledger=await pages.update(before?.root.roots.ledger,"ledger",ledgerChange);
       roots.commitIndex=await pages.update(before?.root.roots.commitIndex,"commitIndex",new Map([[commitId,member]]));
-      const retentionChanges=new Map(overrides.retentionChanges??[]);
+      const retentionChanges=new Map(overrides.retentionChanges??[]),neededRegistries=new Set([roots.registry]);
       if(this.lifecycle){
         const now=this.lifecycle.now(),prior=policyOf(before?.indices.retention),policy=retentionChanges.get("lifecycle")??structuredClone(prior??initialPolicy(this.lifecycle.options,this.lifecycle.acceptedTime()));
         policy.highWaterMs=Math.max(policy.highWaterMs,prior?.highWaterMs??0,now);policy.committedAtMs=Math.max(policy.highWaterMs,now);
@@ -184,13 +189,21 @@ export class CommitCoordinator {
         if(policy.contentSinceMaintenance>=100&&policy.maintenance.state==="idle")policy.maintenance.state="scheduled";
         retentionChanges.set("lifecycle",policy);
         if(before){retentionChanges.set("recovery:"+before.root.generation,{schema:"estampes.recovery-root/1",envelope:before.envelope,committedAtMs:prior?.committedAtMs??now});}
-        const recoveries=[...new Map([...(before?.indices.retention??[]),...retentionChanges])].filter(([key])=>key.startsWith("recovery:")).sort((a,b)=>b[1].envelope.generation-a[1].envelope.generation);
-        for(const [i,[key,value]]of recoveries.entries())if(i>=1&&now>=policy.highWaterMs&&now-value.committedAtMs>=DAY)retentionChanges.set(key,undefined);
-        for(const [key,value]of before?.indices.retention??[]){
-          if(key.startsWith("registry:"))retentionChanges.set(key,{...value,resolverLocatorRootHash:roots.locator});
+        // Store-wide recovery points are bounded: the newest RECOVERY_POINTS plus
+        // named checkpoints. Each Document's own history stays lossless in the
+        // locator/archive; only whole-store roll-back targets are bounded, so open
+        // time and per-commit index writes no longer grow with every commit.
+        const merged=new Map([...(before?.indices.retention??[]),...retentionChanges]);
+        const recoveries=[...merged].filter(([key,value])=>key.startsWith("recovery:")&&value!==undefined).sort((a,b)=>b[1].envelope.generation-a[1].envelope.generation);
+        for(const [i,[key]]of recoveries.entries())if(i>=RECOVERY_POINTS)retentionChanges.set(key,undefined);
+        const reader=new PageStore(this.files);
+        for(const [,value]of recoveries.slice(0,RECOVERY_POINTS))neededRegistries.add(parseCommitRoot(await reader.hashed(value.envelope.rootHash,"visual-registry/roots",64*1024)).roots.registry);
+        for(const [key,value]of merged)if(key.startsWith("checkpoint:")&&value)neededRegistries.add(value.registryRootHash);
+        for(const [key,value]of before?.indices.retention??[])
           if(key.startsWith("checkpoint:")&&!retentionChanges.has(key))retentionChanges.set(key,{...value,resolverLocatorRootHash:roots.locator});
-        }
       }
+      for(const [key,value]of before?.indices.retention??[])
+        if(key.startsWith("registry:")&&!retentionChanges.has(key))retentionChanges.set(key,neededRegistries.has(value.registryRootHash)?{...value,resolverLocatorRootHash:roots.locator}:undefined);
       retentionChanges.set("registry:"+roots.registry,{registryRootHash:roots.registry,logicalClosureHash:logicalClosureHash(registry),resolverLocatorRootHash:roots.locator});
       roots.retention=await pages.update(before?.root.roots.retention,"retention",retentionChanges);
       const root=parseCommitRoot({schema:"estampes.commit-root/1",storeInstanceId:this.format.storeInstanceId,generation,commitId,parentCommitHash:before?.envelope.rootHash??null,roots});
@@ -210,7 +223,7 @@ export class CommitCoordinator {
       await plan.flush(record=>record.label==="root",temporaryOwner);await this.journal.prepare({schema:"estampes.prepared/1",commitId,generation,rootHash});
       timings.stageAndPrepareMs=performance.now()-stageStarted;stageStarted=performance.now();
       await this.files.point("after-prepared");
-      const prepared=await verifyPreparedClosure(this.files,envelope,{cache:this.verification,metrics:this.performance});
+      const prepared=await verifyPreparedClosure(this.files,envelope,{cache:this.verification,metrics:this.performance,history:false});
       timings.candidateVerificationMs=performance.now()-stageStarted;stageStarted=performance.now();
       if(before&&canonicalJson(await this.files.json("visual-registry/CURRENT.json",64*1024))!==canonicalJson(before.envelope))fail("INTEGRITY_ERROR","CURRENT changed during preparation",{storageIntegrity:true});
       publicationAttempted=true;await this.files.atomic("visual-registry/CURRENT.json",Buffer.from(canonicalJson(envelope)),"current",{owner:temporaryOwner,beforeRename:()=>prepared.verifyObservation()});

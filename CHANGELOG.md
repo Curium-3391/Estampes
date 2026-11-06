@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- UVA storage engine rework (owner-authorized change to the sealed engine). Crash
+  leftovers that can never have been published are closed at open instead of
+  leaving the store read-only (180 SIGKILLs, no wedge, no lost ACK). Store-wide
+  recovery points are bounded to the newest 20 plus named checkpoints, and open and
+  commit no longer re-verify all history: at 300 commits cold start is 9.7 s (was
+  over 30 s from about 200) and a commit about 2 s; disk per commit is constant.
+  The mirror's commit budget default rises from 60 to 300.
+
 - UVA durability qualification: `scripts/uva-qualify.mjs` (history, SIGKILL, full
   filesystem, export/recovery, many documents) and the measured results in
   `docs/UVA-BETA.md`. The mirror now stops at `ESTAMPES_UVA_MIRROR_MAX_COMMITS`
