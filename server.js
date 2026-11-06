@@ -52,7 +52,7 @@ import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
 import sharp from "sharp";
 import { fitResult } from "./src/result-budget.js";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { createOAuth, readBody } from "./src/oauth.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
@@ -85,14 +85,14 @@ const publicUrl = () => config.publicUrl || tunnelOrigin || seenOrigin;
 const URI_TAG = "v" + VERSION.replace(/\./g, "");
 const WIDGET = "ui://estampes/number-line-v031.html";
 const LEGACY_WIDGET = "ui://estampes/number-line.html";
-const VISUAL_URI = "ui://estampes/visual-surface-" + URI_TAG + ".html";
+const VISUAL_BASE_URI = "ui://estampes/visual-surface-" + URI_TAG + ".html";
 const EVIDENCE_URI = "ui://estampes/visual-evidence-" + URI_TAG + ".html";
 // Older URIs stay resolvable for saved ChatGPT conversations. They serve the
 // current HTML on purpose: the host caches templates by URI, so a stale URI
 // must still get a working widget, not a 404.
 const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197","v0198"]
   .map(tag => "ui://estampes/visual-surface-" + tag + ".html")
-  .filter(uri => uri !== VISUAL_URI);
+  .filter(uri => uri !== VISUAL_BASE_URI);
 const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197","v0198"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
@@ -103,6 +103,12 @@ const html = loadWidget("number-line.html");
 const storeHtml = loadWidget("module-store.html");
 const evidenceHtml = loadWidget("visual-evidence.html");
 const visualHtml = loadWidget("visual-surface.html");
+// The host caches templates by URI, so a widget fix shipped without a version
+// bump would never reach ChatGPT. The canvas URI therefore also carries a hash
+// of the HTML actually served (which depends on config, e.g. the UVA Beta).
+// The plain versioned URI stays registered for conversations that saved it.
+const VISUAL_URI = "ui://estampes/visual-surface-" + URI_TAG + "-" + createHash("sha256").update(visualHtml).digest("hex").slice(0, 12) + ".html";
+LEGACY_VISUAL_URIS.push(VISUAL_BASE_URI);
 const SceneSchema = z.enum(["landscape", "shapes", "formula"]);
 const Point01 = z.number().finite().min(0).max(1);
 
@@ -2884,7 +2890,14 @@ uvaService = await createUvaService({ enabled: config.uvaBeta, directory: config
   legacyItems: async (op) => {
     let entries;
     if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }
-    else entries = await Promise.all((op.imageIds ?? []).map(ensureImage));
+    else {
+      // Creating from images starts from their pixels only. Legacy marks,
+      // layers and scene objects on the same image (e.g. image layers that
+      // cannot be migrated yet) belong to an explicit import, not to a new
+      // workspace, and must not block it.
+      entries = await Promise.all((op.imageIds ?? []).map(ensureImage));
+      return Promise.all(entries.map(async entry => ({ canvas: { version: serializeCanvas(entry).version, imageId: entry.imageId, width: entry.width, height: entry.height, marks: [], layers: [], links: {} }, bytes: entry.sourceBytes ?? await readSource(entry.imageId) })));
+    }
     return Promise.all(entries.map(async entry => ({ canvas: serializeCanvas(entry), bytes: entry.sourceBytes ?? await readSource(entry.imageId) })));
   },
 });

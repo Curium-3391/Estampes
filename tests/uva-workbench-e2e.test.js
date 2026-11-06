@@ -123,3 +123,20 @@ test('ChatGPT-style delivery: a UVA result on window.openai waits for the handsh
  assert.notEqual(await frame.locator('#uva-status').getAttribute('role'),'alert');
  assert.deepEqual(w.errors,[]);
 });
+test('create from an image starts from its pixels even when its legacy canvas has image layers; canvas URI tracks the served HTML',{timeout:60000},async t=>{
+ const beta=await mkdtemp(join(tmpdir(),'uva-pixels-'));
+ const stack=await startStack({cas:false,env:{ESTAMPES_UVA_BETA:'1',ESTAMPES_UVA_BETA_DIR:beta,ESTAMPES_UVA_BETA_PROFILE:'linux-process-crash-test',ESTAMPES_RATE_LIMIT_PER_MIN:'0'}});
+ t.after(async()=>{await stack.close();await rm(beta,{recursive:true,force:true});});
+ const data=(await sharp({create:{width:300,height:200,channels:3,background:'#335577'}}).png().toBuffer()).toString('base64');
+ const imageId=(await stack.call('upload_visual_image',{total:data.length,offset:0,data,fileName:'layered.png'})).structuredContent.imageId;
+ const layer=await stack.call('add_image_layer',{imageId});assert.ok(!layer.isError,JSON.stringify(layer));
+ const p=await stack.call('experimental_workspace',{action:'prepare',requestId:requestId(),operation:{type:'create',imageIds:[imageId],title:'Pixels only'}});
+ assert.ok(!p.isError,JSON.stringify(p));
+ const c=await stack.call('experimental_workspace',{action:'commit',prepared:p.structuredContent.prepared});assert.ok(!c.isError,JSON.stringify(c));
+ const scene=c.structuredContent.document.scenes[0];assert.equal(scene.annotations.length,0);assert.equal(scene.objects.length,0);
+ const tool=(await stack.client.listTools()).tools.find(x=>x.name==='experimental_workspace');
+ assert.match(tool._meta.ui.resourceUri,/^ui:\/\/estampes\/visual-surface-v\d+-[0-9a-f]{12}\.html$/);
+ const uris=(await stack.client.listResources()).resources.map(r=>r.uri);
+ assert.ok(uris.includes(tool._meta.ui.resourceUri));
+ assert.ok(uris.some(u=>/^ui:\/\/estampes\/visual-surface-v\d+\.html$/.test(u)&&!/v040|v198/.test(u)),'plain versioned URI stays registered');
+});
