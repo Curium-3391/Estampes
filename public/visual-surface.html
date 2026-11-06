@@ -1914,7 +1914,11 @@ document.addEventListener("keydown",e=>{
  if(k==="z"){e.preventDefault();e.shiftKey?redo():undo();}else if(k==="y"){e.preventDefault();redo();}
 });
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
-function request(method,params){return new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});
+// Hosts such as ChatGPT can hand the widget its tool result (window.openai)
+// before the MCP Apps handshake. Nothing but ui/initialize may reach the host
+// until it has answered, or the host can drop the view as timed out.
+async function request(method,params){if(method!=="ui/initialize")await whenReady();return rawRequest(method,params)}
+function rawRequest(method,params){return new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});
  window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
  setTimeout(()=>{if(pending.has(id)){pending.delete(id);reject(Error("Host timeout: "+method))}},12000);
 })}
@@ -1932,7 +1936,12 @@ const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput){if(o?.toolInput&
  if(o.toolOutput===seenOutput&&o.toolResponseMetadata===seenMeta)return;
  seenOutput=o.toolOutput;seenMeta=o.toolResponseMetadata;
  applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
-window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
+// ChatGPT sets window.openai before this script runs. Apply it only after the
+// whole module (including the inlined Workbench/UVA code below) has been
+// evaluated and the handshake has been sent: applying it here, synchronously,
+// reached UVA bindings still in their temporal dead zone, aborted the script
+// before ui/initialize and left the host to report the view as timed out.
+window.addEventListener("openai:set_globals",fromGlobals);queueMicrotask(fromGlobals);
 // More room for the canvas when ChatGPT shows the widget full screen.
 const syncDisplayMode=()=>document.body.classList.toggle("fullscreen",window.openai?.displayMode==="fullscreen");
 window.addEventListener("openai:set_globals",syncDisplayMode);syncDisplayMode();

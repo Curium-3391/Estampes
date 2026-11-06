@@ -19,16 +19,25 @@ export const shotsDir = process.env.ESTAMPES_E2E_SHOTS;
 
 const HARNESS = `<!doctype html><body style="margin:0"><iframe id="w" style="width:100vw;height:100vh;border:0"></iframe><script>
 const f=document.getElementById("w");
+window.hostLog=[];let initialized=false;
 addEventListener("message",async e=>{
-  if(e.source!==f.contentWindow)return;const m=e.data;if(m?.jsonrpc!=="2.0"||m.id==null)return;
+  if(e.source!==f.contentWindow)return;const m=e.data;if(m?.jsonrpc!=="2.0")return;
+  window.hostLog.push(m.method??"response");
+  if(m.method==="ui/notifications/initialized")initialized=true;
+  if(m.id==null)return;
   const reply=(o)=>f.contentWindow.postMessage({jsonrpc:"2.0",id:m.id,...o},"*");
   try{
     if(m.method==="ui/initialize")reply({result:{protocolVersion:"2026-01-26",hostInfo:{name:"fake-host",version:"0"},hostCapabilities:{}}});
+    // Strict hosts refuse anything before the handshake completes.
+    else if(!initialized)reply({error:{message:"request before ui/notifications/initialized: "+m.method}});
     else if(m.method==="tools/call")reply({result:await window.hostCall(m.params)});
     else reply({result:{}});
   }catch(err){reply({error:{message:String(err.message||err)}});}
 });
 window.load=(html,result)=>{f.onload=()=>setTimeout(()=>f.contentWindow.postMessage({jsonrpc:"2.0",method:"ui/notifications/tool-result",params:result},"*"),150);f.srcdoc=html;};
+// ChatGPT-like delivery: the result is already on window.openai when the
+// widget's own script starts, before any handshake.
+window.loadGlobals=(html,result)=>{f.onload=null;const g="<script>window.openai="+JSON.stringify({toolOutput:result.structuredContent,toolResponseMetadata:result._meta??null}).replace(/</g,"\\\\u003c")+"<\\/script>";f.srcdoc=html.replace(/<head[^>]*>/i,m=>m+g);};
 </script></body>`;
 
 async function freePort() { const s = createServer(); await new Promise((r) => s.listen(0, "127.0.0.1", r)); const p = s.address().port; await new Promise((r) => s.close(r)); return p; }
@@ -58,7 +67,8 @@ export async function startStack({ cas = true, env = {} } = {}) {
       return (await client.readResource({ uri })).contents[0].text;
     },
     // Opens the widget on `imageId` the way present_visual would deliver it.
-    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null }) {
+    // globals: deliver the result the way ChatGPT does (window.openai first).
+    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false }) {
       const widget = await this.widgetHtml();
       browser ??= await chromium.launch(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : { args: ["--no-sandbox"] });
       const page = await browser.newPage({ viewport });
@@ -72,7 +82,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
       await page.setContent(HARNESS);
       const reload = async () => {
         const r = result ? await result() : await call("present_visual", { imageId });
-        await page.evaluate(([h, res]) => window.load(h, res), [widget, { structuredContent: r.structuredContent, _meta: r._meta, content: r.content }]);
+        await page.evaluate(([h, res, g]) => (g ? window.loadGlobals : window.load)(h, res), [widget, { structuredContent: r.structuredContent, _meta: r._meta, content: r.content }, globals]);
       };
       await reload();
       const shot = async (name) => { if (shotsDir) { await mkdir(shotsDir, { recursive: true }); await page.screenshot({ path: join(shotsDir, name + ".png") }); } };

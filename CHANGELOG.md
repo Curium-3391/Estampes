@@ -7,6 +7,13 @@
   CommitRoot transactions, explicit legacy copies and saved logical export/recovery.
 - Legacy remains default. Beta uses separate storage, conservative limits and
   explicit profiles; production durability/performance qualification remains open.
+- Fix: in ChatGPT the canvas view of an `experimental_workspace` result showed
+  "timed out". ChatGPT puts the result on `window.openai` before the widget script
+  runs; the widget applied it synchronously, reached the inlined UVA code before
+  its declarations, threw, and never sent `ui/initialize`. The result is now
+  applied after the script has finished, and every bridge request other than
+  `ui/initialize` waits for the handshake. The browser test host can deliver
+  results the ChatGPT way and refuses requests sent before the handshake.
 
 
 The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
