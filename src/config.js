@@ -33,6 +33,9 @@ export const config = Object.freeze({
   rateLimitPerMin: num("ESTAMPES_RATE_LIMIT_PER_MIN", 120),
   // Empty = memory only (the old behaviour). Docker sets /data.
   storageDir: str("ESTAMPES_STORAGE_DIR"),
+  uvaBeta: str("ESTAMPES_UVA_BETA") === "1",
+  uvaBetaDir: str("ESTAMPES_UVA_BETA_DIR"),
+  uvaBetaProfile: str("ESTAMPES_UVA_BETA_PROFILE"),
   retentionDays: num("ESTAMPES_STORAGE_RETENTION_DAYS", 0, { max: 36500 }),
   maxImageBytes: num("ESTAMPES_MAX_IMAGE_MB", 20, { min: 1, max: 200 }) * 1024 * 1024,
   maxInputPixels: num("ESTAMPES_MAX_IMAGE_MEGAPIXELS", 50, { min: 1, max: 500 }) * 1_000_000,

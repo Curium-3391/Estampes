@@ -1,0 +1,112 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID, createHash } from 'node:crypto';
+import sharp from 'sharp';
+import { createUvaService, BETA_LIMITS } from '../src/uva/service.js';
+import { createModuleHost } from '../src/modules/index.js';
+import { readSavedExport } from '../src/uva/exports.js';
+import { unzipFiles } from '../src/zip.js';
+const requestId=()=> 'req:'+randomUUID();
+async function fixture(t){
+ const root=await mkdtemp(join(tmpdir(),'uva-beta-'));
+ const bytes=await sharp({create:{width:200,height:100,channels:3,background:'#ddccbb'}}).png().toBuffer();
+ const imageId='img:'+createHash('sha256').update(bytes).digest('hex').slice(0,16);
+ const canvas={version:1,imageId,width:200,height:100,layers:[],marks:[],links:{},savedAt:'2026-11-06T00:00:00Z'};
+ const source=JSON.stringify(canvas),host=await createModuleHost({coreVersion:'0.20.0',canvases:{}});
+ await host.registry.setRecord('org.estampes.graph',{state:'enabled',granted:['canvas.read','canvas.write','workspace.write']});
+ let service;
+ const opts={enabled:true,directory:root,profile:'linux-process-crash-test',moduleHost:host,legacyItems:async op=>(op.imageIds??[imageId]).map(()=>({canvas:structuredClone(canvas),bytes}))};
+ const reopen=async()=>{if(service){service.store.kill('SIGKILL');await service.store.waitForExit();}service=await createUvaService(opts);return service;};
+ await reopen();t.after(async()=>{await service.close().catch(()=>{});await rm(root,{recursive:true,force:true});});
+ const call=(input,author='assistant')=>service.dispatch(input,author);
+ const edit=async(doc,operation,author='assistant')=>{const p=await call({action:'prepare',requestId:requestId(),...(doc?{documentId:doc.id,expectedRevision:doc.revision}:{}),operation},author);return call({action:'commit',prepared:p.prepared},author);};
+ return {root,bytes,canvas,source,host,call,edit,reopen,get service(){return service;}};
+}
+test('A/B/C/F: real assets, GPT/user edits, layers, non-destructive import and restart',async t=>{
+ const f=await fixture(t);let r=await f.edit(null,{type:'import',sourceRef:f.canvas.imageId,title:'Beta'});let d=r.document;
+ assert.equal(r.ack.durability,'process-crash-test');assert.equal(JSON.stringify(f.canvas),f.source);
+ r=await f.edit(d,{type:'layer.create',name:'AI'});d=r.document;const layer=d.scenes[0].layers[0].id;
+ r=await f.edit(d,{type:'annotation.add',annotation:{type:'rect',geometry:{x:.1,y:.2,x2:.4,y2:.6},layerId:layer,label:'AI',style:{color:'red'}}});d=r.document;
+ const a=d.scenes[0].annotations[0];assert.equal(a.provenance.author,'assistant');
+ r=await f.edit(d,{type:'annotation.update',id:a.id,annotation:{geometry:{x:.2,y:.3,x2:.5,y2:.7},label:'User',style:{color:'blue'}}},'user');d=r.document;
+ r=await f.edit(d,{type:'layer.create',name:'User'},'user');d=r.document;const l2=d.scenes[0].layers[1].id;
+ r=await f.edit(d,{type:'annotation.add',annotation:{type:'point',geometry:{x:.8,y:.7},layerId:l2}},'user');d=r.document;
+ r=await f.edit(d,{type:'layer.update',id:layer,patch:{visible:false}},'user');d=r.document;
+ await f.reopen();const loaded=await f.call({action:'open',documentId:d.id});
+ assert.deepEqual(loaded.document,d);assert.equal(loaded.document.scenes[0].annotations[0].label,'User');assert.equal(loaded.document.scenes[0].layers[0].visible,false);
+ const pixels=await f.call({action:'render',documentId:d.id});assert.equal((await sharp(Buffer.from(pixels.image.data,'base64')).metadata()).width,200);
+ assert.equal(JSON.stringify(f.canvas),f.source);
+});
+test('D: stale signed commits conflict, exact retries return original ACK, tampering rejected',async t=>{
+ const f=await fixture(t);let d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;
+ const prepare=title=>f.call({action:'prepare',documentId:d.id,expectedRevision:d.revision,requestId:requestId(),operation:{type:'rename',title}});
+ const one=await prepare('One'),two=await prepare('Two');
+ const r=await f.call({action:'commit',prepared:one.prepared});
+ assert.deepEqual((await f.call({action:'commit',prepared:one.prepared})).ack,r.ack);
+ await assert.rejects(f.call({action:'commit',prepared:two.prepared}),/revision/i);
+ const altered=structuredClone(one.prepared);altered.plan.command.changes[0].document.title='Forged';await assert.rejects(f.call({action:'commit',prepared:altered}),e=>e.code==='FORBIDDEN');
+ assert.equal((await f.call({action:'open',documentId:d.id})).document.title,'One');
+});
+test('E: interrupted real writer, recovery and original signed request replay keep Ledger/ACK identity',async t=>{
+ const f=await fixture(t);const d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;
+ const p=await f.call({action:'prepare',documentId:d.id,expectedRevision:d.revision,requestId:requestId(),operation:{type:'rename',title:'After crash'}});
+ await f.service.store.injectFault({point:'after-publication-durable',mode:'pause'});
+ const boundary=new Promise(resolve=>f.service.store.events.on('stage',e=>{if(e.name==='after-publication-durable')resolve();}));
+ const pending=f.call({action:'commit',prepared:p.prepared}).catch(e=>e);await boundary;
+ f.service.store.kill('SIGKILL');await f.service.store.waitForExit();await pending;await f.reopen();
+ const first=await f.call({action:'commit',prepared:p.prepared});assert.equal(first.document.title,'After crash');
+ assert.deepEqual((await f.call({action:'commit',prepared:p.prepared})).ack,first.ack);
+ assert.equal((await f.service.store.diagnostics()).contentCommits,2);
+});
+test('G: existing Graph router uses shared scene, grants and editable objects',async t=>{
+ const f=await fixture(t);let d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;
+ const mods=await f.call({action:'modules'});assert.ok(mods.modules.some(m=>m.id==='org.estampes.graph'));
+ let r=await f.edit(d,{type:'module',module:'org.estampes.graph',capability:'plot_function',params:{expression:'x^2'}});d=r.document;
+ assert.equal(d.scenes[0].objects.length,2);assert.match((await f.call({action:'render',documentId:d.id})).objectsSvg,/<path/);
+ const plot=d.scenes[0].objects.find(o=>o.type==='function-plot');
+ r=await f.edit(d,{type:'module',module:'org.estampes.graph',capability:'update_plot',params:{object:plot.id,expression:'sin(x)'}});d=r.document;
+ assert.equal(d.scenes[0].objects.find(o=>o.id===plot.id).props.expression,'sin(x)');
+ assert.equal((await f.call({action:'open',documentId:d.id})).document.revision,d.revision);
+});
+test('H/I: unsupported durable mount, limits, exported assets and disabled legacy boundary',async t=>{
+ const f=await fixture(t);const d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;
+ const out=await f.call({action:'export',documentId:d.id});
+ const bytes=await readSavedExport(f.root,out.exportId),files=unzipFiles(bytes);
+ assert.deepEqual(JSON.parse(files.get('document.json')),d);assert.ok([...files.keys()].some(k=>k.startsWith('assets/')));
+ const off=await createUvaService({enabled:false,directory:f.root});await assert.rejects(off.dispatch({action:'open',documentId:d.id}));assert.deepEqual(await readSavedExport(f.root,out.exportId),bytes);
+ assert.equal((await f.call({action:'status'})).diagnostics.production,'NOT QUALIFIED');
+ const bad=join(f.root,'unknown');await mkdir(bad,{mode:0o700});await writeFile(join(bad,'user-data'),'preserve');
+ await assert.rejects(createUvaService({enabled:true,directory:bad,profile:'linux-process-crash-test'}),/Unrecognized/);assert.equal(await readFile(join(bad,'user-data'),'utf8'),'preserve');
+ await assert.rejects(createUvaService({enabled:true,directory:f.root,profile:'linux-local-durable'}),/Incompatible/);
+ const native=join(f.root,'native');await mkdir(native,{mode:0o700});
+ const {statfs}=await import('node:fs/promises');const fs=await statfs(native);if(![0xef53,0x58465342].includes(Number(fs.type)))await assert.rejects(createUvaService({enabled:true,directory:native,profile:'linux-local-durable'}),/ext4\/XFS/);
+ 
+ await assert.rejects(f.call({action:'prepare',documentId:d.id,expectedRevision:0,requestId:requestId(),operation:{type:'rename',title:'Stale'}}),e=>e.code==='STALE_REVISION');
+});
+
+test('Beta caps are exercised through real commits; locked edits, missing assets, and saved recovery fail safely',async t=>{
+ const f=await fixture(t);
+ await assert.rejects(f.edit(null,{type:'create',imageIds:Array(5).fill(f.canvas.imageId)}),e=>e.code==='LIMIT');
+ let d=(await f.edit(null,{type:'create',imageIds:[f.canvas.imageId]})).document;
+ d=(await f.edit(d,{type:'layer.create',name:'Locked'})).document;const layer=d.scenes[0].layers[0].id;
+ d=(await f.edit(d,{type:'annotation.add',annotation:{type:'point',geometry:{x:.2,y:.3},layerId:layer}})).document;
+ const a=d.scenes[0].annotations[0];d=(await f.edit(d,{type:'annotation.update',id:a.id,annotation:{label:'Human'}},'user')).document;
+ await assert.rejects(f.edit(d,{type:'annotation.update',id:a.id,annotation:{label:'Overwrite'}}),e=>e.code==='FORBIDDEN');
+ d=(await f.edit(d,{type:'layer.update',id:layer,patch:{locked:true}},'user')).document;
+ await assert.rejects(f.edit(d,{type:'annotation.remove',id:a.id},'user'),e=>e.code==='FORBIDDEN');
+ const out=await f.call({action:'export',documentId:d.id}),bytes=await f.service.readExport(out.exportId);
+ const recovery=await mkdtemp(join(tmpdir(),'uva-restored-'));let restored;
+ t.after(async()=>{await restored?.close();await rm(recovery,{recursive:true,force:true});});
+ restored=await createUvaService({enabled:true,directory:recovery,profile:'linux-process-crash-test'});
+ const id=await restored.stageRecovery(bytes),p=await restored.dispatch({action:'prepare',requestId:requestId(),operation:{type:'recover',exportId:id}},'user');
+ const r=await restored.dispatch({action:'commit',prepared:p.prepared},'user');assert.equal(r.document.scenes[0].annotations[0].label,'Human');assert.equal(r.document.scenes[0].annotations[0].provenance.editedByUser,true);assert.deepEqual(r.document.extensions['estampes.beta:recoveredSource'].document,d);
+ for(let i=d.revision;i<BETA_LIMITS.revisions;i++)d=(await f.edit(d,{type:'rename',title:'Revision '+(i+1)})).document;
+ assert.equal(d.revision,BETA_LIMITS.revisions);await assert.rejects(f.edit(d,{type:'rename',title:'Over cap'}),e=>e.code==='LIMIT');
+ const asset=d.scenes[0].background.asset.assetId.slice(13);await rm(join(f.root,'assets',asset));
+ const open=await f.call({action:'open',documentId:d.id});assert.equal(open.assetErrors[0].code,'STORAGE_UNAVAILABLE');
+ await assert.rejects(f.call({action:'render',documentId:d.id}),e=>e.code==='STORAGE_UNAVAILABLE');
+ assert.deepEqual(await readSavedExport(f.root,out.exportId),bytes);
+});
