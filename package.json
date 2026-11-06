@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
+    "uva:qualify": "node scripts/uva-qualify.mjs",
     "release:check": "node scripts/check-release.mjs",
     "docs:check": "node scripts/check-docs.mjs"
   },
