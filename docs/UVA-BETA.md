@@ -61,7 +61,7 @@ images directly in the editor; each becomes a separate editable visual item.
 Existing image/workspace references can be copied in the advanced controls.
 
 Create layers, select an active layer, draw points/boxes/arrows/freehand lines,
-select and move annotations, or edit their coordinates, label and color. Layer
+select and move annotations, or edit their coordinates, curve vertices, label and color. Layer
 visibility, lock, opacity and names are document state. Zoom, pan, selection and
 closing the editor are local view state. Select a saved workspace to reopen it.
 
@@ -171,3 +171,12 @@ Known work: [history/drain #88](https://github.com/Curium-3391/Estampes/issues/8
 Report Beta feedback with profile, observed revision, request/ACK IDs, exact error,
 module capability and reproduction steps. Preserve a saved export; never attach
 access keys, signing keys or private image bytes to a public issue inadvertently.
+
+
+Large tool results use immutable, bounded read snapshots. The Workbench assembles
+them automatically; GPT can fetch the remaining segments using `read_chunk` with
+the returned transport ID and next offset, concatenate the data and parse JSON.
+Use the complete signed prepared value for commit/retry. Snapshots expire after
+ten minutes; expiration before commit requires reopening/preparing again. The
+cache never publishes workspace state. Model render images remain subject to the
+existing Host size cap and always use normalized image coordinates for editing.

@@ -97,9 +97,10 @@ function uvaDraw(){
  const a=scene.annotations.find(a=>a.id===uva.selected);
  if(a){
   const label=h('input',{id:'uva-label',value:a.label??'','aria-label':'標註標籤'}),color=h('select',{id:'uva-color','aria-label':'標註顏色'});
-  for(const c of ['blue','red','green','gold','white','black'])color.append(h('option',{value:c,selected:c===a.style.color},c));
-  const fields=['x','y',...(a.type==='rect'||a.type==='arrow'?['x2','y2']:[])].filter(k=>a.geometry[k]!==undefined).map(k=>h('input',{id:'uva-'+k,type:'number',step:.01,min:0,max:1,value:a.geometry[k],'aria-label':k,style:'width:85px'}));
-  uvaRoot.append(h('div',{},label,color,...fields,h('button',{id:'uva-save-annotation',onclick:()=>{const geometry={...a.geometry};for(const f of fields)geometry[f.id.slice(4)]=Number(f.value);uvaEdit({type:'annotation.update',sceneId:scene.id,id:a.id,annotation:{label:label.value,style:{...a.style,color:color.value},geometry}});}},'儲存標註'),h('button',{id:'uva-delete-annotation',onclick:()=>uvaEdit({type:'annotation.remove',sceneId:scene.id,id:a.id})},'刪除標註')));
+  for(const c of new Set([a.style.color??'gold','blue','red','green','gold','white','black']))color.append(h('option',{value:c,selected:c===(a.style.color??'gold')},c));
+  const points=a.type==='polyline'?h('textarea',{id:'uva-points','aria-label':'線條頂點',rows:3},JSON.stringify(a.geometry.points)):null;
+  const fields=(a.type==='polyline'?[]:['x','y',...(a.type==='rect'||a.type==='arrow'?['x2','y2']:[])]).filter(k=>a.geometry[k]!==undefined).map(k=>h('input',{id:'uva-'+k,type:'number',step:.01,min:0,max:1,value:a.geometry[k],'aria-label':k,style:'width:85px'}));
+  uvaRoot.append(h('div',{},label,color,points,...fields,h('button',{id:'uva-save-annotation',onclick:()=>{const geometry={...a.geometry};for(const f of fields)geometry[f.id.slice(4)]=Number(f.value);if(points){try{geometry.points=JSON.parse(points.value);if(geometry.x!==undefined){geometry.x=Math.min(...geometry.points.map(p=>p.x));geometry.y=Math.min(...geometry.points.map(p=>p.y));geometry.x2=Math.max(...geometry.points.map(p=>p.x));geometry.y2=Math.max(...geometry.points.map(p=>p.y));}}catch(e){uvaStatus('頂點格式錯誤：'+e.message,true);return;}}uvaEdit({type:'annotation.update',sceneId:scene.id,id:a.id,annotation:{label:label.value,style:{...a.style,color:color.value},geometry}});}},'儲存標註'),h('button',{id:'uva-delete-annotation',onclick:()=>uvaEdit({type:'annotation.remove',sceneId:scene.id,id:a.id})},'刪除標註')));
  }
  uvaRoot.append(h('div',{id:'uva-stage',style:'overflow:auto;max-height:54vh;border:1px solid #8885;background:#ddd;touch-action:none'}));uvaPaint();
  const modules=h('details',{id:'uva-modules'},h('summary',{},'模組／共享視覺項目'),h('div',{id:'uva-module-content'},'載入模組…'));uvaRoot.append(modules);
@@ -127,7 +128,7 @@ async function uvaPaint(){
   for(const a of s.annotations.filter(a=>a.layerId===l.id)){
    const g=a.geometry,W=s.extent.width,H=s.extent.height;let n;
    if(a.type==='point')n=uvaNode('circle',{cx:g.x*W,cy:g.y*H,r:6/uva.zoom});
-   else if(a.type==='polyline')n=uvaNode(g.closed?'polygon':'polyline',{points:g.points.map(p=>p.x*W+','+p.y*H).join(' ')});
+   else if(a.type==='polyline')n=uvaNode('path',{d:pathData({...g,points:g.points.map(p=>({x:p.x*W/VW,y:p.y*H/VH}))})});
    else if(a.type==='arrow')n=uvaNode('path',{d:`M ${g.x*W} ${g.y*H} L ${g.x2*W} ${g.y2*H} m ${-12*Math.cos(Math.atan2((g.y2-g.y)*H,(g.x2-g.x)*W)-.5)} ${-12*Math.sin(Math.atan2((g.y2-g.y)*H,(g.x2-g.x)*W)-.5)} M ${g.x2*W} ${g.y2*H} l ${-12*Math.cos(Math.atan2((g.y2-g.y)*H,(g.x2-g.x)*W)+.5)} ${-12*Math.sin(Math.atan2((g.y2-g.y)*H,(g.x2-g.x)*W)+.5)}`});
    else n=uvaNode('rect',{x:Math.min(g.x,g.x2)*W,y:Math.min(g.y,g.y2)*H,width:Math.abs(g.x2-g.x)*W,height:Math.abs(g.y2-g.y)*H});
    n.setAttribute('data-annotation',a.id);n.setAttribute('fill',a.type==='point'?(a.style.color??'gold'):'none');n.setAttribute('stroke',a.style.color??'gold');n.setAttribute('stroke-width',(a.id===uva.selected?4:2)/uva.zoom);n.setAttribute('pointer-events','all');group.append(n);

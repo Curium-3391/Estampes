@@ -138,8 +138,8 @@ promoted to authenticated local state.
 | Verification | Actual result |
 | --- | --- |
 | Node 22.23.4 complete suite, concurrency 2 | 530 tests: 527 pass, 0 fail, 3 skip |
-| Focused final Beta backend + Chromium/MCP | 8 tests: 8 pass, 0 fail, 0 skip |
-| Final selected-runtime/legacy source contract tests | 34 tests: 34 pass, 0 fail |
+| Focused final Beta backend + Chromium/MCP | 9 tests: 9 pass, 0 fail, 0 skip |
+| Final selected-runtime/legacy + HTTP/widget contract tests | 37 tests: 37 pass, 0 fail |
 | Python CAS | 17 tests: 17 pass |
 | Docker image build, Node 22, private named volumes, read-only root | Build passes; 10 smoke checks pass |
 | Base and opt-in Compose config | Both pass; explicit profile required |
@@ -158,8 +158,9 @@ The initial Node 24 run had 530 tests: 520 pass, 7 fail, 3 skip. Those seven
 failures came from three omitted fault-injection fixture modules during selective
 source integration. They were restored byte-for-byte from the selected source;
 no crash assertion was weakened. Its raw log is preserved compressed. The final
-Node 22 full run is the regression result. Subsequent ACK-replay changes were
-covered by the focused final Beta run, including revocation/asset-loss retries.
+Node 22 full run is the regression result. Subsequent ACK-replay and bounded-transport changes were
+covered by the focused final Beta run, including revocation/asset-loss retries,
+large high-entropy pixel delivery and curved vertex/color editing.
 The old PR-1A isolation-only production hash seal is retained in its original
 `source-index.json`; its test now protects newer main outside an enumerated list
 of authorized PR-1B seams (including the added CI browser coverage), and checks
@@ -246,3 +247,28 @@ discarded. Repository main is unprotected and its ruleset list is empty, but thi
 assignment still requires CI success before merge. Main integration is **PENDING
 CI**; consult PR #92 for the authoritative final merge/check state. No deployed
 installation has been enabled or migrated.
+
+
+### Final Host transport verification
+
+`14f8618` adds bounded immutable response snapshots for large documents/prepared
+commands and app pixels. `read_chunk` uses one content-identified read snapshot,
+expires after ten minutes, and is bounded to eight entries / 16 million JSON
+characters. This is a read cache, never a writer or a replacement for the signed
+command and Ledger. The Workbench reassembles complete values before using them;
+expired/inconsistent snapshots reject. Model-facing rendering returns one real
+composite image, with normalized coordinates and existing Host image budgeting,
+rather than repeating binary pixels in structured/text fields. The final browser
+case uses a high-entropy 640×480 JPEG to prove every MCP reply stays within the
+145,000-character default cap and the real image appears after reassembly.
+`6fce6fb` additionally rejects stale render/pointer snapshots. The final editor
+preserves custom colors and reuses the existing smooth-path renderer for editable
+curve vertices. Final focused results are 9/9 Beta tests and 37/37 contracts.
+The full suite above predates these focused follow-ups; latest-head GitHub CI
+provides the final complete regression gate.
+
+Docker was rebuilt for the transport backend and all ten real-container smoke
+checks passed again. An intermediate infrastructure ENOSPC occurred after repeated
+Docker VFS builds filled the 8 GiB executor disk; only this task's old images and
+verified task-created build records were removed before the passing rerun. This
+was not a storage-engine physical ENOSPC acceptance experiment.

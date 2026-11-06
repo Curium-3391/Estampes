@@ -82,6 +82,13 @@ test('Workbench file chooser creates and extends a persistent multi-image worksp
  await frame.locator('#uva-files').setInputFiles({name:'third.png',mimeType:'image/png',buffer});
  await frame.locator('#uva-status').filter({hasText:'已儲存'}).waitFor();assert.equal(await frame.locator('#uva-item option').count(),3);
  const list=await stack.call('experimental_workspace',{action:'list'});assert.equal(list.structuredContent.workspaces[0].items,3);
+ const workspaceId=list.structuredContent.workspaces[0].id;
+ const change=async(operation,author='assistant')=>{const state=(await stack.call('experimental_workspace',{action:'open',documentId:workspaceId})).structuredContent.document;const tool=author==='user'?'uva_user_command':'experimental_workspace';const p=await stack.call(tool,{action:'prepare',documentId:workspaceId,expectedRevision:state.revision,requestId:requestId(),operation});assert.ok(!p.isError,JSON.stringify(p));const r=await stack.call(tool,{action:'commit',prepared:p.structuredContent.prepared});assert.ok(!r.isError,JSON.stringify(r));return r.structuredContent.document;};
+ let d=await change({type:'layer.create',name:'Curves'},'user');const layer=d.scenes[0].layers[0].id;
+ d=await change({type:'annotation.add',annotation:{type:'polyline',layerId:layer,geometry:{points:[{x:.1,y:.2},{x:.3,y:.4},{x:.7,y:.2}],smooth:true},style:{color:'#123456'}}});
+ const annotation=d.scenes[0].annotations[0].id;await frame.locator('[data-annotation="'+annotation+'"]').waitFor();assert.match(await frame.locator('[data-annotation="'+annotation+'"]').getAttribute('d'),/C/);
+ await frame.locator('#uva-annotations').selectOption(annotation);await frame.locator('#uva-label').fill('Curved');const vertices=[{x:.2,y:.3},{x:.4,y:.5},{x:.8,y:.3}];await frame.locator('#uva-points').fill(JSON.stringify(vertices));await frame.locator('#uva-save-annotation').click();await frame.locator('#uva-status').filter({hasText:'已儲存'}).waitFor();
+ d=(await stack.call('experimental_workspace',{action:'open',documentId:workspaceId})).structuredContent.document;assert.deepEqual(d.scenes[0].annotations[0].geometry.points,vertices);assert.equal(d.scenes[0].annotations[0].style.color,'#123456');
  assert.deepEqual(w.errors,[]);
 });
 

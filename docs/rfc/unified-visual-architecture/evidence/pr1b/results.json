@@ -7,8 +7,8 @@
     "skipped": 3
   },
   "beta": {
-    "tests": 8,
-    "pass": 8,
+    "tests": 9,
+    "pass": 9,
     "fail": 0,
     "skipped": 0
   },
@@ -29,5 +29,10 @@
     "fail": 7,
     "skipped": 3,
     "cause": "Three omitted fault-injection fixture modules; restored byte-for-byte from d9aaa49f before final Node 22 suite"
+  },
+  "finalContracts": {
+    "tests": 37,
+    "pass": 37,
+    "fail": 0
   }
 }
