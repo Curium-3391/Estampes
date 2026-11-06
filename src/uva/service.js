@@ -20,7 +20,7 @@ import { primitivesSvg } from '../scene/objects.js';
 import { zipFiles, unzipFiles } from '../zip.js';
 
 export const BETA_LIMITS = Object.freeze({ workspaces:4, items:4, revisions:25, annotations:128, objects:64, documentBytes:1024**2, assetBytes:8*1024**2, allAssetBytes:64*1024**2, allExportBytes:128*1024**2 });
-const OWNER='owner:uva-beta-instance', KIND='estampes.uva/1';
+const OWNER='owner:uva-beta-instance', KIND='estampes.uva/1', MIRROR_KEY='estampes.beta:mirror';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const now=()=>new Date().toISOString();
 const matrix=(w,h)=>[w,0,0,0,h,0,0,0,1];
@@ -44,13 +44,17 @@ async function immutable(path,bytes){
   try{await fd.writeFile(bytes);await fd.sync();}finally{await fd.close();}
   try{await rename(temp,path);await syncDir(resolve(path,'..'));}finally{await unlink(temp).catch(e=>{if(e.code!=='ENOENT')throw e;});}
 }
-function checkLimits(d){
-  if(d.scenes.length>BETA_LIMITS.items||d.revision>BETA_LIMITS.revisions||d.scenes.reduce((n,s)=>n+s.annotations.length,0)>BETA_LIMITS.annotations||d.scenes.reduce((n,s)=>n+s.objects.length,0)>BETA_LIMITS.objects||Buffer.byteLength(canonicalJson(d))>BETA_LIMITS.documentBytes)fail('LIMIT','Experimental workload limit reached; export and start a new copy');
+function checkLimits(d,limits=BETA_LIMITS){
+  if(d.scenes.length>limits.items||d.revision>limits.revisions||d.scenes.reduce((n,s)=>n+s.annotations.length,0)>limits.annotations||d.scenes.reduce((n,s)=>n+s.objects.length,0)>limits.objects||Buffer.byteLength(canonicalJson(d))>limits.documentBytes)fail('LIMIT','Experimental workload limit reached; export and start a new copy');
   parseVisualDocument(d);
 }
-export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost}={}){
+// mirror: the legacy canvas stays the writer; checkpoints of it are copied into
+// UVA documents (see syncCanvas). Mirror documents are read-only through UVA.
+export const MIRROR_LIMITS = Object.freeze({ ...BETA_LIMITS, workspaces:64, revisions:1_000_000, annotations:512 });
+export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false}={}){
   if(!enabled)return {enabled:false,async dispatch(){fail('UNSUPPORTED_TARGET','UVA Experimental Beta is disabled; legacy remains available');},async close(){}};
   if(!root||!['linux-process-crash-test','linux-local-durable'].includes(profile))fail('UNSUPPORTED_STORAGE','Set ESTAMPES_UVA_BETA_DIR and an explicit ESTAMPES_UVA_BETA_PROFILE (linux-process-crash-test is NOT durable)');
+  const limits=mirror?MIRROR_LIMITS:BETA_LIMITS;
   root=resolve(root);const legacy=legacyDirectory&&resolve(legacyDirectory);
   if(legacy&&(root===legacy||root.startsWith(legacy+'/')||legacy.startsWith(root+'/')))fail('UNSUPPORTED_STORAGE','Beta and legacy directories must be separate, without nesting');
   // Creation is deliberately non-recursive: the operator selects an existing,
@@ -75,10 +79,11 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     await immutable(join(root,'beta-format.json'),Buffer.from(JSON.stringify(format)));
   }
   const signingKey=Buffer.from(format.planKey,'hex');let queue=Promise.resolve();
+  let mirrorState=null;const mirrorStatus=()=>mirror?{enabled:true,...(mirrorState??{})}:{enabled:false};
   const serial=fn=>{const p=queue.then(fn,fn);queue=p.catch(()=>{});return p;};
   const diagnostics=async()=>{
     const d=await store.diagnostics();
-    return {enabled:true,experimental:true,production:'NOT QUALIFIED',durability:d.platform.durability,profile,state:d.state,problem:d.problem,limits:BETA_LIMITS,contentCommits:d.contentCommits,maintenance:d.lifecycle,assetCommitBoundary:'verified immutable assets are installed before document publication; no cross-store transaction or asset GC',qualification:'process restart only; filesystem and power-loss qualification remains open'};
+    return {enabled:true,experimental:true,production:'NOT QUALIFIED',durability:d.platform.durability,profile,state:d.state,problem:d.problem,limits,mirror:mirrorStatus(),contentCommits:d.contentCommits,maintenance:d.lifecycle,assetCommitBoundary:'verified immutable assets are installed before document publication; no cross-store transaction or asset GC',qualification:'process restart only; filesystem and power-loss qualification remains open'};
   };
   async function assetBytes(asset){
     if(!/^asset:sha256:[0-9a-f]{64}$/.test(asset.assetId))fail('INVALID_INPUT','Invalid asset identity');
@@ -123,7 +128,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const time=now(),s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; export verified state and inspect diagnostics');
     let d,prior=null,requirements=[];
     if(['create','import'].includes(op.type)){
-      if(s.documents.length>=BETA_LIMITS.workspaces)fail('LIMIT','Beta supports at most four workspaces');
+      if(s.documents.length>=limits.workspaces)fail('LIMIT','Beta supports at most '+limits.workspaces+' workspaces');
       const id=allocated('doc',requestId),items=await legacyItems(op);
       if(!items.length||items.length>BETA_LIMITS.items)fail('LIMIT','Provide one to four real image items');
       const scenes=[],archives=[];
@@ -139,6 +144,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     }else{
       prior=s.documents.find(d=>d.id===documentId);if(!prior)fail('NOT_FOUND','Unknown experimental workspace');
       if(expectedRevision!==prior.revision)fail('STALE_REVISION','Workspace changed; refresh and review before retrying',{revision:prior.revision});
+      if(prior.extensions?.[MIRROR_KEY]&&author!=='mirror')fail('UNSUPPORTED_TARGET','This workspace mirrors the canvas of '+prior.provenance.legacySetKey+'; edit it with the canvas tools. Mirrors are read-only here.');
       d=structuredClone(prior);
       const scene=d.scenes.find(s=>s.id===op.sceneId)??(!op.sceneId?d.scenes[0]:null);
       if(!scene)fail('NOT_FOUND','Unknown visual item');
@@ -197,7 +203,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
       for(const sc of d.scenes){const before=prior.scenes.find(s=>s.id===sc.id);if(before&&!same(sc,before))sc.revision=before.revision+1;}
       if(!same(d,prior)){d.revision++;d.updatedAt=time;}else fail('INVALID_INPUT','Nothing changed; no-op requests do not consume the Beta command budget');
     }
-    checkLimits(d);await verifyAssets(d);
+    checkLimits(d,limits);await verifyAssets(d);
     const command={requestId,changes:[{expectedRevision:prior?.revision??null,document:d}]};
     const plan={schema:'estampes.uva-plan/1',author,requirements,command};
     const token=createHmac('sha256',signingKey).update(canonicalJson(plan)).digest('hex');
@@ -207,7 +213,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const {plan,token}=prepared??{};
     if(!plan||plan.author!==author||plan.schema!=='estampes.uva-plan/1'||!/^[0-9a-f]{64}$/.test(token??''))fail('FORBIDDEN','Invalid prepared command');
     const expected=createHmac('sha256',signingKey).update(canonicalJson(plan)).digest();if(!timingSafeEqual(expected,Buffer.from(token,'hex')))fail('FORBIDDEN','Prepared command was changed');
-    const change=plan.command.changes[0],d=change.document;checkLimits(d);
+    const change=plan.command.changes[0],d=change.document;checkLimits(d,limits);
     const s=await snapshot(),current=s.documents.find(x=>x.id===d.id);
     // If the observed revision has advanced, this exact command can only
     // replay or conflict inside the Ledger authority; it cannot publish a new
@@ -215,7 +221,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     // or image availability. The returned view separately reports asset errors.
     const replayOnly=Boolean(current&&current.revision!==change.expectedRevision);
     if(!replayOnly)await verifyAssets(d);
-    if(!s.documents.some(x=>x.id===d.id)&&s.documents.length>=BETA_LIMITS.workspaces)fail('LIMIT','Workspace limit reached');
+    if(!s.documents.some(x=>x.id===d.id)&&s.documents.length>=limits.workspaces)fail('LIMIT','Workspace limit reached');
     for(const r of replayOnly?[]:plan.requirements){const m=moduleHost?.registry.get(r.module);if(!m||m.record.state!=='enabled'||m.manifest.version!==r.version||!same(m.record.granted,r.granted))fail('FORBIDDEN','Module grant/version changed; prepare again');}
     const actor={principal:principal(author),authenticatedOwnerId:OWNER,origin:author==='user'?'app-user':'model-tool',effectiveGrants:[],targetScope:[],grantRevision:1,executionId:createId('exec')};
     const result=await store.commit(plan.command,actor,s.authority.epoch);
@@ -253,11 +259,54 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     d.revision=1;for(const s of d.scenes){s.revision=1;s.undo.entries=[];for(const e of [...s.objects,...s.annotations]){e.revision=1;if(e.provenance.lastUserEditRevision)e.provenance.lastUserEditRevision=1;if(e.userEditGuard)e.userEditGuard.guardRevision=1;}}
     // New store history starts at one. The exact original revisions and audit
     // records remain in the recoverable source archive, never reinterpreted.
-    checkLimits(d);await verifyAssets(d);
+    checkLimits(d,limits);await verifyAssets(d);
     const plan={schema:'estampes.uva-plan/1',author,requirements:[],command:{requestId,changes:[{expectedRevision:null,document:d}]}};
     return {kind:KIND,prepared:{plan,token:createHmac('sha256',signingKey).update(canonicalJson(plan)).digest('hex')},document:d};
   }
-  const service={enabled:true,store,root,diagnostics,async stageRecovery(bytes){if(bytes.length>40*1024**2)fail('LIMIT','Recovery artifact exceeds limit');const id=hash(bytes);await immutable(join(exportRoot,id+'.zip'),bytes);return id;},async close(){await queue;await store.close();},async readExport(id){if(!/^[0-9a-f]{64}$/.test(id))fail('INVALID_INPUT','Invalid export identity');const b=await bytesAt(join(exportRoot,id+'.zip'),40*1024**2);if(hash(b)!==id)fail('INTEGRITY_ERROR','Saved export hash differs');return b;},
+
+  // One checkpoint of a legacy canvas into its mirror document. Idempotent: an
+  // unchanged canvas (ignoring the save time) writes nothing.
+  async function syncCanvas({canvas,bytes}){
+    if(!mirror)fail('UNSUPPORTED_TARGET','Mirror is not enabled');
+    const {savedAt,...source}=canvas,sourceHash=hashJson(source),key=source.imageId;
+    const s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; mirror paused');
+    const prior=s.documents.find(d=>d.provenance?.legacySetKey===key&&d.extensions?.[MIRROR_KEY]);
+    if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash)return {status:'unchanged',documentId:prior.id,revision:prior.revision};
+    const time=now(),asset=await putAsset(bytes);
+    if(source.imageId!==asset.legacyImageId)fail('INTEGRITY_ERROR','Legacy source bytes and image identity disagree');
+    const docId=prior?.id??allocated('doc','mirror:'+key),sceneId=prior?.scenes[0].id??allocated('scene','mirror:'+key),layerId=allocated('layer','mirror:'+key);
+    const mapped=mapLegacyCanvas(source,{documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??('Canvas '+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
+    if(!mapped.document){mirrorState={...mirrorState,blocked:{...(mirrorState?.blocked),[key]:mapped.report.issues.filter(i=>i.blocking).map(i=>i.message).join('; ')}};return {status:'blocked',issues:mapped.report.issues.filter(i=>i.blocking)};}
+    if(mirrorState?.blocked?.[key]){const {[key]:_,...rest}=mirrorState.blocked;mirrorState={...mirrorState,blocked:rest};}
+    const scene=mapped.document.scenes[0];
+    // A re-projection must not rewrite who created an entity or when: carry the
+    // immutable provenance of entities that already exist, and never let the user-edit audit move back.
+    if(prior)for(const kind of ['annotations','objects']){
+      const before=new Map(prior.scenes[0][kind].map(e=>[e.id,e.provenance]));
+      for(const e of scene[kind]){
+        const old=before.get(e.id);if(!old)continue;
+        const next={...e.provenance};
+        for(const f of ['createdBy','createdAt','original','sourceTrust'])if(old[f]!==undefined)next[f]=old[f];else delete next[f];
+        next.editedByUser=Boolean(old.editedByUser||next.editedByUser);
+        if(old.lastUserEditRevision!==undefined)next.lastUserEditRevision=Math.max(old.lastUserEditRevision,next.lastUserEditRevision??0);
+        e.provenance=next;
+      }
+      // Entity revisions must equal the real change: untouched entities stay as they were.
+      const prev=new Map(prior.scenes[0][kind].map(e=>[e.id,e])),strip=e=>canonicalJson({...e,revision:0,provenance:{...e.provenance,lastEditedAt:null,lastEditedBy:null}});
+      scene[kind]=scene[kind].map(e=>{const old=prev.get(e.id);if(!old)return e;return strip(old)===strip(e)?old:{...e,revision:old.revision+1};});
+    }
+    const ext={[MIRROR_KEY]:{sourceHash,syncedAt:time,authority:'legacy-canvas'},'estampes.beta:legacyArchives':mapped.sidecars};
+    let d,expected=null;
+    if(prior){d=structuredClone(prior);scene.revision=prior.scenes[0].revision+1;d.scenes[0]=scene;d.revision++;d.updatedAt=time;d.extensions=ext;expected=prior.revision;}
+    else d={schema:'estampes.document/1',id:docId,kind:'image',title:'Canvas '+key,revision:1,state:'active',persistence:profile==='linux-local-durable'?'durable':'memory',createdAt:time,updatedAt:time,defaultSceneId:scene.id,scenes:[scene],bindings:[],annotationSupport:'shared-v1',provenance:{createdBy:'migration',legacySetKey:key},extensions:ext};
+    checkLimits(d,limits);await verifyAssets(d);
+    const command={requestId:'req:'+randomUUID(),changes:[{expectedRevision:expected,document:d}]};
+    const actor={principal:principal('user'),authenticatedOwnerId:OWNER,origin:'app-user',effectiveGrants:[],targetScope:[],grantRevision:1,executionId:createId('exec')};
+    const started=performance.now(),result=await store.commit(command,actor,s.authority.epoch);
+    mirrorState={...mirrorState,syncs:(mirrorState?.syncs??0)+1,lastSyncMs:Math.round(performance.now()-started),lastSyncAt:time};
+    return {status:prior?'updated':'created',documentId:d.id,revision:d.revision,ack:result.ack};
+  }
+  const service={enabled:true,store,root,diagnostics,syncCanvas:(input)=>serial(()=>syncCanvas(input)),noteMirror(patch){mirrorState={...mirrorState,...patch};},async stageRecovery(bytes){if(bytes.length>40*1024**2)fail('LIMIT','Recovery artifact exceeds limit');const id=hash(bytes);await immutable(join(exportRoot,id+'.zip'),bytes);return id;},async close(){await queue;await store.close();},async readExport(id){if(!/^[0-9a-f]{64}$/.test(id))fail('INVALID_INPUT','Invalid export identity');const b=await bytesAt(join(exportRoot,id+'.zip'),40*1024**2);if(hash(b)!==id)fail('INTEGRITY_ERROR','Saved export hash differs');return b;},
     async dispatch(input,author='assistant'){
       if(!['user','assistant'].includes(author))fail('FORBIDDEN','Unknown actor');
       const {action,documentId,sceneId}=input;

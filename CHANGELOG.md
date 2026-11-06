@@ -22,6 +22,11 @@
   An image whose legacy canvas had an image layer was refused with
   `UNSUPPORTED_TARGET` ("Legacy PNG object needs verified asset intake");
   migrating legacy marks and layers stays the job of `import`.
+- UVA canvas mirror (`ESTAMPES_UVA_MIRROR=1`, default off): checkpoints of the
+  ordinary canvas are copied, coalesced, into read-only UVA documents, so GPT reads
+  the same marks and layers through `experimental_workspace`. The canvas stays the
+  only writer. Measured cost of a UVA commit (about 136 KB, 0.3 to 0.7 s) is why it
+  is a mirror and not yet the writer; see `docs/UVA-BETA.md`.
 - Fix: inline in ChatGPT the UVA view collapsed to a thin strip. The host sizes
   the frame from the content, and the view capped its own height in `vh`, which
   shrank with the frame. The caps are now content-based (stage at least 480px).
