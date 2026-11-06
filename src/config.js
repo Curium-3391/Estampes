@@ -36,6 +36,9 @@ export const config = Object.freeze({
   uvaBeta: str("ESTAMPES_UVA_BETA") === "1",
   uvaBetaDir: str("ESTAMPES_UVA_BETA_DIR"),
   uvaBetaProfile: str("ESTAMPES_UVA_BETA_PROFILE"),
+  // Copy canvas checkpoints into UVA documents (needs the UVA Beta). Default off.
+  uvaMirror: str("ESTAMPES_UVA_MIRROR") === "1",
+  uvaMirrorIdleSec: num("ESTAMPES_UVA_MIRROR_IDLE_SEC", 15, { min: 0, max: 3600 }),
   retentionDays: num("ESTAMPES_STORAGE_RETENTION_DAYS", 0, { max: 36500 }),
   maxImageBytes: num("ESTAMPES_MAX_IMAGE_MB", 20, { min: 1, max: 200 }) * 1024 * 1024,
   maxInputPixels: num("ESTAMPES_MAX_IMAGE_MEGAPIXELS", 50, { min: 1, max: 500 }) * 1_000_000,

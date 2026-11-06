@@ -8,6 +8,31 @@ working. No startup migration occurs.
 Production qualification: **NOT QUALIFIED**. The native A/B result remains
 **INCONCLUSIVE — DEFAULT TO BASELINE**; G2 remains **UNRESOLVED INTERMITTENT**.
 
+## Canvas mirror (optional)
+
+`ESTAMPES_UVA_MIRROR=1` (with the Beta on) copies **checkpoints of the ordinary canvas**
+into UVA documents. The canvas stays the only writer, so its editing tools, undo,
+links and reviews are unchanged and a slow or full UVA store never delays or loses a
+canvas edit. GPT reads the same marks and layers with `experimental_workspace`
+(`list`, `open`, `render`).
+
+- A mirror document is read-only through UVA (`prepare` is refused with a message
+  that names the canvas). Edit the canvas instead.
+- A save is copied after `ESTAMPES_UVA_MIRROR_IDLE_SEC` seconds without another
+  save (default 15), and at the latest two minutes after the first unsynced save.
+  An unchanged canvas writes nothing. Pending checkpoints are flushed on shutdown.
+- A canvas restored from a bundle is mirrored at its next save.
+- Only a single image's own canvas is mirrored (not copies or workspaces). A
+  canvas the document model cannot hold yet, for example one with an image layer,
+  is skipped and listed under `diagnostics.mirror.blocked` in `action: status`.
+- Cost: measured on the development machine, one UVA commit used about 136 KB of
+  disk and 0.3 to 0.7 s, and enabling automatic maintenance did not reclaim
+  space within minutes. The Beta store has a 256 MiB quota, so it holds roughly
+  1,900 commits in its lifetime. This is why saves are coalesced, and why the mirror
+  is **not** a way to make UVA the writer: that needs the storage cost fixed first
+  (qualification issues #88–#91).
+- Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
+
 ## Enable on Linux
 
 Use Node 22, `/usr/bin/flock` (Debian package `util-linux`), and an existing trusted

@@ -34,7 +34,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { readSource, intakeImage, ensureImage, saveCanvas, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { readSource, intakeImage, ensureImage, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -46,6 +46,16 @@ import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, widgetImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 import { createUvaService } from "./src/uva/service.js";
+import { createMirror } from "./src/uva/mirror.js";
+
+// Every canvas save made through the server goes through here, so the optional
+// UVA mirror hears about it. The sealed storage module itself is untouched, and a
+// failing listener can never affect the save.
+let canvasSaved = null;
+const saveCanvas = (entry, meta) => saveCanvasFile(entry, meta).then((result) => {
+  if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
+  return result;
+});
 import { registerUvaTools } from "./src/uva/mcp-tools.js";
 import { serializeCanvas } from "./src/storage.js";
 import { createModuleHost } from "./src/modules/index.js";
@@ -2514,7 +2524,7 @@ const port = config.port;
 // it is generated on first start. Set before the server listens.
 let ACCESS_KEY = "";
 // Created at startup, once storage is checked (see below).
-let moduleHost = null, surfaceService = null, uvaService = null;
+let moduleHost = null, surfaceService = null, uvaService = null, uvaMirror = null;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -2886,7 +2896,7 @@ moduleHost = await createModuleHost({
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
 });
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
-uvaService = await createUvaService({ enabled: config.uvaBeta, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
+uvaService = await createUvaService({ enabled: config.uvaBeta, mirror: config.uvaBeta && config.uvaMirror, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
   legacyItems: async (op) => {
     let entries;
     if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }
@@ -2902,6 +2912,18 @@ uvaService = await createUvaService({ enabled: config.uvaBeta, directory: config
   },
 });
 if (uvaService.enabled) log("warn", "[uva] Experimental Beta enabled; production NOT QUALIFIED", { profile: config.uvaBetaProfile });
+if (uvaService.enabled && config.uvaMirror) {
+  uvaMirror = createMirror({
+    service: uvaService, idleMs: config.uvaMirrorIdleSec * 1000, log,
+    read: async (imageId) => {
+      const entry = await ensureImage(imageId);
+      if (!entry?.imageId) return null;
+      return { canvas: serializeCanvas(entry), bytes: entry.sourceBytes ?? await readSource(entry.imageId) };
+    },
+  });
+  canvasSaved = (imageId) => uvaMirror.schedule(imageId);
+  log("warn", "[uva] canvas mirror on: checkpoints are copied into read-only UVA documents; the canvas stays the writer", { idleSec: config.uvaMirrorIdleSec });
+}
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
   log("warn", "[auth] generated an access key. Connector URL: https://<your host>/mcp?key=" + keyInfo.key +
@@ -2942,6 +2964,6 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
     httpServer.close();
     const force = setTimeout(() => process.exit(0), 8000);
     force.unref();
-    Promise.all([flushStorage(), uvaService?.close()]).finally(() => process.exit(0));
+    flushStorage().then(() => uvaMirror?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
   });
 }

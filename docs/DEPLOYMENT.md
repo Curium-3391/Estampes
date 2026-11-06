@@ -175,3 +175,6 @@ trusted parent. `ESTAMPES_UVA_BETA_PROFILE` must be explicitly set to
 no silent profile fallback, directory adoption, or automatic migration. Full
 instructions, Docker overlay, platform matrix, export/recovery and rollback are
 in [UVA Experimental Beta](UVA-BETA.md).
+`ESTAMPES_UVA_MIRROR=1` (optional, needs the Beta) copies canvas checkpoints into read-only
+UVA documents so GPT reads the same marks; `ESTAMPES_UVA_MIRROR_IDLE_SEC` sets the
+quiet time before a copy. See [Canvas mirror](UVA-BETA.md#canvas-mirror-optional).
