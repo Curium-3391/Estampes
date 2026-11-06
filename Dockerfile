@@ -12,7 +12,9 @@ WORKDIR /app
 # Optional PDF page rendering (adds roughly 60 MB): docker build --build-arg ESTAMPES_WITH_PDF=1
 ARG ESTAMPES_WITH_PDF=0
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund \
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
+    npm ci --omit=dev --no-audit --no-fund \
  && if [ "$ESTAMPES_WITH_PDF" = "1" ]; then npm install --no-save --omit=dev --no-audit --no-fund pdfjs-dist@4.10.38 @napi-rs/canvas; fi \
  && node -e "require('sharp'); console.log('sharp', require('sharp/package.json').version, process.arch)"
 
@@ -23,6 +25,9 @@ ENV NODE_ENV=production \
     PORT=8787 \
     ESTAMPES_STORAGE_DIR=/data \
     ESTAMPES_REQUIRE_KEY=1
+# The existing UVA lease requires the OS flock backend. Keep Beta opt-in.
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json server.js ./
@@ -31,7 +36,8 @@ COPY scripts ./scripts
 COPY public ./public
 # Run as the image's unprivileged "node" user (uid 1000). /data is created
 # here so a new named volume starts owned by that user.
-RUN mkdir -p /data /run/estampes-cas && chown node:node /data /run/estampes-cas
+RUN chmod -R u=rwX,go=rX /app \
+ && mkdir -p /data /run/estampes-cas /uva-beta && chown node:node /data /run/estampes-cas /uva-beta && chmod 700 /uva-beta
 USER node
 VOLUME ["/data"]
 EXPOSE 8787
