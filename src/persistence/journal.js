@@ -19,11 +19,23 @@ export class IntentJournal {
     const value={schema:"estampes.transaction-outcome/1",commitId,outcome:member?"committed":"aborted",...(member?{membership:{generation:member.generation,registryRootHash:member.registryRootHash,resultHash:member.resultHash}}:{})};
     await this.files.atomic(transactionPath(commitId)+"/outcome.json",Buffer.from(canonicalJson(value)),"outcome",{immutable:true,owner:{kind:"transaction",id:commitId.slice(3)}});
   }
-  async recover(snapshot){
+  // Transactions at or after `settledBefore` (the recent window) are always fully
+  // re-checked; older committed ones with a matching durable outcome are not.
+  async recover(snapshot,{settledBefore=0}={}){
     const seen=new Map(),outcomes=[];
     for(const name of await readdir(this.files.path("visual-transactions"))){
       if(!UUIDSchema.safeParse(name).success){integrity(false,"Unknown transaction directory");}
       const id="tx:"+name,path=transactionPath(id),member=snapshot.indices.commitIndex.get(id);
+      // A committed transaction whose outcome is durable was checked against its
+      // intent and Ledger entry when that outcome was written; its request key is
+      // in the commit index. Re-reading every settled intent made open O(history).
+      if(member&&member.generation<settledBefore){
+        const old=await this.files.exists(path+"/outcome.json")?parse(outcomeSchema,await this.files.json(path+"/outcome.json")):null;
+        if(old&&old.commitId===id&&old.outcome==="committed"&&old.membership?.generation===member.generation&&old.membership.registryRootHash===member.registryRootHash&&old.membership.resultHash===member.resultHash){
+          if(member.requestKeyDigest!==null){integrity(!seen.has(member.requestKeyDigest)||seen.get(member.requestKeyDigest)===member.payloadHash,"Conflicting durable request intents");seen.set(member.requestKeyDigest,member.payloadHash);}
+          outcomes.push({commitId:id,outcome:"committed"});continue;
+        }
+      }
       if(!await this.files.exists(path+"/intent.json")){const proof=snapshot.indices.retention.get("journal-compacted:"+id);integrity(!member||(proof?.commitId===id&&proof.outcome==="committed"&&proof.payloadHash===member.payloadHash),"Committed transaction is missing its durable intent or matching compaction proof");outcomes.push({commitId:id,outcome:"incomplete-intent"});continue;}
       const intent=parse(IntentSchema,await this.files.json(path+"/intent.json"));
       integrity(intent.commitId===id&&intent.storeInstanceId===snapshot.root.storeInstanceId,"Journal namespace mismatch");

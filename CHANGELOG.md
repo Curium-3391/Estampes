@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- UVA engine, second pass (owner-authorized, from profiling a 300-commit store).
+  Open no longer re-checks every ACK against its historical registry or rebuilds
+  the Documents of every retained recovery point, and it walks the tree once.
+  Commits no longer rewrite all 20 recovery resolver rows, re-read whole indices or
+  lstat every history file for capacity admission, and they do not slow down the
+  longer a process runs. At 300 commits cold start is 3.7 s (was 8.7 s) and a
+  commit 1.1 s (was 2.2 s); at about 920 commits, 4.9 s and 1.2–1.3 s. New index
+  pages per commit fall from 31 to 12.
+
 - UVA storage engine rework (owner-authorized change to the sealed engine). Crash
   leftovers that can never have been published are closed at open instead of
   leaving the store read-only (180 SIGKILLs, no wedge, no lost ACK). Store-wide

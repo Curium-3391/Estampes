@@ -197,7 +197,11 @@ export class GarbageCollector {
 export async function recoverQuarantine(files){
  if(!await files.exists("visual-registry/CURRENT.json"))return;
  const envelope=parse(CurrentEnvelopeSchema,await files.json("visual-registry/CURRENT.json",64*1024)),pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
- const retention=await pages.read(root.roots.retention,"retention"),locator=await pages.read(root.roots.locator,"locator"),required=new Set(pages.track);
+ const retention=await pages.read(root.roots.retention,"retention");
+ // Only a committed GC plan can have quarantined anything. Without one there is
+ // nothing to restore, and the Locator/manifest walk below would be O(history).
+ if(![...retention.keys()].some(key=>key.startsWith("gc:")))return;
+ const locator=await pages.read(root.roots.locator,"locator"),required=new Set(pages.track);
  await gcOwnership(files,{root,indices:{retention}});
  for(const row of locator.values()){
   if(row.kind==="full")required.add(row.relativePath);

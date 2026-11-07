@@ -26,7 +26,7 @@ export async function registerTemporary(files,finalPath,bytes,label,ownerInput){
   await files.durableCreate(temporaryClaimPath(claimId),Buffer.from(canonicalJson(claim)),"temporary-claim");return claim;
 }
 
-async function inventory(files,gcOwnedPaths=new Set()){
+async function inventory(files,gcOwnedPaths=new Set(),scan=null){
   const claims=new Map(),emptyClaims=new Map(),claimDir="visual-temporaries/claims";
   // A claim is staged as <id>.json.partial and linked into place only when
   // complete (ManagedFiles.durableCreate). A leftover partial owns nothing; it is
@@ -45,12 +45,18 @@ async function inventory(files,gcOwnedPaths=new Set()){
     integrity(name===claim.claimId+".json"&&claim.temporaryPath===claim.finalPath+".tmp-"+claim.claimId,"Temporary claim identity mismatch");
     integrity(!claims.has(claim.temporaryPath),"Temporary path has conflicting owners");claims.set(claim.temporaryPath,claim);
   }
-  const found=[];
+  let found=[];
+  // One open walks (and audits) the whole tree once. Later steps of the same open
+  // only remove or rename temporaries, so they reuse the scan, re-checked below.
+  if(scan?.found){for(const name of scan.found)if(await files.exists(name))found.push(name);}
+  else{
   const walk=async absolute=>{for(const entry of await readdir(absolute,{withFileTypes:true})){
     const path=join(absolute,entry.name),name=relative(files.root,path);
     const st=await lstat(path);files.validateEntry(st);
     if(st.isDirectory())await walk(path);else if(/\.tmp-[0-9a-f]{8}-[0-9a-f-]{27}$/.test(name))found.push(name);
   }};await walk(files.root);
+  if(scan)scan.found=[...found];
+  }
   for(const [id,claimPath] of emptyClaims){
     integrity(!found.some(path=>path.endsWith(".tmp-"+id)),"Empty temporary claim has a temporary file");
     await files.remove(claimPath,"temporary-claim");
@@ -112,8 +118,8 @@ async function selectedPublication(files,snapshot,claim,member){
   return {schema:"estampes.selected-current-proof/1",envelope};
 }
 
-export async function recoverBootstrapTemporary(files){
-  const claims=await inventory(files),bootstrap=[...claims.values()].filter(claim=>claim.owner.kind==="bootstrap");if(!bootstrap.length)return;
+export async function recoverBootstrapTemporary(files,scan=null){
+  const claims=await inventory(files,new Set(),scan),bootstrap=[...claims.values()].filter(claim=>claim.owner.kind==="bootstrap");if(!bootstrap.length)return;
   integrity(bootstrap.length===1,"Store bootstrap has ambiguous temporary owners");const claim=bootstrap[0];
   integrity(claim.finalPath==="storage-format.json","Store bootstrap temporary has an invalid target");
   if(await files.exists(claim.finalPath)){
@@ -125,8 +131,8 @@ export async function recoverBootstrapTemporary(files){
   await files.remove(temporaryClaimPath(claim.claimId),"temporary-claim");
 }
 
-export async function classifyTemporaryClaims(files,snapshot){
-  const gcOwned=await gcTemporaryOwnership(files,snapshot),claims=await inventory(files,gcOwned.ownedPaths),changes=new Map(),outcomes=[],finalOwners=new Map();
+export async function classifyTemporaryClaims(files,snapshot,scan=null){
+  const gcOwned=await gcTemporaryOwnership(files,snapshot),claims=await inventory(files,gcOwned.ownedPaths,scan),changes=new Map(),outcomes=[],finalOwners=new Map();
   for(const claim of claims.values()){
     integrity(claim.owner.kind==="transaction","Unexpected temporary owner in active Document store");
     const disposition=gcOwned.dispositions.get(claim.claimId);
