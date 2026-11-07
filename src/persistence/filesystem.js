@@ -10,6 +10,7 @@ import { privateDirectory, privateFile, privateAncestry } from "./ownership.js";
 export const physicalFingerprint=info=>[info.dev,info.ino,info.bytes,info.mtimeNs,info.ctimeNs].join(":");
 const physicalInfo=st=>({bytes:Number(st.size),allocatedBytes:Number(st.blocks*512n),dev:String(st.dev),ino:String(st.ino),mtimeNs:String(st.mtimeNs),ctimeNs:String(st.ctimeNs)});
 
+const IMMUTABLE_RECORD=/^(?:visual-registry\/(?:pages|roots)\/[0-9a-f]{64}\.json|visual-history\/(?:chunks\/[0-9a-f]{64}\.bin|deltas\/[0-9a-f]{64}\.json)|visual-documents\/[0-9a-f-]{36}\/generations\/[1-9][0-9]*-[0-9a-f]{64}\.json|visual-transactions\/[0-9a-f-]{36}\/(?:intent|prepared|outcome)\.json)$/;
 export class ManagedFiles {
   // pageProofs outlives single verifications (observations inherit it): a
   // content-addressed page that was verified once and whose physical fingerprint
@@ -23,7 +24,12 @@ export class ManagedFiles {
   async checkFingerprint(name,expected){
     if(!expected?.hash)return false;
     let value=this.contentProofs?.get(name),fingerprint=this.observations?.get(name);
-    if(!value){const digest=await this.digest(name);value={hash:digest.hash,contentBytes:digest.bytes};fingerprint=physicalFingerprint(digest);}
+    // Not yet observed in this verification: under the trust model an unchanged
+    // physical fingerprint proves the content hashed when the proof was made, so
+    // a cached proof costs one stat instead of re-reading and hashing the file.
+    if(!value){const info=await this.info(name);fingerprint=physicalFingerprint(info);
+      if(fingerprint===expected.fingerprint&&info.bytes===expected.contentBytes){this.observed(name,info,expected.hash);return true;}
+      const digest=await this.digest(name);value={hash:digest.hash,contentBytes:digest.bytes};fingerprint=physicalFingerprint(digest);}
     return fingerprint===expected.fingerprint&&value.hash===expected.hash&&value.contentBytes===expected.contentBytes;
   }
   observed(name,info,hash){
@@ -161,13 +167,21 @@ export class ManagedFiles {
       const value={...info,hash:hash.digest("hex")};this.contentHashChecks=(this.contentHashChecks??0)+1;this.observed(name,info,value.hash);return value;
     }finally{await fd.close();}
   }
+  // Every entry is listed on each call, so new, removed and mutable files are
+  // always measured. Content-addressed records are written once by atomic
+  // rename and never modified in place, so their lstat is reused while the
+  // name stays listed: admission no longer costs one lstat per history file.
   async usage(){
-    const inodes=new Set();let logicalBytes=0,allocatedBytes=0,files=0;
-    const walk=async dir=>{const entries=await readdir(dir,{withFileTypes:true});for(const e of entries){
-      const p=join(dir,e.name),st=await lstat(p);integrity(!st.isSymbolicLink()&&(st.isFile()||st.isDirectory()),"Unsafe managed usage entry");
-      const key=st.dev+":"+st.ino;if(!inodes.has(key)){allocatedBytes+=st.blocks*512;inodes.add(key);}
-      if(st.isDirectory())await walk(p);else{logicalBytes+=st.size;files++;}
-    }};await walk(this.root);return {logicalBytes,allocatedBytes,files};
+    const inodes=new Set(),seen=new Set(),cache=this.usageCache??=new Map();let logicalBytes=0,allocatedBytes=0,files=0;
+    const walk=async(dir,rel)=>{const entries=await readdir(dir,{withFileTypes:true});for(const e of entries){
+      integrity(!e.isSymbolicLink()&&(e.isFile()||e.isDirectory()),"Unsafe managed usage entry");
+      const name=rel?rel+"/"+e.name:e.name,p=join(dir,e.name),immutable=e.isFile()&&IMMUTABLE_RECORD.test(name);let st=immutable?cache.get(name):null;
+      if(!st){const s=await lstat(p);integrity(!s.isSymbolicLink()&&(s.isFile()||s.isDirectory()),"Unsafe managed usage entry");st={directory:s.isDirectory(),key:s.dev+":"+s.ino,blocks:s.blocks*512,size:s.size};if(immutable&&!st.directory)cache.set(name,st);}
+      seen.add(name);if(!inodes.has(st.key)){allocatedBytes+=st.blocks;inodes.add(st.key);}
+      if(st.directory)await walk(p,name);else{logicalBytes+=st.size;files++;}
+    }};await walk(this.root,"");
+    for(const name of cache.keys())if(!seen.has(name))cache.delete(name);
+    return {logicalBytes,allocatedBytes,files};
   }
   async usedBytes(){return (await this.usage()).allocatedBytes;}
   async move(from,to,label="gc"){

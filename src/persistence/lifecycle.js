@@ -73,11 +73,12 @@ export class LifecycleManager {
  async pin(args={}){
   const current=this.owner.current,registry=args.registryRootHash??current.root.roots.registry,resolver=current.indices.retention.get("registry:"+registry);
   if(!resolver)fail("STALE_CURSOR","Historical registry is no longer resolvable");
-  const view=await readRegistrySnapshot(this.files,registry,resolver.resolverLocatorRootHash,current.root.storeInstanceId,current.root.generation);
+  const locatorRoot=current.root.roots.locator; // append-only: resolves every retained registry
+  const view=await readRegistrySnapshot(this.files,registry,locatorRoot,current.root.storeInstanceId,current.root.generation);
   const paths=new Set(view.files),pages=new PageStore(this.files);await pages.hashed(current.envelope.rootHash,"visual-registry/roots",64*1024);for(const [kind,hash]of Object.entries(current.root.roots))await pages.read(hash,kind);for(const path of pages.track)paths.add(path);
   const historyRefs=args.historyRefs??[];integrity(Array.isArray(historyRefs)&&historyRefs.length<=200,"History pin reference limit exceeded");
   for(const ref of historyRefs){integrity(view.locator.has(hashJson(ref)),"History reference is absent");await physicalVersionPaths(this.files,ref,view.locator,paths);}
-  const descriptor={registryRootHash:registry,locatorRootHash:resolver.resolverLocatorRootHash,storeInstanceId:current.root.storeInstanceId,generation:current.root.generation,envelope:current.envelope,historyRefs};
+  const descriptor={registryRootHash:registry,locatorRootHash:locatorRoot,storeInstanceId:current.root.storeInstanceId,generation:current.root.generation,envelope:current.envelope,historyRefs};
   return this.pins.acquire(descriptor,[...paths],this.now(),{ttlMs:args.ttlMs??10*60*1000});
  }
  async readPin(id){return this.pins.read(id,this.now(),async(s,io)=>(await readRegistrySnapshot(io,s.registryRootHash,s.locatorRootHash,s.storeInstanceId,s.generation)).documents);}

@@ -43,10 +43,13 @@ export class PageStore {
       }
     }return entries;
   }
-  async update(hash,kind,changes){
+  // `known` is the already verified content of `hash` (the writer's selected
+  // snapshot). Passing it avoids re-reading every bucket page on each commit,
+  // which made each index update O(index size) in disk reads.
+  async update(hash,kind,changes,known=null){
     integrity(Boolean(this.plan),"A staging plan is required for index updates");
     const old=hash?parse(rootSchema,await this.hashed(hash)):{schema:"estampes.index-root/1",kind,buckets:{}};
-    integrity(old.kind===kind,"Index update kind mismatch");const root=structuredClone(old),all=await this.read(hash,kind),touched=new Set();
+    integrity(old.kind===kind,"Index update kind mismatch");const root=structuredClone(old),all=hash&&known?new Map(known):await this.read(hash,kind),touched=new Set();
     for(const [key,value]of changes){if(value===undefined)all.delete(key);else all.set(key,value);touched.add(bucketOf(key));}
     if(all.size>100000)fail("LIMIT","Isolated index entry limit exceeded before publication");
     if(!hash&&changes.size===0)return this.plan.blob(root);

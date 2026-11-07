@@ -168,17 +168,24 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   };
   const documents=await materialize(indices.registry);
   const materialized=new Set([root.roots.registry]);
-  let currentCatalog=false;
+  let currentCatalog=false;const retainedRegistries=new Set([root.roots.registry]);
   for(const [key,raw]of indices.retention){
     if(!key.startsWith("registry:"))continue;
-    const resolver=parse(RecoveryResolverSchema,raw);integrity(key==="registry:"+resolver.registryRootHash,"Recovery catalog key mismatch");
-    let registry=await cache.registry(files,resolver.registryRootHash,resolver,indices.locator,root.roots.locator,pages.track),locator;const registryHit=Boolean(registry);
-    if(!registry){const historicalTrack=new Set(),historicalPages=new PageStore(files,null,historicalTrack);registry=await historicalPages.read(resolver.registryRootHash,"registry");locator=resolver.resolverLocatorRootHash===root.roots.locator?indices.locator:await historicalPages.read(resolver.resolverLocatorRootHash,"locator");for(const path of historicalTrack)pages.track.add(path);}
-    else locator=indices.locator;
+    const stored=parse(RecoveryResolverSchema,raw);integrity(key==="registry:"+stored.registryRootHash,"Recovery catalog key mismatch");retainedRegistries.add(stored.registryRootHash);
+    if(stored.registryRootHash===root.roots.registry){integrity(stored.resolverLocatorRootHash===root.roots.locator,"Current recovery resolver is split");currentCatalog=true;}
+    // The Locator is append-only for logical versions, so every retained registry
+    // resolves through the current Locator; the stored Locator root records where
+    // the row was written and is not read again.
+    const resolver={...stored,resolverLocatorRootHash:root.roots.locator};
+    let registry=await cache.registry(files,resolver.registryRootHash,resolver,indices.locator,root.roots.locator,pages.track);const registryHit=Boolean(registry);
+    if(!registry){const historicalTrack=new Set(),historicalPages=new PageStore(files,null,historicalTrack);registry=await historicalPages.read(resolver.registryRootHash,"registry");for(const path of historicalTrack)pages.track.add(path);}
     integrity(logicalClosureHash(registry)===resolver.logicalClosureHash,"Recovery logical closure hash mismatch");
-    for(const [k,value]of registry)if(k.startsWith("entity:"))integrity(locator.has(hashJson(value))&&canonicalJson(locator.get(hashJson(value)))===canonicalJson(indices.locator.get(hashJson(value))),"Recovery resolver lacks matching retained version");
-    if(!registryHit){if(!materialized.has(resolver.registryRootHash)){await materialize(registry,indices.locator);materialized.add(resolver.registryRootHash);}const proofTrack=new Set(),proofPages=new PageStore(files,null,proofTrack);await proofPages.read(resolver.registryRootHash,"registry");if(resolver.resolverLocatorRootHash!==root.roots.locator)await proofPages.read(resolver.resolverLocatorRootHash,"locator");for(const path of proofTrack)pages.track.add(path);await cache.rememberRegistry(files,resolver.registryRootHash,resolver,registry,indices.locator,proofTrack,root.roots.locator);}
-    if(resolver.registryRootHash===root.roots.registry){integrity(resolver.resolverLocatorRootHash===root.roots.locator,"Current recovery resolver is split");currentCatalog=true;}
+    for(const [k,value]of registry)if(k.startsWith("entity:"))integrity(indices.locator.has(hashJson(value)),"Recovery resolver lacks matching retained version");
+    // Without history a retained recovery registry is checked structurally (its
+    // pages, closure hash and Locator coverage); its Document versions were
+    // verified when it was current and are re-verified when it is restored or by
+    // a history verification. Materializing all of them made each open O(K·D).
+    if(!registryHit&&(history||materialized.has(resolver.registryRootHash))){if(!materialized.has(resolver.registryRootHash)){await materialize(registry,indices.locator);materialized.add(resolver.registryRootHash);}const proofTrack=new Set(),proofPages=new PageStore(files,null,proofTrack);await proofPages.read(resolver.registryRootHash,"registry");for(const path of proofTrack)pages.track.add(path);await cache.rememberRegistry(files,resolver.registryRootHash,resolver,registry,indices.locator,proofTrack,root.roots.locator);}
   }
   integrity(currentCatalog,"Current registry lacks recovery catalog entry");
   const memberships=new Map(),generations=new Set();
@@ -201,6 +208,11 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
     integrity(member?.requestKeyDigest===key&&member.payloadHash===entry.payloadHash&&member.resultHash===entry.resultHash,"Ledger outcome split from content membership");
     if(value.kind==="tombstone")continue;
     integrity(entry.ack.durability===(authority.profile==="linux-local-durable"?"durable":"process-crash-test"),"Ledger durability/profile mismatch");
+    // Each ACK was checked against its own registry when that commit's candidate
+    // was verified, and the Ledger page holding it is content-addressed. Without
+    // history only ACKs of retained registries are re-checked; reading every
+    // historical registry made open O(history) and kept all of them reachable.
+    if(!history&&!retainedRegistries.has(member.registryRootHash))continue;
     const registry=await pages.read(member.registryRootHash,"registry");
     for(const ref of entry.ack.revisionVector)integrity(canonicalJson(registry.get("entity:"+ref.entityId))===canonicalJson(ref),"ACK revision vector differs from committed registry");
   }

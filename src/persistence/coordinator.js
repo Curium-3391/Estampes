@@ -9,7 +9,7 @@ import { ActorContextSchema, assertCreatorUnchanged } from "../documents/provena
 import { parseCommitRoot } from "./commit-root-schema.js";
 import { ManagedFiles, StagingPlan } from "./filesystem.js";
 import { PageStore } from "./pages.js";
-import { IntentJournal } from "./journal.js";
+import { IntentJournal, transactionPath } from "./journal.js";
 import { CommitCommandSchema, FormatSchema, AckSchema, LedgerEntrySchema, VerificationCache, replayLedgerEntry, loadCommitted, verifyPreparedClosure, versionPath, closure, logicalClosureHash } from "./records.js";
 import { assertOwnedWriterLease, inspectPlatform } from "./platform.js";
 import { LifecycleManager } from "./lifecycle.js";
@@ -60,7 +60,7 @@ export class CommitCoordinator {
     await assertOwnedWriterLease(this.files.root);
     try{
       await this.files.auditBoundary();
-      await recoverBootstrapTemporary(this.files);
+      const scan={};await recoverBootstrapTemporary(this.files,scan);
       const hasFormat=await this.files.exists("storage-format.json"),hasCurrent=await this.files.exists("visual-registry/CURRENT.json");
       if(!hasFormat){
         this.format=parse(FormatSchema,{schema:"estampes.isolated-store/1",storeInstanceId:randomUUID(),purpose:"isolated-pr1c-testing",profile:this.platform.profile,
@@ -88,9 +88,13 @@ export class CommitCoordinator {
         if(this.current.lifecycle||options.lifecycle||this.format.lifecycle)this.installLifecycle(this.current.lifecycle?.options??options.lifecycle??this.format.lifecycle,options.testClockMs);
         if(restricted){this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:"RESTORED_BACKUP_REQUIRES_CONTINUATION_PROOF"};return this;}
         // Re-establish all file/directory barriers after an interrupted publish.
-        for(const path of this.current.files)await this.files.resync(path);
+        // A transaction's files are durable before its CURRENT is published, and its
+        // outcome is written only after that publication is durable. So only a
+        // selected root whose outcome is missing can have unsettled barriers.
+        const settled=await this.files.exists(transactionPath(this.current.root.commitId)+"/outcome.json");
+        for(const path of settled?["visual-registry/CURRENT.json"]:this.current.files)await this.files.resync(path);
         await this.files.resync("storage-format.json");
-        const report=await this.journal.recover(this.current),temporaries=await classifyTemporaryClaims(this.files,this.current);this.seen=report.seen;this.recoveryReport=[...report.outcomes,...temporaries.outcomes];
+        const report=await this.journal.recover(this.current,{settledBefore:this.current.root.generation-RECOVERY_POINTS});const temporaries=await classifyTemporaryClaims(this.files,this.current,scan);this.seen=report.seen;this.recoveryReport=[...report.outcomes,...temporaries.outcomes];
         await this.#publish(null,null,"recovery-epoch",{name:"temporary-recovery",mutate:async()=>({retentionChanges:temporaries.changes,result:{temporaries:temporaries.outcomes.length}})});
       }
       this.state="ready";
@@ -167,11 +171,11 @@ export class CommitCoordinator {
       if(maintenance){overrides=await maintenance.mutate({before,plan,pages,commitId,generation});maintenanceResult=overrides.result??{};for(const [key,value]of overrides.locatorChanges??[])locatorChanges.set(key,value);}
       for(const [key,value]of registryChanges)if(value===undefined)registry.delete(key);else registry.set(key,value);
       const roots={};
-      roots.registry=await pages.update(before?.root.roots.registry,"registry",registryChanges);
-      roots.locator=await pages.update(before?.root.roots.locator,"locator",locatorChanges);
+      roots.registry=await pages.update(before?.root.roots.registry,"registry",registryChanges,before?.indices.registry);
+      roots.locator=await pages.update(before?.root.roots.locator,"locator",locatorChanges,before?.indices.locator);
       const epoch=(before?.authority.epoch??0)+(["content","maintenance"].includes(mode)?0:1);
       const authority={schema:"estampes.isolated-authority/1",storeInstanceId:this.format.storeInstanceId,epoch,mode:"isolated-testing",profile:this.platform.profile};
-      roots.authority=await pages.update(before?.root.roots.authority,"authority",new Map([["store",authority]]));
+      roots.authority=await pages.update(before?.root.roots.authority,"authority",new Map([["store",authority]]),before?.indices.authority);
       const ack=command?parse(AckSchema,{schema:"estampes.commit-ack/1",commitId,resultId:createId("event"),durability:this.platform.durability,
         noChange:command.changes.every(c=>unchangedDocuments.has(c.document.id)),revisionVector:after}):null;
       const resultHash=hashJson(ack??{mode,epoch,result:maintenanceResult}),payloadHash=request?.payloadHash??hashJson({mode,epoch,maintenance:maintenance?.name??null,metadata:maintenance?.metadata??null});
@@ -179,8 +183,8 @@ export class CommitCoordinator {
       const ledgerChange=new Map();
       if(request)ledgerChange.set(request.digest,parse(LedgerEntrySchema,{kind:"ack",key:request.key,payloadHash,commitId,resultHash,acceptedAt,ack}));
       for(const [key,value]of overrides.ledgerChanges??[])ledgerChange.set(key,value);
-      roots.ledger=await pages.update(before?.root.roots.ledger,"ledger",ledgerChange);
-      roots.commitIndex=await pages.update(before?.root.roots.commitIndex,"commitIndex",new Map([[commitId,member]]));
+      roots.ledger=await pages.update(before?.root.roots.ledger,"ledger",ledgerChange,before?.indices.ledger);
+      roots.commitIndex=await pages.update(before?.root.roots.commitIndex,"commitIndex",new Map([[commitId,member]]),before?.indices.commitIndex);
       const retentionChanges=new Map(overrides.retentionChanges??[]),neededRegistries=new Set([roots.registry]);
       if(this.lifecycle){
         const now=this.lifecycle.now(),prior=policyOf(before?.indices.retention),policy=retentionChanges.get("lifecycle")??structuredClone(prior??initialPolicy(this.lifecycle.options,this.lifecycle.acceptedTime()));
@@ -202,10 +206,15 @@ export class CommitCoordinator {
         for(const [key,value]of before?.indices.retention??[])
           if(key.startsWith("checkpoint:")&&!retentionChanges.has(key))retentionChanges.set(key,{...value,resolverLocatorRootHash:roots.locator});
       }
+      // A resolver row is written once, while its registry is current. The Locator
+      // only ever gains rows (compaction swaps a row's representation, never its
+      // logical version), so the current Locator resolves every retained registry
+      // and rows are no longer rewritten on each commit: that rewrite made most
+      // of each commit's new index pages.
       for(const [key,value]of before?.indices.retention??[])
-        if(key.startsWith("registry:")&&!retentionChanges.has(key))retentionChanges.set(key,neededRegistries.has(value.registryRootHash)?{...value,resolverLocatorRootHash:roots.locator}:undefined);
+        if(key.startsWith("registry:")&&!retentionChanges.has(key)&&!neededRegistries.has(value.registryRootHash))retentionChanges.set(key,undefined);
       retentionChanges.set("registry:"+roots.registry,{registryRootHash:roots.registry,logicalClosureHash:logicalClosureHash(registry),resolverLocatorRootHash:roots.locator});
-      roots.retention=await pages.update(before?.root.roots.retention,"retention",retentionChanges);
+      roots.retention=await pages.update(before?.root.roots.retention,"retention",retentionChanges,before?.indices.retention);
       const root=parseCommitRoot({schema:"estampes.commit-root/1",storeInstanceId:this.format.storeInstanceId,generation,commitId,parentCommitHash:before?.envelope.rootHash??null,roots});
       const rootHash=plan.blob(root,{folder:"visual-registry/roots",limit:64*1024,label:"root"}),head={generation,rootHash,commitId},envelope={...head,checksum:hashJson(head)};
       const intent={schema:"estampes.transaction-intent/1",commitId,storeInstanceId:this.format.storeInstanceId,mode,baseRootHash:before?.envelope.rootHash??null,baseGeneration:before?.root.generation??0,

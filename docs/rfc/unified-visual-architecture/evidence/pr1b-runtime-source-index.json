@@ -55,7 +55,7 @@
     },
     {
       "path": "src/persistence/coordinator.js",
-      "sha256": "902bf1aa9efa7da56b5496cbdcb7cc81ccd713dc98838c94c861f9d40cc012f8"
+      "sha256": "270684a5e877a454af69419b929347583bf15dc3bd1f7cdfcd3d0faac634b158"
     },
     {
       "path": "src/persistence/errors.js",
@@ -63,15 +63,15 @@
     },
     {
       "path": "src/persistence/filesystem.js",
-      "sha256": "8b5ce6152a4d921250f07bd2215be02af3a2739ac7f3892969b3e921eb341d77"
+      "sha256": "df7e93fa555d19f6c0360881ace216be41abccc45a39abd343af8106b7bd5cd2"
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "ad5888cc5d4a30eb6c1aeaa2b4c90cbc173835d9f2998300425c7268b4fd3366"
+      "sha256": "b99b3825876b62e218606d05591bf7d14888b3f049e7c3459efa9cede86439b7"
     },
     {
       "path": "src/persistence/journal.js",
-      "sha256": "77486dd9573075a7556c94646cacae3d4960dac3b47ca9ebe4def1765038fe93"
+      "sha256": "bf248baa5c0ede49413cb1cd5116839c6492cc7c81788224df844a2f211354bc"
     },
     {
       "path": "src/persistence/lease.js",
@@ -83,7 +83,7 @@
     },
     {
       "path": "src/persistence/lifecycle.js",
-      "sha256": "623494b3feaece422f48d8898059081ab28940af29cf40a122055a38e42202f3"
+      "sha256": "0800458f1d4bf46d439749e510eb5bc54e5c236207a8eda55391d7bbf4805f56"
     },
     {
       "path": "src/persistence/ownership.js",
@@ -91,7 +91,7 @@
     },
     {
       "path": "src/persistence/pages.js",
-      "sha256": "5fac61b8cdf0bfa665a9ad3cf40d8a080e41e0cfcaeb107452b6d05f04d77354"
+      "sha256": "ca1f67d22d7da116f73f0c776257d0ab55c4bdab3b6e6f7240bb30c0f79f4c67"
     },
     {
       "path": "src/persistence/pins.js",
@@ -103,7 +103,7 @@
     },
     {
       "path": "src/persistence/records.js",
-      "sha256": "8b060fc0eb8da487578e8d0b522a7a5787a9e585be779848d5389f5086967606"
+      "sha256": "1523e0f7ca36714276b81d3f15e4d46da428044c356a7ce0e29db019b98eb0df"
     },
     {
       "path": "src/persistence/restore-worker.js",
@@ -111,7 +111,7 @@
     },
     {
       "path": "src/persistence/temporary-attribution.js",
-      "sha256": "c8a33e572a1f6d3679bcf47d5d7ff40537e29cd8a685fb0ad0e9cd5d688ff677"
+      "sha256": "4807455ce8b01748210b304f293bdcd352bb70f890fc9b0e042e56b49a8417f4"
     },
     {
       "path": "src/persistence/worker.js",
@@ -153,6 +153,53 @@
           "path": "src/persistence/temporary-attribution.js",
           "from": "42f240dda1198c27ee60c1e486f9b3a69f839362b2ba1386af3dce1fcf1b1fd3",
           "to": "c8a33e572a1f6d3679bcf47d5d7ff40537e29cd8a685fb0ad0e9cd5d688ff677"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "Second engine pass (2026-11-07) from scripts/uva-qualify.mjs profiles: open re-checks only ACKs of retained registries; recovery resolvers written once and resolved through the append-only Locator; index updates reuse the verified snapshot instead of re-reading every page; capacity admission reuses lstat of immutable content-addressed records; one tree scan per open; quarantine recovery only when a GC plan exists; only an unsettled selected root is re-synced; journal re-checks the recent window; retained recovery registries are checked structurally without history; cached version proofs are re-checked by physical fingerprint",
+      "files": [
+        {
+          "path": "src/persistence/coordinator.js",
+          "from": "902bf1aa9efa7da56b5496cbdcb7cc81ccd713dc98838c94c861f9d40cc012f8",
+          "to": "270684a5e877a454af69419b929347583bf15dc3bd1f7cdfcd3d0faac634b158"
+        },
+        {
+          "path": "src/persistence/filesystem.js",
+          "from": "8b5ce6152a4d921250f07bd2215be02af3a2739ac7f3892969b3e921eb341d77",
+          "to": "df7e93fa555d19f6c0360881ace216be41abccc45a39abd343af8106b7bd5cd2"
+        },
+        {
+          "path": "src/persistence/gc.js",
+          "from": "ad5888cc5d4a30eb6c1aeaa2b4c90cbc173835d9f2998300425c7268b4fd3366",
+          "to": "b99b3825876b62e218606d05591bf7d14888b3f049e7c3459efa9cede86439b7"
+        },
+        {
+          "path": "src/persistence/journal.js",
+          "from": "77486dd9573075a7556c94646cacae3d4960dac3b47ca9ebe4def1765038fe93",
+          "to": "bf248baa5c0ede49413cb1cd5116839c6492cc7c81788224df844a2f211354bc"
+        },
+        {
+          "path": "src/persistence/lifecycle.js",
+          "from": "623494b3feaece422f48d8898059081ab28940af29cf40a122055a38e42202f3",
+          "to": "0800458f1d4bf46d439749e510eb5bc54e5c236207a8eda55391d7bbf4805f56"
+        },
+        {
+          "path": "src/persistence/pages.js",
+          "from": "5fac61b8cdf0bfa665a9ad3cf40d8a080e41e0cfcaeb107452b6d05f04d77354",
+          "to": "ca1f67d22d7da116f73f0c776257d0ab55c4bdab3b6e6f7240bb30c0f79f4c67"
+        },
+        {
+          "path": "src/persistence/records.js",
+          "from": "8b060fc0eb8da487578e8d0b522a7a5787a9e585be779848d5389f5086967606",
+          "to": "1523e0f7ca36714276b81d3f15e4d46da428044c356a7ce0e29db019b98eb0df"
+        },
+        {
+          "path": "src/persistence/temporary-attribution.js",
+          "from": "c8a33e572a1f6d3679bcf47d5d7ff40537e29cd8a685fb0ad0e9cd5d688ff677",
+          "to": "4807455ce8b01748210b304f293bdcd352bb70f890fc9b0e042e56b49a8417f4"
         }
       ]
     }

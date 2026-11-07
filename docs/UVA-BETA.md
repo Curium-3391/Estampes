@@ -196,14 +196,16 @@ export and recovery round trip, and many documents. Results on a Linux 6.18
 container (ext4 root, `linux-process-crash-test` profile, Node 22), one image of
 640×400 with up to 120 marks:
 
-| Check | Before the engine rework | After |
-|---|---|---|
-| Acknowledged revision lost after kill | 0 in 6 trials | 0 in 18 trials (180 kills) |
-| Store left read-only after a kill | 1 in 6 trials, 3 of 3 earlier probes | 0 in 18 trials |
-| 150 commits: one commit | 4.4 s | 1.9 s |
-| 300 commits: cold start | over the 30 s limit from about 200 commits | 9.7 s |
-| 300 commits: commit latency p50 / p95 | not reachable | 2.2 s / 3.3 s |
-| Disk per commit (120-mark canvas) | about 0.5 MB, growing with history | about 0.11 MB, constant |
+| Check | Before the engine rework | First pass (2026-11-06) | Second pass (2026-11-07) |
+|---|---|---|---|
+| Acknowledged revision lost after kill | 0 in 6 trials | 0 in 18 trials (180 kills) | 0 in 10 trials (100 kills) |
+| Store left read-only after a kill | 1 in 6 trials, 3 of 3 earlier probes | 0 in 18 trials | 0 in 10 trials |
+| 150 commits: one commit | 4.4 s | 1.9 s | |
+| 300 commits: cold start | over the 30 s limit from about 200 commits | 9.7 s (8.7 s re-measured) | 3.7 s |
+| 300 commits: one commit after open | not reachable | 2.2 s | 1.1 s |
+| About 920 commits: cold start / one commit | not reachable | not reachable | 4.9 s / 1.2–1.3 s |
+| New index pages per commit | | 31 | 12 |
+| Disk per commit (120-mark canvas) | about 0.5 MB, growing with history | about 0.11 MB, constant | about 0.12 MB, constant |
 | Filesystem full | refused with `STORAGE_UNAVAILABLE`, nothing lost; writes resume once space is freed | unchanged |
 | Export, then recover into a fresh store | hashes match | unchanged |
 
@@ -227,9 +229,33 @@ hashes and the reason are recorded in
   fingerprint (device, inode, size, mtime, ctime) instead of being hashed again.
 - **Shorter delta chains:** a full copy every 32 revisions.
 
-Still open: cold start and commit time still grow slowly with history (the
-transaction journal and the Ledger are read in full at open; journal compaction is
-part of maintenance, which stays off in the Beta). Not provable in a container:
+The second pass came from profiling a 300-commit store (open 8.7 s, commit 2.2 s):
+
+- At open, only ACKs whose registry is still retained are re-checked against that
+  registry; each ACK was checked when its own commit was verified. Retained
+  recovery registries are checked structurally (pages, closure hash, Locator
+  coverage); their Documents are rebuilt when one is restored or by `verify`.
+- A recovery resolver row is written once, while its registry is current, and is
+  resolved through the current Locator, which only ever gains rows. Rewriting all
+  20 rows on every commit had made most of each commit's new index pages.
+- An index update starts from the writer's verified snapshot instead of reading
+  every page of that index again.
+- Capacity admission still lists every entry, but reuses the size of
+  content-addressed records, which are never modified in place.
+- One open walks and audits the tree once (it was twice), restores quarantine only
+  when a GC plan exists, re-syncs files only when the selected root's outcome is
+  missing, and fully re-checks only the newest 20 journal transactions.
+- A cached version proof is re-checked by physical fingerprint instead of reading
+  and hashing the file again, so commits do not slow down the longer a process
+  runs.
+
+Still open: listing the tree and the journal at open, and capacity admission on each
+commit, still grow with the number of files. Unreachable index pages are never
+reclaimed (G1 does not cover them and maintenance is off in the Beta), so a 256 MiB
+Beta store fills after about 900 commits of a 120-mark canvas, refusing further
+commits with `STORAGE_UNAVAILABLE` and losing nothing. The mirror's default budget
+of 300 commits stays well inside that. Journal compaction needs G2, which is blocked
+by issue #90. Not provable in a container:
 host power loss, real ext4/XFS fsync ordering, physical ENOSPC, near-64 MiB cold
 start (issues #89 and #91).
 
