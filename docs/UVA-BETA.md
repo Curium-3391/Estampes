@@ -6,7 +6,8 @@ UVA connects the Workbench's image annotation editor and existing visual modules
 working. No startup migration occurs.
 
 Production qualification: **NOT QUALIFIED**. The native A/B result remains
-**INCONCLUSIVE — DEFAULT TO BASELINE**; G2 remains **UNRESOLVED INTERMITTENT**.
+**INCONCLUSIVE — DEFAULT TO BASELINE**. The G2 intermittent (#90) is reproduced,
+explained and fixed; see the [root cause](rfc/unified-visual-architecture/PR-1D-G2-ROOT-CAUSE.md).
 
 ## Canvas mirror (optional)
 
@@ -102,9 +103,10 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   commit budget (default 1500) therefore stops first, with a clear message. After
   that, or after any refused commit, saves stay in their pending files and the
   canvas is unaffected; export and start a new `ESTAMPES_UVA_BETA_DIR`. History
-  compaction, which would remove this limit, needs G2 (#90).
+  compaction, which would remove this limit, is not built yet. Its G2 blocker
+  (#90) is fixed.
 
-Production qualification is unchanged: **NOT QUALIFIED** (power loss #89/#91, G2 #90).
+Production qualification is unchanged: **NOT QUALIFIED** (power loss #89/#91).
 
 ## Enable on Linux
 
@@ -338,7 +340,8 @@ A sweep takes about 0.7 s on a 900-commit store, and one commit in 32 waits for 
 
 Still open: listing the tree and the journal at open, and capacity admission on each
 commit, still grow with the number of files, so cold start reaches about 6 s at
-1000 commits. Journal compaction needs G2, which is blocked by issue #90. Not
+1000 commits. Journal compaction runs through G2, whose blocker (#90) is fixed, but
+is not scheduled automatically yet. Not
 provable in a container:
 host power loss, real ext4/XFS fsync ordering, physical ENOSPC, near-64 MiB cold
 start (issues #89 and #91).
@@ -352,7 +355,7 @@ acceptance has **not** been performed by that test.
 
 Known work: [history/drain #88](https://github.com/Curium-3391/Estampes/issues/88),
 [large startup/RSS #89](https://github.com/Curium-3391/Estampes/issues/89),
-[G2 #90](https://github.com/Curium-3391/Estampes/issues/90), and
+[G2 #90](https://github.com/Curium-3391/Estampes/issues/90) (fixed), and
 [native/capacity/backup qualification #91](https://github.com/Curium-3391/Estampes/issues/91).
 Report Beta feedback with profile, observed revision, request/ACK IDs, exact error,
 module capability and reproduction steps. Preserve a saved export; never attach

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- UVA engine, G2 fix (#90): a GC plan could stall forever after the grace,
+  returning `quarantining` on every step. Index pages and generation files are
+  named by their content, so a later commit, or the plan's own publication, can
+  write a candidate's path again; that candidate could then never be moved. Such a
+  candidate is now released from the plan and kept. Grace, re-mark and unlink
+  checks are unchanged. The failing store is kept as
+  evidence, with a test that checks it. See
+  docs/rfc/unified-visual-architecture/PR-1D-G2-ROOT-CAUSE.md.
+
 - Canvas store, phase 1 (`ESTAMPES_CANVAS_STORE=uva`, Beta, default `legacy`): an
   image's own canvas is committed to its UVA document and restored from it. Each
   save is acknowledged only once it is written durably to `uva-pending/`, then

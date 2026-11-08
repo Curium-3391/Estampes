@@ -2,6 +2,8 @@
 
 2026-11-04（Asia/Taipei）。**C — UNRESOLVED INTERMITTENT。G2／Gate B 仍為 BLOCKED。**
 
+> 2026-11-08 更新：已重現、解釋並修正，見 [PR-1D G2 根因與修正](PR-1D-G2-ROOT-CAUSE.md)。本文保留為當時的裁決紀錄。
+
 ## 基準與執行環境
 
 - 已從 `Curium-3391/Estampes` fetch `codex/pr1d-final-engineering-acceptance`。遠端 HEAD 和乾淨的起始 checkout 都是 `2765ec10c5524f28e594b8456d2341b47fd6d44c`，tree 為 `6098e0422deadbaf2a08c7b6bc6af98777fc604b`。Production 祖先是 `29d097833688ddb649a88cb2a09f22ba5fadda8e`，tree 為 `756ea491e27bce3a2998dc61ba1e3ee34525919c`。兩者之間只有 final acceptance 工具、報告與證據新增。診斷分支從驗收 HEAD 延伸。原 checkout 裡一份未追蹤的 runner 草稿移至自有 scratch 保留，原樣重跑使用該 runner。工作樹及歷史檔案比對見 [環境與基準](https://github.com/Curium-3391/Estampes/blob/d9aaa49f27d195ed53baeb12e95e434f1a7b10b0/docs/rfc/unified-visual-architecture/evidence/pr1d-g2-adjudication/environment.log)。
