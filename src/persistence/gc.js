@@ -23,13 +23,19 @@ export const gcPlanPath=hash=>"visual-maintenance/gc/"+parse(Hash,hash)+".json";
 export async function readGcPlan(files,record){
  const r=parse(GcRecordSchema,record),raw=await files.json(gcPlanPath(r.planHash),4*1024**2),validated=GcPlanSchema.safeParse(raw);integrity(validated.success,"Invalid committed GC plan schema");const plan=validated.data;integrity(hashJson(plan)===r.planHash,"GC plan hash mismatch");
  integrity(new Set(r.moved).size===r.moved.length&&new Set(r.deleted).size===r.deleted.length&&new Set(r.unlinking??[]).size===(r.unlinking??[]).length&&r.moved.every(i=>i<plan.candidates.length)&&r.deleted.every(i=>r.moved.includes(i))&&(r.unlinking??[]).every(i=>r.moved.includes(i)&&!r.deleted.includes(i)),"GC progress differs from candidate inventory");
- integrity(new Set(plan.candidates.map(c=>c.path)).size===plan.candidates.length&&(r.state!=="complete"||r.deleted.length===plan.candidates.length),"GC plan repeats a candidate or has incomplete terminal progress");
+ const released=r.released??[];
+ integrity(new Set(released).size===released.length&&released.every(i=>i<plan.candidates.length&&!r.deleted.includes(i)&&!(r.unlinking??[]).includes(i)),"GC released candidates differ from candidate inventory");
+ integrity(new Set(plan.candidates.map(c=>c.path)).size===plan.candidates.length&&(r.state!=="complete"||r.deleted.length+released.length===plan.candidates.length),"GC plan repeats a candidate or has incomplete terminal progress");
  for(const [i,c]of plan.candidates.entries())integrity(c.quarantine===`gc-quarantine/${plan.id}/${i}-${c.hash}.bin`,"Unsafe GC quarantine path");return plan;
 }
 // Absence is an outcome only when an earlier selected Root already authorized
 // that exact candidate's unlink. A new intent cannot explain an older loss.
 async function verifyGcLocations(files,plan,record){
+ const released=new Set(record.released??[]);
  for(const [i,c]of plan.candidates.entries()){
+  // A released candidate is live again under its own path: the plan neither
+  // holds nor may touch it.
+  if(released.has(i)){integrity(!await files.exists(c.quarantine),"Released GC candidate is still quarantined");continue;}
   const source=await files.exists(c.path),quarantine=await files.exists(c.quarantine);
   if(record.deleted.includes(i)){
    integrity(!quarantine,"Terminal GC quarantine candidate reappeared");
@@ -58,8 +64,9 @@ export async function gcOwnership(files,snapshot){
   integrity(key==="gc:"+plan.id&&plan.storeInstanceId===snapshot.root.storeInstanceId&&plan.sourceGeneration<=snapshot.root.generation,"GC ownership namespace differs from selected root");
   if(record.state==="complete")continue;
   await verifyGcLocations(files,plan,record);
+  const released=new Set(record.released??[]);
   for(const [i,c]of plan.candidates.entries()){
-   if(record.deleted.includes(i))continue;
+   if(record.deleted.includes(i)||released.has(i))continue;
    if(++count>4096)fail("STORAGE_UNAVAILABLE","Active GC ownership exceeds bounded inventory");
    const object=objectKey(c.physical),prior=paths.get(c.path)??[];
    integrity(!legacyPaths.has(c.path)&&(!object?prior.length===0:!objects.has(object)),"Physical candidate has overlapping active GC owners");
@@ -147,11 +154,23 @@ export class GarbageCollector {
   await gcOwnership(this.files,this.owner.current);
   await verifyGcLocations(this.files,plan,record);if(record.state==="complete")return {id,state:"complete"};
   const priorUnlinking=new Set(record.unlinking??[]);
+  // Content-addressed paths can be written again after the plan's mark: by a
+  // later commit, or by the plan's own publication (a retention page that
+  // returns to earlier bytes). The selected root then owns an object at that
+  // path again. The plan yields such a candidate (`released`) instead of
+  // waiting on it forever, and never quarantines it later under a grace that
+  // started before it moved. Temporary dispositions keep their stricter path.
+  const disposed=new Set((plan.temporaryDispositions??[]).flatMap(d=>[d.claimCandidate,d.temporaryCandidate]).filter(i=>i!==null));
+  const releasable=async(i,c)=>!disposed.has(i)&&await this.files.exists(c.path);
+  const release=(target,i)=>{target.released=[...new Set([...(target.released??[]),i])].sort((a,b)=>a-b);};
   const state=structuredClone(record),{paths}=await protectedPaths(this.owner);let progressed=0;
   await this.files.point("gc.before-quarantine",{id});
   for(const [i,c]of plan.candidates.entries()){
-   if(state.moved.includes(i))continue;
-   if(paths.has(c.path)){state.reason="PINNED_OR_REACHABLE";continue;}
+   if(state.moved.includes(i)||(state.released??[]).includes(i))continue;
+   if(paths.has(c.path)){
+    if(await releasable(i,c)){release(state,i);progressed++;continue;}
+    state.reason="PINNED_OR_REACHABLE";continue;
+   }
    if(await this.files.exists(c.quarantine)){const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantined file changed");}
    else if(await this.files.exists(c.path)){
     const digest=await this.files.digest(c.path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC source changed since plan");
@@ -164,10 +183,12 @@ export class GarbageCollector {
   await this.manager.publish("gc-quarantine-progress",async()=>({retentionChanges:new Map([[key,state]]),result:{id,moved:state.moved.length}}));
   await this.files.point("gc.after-quarantine",{id});
   // Re-mark after durable quarantine progress; callbacks cannot use the old mark.
+  // A quarantined candidate whose path is reachable again keeps its copy until
+  // the path is unreachable (a later commit may have written the same content).
   const remarked=await protectedPaths(this.owner);
   let next=structuredClone(this.owner.current.indices.retention.get(key)),waiting=false;const deletionIntent=[];
   for(const i of next.moved){
-   if(next.deleted.includes(i))continue;const c=plan.candidates[i];
+   if(next.deleted.includes(i)||(next.released??[]).includes(i))continue;const c=plan.candidates[i];
    if(remarked.paths.has(c.path)){waiting=true;continue;}
    if(c.class==="G2"&&(!this.manager.canAge()||this.manager.now()-next.quarantinedAtMs<DAY)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine changed before unlink authorization");}
@@ -187,9 +208,9 @@ export class GarbageCollector {
    }
    delete next.unlinking;
   }
-  next.state=next.deleted.length===plan.candidates.length?"complete":waiting?"waiting-grace":"quarantining";
+  next.state=next.deleted.length+(next.released?.length??0)===plan.candidates.length?"complete":waiting?"waiting-grace":"quarantining";
   await this.manager.publish("gc-unlink-progress",async()=>({retentionChanges:new Map([[key,next]]),result:{id,state:next.state,deleted:next.deleted.length}}));
-  return {id,state:next.state,progressed,moved:next.moved.length,deleted:next.deleted.length};
+  return {id,state:next.state,progressed,moved:next.moved.length,deleted:next.deleted.length,...(next.released?.length?{released:next.released.length}:{})};
  }
 }
 // Before a full logical load, restore any quarantined representation that a

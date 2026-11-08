@@ -67,7 +67,7 @@
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "9df2776b91cf17563c6ceea9acb9991cb67cbe66583899f72ac4cff4c1a2a648"
+      "sha256": "67a07fb55fa13146b37b2118f20b4e89a4d0f42e460b0e21a1cdf922499284df"
     },
     {
       "path": "src/persistence/journal.js",
@@ -79,7 +79,7 @@
     },
     {
       "path": "src/persistence/lifecycle-state.js",
-      "sha256": "d848b54b939b5d6a31b91e50afe0e81b264f7d1b43395d11f06eef6e9788dcf1"
+      "sha256": "1b84971ab6ddfc8dbc17ceb11029c0cc734dea8188b00068680938571d6fcbce"
     },
     {
       "path": "src/persistence/lifecycle.js",
@@ -222,6 +222,23 @@
           "path": "src/persistence/lifecycle.js",
           "from": "0800458f1d4bf46d439749e510eb5bc54e5c236207a8eda55391d7bbf4805f56",
           "to": "b9e7886d7067da55d4156a2245c94065273d97e380bc6ff6d794c185bf71c900"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "#90: G2 plans release candidates re-adopted after their mark",
+      "files": [
+        {
+          "path": "src/persistence/gc.js",
+          "from": "9df2776b91cf17563c6ceea9acb9991cb67cbe66583899f72ac4cff4c1a2a648",
+          "to": "67a07fb55fa13146b37b2118f20b4e89a4d0f42e460b0e21a1cdf922499284df"
+        },
+        {
+          "path": "src/persistence/lifecycle-state.js",
+          "from": "d848b54b939b5d6a31b91e50afe0e81b264f7d1b43395d11f06eef6e9788dcf1",
+          "to": "1b84971ab6ddfc8dbc17ceb11029c0cc734dea8188b00068680938571d6fcbce"
         }
       ]
     }

@@ -1,0 +1,21 @@
+{
+ "case": "R3-B1 / current.before-rename (same flow as tests/persistence-state-machine.test.js)",
+ "gcPlanId": "71fd6a96-172d-4426-9c37-1db629491434",
+ "firstStep": {
+  "id": "71fd6a96-172d-4426-9c37-1db629491434",
+  "state": "waiting-grace",
+  "progressed": 12,
+  "moved": 12,
+  "deleted": 0
+ },
+ "postGraceStep": {
+  "id": "71fd6a96-172d-4426-9c37-1db629491434",
+  "state": "quarantining",
+  "progressed": 12,
+  "moved": 12,
+  "deleted": 12
+ },
+ "liveCandidatesAfterPlanPublication": [
+  "10:visual-registry/pages/7e470e93a1b256a5eeb069e0d10ca9fee2219196daf641c00a23e1bf4b042dc3.json"
+ ]
+}

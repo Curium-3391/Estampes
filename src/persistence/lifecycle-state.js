@@ -15,7 +15,7 @@ export const RecoveryRootSchema=z.object({schema:z.literal("estampes.recovery-ro
 export const CheckpointSchema=z.object({schema:z.literal("estampes.named-checkpoint/1"),name:z.string().min(1).max(80),
  registryRootHash:ContentHashSchema,logicalClosureHash:ContentHashSchema,resolverLocatorRootHash:ContentHashSchema,createdAtMs:z.number().int().min(0),envelope:CurrentEnvelopeSchema}).strict();
 export const GcRecordSchema=z.object({schema:z.literal("estampes.gc-state/1"),planHash:ContentHashSchema,state:z.enum(["planned","quarantining","waiting-grace","unlinking","complete","failed"]),
- quarantinedAtMs:z.number().int().min(0).nullable(),moved:z.array(z.number().int().min(0).max(127)),deleted:z.array(z.number().int().min(0).max(127)),unlinking:z.array(z.number().int().min(0).max(127)).optional(),reason:z.string().max(300).optional()}).strict();
+ quarantinedAtMs:z.number().int().min(0).nullable(),moved:z.array(z.number().int().min(0).max(127)),deleted:z.array(z.number().int().min(0).max(127)),unlinking:z.array(z.number().int().min(0).max(127)).optional(),released:z.array(z.number().int().min(0).max(127)).optional(),reason:z.string().max(300).optional()}).strict();
 export const BackupJobSchema=z.object({schema:z.literal("estampes.backup-job/1"),id:z.string().uuid(),destination:z.string().min(1).max(4096),
  destinationToken:ContentHashSchema,source:CurrentEnvelopeSchema,filesHash:ContentHashSchema,state:z.enum(["copying","complete","cancelled","failed"]),
  fileIndex:z.number().int().min(0),offset:z.number().int().min(0),remainingBytes:z.number().int().min(0),deadlineMs:z.number().int().min(0),reason:z.string().max(300).optional()}).strict();
