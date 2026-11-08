@@ -67,7 +67,7 @@
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "67a07fb55fa13146b37b2118f20b4e89a4d0f42e460b0e21a1cdf922499284df"
+      "sha256": "479e1d1562940c1f66aef94da67c58ad545ab8cc6a5be0e72a27fe40fb313711"
     },
     {
       "path": "src/persistence/journal.js",
@@ -239,6 +239,18 @@
           "path": "src/persistence/lifecycle-state.js",
           "from": "d848b54b939b5d6a31b91e50afe0e81b264f7d1b43395d11f06eef6e9788dcf1",
           "to": "1b84971ab6ddfc8dbc17ceb11029c0cc734dea8188b00068680938571d6fcbce"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "#90 follow-up: unlink a quarantined copy whose path was written again, after the grace",
+      "files": [
+        {
+          "path": "src/persistence/gc.js",
+          "from": "67a07fb55fa13146b37b2118f20b4e89a4d0f42e460b0e21a1cdf922499284df",
+          "to": "479e1d1562940c1f66aef94da67c58ad545ab8cc6a5be0e72a27fe40fb313711"
         }
       ]
     }

@@ -34,7 +34,7 @@ claim ID 是隨機的，每次執行有五個 claim 各以 1/256 的機率落進
 
 結果：每一步之後，每個候選不是已搬移就是已釋放。grace 後若無阻擋，同一步就完成；非 terminal 的回傳一定是 `waiting-grace`。
 
-已搬移的候選維持原行為：若它的路徑之後又被新提交寫出，計畫保留隔離副本並等待（既有 H-02 測試要求如此），新的 live 物件不受影響。這種計畫在路徑仍被引用時不會結束，會擋住 `reclaimPages`；它不是 #90 的失敗，若要改成 grace 後刪除隔離副本，需另行決定。
+**後續（2026-11-08，使用者決定「改」）**：已搬移的候選若路徑之後又被新提交寫出，來源是另一個已驗證 hash 相同的 live 物件，隔離區那份只屬於計畫，照樣等滿 G2 grace 後 unlink，計畫因此能結束，不再擋住 `reclaimPages`。只有在 Root 需要、而來源不存在時（必須由 recovery 搬回），才繼續等待。recovery 已把隔離檔搬回來源、且 Root 引用它的候選，則釋放。H-02 的 quarantined 案例原本斷言 grace 後仍 `waiting-grace`，現改為斷言 `complete`，並在冷重開後驗證 Document、ACK 重播與 `contentCommits` 不變。
 
 ## 驗證
 
@@ -44,7 +44,7 @@ claim ID 是隨機的，每次執行有五個 claim 各以 1/256 的機率落進
 | --- | --- |
 | 必然重現（新提交在計畫後重寫同一 generation file 與 pages） | 修正前：grace 後 `quarantining`，第三步仍 `quarantining`；修正後 `complete` |
 | grace 前零刪除 | 釋放的與搬移的候選在 grace 前都是 0 deleted |
-| 已隔離後被重寫（行為不變） | grace 後仍 `waiting-grace`，隔離副本保留，live 物件 hash 相同 |
+| 已隔離後被重寫（後續修改） | grace 前 0 deleted；grace 後隔離副本刪除，live 物件仍是提交寫出的那個 inode，hash 相同 |
 | 時鐘回撥 | 回撥後 `waiting-grace`、0 deleted；時鐘回來後同計畫 `complete` |
 | 冷重開 | Documents 不變，`contentCommits` 1，同計畫仍 `complete` |
 | 保留現場 | 逐項驗證：候選 10 的頁面由計畫自己的發布引用、計畫當下的 Root 沒有引用、claim key 與 `lifecycle` 同 bucket |

@@ -75,10 +75,10 @@ test("a candidate re-adopted before quarantine is released; grace still holds th
   assert.equal((await f.store.maintenance("gcStep", {id: job.id})).state, "complete");
 });
 
-// Unchanged by #90 (and asserted by H-02 in persistence-integrity-hardening):
-// once a candidate is quarantined, a path that is reachable again keeps the
-// plan's copy and the plan waits; the new live object is never touched.
-test("a candidate re-created after quarantine keeps its quarantined copy; the live object stays", async t => {
+// A path written again after its candidate was quarantined: the new source is a
+// separate live object. The plan's own copy still waits the full grace, then
+// is unlinked; the live object is never touched.
+test("a candidate re-created after quarantine: its copy is unlinked after grace and the live object stays", async t => {
   const {f, files, cmd, job, plan} = await abandoned(t);
   const first = await f.store.maintenance("gcStep", {id: job.id});
   assert.equal(first.state, "waiting-grace");
@@ -87,18 +87,30 @@ test("a candidate re-created after quarantine keeps its quarantined copy; the li
   const live = new Set((await loadCommitted(files)).files);
   const recreated = plan.candidates.map((c, i) => live.has(c.path) ? i : -1).filter(i => i >= 0);
   assert.ok(recreated.length > 0);
-  await f.store.maintenance("clock", {nowMs: TIME + DAY});
-  const after = await f.store.maintenance("gcStep", {id: job.id});
-  assert.equal(after.state, "waiting-grace");
-  assert.equal(after.deleted, plan.candidates.length - recreated.length);
+  const objects = {};
   for (const i of recreated) {
-    const c = plan.candidates[i];
-    assert.equal(await files.exists(c.quarantine), true);
-    assert.equal((await files.digest(c.path)).hash, c.hash);
+    const c = plan.candidates[i], source = await files.digest(c.path), copy = await files.digest(c.quarantine);
+    assert.equal(source.hash, c.hash); assert.equal(copy.hash, c.hash);
+    assert.notEqual(source.dev + ":" + source.ino, copy.dev + ":" + copy.ino);
+    objects[i] = source.dev + ":" + source.ino;
+  }
+  const waiting = await f.store.maintenance("gcStep", {id: job.id});
+  assert.equal(waiting.state, "waiting-grace"); assert.equal(waiting.deleted, 0, "nothing is unlinked before the G2 grace");
+
+  await f.store.maintenance("clock", {nowMs: TIME + DAY});
+  const done = await f.store.maintenance("gcStep", {id: job.id});
+  assert.equal(done.state, "complete");
+  assert.equal(done.deleted, plan.candidates.length);
+  for (const i of recreated) {
+    const c = plan.candidates[i], source = await files.digest(c.path);
+    assert.equal(await files.exists(c.quarantine), false);
+    assert.equal(source.hash, c.hash);
+    assert.equal(source.dev + ":" + source.ino, objects[i], "the live object is the one the commit wrote");
   }
   const documents = (await f.store.snapshot()).documents;
   await f.reopen({testClockMs: TIME + DAY}); ready(f);
   assert.deepEqual((await f.store.snapshot()).documents, documents);
+  assert.equal((await f.store.maintenance("gcStep", {id: job.id})).state, "complete");
 });
 
 test("a clock rollback keeps the grace closed for a plan with released candidates", async t => {
