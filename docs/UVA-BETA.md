@@ -33,7 +33,7 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
 - Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
 - **Commit budget.** The store's cold start grows with its whole commit history, and
   the engine refuses a writer that takes longer than 30 s to start. The mirror
-  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 1500) and
+  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 1800) and
   reports `budgetExhausted` in `diagnostics.mirror`. The canvas is unaffected.
   Export what you need and start a new `ESTAMPES_UVA_BETA_DIR` to continue. If a
   UVA store cannot start at all, the server logs it and runs without UVA.
@@ -100,7 +100,7 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   under load): 1915 commits fit before the store's capacity admission refused the
   next one (108 MB on disk; the 256 MiB quota keeps a 64 MiB reserve and working
   space). Cold start at 1915 commits was 9.3 s; a commit took 3.3 s (p50). The
-  commit budget (default 1500) therefore stops first, with a clear message. After
+  commit budget (default 1800) therefore stops first, with a clear message. After
   that, or after any refused commit, saves stay in their pending files and the
   canvas is unaffected; export and start a new `ESTAMPES_UVA_BETA_DIR`. History
   compaction, which would remove this limit, is not built yet. Its G2 blocker

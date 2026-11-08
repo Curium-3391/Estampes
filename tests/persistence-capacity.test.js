@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { writeFile,stat } from "node:fs/promises";
 import { join } from "node:path";
-import { lifecycleFixture,document,command,actor,epoch } from "./fixtures/uva-lifecycle.mjs";
+import { lifecycleFixture,document,titleEdit,command,actor,epoch } from "./fixtures/uva-lifecycle.mjs";
 import { CapacityManager,DEFAULT_QUOTA,WORK_BYTES } from "../src/persistence/capacity.js";
 import { ManagedFiles,StagingPlan } from "../src/persistence/filesystem.js";
 import { stageDelta,ARCHIVE_BYTES,MIB } from "../src/persistence/archive.js";
@@ -21,4 +21,28 @@ test("UVA-63: real archive threshold chooses a full anchor at 32 MiB without sta
  const before={document:{id:"doc:00000001-0000-4000-8000-000000000001",revision:1,title:"a"}},after={document:{...before.document,revision:2,title:"b"}},from={storeInstanceId:"00000001-0000-4000-8000-000000000001",entityId:before.document.id,revision:1,contentHash:hashJson(before)},to={...from,revision:2,contentHash:hashJson(after)},plan=new StagingPlan(null);
  const delta=stageDelta(plan,before,after,from,to,{kind:"delta",deltaBytes:ARCHIVE_BYTES-1,span:999});assert.equal(delta,null);assert.equal(plan.records.size,0);
  const small=new StagingPlan(null),accepted=stageDelta(small,before,after,from,to,{kind:"full"});assert.equal(accepted.kind,"delta");assert.ok(accepted.deltaBytes<ARCHIVE_BYTES);assert.ok(small.bytes<4096);
+});
+test("usage with settled transaction folders cached equals a fresh walk, and forgets a folder that is removed",async t=>{
+ const f=await lifecycleFixture(t),cached=new ManagedFiles(f.root);
+ let d={...document(),persistence:"memory"};
+ for(let n=1;n<=3;n++){if(n>1)d={...titleEdit(d),title:"edit "+n};await f.store.commit(command([d],n,n===1?null:n-1),actor(n),await epoch(f.store));}
+ const fresh=async()=>new ManagedFiles(f.root).usage();
+ const first=await cached.usage();assert.deepEqual(first,await fresh());
+ assert.ok(cached.usageSettled.size>=3,"settled transaction folders are remembered");
+ // Second call reuses them and still matches a walk that remembers nothing.
+ assert.deepEqual(await cached.usage(),await fresh());
+ // A new commit adds a folder; compaction-style removal of a record drops the folder from the cache.
+ d={...titleEdit(d),title:"edit 4"};await f.store.commit(command([d],4,3),actor(4),await epoch(f.store));
+ assert.deepEqual(await cached.usage(),await fresh());
+ const [folder]=[...cached.usageSettled.keys()];
+ await cached.remove(folder+"/prepared.json","gc");
+ assert.equal(cached.usageSettled.has(folder),false);
+ assert.deepEqual(await cached.usage(),await fresh());
+});
+
+test("version proofs kept between commits stay bounded by the live registry, not by the number of commits",async t=>{
+  const f=await lifecycleFixture(t);let d={...document(),persistence:"memory"};
+  for(let n=1;n<=80;n++){if(n>1)d={...titleEdit(d),title:"edit "+n};await f.store.commit(command([d],n,n===1?null:n-1),actor(n),await epoch(f.store));}
+  const verification=(await f.store.diagnostics()).performance.verification;
+  assert.ok(verification.versionProofs<=24,"versionProofs "+verification.versionProofs+" after 80 commits of one document");
 });

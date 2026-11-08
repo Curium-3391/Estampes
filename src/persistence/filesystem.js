@@ -10,6 +10,9 @@ import { privateDirectory, privateFile, privateAncestry } from "./ownership.js";
 export const physicalFingerprint=info=>[info.dev,info.ino,info.bytes,info.mtimeNs,info.ctimeNs].join(":");
 const physicalInfo=st=>({bytes:Number(st.size),allocatedBytes:Number(st.blocks*512n),dev:String(st.dev),ino:String(st.ino),mtimeNs:String(st.mtimeNs),ctimeNs:String(st.ctimeNs)});
 
+// A transaction folder whose outcome is written never changes again (its three
+// records are immutable); only compaction removes them, through remove().
+const SETTLED_FOLDER=/^visual-transactions\/[0-9a-f-]{36}$/, SETTLED_RECORD=/^(?:intent|prepared|outcome)\.json$/;
 const IMMUTABLE_RECORD=/^(?:visual-registry\/(?:pages|roots)\/[0-9a-f]{64}\.json|visual-history\/(?:chunks\/[0-9a-f]{64}\.bin|deltas\/[0-9a-f]{64}\.json)|visual-documents\/[0-9a-f-]{36}\/generations\/[1-9][0-9]*-[0-9a-f]{64}\.json|visual-transactions\/[0-9a-f-]{36}\/(?:intent|prepared|outcome)\.json)$/;
 export class ManagedFiles {
   // pageProofs outlives single verifications (observations inherit it): a
@@ -172,15 +175,32 @@ export class ManagedFiles {
   // rename and never modified in place, so their lstat is reused while the
   // name stays listed: admission no longer costs one lstat per history file.
   async usage(){
-    const inodes=new Set(),seen=new Set(),cache=this.usageCache??=new Map();let logicalBytes=0,allocatedBytes=0,files=0;
+    const inodes=new Set(),seen=new Set(),cache=this.usageCache??=new Map(),settled=this.usageSettled??=new Map();let logicalBytes=0,allocatedBytes=0,files=0;
+    const count=st=>{if(!inodes.has(st.key)){allocatedBytes+=st.blocks;inodes.add(st.key);}};
+    const measure=async path=>{const s=await lstat(path);integrity(!s.isSymbolicLink()&&(s.isFile()||s.isDirectory()),"Unsafe managed usage entry");return {directory:s.isDirectory(),key:s.dev+":"+s.ino,blocks:s.blocks*512,size:s.size};};
     const walk=async(dir,rel)=>{const entries=await readdir(dir,{withFileTypes:true});for(const e of entries){
       integrity(!e.isSymbolicLink()&&(e.isFile()||e.isDirectory()),"Unsafe managed usage entry");
-      const name=rel?rel+"/"+e.name:e.name,p=join(dir,e.name),immutable=e.isFile()&&IMMUTABLE_RECORD.test(name);let st=immutable?cache.get(name):null;
-      if(!st){const s=await lstat(p);integrity(!s.isSymbolicLink()&&(s.isFile()||s.isDirectory()),"Unsafe managed usage entry");st={directory:s.isDirectory(),key:s.dev+":"+s.ino,blocks:s.blocks*512,size:s.size};if(immutable&&!st.directory)cache.set(name,st);}
-      seen.add(name);if(!inodes.has(st.key)){allocatedBytes+=st.blocks;inodes.add(st.key);}
+      const name=rel?rel+"/"+e.name:e.name,p=join(dir,e.name);
+      if(e.isDirectory()&&SETTLED_FOLDER.test(name)){
+        // A transaction folder with an outcome is listed once; later calls reuse
+        // its totals while its name stays listed (remove() forgets it).
+        seen.add(name);let known=settled.get(name);
+        if(!known){
+          const folder=await measure(p),members=[];
+          for(const member of await readdir(p)){const st=await measure(join(p,member));integrity(!st.directory,"Unsafe managed usage entry");members.push({name:member,...st});}
+          known={folder,files:members,final:members.some(m=>m.name==="outcome.json")&&members.every(m=>SETTLED_RECORD.test(m.name))};
+          if(known.final)settled.set(name,known);
+        }
+        count(known.folder);for(const m of known.files){count(m);logicalBytes+=m.size;files++;}
+        continue;
+      }
+      const immutable=e.isFile()&&IMMUTABLE_RECORD.test(name);let st=immutable?cache.get(name):null;
+      if(!st){st=await measure(p);if(immutable&&!st.directory)cache.set(name,st);}
+      seen.add(name);count(st);
       if(st.directory)await walk(p,name);else{logicalBytes+=st.size;files++;}
     }};await walk(this.root,"");
     for(const name of cache.keys())if(!seen.has(name))cache.delete(name);
+    for(const name of settled.keys())if(!seen.has(name))settled.delete(name);
     return {logicalBytes,allocatedBytes,files};
   }
   async usedBytes(){return (await this.usage()).allocatedBytes;}
@@ -192,6 +212,7 @@ export class ManagedFiles {
   async remove(name,label="gc",{allowMissing=true,expected}={}){
     await this.point(label+".before-unlink",{path:name});
     if(expected){const actual=await this.digest(name);if(physicalFingerprint(actual)!==physicalFingerprint(expected)||actual.hash!==expected.hash)fail("INTEGRITY_ERROR","Authorized unlink object was replaced or modified",{storageIntegrity:true});}
+    this.usageSettled?.delete(dirname(name));
     try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT"||!allowMissing)throw e;}
     await this.point(label+".after-unlink",{path:name});await this.syncDirectory(dirname(this.path(name)),label);
   }

@@ -2,7 +2,7 @@
 // Durability qualification for the UVA canvas mirror, runnable in any Linux
 // container. It produces raw evidence (JSON) and a pass/fail per scenario.
 //
-//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1]
+//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1] [--edit one] [--progress 250]
 //
 // --store 1 opens the store the way ESTAMPES_CANVAS_STORE=uva does (residual, no sidecar).
 // What it can prove:  process-crash safety (SIGKILL), no false ACK, long-history
@@ -35,14 +35,24 @@ async function dirBytes(p) {
   }
   return n;
 }
+async function fileCount(p) {
+  let n = 0;
+  for (const e of await readdir(p, { withFileTypes: true }).catch(() => [])) n += e.isDirectory() ? await fileCount(join(p, e.name)) : 1;
+  return n;
+}
 async function image(seed = 1) {
   const bytes = await sharp({ create: { width: 640, height: 400, channels: 3, background: { r: seed % 255, g: 90, b: 160 } } }).png().toBuffer();
   return { bytes, imageId: 'img:' + sha(bytes).slice(0, 16) };
 }
 // A canvas with `n` marks, growing the way a real session does.
+// --edit one: every commit changes a single mark (what a real edit does); by default
+// every mark's label changes, which is the worst case for history size.
+let edits = 0;
+const EDIT_ONE = arg('edit') === 'one', edited = new Map();
 function canvas(img, n, tag = '') {
   const marks = [];
-  for (let i = 0; i < n; i++) marks.push({ id: 'm' + i, author: i % 3 ? 'user' : 'gpt', type: 'rect', x: (i % 10) / 12, y: (Math.floor(i / 10) % 10) / 12, x2: (i % 10) / 12 + .05, y2: (Math.floor(i / 10) % 10) / 12 + .05, label: 'mark ' + i + tag });
+  if (EDIT_ONE) edited.set(edits++ % n, tag);
+  for (let i = 0; i < n; i++) marks.push({ id: 'm' + i, author: i % 3 ? 'user' : 'gpt', type: 'rect', x: (i % 10) / 12, y: (Math.floor(i / 10) % 10) / 12, x2: (i % 10) / 12 + .05, y2: (Math.floor(i / 10) % 10) / 12 + .05, label: 'mark ' + i + (EDIT_ONE ? (edited.get(i) ?? '') : tag) });
   return { version: 1, imageId: img.imageId, width: 640, height: 400, marks, layers: [], savedAt: new Date().toISOString() };
 }
 const open = (dir, extra = {}) => createUvaService({ enabled: true, directory: dir, profile: PROFILE, mirror: true, mirrorMaxCommits: 1e9, ...(arg('store') ? { canvasStore: true } : {}), ...extra });
@@ -56,10 +66,15 @@ async function history(n) {
   let revision = 0, failure = null;
   for (let i = 1; i <= n; i++) {
     const s = performance.now();
-    try { const r = await svc.syncCanvas({ canvas: canvas(img, Math.min(i, 120), ' #' + i), bytes: img.bytes }); revision = r.revision; }
+    try { const r = await svc.syncCanvas({ canvas: canvas(img, EDIT_ONE ? 120 : Math.min(i, 120), ' #' + i), bytes: img.bytes }); revision = r.revision; }
     catch (e) { failure = { at: i, code: e.code, message: e.message }; break; }
     lat.push(performance.now() - s);
     if (i % 25 === 0) disk.push({ commit: i, mb: mb(await dirBytes(dir)), rssMb: rss() });
+    const every = +arg('progress', 0);
+    if (every && i % every === 0) {
+      const w = lat.slice(-every);
+      console.error(`# commit ${i}: window p50 ${pct(w, .5)} ms p95 ${pct(w, .95)} ms, disk ${mb(await dirBytes(dir))} MB, files ${await fileCount(dir)}, rss ${rss()} MB, dir ${dir}`);
+    }
   }
   const diag = await svc.diagnostics();
   await svc.close();

@@ -21,6 +21,10 @@ export class VerificationCache {
     for(const path of proof.paths){const physical=this.fingerprints.get(path);if(physical&&--physical.refs===0){this.fingerprints.delete(path);this.proofTotal-=physical.bytes;}}
     if(evicted)this.stats.proofEvictions++;
   }
+  // Keeps only the version proofs the next load needs. Older versions stay
+  // reconstructible (hash-verified on read), but re-validating every proof made
+  // each load O(versions made in this process).
+  retainVersions(keys){for(const key of [...this.versions.keys()])if(!keys.has(key)){this.dropProof(key);const hit=this.records.get(key);if(hit){this.recordTotal-=hit.bytes;this.records.delete(key);}}}
   invalidatePath(path){for(const [key,proof]of [...this.versions])if(proof.paths.includes(path))this.dropProof(key);for(const [key,proof]of [...this.registries])if(proof.paths.includes(path))this.dropRegistry(key);}
   evictProofMetadata(){while(this.proofTotal>this.proofBytes&&(this.versions.size||this.registries.size)){let target=null;
     for(const [key,value]of this.versions)if(!target||value.last<target.last)target={kind:"version",key,last:value.last};
@@ -218,6 +222,9 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
   }
   for(const member of memberships.values())if(member.requestKeyDigest!==null)integrity(keys.has(member.requestKeyDigest),"Committed effect is missing its ledger outcome");
   await files.verifyObservations();
+  if(!history){const needed=new Set();
+    for(const [k,ref]of indices.registry)if(k.startsWith("entity:")){let key=hashJson(ref);while(key&&!needed.has(key)){needed.add(key);const row=indices.locator.get(key);key=row?.kind==="delta"?hashJson(row.base):null;}}
+    cache.retainVersions(needed);}
   cache.stats.deltaApplications=(cache.stats.deltaApplications??0)+versionReads.deltaApplications;
   cache.stats.operationPrefixHits=(cache.stats.operationPrefixHits??0)+versionReads.hits;
   cache.stats.physicalFingerprintChecks=(cache.stats.physicalFingerprintChecks??0)+files.fingerprintChecks;

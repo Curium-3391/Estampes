@@ -63,7 +63,7 @@
     },
     {
       "path": "src/persistence/filesystem.js",
-      "sha256": "df7e93fa555d19f6c0360881ace216be41abccc45a39abd343af8106b7bd5cd2"
+      "sha256": "014d628dacc76d59cdf38d881a9f6d3a9f1a92cf981bc313e7f887585bdc791a"
     },
     {
       "path": "src/persistence/gc.js",
@@ -103,7 +103,7 @@
     },
     {
       "path": "src/persistence/records.js",
-      "sha256": "1523e0f7ca36714276b81d3f15e4d46da428044c356a7ce0e29db019b98eb0df"
+      "sha256": "e80ff1693f62102ef684e1b7363accb2a421fcdc6d54acf882ff6de265939b3a"
     },
     {
       "path": "src/persistence/restore-worker.js",
@@ -251,6 +251,30 @@
           "path": "src/persistence/gc.js",
           "from": "67a07fb55fa13146b37b2118f20b4e89a4d0f42e460b0e21a1cdf922499284df",
           "to": "479e1d1562940c1f66aef94da67c58ad545ab8cc6a5be0e72a27fe40fb313711"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "UVA: capacity usage reuses totals of settled transaction folders",
+      "files": [
+        {
+          "path": "src/persistence/filesystem.js",
+          "from": "df7e93fa555d19f6c0360881ace216be41abccc45a39abd343af8106b7bd5cd2",
+          "to": "014d628dacc76d59cdf38d881a9f6d3a9f1a92cf981bc313e7f887585bdc791a"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "VerificationCache.retainVersions and settled-folder usage cache",
+      "files": [
+        {
+          "path": "src/persistence/records.js",
+          "from": "1523e0f7ca36714276b81d3f15e4d46da428044c356a7ce0e29db019b98eb0df",
+          "to": "e80ff1693f62102ef684e1b7363accb2a421fcdc6d54acf882ff6de265939b3a"
         }
       ]
     }
