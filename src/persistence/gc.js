@@ -1,7 +1,7 @@
 // Destructive work is only permitted by a plan committed in the sole CommitRoot.
-import { readdir } from "node:fs/promises";
+import { readdir, unlink } from "node:fs/promises";
 import { z } from "zod";
-import { PageStore } from "./pages.js";
+import { PageStore, pagePath } from "./pages.js";
 import { parseCommitRoot, assertCurrentEnvelope, CurrentEnvelopeSchema } from "./commit-root-schema.js";
 import { GcRecordSchema, DAY, policyOf } from "./lifecycle-state.js";
 import { hashJson, canonicalJson, parse, ContentHashSchema as Hash, bounded } from "../documents/validation.js";
@@ -219,4 +219,58 @@ export async function recoverQuarantine(files){
    if(required.has(c.path)&&!await files.exists(c.path))await files.move(c.quarantine,c.path,"gc-recovery");
   }
  }
+}
+// Index pages and commit roots are content-addressed and immutable; a commit
+// rewrites only the pages it touches, so every commit leaves older pages that
+// no durable root can reach. This marks everything any reader, recovery,
+// verification, pin or backup can still reach from the selected CURRENT
+// (current and retained roots with all their pages, the registry of every ACK
+// still in the Ledger, selected CURRENT publication evidence, roots of
+// transactions that still own a claim) and unlinks the rest of the two page
+// folders. It runs on the writer's serialized queue, so no commit can stage or
+// reuse a page between the mark and the unlink; an interrupted sweep only
+// leaves garbage for the next one.
+const pageName=/^[0-9a-f]{64}\.json$/;
+export async function reclaimIndexPages(owner,{limit=4096}={}){
+ const files=owner.files,snapshot=owner.current;
+ integrity(snapshot&&owner.state==="ready","Index page reclamation requires a ready writer");
+ const selected=parse(CurrentEnvelopeSchema,await files.json("visual-registry/CURRENT.json",64*1024));
+ integrity(canonicalJson(selected)===canonicalJson(snapshot.envelope),"CURRENT changed outside serialized maintenance");
+ const retention=snapshot.indices.retention;
+ for(const [key,value]of retention)if(key.startsWith("gc:")&&!["complete","failed"].includes(value.state))return {reclaimed:0,reason:"GC plan active"};
+ // An observation reuses page proofs from earlier verification (a stat, not a read).
+ const marked=new Set(),pages=new PageStore(files.observation()),indexes=new Set();
+ const markIndex=async hash=>{if(!hash||indexes.has(hash))return;indexes.add(hash);const root=await pages.hashed(hash);marked.add(pagePath(hash));
+  for(const first of Object.values(root.buckets??{})){let next=first;while(next&&!marked.has(pagePath(next))){marked.add(pagePath(next));next=(await pages.hashed(next)).next;}}};
+ const markRoot=async rootHash=>{const path="visual-registry/roots/"+parse(Hash,rootHash)+".json";if(marked.has(path))return;marked.add(path);
+  const root=parseCommitRoot(await pages.hashed(rootHash,"visual-registry/roots",64*1024));for(const hash of Object.values(root.roots))await markIndex(hash);};
+ await markRoot(snapshot.envelope.rootHash);
+ for(const [key,value]of retention){
+  if((key.startsWith("recovery:")||key.startsWith("checkpoint:"))&&value?.envelope)await markRoot(value.envelope.rootHash);
+  if(key.startsWith("checkpoint:")&&value){await markIndex(value.registryRootHash);await markIndex(value.resolverLocatorRootHash);}
+  if(key.startsWith("registry:")){await markIndex(value.registryRootHash);await markIndex(value.resolverLocatorRootHash);}
+  if(key.startsWith("temporary:")&&value.publication)await markRoot(value.publication.envelope.rootHash);
+  if(key.startsWith("backup:")){const {readBackupList}=await import("./backup.js"),list=await readBackupList(files,value.filesHash);for(const p of list.paths)marked.add(p);for(const f of list.files??[])marked.add(f.path);}
+ }
+ for(const [,value]of snapshot.indices.ledger){if(value.kind==="tombstone")continue;const member=snapshot.indices.commitIndex.get(value.commitId);if(member)await markIndex(member.registryRootHash);}
+ const claimDir="visual-temporaries/claims";
+ if(await files.exists(claimDir))for(const name of await readdir(files.path(claimDir))){
+  if(!/^[0-9a-f-]{36}\.json$/.test(name))continue;
+  const claim=await readTemporaryClaim(files,name.slice(0,-5)),prepared="visual-transactions/"+claim.owner.id+"/prepared.json";
+  if(claim.owner.kind==="transaction"&&await files.exists(prepared)){const value=await files.json(prepared,4096);if(Hash.safeParse(value?.rootHash).success&&await files.exists("visual-registry/roots/"+value.rootHash+".json"))await markRoot(value.rootHash);}
+ }
+ for(const path of owner.lifecycle?.pins.paths??[])marked.add(path);
+ let reclaimed=0,bytes=0;const touched=new Set();
+ for(const folder of ["visual-registry/pages","visual-registry/roots"]){
+  if(!await files.exists(folder))continue;
+  for(const name of await readdir(files.path(folder))){
+   if(reclaimed>=limit)break;
+   const path=folder+"/"+name;if(!pageName.test(name)||marked.has(path))continue;
+   const info=await files.info(path);await files.point("reclaim.before-unlink",{path});
+   try{await unlink(files.path(path));}catch(e){if(e.code!=="ENOENT")throw e;}
+   reclaimed++;bytes+=info.bytes;touched.add(folder);
+  }
+ }
+ for(const folder of touched)await files.syncDirectory(files.path(folder),"reclaim");
+ return {reclaimed,bytes,reachable:marked.size};
 }

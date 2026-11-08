@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- UVA engine: unreachable index pages and commit roots are reclaimed every 32
+  commits, after a mark of everything still reachable from CURRENT, retained and
+  checkpoint roots, Ledger ACKs, crash evidence, backups and pins. Document history
+  is never touched. A 256 MiB Beta store that used to fill at about 900 commits now
+  holds 1000 commits in 73 MB, and a 100-kill SIGKILL run still left no store
+  read-only and no ACK lost. New maintenance action `reclaimPages`.
+
 - UVA engine, second pass (owner-authorized, from profiling a 300-commit store).
   Open no longer re-checks every ACK against its historical registry or rebuilds
   the Documents of every retained recovery point, and it walks the tree once.

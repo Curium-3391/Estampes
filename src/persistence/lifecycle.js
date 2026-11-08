@@ -1,7 +1,7 @@
 import { parse, hashJson, canonicalJson } from "../documents/validation.js";
 import { ReaderPins } from "./pins.js";
 import { CapacityManager } from "./capacity.js";
-import { GarbageCollector, recoverQuarantine, protectedPaths } from "./gc.js";
+import { GarbageCollector, recoverQuarantine, protectedPaths, reclaimIndexPages } from "./gc.js";
 import { BackupManager } from "./backup.js";
 import { readVersion, physicalVersionPaths, stageDelta, MIB } from "./archive.js";
 import { readRegistrySnapshot } from "./records.js";
@@ -100,6 +100,7 @@ export class LifecycleManager {
    if(action==="dropCheckpoint")return await this.checkpoint(args.name,true);
    if(action==="gcPlan")return await this.gc.plan(args);
    if(action==="gcStep")return await this.gc.step(args.id);
+   if(action==="reclaimPages")return await reclaimIndexPages(this.owner,args);
    if(action==="backupStart")return await this.backups.start(args);
    if(action==="backupStep")return await this.backups.step(args.id);
    if(action==="backupCancel")return await this.backups.cancel(args.id);
