@@ -6,8 +6,10 @@
   returning `quarantining` on every step. Index pages and generation files are
   named by their content, so a later commit, or the plan's own publication, can
   write a candidate's path again; that candidate could then never be moved. Such a
-  candidate is now released from the plan and kept. Grace, re-mark and unlink
-  checks are unchanged. The failing store is kept as
+  candidate is now released from the plan and kept. When the path is written
+  again after the candidate was quarantined, the plan's copy is unlinked after
+  the grace and the new live file stays, so the plan can finish. Grace, re-mark
+  and unlink checks are unchanged. The failing store is kept as
   evidence, with a test that checks it. See
   docs/rfc/unified-visual-architecture/PR-1D-G2-ROOT-CAUSE.md.
 

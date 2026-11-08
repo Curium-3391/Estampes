@@ -183,13 +183,19 @@ export class GarbageCollector {
   await this.manager.publish("gc-quarantine-progress",async()=>({retentionChanges:new Map([[key,state]]),result:{id,moved:state.moved.length}}));
   await this.files.point("gc.after-quarantine",{id});
   // Re-mark after durable quarantine progress; callbacks cannot use the old mark.
-  // A quarantined candidate whose path is reachable again keeps its copy until
-  // the path is unreachable (a later commit may have written the same content).
+  // A reachable path blocks unlinking only while a root would need the
+  // quarantined bytes back (the source is absent; recovery restores it). When
+  // the source exists, a later commit wrote that content again as a separate,
+  // verified object; the quarantined copy belongs to the plan alone and follows
+  // the grace like any other.
+  const blocks=async(marked,i,c)=>marked.paths.has(c.path)&&(disposed.has(i)||!await this.files.exists(c.path));
   const remarked=await protectedPaths(this.owner);
   let next=structuredClone(this.owner.current.indices.retention.get(key)),waiting=false;const deletionIntent=[];
   for(const i of next.moved){
    if(next.deleted.includes(i)||(next.released??[]).includes(i))continue;const c=plan.candidates[i];
-   if(remarked.paths.has(c.path)){waiting=true;continue;}
+   if(await blocks(remarked,i,c)){waiting=true;continue;}
+   // Moved back by recovery to the path a root needs: that object is live again.
+   if(remarked.paths.has(c.path)&&!priorUnlinking.has(i)&&!await this.files.exists(c.quarantine)&&await releasable(i,c)){release(next,i);progressed++;continue;}
    if(c.class==="G2"&&(!this.manager.canAge()||this.manager.now()-next.quarantinedAtMs<DAY)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine changed before unlink authorization");}
    else integrity(priorUnlinking.has(i),"Missing quarantine cannot acquire a new unlink intent");
@@ -199,7 +205,7 @@ export class GarbageCollector {
    next.state="unlinking";next.unlinking=deletionIntent;
    await this.manager.publish("gc-unlink-intent",async()=>({retentionChanges:new Map([[key,next]]),result:{id,unlinking:deletionIntent.length}}));
    const finalMark=await protectedPaths(this.owner);next=structuredClone(this.owner.current.indices.retention.get(key));
-   for(const i of next.unlinking??[]){const c=plan.candidates[i];if(finalMark.paths.has(c.path)){waiting=true;continue;}
+   for(const i of next.unlinking??[]){const c=plan.candidates[i];if(await blocks(finalMark,i,c)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){
     const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine checksum failed before unlink");
     await this.files.remove(c.quarantine,"gc",{allowMissing:false,expected:digest});

@@ -283,5 +283,11 @@ for(const phase of ['quarantined','terminal'])test('H-02 / a later legitimate co
   assert.deepEqual((await f.store.snapshot()).documents,[d]);
   assert.deepEqual((await f.store.commit(cmd,actor(3),await epoch(f.store))).ack,ack.ack);
   assert.equal((await f.store.diagnostics()).contentCommits,1);
-  assert.equal((await f.store.maintenance('gcStep',{id:job.id})).state,phase==='terminal'?'complete':'waiting-grace');
+  // The re-created source is a separate live object: after the grace the plan
+  // unlinks only its own quarantined copy, and the Document stays intact.
+  assert.equal((await f.store.maintenance('gcStep',{id:job.id})).state,'complete');
+  await f.reopen({testClockMs:TIME+DAY});ready(f);
+  assert.deepEqual((await f.store.snapshot()).documents,[d]);
+  assert.deepEqual((await f.store.commit(cmd,actor(4),await epoch(f.store))).ack,ack.ack);
+  assert.equal((await f.store.diagnostics()).contentCommits,1);
 });
