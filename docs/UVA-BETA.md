@@ -249,13 +249,30 @@ The second pass came from profiling a 300-commit store (open 8.7 s, commit 2.2 s
   and hashing the file again, so commits do not slow down the longer a process
   runs.
 
+**Index page reclamation (2026-11-08).** Every 32 commits, on the writer's serialized
+queue and after the ACK, the engine marks every index page and commit root that
+can still be reached from CURRENT: the current, retained and checkpoint roots with
+all their pages, the registry of every ACK still in the Ledger, selected CURRENT
+publication evidence, roots of transactions that still own a claim, backup lists
+and reader pins. It then unlinks the rest of `visual-registry/pages` and
+`visual-registry/roots`. Document history in `visual-history` and
+`visual-documents` is never touched. A sweep that is interrupted only leaves
+garbage for the next one. The `reclaimPages` maintenance action runs it on demand.
+
+| Check | Before reclamation | After |
+|---|---|---|
+| 256 MiB Beta store | full at 913 commits | 1000 commits, 72.8 MB |
+| Disk per commit | about 0.12 MB | about 0.07 MB |
+| A full store from before, swept once | | index files 11,218 → 2,827, 160 → 93 MB; full history `verify` passes and commits resume |
+| 1000 commits: cold start | not reachable | 6.0 s |
+| SIGKILL with sweeps in progress | | 0 wedged, 0 false ACK in 10 trials (100 kills) |
+
+A sweep takes about 0.7 s on a 900-commit store, and one commit in 32 waits for it.
+
 Still open: listing the tree and the journal at open, and capacity admission on each
-commit, still grow with the number of files. Unreachable index pages are never
-reclaimed (G1 does not cover them and maintenance is off in the Beta), so a 256 MiB
-Beta store fills after about 900 commits of a 120-mark canvas, refusing further
-commits with `STORAGE_UNAVAILABLE` and losing nothing. The mirror's default budget
-of 300 commits stays well inside that. Journal compaction needs G2, which is blocked
-by issue #90. Not provable in a container:
+commit, still grow with the number of files, so cold start reaches about 6 s at
+1000 commits. Journal compaction needs G2, which is blocked by issue #90. Not
+provable in a container:
 host power loss, real ext4/XFS fsync ordering, physical ENOSPC, near-64 MiB cold
 start (issues #89 and #91).
 

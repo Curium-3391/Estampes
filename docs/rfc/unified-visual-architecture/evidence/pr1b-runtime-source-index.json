@@ -55,7 +55,7 @@
     },
     {
       "path": "src/persistence/coordinator.js",
-      "sha256": "270684a5e877a454af69419b929347583bf15dc3bd1f7cdfcd3d0faac634b158"
+      "sha256": "4fbaabd227394c5a6fd9373933e6690c48af6f26c15a9a8c53c54a87ad339b0f"
     },
     {
       "path": "src/persistence/errors.js",
@@ -67,7 +67,7 @@
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "b99b3825876b62e218606d05591bf7d14888b3f049e7c3459efa9cede86439b7"
+      "sha256": "9df2776b91cf17563c6ceea9acb9991cb67cbe66583899f72ac4cff4c1a2a648"
     },
     {
       "path": "src/persistence/journal.js",
@@ -83,7 +83,7 @@
     },
     {
       "path": "src/persistence/lifecycle.js",
-      "sha256": "0800458f1d4bf46d439749e510eb5bc54e5c236207a8eda55391d7bbf4805f56"
+      "sha256": "b9e7886d7067da55d4156a2245c94065273d97e380bc6ff6d794c185bf71c900"
     },
     {
       "path": "src/persistence/ownership.js",
@@ -200,6 +200,28 @@
           "path": "src/persistence/temporary-attribution.js",
           "from": "c8a33e572a1f6d3679bcf47d5d7ff40537e29cd8a685fb0ad0e9cd5d688ff677",
           "to": "4807455ce8b01748210b304f293bdcd352bb70f890fc9b0e042e56b49a8417f4"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "Index page reclamation (2026-11-08, owner-approved): a serialized mark of every page and root still reachable from CURRENT, retained and checkpoint roots, Ledger ACK registries, CURRENT publication evidence, claimed transactions, backups and pins, then unlink of the rest of visual-registry/pages and roots; automatic every 32 commits",
+      "files": [
+        {
+          "path": "src/persistence/coordinator.js",
+          "from": "270684a5e877a454af69419b929347583bf15dc3bd1f7cdfcd3d0faac634b158",
+          "to": "4fbaabd227394c5a6fd9373933e6690c48af6f26c15a9a8c53c54a87ad339b0f"
+        },
+        {
+          "path": "src/persistence/gc.js",
+          "from": "b99b3825876b62e218606d05591bf7d14888b3f049e7c3459efa9cede86439b7",
+          "to": "9df2776b91cf17563c6ceea9acb9991cb67cbe66583899f72ac4cff4c1a2a648"
+        },
+        {
+          "path": "src/persistence/lifecycle.js",
+          "from": "0800458f1d4bf46d439749e510eb5bc54e5c236207a8eda55391d7bbf4805f56",
+          "to": "b9e7886d7067da55d4156a2245c94065273d97e380bc6ff6d794c185bf71c900"
         }
       ]
     }

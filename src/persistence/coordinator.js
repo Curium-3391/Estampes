@@ -21,6 +21,7 @@ import { recoverBootstrapTemporary, classifyTemporaryClaims } from "./temporary-
 // Whole-store recovery points kept besides named checkpoints (owner decision 2026-11-06).
 export const RECOVERY_POINTS=20;
 export const ANCHOR_SPAN=32;
+export const RECLAIM_EVERY=32;
 const stablePrincipal = actor => {
   const p=actor.principal;
   if(p.kind==="user"||p.kind==="assistant")return {owner:actor.authenticatedOwnerId,kind:p.kind,principalId:p.principalId};
@@ -109,7 +110,7 @@ export class CommitCoordinator {
     const result=this.queue.then(run);this.queue=result.catch(()=>{});return result;
   }
   snapshot(){if(!this.current)fail("RECOVERY_REQUIRED","No verified committed snapshot is available");return structuredClone({root:this.current.root,envelope:this.current.envelope,documents:this.current.documents,authority:this.current.authority,state:this.state});}
-  diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,filesystemTrust:this.files.trust??null,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null,performance:structuredClone(this.performance)};}
+  diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,filesystemTrust:this.files.trust??null,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null,reclaim:this.reclaim??null,performance:structuredClone(this.performance)};}
   commit(input,actorInput,expectedEpoch){
     // Parse/copy immediately, before queueing; caller changes cannot alter a pending command.
     const command=parse(CommitCommandSchema,input),actor=parse(ActorContextSchema,actorInput);parse(RevisionSchema,expectedEpoch);
@@ -124,7 +125,16 @@ export class CommitCoordinator {
       if(!this.lifecycle&&this.current.indices.ledger.size>=this.format.maxContentCommits)fail("STORAGE_UNAVAILABLE","Isolated commit budget reached; PR-1D maintenance is not enabled");
       return this.#publish(command,{key,digest,payloadHash},"content");
     };
-    const result=this.queue.then(run);this.queue=result.catch(()=>{});return result;
+    const result=this.queue.then(run);this.queue=result.catch(()=>{});
+    // Unreachable index pages are reclaimed on the same serialized queue, after
+    // the ACK is returned, every RECLAIM_EVERY commit requests. Only an integrity
+    // failure fences the writer (inside the sweep); anything else is reported in
+    // diagnostics and retried at the next interval, never failing the commit.
+    if(this.lifecycle)this.queue=this.queue.then(async()=>{
+      this.sinceReclaim=(this.sinceReclaim??0)+1;if(this.state!=="ready"||this.sinceReclaim<RECLAIM_EVERY)return;this.sinceReclaim=0;
+      try{this.reclaim=await this.lifecycle.run("reclaimPages",{});}catch(e){this.reclaim={error:e.code??"IO_ERROR",message:String(e.message).slice(0,200)};}
+    });
+    return result;
   }
   async #publish(command,request,mode,maintenance=null){
     const transactionStarted=performance.now(),timings={mode};let stageStarted=transactionStarted;
