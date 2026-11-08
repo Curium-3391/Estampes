@@ -18,10 +18,11 @@ test("PR-1D: warm verification reconstructs each new logical version once, not a
   assert.equal(diagnostics.performance.transactions.length,17); // genesis plus content commits
   assert.equal(verification.snapshotLoads,17);
   assert.ok(verification.versionReconstructions<=16,JSON.stringify(verification));
+  // Only the live registry's proofs are kept, so each commit hits the previous one once.
   // A non-lifecycle Registry is verified once while current and once after its
   // resolver Locator becomes historical; neither path grows with later commits.
   assert.ok(verification.registryMaterializations<=verification.snapshotLoads*3,JSON.stringify(verification));
-  assert.ok(verification.versionHits>verification.versionReconstructions,JSON.stringify(verification));
+  assert.ok(verification.versionHits>=verification.versionReconstructions-1,JSON.stringify(verification));
   assert.ok(verification.proofMetadataBytes<=verification.proofMetadataBudget,JSON.stringify(verification));
   assert.ok(verification.physicalFingerprints>=verification.versionProofs,JSON.stringify(verification));
   for(const transaction of diagnostics.performance.transactions){

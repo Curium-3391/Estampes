@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- UVA engine, long-running commit latency: a process that kept committing
+  re-validated every version proof it had ever cached on each load, so commit
+  time grew with the number of commits made in that process (551 ms to 1642 ms
+  over 700 commits). Loads without history now keep only the proofs the next load
+  needs (the live registry's versions and their delta bases). Settled transaction
+  folders are listed once for the capacity walk. Over 1200 single-edit commits the
+  p50 settles near 960 ms (was 1.6 s at 700 and rising). The canvas store's
+  default commit budget rises from 1500 to 1800, just under the 1915 commits at
+  which the 256 MiB quota refuses the next one. History compaction is still not
+  built, so the budget remains a lifetime limit.
 - UVA engine, G2 fix (#90): a GC plan could stall forever after the grace,
   returning `quarantining` on every step. Index pages and generation files are
   named by their content, so a later commit, or the plan's own publication, can
