@@ -25,19 +25,86 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
 - Only a single image's own canvas is mirrored (not copies or workspaces). A
   canvas the document model cannot hold yet, for example one with an image layer,
   is skipped and listed under `diagnostics.mirror.blocked` in `action: status`.
-- Cost: measured on the development machine, one UVA commit used about 136 KB of
-  disk and 0.3 to 0.7 s, and enabling automatic maintenance did not reclaim
-  space within minutes. The Beta store has a 256 MiB quota, so it holds roughly
-  1,900 commits in its lifetime. This is why saves are coalesced, and why the mirror
-  is **not** a way to make UVA the writer: that needs the storage cost fixed first
-  (qualification issues #88–#91).
+- Cost: since index pages are reclaimed (see the changelog), a commit uses about
+  0.07 MB of disk and 1–2 s on the development machine, so 1000 commits fit in
+  about 73 MB of the 256 MiB Beta quota. Saves are still coalesced because of the
+  commit time.
 - Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
 - **Commit budget.** The store's cold start grows with its whole commit history, and
   the engine refuses a writer that takes longer than 30 s to start. The mirror
-  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 300) and
+  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 1500) and
   reports `budgetExhausted` in `diagnostics.mirror`. The canvas is unaffected.
   Export what you need and start a new `ESTAMPES_UVA_BETA_DIR` to continue. If a
   UVA store cannot start at all, the server logs it and runs without UVA.
+
+## Canvas store: commit canvases to UVA (optional, phase 1)
+
+`ESTAMPES_CANVAS_STORE=uva` (needs the Beta and `ESTAMPES_STORAGE_DIR`; the default
+is `legacy`) makes an image's own canvas **committed to its UVA document and
+restored from it**. The canvas editor, its tools, undo and the widget are
+unchanged; only where the canvas is kept moves. It replaces the mirror for those
+canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
+
+- **Save.** Every save writes a record durably (file and folder fsync) to
+  `<storage>/uva-pending/<hex>.json`, then a coalesced background commit puts it in
+  the UVA document (`ESTAMPES_UVA_MIRROR_IDLE_SEC`, default 15 s, at most two
+  minutes). Once the document holds exactly that content the pending file is
+  removed. A killed server loses nothing: pending files are committed at the next
+  start. **A save is acknowledged only when its pending record is durable**: if it
+  cannot be written, the tool call fails with that reason, even though
+  `canvas.json` may already hold the edit.
+- **Order.** Each record carries a per-image sequence number that grows by one
+  with every accepted save; between the UVA document and the pending record the
+  higher number wins. Clock times are never compared.
+- **The legacy copy.** `canvas.json` has no sequence number, so each record also
+  keeps the content `canvas.json` held when the record was written. On restore,
+  and for every stored canvas at startup, `canvas.json` is adopted (as the next
+  number) only when it holds content the latest record does not know, which is a
+  save that bypassed the server; a stale, damaged or missing copy is rewritten
+  from the record instead. With no record at all, it is migrated.
+- **Three states per image.** `diagnostics.mirror.canvasStore.images[<imageId>]`
+  reports them apart: `legacy` (`matches`, `differs` or `missing` when the last
+  record was written), `pendingSeq` (the last durable record), `committedSeq` (the
+  last record in the UVA document) and `failedSeq` (a save that was refused).
+- **What the document holds.** Marks, layers, scene objects, gesture decisions and
+  rejections are stored as document structure. Anything the structure cannot
+  reproduce exactly (archived legacy fields such as user-edit records) is kept as a
+  small exact patch next to it, and every commit first proves that
+  structure + patch gives back the canvas byte for byte (canonical hash).
+  `diagnostics.mirror.lastResidualBytes` shows the size of that patch; it is 0 for
+  ordinary marks and layers.
+- **Migration** is lazy: a legacy canvas becomes a UVA document the first time it
+  is opened. Startup only checks canvases the store already holds.
+- **Not yet in UVA** (phase 2 and later): canvases with links to other canvases,
+  image layers, copies made by workspaces, more than 512 marks or 64 objects, or a
+  store over its limits. Such a canvas keeps its pending file, which then wins on
+  restore, and is listed under `diagnostics.mirror.blocked`.
+- **Still written:** `canvas.json`, `marks.svg` and `history.jsonl`, so switching
+  back to `ESTAMPES_CANVAS_STORE=legacy` keeps every edit. Image bytes are also
+  still kept in legacy storage; the UVA copy is capped by
+  `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024, 32 MiB per image).
+- The workspace and bundle modules load and save canvases themselves. Canvases a
+  tool call or a workspace HTTP route names (or that are in a workspace it names)
+  are loaded from the store first and committed afterwards if they changed. Any
+  image entry that reaches memory another way is restored the first time the
+  server touches it. Because `canvas.json` is kept equal to the record, modules
+  that read it directly see the committed canvas too, and a save that still
+  bypasses the server is adopted at the next restore.
+- `diagnostics.mirror.canvasStore` also counts writes, refused writes, commits,
+  restores by source, migrations, adopted bypassing saves, repaired legacy copies
+  and the last error.
+
+- **Lifetime limit.** Measured with `node scripts/uva-qualify.mjs --only history
+  --history 2000 --store 1` (one 120-mark canvas, development machine, partly
+  under load): 1915 commits fit before the store's capacity admission refused the
+  next one (108 MB on disk; the 256 MiB quota keeps a 64 MiB reserve and working
+  space). Cold start at 1915 commits was 9.3 s; a commit took 3.3 s (p50). The
+  commit budget (default 1500) therefore stops first, with a clear message. After
+  that, or after any refused commit, saves stay in their pending files and the
+  canvas is unaffected; export and start a new `ESTAMPES_UVA_BETA_DIR`. History
+  compaction, which would remove this limit, needs G2 (#90).
+
+Production qualification is unchanged: **NOT QUALIFIED** (power loss #89/#91, G2 #90).
 
 ## Enable on Linux
 

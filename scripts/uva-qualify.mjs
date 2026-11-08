@@ -2,8 +2,9 @@
 // Durability qualification for the UVA canvas mirror, runnable in any Linux
 // container. It produces raw evidence (JSON) and a pass/fail per scenario.
 //
-//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25]
+//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1]
 //
+// --store 1 opens the store the way ESTAMPES_CANVAS_STORE=uva does (residual, no sidecar).
 // What it can prove:  process-crash safety (SIGKILL), no false ACK, long-history
 // cost, restart/recovery, export round-trip, clean ENOSPC behaviour on a real
 // size-limited filesystem (needs root for `mount -t tmpfs`; skipped otherwise).
@@ -44,7 +45,7 @@ function canvas(img, n, tag = '') {
   for (let i = 0; i < n; i++) marks.push({ id: 'm' + i, author: i % 3 ? 'user' : 'gpt', type: 'rect', x: (i % 10) / 12, y: (Math.floor(i / 10) % 10) / 12, x2: (i % 10) / 12 + .05, y2: (Math.floor(i / 10) % 10) / 12 + .05, label: 'mark ' + i + tag });
   return { version: 1, imageId: img.imageId, width: 640, height: 400, marks, layers: [], savedAt: new Date().toISOString() };
 }
-const open = (dir, extra = {}) => createUvaService({ enabled: true, directory: dir, profile: PROFILE, mirror: true, mirrorMaxCommits: 1e9, ...extra });
+const open = (dir, extra = {}) => createUvaService({ enabled: true, directory: dir, profile: PROFILE, mirror: true, mirrorMaxCommits: 1e9, ...(arg('store') ? { canvasStore: true } : {}), ...extra });
 const fresh = async () => { const d = await mkdtemp(join(tmpdir(), 'uva-qual-')); return d; };
 const rss = () => mb(process.memoryUsage().rss);
 
