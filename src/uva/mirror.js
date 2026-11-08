@@ -5,7 +5,8 @@
 // A UVA commit costs about 136 KB of disk and ~0.7 s, so edits are coalesced:
 // one sync after `idleMs` without a save, and at the latest `maxWaitMs` after the
 // first unsynced save.
-export function createMirror({ service, read, idleMs = 15000, maxWaitMs = 120000, log = () => {} }) {
+// onSynced(imageId, result) runs after each sync that did not throw.
+export function createMirror({ service, read, onSynced = async () => {}, idleMs = 15000, maxWaitMs = 120000, log = () => {} }) {
   const pending = new Map(); // imageId -> { timer, first }
   let running = Promise.resolve(), closed = false;
 
@@ -16,6 +17,7 @@ export function createMirror({ service, read, idleMs = 15000, maxWaitMs = 120000
       const r = await service.syncCanvas(input);
       if (r.status === "blocked") log("info", "[uva-mirror] canvas not mirrored", { imageId, reason: r.issues.map((i) => i.message).join("; ") });
       else if (r.status !== "unchanged") log("info", "[uva-mirror] synced", { imageId, status: r.status, revision: r.revision });
+      await onSynced(imageId, r);
     } catch (error) {
       service.noteMirror({ lastError: String(error?.message || error), lastErrorAt: new Date().toISOString(), lastErrorImage: imageId });
       log("warn", "[uva-mirror] sync failed; the canvas itself is saved", { imageId, error: String(error?.message || error) });
@@ -39,5 +41,12 @@ export function createMirror({ service, read, idleMs = 15000, maxWaitMs = 120000
     await running;
     service.noteMirror({ pending: pending.size });
   }
-  return { schedule, flush, async close() { await flush(); closed = true; }, get pending() { return pending.size; } };
+  // Stops without syncing what is still waiting (its source stays on disk).
+  async function stop() {
+    closed = true;
+    for (const entry of pending.values()) clearTimeout(entry.timer);
+    pending.clear();
+    await running;
+  }
+  return { schedule, flush, stop, async close() { await flush(); closed = true; }, get pending() { return pending.size; } };
 }

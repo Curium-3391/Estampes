@@ -38,7 +38,12 @@ export const config = Object.freeze({
   uvaBetaProfile: str("ESTAMPES_UVA_BETA_PROFILE"),
   // Copy canvas checkpoints into UVA documents (needs the UVA Beta). Default off.
   uvaMirror: str("ESTAMPES_UVA_MIRROR") === "1",
-  uvaMirrorMaxCommits: num("ESTAMPES_UVA_MIRROR_MAX_COMMITS", 300, { min: 1, max: 1000000 }),
+  // Where an image's own canvas is committed: "legacy" (canvas.json, the default)
+  // or "uva" (its UVA document; needs the UVA Beta and ESTAMPES_STORAGE_DIR).
+  canvasStore: str("ESTAMPES_CANVAS_STORE", "legacy").toLowerCase() === "uva" ? "uva" : "legacy",
+  uvaAssetMaxMb: num("ESTAMPES_UVA_ASSET_MAX_MB", 1024, { min: 64, max: 1048576 }),
+  // Total commits a UVA store accepts from canvases (its open time grows with them).
+  uvaMirrorMaxCommits: num("ESTAMPES_UVA_MIRROR_MAX_COMMITS", 2000, { min: 1, max: 1000000 }),
   uvaMirrorIdleSec: num("ESTAMPES_UVA_MIRROR_IDLE_SEC", 15, { min: 0, max: 3600 }),
   retentionDays: num("ESTAMPES_STORAGE_RETENTION_DAYS", 0, { max: 36500 }),
   maxImageBytes: num("ESTAMPES_MAX_IMAGE_MB", 20, { min: 1, max: 200 }) * 1024 * 1024,

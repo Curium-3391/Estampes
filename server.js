@@ -25,16 +25,16 @@ import {
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
-import { downloadImage, entrySharp, MAX_DOWNLOAD_BYTES } from "./src/image-store.js";
+import { downloadImage, entrySharp, MAX_DOWNLOAD_BYTES, hasImage, imageIdOf } from "./src/image-store.js";
 import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import {
-  WORKSPACE_PROTOCOL, MAX_ITEMS, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
+  WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { readSource, intakeImage, ensureImage, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, restoreCanvas, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -47,15 +47,59 @@ import {
 } from "./src/image-ops.js";
 import { createUvaService } from "./src/uva/service.js";
 import { createMirror } from "./src/uva/mirror.js";
+import { createCanvasStore } from "./src/uva/canvas-store.js";
 
 // Every canvas save made through the server goes through here, so the optional
 // UVA mirror hears about it. The sealed storage module itself is untouched, and a
 // failing listener can never affect the save.
-let canvasSaved = null;
-const saveCanvas = (entry, meta) => saveCanvasFile(entry, meta).then((result) => {
-  if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
-  return result;
-});
+// With ESTAMPES_CANVAS_STORE=uva an image's own canvas is also written durably
+// for its UVA commit (src/uva/canvas-store.js); the content is captured now, in
+// save order.
+let canvasSaved = null, canvasStore = null;
+const saveCanvas = (entry, meta) => {
+  const stored = canvasStore && !entry.setId ? canvasStore.write(entry.imageId, serializeCanvas(entry)) : null;
+  return Promise.all([saveCanvasFile(entry, meta), stored]).then(([result]) => {
+    if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
+    return result;
+  });
+};
+// Loading an image from disk restores its canvas from the canvas store when one
+// is on; callers that arrive while that runs wait for it.
+const restoring = new Map();
+function restored(imageId, load) {
+  const running = restoring.get(imageId);
+  if (running) return running;
+  if (!canvasStore || hasImage(imageId)) return load();
+  const job = (async () => {
+    const entry = await load();
+    try { await canvasStore.restore(entry); } catch (error) { log("error", "[canvas-store] restore failed; using canvas.json", { imageId, error: String(error?.message || error) }); }
+    return entry;
+  })();
+  restoring.set(imageId, job);
+  job.finally(() => restoring.delete(imageId)).catch(() => {});
+  return job;
+}
+const ensureImage = (imageId) => restored(imageId, () => ensureImageFile(imageId));
+const intakeImage = (bytes, options) => restored(imageIdOf(bytes), () => intakeImageFile(bytes, options));
+// The sealed workspace and bundle modules load and save canvases themselves.
+// Before a tool runs, canvases it names are loaded here (so they come from the
+// store); afterwards, any of them that changed is committed.
+async function warmCanvases(args) {
+  if (!canvasStore) return [];
+  let text = "";
+  try { text = JSON.stringify(args ?? null) ?? ""; } catch { return []; }
+  const ids = new Set(text.match(/img:[0-9a-f]{16}/g) ?? []);
+  for (const ws of new Set(text.match(/ws:[0-9a-f]{16}/g) ?? [])) {
+    try { for (const it of (await getWorkspace(ws)).items ?? []) for (const ref of [it.asset, it.set]) if (/^img:[0-9a-f]{16}$/.test(ref ?? "")) ids.add(ref); } catch { /* not a workspace here */ }
+  }
+  const list = [...ids].slice(0, 64);
+  await Promise.all(list.map((id) => ensureImage(id).catch(() => null)));
+  return list;
+}
+function refreshCanvases(ids) {
+  if (!canvasStore) return;
+  for (const id of ids) if (hasImage(id)) ensureImageFile(id).then((entry) => canvasStore.refresh(entry)).catch(() => {});
+}
 import { registerUvaTools } from "./src/uva/mcp-tools.js";
 import { serializeCanvas } from "./src/storage.js";
 import { createModuleHost } from "./src/modules/index.js";
@@ -614,7 +658,10 @@ function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION });
   // Every tool result goes through the host size cap (src/result-budget.js).
   const register = server.registerTool.bind(server);
-  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => fitResult(await handler(...args), config.maxResultChars));
+  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => {
+    const touched = await warmCanvases(args[0]);
+    try { return fitResult(await handler(...args), config.maxResultChars); } finally { refreshCanvases(touched); }
+  });
 
   registerAppResource(
     server,
@@ -2903,7 +2950,10 @@ const startUva = (options) => createUvaService(options).catch((error) => {
   log("error", "[uva] could not start; continuing without UVA. The canvas is unaffected. Export the workspaces from a copy, or start a new ESTAMPES_UVA_BETA_DIR.", { code: error.code, error: error.message });
   return createUvaService({ enabled: false });
 });
-uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: config.uvaBeta, mirror: config.uvaBeta && config.uvaMirror, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
+const wantCanvasStore = config.canvasStore === "uva";
+if (wantCanvasStore && (!config.uvaBeta || !config.storageDir)) log("error", "[canvas-store] ESTAMPES_CANVAS_STORE=uva needs ESTAMPES_UVA_BETA=1 and ESTAMPES_STORAGE_DIR; canvases stay in legacy storage");
+uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: config.uvaBeta, mirror: config.uvaBeta && config.uvaMirror,
+  canvasStore: wantCanvasStore && config.uvaBeta && !!config.storageDir, assetCapBytes: config.uvaAssetMaxMb * 1024 * 1024, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
   legacyItems: async (op) => {
     let entries;
     if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }
@@ -2919,7 +2969,11 @@ uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enab
   },
 });
 if (uvaService.enabled) log("warn", "[uva] Experimental Beta enabled; production NOT QUALIFIED", { profile: config.uvaBetaProfile });
-if (uvaService.enabled && config.uvaMirror) {
+if (uvaService.enabled && uvaService.canvasStore) {
+  canvasStore = await createCanvasStore({ service: uvaService, storageDir: config.storageDir, readSource, restoreCanvas, serializeCanvas, idleMs: config.uvaMirrorIdleSec * 1000, log })
+    .catch((error) => { log("error", "[canvas-store] could not start; canvases stay in legacy storage", { error: String(error?.message || error) }); return null; });
+  if (canvasStore) log("warn", "[canvas-store] ESTAMPES_CANVAS_STORE=uva: image canvases are committed to UVA documents (Beta, NOT QUALIFIED); canvas.json is still written so legacy can be switched back", { recovering: canvasStore.recovered.length });
+} else if (uvaService.enabled && config.uvaMirror) {
   uvaMirror = createMirror({
     service: uvaService, idleMs: config.uvaMirrorIdleSec * 1000, log,
     read: async (imageId) => {
@@ -2971,6 +3025,6 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
     httpServer.close();
     const force = setTimeout(() => process.exit(0), 8000);
     force.unref();
-    flushStorage().then(() => uvaMirror?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
+    flushStorage().then(() => canvasStore?.close()).then(() => uvaMirror?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
   });
 }

@@ -1,0 +1,153 @@
+// ESTAMPES_CANVAS_STORE=uva: real server processes over real storage folders,
+// restarted and killed between steps.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { createServer } from "node:net";
+import { mkdtemp, rm, readFile, writeFile, readdir, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
+import sharp from "sharp";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+
+// A failing assertion must not leave a server running (the test would hang).
+const running = new Set();
+test.after(() => { for (const p of running) p.kill("SIGKILL"); });
+async function freePort() { const s = createServer(); await new Promise((r) => s.listen(0, "127.0.0.1", r)); const p = s.address().port; await new Promise((r) => s.close(r)); return p; }
+async function start(storage, beta, { mode = "uva", idle = "0", env = {} } = {}) {
+  const port = await freePort();
+  const proc = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), stdio: "ignore", env: { ...process.env, PORT: String(port),
+    ESTAMPES_STORAGE_DIR: storage, ESTAMPES_ALLOW_OPEN: "1", ESTAMPES_REQUIRE_KEY: "0", ESTAMPES_RATE_LIMIT_PER_MIN: "0",
+    ESTAMPES_UVA_BETA: "1", ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: "linux-process-crash-test",
+    ESTAMPES_CANVAS_STORE: mode, ESTAMPES_UVA_MIRROR_IDLE_SEC: idle, ...env } });
+  for (let i = 0; i < 300; i++) { try { if ((await fetch("http://127.0.0.1:" + port + "/")).ok) break; } catch {} await sleep(100); }
+  const client = new Client({ name: "canvas-store", version: "0" }, { versionNegotiation: { mode: "auto" } });
+  await client.connect(new StreamableHTTPClientTransport(new URL("http://127.0.0.1:" + port + "/mcp")));
+  const call = async (name, args) => { const r = await client.callTool({ name, arguments: args }); assert.ok(!r.isError, name + ": " + JSON.stringify(r.content)); return r; };
+  running.add(proc);
+  const exited = new Promise((r) => proc.once("exit", () => { running.delete(proc); r(); }));
+  return {
+    call,
+    async stop() { await client.close().catch(() => {}); proc.kill("SIGTERM"); await exited; },
+    async kill() { await client.close().catch(() => {}); proc.kill("SIGKILL"); await exited; },
+    diagnostics: async () => (await call("experimental_workspace", { action: "status" })).structuredContent.diagnostics,
+    documents: async () => (await call("experimental_workspace", { action: "list" })).structuredContent.workspaces,
+    labels: async (imageId) => (await call("get_visual_state", { imageId })).structuredContent.marks.map((m) => m.label ?? m.id).sort(),
+  };
+}
+async function until(fn, ms = 20000) {
+  const end = Date.now() + ms;
+  for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw Error("timed out waiting"); await sleep(100); }
+}
+async function folders(t) {
+  const storage = await mkdtemp(join(tmpdir(), "canvas-store-legacy-")), beta = await mkdtemp(join(tmpdir(), "canvas-store-uva-"));
+  t.after(() => Promise.all([rm(storage, { recursive: true, force: true }), rm(beta, { recursive: true, force: true })]));
+  return { storage, beta };
+}
+async function upload(server, color) {
+  const data = (await sharp({ create: { width: 320, height: 200, channels: 3, background: color } }).png().toBuffer()).toString("base64");
+  return (await server.call("upload_visual_image", { total: data.length, offset: 0, data, fileName: "c.png" })).structuredContent.imageId;
+}
+const pendingFiles = async (storage) => (await readdir(join(storage, "uva-pending")).catch(() => [])).filter((n) => n.endsWith(".json"));
+const canvasJson = (storage, imageId) => join(storage, "images", imageId.slice(4), "canvas.json");
+const committed = (server, storage) => until(async () => !(await pendingFiles(storage)).length && (await server.diagnostics()).mirror.canvasStore?.committed > 0);
+
+test("a canvas is committed to its UVA document and restored from it after a restart", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const imageId = await upload(s, "#336699");
+  await s.call("present_visual", { imageId, layer: "第一輪", annotations: [{ id: "a1", type: "rect", x: .1, y: .2, x2: .4, y2: .5, label: "first" }, { id: "a2", type: "point", x: .7, y: .7, label: "second" }] });
+  await committed(s, storage);
+  const [doc] = await s.documents();
+  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const ext = open.extensions["estampes.beta:mirror"];
+  assert.equal(ext.authority, "uva");
+  assert.equal(open.extensions["estampes.beta:legacyArchives"], undefined, "the raw canvas is not stored again as a sidecar");
+  assert.deepEqual(open.scenes[0].annotations.map((a) => a.label).sort(), ["first", "second"]);
+  assert.equal((await s.diagnostics()).mirror.lastResidualBytes, 0, JSON.stringify(ext.residual));
+  await s.stop();
+
+  // canvas.json is only the legacy copy now: an older one, or none, does not matter.
+  const legacy = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  await writeFile(canvasJson(storage, imageId), JSON.stringify({ ...legacy, marks: legacy.marks.slice(0, 1), savedAt: "2000-01-01T00:00:00.000Z" }));
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["first", "second"]);
+  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.uva, 1);
+  await s.stop();
+  await unlink(canvasJson(storage, imageId));
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["first", "second"]);
+  // Further edits keep updating the same document.
+  await s.call("present_visual", { imageId, annotations: [{ id: "a3", type: "point", x: .2, y: .8, label: "third" }] });
+  await committed(s, storage);
+  assert.equal((await s.documents()).length, 1);
+  await s.stop();
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["first", "second", "third"]);
+  await s.stop();
+});
+
+test("an edit killed before its commit is recovered from the pending copy and then committed", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { idle: "3600" });
+  const imageId = await upload(s, "#993366");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "rect", x: .1, y: .1, x2: .3, y2: .3, label: "unsaved?" }] });
+  assert.equal((await pendingFiles(storage)).length, 1);
+  assert.equal((await s.documents()).length, 0, "the commit waits for the idle time");
+  await s.kill();
+  // The legacy copy is gone too: only the pending copy holds the edit.
+  await unlink(canvasJson(storage, imageId));
+  s = await start(storage, beta);
+  await committed(s, storage);
+  assert.deepEqual(await s.labels(imageId), ["unsaved?"]);
+  assert.equal((await s.documents()).length, 1);
+  await s.stop();
+});
+
+test("a legacy canvas moves into UVA on open, and a newer canvas.json written behind the server's back wins", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { mode: "legacy" });
+  const imageId = await upload(s, "#669933");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "old canvas" }] });
+  await s.stop();
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["old canvas"]);
+  await committed(s, storage);
+  assert.equal((await s.diagnostics()).mirror.canvasStore.migrated, 1);
+  await s.stop();
+
+  // e.g. the workspace or bundle modules, which write canvas.json themselves.
+  const legacy = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  legacy.marks.push({ ...legacy.marks[0], id: "a2", label: "written later" });
+  await writeFile(canvasJson(storage, imageId), JSON.stringify({ ...legacy, savedAt: new Date(Date.now() + 1000).toISOString() }));
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["old canvas", "written later"]);
+  await committed(s, storage);
+  const [doc] = await s.documents();
+  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  assert.equal(open.scenes[0].annotations.length, 2);
+  await s.stop();
+
+  // Switching back to legacy still has every edit.
+  s = await start(storage, beta, { mode: "legacy" });
+  assert.deepEqual(await s.labels(imageId), ["old canvas", "written later"]);
+  await s.stop();
+});
+
+test("a canvas the document cannot hold yet stays in its pending copy and is reported", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const imageId = await upload(s, "#336633");
+  await s.call("add_image_layer", { imageId });
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }] });
+  const d = await until(async () => { const m = (await s.diagnostics()).mirror; return m.blocked?.[imageId] ? m : null; });
+  assert.match(d.blocked[imageId], /PNG object/);
+  assert.equal((await pendingFiles(storage)).length, 1);
+  await s.stop();
+  await unlink(canvasJson(storage, imageId));
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["kept"]);
+  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.pending, 1);
+  await s.stop();
+});

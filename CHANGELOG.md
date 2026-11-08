@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Canvas store, phase 1 (`ESTAMPES_CANVAS_STORE=uva`, Beta, default `legacy`): an
+  image's own canvas is committed to its UVA document and restored from it. Each
+  save is first written durably to `uva-pending/` and committed in the background;
+  on restore the newest of document, pending file and `canvas.json` wins. Marks,
+  layers and objects are stored as document structure, with an exact patch for
+  archived legacy fields, and every commit proves the canvas round-trips
+  byte for byte. Legacy canvases migrate when opened; canvases with links or
+  image layers stay pending and are reported. `canvas.json` is still written, so
+  switching back is safe. The mirror commit budget default rises from 300 to 2000.
+  See docs/UVA-BETA.md.
+
 - UVA engine: unreachable index pages and commit roots are reclaimed every 32
   commits, after a mark of everything still reachable from CURRENT, retained and
   checkpoint roots, Ledger ACKs, crash evidence, backups and pins. Document history
