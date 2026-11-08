@@ -56,9 +56,12 @@ import { createCanvasStore } from "./src/uva/canvas-store.js";
 // for its UVA commit (src/uva/canvas-store.js); the content is captured now, in
 // save order.
 let canvasSaved = null, canvasStore = null;
+// In that mode a save resolves only once the pending record is durable, and
+// rejects when it could not be written (canvas.json may still hold the edit).
 const saveCanvas = (entry, meta) => {
-  const stored = canvasStore && !entry.setId ? canvasStore.write(entry.imageId, serializeCanvas(entry), entry) : null;
-  return Promise.all([saveCanvasFile(entry, meta), stored]).then(([result]) => {
+  const legacy = saveCanvasFile(entry, meta);
+  const stored = canvasStore && !entry.setId ? canvasStore.write(entry.imageId, serializeCanvas(entry), { entry, after: legacy }) : null;
+  return Promise.all([legacy, stored]).then(([result]) => {
     if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
     return result;
   });
@@ -75,7 +78,7 @@ function restored(imageId, load) {
   const job = (async () => {
     const entry = await load();
     if (canvasStore.current(entry)) return entry;
-    // A legacy save of this entry still in flight must land first: its canvas.json may be the newest edit.
+    // A legacy save of this entry still in flight must land first: canvas.json may hold a bypassing save.
     try { await flushStorage(); await canvasStore.restore(entry); } catch (error) { log("error", "[canvas-store] restore failed; using canvas.json", { imageId, error: String(error?.message || error) }); }
     return entry;
   })();

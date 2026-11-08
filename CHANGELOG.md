@@ -4,8 +4,11 @@
 
 - Canvas store, phase 1 (`ESTAMPES_CANVAS_STORE=uva`, Beta, default `legacy`): an
   image's own canvas is committed to its UVA document and restored from it. Each
-  save is first written durably to `uva-pending/` and committed in the background;
-  on restore the newest of document, pending file and `canvas.json` wins. Marks,
+  save is acknowledged only once it is written durably to `uva-pending/`, then
+  committed in the background. Records are ordered by a per-image sequence
+  number, not by clock; `canvas.json` is adopted only when it holds content no
+  record knows (a save that bypassed the server) and is otherwise kept equal to
+  the record. Marks,
   layers and objects are stored as document structure, with an exact patch for
   archived legacy fields, and every commit proves the canvas round-trips
   byte for byte. Legacy canvases migrate when opened; canvases with links or
