@@ -45,7 +45,7 @@ restored from it**. The canvas editor, its tools, undo and the widget are
 unchanged; only where the canvas is kept moves. It replaces the mirror for those
 canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
 
-- **Save.** Every save writes the canvas durably (fsync) to
+- **Save.** Every save writes the canvas durably (file and folder fsync) to
   `<storage>/uva-pending/<hex>.json`, then a coalesced background commit puts it in
   the UVA document (`ESTAMPES_UVA_MIRROR_IDLE_SEC`, default 15 s, at most two
   minutes). Once the document holds exactly that content the pending file is
