@@ -29,6 +29,7 @@ async function start(storage, beta, { mode = "uva", idle = "0", env = {} } = {})
   const exited = new Promise((r) => proc.once("exit", () => { running.delete(proc); r(); }));
   return {
     call,
+    get: async (path) => (await fetch("http://127.0.0.1:" + port + path)).json(),
     async stop() { await client.close().catch(() => {}); proc.kill("SIGTERM"); await exited; },
     async kill() { await client.close().catch(() => {}); proc.kill("SIGKILL"); await exited; },
     diagnostics: async () => (await call("experimental_workspace", { action: "status" })).structuredContent.diagnostics,
@@ -149,5 +150,23 @@ test("a canvas the document cannot hold yet stays in its pending copy and is rep
   s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["kept"]);
   assert.equal((await s.diagnostics()).mirror.canvasStore.restored.pending, 1);
+  await s.stop();
+});
+
+test("a workspace read over HTTP after a restart shows the committed canvas, and later edits keep it", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const imageId = await upload(s, "#663399");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .3, y: .3, label: "committed" }] });
+  await committed(s, storage);
+  const ws = (await s.call("create_workspace", { canvases: [imageId] })).structuredContent.workspaceId;
+  await s.stop();
+  await unlink(canvasJson(storage, imageId));
+  s = await start(storage, beta);
+  // The HTTP route loads the images through the workspace module itself.
+  const doc = await s.get("/api/v1/workspaces/" + ws.slice(3));
+  assert.ok(JSON.stringify(doc).includes("committed"), JSON.stringify(doc).slice(0, 300));
+  await s.call("present_visual", { imageId, annotations: [{ id: "a2", type: "point", x: .6, y: .6, label: "later" }] });
+  assert.deepEqual(await s.labels(imageId), ["committed", "later"]);
   await s.stop();
 });

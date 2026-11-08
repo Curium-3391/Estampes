@@ -57,22 +57,26 @@ import { createCanvasStore } from "./src/uva/canvas-store.js";
 // save order.
 let canvasSaved = null, canvasStore = null;
 const saveCanvas = (entry, meta) => {
-  const stored = canvasStore && !entry.setId ? canvasStore.write(entry.imageId, serializeCanvas(entry)) : null;
+  const stored = canvasStore && !entry.setId ? canvasStore.write(entry.imageId, serializeCanvas(entry), entry) : null;
   return Promise.all([saveCanvasFile(entry, meta), stored]).then(([result]) => {
     if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
     return result;
   });
 };
-// Loading an image from disk restores its canvas from the canvas store when one
-// is on; callers that arrive while that runs wait for it.
+// With the canvas store on, every image entry is restored from it once, however
+// it got into memory (the sealed workspace and bundle modules load images
+// themselves), and a new entry after an eviction is restored again. Callers that
+// arrive while that runs wait for it.
 const restoring = new Map();
 function restored(imageId, load) {
   const running = restoring.get(imageId);
   if (running) return running;
-  if (!canvasStore || hasImage(imageId)) return load();
+  if (!canvasStore) return load();
   const job = (async () => {
     const entry = await load();
-    try { await canvasStore.restore(entry); } catch (error) { log("error", "[canvas-store] restore failed; using canvas.json", { imageId, error: String(error?.message || error) }); }
+    if (canvasStore.current(entry)) return entry;
+    // A legacy save of this entry still in flight must land first: its canvas.json may be the newest edit.
+    try { await flushStorage(); await canvasStore.restore(entry); } catch (error) { log("error", "[canvas-store] restore failed; using canvas.json", { imageId, error: String(error?.message || error) }); }
     return entry;
   })();
   restoring.set(imageId, job);
@@ -98,7 +102,7 @@ async function warmCanvases(args) {
 }
 function refreshCanvases(ids) {
   if (!canvasStore) return;
-  for (const id of ids) if (hasImage(id)) ensureImageFile(id).then((entry) => canvasStore.refresh(entry)).catch(() => {});
+  for (const id of ids) if (hasImage(id)) ensureImage(id).then((entry) => canvasStore.refresh(entry)).catch(() => {});
 }
 import { registerUvaTools } from "./src/uva/mcp-tools.js";
 import { serializeCanvas } from "./src/storage.js";
@@ -2759,7 +2763,7 @@ const httpServer = createHttpServer((req, res) => {
     // The file the tool described; after a restart it is built again from the stored workspace.
     const cached = bundleCache.get(bundleMatch[1]);
     if (cached) { send(cached); return; }
-    exportBundle("ws:" + bundleMatch[1], { version: VERSION }).then(send, (error) => {
+    warmCanvases({ workspaceId: "ws:" + bundleMatch[1] }).then(() => exportBundle("ws:" + bundleMatch[1], { version: VERSION })).then(send, (error) => {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Workspace not found on this server: " + String(error?.message || error));
     });
@@ -2825,7 +2829,7 @@ const httpServer = createHttpServer((req, res) => {
     };
     if (!authorized(req, url)) { json(401, { error: "Missing or invalid Estampes access key" }); return; }
     const history = Math.min(200, Math.max(0, Number(url.searchParams.get("history")) || 0));
-    resolveRef("ws:" + wsMatch[1]).then(async ({ doc }) => json(200, await workspaceDocument(doc, { history })))
+    warmCanvases({ workspaceId: "ws:" + wsMatch[1] }).then(() => resolveRef("ws:" + wsMatch[1])).then(async ({ doc }) => json(200, await workspaceDocument(doc, { history })))
       .catch((error) => json(404, { error: String(error?.message || error) }));
     return;
   }

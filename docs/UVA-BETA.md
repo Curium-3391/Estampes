@@ -72,9 +72,11 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   still kept in legacy storage; the UVA copy is capped by
   `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024, 32 MiB per image).
 - The workspace and bundle modules load and save canvases themselves. Canvases a
-  tool call names (or that are in a workspace it names) are loaded from the store
-  first and committed afterwards if they changed; a save that still bypasses the
-  server is picked up at the next restore, because the newest edit wins.
+  tool call or a workspace HTTP route names (or that are in a workspace it names)
+  are loaded from the store first and committed afterwards if they changed. Any
+  image entry that reaches memory another way is restored the first time the
+  server touches it, and a save that still bypasses the server is picked up at the
+  next restore, because the newest edit wins.
 - `diagnostics.mirror.canvasStore` counts writes, commits, restores by source,
   migrations and the last error.
 

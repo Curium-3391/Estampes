@@ -19,7 +19,7 @@
 // over the store limits) keeps its pending copy, which then wins on restore;
 // the reason is in the UVA diagnostics.
 import { mkdir, open, readFile, readdir, rename, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { hashJson } from "../documents/validation.js";
 import { createMirror } from "./mirror.js";
 
@@ -31,10 +31,12 @@ async function syncDir(path) {
   const handle = await open(path, "r");
   try { await handle.sync(); } finally { await handle.close(); }
 }
+// Durable once it resolves: the file, then the rename in its folder.
 async function durableWrite(path, text) {
   const tmp = path + "." + process.pid + "." + Date.now() + ".tmp", handle = await open(tmp, "w", 0o600);
   try { await handle.writeFile(text); await handle.sync(); } finally { await handle.close(); }
   await rename(tmp, path);
+  await syncDir(dirname(path));
 }
 async function readJson(path) {
   try { return JSON.parse(await readFile(path, "utf8")); } catch (error) {
@@ -47,9 +49,13 @@ async function readJson(path) {
 export async function createCanvasStore({ service, storageDir, readSource, restoreCanvas, serializeCanvas, idleMs = 15000, maxWaitMs = 120000, log = () => {} }) {
   if (!service?.canvasStore) throw new Error("The UVA service was not opened as a canvas store");
   const dir = join(storageDir, "uva-pending");
-  await mkdir(dir, { recursive: true, mode: 0o700 });
+  const created = await mkdir(dir, { recursive: true, mode: 0o700 });
+  // A new folder must itself survive a crash before its files can.
+  if (created) for (let d = dir; ; d = dirname(d)) { await syncDir(dirname(d)); if (d === created || dirname(d) === d) break; }
   const file = (imageId) => join(dir, imageId.slice(4) + ".json");
-  const queues = new Map(), known = new Map();
+  // `known`: content hash of what was last written or restored, per image.
+  // `restored`: entry objects already restored or saved through this store.
+  const queues = new Map(), known = new Map(), restored = new WeakSet();
   const stats = { writes: 0, committed: 0, restored: { uva: 0, pending: 0, legacy: 0 }, migrated: 0, lastError: null };
   const note = () => service.noteMirror({ canvasStore: { ...stats, restored: { ...stats.restored } } });
   const fault = (where, imageId, error) => {
@@ -85,8 +91,9 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   });
 
   // Durable before it resolves; the commit follows in the background.
-  function write(imageId, value) {
+  function write(imageId, value, entry) {
     if (!IMAGE.test(imageId) || value.setId) return Promise.resolve();
+    if (entry) restored.add(entry);
     // As it will be read back: JSON drops undefined fields.
     const text = JSON.stringify(value), canvas = JSON.parse(text);
     known.set(imageId, contentHash(canvas));
@@ -98,6 +105,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   async function restore(entry) {
     const imageId = entry?.imageId;
     if (!IMAGE.test(imageId ?? "") || entry.setId) return;
+    restored.add(entry);
     let uva = null;
     try { uva = await service.canvasState(imageId); } catch (error) { fault("restore from UVA", imageId, error); }
     const [pending, legacy] = await Promise.all([readPending(imageId), readJson(join(storageDir, "images", imageId.slice(4), "canvas.json"))]);
@@ -136,6 +144,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   note();
   return {
     write, restore, refresh, known: () => [...known.keys()], recovered: leftovers,
+    current: (entry) => !entry || restored.has(entry) || !IMAGE.test(entry.imageId ?? "") || !!entry.setId,
     flush: () => mirror.flush(),
     // Shutdown: finish writes in flight; what waits for a commit stays pending on disk.
     async close() { await mirror.stop(); await Promise.all([...queues.values()]); },
