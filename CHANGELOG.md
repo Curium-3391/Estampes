@@ -10,7 +10,7 @@
   archived legacy fields, and every commit proves the canvas round-trips
   byte for byte. Legacy canvases migrate when opened; canvases with links or
   image layers stay pending and are reported. `canvas.json` is still written, so
-  switching back is safe. The mirror commit budget default rises from 300 to 2000.
+  switching back is safe. The mirror commit budget default rises from 300 to 1500.
   See docs/UVA-BETA.md.
 
 - UVA engine: unreachable index pages and commit roots are reclaimed every 32

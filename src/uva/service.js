@@ -56,7 +56,7 @@ export const MIRROR_LIMITS = Object.freeze({ ...BETA_LIMITS, workspaces:64, revi
 // src/uva/canvas-store.js). Images stay in legacy storage too until asset intake
 // (phase 2), so the asset caps only bound this store's own copies.
 export const STORE_LIMITS = Object.freeze({ ...MIRROR_LIMITS, workspaces:512, assetBytes:32*1024**2, allAssetBytes:1024**3 });
-export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=2000,canvasStore=false,assetCapBytes}={}){
+export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=1500,canvasStore=false,assetCapBytes}={}){
   if(!enabled)return {enabled:false,async dispatch(){fail('UNSUPPORTED_TARGET','UVA Experimental Beta is disabled; legacy remains available');},async close(){}};
   if(!root||!['linux-process-crash-test','linux-local-durable'].includes(profile))fail('UNSUPPORTED_STORAGE','Set ESTAMPES_UVA_BETA_DIR and an explicit ESTAMPES_UVA_BETA_PROFILE (linux-process-crash-test is NOT durable)');
   if(canvasStore)mirror=true;
