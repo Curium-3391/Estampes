@@ -3,7 +3,7 @@ import { readdir, unlink } from "node:fs/promises";
 import { z } from "zod";
 import { PageStore, pagePath } from "./pages.js";
 import { parseCommitRoot, assertCurrentEnvelope, CurrentEnvelopeSchema } from "./commit-root-schema.js";
-import { GcRecordSchema, DAY, policyOf } from "./lifecycle-state.js";
+import { GcRecordSchema, DAY, policyOf, GC_MAX_CANDIDATES, GC_OWNERSHIP } from "./lifecycle-state.js";
 import { hashJson, canonicalJson, parse, ContentHashSchema as Hash, bounded } from "../documents/validation.js";
 import { loadCommitted } from "./records.js";
 import { integrity, fail } from "./errors.js";
@@ -16,9 +16,9 @@ export const gcSourceAllowed=path=>typeof path==="string"&&allowed.test(path);
 const physicalSchema=z.object({dev:z.string().regex(/^\d{1,32}$/),ino:z.string().regex(/^\d{1,32}$/)}).strict();
 const objectKey=value=>value?value.dev+":"+value.ino:null;
 const candidateSchema=z.object({path:z.string().refine(gcSourceAllowed),hash:Hash,bytes:z.number().int().min(0),class:z.enum(["G1","G2"]),quarantine:z.string(),reason:z.string().max(160),physical:physicalSchema.optional()}).strict();
-const temporaryDispositionSchema=z.object({recovery:TemporaryRecoverySchema,claimCandidate:z.number().int().min(0).max(127),temporaryCandidate:z.number().int().min(0).max(127).nullable()}).strict();
+const temporaryDispositionSchema=z.object({recovery:TemporaryRecoverySchema,claimCandidate:z.number().int().min(0).max(GC_MAX_CANDIDATES-1),temporaryCandidate:z.number().int().min(0).max(GC_MAX_CANDIDATES-1).nullable()}).strict();
 export const GcPlanSchema=bounded(z.object({schema:z.literal("estampes.gc-plan/1"),id:z.string().uuid(),storeInstanceId:z.string().uuid(),sourceGeneration:z.number().int().positive(),
- sourceRootHash:Hash,rootsetHash:Hash,pinsEpoch:z.number().int().min(0),createdAtMs:z.number().int().min(0),candidates:z.array(candidateSchema).min(1).max(128),temporaryDispositions:z.array(temporaryDispositionSchema).max(64).optional()}).strict());
+ sourceRootHash:Hash,rootsetHash:Hash,pinsEpoch:z.number().int().min(0),createdAtMs:z.number().int().min(0),candidates:z.array(candidateSchema).min(1).max(GC_MAX_CANDIDATES),temporaryDispositions:z.array(temporaryDispositionSchema).max(64).optional()}).strict());
 export const gcPlanPath=hash=>"visual-maintenance/gc/"+parse(Hash,hash)+".json";
 export async function readGcPlan(files,record){
  const r=parse(GcRecordSchema,record),raw=await files.json(gcPlanPath(r.planHash),4*1024**2),validated=GcPlanSchema.safeParse(raw);integrity(validated.success,"Invalid committed GC plan schema");const plan=validated.data;integrity(hashJson(plan)===r.planHash,"GC plan hash mismatch");
@@ -41,7 +41,7 @@ async function verifyGcLocations(files,plan,record){
    integrity(!quarantine,"Terminal GC quarantine candidate reappeared");
    // A later transaction may legitimately recreate the content-addressed
    // source path. This terminal plan has no deletion authority over it.
-   if(source){const digest=await files.digest(c.path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Reused terminal GC source differs from its content identity");}
+   if(source){const digest=await files.knownDigest(c.path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Reused terminal GC source differs from its content identity");}
    continue;
   }
   if(!source&&!quarantine){integrity(record.moved.includes(i)&&(record.unlinking??[]).includes(i),"GC candidate missing without prior durable unlink intent");continue;}
@@ -49,7 +49,7 @@ async function verifyGcLocations(files,plan,record){
   // earlier copy is still quarantined. Verify both, retain the new source,
   // and let the live-root re-mark postpone deletion of the old copy.
   for(const path of [...(source?[c.path]:[]),...(quarantine?[c.quarantine]:[])]){
-   const digest=await files.digest(path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC candidate physical identity changed");
+   const digest=await files.knownDigest(path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC candidate physical identity changed");
    if(c.physical&&(path===c.quarantine||(!quarantine&&!(record.unlinking??[]).includes(i))))integrity(objectKey(digest)===objectKey(c.physical),"GC candidate object differs from selected ownership");
   }
  }
@@ -67,7 +67,7 @@ export async function gcOwnership(files,snapshot){
   const released=new Set(record.released??[]);
   for(const [i,c]of plan.candidates.entries()){
    if(record.deleted.includes(i)||released.has(i))continue;
-   if(++count>4096)fail("STORAGE_UNAVAILABLE","Active GC ownership exceeds bounded inventory");
+   if(++count>GC_OWNERSHIP)fail("STORAGE_UNAVAILABLE","Active GC ownership exceeds bounded inventory");
    const object=objectKey(c.physical),prior=paths.get(c.path)??[];
    integrity(!legacyPaths.has(c.path)&&(!object?prior.length===0:!objects.has(object)),"Physical candidate has overlapping active GC owners");
    if(object)objects.add(object);else legacyPaths.add(c.path);
@@ -76,17 +76,29 @@ export async function gcOwnership(files,snapshot){
  }
  return {objects,legacyPaths,count};
 }
-async function rootMetadata(files,envelope,paths){
- const pages=new PageStore(files),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
- for(const [kind,hash]of Object.entries(root.roots))await pages.read(hash,kind);for(const p of pages.track)paths.add(p);
+// Retained roots share most of their index pages. Pages are content-addressed
+// and each chain is hash-linked, so a page already marked has its whole chain
+// marked: walking only new pages made the mark O(changed pages), not
+// O(retained roots x index size).
+async function rootMetadata(files,envelope,paths,shared=null){
+ const pages=shared?.pages??new PageStore(files),seen=shared?.seen??new Set(),root=parseCommitRoot(await pages.hashed(envelope.rootHash,"visual-registry/roots",64*1024));assertCurrentEnvelope(root,envelope);
+ for(const [kind,hash]of Object.entries(root.roots)){
+  if(seen.has(hash))continue;seen.add(hash);const index=await pages.hashed(hash);integrity(index.kind===kind,"Index kind mismatch");
+  for(const first of Object.values(index.buckets??{})){let next=first;while(next&&!seen.has(next)){seen.add(next);const page=await pages.hashed(next);integrity(page.kind===kind,"Index page belongs to another partition");next=page.next;}}
+ }
+ for(const p of pages.track)paths.add(p);
 }
-export async function protectedPaths(owner,{verify=true,includeTemporary=false}={}){
- const snapshot=verify?await loadCommitted(owner.files):owner.current;
+// `cached` reuses the writer's verification proofs (a fingerprint walk for what
+// it already verified); the explicit verify action always rereads everything.
+export async function protectedPaths(owner,{verify=true,includeTemporary=false,cached=false}={}){
+ const snapshot=verify?await loadCommitted(owner.files,cached&&owner.verification?{cache:owner.verification}:undefined):owner.current;
  integrity(snapshot.envelope.rootHash===owner.current.envelope.rootHash,"CURRENT changed outside serialized maintenance");
  const paths=new Set(snapshot.files);paths.add("storage-format.json");paths.add("WRITER.lock");
+ // The selected root's pages are already in snapshot.files and verified.
+ const shared={pages:new PageStore(owner.files),seen:new Set([snapshot.envelope.rootHash,...Object.values(snapshot.root.roots)])};
  for(const [key,value]of snapshot.indices.retention){
-  if(key.startsWith("recovery:"))await rootMetadata(owner.files,value.envelope,paths);
-  if(key.startsWith("checkpoint:")&&value.envelope)await rootMetadata(owner.files,value.envelope,paths);
+  if(key.startsWith("recovery:"))await rootMetadata(owner.files,value.envelope,paths,shared);
+  if(key.startsWith("checkpoint:")&&value.envelope)await rootMetadata(owner.files,value.envelope,paths,shared);
   if(key.startsWith("gc:")){paths.add(gcPlanPath(value.planHash));const plan=await readGcPlan(owner.files,value);if(!["complete","failed"].includes(value.state))for(const c of plan.candidates)if(await owner.files.exists(c.quarantine))paths.add(c.quarantine);}
   if(key.startsWith("backup:")){
    const list=await owner.lifecycle.backups.readList(value.filesHash);for(const p of list.paths)paths.add(p);if(value.state==="copying")for(const f of list.files)paths.add(f.path);
@@ -100,28 +112,29 @@ export async function protectedPaths(owner,{verify=true,includeTemporary=false}=
 }
 export class GarbageCollector {
  constructor(manager){this.manager=manager;this.owner=manager.owner;this.files=this.owner.files;}
- async plan({classes=["G1","G2"]}={}){
+ async plan({classes=["G1","G2"],sweep=false,limit=128}={}){
+  integrity(Number.isSafeInteger(limit)&&limit>=2&&limit<=GC_MAX_CANDIDATES,"Invalid GC plan size");
   integrity(Array.isArray(classes)&&classes.length>0&&classes.every(v=>["G1","G2"].includes(v)),"Invalid GC class filter");
-  const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner),candidates=[],proofs=new Map(),selected=new Set(),temporaryDispositions=[];
+  const {snapshot,paths,hash:rootsetHash}=await protectedPaths(this.owner,{cached:true}),candidates=[],proofs=new Map(),selected=new Set(),temporaryDispositions=[];
   const ownership=await gcOwnership(this.files,snapshot);
-  const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=128||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return false;
+  const add=async(path,kind,reason)=>{if(!classes.includes(kind)||candidates.length>=limit||selected.has(path)||paths.has(path)||!gcSourceAllowed(path)||!await this.files.exists(path))return false;
    const info=await this.files.digest(path);if(ownership.legacyPaths.has(path)||ownership.objects.has(objectKey(info)))return false;
-   if(ownership.count+candidates.length>=4096)fail("STORAGE_UNAVAILABLE","Active GC ownership budget exhausted");
+   if(ownership.count+candidates.length>=GC_OWNERSHIP)fail("STORAGE_UNAVAILABLE","Active GC ownership budget exhausted");
    selected.add(path);candidates.push({path,hash:info.hash,bytes:info.bytes,class:kind,reason,quarantine:"",physical:{dev:info.dev,ino:info.ino}});return true;};
   for(const row of snapshot.indices.locator.values())if(row.kind==="delta"){
    const ref=row.logical,path=`visual-documents/${ref.entityId.slice(4)}/generations/${ref.revision}-${ref.contentHash}.json`;
    await add(path,"G1","Verified committed delta reconstructs the same logical version");
   }
-  const now=this.manager.now(),safeClock=this.manager.canAge();
+  const now=this.manager.now(),safeClock=this.manager.canAge(),proofBuckets=new Set();
   for(const [key,raw]of snapshot.indices.retention){
-   if(!key.startsWith("temporary:")||!classes.includes("G2")||candidates.length>126||temporaryDispositions.length>=64)continue;
+   if(!key.startsWith("temporary:")||!classes.includes("G2")||candidates.length>limit-2||temporaryDispositions.length>=64)continue;
    const recovery=parse(TemporaryRecoverySchema,raw);integrity(key==="temporary:"+recovery.claimId,"Temporary recovery key mismatch");
    const claim=await readTemporaryClaim(this.files,recovery.claimId);
    integrity(claim.claimId===recovery.claimId&&canonicalJson(claim.owner)===canonicalJson(recovery.owner)&&claim.finalPath===recovery.finalPath&&claim.temporaryPath===recovery.temporaryPath&&claim.hash===recovery.hash&&claim.bytes===recovery.bytes,"Temporary claim differs from durable recovery classification");
    const hasTemporary=await this.files.exists(claim.temporaryPath);let temporaryCandidate=null;if(hasTemporary){integrity(await add(claim.temporaryPath,"G2","Attributed temporary from a durably classified transaction"),"Attributed temporary could not enter GC plan");temporaryCandidate=candidates.length-1;}
    integrity(await add(temporaryClaimPath(claim.claimId),"G2","Durable temporary ownership claim after terminal classification"),"Temporary claim could not enter GC plan");
    temporaryDispositions.push({recovery,claimCandidate:candidates.length-1,temporaryCandidate});
-   proofs.set(key,undefined);
+   proofs.set(key,undefined);proofBuckets.add(hashJson(key).slice(0,2));
   }
   for(const dir of await readdir(this.files.path("visual-transactions"))){
    if(!new RegExp("^"+uuid+"$").test(dir))fail("INTEGRITY_ERROR","Unknown transaction directory during GC planning");
@@ -136,10 +149,32 @@ export class GarbageCollector {
    }
    for(const f of intent.stagedFiles??[])if(!paths.has(f.path))await add(f.path,"G2","Unreachable file from a terminal transaction plan");
    const age=now-Date.parse(intent.acceptedAt),wait=member?7*DAY:DAY;
-   if(safeClock&&age>=wait){
+   // Each compacted journal adds retention proofs; a maintenance publication
+   // may touch at most 128 pages, so the proofs of one plan stay within 96
+   // retention buckets. The rest wait for the next plan.
+   const proofKeys=["journal-compacted:"+tx,...(intent.requestKeyDigest?["journal-key:"+intent.requestKeyDigest]:[])],fresh=proofKeys.map(k=>hashJson(k).slice(0,2)).filter(b=>!proofBuckets.has(b));
+   if(safeClock&&age>=wait&&proofBuckets.size+new Set(fresh).size<=96){for(const b of fresh)proofBuckets.add(b);
     proofs.set("journal-compacted:"+tx,{schema:"estampes.compacted-journal/1",commitId:tx,payloadHash:intent.payloadHash,outcome:member?"committed":"aborted",atMs:now});
     if(intent.requestKeyDigest)proofs.set("journal-key:"+intent.requestKeyDigest,{payloadHash:intent.payloadHash});
     for(const name of ["intent.json","prepared.json","outcome.json"])await add(prefix+"/"+name,"G2","Terminal journal with durable membership/key retention proof");
+   }
+  }
+  // History compaction removes Locator rows, Ledger tombstones and memberships
+  // that no retained root needs; the files only they reached are then outside
+  // the protected set. They follow the same quarantine and G2 grace. Targets of
+  // a temporary claim are left to its own classification.
+  if(sweep&&classes.includes("G2")){
+   const claimed=new Set(),claimDir="visual-temporaries/claims";
+   if(await this.files.exists(claimDir))for(const name of await readdir(this.files.path(claimDir))){if(!/^[0-9a-f-]{36}\.json$/.test(name))continue;const claim=await readTemporaryClaim(this.files,name.slice(0,-5));claimed.add(claim.finalPath);claimed.add(claim.temporaryPath);}
+   const folders=["visual-history/deltas","visual-history/chunks","visual-maintenance/gc"];
+   if(await this.files.exists("visual-documents"))for(const d of await readdir(this.files.path("visual-documents")))folders.push("visual-documents/"+d+"/generations");
+   for(const folder of folders){
+    if(candidates.length>=limit)break;if(!await this.files.exists(folder))continue;
+    for(const name of (await readdir(this.files.path(folder))).sort()){
+     if(candidates.length>=limit)break;const path=folder+"/"+name;
+     if(name.includes(".tmp-")||claimed.has(path))continue;
+     await add(path,"G2","History file outside every retained root");
+    }
    }
   }
   if(!candidates.length)return {planned:false,reason:"No provably unreachable managed files"};
@@ -163,7 +198,7 @@ export class GarbageCollector {
   const disposed=new Set((plan.temporaryDispositions??[]).flatMap(d=>[d.claimCandidate,d.temporaryCandidate]).filter(i=>i!==null));
   const releasable=async(i,c)=>!disposed.has(i)&&await this.files.exists(c.path);
   const release=(target,i)=>{target.released=[...new Set([...(target.released??[]),i])].sort((a,b)=>a-b);};
-  const state=structuredClone(record),{paths}=await protectedPaths(this.owner);let progressed=0;
+  const state=structuredClone(record),{paths}=await protectedPaths(this.owner,{cached:true}),synced=new Set();let progressed=0;
   await this.files.point("gc.before-quarantine",{id});
   for(const [i,c]of plan.candidates.entries()){
    if(state.moved.includes(i)||(state.released??[]).includes(i))continue;
@@ -174,10 +209,11 @@ export class GarbageCollector {
    if(await this.files.exists(c.quarantine)){const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantined file changed");}
    else if(await this.files.exists(c.path)){
     const digest=await this.files.digest(c.path);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"GC source changed since plan");
-    await this.files.move(c.path,c.quarantine,"gc");
+    await this.files.move(c.path,c.quarantine,"gc",synced);
    }else fail("INTEGRITY_ERROR","GC source vanished before quarantine");
    state.moved.push(i);progressed++;
   }
+  await this.files.syncDirectories(synced,"gc");
   if(state.quarantinedAtMs===null&&state.moved.length)state.quarantinedAtMs=this.manager.acceptedTime();
   state.state="quarantining";
   await this.manager.publish("gc-quarantine-progress",async()=>({retentionChanges:new Map([[key,state]]),result:{id,moved:state.moved.length}}));
@@ -189,7 +225,7 @@ export class GarbageCollector {
   // verified object; the quarantined copy belongs to the plan alone and follows
   // the grace like any other.
   const blocks=async(marked,i,c)=>marked.paths.has(c.path)&&(disposed.has(i)||!await this.files.exists(c.path));
-  const remarked=await protectedPaths(this.owner);
+  const remarked=await protectedPaths(this.owner,{cached:true});
   let next=structuredClone(this.owner.current.indices.retention.get(key)),waiting=false;const deletionIntent=[];
   for(const i of next.moved){
    if(next.deleted.includes(i)||(next.released??[]).includes(i))continue;const c=plan.candidates[i];
@@ -204,14 +240,15 @@ export class GarbageCollector {
   if(deletionIntent.length){
    next.state="unlinking";next.unlinking=deletionIntent;
    await this.manager.publish("gc-unlink-intent",async()=>({retentionChanges:new Map([[key,next]]),result:{id,unlinking:deletionIntent.length}}));
-   const finalMark=await protectedPaths(this.owner);next=structuredClone(this.owner.current.indices.retention.get(key));
+   const finalMark=await protectedPaths(this.owner,{cached:true});next=structuredClone(this.owner.current.indices.retention.get(key));
    for(const i of next.unlinking??[]){const c=plan.candidates[i];if(await blocks(finalMark,i,c)){waiting=true;continue;}
    if(await this.files.exists(c.quarantine)){
     const digest=await this.files.digest(c.quarantine);integrity(digest.hash===c.hash&&digest.bytes===c.bytes,"Quarantine checksum failed before unlink");
-    await this.files.remove(c.quarantine,"gc",{allowMissing:false,expected:digest});
-   }else {integrity(priorUnlinking.has(i),"Quarantine vanished after new unlink authorization");await this.files.syncDirectory(this.files.path("gc-quarantine/"+id),"gc");}
+    await this.files.remove(c.quarantine,"gc",{allowMissing:false,expected:digest,pending:synced});
+   }else {integrity(priorUnlinking.has(i),"Quarantine vanished after new unlink authorization");synced.add(this.files.path("gc-quarantine/"+id));}
    next.deleted.push(i);progressed++;
    }
+   await this.files.syncDirectories(synced,"gc");
    delete next.unlinking;
   }
   next.state=next.deleted.length+(next.released?.length??0)===plan.candidates.length?"complete":waiting?"waiting-grace":"quarantining";
@@ -264,7 +301,10 @@ export async function reclaimIndexPages(owner,{limit=4096}={}){
  const selected=parse(CurrentEnvelopeSchema,await files.json("visual-registry/CURRENT.json",64*1024));
  integrity(canonicalJson(selected)===canonicalJson(snapshot.envelope),"CURRENT changed outside serialized maintenance");
  const retention=snapshot.indices.retention;
- for(const [key,value]of retention)if(key.startsWith("gc:")&&!["complete","failed"].includes(value.state))return {reclaimed:0,reason:"GC plan active"};
+ // A path held by an active GC plan is that plan's to move or release; the
+ // sweep never touches it, so the two never race over one object.
+ const held=new Set();
+ for(const [key,value]of retention)if(key.startsWith("gc:")&&!["complete","failed"].includes(value.state))for(const c of (await readGcPlan(files,value)).candidates)held.add(c.path);
  // An observation reuses page proofs from earlier verification (a stat, not a read).
  const marked=new Set(),pages=new PageStore(files.observation()),indexes=new Set();
  const markIndex=async hash=>{if(!hash||indexes.has(hash))return;indexes.add(hash);const root=await pages.hashed(hash);marked.add(pagePath(hash));
@@ -292,7 +332,7 @@ export async function reclaimIndexPages(owner,{limit=4096}={}){
   if(!await files.exists(folder))continue;
   for(const name of await readdir(files.path(folder))){
    if(reclaimed>=limit)break;
-   const path=folder+"/"+name;if(!pageName.test(name)||marked.has(path))continue;
+   const path=folder+"/"+name;if(!pageName.test(name)||marked.has(path)||held.has(path))continue;
    const info=await files.info(path);await files.point("reclaim.before-unlink",{path});
    try{await unlink(files.path(path));}catch(e){if(e.code!=="ENOENT")throw e;}
    reclaimed++;bytes+=info.bytes;touched.add(folder);

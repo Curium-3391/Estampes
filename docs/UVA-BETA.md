@@ -31,12 +31,15 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
   about 73 MB of the 256 MiB Beta quota. Saves are still coalesced because of the
   commit time.
 - Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
-- **Commit budget.** The store's cold start grows with its whole commit history, and
-  the engine refuses a writer that takes longer than 30 s to start. The mirror
-  therefore stops after `ESTAMPES_UVA_MIRROR_MAX_COMMITS` commits (default 1800) and
-  reports `budgetExhausted` in `diagnostics.mirror`. The canvas is unaffected.
-  Export what you need and start a new `ESTAMPES_UVA_BETA_DIR` to continue. If a
-  UVA store cannot start at all, the server logs it and runs without UVA.
+- **History compaction.** The store keeps what its 20 recovery points, named
+  checkpoints and readers need, plus about the last 7 days of commits (the ACK
+  replay window). Older history is retired automatically every 64 commits and its
+  files are deleted after a 1-day grace. See
+  [history compaction](rfc/unified-visual-architecture/HISTORY-COMPACTION.md).
+  `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) only caps commits retained in
+  that window; it is no longer a lifetime limit. When it is reached the mirror
+  reports `budgetExhausted` in `diagnostics.mirror` and the canvas is unaffected.
+  If a UVA store cannot start at all, the server logs it and runs without UVA.
 
 ## Canvas store: commit canvases to UVA (optional, phase 1)
 
@@ -95,16 +98,14 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   restores by source, migrations, adopted bypassing saves, repaired legacy copies
   and the last error.
 
-- **Lifetime limit.** Measured with `node scripts/uva-qualify.mjs --only history
-  --history 2000 --store 1` (one 120-mark canvas, development machine, partly
-  under load): 1915 commits fit before the store's capacity admission refused the
-  next one (108 MB on disk; the 256 MiB quota keeps a 64 MiB reserve and working
-  space). Cold start at 1915 commits was 9.3 s; a commit took 3.3 s (p50). The
-  commit budget (default 1800) therefore stops first, with a clear message. After
-  that, or after any refused commit, saves stay in their pending files and the
-  canvas is unaffected; export and start a new `ESTAMPES_UVA_BETA_DIR`. History
-  compaction, which would remove this limit, is not built yet. Its G2 blocker
-  (#90) is fixed.
+- **No lifetime limit.** Measured with `node scripts/uva-qualify.mjs --only history
+  --history 2500 --store 1 --edit one --day-every 100` (one 120-mark canvas, one
+  simulated day every 100 commits, development machine): all 2500 commits
+  succeeded, disk levelled off at 13–18 MB (before compaction, 1915 commits filled
+  the store at 108 MB), a commit took 1.3 s (p50, flat after about 1000 commits)
+  and cold start was 7.2 s. Every 64th commit waits for a compaction pass: p99 was
+  27 s, the worst 56 s (a pass that caught up on several simulated days). Saves are
+  acked from their pending file first, so the canvas does not wait for it.
 
 Production qualification is unchanged: **NOT QUALIFIED** (power loss #89/#91).
 

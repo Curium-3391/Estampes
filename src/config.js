@@ -43,7 +43,7 @@ export const config = Object.freeze({
   canvasStore: str("ESTAMPES_CANVAS_STORE", "legacy").toLowerCase() === "uva" ? "uva" : "legacy",
   uvaAssetMaxMb: num("ESTAMPES_UVA_ASSET_MAX_MB", 1024, { min: 64, max: 1048576 }),
   // Total commits a UVA store accepts from canvases (its open time grows with them).
-  uvaMirrorMaxCommits: num("ESTAMPES_UVA_MIRROR_MAX_COMMITS", 1800, { min: 1, max: 1000000 }),
+  uvaMirrorMaxCommits: num("ESTAMPES_UVA_MIRROR_MAX_COMMITS", 10000, { min: 1, max: 1000000 }),
   uvaMirrorIdleSec: num("ESTAMPES_UVA_MIRROR_IDLE_SEC", 15, { min: 0, max: 3600 }),
   retentionDays: num("ESTAMPES_STORAGE_RETENTION_DAYS", 0, { max: 36500 }),
   maxImageBytes: num("ESTAMPES_MAX_IMAGE_MB", 20, { min: 1, max: 200 }) * 1024 * 1024,

@@ -55,7 +55,7 @@
     },
     {
       "path": "src/persistence/coordinator.js",
-      "sha256": "4fbaabd227394c5a6fd9373933e6690c48af6f26c15a9a8c53c54a87ad339b0f"
+      "sha256": "6077ad2fbf7c8b34bf93ad39989ea883d8eff8eef93dda99bfaa0d63c0319cdf"
     },
     {
       "path": "src/persistence/errors.js",
@@ -63,11 +63,11 @@
     },
     {
       "path": "src/persistence/filesystem.js",
-      "sha256": "014d628dacc76d59cdf38d881a9f6d3a9f1a92cf981bc313e7f887585bdc791a"
+      "sha256": "0ecad62a4568290f19c70d0695cda6ea1bdef7a92621b8e7af10eeb953822070"
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "479e1d1562940c1f66aef94da67c58ad545ab8cc6a5be0e72a27fe40fb313711"
+      "sha256": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887"
     },
     {
       "path": "src/persistence/journal.js",
@@ -79,11 +79,11 @@
     },
     {
       "path": "src/persistence/lifecycle-state.js",
-      "sha256": "1b84971ab6ddfc8dbc17ceb11029c0cc734dea8188b00068680938571d6fcbce"
+      "sha256": "1563348f80150938d72d9a63dad3729d9bb9d79488d5fd77066f9c6bf44a4e5d"
     },
     {
       "path": "src/persistence/lifecycle.js",
-      "sha256": "b9e7886d7067da55d4156a2245c94065273d97e380bc6ff6d794c185bf71c900"
+      "sha256": "ef2ae387d358caa28037dcb02c447f86411a46aee82136be5f45d62ad2a54e80"
     },
     {
       "path": "src/persistence/ownership.js",
@@ -103,7 +103,7 @@
     },
     {
       "path": "src/persistence/records.js",
-      "sha256": "e80ff1693f62102ef684e1b7363accb2a421fcdc6d54acf882ff6de265939b3a"
+      "sha256": "da50f9c238a2f1f4dd2c93db0c6b5536eccc22e3ef771830d4ca0820586b6f81"
     },
     {
       "path": "src/persistence/restore-worker.js",
@@ -275,6 +275,60 @@
           "path": "src/persistence/records.js",
           "from": "1523e0f7ca36714276b81d3f15e4d46da428044c356a7ce0e29db019b98eb0df",
           "to": "e80ff1693f62102ef684e1b7363accb2a421fcdc6d54acf882ff6de265939b3a"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "history compaction: prune, GC sweep, auto pass, incremental GC mark",
+      "files": [
+        {
+          "path": "src/persistence/coordinator.js",
+          "from": "4fbaabd227394c5a6fd9373933e6690c48af6f26c15a9a8c53c54a87ad339b0f",
+          "to": "6077ad2fbf7c8b34bf93ad39989ea883d8eff8eef93dda99bfaa0d63c0319cdf"
+        },
+        {
+          "path": "src/persistence/filesystem.js",
+          "from": "014d628dacc76d59cdf38d881a9f6d3a9f1a92cf981bc313e7f887585bdc791a",
+          "to": "b89b132aec4dd1761ebd88e8bffa0eeca68e72e0bac8468cde4b18d0b5915960"
+        },
+        {
+          "path": "src/persistence/gc.js",
+          "from": "479e1d1562940c1f66aef94da67c58ad545ab8cc6a5be0e72a27fe40fb313711",
+          "to": "307d5161976aa39b41cc27e64ac2326520e44748348ffcd3eca12e6a9291b57f"
+        },
+        {
+          "path": "src/persistence/lifecycle-state.js",
+          "from": "1b84971ab6ddfc8dbc17ceb11029c0cc734dea8188b00068680938571d6fcbce",
+          "to": "1563348f80150938d72d9a63dad3729d9bb9d79488d5fd77066f9c6bf44a4e5d"
+        },
+        {
+          "path": "src/persistence/lifecycle.js",
+          "from": "b9e7886d7067da55d4156a2245c94065273d97e380bc6ff6d794c185bf71c900",
+          "to": "ef2ae387d358caa28037dcb02c447f86411a46aee82136be5f45d62ad2a54e80"
+        },
+        {
+          "path": "src/persistence/records.js",
+          "from": "e80ff1693f62102ef684e1b7363accb2a421fcdc6d54acf882ff6de265939b3a",
+          "to": "da50f9c238a2f1f4dd2c93db0c6b5536eccc22e3ef771830d4ca0820586b6f81"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "history compaction: fingerprint-cached GC location digests",
+      "files": [
+        {
+          "path": "src/persistence/filesystem.js",
+          "from": "b89b132aec4dd1761ebd88e8bffa0eeca68e72e0bac8468cde4b18d0b5915960",
+          "to": "0ecad62a4568290f19c70d0695cda6ea1bdef7a92621b8e7af10eeb953822070"
+        },
+        {
+          "path": "src/persistence/gc.js",
+          "from": "307d5161976aa39b41cc27e64ac2326520e44748348ffcd3eca12e6a9291b57f",
+          "to": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887"
         }
       ]
     }

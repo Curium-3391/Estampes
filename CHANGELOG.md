@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- UVA engine, automatic history compaction (#106): the canvas store and mirror
+  no longer have a lifetime commit limit. History that no recovery point,
+  checkpoint or reader needs, and that is older than the 7-day ACK replay window,
+  is retired every 64 commits; its files are deleted after the 1-day G2 grace.
+  Over 2500 commits (25 simulated days) the store stayed at 13–18 MB, where 1915
+  commits used to fill it. A forgotten request that is retried gets `CONFLICT`
+  and never applies twice. `ESTAMPES_UVA_MIRROR_MAX_COMMITS` now defaults to 10000
+  commits retained in the replay window. Also fixed on the way: the GC mark
+  re-read every index page per recovery point, page reclamation paused whenever a
+  GC plan was active, and a large GC plan could exceed the maintenance write
+  budget and fence the writer. Design:
+  docs/rfc/unified-visual-architecture/HISTORY-COMPACTION.md.
 - UVA engine, long-running commit latency: a process that kept committing
   re-validated every version proof it had ever cached on each load, so commit
   time grew with the number of commits made in that process (551 ms to 1642 ms

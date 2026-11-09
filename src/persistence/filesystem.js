@@ -160,6 +160,15 @@ export class ManagedFiles {
     let dir=dirname(path);while(dir!==this.root){privateDirectory(await lstat(dir));dir=dirname(dir);}
     return physicalInfo(st);
   }
+  // A content hash verified earlier in this process is reused while the
+  // object's physical fingerprint (device, inode, size, mtime, ctime) is
+  // unchanged; any rename, rewrite or replacement changes it and rehashes.
+  async knownDigest(name){
+    const cache=this.knownDigests??=new Map(),info=await this.info(name),hit=cache.get(name);
+    if(hit&&hit.fingerprint===physicalFingerprint(info))return {...info,hash:hit.hash};
+    const value=await this.digest(name);cache.set(name,{fingerprint:physicalFingerprint(value),hash:value.hash});
+    if(cache.size>65536)cache.delete(cache.keys().next().value);return value;
+  }
   async digest(name){
     const info=await this.info(name),fd=await open(this.path(name),constants.O_RDONLY|constants.O_NOFOLLOW),hash=createHash("sha256"),buffer=Buffer.alloc(Math.max(1,Math.min(info.bytes,4*1024*1024)));let offset=0;
     try{
@@ -204,17 +213,22 @@ export class ManagedFiles {
     return {logicalBytes,allocatedBytes,files};
   }
   async usedBytes(){return (await this.usage()).allocatedBytes;}
-  async move(from,to,label="gc"){
+  // `pending` (a Set) defers the directory fsyncs to the caller, who syncs each
+  // directory once before recording the batch durably.
+  async move(from,to,label="gc",pending=null){
     await this.info(from);await this.ensureDirectory(dirname(to));await this.point(label+".before-rename",{from,to});
     try{await rename(this.path(from),this.path(to));}catch(e){e.barrier=true;throw e;}
-    await this.point(label+".after-rename",{from,to});await this.syncDirectory(dirname(this.path(from)),label);await this.syncDirectory(dirname(this.path(to)),label);
+    await this.point(label+".after-rename",{from,to});
+    if(pending){pending.add(dirname(this.path(from)));pending.add(dirname(this.path(to)));return;}
+    await this.syncDirectory(dirname(this.path(from)),label);await this.syncDirectory(dirname(this.path(to)),label);
   }
-  async remove(name,label="gc",{allowMissing=true,expected}={}){
+  async syncDirectories(paths,label){for(const path of [...paths].sort())await this.syncDirectory(path,label);paths.clear();}
+  async remove(name,label="gc",{allowMissing=true,expected,pending=null}={}){
     await this.point(label+".before-unlink",{path:name});
     if(expected){const actual=await this.digest(name);if(physicalFingerprint(actual)!==physicalFingerprint(expected)||actual.hash!==expected.hash)fail("INTEGRITY_ERROR","Authorized unlink object was replaced or modified",{storageIntegrity:true});}
     this.usageSettled?.delete(dirname(name));
     try{await unlink(this.path(name));}catch(e){if(e.code!=="ENOENT"||!allowMissing)throw e;}
-    await this.point(label+".after-unlink",{path:name});await this.syncDirectory(dirname(this.path(name)),label);
+    await this.point(label+".after-unlink",{path:name});if(pending)pending.add(dirname(this.path(name)));else await this.syncDirectory(dirname(this.path(name)),label);
   }
   async preflight(bytes,quota,reserve) {
     const used=await this.usedBytes(), fs=await statfs(this.root,{bigint:true}), available=fs.bavail*fs.bsize;
