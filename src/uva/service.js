@@ -56,7 +56,7 @@ export const MIRROR_LIMITS = Object.freeze({ ...BETA_LIMITS, workspaces:64, revi
 // src/uva/canvas-store.js). Images stay in legacy storage too until asset intake
 // (phase 2), so the asset caps only bound this store's own copies.
 export const STORE_LIMITS = Object.freeze({ ...MIRROR_LIMITS, workspaces:512, assetBytes:32*1024**2, allAssetBytes:1024**3 });
-export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=1800,canvasStore=false,assetCapBytes}={}){
+export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=10000,canvasStore=false,assetCapBytes}={}){
   if(!enabled)return {enabled:false,async dispatch(){fail('UNSUPPORTED_TARGET','UVA Experimental Beta is disabled; legacy remains available');},async close(){}};
   if(!root||!['linux-process-crash-test','linux-local-durable'].includes(profile))fail('UNSUPPORTED_STORAGE','Set ESTAMPES_UVA_BETA_DIR and an explicit ESTAMPES_UVA_BETA_PROFILE (linux-process-crash-test is NOT durable)');
   if(canvasStore)mirror=true;
@@ -80,7 +80,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     for(const p of [storeRoot,assetRoot,exportRoot]){privateDirectory(await lstat(p));if(await realpath(p)!==p)fail('UNSUPPORTED_STORAGE','Beta child path was replaced');}
     await lstat(join(storeRoot,'storage-format.json'));await lstat(join(storeRoot,'visual-registry/CURRENT.json'));
   }else for(const p of [storeRoot,assetRoot,exportRoot])await directory(p);
-  const store=await openIsolatedStore(storeRoot,{profile,purpose:'isolated-pr1c-testing',quotaBytes:256*1024**2,lifecycle:{enabled:true,autoMaintenance:false}});
+  const store=await openIsolatedStore(storeRoot,{profile,purpose:'isolated-pr1c-testing',quotaBytes:256*1024**2,lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:Boolean(mirror)}});
   if(!names.length){
     if(store.status.state!=='ready'){await store.close();fail('RECOVERY_REQUIRED','Fresh store did not initialize safely');}
     await immutable(join(root,'beta-format.json'),Buffer.from(JSON.stringify(format)));
@@ -279,10 +279,11 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; mirror paused');
     const prior=s.documents.find(d=>d.provenance?.legacySetKey===key&&d.extensions?.[MIRROR_KEY]);
     if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash&&(prior.extensions[MIRROR_KEY].authority??'legacy-canvas')===authority)return {status:'unchanged',documentId:prior.id,revision:prior.revision,sourceHash,seq:prior.extensions[MIRROR_KEY].sourceSeq??null};
-    // Cold start (and disk) grow with the store's total commit history, and the
-    // engine refuses to start a writer that takes over 30 s. Stop early, visibly.
+    // History compaction retires what no recovery point needs, so the store
+    // keeps about the last 7 days of commits (the ACK replay window). This cap
+    // is a safety net for an unusual burst inside that window, not a lifetime limit.
     const commits=(await store.diagnostics()).contentCommits;
-    if(commits>=mirrorMaxCommits){mirrorState={...mirrorState,budgetExhausted:true,commits};fail('LIMIT','Mirror history budget reached ('+commits+'/'+mirrorMaxCommits+' commits). Export what you need, then start a new ESTAMPES_UVA_BETA_DIR; the canvas is unaffected.');}
+    if(commits>=mirrorMaxCommits){mirrorState={...mirrorState,budgetExhausted:true,commits};fail('LIMIT','Commit budget reached ('+commits+'/'+mirrorMaxCommits+' commits retained in the 7-day replay window). Saves stay pending and the canvas is unaffected; they resume as older commits age out.');}
     // The asset is identified before it is written, so a canvas that cannot be
     // mapped never copies its image into the store.
     const time=now(),digest=Buffer.isBuffer(bytes)?hash(bytes):'',asset={assetId:'asset:sha256:'+digest,legacyImageId:'img:'+digest.slice(0,16)};

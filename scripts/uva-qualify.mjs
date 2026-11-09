@@ -2,7 +2,7 @@
 // Durability qualification for the UVA canvas mirror, runnable in any Linux
 // container. It produces raw evidence (JSON) and a pass/fail per scenario.
 //
-//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1] [--edit one] [--progress 250]
+//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1] [--edit one] [--progress 250] [--day-every 100]
 //
 // --store 1 opens the store the way ESTAMPES_CANVAS_STORE=uva does (residual, no sidecar).
 // What it can prove:  process-crash safety (SIGKILL), no false ACK, long-history
@@ -63,12 +63,16 @@ const rss = () => mb(process.memoryUsage().rss);
 async function history(n) {
   const dir = await fresh(), img = await image(), svc = await open(dir), lat = [], disk = [];
   const t0 = performance.now();
-  let revision = 0, failure = null;
+  let revision = 0, failure = null, clock = null;
   for (let i = 1; i <= n; i++) {
     const s = performance.now();
     try { const r = await svc.syncCanvas({ canvas: canvas(img, EDIT_ONE ? 120 : Math.min(i, 120), ' #' + i), bytes: img.bytes }); revision = r.revision; }
     catch (e) { failure = { at: i, code: e.code, message: e.message }; break; }
     lat.push(performance.now() - s);
+    // --day-every N (test profile): one simulated day passes every N commits, so
+    // the 7-day replay window and the 1-day G2 grace elapse within the run.
+    const dayEvery = +arg('day-every', 0);
+    if (dayEvery && i % dayEvery === 0) { clock = (clock ?? Date.now()) + 864e5; await svc.store.maintenance('clock', { nowMs: clock }); }
     if (i % 25 === 0) disk.push({ commit: i, mb: mb(await dirBytes(dir)), rssMb: rss() });
     const every = +arg('progress', 0);
     if (every && i % every === 0) {
@@ -76,7 +80,7 @@ async function history(n) {
       console.error(`# commit ${i}: window p50 ${pct(w, .5)} ms p95 ${pct(w, .95)} ms, disk ${mb(await dirBytes(dir))} MB, files ${await fileCount(dir)}, rss ${rss()} MB, dir ${dir}`);
     }
   }
-  const diag = await svc.diagnostics();
+  const diag = await svc.diagnostics(), storeDiag = await svc.store.diagnostics();
   await svc.close();
   // restart and re-verify
   const t1 = performance.now(), svc2 = await open(dir), coldOpenMs = Math.round(performance.now() - t1);
@@ -87,7 +91,7 @@ async function history(n) {
     commits: lat.length, requested: n, failure, finalRevision: revision, revisionAfterRestart: reopened,
     latencyMs: { p50: pct(lat, .5), p95: pct(lat, .95), p99: pct(lat, .99), max: pct(lat, 1) },
     totalSeconds: Math.round((performance.now() - t0) / 100) / 10, diskMb: mb(await dirBytes(dir)), diskSamples: disk,
-    maintenance: diag.maintenance, state: diag.state, coldOpenMs, peakRssMb: rss(),
+    maintenance: diag.maintenance, state: diag.state, problem: diag.problem, compaction: storeDiag.compaction ?? null, reclaim: storeDiag.reclaim ?? null, coldOpenMs, peakRssMb: rss(),
   };
   result.pass = !failure && reopened === revision && diag.state === 'ready';
   if (arg('keep')) { result.keptAt = dir; } else await rm(dir, { recursive: true, force: true });
@@ -235,6 +239,10 @@ async function manyDocuments(count) {
     const img = await image(i + 1), s = performance.now();
     try { await svc.syncCanvas({ canvas: canvas(img, 10), bytes: img.bytes }); } catch (e) { await svc.close(); await rm(dir, { recursive: true, force: true }); return { count: i, failure: e.message, pass: false }; }
     lat.push(performance.now() - s);
+    // --day-every N (test profile): one simulated day passes every N commits, so
+    // the 7-day replay window and the 1-day G2 grace elapse within the run.
+    const dayEvery = +arg('day-every', 0);
+    if (dayEvery && i % dayEvery === 0) { clock = (clock ?? Date.now()) + 864e5; await svc.store.maintenance('clock', { nowMs: clock }); }
   }
   await svc.close();
   const t = performance.now(), svc2 = await open(dir), cold = Math.round(performance.now() - t);

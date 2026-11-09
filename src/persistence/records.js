@@ -142,7 +142,10 @@ async function loadSnapshot(files,envelopeInput,{cache=new VerificationCache(),m
     // fingerprint walk), so a replaced generation still fences the writer.
     const known=cache.versions.has(key);
     if(!history&&!known)continue;
-    if(await cache.valid(files,key,value,pages.track)){
+    // A proof remembered while the version was current covers its full copy
+    // only; a history load also reads (and so protects) its lossless delta.
+    const alternative=history&&value.kind==="full"&&value.alternative?"visual-history/deltas/"+value.alternative.manifest+".json":null;
+    if(await cache.valid(files,key,value,pages.track)&&(!alternative||cache.versions.get(key).paths.includes(alternative))){
       const record=cache.record(key);if(record)versionReads.put(value,record,cache.versions.get(key).paths);
     }else unverified.push([key,value]);
   }

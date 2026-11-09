@@ -1,11 +1,13 @@
 import { parse, hashJson, canonicalJson } from "../documents/validation.js";
 import { ReaderPins } from "./pins.js";
 import { CapacityManager } from "./capacity.js";
-import { GarbageCollector, recoverQuarantine, protectedPaths, reclaimIndexPages } from "./gc.js";
+import { GarbageCollector, recoverQuarantine, protectedPaths, reclaimIndexPages, readGcPlan } from "./gc.js";
+import { readdir, rmdir } from "node:fs/promises";
+import { readTemporaryClaim } from "./temporary-attribution.js";
 import { BackupManager } from "./backup.js";
 import { readVersion, physicalVersionPaths, stageDelta, MIB } from "./archive.js";
 import { readRegistrySnapshot } from "./records.js";
-import { policyOf, initialPolicy, LifecycleOptionsSchema, checkpointKey, ACK_WINDOW } from "./lifecycle-state.js";
+import { policyOf, initialPolicy, LifecycleOptionsSchema, checkpointKey, ACK_WINDOW, DAY, GC_MAX_CANDIDATES } from "./lifecycle-state.js";
 import { integrity, fail, PersistenceError } from "./errors.js";
 import { PageStore } from "./pages.js";
 import { parseCommitRoot, assertCurrentEnvelope } from "./commit-root-schema.js";
@@ -70,6 +72,96 @@ export class LifecycleManager {
    return {ledgerChanges:changes,result:{compacted:changed,keysBefore:entries.size,keysAfter:entries.size}};
   });
  }
+ // History compaction. The horizon is the oldest generation any retained root
+ // still selects: the recovery points, named checkpoints, pins, active backups
+ // and selected CURRENT publication evidence. A Locator row survives while a
+ // retained registry (or a pin's history reference) needs it or its delta
+ // chain; a membership and its Ledger tombstone survive while they are at or
+ // above the horizon, inside the ACK window, or their journal still exists.
+ // A retry of a forgotten request cannot apply twice: every committed change
+ // moved its Document's revision, so it fails the expectedRevision check.
+ async prune({budget=96}={}){
+  const s=this.owner.current,ret=s.indices.retention,loc=s.indices.locator,pages=new PageStore(this.files);
+  let horizon=s.root.generation;const registries=new Set([s.root.roots.registry]),refs=[];
+  for(const [k,v]of ret){
+   if(k.startsWith("registry:"))registries.add(v.registryRootHash);
+   if(k.startsWith("recovery:"))horizon=Math.min(horizon,v.envelope.generation);
+   if(k.startsWith("checkpoint:")&&v){registries.add(v.registryRootHash);horizon=Math.min(horizon,v.envelope.generation);}
+   if(k.startsWith("backup:")&&v.state==="copying")horizon=Math.min(horizon,v.source.generation);
+   if(k.startsWith("temporary:")&&v.publication){const e=v.publication.envelope;horizon=Math.min(horizon,e.generation);registries.add(parseCommitRoot(await pages.hashed(e.rootHash,"visual-registry/roots",64*1024)).roots.registry);}
+  }
+  for(const session of this.pins.sessions.values()){const d=session.snapshot;horizon=Math.min(horizon,d.generation??d.envelope?.generation??0);if(d.registryRootHash)registries.add(d.registryRootHash);for(const ref of d.historyRefs??[])refs.push(hashJson(ref));}
+  const needed=new Set(),want=key=>{while(key&&!needed.has(key)){needed.add(key);const row=loc.get(key);key=row?.kind==="delta"?hashJson(row.base):null;}};
+  for(const hash of registries){const registry=hash===s.root.roots.registry?s.indices.registry:await pages.read(hash,"registry");for(const [k,ref]of registry)if(k.startsWith("entity:"))want(hashJson(ref));}
+  for(const key of refs)want(key);
+  // Paths an active GC plan holds stay with that plan.
+  const held=new Set();for(const [k,v]of ret)if(k.startsWith("gc:")&&!["complete","failed"].includes(v.state))for(const c of (await readGcPlan(this.files,v)).candidates)held.add(c.path);
+  const owners=new Set();for(const [k,v]of ret)if(k.startsWith("temporary:"))owners.add(v.owner.id);
+  const claimDir="visual-temporaries/claims";
+  if(await this.files.exists(claimDir))for(const name of await readdir(this.files.path(claimDir)))if(/^[0-9a-f-]{36}\.json$/.test(name))owners.add((await readTemporaryClaim(this.files,name.slice(0,-5))).owner.id);
+  const journalGone=async id=>{for(const name of ["intent.json","prepared.json","outcome.json"]){const path="visual-transactions/"+id.slice(3)+"/"+name;if(held.has(path)||await this.files.exists(path))return false;}return true;};
+  const bucket=key=>hashJson(key).slice(0,2),touched={locator:new Set(),ledger:new Set(),commitIndex:new Set(),retention:new Set()};
+  const fits=list=>{const extra=list.filter(([index,key])=>!touched[index].has(bucket(key))).length,used=Object.values(touched).reduce((n,t)=>n+t.size,0);if(used+extra>budget)return false;for(const [index,key]of list)touched[index].add(bucket(key));return true;};
+  const locatorChanges=new Map(),ledgerChanges=new Map(),commitIndexChanges=new Map(),retentionChanges=new Map(),folders=new Set(),quarantines=new Set();let full=false;
+  const ledgerAfter=new Set(s.indices.ledger.keys());
+  for(const [id,m]of s.indices.commitIndex){
+   if(m.generation>=horizon||id===s.root.commitId||owners.has(id.slice(3)))continue;
+   if(m.requestKeyDigest!==null&&s.indices.ledger.get(m.requestKeyDigest)?.kind!=="tombstone")continue;
+   if(!await journalGone(id))continue;
+   const list=[["commitIndex",id],["retention","journal-compacted:"+id],...(m.requestKeyDigest?[["ledger",m.requestKeyDigest],["retention","journal-key:"+m.requestKeyDigest]]:[])];
+   if(!fits(list)){full=true;break;}
+   commitIndexChanges.set(id,undefined);if(ret.has("journal-compacted:"+id))retentionChanges.set("journal-compacted:"+id,undefined);
+   if(m.requestKeyDigest){ledgerChanges.set(m.requestKeyDigest,undefined);ledgerAfter.delete(m.requestKeyDigest);if(ret.has("journal-key:"+m.requestKeyDigest))retentionChanges.set("journal-key:"+m.requestKeyDigest,undefined);}
+   folders.add(id.slice(3));
+  }
+  for(const [k,v]of ret){
+   if(full)break;
+   let drop=false;
+   // An aborted transaction's proof, once its journal is gone, explains nothing.
+   if(k.startsWith("journal-compacted:")&&v.outcome==="aborted"&&!s.indices.commitIndex.has(v.commitId)&&await journalGone(v.commitId)){drop=true;folders.add(v.commitId.slice(3));}
+   if(k.startsWith("journal-key:")&&!ledgerAfter.has(k.slice(12)))drop=true;
+   if(k.startsWith("gc:")&&v.state==="complete"&&(await readGcPlan(this.files,v)).sourceGeneration<horizon){drop=true;quarantines.add(k.slice(3));}
+   if(!drop||retentionChanges.has(k))continue;
+   if(!fits([["retention",k]])){full=true;break;}
+   retentionChanges.set(k,undefined);
+  }
+  for(const [key,row]of loc){
+   if(full)break;
+   let next;
+   if(!needed.has(key))next=undefined;
+   else if(row.kind==="full"&&row.alternative&&!needed.has(hashJson(row.alternative.base))){const {alternative,...rest}=row;next=rest;}
+   else continue;
+   if(!fits([["locator",key]])){full=true;break;}
+   locatorChanges.set(key,next);
+  }
+  const changes=locatorChanges.size+ledgerChanges.size+commitIndexChanges.size+retentionChanges.size;
+  if(!changes)return {pruned:0,horizon,more:false};
+  await this.publish("history-prune",async()=>({locatorChanges,ledgerChanges,commitIndexChanges,retentionChanges,result:{horizon,versions:locatorChanges.size,memberships:commitIndexChanges.size,retention:retentionChanges.size}}));
+  // Journal folders are empty by now; an interrupted removal leaves an empty
+  // folder that recovery skips and the next prune removes.
+  let removed=0;for(const id of folders){try{await rmdir(this.files.path("visual-transactions/"+id));removed++;}catch(e){if(!["ENOENT","ENOTEMPTY","EEXIST"].includes(e.code))throw e;}}
+  if(removed)await this.files.syncDirectory(this.files.path("visual-transactions"),"history-prune");
+  for(const id of quarantines){try{await rmdir(this.files.path("gc-quarantine/"+id));}catch(e){if(!["ENOENT","ENOTEMPTY","EEXIST"].includes(e.code))throw e;}}
+  return {pruned:changes,horizon,versions:locatorChanges.size,memberships:commitIndexChanges.size,folders:removed,more:full};
+ }
+ async expireAcks({limit=64}={}){
+  if(!this.canAge())return {compacted:0};
+  const now=this.now(),selected=[...this.owner.current.indices.ledger].filter(([,e])=>e.kind==="ack"&&now-Date.parse(e.acceptedAt)>=ACK_WINDOW).slice(0,limit);
+  if(!selected.length)return {compacted:0};
+  return this.publish("ledger-compaction",async()=>({ledgerChanges:new Map(selected.map(([key,e])=>[key,{kind:"tombstone",record:{key:e.key,payloadHash:e.payloadHash,commitId:e.commitId,resultHash:e.resultHash,acceptedAt:e.acceptedAt}}])),result:{compacted:selected.length}})).then(r=>r.result);
+ }
+ // One automatic pass: age ACKs out of the window, prune what no retained root
+ // needs, advance every GC plan that can progress, and plan the next batch.
+ async autoCompact({steps=8}={}){
+  const report={acks:0,pruned:0,gc:[]};
+  for(let i=0;i<steps;i++){const r=await this.expireAcks();report.acks+=r.compacted;if(r.compacted<64)break;}
+  for(let i=0;i<steps;i++){const r=await this.prune();report.pruned+=r.pruned;report.horizon=r.horizon;if(!r.more)break;}
+  const due=v=>v.state!=="waiting-grace"||(v.quarantinedAtMs!==null&&this.canAge()&&this.now()-v.quarantinedAtMs>=DAY);
+  for(const [k,v]of [...this.owner.current.indices.retention])if(k.startsWith("gc:")&&!["complete","failed"].includes(v.state)&&due(v)){const r=await this.gc.step(k.slice(3));report.gc.push({id:r.id,state:r.state,deleted:r.deleted});}
+  const planned=await this.gc.plan({sweep:true,limit:GC_MAX_CANDIDATES});
+  if(planned.planned){const r=await this.gc.step(planned.id);report.gc.push({id:r.id,state:r.state,candidates:planned.candidates,moved:r.moved});}
+  return report;
+ }
  async pin(args={}){
   const current=this.owner.current,registry=args.registryRootHash??current.root.roots.registry,resolver=current.indices.retention.get("registry:"+registry);
   if(!resolver)fail("STALE_CURSOR","Historical registry is no longer resolvable");
@@ -92,6 +184,8 @@ export class LifecycleManager {
    if(action==="clock"){integrity(Number.isSafeInteger(args.nowMs)&&args.nowMs>=0,"Invalid test clock");this.clockMs=args.nowMs;return await this.publishPolicy("clock-observation",()=>{});}
    if(action==="compact")return await this.compactStep();
    if(action==="ledger")return await this.compactLedger();
+   if(action==="prune")return await this.prune(args);
+   if(action==="autoCompact")return await this.autoCompact(args);
    if(action==="pin")return await this.pin(args);
    if(action==="readPin")return await this.readPin(args.id);
    if(action==="releasePin")return await this.pins.release(args.id);

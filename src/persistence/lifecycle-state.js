@@ -4,7 +4,11 @@ import { CurrentEnvelopeSchema, RecoveryResolverSchema } from "./commit-root-sch
 import { fail } from "./errors.js";
 import { TemporaryRecoverySchema } from "./temporary-attribution.js";
 export const DAY=24*60*60*1000, ACK_WINDOW=7*DAY;
-export const LifecycleOptionsSchema=z.object({enabled:z.literal(true),autoMaintenance:z.boolean().default(true),
+// A GC plan holds at most this many candidates; all active plans together at
+// most GC_OWNERSHIP. History compaction needs plans large enough to keep up
+// with what a day of commits leaves behind.
+export const GC_MAX_CANDIDATES=1024, GC_OWNERSHIP=16384;
+export const LifecycleOptionsSchema=z.object({enabled:z.literal(true),autoMaintenance:z.boolean().default(true),autoCompaction:z.boolean().default(false),
  pinSessions:z.number().int().min(1).max(1024).default(64),pinBytes:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).default(1024**3)}).strict();
 export const PolicySchema=bounded(z.object({schema:z.literal("estampes.lifecycle/1"),options:LifecycleOptionsSchema,
  highWaterMs:z.number().int().min(0),committedAtMs:z.number().int().min(0),contentSinceMaintenance:z.number().int().min(0),
@@ -15,7 +19,7 @@ export const RecoveryRootSchema=z.object({schema:z.literal("estampes.recovery-ro
 export const CheckpointSchema=z.object({schema:z.literal("estampes.named-checkpoint/1"),name:z.string().min(1).max(80),
  registryRootHash:ContentHashSchema,logicalClosureHash:ContentHashSchema,resolverLocatorRootHash:ContentHashSchema,createdAtMs:z.number().int().min(0),envelope:CurrentEnvelopeSchema}).strict();
 export const GcRecordSchema=z.object({schema:z.literal("estampes.gc-state/1"),planHash:ContentHashSchema,state:z.enum(["planned","quarantining","waiting-grace","unlinking","complete","failed"]),
- quarantinedAtMs:z.number().int().min(0).nullable(),moved:z.array(z.number().int().min(0).max(127)),deleted:z.array(z.number().int().min(0).max(127)),unlinking:z.array(z.number().int().min(0).max(127)).optional(),released:z.array(z.number().int().min(0).max(127)).optional(),reason:z.string().max(300).optional()}).strict();
+ quarantinedAtMs:z.number().int().min(0).nullable(),moved:z.array(z.number().int().min(0).max(GC_MAX_CANDIDATES-1)),deleted:z.array(z.number().int().min(0).max(GC_MAX_CANDIDATES-1)),unlinking:z.array(z.number().int().min(0).max(GC_MAX_CANDIDATES-1)).optional(),released:z.array(z.number().int().min(0).max(GC_MAX_CANDIDATES-1)).optional(),reason:z.string().max(300).optional()}).strict();
 export const BackupJobSchema=z.object({schema:z.literal("estampes.backup-job/1"),id:z.string().uuid(),destination:z.string().min(1).max(4096),
  destinationToken:ContentHashSchema,source:CurrentEnvelopeSchema,filesHash:ContentHashSchema,state:z.enum(["copying","complete","cancelled","failed"]),
  fileIndex:z.number().int().min(0),offset:z.number().int().min(0),remainingBytes:z.number().int().min(0),deadlineMs:z.number().int().min(0),reason:z.string().max(300).optional()}).strict();
