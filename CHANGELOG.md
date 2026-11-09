@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- UVA engine, compaction latency (#107): history compaction runs as single units
+  (one GC step, ACK batch, prune, page sweep or GC plan of at most 256 files) instead
+  of one pass every 64 commits, so a commit waits for at most one unit. Units run
+  while the writer has been idle for 3 s (`compactionIdleMs`); under sustained
+  load one runs after every 8 commits while there is work. Over 2500 back-to-back
+  commits p99 fell from 27 s to 8.0 s and the worst commit from 56 s to 9.6 s.
 - UVA engine, automatic history compaction (#106): the canvas store and mirror
   no longer have a lifetime commit limit. History that no recovery point,
   checkpoint or reader needs, and that is older than the 7-day ACK replay window,
