@@ -91,3 +91,16 @@ test("canvas records are ordered by sequence number, never by clock; canvas.json
   assert.deepEqual(chooseCanvas({ legacy: A }), { from: "legacy", canvas: A, adopt: true, seq: 0 });
   assert.equal(chooseCanvas({}), null);
 });
+
+test("image objects are projected back to their inline PNG from the asset bytes", () => {
+  const source = json(legacy());
+  const mapped = mapLegacyCanvas({ ...source, objects: [] }, { ...context(), unlayeredLayerId: UNLAYERED });
+  assert.equal(mapped.status, "mapped", JSON.stringify(mapped.report.issues));
+  const scene = mapped.document.scenes[0], layerId = scene.layers[0].id, bytes = Buffer.from("89504e470d0a1a0a0000", "hex");
+  const ref = { assetId: "asset:sha256:" + "ab".repeat(32) };
+  scene.objects = [{ id: "o9", type: "image", revision: 1, layerId, visibility: "public", provenance: scene.annotations[0].provenance,
+    props: { asset: ref, region: { x: 0, y: 0, x2: .5, y2: .5 }, source: "copy" } }];
+  const canvas = projectCanvas(mapped.document, { unlayeredLayerId: UNLAYERED, images: new Map([[ref.assetId, bytes.toString("base64")]]) });
+  assert.deepEqual(canvas.objects[0].props, { png: "data:image/png;base64," + bytes.toString("base64"), region: { x: 0, y: 0, x2: .5, y2: .5 }, source: "copy" });
+  assert.throws(() => projectCanvas(mapped.document, { unlayeredLayerId: UNLAYERED }), /needs the bytes/);
+});

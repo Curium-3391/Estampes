@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Canvas store phase 2: image layers go into UVA. Canvases with image objects
+  (`add_image_layer`, a promoted base image, a copied canvas) used to stay in
+  their pending file as blocked. Each inline PNG is now verified (decodes as PNG,
+  canonical base64), stored once in the content-addressed asset folder and
+  referenced from the document; restore rebuilds the canvas byte for byte. Moving
+  or editing an image layer is an ordinary object commit. Mirror documents with a
+  promoted base image (transparent background) can be rendered and exported, and
+  exports carry every referenced image. Still blocked: links to other canvases
+  and workspace copies (phase 3). Assets are not garbage-collected yet.
 - UVA engine, compaction latency (#107): history compaction runs as single units
   (one GC step, ACK batch, prune, page sweep or GC plan of at most 256 files) instead
   of one pass every 64 commits, so a commit waits for at most one unit. Units run

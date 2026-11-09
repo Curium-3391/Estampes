@@ -65,16 +65,17 @@ test('a canvas the document model cannot hold is skipped without touching its sa
   const beta = await mkdtemp(join(tmpdir(), 'uva-mirror-blocked-'));
   const stack = await startStack({ cas: false, env: env(beta) });
   t.after(async () => { await stack.close(); await rm(beta, { recursive: true, force: true }); });
-  const imageId = await upload(stack, '#996633');
-  const layer = await stack.call('add_image_layer', { imageId });
-  assert.ok(!layer.isError, JSON.stringify(layer));
-  await stack.call('present_visual', { imageId, annotations: [{ id: 'a1', type: 'point', x: .5, y: .5, label: 'still saved' }] });
+  const imageId = await upload(stack, '#996633'), right = await upload(stack, '#339966');
+  // Links to another canvas need cross-document bindings (not mapped yet).
+  const r = await stack.call('present_visual', { imageId, pairImageId: right, annotations: [{ id: 'a1', type: 'point', x: .5, y: .5, label: 'still saved' }, { id: 'b1', side: 'right', type: 'point', x: .5, y: .5 }],
+    links: [{ id: 'k1', left: 'a1', right: 'b1', label: 'same', confidence: 'low' }] });
+  assert.ok(!r.isError, JSON.stringify(r));
   const status = await until(async () => { const d = (await stack.call('experimental_workspace', { action: 'status' })).structuredContent.diagnostics.mirror; return d.blocked?.[imageId] ? d : null; });
-  assert.match(status.blocked[imageId], /PNG object/);
+  assert.match(status.blocked[imageId], /Relation|endpoint|binding/i);
   // The canvas itself kept the mark.
   const st = await stack.call('get_visual_state', { imageId });
   assert.ok(JSON.stringify(st).includes('still saved'), JSON.stringify(st).slice(0, 400));
-  assert.equal((await stack.call('experimental_workspace', { action: 'list' })).structuredContent.workspaces.length, 0);
+  assert.ok(!(await stack.call('experimental_workspace', { action: 'list' })).structuredContent.workspaces.some(w => w.title === 'Canvas ' + imageId));
 });
 
 test('a burst of canvas edits becomes a few checkpoints, not one commit per edit', { timeout: 90000 }, async t => {

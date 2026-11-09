@@ -137,20 +137,73 @@ test("a legacy canvas moves into UVA on open, and a newer canvas.json written be
   await s.stop();
 });
 
+test("image layers are committed as verified assets and come back byte for byte", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const imageId = await upload(s, "#336633"), other = await upload(s, "#aa2244");
+  // Promotes the base image to an image object and copies another canvas in as a second one.
+  await s.call("add_image_layer", { imageId, sourceImageId: other, region: { x: .1, y: .1, x2: .5, y2: .6 } });
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }] });
+  await committed(s, storage);
+  const before = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  const pngs = before.objects.filter((o) => o.type === "image").map((o) => o.props.png);
+  assert.equal(pngs.length, 2);
+  assert.equal(before.baseAsObject, true);
+  const [doc] = (await s.documents()).filter((d) => d.title === "Canvas " + imageId);
+  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const scene = open.scenes[0];
+  assert.equal(scene.background.kind, "transparent");
+  const images = scene.objects.filter((o) => o.type === "image");
+  assert.equal(images.length, 2);
+  // The document holds references, not the PNG text.
+  for (const o of images) assert.match(o.props.asset.assetId, /^asset:sha256:[0-9a-f]{64}$/);
+  assert.ok(!JSON.stringify(open).includes("data:image/png"));
+  assert.ok(Buffer.byteLength(JSON.stringify(open)) < 64 * 1024);
+  // Render works without a background asset.
+  const r = await s.call("experimental_workspace", { action: "render", documentId: doc.id });
+  const pixels = r.content.find((c) => c.type === "image");
+  assert.ok(pixels?.data.length > 100, JSON.stringify(r.content).slice(0, 300));
+  // The export carries every image the document references.
+  const exported = (await s.call("experimental_workspace", { action: "export", documentId: doc.id })).structuredContent;
+  const zip = await readFile(join(beta, "exports", exported.exportId + ".zip"));
+  for (const o of images) assert.ok(zip.includes(Buffer.from("assets/" + o.props.asset.assetId.slice(13))), o.props.asset.assetId);
+  await s.stop();
+
+  // The legacy copy is gone: the canvas, including every PNG, comes back from UVA.
+  await unlink(canvasJson(storage, imageId));
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["kept"]);
+  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.uva, 1);
+  const after = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  assert.deepEqual(after.objects.filter((o) => o.type === "image").map((o) => o.props.png), pngs);
+  // Moving an image layer is an object edit; it commits and survives a restart.
+  const moved = after.objects.find((o) => o.type === "image" && o.props.region.x === .1);
+  await s.call("edit_scene_object", { imageId, id: moved.id, props: { region: { x: .2, y: .2, x2: .6, y2: .7 } } });
+  await committed(s, storage);
+  await s.stop();
+  await unlink(canvasJson(storage, imageId));
+  s = await start(storage, beta);
+  const last = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  assert.deepEqual(last.objects.find((o) => o.id === moved.id).props.region, { x: .2, y: .2, x2: .6, y2: .7 });
+  assert.equal(last.objects.find((o) => o.id === moved.id).props.png, moved.props.png);
+  await s.stop();
+});
+
 test("a canvas the document cannot hold yet stays in its pending copy and is reported", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta);
-  const imageId = await upload(s, "#336633");
-  await s.call("add_image_layer", { imageId });
-  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }] });
+  const imageId = await upload(s, "#336633"), right = await upload(s, "#663333");
+  // Links to another canvas are phase 3.
+  await s.call("present_visual", { imageId, pairImageId: right, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }, { id: "b1", side: "right", type: "point", x: .5, y: .5, label: "other" }],
+    links: [{ id: "k1", left: "a1", right: "b1", label: "same", confidence: "low" }] });
   const d = await until(async () => { const m = (await s.diagnostics()).mirror; return m.blocked?.[imageId] ? m : null; });
-  assert.match(d.blocked[imageId], /PNG object/);
-  assert.equal((await pendingFiles(storage)).length, 1);
+  assert.match(d.blocked[imageId], /Relation|endpoint|binding/i);
+  assert.ok((await pendingFiles(storage)).length >= 1);
   await s.stop();
   await unlink(canvasJson(storage, imageId));
   s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["kept"]);
-  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.pending, 1);
+  assert.ok((await s.diagnostics()).mirror.canvasStore.restored.pending >= 1);
   await s.stop();
 });
 

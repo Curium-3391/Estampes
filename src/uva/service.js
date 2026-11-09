@@ -25,6 +25,7 @@ const OWNER='owner:uva-beta-instance', KIND='estampes.uva/1', MIRROR_KEY='estamp
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const now=()=>new Date().toISOString();
 const matrix=(w,h)=>[w,0,0,0,h,0,0,0,1];
+const PNG_URI='data:image/png;base64,';
 const same=(a,b)=>canonicalJson(a)===canonicalJson(b);
 const allocated=(kind,requestId,index=0)=>kind+':'+createHash('sha256').update(requestId+':'+index).digest('hex').replace(/^(.{8})(.{4}).(.{3}).(.{3})(.{12}).*$/,'$1-$2-4$3-8$4-$5');
 const principal=author=>({kind:author,principalId:OWNER});
@@ -53,8 +54,9 @@ function checkLimits(d,limits=BETA_LIMITS){
 // UVA documents (see syncCanvas). Mirror documents are read-only through UVA.
 export const MIRROR_LIMITS = Object.freeze({ ...BETA_LIMITS, workspaces:64, revisions:1_000_000, annotations:512 });
 // canvasStore: the UVA document is the canvas's committed record (see
-// src/uva/canvas-store.js). Images stay in legacy storage too until asset intake
-// (phase 2), so the asset caps only bound this store's own copies.
+// src/uva/canvas-store.js). Base images and image-object PNGs are verified assets
+// here; legacy storage still keeps its own copies, so the asset caps only bound
+// this store's copies.
 export const STORE_LIMITS = Object.freeze({ ...MIRROR_LIMITS, workspaces:512, assetBytes:32*1024**2, allAssetBytes:1024**3 });
 export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=10000,canvasStore=false,assetCapBytes,compactionIdleMs}={}){
   if(!enabled)return {enabled:false,async dispatch(){fail('UNSUPPORTED_TARGET','UVA Experimental Beta is disabled; legacy remains available');},async close(){}};
@@ -106,13 +108,20 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     await immutable(path,bytes);await assetBytes(asset);return asset;
   }
   async function verifyAssets(d){
+    // A canvas document may have a transparent background: its base image was
+    // promoted into an image object (add_image_layer). Its marks stay anchored
+    // to the source image, which must still verify.
+    const canvasDoc=Boolean(d.extensions?.[MIRROR_KEY]);
     for(const s of d.scenes){
-      if(s.background.kind!=='asset')fail('UNSUPPORTED_TARGET','Beta scenes require an image background');
-      await assetBytes(s.background.asset);
-      for(const a of s.annotations)if(a.anchor.space!=='image-normalized'||!same(a.anchor.asset,s.background.asset)||!same(a.anchor.sourceToDocument,matrix(s.extent.width,s.extent.height)))fail('UNSUPPORTED_TARGET','Beta editor supports only explicit image-normalized annotations');
-      // Rich legacy image objects need a separate intake mapping; block rather
-      // than omit their bytes. Other existing semantic objects are preserved.
-      if(s.objects.some(o=>o.type==='image'||o.type==='embedded-document'))fail('UNSUPPORTED_TARGET','Image/embedded objects need explicit asset/binding intake; source is unchanged');
+      if(s.background.kind!=='asset'&&!(canvasDoc&&s.background.kind==='transparent'))fail('UNSUPPORTED_TARGET','Beta scenes require an image background');
+      const anchor=s.background.kind==='asset'?s.background.asset:s.annotations[0]?.anchor.asset;
+      if(s.background.kind!=='asset'&&anchor&&anchor.legacyImageId!==d.provenance.legacySetKey)fail('INTEGRITY_ERROR','Marks of a canvas are anchored to another image');
+      if(s.background.kind==='asset')await assetBytes(s.background.asset);
+      for(const a of s.annotations)if(a.anchor.space!=='image-normalized'||!same(a.anchor.asset,anchor)||!same(a.anchor.sourceToDocument,matrix(s.extent.width,s.extent.height)))fail('UNSUPPORTED_TARGET','Beta editor supports only explicit image-normalized annotations');
+      if(s.background.kind!=='asset'&&s.annotations.length)await assetBytes(anchor);
+      // Image objects reference verified assets (canvas documents only); embedded documents need binding intake.
+      if(s.objects.some(o=>o.type==='embedded-document'||(o.type==='image'&&!canvasDoc)))fail('UNSUPPORTED_TARGET','Image/embedded objects need explicit asset/binding intake; source is unchanged');
+      for(const o of s.objects)if(o.type==='image')await assetBytes(o.props.asset);
     }
   }
   async function snapshot(){return store.snapshot();}
@@ -122,9 +131,19 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     for(const s of d.scenes){try{await assetBytes(s.background.asset);}catch(e){assets.push({sceneId:s.id,code:e.code,message:e.message});}}
     return {kind:KIND,document:d,revision:d.revision,diagnostics:await diagnostics(),assetErrors:assets};
   }
-  function legacyEntry(s){
-    const entry={imageId:s.background.asset.legacyImageId,width:s.extent.width,height:s.extent.height,sceneRevision:s.revision,objectSeq:0,layers:s.layers.map(l=>({id:l.id,name:l.name,author:l.author,opacity:l.opacity,visible:l.visible,locked:l.locked})),marks:new Map(s.annotations.map(a=>[a.id,{id:a.id,type:a.type,...a.geometry,...a.style,label:a.label,author:a.provenance.author,layer:a.layerId}])),baseAsObject:false};
-    restoreObjects(entry,s.objects.map(o=>({id:o.id,type:o.type,revision:o.revision,props:o.props,layer:o.layerId,label:o.label,visibility:o.visibility,provenance:{author:o.provenance.author,module:o.provenance.createdBy.moduleId,moduleVersion:o.provenance.createdBy.version}})));
+  // Every image a document references: scene backgrounds, mark anchors and image objects.
+  function documentAssets(d){
+    const out=[];
+    for(const s of d.scenes){
+      if(s.background.kind==='asset')out.push(s.background.asset);
+      for(const a of s.annotations)if(a.anchor.asset)out.push(a.anchor.asset);
+      for(const o of s.objects)if(o.type==='image')out.push(o.props.asset);
+    }
+    return [...new Map(out.map(a=>[a.assetId,a])).values()];
+  }
+  function legacyEntry(s,images=new Map(),imageId=s.background.asset?.legacyImageId){
+    const entry={imageId,width:s.extent.width,height:s.extent.height,sceneRevision:s.revision,objectSeq:0,layers:s.layers.map(l=>({id:l.id,name:l.name,author:l.author,opacity:l.opacity,visible:l.visible,locked:l.locked})),marks:new Map(s.annotations.map(a=>[a.id,{id:a.id,type:a.type,...a.geometry,...a.style,label:a.label,author:a.provenance.author,layer:a.layerId}])),baseAsObject:false};
+    restoreObjects(entry,s.objects.map(o=>({id:o.id,type:o.type,revision:o.revision,props:o.type==='image'&&images.has(o.props.asset.assetId)?{png:PNG_URI+images.get(o.props.asset.assetId),region:o.props.region,...(o.props.source===undefined?{}:{source:o.props.source})}:o.props,layer:o.layerId,label:o.label,visibility:o.visibility,provenance:{author:o.provenance.author,module:o.provenance.createdBy.moduleId,moduleVersion:o.provenance.createdBy.version}})));
     if(entry.objects.size!==s.objects.length)fail('UNSUPPORTED_TARGET','Scene object cannot be projected into the existing module runtime without loss');
     entry.objectSeq=Math.max(0,...s.objects.map(o=>Number(o.id.slice(1))||0));return entry;
   }
@@ -236,7 +255,9 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   }
   async function render(documentId,sceneId){
     const d=await document(documentId),s=d.scenes.find(s=>s.id===sceneId)??(!sceneId?d.scenes[0]:null);if(!s)fail('NOT_FOUND','Unknown visual item');
-    const b=await assetBytes(s.background.asset),entry=legacyEntry(s),hidden=new Set(s.layers.filter(l=>!l.visible).map(l=>l.id));
+    // A transparent background (base image promoted to an image object) renders on white.
+    const b=s.background.kind==='asset'?await assetBytes(s.background.asset):await sharp({create:{width:Math.round(s.extent.width),height:Math.round(s.extent.height),channels:4,background:{r:255,g:255,b:255,alpha:1}}}).png().toBuffer();
+    const entry=legacyEntry(s,await imageData(s),s.background.asset?.legacyImageId??d.provenance.legacySetKey),hidden=new Set(s.layers.filter(l=>!l.visible).map(l=>l.id));
     const svg=renderedObjects(entry).filter(r=>r.object.visibility==='public'&&!hidden.has(r.object.layer)).map(r=>`<g opacity="${s.layers.find(l=>l.id===r.object.layer)?.opacity??1}">${primitivesSvg(r.primitives,s.extent.width,s.extent.height)}</g>`).join('');
     const factor=Math.min(1,1000/Math.max(s.extent.width,s.extent.height)),width=Math.max(1,Math.round(s.extent.width*factor)),height=Math.max(1,Math.round(s.extent.height*factor));
     const bg=await sharp(b,{limitInputPixels:50_000_000}).rotate().resize(width,height,{fit:'fill'}).png().toBuffer();
@@ -248,7 +269,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   }
   async function exportDocument(id){
     const d=await document(id),files=[{name:'document.json',data:Buffer.from(canonicalJson(d))}],seen=new Set();
-    for(const s of d.scenes){const a=s.background.asset;if(!seen.has(a.assetId)){seen.add(a.assetId);files.push({name:'assets/'+a.assetId.slice(13),data:await assetBytes(a),store:true});}}
+    for(const a of documentAssets(d))if(!seen.has(a.assetId)){seen.add(a.assetId);files.push({name:'assets/'+a.assetId.slice(13),data:await assetBytes(a),store:true});}
     files.push({name:'manifest.json',data:Buffer.from(JSON.stringify({schema:'estampes.uva-export/1',production:'NOT QUALIFIED',profile,documentHash:hashJson(d),files:files.map(f=>({name:f.name,hash:hash(f.data)}))}))});
     const bytes=zipFiles(files),digest=hash(bytes);let total=0;for(const name of await readdir(exportRoot))if(name!==digest+'.zip')total+=(await lstat(join(exportRoot,name))).size;if(total+bytes.length>BETA_LIMITS.allExportBytes)fail('LIMIT','Saved exports exceed 128 MiB; copy artifacts off-server before operator cleanup');await immutable(join(exportRoot,digest+'.zip'),bytes);
     return {kind:KIND,exportId:digest,bytes:bytes.length,documentId:id,message:'Saved editable document + original assets. This is a portable logical export, not a Ledger/history backup.'};
@@ -257,11 +278,11 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     // Importing arbitrary external provenance needs the full remapping boundary.
     // Beta offers verified recovery of a locally saved artifact, retaining IDs
     // only in a new store where they cannot collide.
-    const bytes=await service.readExport(op.exportId),files=unzipFiles(bytes,{maxEntries:8,maxTotal:40*1024**2,maxEntry:8*1024**2});
+    const bytes=await service.readExport(op.exportId),files=unzipFiles(bytes,{maxEntries:2+BETA_LIMITS.items*(1+BETA_LIMITS.objects),maxTotal:40*1024**2,maxEntry:8*1024**2});
     const m=JSON.parse(files.get('manifest.json')),d=parseVisualDocument(JSON.parse(files.get('document.json')));
     if(m.schema!=='estampes.uva-export/1'||m.documentHash!==hashJson(d)||!m.files.every(f=>files.has(f.name)&&hash(files.get(f.name))===f.hash))fail('INTEGRITY_ERROR','Export hashes differ');
     const snap=await snapshot();if(snap.documents.some(x=>x.id===d.id))fail('CONFLICT','Recovery requires a separate empty Beta store; existing document is never overwritten');
-    for(const s of d.scenes)await putAsset(files.get('assets/'+s.background.asset.assetId.slice(13)));
+    for(const a of documentAssets(d)){const f=files.get('assets/'+a.assetId.slice(13));if(!f)fail('INTEGRITY_ERROR','Export is missing an image asset');await putAsset(f);}
     const original=structuredClone(d);d.extensions={...d.extensions,'estampes.beta:recoveredSource':{documentHash:hashJson(original),document:original}};
     d.revision=1;for(const s of d.scenes){s.revision=1;s.undo.entries=[];for(const e of [...s.objects,...s.annotations]){e.revision=1;if(e.provenance.lastUserEditRevision)e.provenance.lastUserEditRevision=1;if(e.userEditGuard)e.userEditGuard.guardRevision=1;}}
     // New store history starts at one. The exact original revisions and audit
@@ -271,6 +292,43 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     return {kind:KIND,prepared:{plan,token:createHmac('sha256',signingKey).update(canonicalJson(plan)).digest('hex')},document:d};
   }
 
+  // Verified intake of a canvas's image objects. Each PNG data URI must decode
+  // to a PNG and re-encode to exactly the same text, so the canvas comes back
+  // byte for byte from the asset. The returned source has each image object
+  // replaced by a placeholder the legacy mapping accepts; restoreImageObjects
+  // turns those back into image objects that reference their asset.
+  async function intakeImageObjects(source){
+    const images=[];
+    if(!Array.isArray(source.objects)||!source.objects.some(o=>o?.type==='image'))return {source,images};
+    const objects=[];
+    for(const [i,o] of source.objects.entries()){
+      if(o?.type!=='image'){objects.push(o);continue;}
+      const png=o.props?.png,where='Image object '+JSON.stringify(o.id)+': ';
+      if(typeof png!=='string'||!png.startsWith(PNG_URI))return {blocked:where+'not a PNG data URI'};
+      const base64=png.slice(PNG_URI.length),bytes=Buffer.from(base64,'base64');
+      if(!bytes.length||bytes.toString('base64')!==base64)return {blocked:where+'PNG data is not canonical base64'};
+      if(bytes.length>limits.assetBytes)return {blocked:where+'PNG exceeds '+(limits.assetBytes/1024**2)+' MiB'};
+      try{if((await sharp(bytes,{limitInputPixels:50_000_000}).metadata()).format!=='png')throw new Error('not png');}catch{return {blocked:where+'PNG data does not decode'};}
+      const {png:_,...rest}=o.props??{},props=Object.keys(rest).filter(k=>!['region','source'].includes(k));
+      if(props.length)return {blocked:where+'unknown props '+props.join(', ')};
+      images.push({id:o.id,index:i,bytes,base64,asset:{assetId:'asset:sha256:'+hash(bytes)},region:o.props.region,source:o.props.source});
+      objects.push({...o,type:'info-card',props:{title:'image',rows:[{label:'image',value:'asset'}]}});
+    }
+    return {source:{...source,objects},images};
+  }
+  function restoreImageObjects(d,images){
+    const byId=new Map(images.map(i=>[i.id,i]));
+    for(const o of d.scenes[0].objects){
+      const i=byId.get(o.id);if(!i)continue;
+      o.type='image';o.props={asset:i.asset,region:structuredClone(i.region),...(i.source===undefined?{}:{source:i.source})};
+    }
+  }
+  // assetId -> base64 PNG of every image object in a scene, read and verified.
+  async function imageData(scene){
+    const out=new Map();
+    for(const o of scene.objects)if(o.type==='image'&&!out.has(o.props.asset.assetId))out.set(o.props.asset.assetId,(await assetBytes(o.props.asset)).toString('base64'));
+    return out;
+  }
   // One checkpoint of a legacy canvas into its mirror document. Idempotent: an
   // unchanged canvas (ignoring the save time) writes nothing.
   async function syncCanvas({canvas,bytes,seq=null,legacyHash=null}){
@@ -289,12 +347,18 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const time=now(),digest=Buffer.isBuffer(bytes)?hash(bytes):'',asset={assetId:'asset:sha256:'+digest,legacyImageId:'img:'+digest.slice(0,16)};
     if(source.imageId!==asset.legacyImageId)fail('INTEGRITY_ERROR','Legacy source bytes and image identity disagree');
     const docId=prior?.id??allocated('doc','mirror:'+key),sceneId=prior?.scenes[0].id??allocated('scene','mirror:'+key),layerId=allocated('layer','mirror:'+key);
-    const mapped=mapLegacyCanvas(source,{documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??('Canvas '+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
     const blocked=(message)=>{mirrorState={...mirrorState,blocked:{...(mirrorState?.blocked),[key]:message}};return {status:'blocked',issues:[{message}],sourceHash};};
+    // Image objects (add_image_layer, the promoted base image) carry their PNG
+    // inline. Their bytes become verified assets; the document keeps a reference.
+    const intake=await intakeImageObjects(source);
+    if(intake.blocked)return blocked(intake.blocked);
+    const mapped=mapLegacyCanvas(intake.source,{documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??('Canvas '+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
+    if(mapped.document)restoreImageObjects(mapped.document,intake.images);
     if(!mapped.document)return blocked(mapped.report.issues.filter(i=>i.blocking).map(i=>i.message).join('; '));
     if(mapped.document.scenes[0].annotations.length>limits.annotations||mapped.document.scenes[0].objects.length>limits.objects)return blocked('Canvas exceeds '+limits.annotations+' marks or '+limits.objects+' objects');
     if(!prior&&s.documents.length>=limits.workspaces)return blocked('Store holds the maximum of '+limits.workspaces+' canvases');
     await putAsset(bytes);
+    for(const image of intake.images)await putAsset(image.bytes);
     if(mirrorState?.blocked?.[key]){const {[key]:_,...rest}=mirrorState.blocked;mirrorState={...mirrorState,blocked:rest};}
     const scene=mapped.document.scenes[0];
     // A re-projection must not rewrite who created an entity or when: carry the
@@ -321,7 +385,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     if(canvasStore){
       // The document is the record: keep only what its structure does not carry,
       // and prove the canvas comes back exactly before committing.
-      const projected=projectCanvas(d,{unlayeredLayerId:layerId}),residual=diffJson(projected,source)??null;
+      const projected=projectCanvas(d,{unlayeredLayerId:layerId,images:new Map(intake.images.map(i=>[i.asset.assetId,i.base64]))}),residual=diffJson(projected,source)??null;
       if(hashJson(applyPatch(projected,residual))!==sourceHash)fail('INTEGRITY_ERROR','Canvas does not round-trip through its UVA document; it stays in legacy storage');
       residualBytes=residual?Buffer.byteLength(JSON.stringify(residual)):0;
       // sourceSeq orders this record against the pending copies (src/uva/canvas-store.js).
@@ -339,7 +403,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   async function canvasState(imageId){
     const d=(await snapshot()).documents.find(d=>d.provenance?.legacySetKey===imageId&&d.extensions?.[MIRROR_KEY]);
     const ext=d?.extensions[MIRROR_KEY];if(!ext||ext.authority!=='uva')return null;
-    const canvas=applyPatch(projectCanvas(d,{unlayeredLayerId:allocated('layer','mirror:'+imageId)}),ext.residual);
+    const canvas=applyPatch(projectCanvas(d,{unlayeredLayerId:allocated('layer','mirror:'+imageId),images:await imageData(d.scenes[0])}),ext.residual);
     if(hashJson(canvas)!==ext.sourceHash)fail('INTEGRITY_ERROR','UVA canvas document does not reproduce its recorded canvas hash');
     return {canvas:{...canvas,...(ext.sourceSavedAt?{savedAt:ext.sourceSavedAt}:{})},sourceHash:ext.sourceHash,seq:ext.sourceSeq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
   }

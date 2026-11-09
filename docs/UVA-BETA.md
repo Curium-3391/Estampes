@@ -79,9 +79,17 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   ordinary marks and layers.
 - **Migration** is lazy: a legacy canvas becomes a UVA document the first time it
   is opened. Startup only checks canvases the store already holds.
-- **Not yet in UVA** (phase 2 and later): canvases with links to other canvases,
-  image layers, copies made by workspaces, more than 512 marks or 64 objects, or a
-  store over its limits. Such a canvas keeps its pending file, which then wins on
+- **Image layers** (`add_image_layer`, a promoted base image, a copied canvas)
+  are stored as verified assets. On commit each inline PNG must decode and
+  re-encode to exactly the same base64 text; its bytes go to the content-addressed
+  asset folder and the document keeps only a reference, so a canvas with image
+  layers stays small. On restore the PNG is read back and checked against its hash.
+  A canvas whose base image was promoted has a transparent background; its marks
+  stay anchored to the source image, which must still verify. Assets are never
+  deleted (no asset GC yet), so removing an image layer does not free its bytes.
+- **Not yet in UVA** (phase 3 and later): canvases with links to other canvases,
+  copies made by workspaces, more than 512 marks or 64 objects, or a store over
+  its limits. Such a canvas keeps its pending file, which then wins on
   restore, and is listed under `diagnostics.mirror.blocked`.
 - **Still written:** `canvas.json`, `marks.svg` and `history.jsonl`, so switching
   back to `ESTAMPES_CANVAS_STORE=legacy` keeps every edit. Image bytes are also
