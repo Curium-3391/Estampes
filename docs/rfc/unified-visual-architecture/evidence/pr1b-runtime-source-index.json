@@ -63,11 +63,11 @@
     },
     {
       "path": "src/persistence/filesystem.js",
-      "sha256": "b89b132aec4dd1761ebd88e8bffa0eeca68e72e0bac8468cde4b18d0b5915960"
+      "sha256": "0ecad62a4568290f19c70d0695cda6ea1bdef7a92621b8e7af10eeb953822070"
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "307d5161976aa39b41cc27e64ac2326520e44748348ffcd3eca12e6a9291b57f"
+      "sha256": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887"
     },
     {
       "path": "src/persistence/journal.js",
@@ -312,6 +312,23 @@
           "path": "src/persistence/records.js",
           "from": "e80ff1693f62102ef684e1b7363accb2a421fcdc6d54acf882ff6de265939b3a",
           "to": "da50f9c238a2f1f4dd2c93db0c6b5536eccc22e3ef771830d4ca0820586b6f81"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "history compaction: fingerprint-cached GC location digests",
+      "files": [
+        {
+          "path": "src/persistence/filesystem.js",
+          "from": "b89b132aec4dd1761ebd88e8bffa0eeca68e72e0bac8468cde4b18d0b5915960",
+          "to": "0ecad62a4568290f19c70d0695cda6ea1bdef7a92621b8e7af10eeb953822070"
+        },
+        {
+          "path": "src/persistence/gc.js",
+          "from": "307d5161976aa39b41cc27e64ac2326520e44748348ffcd3eca12e6a9291b57f",
+          "to": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887"
         }
       ]
     }
