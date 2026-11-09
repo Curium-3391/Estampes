@@ -198,10 +198,13 @@ export class GarbageCollector {
   const disposed=new Set((plan.temporaryDispositions??[]).flatMap(d=>[d.claimCandidate,d.temporaryCandidate]).filter(i=>i!==null));
   const releasable=async(i,c)=>!disposed.has(i)&&await this.files.exists(c.path);
   const release=(target,i)=>{target.released=[...new Set([...(target.released??[]),i])].sort((a,b)=>a-b);};
-  const state=structuredClone(record),{paths}=await protectedPaths(this.owner,{cached:true}),synced=new Set();let progressed=0;
+  // The quarantine pass marks only when a candidate is still in place, and
+  // publishes only what changed; a plan waiting out its grace costs no mark.
+  const state=structuredClone(record),synced=new Set(),done=new Set([...state.moved,...(state.released??[])]),unmoved=plan.candidates.some((_,i)=>!done.has(i));let progressed=0;
+  const {paths}=unmoved?await protectedPaths(this.owner,{cached:true}):{paths:new Set()};
   await this.files.point("gc.before-quarantine",{id});
   for(const [i,c]of plan.candidates.entries()){
-   if(state.moved.includes(i)||(state.released??[]).includes(i))continue;
+   if(done.has(i))continue;
    if(paths.has(c.path)){
     if(await releasable(i,c)){release(state,i);progressed++;continue;}
     state.reason="PINNED_OR_REACHABLE";continue;
@@ -216,7 +219,7 @@ export class GarbageCollector {
   await this.files.syncDirectories(synced,"gc");
   if(state.quarantinedAtMs===null&&state.moved.length)state.quarantinedAtMs=this.manager.acceptedTime();
   state.state="quarantining";
-  await this.manager.publish("gc-quarantine-progress",async()=>({retentionChanges:new Map([[key,state]]),result:{id,moved:state.moved.length}}));
+  if(canonicalJson(state)!==canonicalJson({...record,state:record.state==="waiting-grace"?"quarantining":record.state}))await this.manager.publish("gc-quarantine-progress",async()=>({retentionChanges:new Map([[key,state]]),result:{id,moved:state.moved.length}}));
   await this.files.point("gc.after-quarantine",{id});
   // Re-mark after durable quarantine progress; callbacks cannot use the old mark.
   // A reachable path blocks unlinking only while a root would need the
@@ -225,8 +228,17 @@ export class GarbageCollector {
   // verified object; the quarantined copy belongs to the plan alone and follows
   // the grace like any other.
   const blocks=async(marked,i,c)=>marked.paths.has(c.path)&&(disposed.has(i)||!await this.files.exists(c.path));
-  const remarked=await protectedPaths(this.owner,{cached:true});
+  // Before the G2 grace nothing quarantined can be unlinked; the re-mark (and
+  // any early release it would find) waits for the step after the grace.
   let next=structuredClone(this.owner.current.indices.retention.get(key)),waiting=false;const deletionIntent=[];
+  const graceOpen=this.manager.canAge()&&next.quarantinedAtMs!==null&&this.manager.now()-next.quarantinedAtMs>=DAY;
+  const pending=next.moved.filter(i=>!next.deleted.includes(i)&&!(next.released??[]).includes(i));
+  if(!graceOpen&&!priorUnlinking.size&&pending.length&&pending.every(i=>plan.candidates[i].class==="G2")){
+   next.state="waiting-grace";
+   if(canonicalJson(next)!==canonicalJson(this.owner.current.indices.retention.get(key)))await this.manager.publish("gc-unlink-progress",async()=>({retentionChanges:new Map([[key,next]]),result:{id,state:next.state,deleted:next.deleted.length}}));
+   return {id,state:next.state,progressed,moved:next.moved.length,deleted:next.deleted.length,...(next.released?.length?{released:next.released.length}:{})};
+  }
+  const remarked=await protectedPaths(this.owner,{cached:true});
   for(const i of next.moved){
    if(next.deleted.includes(i)||(next.released??[]).includes(i))continue;const c=plan.candidates[i];
    if(await blocks(remarked,i,c)){waiting=true;continue;}
@@ -252,7 +264,7 @@ export class GarbageCollector {
    delete next.unlinking;
   }
   next.state=next.deleted.length+(next.released?.length??0)===plan.candidates.length?"complete":waiting?"waiting-grace":"quarantining";
-  await this.manager.publish("gc-unlink-progress",async()=>({retentionChanges:new Map([[key,next]]),result:{id,state:next.state,deleted:next.deleted.length}}));
+  if(canonicalJson(next)!==canonicalJson(this.owner.current.indices.retention.get(key)))await this.manager.publish("gc-unlink-progress",async()=>({retentionChanges:new Map([[key,next]]),result:{id,state:next.state,deleted:next.deleted.length}}));
   return {id,state:next.state,progressed,moved:next.moved.length,deleted:next.deleted.length,...(next.released?.length?{released:next.released.length}:{})};
  }
 }

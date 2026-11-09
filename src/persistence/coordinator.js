@@ -21,7 +21,12 @@ import { recoverBootstrapTemporary, classifyTemporaryClaims } from "./temporary-
 // Whole-store recovery points kept besides named checkpoints (owner decision 2026-11-06).
 export const RECOVERY_POINTS=20;
 export const ANCHOR_SPAN=32;
-export const RECLAIM_EVERY=32, COMPACT_EVERY=64;
+export const RECLAIM_EVERY=32;
+// History compaction runs one unit at a time (lifecycle.compactUnit). Units run
+// when the queue has been empty for `compactionIdleMs`; under sustained load one
+// unit runs after every UNIT_EVERY_DEBT commits while units keep finding work,
+// and after every UNIT_EVERY_CLEAN commits once one found nothing.
+export const UNIT_EVERY_DEBT=8, UNIT_EVERY_CLEAN=64, COMPACTION_IDLE_MS=3000;
 const stablePrincipal = actor => {
   const p=actor.principal;
   if(p.kind==="user"||p.kind==="assistant")return {owner:actor.authenticatedOwnerId,kind:p.kind,principalId:p.principalId};
@@ -56,6 +61,7 @@ function checkRevisions(before,after){
 export class CommitCoordinator {
   constructor(files,platform){this.files=files;this.platform=platform;this.journal=new IntentJournal(files);this.state="opening";this.current=null;this.queue=Promise.resolve();this.seen=new Map();this.recoveryReport=[];this.lifecycle=null;this.verification=new VerificationCache();this.performance={open:null,transactions:[]};}
   async open(options){
+    this.idleMs=options.compactionIdleMs??COMPACTION_IDLE_MS;this.inlineUnits=options.compactionInline??true; // tests turn both off to schedule compaction themselves
     if(this.state!=="opening")fail("INVALID_INPUT","Coordinator can only be opened once");
     this.platform=await inspectPlatform(this.files.root,this.platform.profile,this.platform.purpose);
     await assertOwnedWriterLease(this.files.root);
@@ -100,6 +106,7 @@ export class CommitCoordinator {
       }
       this.state="ready";
       if(this.lifecycle)await this.lifecycle.onOpen();
+      if(this.lifecycle?.options.autoCompaction)this.#armIdle();
     }catch(e){this.state="read-only-recovery";this.problem={code:"RECOVERY_REQUIRED",cause:e.code??"IO_ERROR",message:String(e.message).slice(0,300)};}
     return this;
   }
@@ -107,7 +114,9 @@ export class CommitCoordinator {
   async maintenance(action,args={}){
     if(action==="readPin"&&this.lifecycle)return this.lifecycle.readPin(args.id);
     const run=async()=>{if(this.state!=="ready")fail("RECOVERY_REQUIRED","Writer is not ready");if(!this.lifecycle)fail("UNSUPPORTED_TARGET","Lifecycle requires explicit isolated opt-in");return this.lifecycle.run(action,args);};
-    const result=this.queue.then(run);this.queue=result.catch(()=>{});return result;
+    this.waiting=(this.waiting??0)+1;const result=this.queue.then(()=>{this.waiting--;return run();});this.queue=result.catch(()=>{});
+    if(this.lifecycle?.options.autoCompaction)this.queue=this.queue.then(()=>this.#armIdle());
+    return result;
   }
   snapshot(){if(!this.current)fail("RECOVERY_REQUIRED","No verified committed snapshot is available");return structuredClone({root:this.current.root,envelope:this.current.envelope,documents:this.current.documents,authority:this.current.authority,state:this.state});}
   diagnostics(){return {state:this.state,problem:this.problem??null,platform:this.platform,filesystemTrust:this.files.trust??null,recovery:this.recoveryReport,trace:[...this.files.trace],contentCommits:this.current?.indices.ledger.size??0,lifecycle:this.lifecycle?.status()??null,reclaim:this.reclaim??null,compaction:this.compaction??null,performance:structuredClone(this.performance)};}
@@ -125,21 +134,49 @@ export class CommitCoordinator {
       if(!this.lifecycle&&this.current.indices.ledger.size>=this.format.maxContentCommits)fail("STORAGE_UNAVAILABLE","Isolated commit budget reached; PR-1D maintenance is not enabled");
       return this.#publish(command,{key,digest,payloadHash},"content");
     };
-    const result=this.queue.then(run);this.queue=result.catch(()=>{});
+    this.waiting=(this.waiting??0)+1;const result=this.queue.then(()=>{this.waiting--;return run();});this.queue=result.catch(()=>{});
     // Unreachable index pages are reclaimed on the same serialized queue, after
     // the ACK is returned, every RECLAIM_EVERY commit requests. Only an integrity
     // failure fences the writer (inside the sweep); anything else is reported in
     // diagnostics and retried at the next interval, never failing the commit.
-    if(this.lifecycle)this.queue=this.queue.then(async()=>{
-      // History compaction (opt-in) retires what no retained root needs, then
-      // GC removes the files only that history reached, after the G2 grace.
-      if(this.lifecycle.options.autoCompaction&&this.state==="ready"&&(this.sinceCompaction=(this.sinceCompaction??0)+1)>=COMPACT_EVERY){this.sinceCompaction=0;
-        try{this.compaction=await this.lifecycle.run("autoCompact",{});}catch(e){this.compaction={error:e.code??"IO_ERROR",message:String(e.message).slice(0,200)};}}
+    if(this.lifecycle?.options.autoCompaction)this.queue=this.queue.then(async()=>{
+      if(this.state!=="ready")return;
+      this.lifecycle.noteContent();
+      this.sinceUnit=(this.sinceUnit??0)+1;
+      if(this.inlineUnits&&this.sinceUnit>=(this.unitDebt===false?UNIT_EVERY_CLEAN:UNIT_EVERY_DEBT))await this.#compactionUnit();
+      this.#armIdle();
+    });
+    else if(this.lifecycle)this.queue=this.queue.then(async()=>{
       this.sinceReclaim=(this.sinceReclaim??0)+1;if(this.state!=="ready"||this.sinceReclaim<RECLAIM_EVERY)return;this.sinceReclaim=0;
       try{this.reclaim=await this.lifecycle.run("reclaimPages",{});}catch(e){this.reclaim={error:e.code??"IO_ERROR",message:String(e.message).slice(0,200)};}
     });
     return result;
   }
+  // One compaction unit on the queue. Failure never fails a commit: an
+  // integrity failure fences the writer inside lifecycle.run; anything else is
+  // reported in diagnostics and the unit is retried later.
+  async #compactionUnit(){
+    this.sinceUnit=0;if(this.state!=="ready"||this.closing)return null;
+    const started=performance.now();
+    try{const r=await this.lifecycle.run("compactUnit",{});this.unitDebt=Boolean(r.unit);this.compaction={...r,ms:Math.round(performance.now()-started),units:(this.compaction?.units??0)+(r.unit?1:0)};return r;}
+    catch(e){this.unitDebt=true;this.compaction={error:e.code??"IO_ERROR",message:String(e.message).slice(0,200),units:this.compaction?.units??0};return null;}
+  }
+  // Idle compaction: after the queue has been empty for the idle delay, run
+  // units one queue task at a time, yielding to any request that arrives.
+  #armIdle(){
+    if(!(this.idleMs>0)||this.closing||this.state!=="ready")return;
+    clearTimeout(this.idleTimer);
+    this.idleTimer=setTimeout(()=>this.#idleUnit(),this.idleMs);this.idleTimer.unref?.();
+  }
+  #idleUnit(){
+    this.idleTimer=null;if(this.waiting>0||this.closing||this.state!=="ready")return;
+    this.queue=this.queue.then(async()=>{
+      if(this.waiting>0||this.closing)return;
+      const r=await this.#compactionUnit();
+      if(r?.unit&&!this.waiting&&!this.closing)setImmediate(()=>this.#idleUnit());
+    });
+  }
+  stopCompaction(){this.closing=true;clearTimeout(this.idleTimer);this.idleTimer=null;}
   async #publish(command,request,mode,maintenance=null){
     const transactionStarted=performance.now(),timings={mode};let stageStarted=transactionStarted;
     const before=this.current,generation=(before?.root.generation??0)+1,commitId=createId("tx"),acceptedAt=new Date(this.lifecycle?this.lifecycle.acceptedTime():Date.now()).toISOString(),plan=new StagingPlan(this.files),pages=new PageStore(this.files,plan);

@@ -56,7 +56,7 @@ export const MIRROR_LIMITS = Object.freeze({ ...BETA_LIMITS, workspaces:64, revi
 // src/uva/canvas-store.js). Images stay in legacy storage too until asset intake
 // (phase 2), so the asset caps only bound this store's own copies.
 export const STORE_LIMITS = Object.freeze({ ...MIRROR_LIMITS, workspaces:512, assetBytes:32*1024**2, allAssetBytes:1024**3 });
-export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=10000,canvasStore=false,assetCapBytes}={}){
+export async function createUvaService({enabled=false,directory:root='',profile='',legacyDirectory='',legacyItems,moduleHost,mirror=false,mirrorMaxCommits=10000,canvasStore=false,assetCapBytes,compactionIdleMs}={}){
   if(!enabled)return {enabled:false,async dispatch(){fail('UNSUPPORTED_TARGET','UVA Experimental Beta is disabled; legacy remains available');},async close(){}};
   if(!root||!['linux-process-crash-test','linux-local-durable'].includes(profile))fail('UNSUPPORTED_STORAGE','Set ESTAMPES_UVA_BETA_DIR and an explicit ESTAMPES_UVA_BETA_PROFILE (linux-process-crash-test is NOT durable)');
   if(canvasStore)mirror=true;
@@ -80,7 +80,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     for(const p of [storeRoot,assetRoot,exportRoot]){privateDirectory(await lstat(p));if(await realpath(p)!==p)fail('UNSUPPORTED_STORAGE','Beta child path was replaced');}
     await lstat(join(storeRoot,'storage-format.json'));await lstat(join(storeRoot,'visual-registry/CURRENT.json'));
   }else for(const p of [storeRoot,assetRoot,exportRoot])await directory(p);
-  const store=await openIsolatedStore(storeRoot,{profile,purpose:'isolated-pr1c-testing',quotaBytes:256*1024**2,lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:Boolean(mirror)}});
+  const store=await openIsolatedStore(storeRoot,{profile,purpose:'isolated-pr1c-testing',quotaBytes:256*1024**2,lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:Boolean(mirror)},...(compactionIdleMs!==undefined?{compactionIdleMs}:{})});
   if(!names.length){
     if(store.status.state!=='ready'){await store.close();fail('RECOVERY_REQUIRED','Fresh store did not initialize safely');}
     await immutable(join(root,'beta-format.json'),Buffer.from(JSON.stringify(format)));

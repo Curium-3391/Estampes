@@ -55,7 +55,7 @@
     },
     {
       "path": "src/persistence/coordinator.js",
-      "sha256": "6077ad2fbf7c8b34bf93ad39989ea883d8eff8eef93dda99bfaa0d63c0319cdf"
+      "sha256": "6d73c64d48ffcb6603b7f6281fb9c6a6e61a7185310e396ff443c31fc8a2f40e"
     },
     {
       "path": "src/persistence/errors.js",
@@ -67,7 +67,7 @@
     },
     {
       "path": "src/persistence/gc.js",
-      "sha256": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887"
+      "sha256": "bf6b83115e2191902d6af9cb84424054d06567cfbb725c681805568c14e4e888"
     },
     {
       "path": "src/persistence/journal.js",
@@ -83,7 +83,7 @@
     },
     {
       "path": "src/persistence/lifecycle.js",
-      "sha256": "ef2ae387d358caa28037dcb02c447f86411a46aee82136be5f45d62ad2a54e80"
+      "sha256": "1a5e86d966c43211f54b0330a0644475ea552faec42292c72c3870f688b60cdf"
     },
     {
       "path": "src/persistence/ownership.js",
@@ -115,7 +115,7 @@
     },
     {
       "path": "src/persistence/worker.js",
-      "sha256": "624f5c331e5eba8bfb04477a635052ad6870ad51fa2717ac9e9e3370628364af"
+      "sha256": "2df556da17d4e3609b3a3a2f562071f0959e2a85d5c1b74dfbed9ff9f5fbdcc1"
     }
   ],
   "amendments": [
@@ -329,6 +329,33 @@
           "path": "src/persistence/gc.js",
           "from": "307d5161976aa39b41cc27e64ac2326520e44748348ffcd3eca12e6a9291b57f",
           "to": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "authorizedBy": "repository owner (Curium), explicit authorization to modify the sealed engine for root-cause durability and performance fixes",
+      "reason": "History compaction runs as single units: idle-time scheduling and per-commit units bound the wait for a commit",
+      "files": [
+        {
+          "path": "src/persistence/coordinator.js",
+          "from": "6077ad2fbf7c8b34bf93ad39989ea883d8eff8eef93dda99bfaa0d63c0319cdf",
+          "to": "6d73c64d48ffcb6603b7f6281fb9c6a6e61a7185310e396ff443c31fc8a2f40e"
+        },
+        {
+          "path": "src/persistence/gc.js",
+          "from": "4a5e74356c184a6b81dcc09a02858e71b787675ee9a98e74dfebc2de2657c887",
+          "to": "bf6b83115e2191902d6af9cb84424054d06567cfbb725c681805568c14e4e888"
+        },
+        {
+          "path": "src/persistence/lifecycle.js",
+          "from": "ef2ae387d358caa28037dcb02c447f86411a46aee82136be5f45d62ad2a54e80",
+          "to": "1a5e86d966c43211f54b0330a0644475ea552faec42292c72c3870f688b60cdf"
+        },
+        {
+          "path": "src/persistence/worker.js",
+          "from": "624f5c331e5eba8bfb04477a635052ad6870ad51fa2717ac9e9e3370628364af",
+          "to": "2df556da17d4e3609b3a3a2f562071f0959e2a85d5c1b74dfbed9ff9f5fbdcc1"
         }
       ]
     }

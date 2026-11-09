@@ -11,7 +11,9 @@ import {ManagedFiles} from "../src/persistence/filesystem.js";
 import {loadCommitted} from "../src/persistence/records.js";
 import {lifecycleFixture, document, titleEdit, command, actor, epoch, TIME, DAY} from "./fixtures/uva-lifecycle.mjs";
 
-const lifecycle={lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:true}};
+// Scheduled units are off here (no idle units, no inline units) so each test
+// decides when compaction runs.
+const lifecycle={lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:true},compactionIdleMs:0,compactionInline:false};
 const ready=f=>assert.equal(f.store.status.state,"ready",JSON.stringify(f.store.status.problem));
 const count=async dir=>{let n=0;for(const e of await readdir(dir,{withFileTypes:true}).catch(()=>[]))n+=e.isDirectory()?await count(join(dir,e.name)):1;return n;};
 const sizes=async f=>{const s=await loadCommitted(new ManagedFiles(f.root));
@@ -92,4 +94,27 @@ test("a 1024-candidate plan over many old journals stays within the maintenance 
   assert.ok(proofs.length>0&&new Set(proofs.map(k=>k)).size<=192,String(proofs.length));
   const second=await f.store.maintenance("gcPlan",{sweep:true,limit:1024});
   assert.equal(second.planned,true,"the remaining journals are planned next");ready(f);
+});
+
+// A commit waits for at most one compaction unit, never a whole pass: each
+// unit is one piece of work, and units run while the writer is idle.
+test("compaction runs one unit at a time, inline under load and while idle",async t=>{
+  const f=await lifecycleFixture(t,{...lifecycle,compactionInline:true}),clock={now:TIME,every:10,step:DAY};
+  let d=await edits(f,1,60,{...document(),persistence:"memory"},clock);
+  clock.now+=2*DAY;await f.store.maintenance("clock",{nowMs:clock.now});
+  // Under load (no idle delay), units ran after commits, one at a time.
+  const inline=(await f.store.diagnostics()).compaction;
+  assert.ok(inline&&inline.units>=1&&!inline.error,JSON.stringify(inline));
+  const kinds=new Set(["gc-step","acks","prune","reclaim","gc-plan",null]);
+  for(let i=0;i<40;i++){const r=await f.store.maintenance("compactUnit");assert.ok(kinds.has(r.unit),JSON.stringify(r));assert.equal(r.report,undefined);if(!r.unit)break;}
+  ready(f);
+  // With an idle delay, units run with no commit at all and drain the work.
+  await f.reopen({compactionIdleMs:50,testClockMs:clock.now+2*DAY});ready(f);
+  d=await edits(f,61,80,d);
+  const documents=(await f.store.snapshot()).documents;
+  let diag;for(let i=0;i<200;i++){diag=(await f.store.diagnostics()).compaction;if(diag?.unit===null)break;await new Promise(r=>setTimeout(r,100));}
+  assert.equal(diag?.unit,null,"idle units drained: "+JSON.stringify(diag));
+  assert.ok(diag.units>=1,JSON.stringify(diag));ready(f);
+  assert.equal((await f.store.maintenance("verify")).verified,true);
+  assert.deepEqual((await f.store.snapshot()).documents,documents);
 });

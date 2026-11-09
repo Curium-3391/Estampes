@@ -2,7 +2,7 @@
 // Durability qualification for the UVA canvas mirror, runnable in any Linux
 // container. It produces raw evidence (JSON) and a pass/fail per scenario.
 //
-//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1] [--edit one] [--progress 250] [--day-every 100]
+//   node scripts/uva-qualify.mjs [--out report.json] [--history 200] [--crashes 25] [--store 1] [--edit one] [--progress 250] [--day-every 100] [--think-ms 1000] [--idle-ms 500]
 //
 // --store 1 opens the store the way ESTAMPES_CANVAS_STORE=uva does (residual, no sidecar).
 // What it can prove:  process-crash safety (SIGKILL), no false ACK, long-history
@@ -55,7 +55,7 @@ function canvas(img, n, tag = '') {
   for (let i = 0; i < n; i++) marks.push({ id: 'm' + i, author: i % 3 ? 'user' : 'gpt', type: 'rect', x: (i % 10) / 12, y: (Math.floor(i / 10) % 10) / 12, x2: (i % 10) / 12 + .05, y2: (Math.floor(i / 10) % 10) / 12 + .05, label: 'mark ' + i + (EDIT_ONE ? (edited.get(i) ?? '') : tag) });
   return { version: 1, imageId: img.imageId, width: 640, height: 400, marks, layers: [], savedAt: new Date().toISOString() };
 }
-const open = (dir, extra = {}) => createUvaService({ enabled: true, directory: dir, profile: PROFILE, mirror: true, mirrorMaxCommits: 1e9, ...(arg('store') ? { canvasStore: true } : {}), ...extra });
+const open = (dir, extra = {}) => createUvaService({ enabled: true, directory: dir, profile: PROFILE, mirror: true, mirrorMaxCommits: 1e9, ...(arg('store') ? { canvasStore: true } : {}), ...(arg('idle-ms') !== undefined ? { compactionIdleMs: +arg('idle-ms') } : {}), ...extra });
 const fresh = async () => { const d = await mkdtemp(join(tmpdir(), 'uva-qual-')); return d; };
 const rss = () => mb(process.memoryUsage().rss);
 
@@ -69,6 +69,9 @@ async function history(n) {
     try { const r = await svc.syncCanvas({ canvas: canvas(img, EDIT_ONE ? 120 : Math.min(i, 120), ' #' + i), bytes: img.bytes }); revision = r.revision; }
     catch (e) { failure = { at: i, code: e.code, message: e.message }; break; }
     lat.push(performance.now() - s);
+    // --think-ms N: the user pauses N ms between saves (idle compaction runs then).
+    const think = +arg('think-ms', 0);
+    if (think) await new Promise(r => setTimeout(r, think));
     // --day-every N (test profile): one simulated day passes every N commits, so
     // the 7-day replay window and the 1-day G2 grace elapse within the run.
     const dayEvery = +arg('day-every', 0);

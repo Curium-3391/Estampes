@@ -178,8 +178,10 @@ for (const phase of ["plan", "before intent", "after intent", "terminal"]) {
     for (const candidate of candidates) assert.equal(await files.exists(candidate.quarantine), true);
     await f.store.maintenance("clock", {nowMs: TIME + DAY});
     if (phase === "before intent") await killAt(f, "gc.after-quarantine", step);
-    if (phase === "after intent") await killAt(f, "after-publication-durable", step, 2);
-    if (phase === "terminal") await killAt(f, "after-publication-durable", step, 3);
+    // Nothing moves in this step, so it publishes only the unlink intent (1st)
+    // and the terminal state (2nd); a no-op quarantine progress is not published.
+    if (phase === "after intent") await killAt(f, "after-publication-durable", step, 1);
+    if (phase === "terminal") await killAt(f, "after-publication-durable", step, 2);
     const {record} = await owned(files, claim.value.claimId);
     if (phase === "before intent") assert.equal(record.unlinking, undefined);
     if (phase === "after intent") assert.ok(record.unlinking.length > 0);
