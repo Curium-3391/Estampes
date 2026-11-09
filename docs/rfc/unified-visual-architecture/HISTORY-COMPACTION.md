@@ -73,6 +73,28 @@ Lifecycle 選項 `autoCompaction`（預設 `false`，UVA 畫布儲存與 mirror 
   計畫持有的路徑。
 - GC 搬移與刪除每批只對每個目錄 fsync 一次，在記錄進度之前完成。
 
+## 驗證
+
+`node scripts/uva-qualify.mjs --only history --history 2500 --store 1 --edit one --day-every 100`
+（單一 120 個標記的畫布，每 100 次提交模擬一天，開發機）：
+
+| 項目 | 壓縮前 | 壓縮後 |
+| --- | --- | --- |
+| 可完成的提交數 | 1915 次後被容量拒絕（108 MB） | 2500 次全部完成 |
+| 磁碟 | 線性成長 | 約 1000 次後持平在 13–18 MB |
+| 提交 p50 | 隨歷史上升 | 約 1000 次後持平在 1.3 s |
+| 冷啟動 | 1915 次時 9.3 s | 2500 次時 7.2 s |
+| 壓縮輪造成的等待 | 無 | p99 27 s，最長 56 s（一次補上數個模擬日） |
+
+測試：`tests/persistence-history-compaction.test.js` 驗證有界性、完整 verify、冷重開、
+舊請求重送得到 `CONFLICT` 而新請求重播 ACK、5 個 SIGKILL 點（ACK/prune 發布、GC 搬移、
+GC 刪除、journal 資料夾移除、暫存寫入）之後 Documents 不變且下一輪完成，以及大型計畫的
+proof 數量不超過 maintenance 上限（修正前會讓 writer 進入唯讀）。
+
 ## 仍未結案
+
+- 壓縮輪在 writer 佇列上執行，每 64 次提交有一次提交要等它。畫布儲存先以 pending 檔案確認
+  儲存，所以畫面不等，但這仍是之後可以縮短的成本。
+
 
 這不改變 Production 資格（**NOT QUALIFIED**：#89、#91 的掉電與原生容量證據仍待補）。
