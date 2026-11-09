@@ -7,7 +7,8 @@ import { readTemporaryClaim } from "./temporary-attribution.js";
 import { BackupManager } from "./backup.js";
 import { readVersion, physicalVersionPaths, stageDelta, MIB } from "./archive.js";
 import { readRegistrySnapshot } from "./records.js";
-import { policyOf, initialPolicy, LifecycleOptionsSchema, checkpointKey, ACK_WINDOW, DAY, GC_MAX_CANDIDATES } from "./lifecycle-state.js";
+import { policyOf, initialPolicy, LifecycleOptionsSchema, checkpointKey, ACK_WINDOW, DAY } from "./lifecycle-state.js";
+const GC_PLAN_UNIT=256,ACK_BATCH=64,RECHECK={acks:16,prune:16,reclaim:32,plan:32,held:64};
 import { integrity, fail, PersistenceError } from "./errors.js";
 import { PageStore } from "./pages.js";
 import { parseCommitRoot, assertCurrentEnvelope } from "./commit-root-schema.js";
@@ -144,23 +145,48 @@ export class LifecycleManager {
   for(const id of quarantines){try{await rmdir(this.files.path("gc-quarantine/"+id));}catch(e){if(!["ENOENT","ENOTEMPTY","EEXIST"].includes(e.code))throw e;}}
   return {pruned:changes,horizon,versions:locatorChanges.size,memberships:commitIndexChanges.size,folders:removed,more:full};
  }
- async expireAcks({limit=64}={}){
+ async expireAcks({limit=ACK_BATCH}={}){
   if(!this.canAge())return {compacted:0};
   const now=this.now(),selected=[...this.owner.current.indices.ledger].filter(([,e])=>e.kind==="ack"&&now-Date.parse(e.acceptedAt)>=ACK_WINDOW).slice(0,limit);
   if(!selected.length)return {compacted:0};
   return this.publish("ledger-compaction",async()=>({ledgerChanges:new Map(selected.map(([key,e])=>[key,{kind:"tombstone",record:{key:e.key,payloadHash:e.payloadHash,commitId:e.commitId,resultHash:e.resultHash,acceptedAt:e.acceptedAt}}])),result:{compacted:selected.length}})).then(r=>r.result);
  }
- // One automatic pass: age ACKs out of the window, prune what no retained root
- // needs, advance every GC plan that can progress, and plan the next batch.
- async autoCompact({steps=8}={}){
-  const report={acks:0,pruned:0,gc:[]};
-  for(let i=0;i<steps;i++){const r=await this.expireAcks();report.acks+=r.compacted;if(r.compacted<64)break;}
-  for(let i=0;i<steps;i++){const r=await this.prune();report.pruned+=r.pruned;report.horizon=r.horizon;if(!r.more)break;}
-  const due=v=>v.state!=="waiting-grace"||(v.quarantinedAtMs!==null&&this.canAge()&&this.now()-v.quarantinedAtMs>=DAY);
-  for(const [k,v]of [...this.owner.current.indices.retention])if(k.startsWith("gc:")&&!["complete","failed"].includes(v.state)&&due(v)){const r=await this.gc.step(k.slice(3));report.gc.push({id:r.id,state:r.state,deleted:r.deleted});}
-  const planned=await this.gc.plan({sweep:true,limit:GC_MAX_CANDIDATES});
-  if(planned.planned){const r=await this.gc.step(planned.id);report.gc.push({id:r.id,state:r.state,candidates:planned.candidates,moved:r.moved});}
-  return report;
+ // Compaction runs as small units on the writer queue, so a commit never waits
+ // for more than one of them. Each unit is one bounded piece of work: a GC plan
+ // step, one batch of ACK expiry, one prune publication, a page sweep, or one
+ // new GC plan. `compactUnit` picks the first that is due and reports which.
+ // Checks that found nothing are not repeated until enough content has been
+ // committed to make new work likely (counted in content commits, not time).
+ noteContent(){this.contentSeen=(this.contentSeen??0)+1;}
+ async compactUnit(){
+  const seen=this.contentSeen??0,steps=this.stepSeen??=new Map(),now=this.now(),since=key=>this.emptyAt?.[key]===undefined||seen-this.emptyAt[key]>=RECHECK[key];
+  const empty=key=>{(this.emptyAt??={})[key]=seen;};
+  // A plan is due when it has not been stepped by this writer, when it still
+  // has work (planned, unlinking), when its grace has newly elapsed, or, if a
+  // retained root held some of its candidates, after more content commits.
+  for(const [k,v]of this.owner.current.indices.retention){
+   if(!k.startsWith("gc:")||["complete","failed"].includes(v.state))continue;
+   const id=k.slice(3),last=steps.get(id),graceAt=v.quarantinedAtMs===null?null:v.quarantinedAtMs+DAY;
+   const due=!last||v.state==="planned"||v.state==="unlinking"||(graceAt!==null&&this.canAge()&&now>=graceAt&&last.at<graceAt)||(v.state==="quarantining"&&seen-last.seen>=RECHECK.held);
+   if(!due)continue;
+   const r=await this.gc.step(id);steps.set(id,{seen,at:now});
+   if(r.state==="complete"){steps.delete(id);delete this.emptyAt?.prune;delete this.emptyAt?.plan;}
+   return {unit:"gc-step",id,state:r.state,moved:r.moved,deleted:r.deleted};
+  }
+  // A check runs again early only when it filled its batch: every maintenance
+  // publication itself leaves superseded pages behind, so "found something"
+  // alone would never settle.
+  if(since("acks")){const r=await this.expireAcks();if(r.compacted<ACK_BATCH)empty("acks");if(r.compacted){delete this.emptyAt?.prune;return {unit:"acks",...r};}}
+  if(since("prune")){const r=await this.prune();if(!r.more)empty("prune");if(r.pruned){delete this.emptyAt?.plan;return {unit:"prune",...r};}}
+  if(since("reclaim")){empty("reclaim");return {unit:"reclaim",...await reclaimIndexPages(this.owner)};}
+  if(since("plan")){const r=await this.gc.plan({sweep:true,limit:GC_PLAN_UNIT});if(!r.planned||r.candidates<GC_PLAN_UNIT)empty("plan");if(r.planned)return {unit:"gc-plan",...r};}
+  return {unit:null};
+ }
+ // Every unit until none has work (tests and the explicit maintenance action).
+ async autoCompact({units=256}={}){
+  this.emptyAt={};const report=[];
+  for(let i=0;i<units;i++){const r=await this.compactUnit();if(!r.unit)break;report.push(r);}
+  return {units:report.length,report:report.slice(-16)};
  }
  async pin(args={}){
   const current=this.owner.current,registry=args.registryRootHash??current.root.roots.registry,resolver=current.indices.retention.get("registry:"+registry);
@@ -186,6 +212,7 @@ export class LifecycleManager {
    if(action==="ledger")return await this.compactLedger();
    if(action==="prune")return await this.prune(args);
    if(action==="autoCompact")return await this.autoCompact(args);
+   if(action==="compactUnit")return await this.compactUnit();
    if(action==="pin")return await this.pin(args);
    if(action==="readPin")return await this.readPin(args.id);
    if(action==="releasePin")return await this.pins.release(args.id);

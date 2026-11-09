@@ -33,8 +33,8 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
 - Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
 - **History compaction.** The store keeps what its 20 recovery points, named
   checkpoints and readers need, plus about the last 7 days of commits (the ACK
-  replay window). Older history is retired automatically every 64 commits and its
-  files are deleted after a 1-day grace. See
+  replay window). Older history is retired automatically in small steps, mostly
+  while the writer is idle, and its files are deleted after a 1-day grace. See
   [history compaction](rfc/unified-visual-architecture/HISTORY-COMPACTION.md).
   `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) only caps commits retained in
   that window; it is no longer a lifetime limit. When it is reached the mirror
@@ -103,9 +103,10 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   simulated day every 100 commits, development machine): all 2500 commits
   succeeded, disk levelled off at 13–18 MB (before compaction, 1915 commits filled
   the store at 108 MB), a commit took 1.3 s (p50, flat after about 1000 commits)
-  and cold start was 7.2 s. Every 64th commit waits for a compaction pass: p99 was
-  27 s, the worst 56 s (a pass that caught up on several simulated days). Saves are
-  acked from their pending file first, so the canvas does not wait for it.
+  and cold start was 7.2 s. Compaction now runs as single units (#107), so a
+  commit waits for at most one: with saves back to back, p99 fell from 27 s to
+  8.0 s and the worst from 56 s to 9.6 s (p50 0.98 s). Saves are acked from their
+  pending file first, so the canvas does not wait for it.
 
 Production qualification is unchanged: **NOT QUALIFIED** (power loss #89/#91).
 
