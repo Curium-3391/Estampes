@@ -25,7 +25,9 @@ function sort(v) {
   return out;
 }
 
-export function projectCanvas(document, { unlayeredLayerId } = {}) {
+// `images` maps the assetId of each image object to its PNG bytes in base64;
+// the canvas carries them inline as a data URI.
+export function projectCanvas(document, { unlayeredLayerId, images = new Map() } = {}) {
   const scene = document.scenes[0], imageId = document.provenance.legacySetKey;
   const layerOf = (id) => (id === unlayeredLayerId ? {} : { layer: id });
   const layers = scene.layers.filter((l) => l.id !== unlayeredLayerId).map((l) => ({
@@ -52,7 +54,13 @@ export function projectCanvas(document, { unlayeredLayerId } = {}) {
   const objects = scene.objects.map((o) => {
     const p = o.provenance, provenance = { author: p.author };
     if (p.createdBy?.kind === "module") { provenance.module = p.createdBy.moduleId; if (p.createdBy.version) provenance.moduleVersion = p.createdBy.version; }
-    return { id: o.id, type: o.type, ...(o.label === undefined ? {} : { label: o.label }), props: clone(o.props), revision: o.revision,
+    let props = clone(o.props);
+    if (o.type === "image") {
+      const data = images.get(o.props.asset.assetId);
+      if (typeof data !== "string") throw new Error("Image object " + o.id + " needs the bytes of " + o.props.asset.assetId);
+      props = { png: "data:image/png;base64," + data, region: clone(o.props.region), ...(o.props.source === undefined ? {} : { source: o.props.source }) };
+    }
+    return { id: o.id, type: o.type, ...(o.label === undefined ? {} : { label: o.label }), props, revision: o.revision,
       ...layerOf(o.layerId), visibility: o.visibility, provenance, ...(o.evidence === undefined ? {} : { evidence: clone(o.evidence) }) };
   });
   return {

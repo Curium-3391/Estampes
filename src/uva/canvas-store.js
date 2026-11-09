@@ -27,7 +27,7 @@
 // `diagnostics.mirror.canvasStore.images` shows the three states separately:
 // the legacy copy, the durable pending seq and the committed seq.
 //
-// A canvas the document cannot hold yet (links to other canvases, image objects,
+// A canvas the document cannot hold yet (links to other canvases, workspace copies,
 // over the store limits) keeps its pending record, which then wins on restore;
 // the reason is in the UVA diagnostics.
 import { mkdir, open, readFile, readdir, rename, unlink, lstat } from "node:fs/promises";
