@@ -160,10 +160,13 @@ const stageError = (stage, i, id, error, code) => {
 const canonical = (v) => Array.isArray(v) ? v.map(canonical)
   : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => [k, canonical(v[k])])) : v;
 export const markEtag = (mark) => createHash("sha256").update(JSON.stringify(canonical(mark))).digest("hex").slice(0, 12);
+// What a refused editor needs to decide without another read: the stored text and place.
+const currentText = (m) => JSON.stringify(Object.fromEntries(["type", "label", "note", "status", "color", "x", "y", "x2", "y2", "author"]
+  .filter((k) => m[k] !== undefined).map((k) => [k, typeof m[k] === "number" ? Math.round(m[k] * 1000) / 1000 : m[k]])));
 const checkIfMatch = (stage, i, id, stored, ifMatch) => {
   if (ifMatch === undefined) return;
   if (!stored) throw stageError(stage, i, id, "ifMatch was given but there is no such mark any more", "CONFLICT");
-  if (markEtag(stored) !== ifMatch) throw stageError(stage, i, id, "the mark changed since you read it (ifMatch " + ifMatch + ", now " + markEtag(stored) + "); read it again and decide whether your edit still applies", "CONFLICT");
+  if (markEtag(stored) !== ifMatch) throw stageError(stage, i, id, "the mark changed since you read it (ifMatch " + ifMatch + ", now " + markEtag(stored) + "). It is now " + currentText(stored) + ". Decide whether your edit still applies and, if so, repeat it with ifMatch " + markEtag(stored), "CONFLICT");
 };
 
 export function applyCanvasChanges(entry, changes) {

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `present_visual` takes `dryRun: true` (one image's canvas): it runs every
+  check of a real call (locked layers, stale `ifMatch`, invalid marks) and
+  reports the refusal, or what would change, without saving anything (#72).
+- A `CONFLICT` refusal now includes the mark's current note, status and place
+  and the etag to pass on a retry, so the assistant can decide without another
+  read (#74).
 - `detect_features` on processed views (#115): pass `derivedViewId` and the
   engine reads that view's pixels (after its geometry and ops, before the
   delivery resize and codec) instead of the source. Before, detection always

@@ -184,7 +184,7 @@ test("ifMatch refuses a stale edit of a mark and leaves the canvas unchanged (#7
   applyCanvasChanges(entry, { annotations: [{ ...base, note: "A", ifMatch: seen }], resolve });
   const afterA = markEtag(canvasMarks(entry)[0]);
   assert.notEqual(afterA, seen);
-  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ ...base, note: "B (stale)", ifMatch: seen }], resolve }), (e) => e.code === "CONFLICT" && /changed since you read it/.test(e.message));
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ ...base, note: "B (stale)", ifMatch: seen }], resolve }), (e) => e.code === "CONFLICT" && /changed since you read it/.test(e.message) && /"note":"A"/.test(e.message) && e.message.includes("repeat it with ifMatch " + afterA));
   assert.throws(() => applyCanvasChanges(entry, { findings: [{ id: "p", note: "B (stale)", ifMatch: seen }], resolve }), (e) => e.code === "CONFLICT");
   assert.equal(canvasMarks(entry)[0].note, "A");
   // A fresh tag, or none (last write wins, as before), still edits.
