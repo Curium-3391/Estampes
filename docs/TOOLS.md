@@ -49,7 +49,7 @@ These are hidden from the model (`visibility: ["app"]`).
 | `load_visual_region` | Returns a higher-resolution tile while you zoom. |
 | `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
 | `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
-| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, move, restyle, delete). |
+| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, move, restyle, delete), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |

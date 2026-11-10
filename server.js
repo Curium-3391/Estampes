@@ -21,6 +21,7 @@ import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
   applyPairChanges, pairLinks, reviewLink, reviewFinding, applyWorkspaceChanges, workspaceLinks, reviewWorkspaceLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
+  undoCanvasEdit, redoCanvasEdit, canvasHistory,
 } from "./src/canvas-state.js";
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
@@ -417,6 +418,8 @@ const EDIT_TEXT = {
   "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
+  "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
+  "redo-edit": (e) => "redid their change to mark " + e.id + " (" + e.steps.join("+") + ")",
   "edit-object": (e) => "edited object " + e.id + (e.props ? " to " + JSON.stringify(e.props) : ""),
   "remove-object": (e) => "deleted object " + e.id,
 };
@@ -1834,12 +1837,17 @@ function makeServer() {
         order: z.record(z.string().regex(/^(left|right|wi-\d{1,4})$/), LayerIds).optional().describe("Layer ids bottom to top, per image (left/right, or workspace item id)"),
         marks: z.array(EditMarkSchema).max(30).default([]),
         remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional() }).strict()).max(30).default([]),
+        history: z.object({ action: z.enum(["undo", "redo"]), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional() }).strict().optional()
+          .describe("Undo or redo the user's last mark edit on one image (move, resize, restyle, relabel, delete). Cannot be combined with other edits."),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove }) => {
+    async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step }) => {
       try {
+        if (step && (layers.length || order || marks.length || remove.length)) throw new Error("history cannot be combined with other edits");
+        const stepOf = (entry) => (step.action === "undo" ? undoCanvasEdit : redoCanvasEdit)(entry);
+        const stateOf = (entries) => Object.fromEntries(entries.map(([key, entry]) => [key, canvasHistory(entry)]));
         const resolveUser = (m) => {
           const { side: _s, item: _i, ...rest } = m;
           return replayUserAnnotation(VisualAnnotationSchema.parse(rest));
@@ -1848,6 +1856,17 @@ function makeServer() {
           // Workspace: the same edits, per item, all or nothing.
           const items = await workspaceItems((await resolveRef(workspaceId)).doc);
           const known = new Set(items.map((it) => it.id));
+          if (step) {
+            if (step.item && !known.has(step.item)) throw new Error("No item " + step.item + " in " + workspaceId);
+            const it = items.find((x) => x.id === (step.item ?? items[0].id));
+            const edit = stepOf(it.entry);
+            await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: [edit.id] });
+            return {
+              content: [{ type: "text", text: (step.action === "undo" ? "Undid" : "Redid") + " the last edit of mark " + edit.id + " on item " + it.id + "." }],
+              structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits: [{ ...edit, side: it.id }], annotations: wsMarks(items), layers: wsLayers(items),
+                links: workspaceLinks(items).map(wsWidgetLink), history: stateOf(items.map((x) => [x.id, x.entry])) },
+            };
+          }
           for (const x of [...layers, ...marks, ...remove]) if (x.item && !known.has(x.item)) throw new Error("No item " + x.item + " in " + workspaceId);
           for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
           const first = items[0].id, of = (x) => x.item ?? first;
@@ -1868,12 +1887,25 @@ function makeServer() {
           const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
           return {
             content: [{ type: "text", text: "Applied " + edits.length + " user edit(s) in workspace " + workspaceId + "." }],
-            structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits, annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) },
+            structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits, annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink),
+              history: stateOf(items.map((x) => [x.id, x.entry])) },
           };
         }
         const left = await ensureImage(imageId), right = pairImageId ? await ensureImage(pairImageId) : null;
         if (!right && [...layers, ...marks, ...remove].some((x) => x.side === "right")) throw new Error("side:'right' needs pairImageId");
         if (!right && order?.right) throw new Error("order.right needs pairImageId");
+        if (step) {
+          if (step.side === "right" && !right) throw new Error("side:'right' needs pairImageId");
+          const entry = step.side === "right" ? right : left, edit = stepOf(entry), side = step.side ?? "left";
+          await saveCanvas(entry, { tool: "edit_visual_canvas", author: "user", changed: [edit.id] });
+          const all = right ? pairMarks(left, right) : canvasMarks(left);
+          return {
+            content: [{ type: "text", text: (step.action === "undo" ? "Undid" : "Redid") + " the last edit of mark " + edit.id + " on " + (side === "right" ? pairImageId : imageId) + "." }],
+            structuredContent: { kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}), edits: [{ ...edit, side }], annotations: all,
+              layers: right ? pairLayers(left, right) : canvasLayers(left), ...(right ? { links: pairLinks(left, right).map(compactLink) } : {}),
+              history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]) },
+          };
+        }
         const pick = (side) => ({
           layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
           order: order?.[side],
@@ -1899,6 +1931,7 @@ function makeServer() {
             edits: [...edits.map((e) => ({ ...e, side: "left" })), ...rightEdits.map((e) => ({ ...e, side: "right" }))],
             annotations: all, layers: right ? pairLayers(left, right) : canvasLayers(left),
             ...(right ? { links: pairLinks(left, right).map(compactLink) } : {}),
+            history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]),
           },
         };
       } catch (error) {
