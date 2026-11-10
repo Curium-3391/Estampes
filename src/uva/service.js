@@ -2,8 +2,13 @@
 // publishes UVA documents. Prepared commands are signed, restart-safe values.
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
-import { mkdir, open, lstat, realpath, readdir, rename, unlink } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, open, lstat, realpath, readdir, rename, unlink, rm } from 'node:fs/promises';
+// A fresh store is made in this order: init.json (our mark), the children,
+// then beta-format.json last. init.lock is never removed.
+const INIT_CHILDREN=new Set(['init.json','init.lock','estampes-pr1c-beta','assets','exports']);
+const INIT_MARK=Buffer.from(JSON.stringify({schema:'estampes.uva-init/1'}));
+import { join, resolve, dirname } from 'node:path';
+import { spawn } from 'node:child_process';
 import sharp from 'sharp';
 import { z } from 'zod';
 import { openIsolatedStore } from '../persistence/lease.js';
@@ -31,7 +36,11 @@ const allocated=(kind,requestId,index=0)=>kind+':'+createHash('sha256').update(r
 const principal=author=>({kind:author,principalId:OWNER});
 const provenance=(author,time)=>({author,createdBy:principal(author),createdAt:time,lastEditedBy:principal(author),lastEditedAt:time,ownership:{kind:'instance',ownerId:OWNER},grounding:author==='user'?'user-pointer':'unverified',editedByUser:false,sourceTrust:'local'});
 async function directory(path) {
-  try { await mkdir(path,{mode:0o700}); } catch(e) { if(e.code!=='EEXIST')throw e; }
+  // A new directory's name is durable only once its parent is fsynced; without
+  // that a power cut can drop the whole folder after commits were acknowledged.
+  let made=false;
+  try { await mkdir(path,{mode:0o700}); made=true; } catch(e) { if(e.code!=='EEXIST')throw e; }
+  if(made)await syncDir(dirname(path));
   privateDirectory(await lstat(path));
   if(await realpath(path)!==path)fail('UNSUPPORTED_STORAGE','Beta paths must not contain symlinks');
   await privateAncestry(path);
@@ -45,6 +54,24 @@ async function immutable(path,bytes){
   const temp=path+'.'+randomUUID()+'.tmp';const fd=await open(temp,'wx',0o600);
   try{await fd.writeFile(bytes);await fd.sync();}finally{await fd.close();}
   try{await rename(temp,path);await syncDir(resolve(path,'..'));}finally{await unlink(temp).catch(e=>{if(e.code!=='ENOENT')throw e;});}
+}
+// Held while the folder is inspected and, if needed, initialized, outside the
+// tree a recovery may remove: a second process on the same folder waits its
+// turn here, so it can never take another process's initialization in
+// progress for an interrupted one. Afterwards the store's own writer lease
+// keeps a second process out.
+async function holdInitLock(root){
+  const path=join(root,'init.lock');
+  const fd=await open(path,constants.O_RDWR|constants.O_CREAT|constants.O_NOFOLLOW,0o600);
+  try{privateFile(await fd.stat());}finally{await fd.close();}
+  const child=spawn('/usr/bin/flock',['-n','-E','73',path,'sh','-c','echo locked; exec cat >/dev/null'],{stdio:['pipe','pipe','ignore']});
+  const ok=await new Promise(done=>{let out='';child.stdout.on('data',b=>{out+=b;if(out.includes('locked'))done(true);});child.once('exit',()=>done(false));child.once('error',()=>done(false));});
+  if(!ok){child.kill('SIGKILL');fail('STORAGE_UNAVAILABLE','Another process holds this UVA folder');}
+  child.unref();child.stdin.unref?.();child.stdout.unref?.();child.stdout.destroy();
+  return ()=>{child.stdin.destroy();child.kill('SIGKILL');};
+}
+async function initMarked(root){
+  try{const b=await bytesAt(join(root,'init.json'),4096);return b.equals(INIT_MARK);}catch{return false;}
 }
 function checkLimits(d,limits=BETA_LIMITS){
   if(d.scenes.length>limits.items||d.revision>limits.revisions||d.scenes.reduce((n,s)=>n+s.annotations.length,0)>limits.annotations||d.scenes.reduce((n,s)=>n+s.objects.length,0)>limits.objects||Buffer.byteLength(canonicalJson(d))>limits.documentBytes)fail('LIMIT','Experimental workload limit reached; export and start a new copy');
@@ -69,12 +96,34 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   // Creation is deliberately non-recursive: the operator selects an existing,
   // trusted parent. Never chmod or adopt an existing public directory.
   await directory(root);
-  const names=await readdir(root);
-  if(names.length&&!names.includes('beta-format.json'))fail('UNSUPPORTED_STORAGE','Unrecognized Beta directory; select a new empty private directory');
+  const releaseInit=await holdInitLock(root);
   const storeRoot=join(root,'estampes-pr1c-beta'),assetRoot=join(root,'assets'),exportRoot=join(root,'exports');
-  let format;
+  let names,format,store;
+  try{
+  names=(await readdir(root)).filter(n=>n!=='init.lock');
+  // A cut while init.json itself was being installed leaves only its
+  // temporary file: nothing else was made yet, so start from empty.
+  const markTemp=/^init\.json\.[0-9a-f-]{36}\.tmp$/;
+  if(names.length&&names.every(n=>markTemp.test(n))){
+    for(const n of names){const st=await lstat(join(root,n));if(!st.isFile())fail('UNSUPPORTED_STORAGE','Unrecognized Beta directory; select a new empty private directory');}
+    for(const n of names)await unlink(join(root,n));
+    await syncDir(root);names=[];
+  }
+  // beta-format.json is written last, after the store is ready, and the
+  // service returns only after that. A folder that carries our init.json mark,
+  // holds only our own children and lacks beta-format.json is therefore an
+  // initialization a power cut interrupted: nothing in it was ever
+  // acknowledged. Start it again instead of refusing forever. Without the
+  // mark the folder is not provably ours and is refused untouched.
+  if(names.length&&!names.includes('beta-format.json')&&names.every(n=>INIT_CHILDREN.has(n)||/^(beta-format|init)\.json\.[0-9a-f-]{36}\.tmp$/.test(n))&&await initMarked(root)){
+    for(const n of names){const p=join(root,n),st=await lstat(p);if(st.isDirectory())privateDirectory(st);}
+    for(const n of names)if(n!=='init.json')await rm(join(root,n),{recursive:true,force:true});
+    await syncDir(root);names=[];
+  }
+  if(names.length&&!names.includes('beta-format.json'))fail('UNSUPPORTED_STORAGE','Unrecognized Beta directory; select a new empty private directory');
   if(!names.length){
     format={schema:'estampes.uva-beta/1',profile,planKey:randomBytes(32).toString('hex')};
+    if(!await initMarked(root))await immutable(join(root,'init.json'),INIT_MARK);
 
   }else format=JSON.parse((await bytesAt(join(root,'beta-format.json'),4096)).toString());
   if(format.schema!=='estampes.uva-beta/1'||format.profile!==profile||!/^[0-9a-f]{64}$/.test(format.planKey))fail('UNSUPPORTED_STORAGE','Incompatible Beta format/profile; never promote a test store to durable');
@@ -82,22 +131,32 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     for(const p of [storeRoot,assetRoot,exportRoot]){privateDirectory(await lstat(p));if(await realpath(p)!==p)fail('UNSUPPORTED_STORAGE','Beta child path was replaced');}
     await lstat(join(storeRoot,'storage-format.json'));await lstat(join(storeRoot,'visual-registry/CURRENT.json'));
   }else for(const p of [storeRoot,assetRoot,exportRoot])await directory(p);
-  const store=await openIsolatedStore(storeRoot,{profile,purpose:'isolated-pr1c-testing',quotaBytes:256*1024**2,lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:Boolean(mirror)},...(compactionIdleMs!==undefined?{compactionIdleMs}:{})});
+  store=await openIsolatedStore(storeRoot,{profile,purpose:'isolated-pr1c-testing',quotaBytes:256*1024**2,lifecycle:{enabled:true,autoMaintenance:false,autoCompaction:Boolean(mirror)},...(compactionIdleMs!==undefined?{compactionIdleMs}:{})});
   if(!names.length){
     if(store.status.state!=='ready'){await store.close();fail('RECOVERY_REQUIRED','Fresh store did not initialize safely');}
     await immutable(join(root,'beta-format.json'),Buffer.from(JSON.stringify(format)));
   }
+  }finally{releaseInit();}
   const signingKey=Buffer.from(format.planKey,'hex');let queue=Promise.resolve();
   let mirrorState=null;const mirrorStatus=()=>mirror?{enabled:true,mode:canvasStore?'canvas-store':'mirror',authority,...(mirrorState??{})}:{enabled:false};
   const serial=fn=>{const p=queue.then(fn,fn);queue=p.catch(()=>{});return p;};
   const diagnostics=async()=>{
     const d=await store.diagnostics();
-    return {enabled:true,experimental:true,production:'NOT QUALIFIED',durability:d.platform.durability,profile,state:d.state,problem:d.problem,limits,mirror:mirrorStatus(),contentCommits:d.contentCommits,maintenance:d.lifecycle,assetCommitBoundary:'verified immutable assets are installed before document publication; no cross-store transaction or asset GC',qualification:'process restart only; filesystem and power-loss qualification remains open'};
+    return {enabled:true,experimental:true,production:'NOT QUALIFIED',durability:d.platform.durability,profile,state:d.state,problem:d.problem,limits,mirror:mirrorStatus(),contentCommits:d.contentCommits,maintenance:d.lifecycle,assetCommitBoundary:'verified immutable assets are installed before document publication; no cross-store transaction or asset GC',qualification:'process restart; power cut simulated at every fsync (docs/UVA-POWERLOSS.md); whether the host disk honours fsync is not qualified'};
   };
   async function assetBytes(asset){
     if(!/^asset:sha256:[0-9a-f]{64}$/.test(asset.assetId))fail('INVALID_INPUT','Invalid asset identity');
     const digest=asset.assetId.slice(13),b=await bytesAt(join(assetRoot,digest),limits.assetBytes).catch(e=>{fail('STORAGE_UNAVAILABLE','Missing/unreadable Beta image asset; restore a saved export',{cause:e.code});});
     if(hash(b)!==digest)fail('INTEGRITY_ERROR','Beta asset content hash differs');return b;
+  }
+  // The image bytes of a legacy image id, from the verified asset store (a
+  // power cut can take the unsynced legacy copy). Null when no asset has them.
+  async function imageBytes(imageId){
+    if(!/^img:[0-9a-f]{16}$/.test(imageId))return null;
+    for(const name of await readdir(assetRoot))if(/^[0-9a-f]{64}$/.test(name)&&name.startsWith(imageId.slice(4))){
+      try{return await assetBytes({assetId:'asset:sha256:'+name});}catch{/* a damaged copy: try another */}
+    }
+    return null;
   }
   async function putAsset(bytes){
     if(!Buffer.isBuffer(bytes)||!bytes.length||bytes.length>limits.assetBytes)fail('LIMIT','Image asset must be 1..'+(limits.assetBytes/1024**2)+' MiB');
@@ -463,7 +522,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     return {value:ext.value,valueHash:ext.valueHash,seq:ext.seq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
   }
   async function recordKeys(){return (await snapshot()).documents.map(d=>d.extensions?.[RECORD_KEY]?.key).filter(Boolean);}
-  const service={enabled:true,store,root,diagnostics,canvasStore,canvasState,canvasImages,syncCanvas:(input)=>serial(()=>syncCanvas(input)),recordState,recordKeys,syncRecord:(input)=>serial(()=>syncRecord(input)),noteMirror(patch){mirrorState={...mirrorState,...patch};},async stageRecovery(bytes){if(bytes.length>40*1024**2)fail('LIMIT','Recovery artifact exceeds limit');const id=hash(bytes);await immutable(join(exportRoot,id+'.zip'),bytes);return id;},async close(){await queue;await store.close();},async readExport(id){if(!/^[0-9a-f]{64}$/.test(id))fail('INVALID_INPUT','Invalid export identity');const b=await bytesAt(join(exportRoot,id+'.zip'),40*1024**2);if(hash(b)!==id)fail('INTEGRITY_ERROR','Saved export hash differs');return b;},
+  const service={enabled:true,store,root,diagnostics,canvasStore,canvasState,canvasImages,imageBytes,syncCanvas:(input)=>serial(()=>syncCanvas(input)),recordState,recordKeys,syncRecord:(input)=>serial(()=>syncRecord(input)),noteMirror(patch){mirrorState={...mirrorState,...patch};},async stageRecovery(bytes){if(bytes.length>40*1024**2)fail('LIMIT','Recovery artifact exceeds limit');const id=hash(bytes);await immutable(join(exportRoot,id+'.zip'),bytes);return id;},async close(){await queue;await store.close();},async readExport(id){if(!/^[0-9a-f]{64}$/.test(id))fail('INVALID_INPUT','Invalid export identity');const b=await bytesAt(join(exportRoot,id+'.zip'),40*1024**2);if(hash(b)!==id)fail('INTEGRITY_ERROR','Saved export hash differs');return b;},
     async dispatch(input,author='assistant'){
       if(!['user','assistant'].includes(author))fail('FORBIDDEN','Unknown actor');
       const {action,documentId,sceneId}=input;

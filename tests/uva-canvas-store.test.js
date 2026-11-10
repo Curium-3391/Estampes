@@ -333,15 +333,18 @@ test("a save is acknowledged only once its pending record is durable; legacy, pe
   assert.equal(after.committedSeq, undefined);
   await rm(pending, { recursive: true });
 
-  // The next save gets the next sequence number, and its commit is reported.
+  // The next save gets a later sequence number, and its commit is reported.
+  // (The store may first re-record the legacy copy that holds "two", so the
+  // number is 2 or 3 depending on timing; it never reuses 1.)
   await s.call("present_visual", { imageId, annotations: [{ id: "a3", type: "point", x: .6, y: .6, label: "three" }] });
-  assert.equal((await image()).pendingSeq, 2);
+  const seq = (await image()).pendingSeq;
+  assert.ok(seq === 2 || seq === 3, "pendingSeq " + seq);
   await s.stop();
   s = await start(storage, beta);
   await committed(s, storage);
   assert.deepEqual(await s.labels(imageId), ["one", "three", "two"]);
   const [doc] = await s.documents();
   const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
-  assert.equal(open.extensions["estampes.beta:mirror"].sourceSeq, 2);
+  assert.equal(open.extensions["estampes.beta:mirror"].sourceSeq, seq);
   await s.stop();
 });

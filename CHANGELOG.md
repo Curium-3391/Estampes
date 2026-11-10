@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Power-loss simulation for the UVA store (issue #91, `scripts/powerloss/`,
+  docs/UVA-POWERLOSS.md). Every fsync is recorded and each crash point is
+  rebuilt as a power cut could leave the folders. The store, or the whole
+  server through its tools, must reopen with every acknowledged result and
+  accept new writes. It found four gaps, all fixed:
+  - a new UVA folder was not fsynced into its parent;
+  - a first start interrupted by a power cut blocked the store forever (it is
+    now started again when it carries the store's own `init.json` mark, under
+    a lock that keeps a second process out; nothing in it was ever
+    acknowledged);
+  - uploaded images were answered before their files were fsynced;
+  - an image whose legacy copy was lost had no fallback (it now comes back
+    from the UVA asset store and the legacy file is repaired).
 - Fix (#73): `import_workspace_bundle` is now all-or-nothing. A bundle with
   invalid marks, or whose manifest totals (items, marks, user marks) disagree
   with its content, is refused before any workspace is created. Pass
