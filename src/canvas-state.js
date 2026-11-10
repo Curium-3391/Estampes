@@ -8,6 +8,7 @@ import {
   assessmentInput, markRegion, findRejection, bringsNewEvidence, rejectionOf, addRejection, dropRejections,
 } from "./assessment.js";
 import { claimOf, withoutClaim, geometryChanged } from "./visual/annotation-contract.js";
+import { recordChange, undoChange, redoChange, historyState } from "./visual/annotation-history.js";
 import {
   LAYER_NAME_MAX, AUTHOR_NAME, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
@@ -220,7 +221,7 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
 // learns about them from `userEdits` on its next call. All or nothing.
 
 export function editCanvas(entry, { layers = [], order, marks = [], remove = [], resolveUser }) {
-  const restore = snapshotCanvas(entry), state = marksOf(entry), edits = [];
+  const restore = snapshotCanvas(entry), state = marksOf(entry), edits = [], changes = [];
   const fail = (stage, i, id, message) => new Error("edit_visual_canvas " + stage + "[" + i + "] (" + JSON.stringify(id) + "): " + message);
   try {
     entry.layers = layersOf(entry).map((l) => ({ ...l }));
@@ -238,6 +239,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       if (!old) throw fail("remove", i, id, "no such mark");
       if (markLocked(entry, old)) throw fail("remove", i, id, "its layer is locked");
       state.delete(id);
+      changes.push({ before: old, after: null });
       edits.push({ kind: "remove-mark", id, author: old.author, ...(old.label ? { label: old.label } : {}) });
     });
     marks.forEach((edit, i) => {
@@ -248,14 +250,31 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
       const moved = geometryChanged(old, next);
-      state.set(edit.id, { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) });
+      const stored = { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) };
+      state.set(edit.id, stored);
+      changes.push({ before: old, after: stored });
       edits.push({ kind: moved ? "move-mark" : "restyle-mark", id: edit.id, ...(next.label ? { label: next.label } : {}) });
     });
+    for (const change of changes) recordChange(entry, change);
     (entry.userEdits ??= []).push(...edits);
     if (entry.userEdits.length > 60) entry.userEdits.splice(0, entry.userEdits.length - 60);
     return edits;
   } catch (error) { restore(); throw error; }
 }
+
+// Undo / redo the user's last mark edit (move, resize, restyle, relabel,
+// delete). Exact: refused with a HistoryConflict if the mark is no longer as
+// that step left it, or sits in a locked layer. Reported to GPT like any
+// other user edit.
+function stepHistory(entry, step, kind) {
+  const item = step(entry, marksOf(entry), (mark) => markLocked(entry, mark));
+  const edit = { kind, id: item.id, steps: item.kinds };
+  (entry.userEdits ??= []).push(edit);
+  return edit;
+}
+export const undoCanvasEdit = (entry) => stepHistory(entry, undoChange, "undo-edit");
+export const redoCanvasEdit = (entry) => stepHistory(entry, redoChange, "redo-edit");
+export const canvasHistory = (entry) => historyState(entry);
 
 // What the user changed by hand since GPT last looked; read once.
 export function takeUserEdits(entry) {
