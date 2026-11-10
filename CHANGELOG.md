@@ -9,7 +9,9 @@
   accept new writes. It found four gaps, all fixed:
   - a new UVA folder was not fsynced into its parent;
   - a first start interrupted by a power cut blocked the store forever (it is
-    now started again; nothing in it was ever acknowledged);
+    now started again when it carries the store's own `init.json` mark, under
+    a lock that keeps a second process out; nothing in it was ever
+    acknowledged);
   - uploaded images were answered before their files were fsynced;
   - an image whose legacy copy was lost had no fallback (it now comes back
     from the UVA asset store and the legacy file is repaired).

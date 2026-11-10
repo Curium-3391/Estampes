@@ -41,14 +41,31 @@ test("an initialization a power cut interrupted is started again, not refused", 
   await mkdir(join(root, "estampes-pr1c-beta"), { recursive: true, mode: 0o700 });
   await mkdir(join(root, "assets"), { mode: 0o700 });
   await writeFile(join(root, "estampes-pr1c-beta", "storage-format.json"), "");
+  await writeFile(join(root, "init.json"), JSON.stringify({ schema: "estampes.uva-init/1" }), { mode: 0o600 });
   const svc = await createUvaService({ enabled: true, directory: root, profile: "linux-process-crash-test", canvasStore: true });
   assert.equal(svc.store.status.state, "ready");
   await svc.close();
+  // While another process inspects or initializes the folder, a second one is
+  // stopped before it looks inside.
+  const { spawn } = await import("node:child_process");
+  const holder = spawn("/usr/bin/flock", [join(root, "init.lock"), "sh", "-c", "echo held; exec cat >/dev/null"], { stdio: ["pipe", "pipe", "ignore"] });
+  await new Promise((done) => holder.stdout.on("data", (b) => { if (String(b).includes("held")) done(); }));
+  try {
+    await assert.rejects(createUvaService({ enabled: true, directory: root, profile: "linux-process-crash-test", canvasStore: true }), /Another process holds this UVA folder/);
+  } finally { holder.stdin.end(); await new Promise((done) => holder.once("exit", done)); }
+  const again = await createUvaService({ enabled: true, directory: root, profile: "linux-process-crash-test", canvasStore: true });
+  await again.close();
   // A folder with anything else in it is still refused.
   const other = join(dir, "other");
   await mkdir(other, { mode: 0o700 });
   await writeFile(join(other, "notes.txt"), "mine");
   await assert.rejects(createUvaService({ enabled: true, directory: other, profile: "linux-process-crash-test", canvasStore: true }), /Unrecognized Beta directory/);
+  // So is a folder whose children have our names but which never carried our mark.
+  const foreign = join(dir, "foreign");
+  await mkdir(join(foreign, "assets"), { recursive: true, mode: 0o700 });
+  await writeFile(join(foreign, "assets", "important.png"), "keep");
+  await assert.rejects(createUvaService({ enabled: true, directory: foreign, profile: "linux-process-crash-test", canvasStore: true }), /Unrecognized Beta directory/);
+  assert.equal(await readFile(join(foreign, "assets", "important.png"), "utf8"), "keep");
 });
 
 test("an image whose legacy file a power cut emptied comes back from the UVA asset store", { timeout: 120000 }, async (t) => {

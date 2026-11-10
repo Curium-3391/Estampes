@@ -67,6 +67,8 @@ test("browser: with the calculator alone, the launcher offers the Graph canvas a
     await button.click();
     await ui.frame.locator("#panel-canvas svg#surface").waitFor({ state: "visible", timeout: 10000 });
     assert.equal(await ui.frame.locator(".calc").isVisible(), true, "both are on screen");
+    // The launcher re-renders after the canvas panel is shown, so wait for it.
+    await ui.frame.locator(".wb-open", { hasText: "函數圖／畫布" }).waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
     assert.equal(await ui.frame.locator(".wb-open", { hasText: "函數圖／畫布" }).count(), 0, "the button goes away once the canvas is back");
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }

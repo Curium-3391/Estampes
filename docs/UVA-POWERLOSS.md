@@ -75,7 +75,11 @@ The simulation found four gaps. All four are fixed:
   start left a half-made store that every later start refused ("Unrecognized
   Beta directory"). Nothing in it was ever acknowledged, because the format
   file is written last and only then does the service answer. Such a folder
-  is now started again. A folder holding anything else is still refused.
+  is now started again, but only when it carries the `init.json` mark that a
+  fresh start writes before anything else. A folder without the mark, or
+  holding anything else, is still refused untouched. A lock (`init.lock`) held
+  for the server's lifetime stops a second process from taking a start in
+  progress for an interrupted one.
 - **Uploaded images not fsynced.** The legacy store writes image files without
   fsync, so an upload could be answered and then lost. With the UVA store on,
   the image files and their folders are now fsynced before the upload is
