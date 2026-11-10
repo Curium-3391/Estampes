@@ -3,8 +3,8 @@
 // table, and the optional label text is XML-escaped. The legacy-profile
 // output of mark-render.js's markSvg is the reference this must equal.
 import { RENDER_PLAN_VERSION, USER_OPACITY } from "./render-plan.js";
+import { K } from "./ink.js";
 
-const K = 1000 / 640;
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const num = (v) => { if (!Number.isFinite(v)) throw new Error("Non-finite number in render plan"); return v; };
 const xml = (s) => String(s).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c]);

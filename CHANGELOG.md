@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Internal: the server's mark drawing (`markSvg`, verification crops and the
+  canvas render) now draws from the shared RenderPlan (`src/visual/`) instead of
+  its own copy of the ink rules. Output is unchanged byte for byte, checked
+  against a fixture captured before the switch (`tests/visual-render-golden.test.js`).
 - `present_visual` takes `dryRun: true` (one image's canvas): it runs every
   check of a real call (locked layers, stale `ifMatch`, invalid marks) and
   reports the refusal, or what would change, without saving anything (#72).

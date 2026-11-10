@@ -4,13 +4,13 @@ import { createHash } from "node:crypto";
 import { entrySharp } from "../image-store.js";
 import { regionToPixels, pixelsToRegion } from "../image-ops.js";
 import { canvasMarks, canvasLayers } from "../canvas-state.js";
-import { markSvg } from "../mark-render.js";
+import { buildRenderPlan } from "../visual/render-plan.js";
+import { planSvg } from "../visual/render-svg.js";
 import { renderedObjects } from "./scene-ops.js";
 import { primitivesSvg } from "./objects.js";
 
 const canonical = (v) => Array.isArray(v) ? v.map(canonical) : v && typeof v === "object"
   ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v;
-const xml = (s) => String(s).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c]);
 const hiddenIds = (ids) => [...new Set(ids)].sort();
 
 export function canvasRevision(entry, hiddenLayers = []) {
@@ -45,17 +45,13 @@ export async function renderCanvas(entry, { region, maxSide = 1600, format = "pn
   const scale = maxSide / Math.max(px.width, px.height);
   const width = Math.max(1, Math.round(px.width * scale)), height = Math.max(1, Math.round(px.height * scale));
   const actualRegion = pixelsToRegion(px, entry.width, entry.height);
-  const layerOpacity = (id) => layers.find((l) => l.id === id)?.opacity ?? 1;
   // Match the widget's stacking: objects under marks; marks in layer order.
   const known = new Set(layers.map((l) => l.id));
-  const markBody = (m) => markSvg(m, (x, y) => [x * entry.width, y * entry.height], entry.width / 1000) +
-    (labels === "all" && m.label ? `<text x="${m.x * entry.width + 6}" y="${m.y * entry.height - 8}" font-size="${15 * entry.width / 640}" fill="#17212A">${xml(m.label)}</text>` : "");
-  const marksSvg = [null, ...layers.map((l) => l.id)].map((id) => {
-    const own = marks.filter((m) => id === null ? !known.has(m.layer) : m.layer === id);
-    const objectSvg = objects.filter(r=>id===null?!known.has(r.object.layer):r.object.layer===id).map(r=>primitivesSvg(r.primitives,entry.width,entry.height)).join("");
-    return `<g opacity="${layerOpacity(id)}">${objectSvg}` + own.filter((m) => m.author !== "user").map(markBody).join("") +
-      `<g opacity="0.55">${own.filter((m) => m.author === "user").map(markBody).join("")}</g></g>`;
-  }).join("");
+  const plan = buildRenderPlan({ marks, layers });
+  const objectsSvg = (id) => objects.filter((r) => id === null ? !known.has(r.object.layer) : r.object.layer === id)
+    .map((r) => primitivesSvg(r.primitives, entry.width, entry.height)).join("");
+  const labelOf = labels === "all" ? Object.fromEntries(marks.filter((m) => m.label).map((m) => [m.id, m.label])) : {};
+  const marksSvg = planSvg(plan, { width: entry.width, height: entry.height, toPx: entry.width / 1000, objectsSvg, labels: labelOf });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${px.left} ${px.top} ${px.width} ${px.height}" preserveAspectRatio="none">${marksSvg}</svg>`;
   const included = { base: !entry.baseAsObject, objects: objects.map((r) => r.object.id), marks: marks.map((m) => m.id) };
   const warnings = scale > 1 ? ["Base image enlarged by interpolation; vector overlays rendered at output resolution."] : [];
