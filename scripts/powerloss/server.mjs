@@ -50,8 +50,12 @@ async function startServer(run, env = {}, cwd = ROOT) {
   return { call, stop, stderr: () => stderr };
 }
 
+// Key order is not content: objects are compared with sorted keys.
+const canonical = (v) => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x));
 // What a mark must still be after recovery: its kind, label and geometry.
-const fingerprint = (m) => JSON.stringify({ type: m.type, label: m.label ?? null, geometry: m.geometry ?? null });
+const fingerprint = (m) => canonical({ type: m.type, label: m.label ?? null, geometry: m.geometry ?? null });
+// What a workspace must still be: each item's id, what it refers to and where it sits, in order.
+const workspaceItems = (doc) => canonical((doc.items ?? []).map((it) => ({ id: it.id, asset: it.asset ?? null, set: it.set ?? null, placement: it.placement ?? null })));
 
 async function photo(seed) {
   const bytes = await sharp({ create: { width: 320, height: 200, channels: 3, background: { r: seed * 70 % 255, g: 120, b: 60 } } }).png().toBuffer();
@@ -82,7 +86,8 @@ async function workload(run, log) {
       if (i === 3) { await s.call("add_image_layer", { imageId: img.id }); ack({ key: img.id + "/layer", kind: "layer", imageId: img.id }); }
       if (i === 5) {
         const ws = (await s.call("create_workspace", { canvases: images.map((m) => m.id) })).structuredContent.workspaceId;
-        ack({ key: ws, kind: "workspace", items: images.length });
+        const doc = (await s.call("get_workspace_state", { workspace: ws })).structuredContent;
+        ack({ key: ws, kind: "workspace", items: workspaceItems(doc) });
       }
     }
   } finally { await s.stop("SIGTERM"); }
@@ -115,7 +120,7 @@ async function check(events, k, run, scratch) {
         if (!(doc.objects ?? []).some((o) => o.type === "image")) throw new Error(a.imageId + " lost its acknowledged image layer");
       } else if (a.kind === "workspace") {
         const doc = (await s.call("get_workspace_state", { workspace: key })).structuredContent;
-        if (doc.items?.length !== a.items) throw new Error(key + " has " + doc.items?.length + " items, acknowledged " + a.items);
+        if (workspaceItems(doc) !== a.items) throw new Error(key + " items differ from the acknowledged ones: " + workspaceItems(doc).slice(0, 300) + " != " + a.items.slice(0, 300));
       }
     }
     const image = [...state.acks.values()].find((a) => a.kind === "image");
