@@ -43,7 +43,8 @@ function canvas(img, n) {
   for (let i = 0; i < n; i++) marks.push({ id: "m" + i, author: i % 3 ? "user" : "gpt", type: "rect", x: (i % 10) / 12, y: (Math.floor(i / 10) % 10) / 12, x2: (i % 10) / 12 + .05, y2: (Math.floor(i / 10) % 10) / 12 + .05, label: "mark " + i + " of " + n });
   return { version: 1, imageId: img.imageId, width: 320, height: 200, marks, layers: [], savedAt: "2026-11-10T00:00:00.000Z" };
 }
-const fingerprint = (c) => sha(JSON.stringify(c.marks.map((m) => [m.id, m.label, m.x, m.y])));
+// Every field of every mark, in order: id, author, type, label and all of its geometry.
+const fingerprint = (c) => sha(JSON.stringify(c.marks.map((m) => Object.keys(m).sort().map((k) => [k, m[k]]))));
 const openService = (dir, create = createUvaService) => create({ enabled: true, directory: dir, profile: PROFILE, canvasStore: true, compactionIdleMs: 0 });
 async function syncDir(path) { const fd = await open(path, "r"); try { await fd.sync(); } finally { await fd.close(); } }
 
