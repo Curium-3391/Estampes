@@ -1,10 +1,10 @@
 // ESTAMPES_CANVAS_STORE=uva: workspaces, panel surfaces and calculator
-// notebooks are committed to UVA record documents and restored from them.
+// notebooks live only in UVA record documents; no file of theirs is written.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdtemp, rm, readFile, writeFile, readdir, unlink, mkdir } from "node:fs/promises";
+import { mkdtemp, rm, readFile, writeFile, readdir, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -66,68 +66,80 @@ const wsFile = (storage, id) => join(storage, "workspaces", id.slice(3) + ".json
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
 const settled = (s, storage) => until(async () => !(await pendingRecords(storage)).length && (await s.records())?.committed > 0).catch(async (e) => { throw new Error(e.message + ": " + JSON.stringify({ pending: await pendingRecords(storage), records: await s.records(), mirror: (await s.diagnostics()).mirror.lastError })); });
 
-test("chooseRecord orders records by seq and adopts only a file it does not know", () => {
-  const v1 = { id: "ws:1", n: 1 }, v2 = { id: "ws:1", n: 2 }, v3 = { id: "ws:1", n: 3 };
+test("chooseRecord takes the higher seq", () => {
+  const v1 = { id: "ws:1", n: 1 }, v2 = { id: "ws:1", n: 2 };
   assert.equal(chooseRecord({}), null);
-  assert.deepEqual(chooseRecord({ legacy: v1 }), { from: "legacy", value: v1, adopt: true, seq: 0 });
-  const uva = { seq: 4, value: v1, legacyHash: hashJson(v1) }, pending = { seq: 5, value: v2, legacyHash: hashJson(v2) };
-  assert.equal(chooseRecord({ uva, pending, legacy: v2 }).from, "pending", "the higher seq wins");
-  assert.equal(chooseRecord({ uva, pending, legacy: v2 }).repairLegacy, false);
-  const newer = { ...uva, seq: 6, legacyHash: hashJson(v2) };
-  assert.equal(chooseRecord({ uva: newer, pending, legacy: v2 }).from, "uva");
-  assert.equal(chooseRecord({ uva: newer, pending, legacy: v2 }).repairLegacy, true, "a file the latest record knows is rewritten to it");
-  const adopted = chooseRecord({ uva, pending, legacy: v3 });
-  assert.equal(adopted.adopt, true, "a file neither record knows was written behind the server's back");
-  assert.equal(adopted.seq, 5);
-  assert.equal(chooseRecord({ uva, legacy: { ...v1 } }).adopt, false);
+  const uva = { seq: 4, value: v1 }, pending = { seq: 5, value: v2 };
+  assert.deepEqual(chooseRecord({ uva, pending }), { from: "pending", value: v2, seq: 5, log: [] });
+  assert.equal(chooseRecord({ uva: { ...uva, seq: 6 }, pending }).from, "uva");
 });
 
-test("a pending record whose commit failed is committed again without another edit", { timeout: 30000 }, async (t) => {
-  const { storage } = await folders(t);
-  const ws = "ws:" + "ab".repeat(8), doc = { id: ws, name: "w", items: [], revision: 1 };
-  await mkdir(join(storage, "workspaces"), { recursive: true });
-  await writeFile(wsFile(storage, ws), JSON.stringify(doc));
+// An in-memory UVA service: syncRecord fails the first `failures` times.
+function fakeService({ failures = 0 } = {}) {
   let calls = 0;
   const held = new Map();
-  const service = {
+  return {
+    held, get calls() { return calls; },
     noteMirror() {}, recordKeys: async () => [...held.keys()], recordState: async (key) => held.get(key) ?? null,
-    async syncRecord({ key, value, seq }) {
-      if (++calls === 1) throw Object.assign(new Error("disk briefly unavailable"), { code: "EIO" });
-      held.set(key, { value, seq, valueHash: hashJson(value), legacyHash: hashJson(value) });
-      return { status: "created", sourceHash: hashJson(value), seq };
+    async syncRecord({ key, value, seq, log }) {
+      if (++calls <= failures) throw Object.assign(new Error("disk briefly unavailable"), { code: "EIO" });
+      held.set(key, { value, seq, log, valueHash: hashJson(value) });
+      return { status: "created", sourceHash: hashJson(value), logHash: hashJson(log ?? []), seq };
     },
   };
-  const store = await createRecordStore({ service, storageDir: storage, idleMs: 0, scanEveryMs: 50 });
-  t.after(() => store.close());
-  await until(async () => calls >= 1);
-  await until(async () => held.has("workspace/" + ws) && !(await pendingRecords(storage)).length, 10000);
-  assert.ok(calls >= 2, "retried after the failure");
-  assert.deepEqual(held.get("workspace/" + ws).value, doc);
-});
+}
 
-test("an edit that lands while its record is being written is adopted on restart, not overwritten", { timeout: 30000 }, async (t) => {
+test("a write is durable before it resolves, is committed, and a failed commit is tried again", { timeout: 30000 }, async (t) => {
   const { storage } = await folders(t);
-  const ws = "ws:" + "cd".repeat(8), a = { id: ws, name: "A", items: [], revision: 1 }, b = { ...a, name: "B", revision: 2 };
-  await mkdir(join(storage, "workspaces"), { recursive: true });
-  let raced = false;
-  // Commits never happen here; the edit lands between the scan's read and the pending write.
-  const service = { noteMirror() {}, recordKeys: async () => [], syncRecord: async () => { throw new Error("offline"); },
-    async recordState() { if (!raced) { raced = true; await writeFile(wsFile(storage, ws), JSON.stringify(b)); } return null; } };
-  const store = await createRecordStore({ service, storageDir: storage, idleMs: 600000, scanEveryMs: 0 });
-  await writeFile(wsFile(storage, ws), JSON.stringify(a));
-  await store.settle();
-  assert.ok(raced);
-  const [name] = await pendingRecords(storage);
-  const pending = await readJson(join(storage, "uva-pending", "records", name));
-  // The server dies before its next scan would record B (no close()).
-  assert.equal(pending.value.name, "A");
-  assert.equal(pending.legacyHash, hashJson(a), "the pending copy names the content it holds, not the newer file");
-  const again = await createRecordStore({ service: { ...service, recordState: async () => null }, storageDir: storage, idleMs: 600000, scanEveryMs: 0 });
-  await again.close();
-  assert.equal((await readJson(wsFile(storage, ws))).name, "B", "the newer file is adopted, never rewritten to A");
+  const ws = "ws:" + "ab".repeat(8), doc = { id: ws, name: "w", items: [], revision: 1 };
+  const service = fakeService({ failures: 1 });
+  const store = await createRecordStore({ service, storageDir: storage, idleMs: 0, retryEveryMs: 50 });
+  t.after(() => store.close());
+  assert.equal(await store.write("workspace", ws, doc), 1);
+  assert.deepEqual(await store.read("workspace", ws), doc, "read back before its commit, from the durable pending copy");
+  await until(async () => service.held.has("workspace/" + ws) && !(await pendingRecords(storage)).length, 10000);
+  assert.ok(service.calls >= 2, "retried after the failure");
+  assert.deepEqual(service.held.get("workspace/" + ws).value, doc);
+  assert.equal(await store.write("workspace", ws, { ...doc, revision: 2 }), 2, "seq grows by one per accepted write");
+  await assert.rejects(store.write("workspace", ws, { id: "ws:" + "00".repeat(8), items: [] }), /Not a valid workspace/);
+  assert.deepEqual(await readdir(storage).then((n) => n.filter((x) => x !== "uva-pending")), [], "no workspace file is written");
 });
 
-test("workspaces are committed to UVA and restored from it after a restart", { timeout: 180000 }, async (t) => {
+test("an older file is migrated in once, then never read or written again", { timeout: 30000 }, async (t) => {
+  const { storage } = await folders(t);
+  const ws = "ws:" + "cd".repeat(8), a = { id: ws, name: "A", items: [], revision: 1 };
+  await mkdir(join(storage, "workspaces"), { recursive: true });
+  await writeFile(wsFile(storage, ws), JSON.stringify(a));
+  await writeFile(join(storage, "workspaces", ws.slice(3) + ".history.jsonl"), JSON.stringify({ kind: "create" }) + "\nbroken\n");
+  const service = fakeService();
+  let store = await createRecordStore({ service, storageDir: storage, idleMs: 600000, retryEveryMs: 0 });
+  assert.deepEqual(await store.list("workspace"), [ws]);
+  assert.deepEqual(await store.read("workspace", ws), a);
+  assert.deepEqual(await store.log("workspace", ws), [{ kind: "create" }]);
+  await store.write("workspace", ws, { ...a, name: "B", revision: 2 }, { line: { kind: "rename" } });
+  assert.deepEqual(await store.log("workspace", ws), [{ kind: "create" }, { kind: "rename" }]);
+  await store.close();
+  // The file is now stale; the store's record wins, even when the file changes.
+  await writeFile(wsFile(storage, ws), JSON.stringify({ ...a, name: "edited by hand" }));
+  store = await createRecordStore({ service, storageDir: storage, idleMs: 600000, retryEveryMs: 0 });
+  assert.equal((await store.read("workspace", ws)).name, "B");
+  await store.close();
+  assert.equal((await readJson(wsFile(storage, ws))).name, "edited by hand", "the old file is never rewritten");
+});
+
+test("a store that cannot be read fails the read instead of passing for no record", { timeout: 30000 }, async (t) => {
+  const { storage } = await folders(t);
+  const ws = "ws:" + "ef".repeat(8);
+  await mkdir(join(storage, "workspaces"), { recursive: true });
+  await writeFile(wsFile(storage, ws), JSON.stringify({ id: ws, name: "old", items: [] }));
+  const service = { ...fakeService(), recordState: async () => { throw new Error("writer unavailable"); } };
+  const store = await createRecordStore({ service, storageDir: storage, idleMs: 600000, retryEveryMs: 0 });
+  t.after(() => store.close());
+  await assert.rejects(store.read("workspace", ws), /writer unavailable/);
+  assert.deepEqual(await pendingRecords(storage), [], "the old file was not migrated over the unreadable store");
+});
+
+test("workspaces live in UVA and come back after a restart; no workspace file is written", { timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta);
   const a = await upload(s, "#336699"), b = await upload(s, "#993366"), c = await upload(s, "#669933");
@@ -138,58 +150,46 @@ test("workspaces are committed to UVA and restored from it after a restart", { t
   await settled(s, storage);
   const r = await s.records();
   assert.ok(r.records["workspace/" + ws]?.committedSeq >= 2, JSON.stringify(r.records));
-  assert.equal((await s.call("uva_store", { action: "list" })).structuredContent.workspaces.filter((d) => /^Record /.test(d.title)).length, 0, "record documents are not offered as Beta workspaces");
-  const before = await readJson(wsFile(storage, ws));
-  assert.equal(before.name, "改名後");
+  assert.equal((await s.call("uva_store", { action: "list" })).structuredContent.workspaces.filter((d) => /^Record /.test(d.title)).length, 0, "record documents are not listed as canvases");
+  await assert.rejects(readFile(wsFile(storage, ws)), { code: "ENOENT" });
+  await assert.rejects(readFile(join(storage, "workspaces", ws.slice(3) + ".history.jsonl")), { code: "ENOENT" });
   await s.stop();
 
-  // Without its file the workspace comes back from UVA, byte for byte.
-  await unlink(wsFile(storage, ws));
   s = await start(storage, beta);
-  assert.deepEqual(await readJson(wsFile(storage, ws)), before);
-  assert.equal((await s.records()).repaired, 1);
-  const state = await s.call("get_workspace_state", { workspace: ws });
+  const state = await s.call("get_workspace_state", { workspace: ws, history: 10 });
   assert.equal(state.structuredContent.name ?? state.structuredContent.workspace?.name, "改名後");
+  assert.ok(JSON.stringify(state.structuredContent).includes("history"), "the change log comes back too");
   const http = await s.get("/api/v1/workspaces/" + ws.slice(3));
   assert.equal(http.items?.length ?? http.workspace?.items?.length, 3);
   await s.stop();
+  // Switching back to legacy: the records are written out to the files it reads.
+  const out = spawnSync(process.execPath, ["scripts/uva-to-legacy.mjs", storage, beta], { encoding: "utf8" });
+  assert.equal(out.status, 0, out.stderr);
+  assert.equal(JSON.parse(out.stdout).written.workspace, 1);
+  assert.equal((await readJson(wsFile(storage, ws))).name, "改名後");
+  assert.ok((await readFile(join(storage, "workspaces", ws.slice(3) + ".history.jsonl"), "utf8")).trim().split("\n").length >= 2);
 });
 
-test("a workspace file written behind the server's back is adopted; an edit killed before its commit is recovered", { timeout: 180000 }, async (t) => {
+test("an edit killed before its commit is recovered from its durable pending record", { timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
-  let s = await start(storage, beta);
+  // Commits wait long enough for the process to be killed with only the pending copy.
+  let s = await start(storage, beta, { idle: "600" });
   const a = await upload(s, "#123456"), b = await upload(s, "#654321");
   const made = await s.call("create_workspace", { name: "first", canvases: [a, b] });
   const ws = made.structuredContent.workspaceId ?? made.structuredContent.workspace?.id;
-  await settled(s, storage);
-  await s.stop();
-
-  // A newer file the records do not know (a legacy-mode run, a restore by hand).
-  const doc = await readJson(wsFile(storage, ws));
-  await writeFile(wsFile(storage, ws), JSON.stringify({ ...doc, name: "edited offline", revision: doc.revision + 1 }));
-  s = await start(storage, beta);
-  assert.equal((await s.records()).adopted, 1);
-  await settled(s, storage);
-  await s.stop();
-  await unlink(wsFile(storage, ws));
-
-  // Commits wait long enough for the process to be killed with only the pending copy.
-  s = await start(storage, beta, { idle: "600" });
-  assert.equal((await readJson(wsFile(storage, ws))).name, "edited offline", "the adopted file is now the committed record");
-  const cur = await readJson(wsFile(storage, ws));
-  await s.call("edit_workspace", { workspaceId: ws, name: "before the kill", expectedRevision: cur.revision });
+  const cur = (await s.call("get_workspace_state", { workspace: ws })).structuredContent;
+  await s.call("edit_workspace", { workspaceId: ws, name: "before the kill", expectedRevision: cur.revision ?? cur.workspace?.revision });
   const records = await s.records();
   assert.ok(records.records["workspace/" + ws].pendingSeq > (records.records["workspace/" + ws].committedSeq ?? 0), "pending durable, not committed yet: " + JSON.stringify(records.records));
-  assert.equal((await pendingRecords(storage)).length, 1);
   await s.kill();
-  await unlink(wsFile(storage, ws));
   s = await start(storage, beta);
-  assert.equal((await readJson(wsFile(storage, ws))).name, "before the kill");
+  const state = (await s.call("get_workspace_state", { workspace: ws })).structuredContent;
+  assert.equal(state.name ?? state.workspace?.name, "before the kill");
   await settled(s, storage);
   await s.stop();
 });
 
-test("a calculator notebook and its panel are committed to UVA and restored, and a bundle is exported from them", { skip: noPython, timeout: 180000 }, async (t) => {
+test("a calculator notebook and its panel live in UVA, come back after a restart, and a bundle is exported from them", { skip: noPython, timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta, { cas: true });
   await s.enable(["org.estampes.graph", "org.estampes.cas"]);
@@ -199,20 +199,16 @@ test("a calculator notebook and its panel are committed to UVA and restored, and
   assert.ok(!def.isError, JSON.stringify(def.content));
   await settled(s, storage);
   await until(async () => (await s.records()).records["notebook/" + nb]?.committedSeq >= 1);
-  const nbPath = join(storage, "cas", "notebooks", nb.replace(":", "_") + ".json");
-  const book = await readJson(nbPath);
-  const surfaceKey = Object.keys((await s.records()).records).find((k) => k.startsWith("surface/"));
-  assert.ok(surfaceKey, "the panel layout is a record too");
-  const surfacePath = join(storage, "surfaces", surfaceKey.slice(8).replace(":", "_") + ".json");
-  const surface = await readJson(surfacePath);
+  assert.ok(Object.keys((await s.records()).records).some((k) => k.startsWith("surface/")), "the panel layout is a record too");
+  await assert.rejects(readdir(join(storage, "cas", "notebooks")), { code: "ENOENT" });
+  await assert.rejects(readdir(join(storage, "surfaces")), { code: "ENOENT" });
   await s.stop();
 
-  await unlink(nbPath); await unlink(surfacePath);
   s = await start(storage, beta, { cas: true });
-  assert.deepEqual(await readJson(nbPath), book);
-  assert.deepEqual(await readJson(surfacePath), surface);
   const state = await s.call("surface_cas", { imageId, capability: "get_notebook", params: { notebook: nb, full: true } });
   assert.ok(JSON.stringify(state.structuredContent).includes("3*x^2"), "the notebook reads back its definition");
+  const panels = await s.call("manage_surface_panels", { imageId, action: "list" }).catch(() => null);
+  if (panels) assert.ok(JSON.stringify(panels.structuredContent).includes(nb), "the panel still shows the notebook");
   const bundle = await s.call("export_workspace_bundle", { workspace: imageId });
   assert.ok(bundle.structuredContent.bytes > 0);
   await s.stop();

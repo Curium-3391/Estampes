@@ -1,53 +1,52 @@
 // ESTAMPES_CANVAS_STORE=uva, beside the canvases: the other records the server
-// keeps are committed to UVA too, and restored from it.
-//   workspace   workspaces/<hex>.json            (the sealed workspace module)
-//   surface     surfaces/sf_<hex>.json           (panels and layouts, src/surface)
-//   notebook    cas/notebooks/nb_<hex>.json      (calculator notebooks, src/cas)
+// keeps live in the UVA store, and nowhere else.
+//   workspace   a workspace (src/workspace.js through src/storage.js), with its
+//               change log (the last LOG_LINES lines) kept beside it
+//   surface     panels and layouts (src/surface/store.js)
+//   notebook    calculator notebooks (src/cas/notebooks.js)
 // Each record is one UVA document (src/uva/service.js syncRecord), keyed
 // "<kind>/<id>".
 //
-// The modules that own these files are sealed and write them themselves, so
-// the file is the working copy, as canvas.json is for a canvas. After every
-// tool call (and on a timer as a safety net) settle() finds files that changed
-// and writes, per record:
-//   uva-pending/records/<kind>-<id>.json   durably (file + folder fsync), with the
-//                                          next per-record sequence number `seq`
-// then a coalesced commit puts it into its UVA document, and the pending copy
-// is removed once the document holds exactly its content. The higher seq wins;
-// wall-clock times are never compared.
+// The modules read and write through this store (read/write/list below); they
+// write no files of their own. A write is acknowledged once
+//   uva-pending/records/<kind>-<id>.json   is durable (file + folder fsync),
+// carrying the next per-record sequence number `seq`; a coalesced commit then
+// puts it into its UVA document and removes the pending copy once the document
+// holds exactly its content. A read takes the higher seq of the pending copy
+// and the document. Wall-clock times are never compared.
 //
-// On startup every record is checked like a canvas (see chooseCanvas in
-// canvas-store.js): a file with content the latest record does not know (neither
-// its value nor its legacyHash) is adopted as the next seq; otherwise the file
-// is rewritten to the latest record, so the sealed modules read the committed
-// state. Per record, `diagnostics.mirror.recordStore.records` shows the three
-// states separately: the file, the durable pending seq and the committed seq.
-import { mkdir, open, readFile, readdir, rename, unlink, stat } from "node:fs/promises";
+// Files an older version wrote (workspaces/<hex>.json, surfaces/sf_<hex>.json,
+// cas/notebooks/nb_<hex>.json, with workspaces/<hex>.history.jsonl) are only read,
+// once, when the store has no record of that id: the file is migrated in as
+// seq 1 and never read or written again. Per record,
+// `diagnostics.mirror.recordStore.records` shows the durable pending seq and
+// the committed seq.
+import { mkdir, open, readFile, readdir, rename, unlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { hashJson } from "../documents/validation.js";
 import { createMirror } from "./mirror.js";
 
 const RECORD = "estampes.record-pending/1";
+export const LOG_LINES = 200;
+const WS = /^ws:[0-9a-f]{16}$/, SF = /^sf:[0-9a-f]{16}$/, NB = /^nb:[0-9a-f]{12}$/;
+const jsonl = (text) => text.trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 export const KINDS = Object.freeze({
-  workspace: { dir: ["workspaces"], file: /^([0-9a-f]{16})\.json$/, id: (m) => "ws:" + m, name: (id) => id.slice(3) + ".json", valid: (v, id) => v?.id === id && Array.isArray(v.items) },
-  surface: { dir: ["surfaces"], file: /^sf_([0-9a-f]{16})\.json$/, id: (m) => "sf:" + m, name: (id) => "sf_" + id.slice(3) + ".json", valid: (v, id) => v?.surfaceId === id && typeof v.schema === "string" },
-  notebook: { dir: ["cas", "notebooks"], file: /^nb_([0-9a-f]{12})\.json$/, id: (m) => "nb:" + m, name: (id) => "nb_" + id.slice(3) + ".json", valid: (v, id) => v?.id === id && typeof v.schema === "string" },
+  workspace: { dir: ["workspaces"], file: /^([0-9a-f]{16})\.json$/, id: (m) => "ws:" + m, name: (id) => id.slice(3) + ".json", logName: (id) => id.slice(3) + ".history.jsonl", idOk: (id) => WS.test(id), valid: (v, id) => v?.id === id && Array.isArray(v.items) },
+  surface: { dir: ["surfaces"], file: /^sf_([0-9a-f]{16})\.json$/, id: (m) => "sf:" + m, name: (id) => "sf_" + id.slice(3) + ".json", idOk: (id) => SF.test(id), valid: (v, id) => v?.surfaceId === id && typeof v.schema === "string" },
+  notebook: { dir: ["cas", "notebooks"], file: /^nb_([0-9a-f]{12})\.json$/, id: (m) => "nb:" + m, name: (id) => "nb_" + id.slice(3) + ".json", idOk: (id) => NB.test(id), valid: (v, id) => v?.id === id && typeof v.schema === "string" },
 });
-const KEY = /^(workspace|surface|notebook)\/((?:ws|sf):[0-9a-f]{16}|nb:[0-9a-f]{12})$/;
-const parts = (key) => { const m = KEY.exec(key ?? ""); return m && ({ ws: "workspace", sf: "surface", nb: "notebook" })[m[2].slice(0, 2)] === m[1] ? { kind: m[1], id: m[2] } : null; };
-const PENDING = /^(workspace|surface|notebook)-([a-z]{2})_([0-9a-f]{12,16})\.json$/;
+const keyOf = (kind, id) => KINDS[kind]?.idOk(id) ? kind + "/" + id : null;
+const parts = (key) => { const i = String(key).indexOf("/"), kind = String(key).slice(0, i), id = String(key).slice(i + 1); return i > 0 && keyOf(kind, id) === key ? { kind, id } : null; };
+const PENDING = /^([a-z]+)-([a-z]{2})_([0-9a-f]{12,16})\.json$/;
 
-// Which value a record has. Pure: records are { seq, legacyHash, value }.
-export function chooseRecord({ uva = null, pending = null, legacy = null }) {
+// Which value a record has. Pure: records are { seq, value, log }; the higher seq wins.
+export function chooseRecord({ uva = null, pending = null }) {
   const records = [uva && { from: "uva", ...uva }, pending && { from: "pending", ...pending }].filter(Boolean);
-  if (!records.length) return legacy ? { from: "legacy", value: legacy, adopt: true, seq: 0 } : null;
+  if (!records.length) return null;
   const latest = records.reduce((a, b) => (b.seq > a.seq ? b : a));
-  if (legacy) {
-    const h = hashJson(legacy);
-    if (h !== hashJson(latest.value) && h !== latest.legacyHash) return { from: "legacy", value: legacy, adopt: true, seq: latest.seq };
-  }
-  return { from: latest.from, value: latest.value, adopt: false, seq: latest.seq, repairLegacy: !legacy || hashJson(legacy) !== hashJson(latest.value) };
+  return { from: latest.from, value: latest.value, seq: latest.seq, log: Array.isArray(latest.log) ? latest.log : [] };
 }
+const logHashOf = (log) => hashJson(log ?? []);
 
 async function syncDir(path) {
   const handle = await open(path, "r");
@@ -59,25 +58,27 @@ async function durableWrite(path, text) {
   await rename(tmp, path);
   await syncDir(dirname(path));
 }
-async function readJson(path) {
-  try { return JSON.parse(await readFile(path, "utf8")); } catch (error) {
-    if (["ENOENT", "EISDIR", "ENOTDIR"].includes(error.code) || error instanceof SyntaxError) return null;
+async function readText(path) {
+  try { return await readFile(path, "utf8"); } catch (error) {
+    if (["ENOENT", "EISDIR", "ENOTDIR"].includes(error.code)) return null;
     throw error;
   }
 }
+const parseJson = (text) => { try { return text === null ? null : JSON.parse(text); } catch { return null; } };
 
-export async function createRecordStore({ service, storageDir, idleMs = 15000, maxWaitMs = 120000, scanEveryMs = 30000, log = () => {} }) {
+export async function createRecordStore({ service, storageDir, idleMs = 15000, maxWaitMs = 120000, retryEveryMs = 30000, log = () => {} }) {
   if (!service?.syncRecord) throw new Error("The UVA service has no record store");
   const dir = join(storageDir, "uva-pending", "records");
   await mkdir(dir, { recursive: true, mode: 0o700 });
-  await syncDir(dirname(dir));
+  await syncDir(dirname(dir)); await syncDir(storageDir);
   const pendingFile = (key) => { const p = parts(key); return join(dir, p.kind + "-" + p.id.replace(":", "_") + ".json"); };
   const legacyFile = (key) => { const p = parts(key); return join(storageDir, ...KINDS[p.kind].dir, KINDS[p.kind].name(p.id)); };
-  // `known`: { hash, seq } of the last record written or restored. `seen`: the
-  // file stat last read, so an unchanged file is not read again.
-  const queues = new Map(), known = new Map(), seen = new Map(), records = new Map();
-  const stats = { writes: 0, committed: 0, restored: { uva: 0, pending: 0, legacy: 0 }, migrated: 0, adopted: 0, repaired: 0, failedWrites: 0, scans: 0, lastError: null };
-  const note = () => service.noteMirror({ recordStore: { ...stats, restored: { ...stats.restored }, records: Object.fromEntries(records) } });
+  // `known`: { hash, seq, value, log } of the latest record, per key. Every write goes
+  // through this store, so a value once read or written stays current.
+  // `ids`: per kind, every id once listed.
+  const queues = new Map(), known = new Map(), records = new Map(), ids = new Map();
+  const stats = { writes: 0, committed: 0, read: { uva: 0, pending: 0 }, migrated: 0, failedWrites: 0, lastError: null };
+  const note = () => service.noteMirror({ recordStore: { ...stats, read: { ...stats.read }, records: Object.fromEntries(records) } });
   const track = (key, patch) => {
     const prev = records.get(key) ?? {};
     records.delete(key); records.set(key, { ...prev, ...patch });
@@ -88,6 +89,7 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
     note();
     log("error", "[record-store] " + where + " failed", { key, error: stats.lastError.message });
   };
+  // Reads and writes of one record run one after another.
   function queued(key, job) {
     const next = (queues.get(key) ?? Promise.resolve()).then(job, job), settled = next.catch(() => {});
     queues.set(key, settled);
@@ -95,26 +97,28 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
     return next;
   }
   async function readPending(key) {
-    const r = await readJson(pendingFile(key));
+    const r = parseJson(await readText(pendingFile(key)));
     return r?.schema === RECORD && r.key === key && Number.isSafeInteger(r.seq) && r.value && typeof r.value === "object" ? r : null;
   }
-  async function readUva(key) {
-    try { return await service.recordState(key); } catch (error) { fault("read UVA record", key, error); return null; }
-  }
+  // A failing UVA read must not pass for "no record": migration would then
+  // adopt an old file over newer committed state.
+  const readUva = (key) => service.recordState(key);
   async function readLegacy(key) {
-    const v = await readJson(legacyFile(key));
-    return KINDS[parts(key).kind].valid(v, parts(key).id) ? v : null;
+    const { kind, id } = parts(key), k = KINDS[kind], v = parseJson(await readText(legacyFile(key)));
+    if (!k.valid(v, id)) return null;
+    const log = k.logName ? jsonl((await readText(join(storageDir, ...k.dir, k.logName(id)))) ?? "").slice(-LOG_LINES) : [];
+    return { value: v, log };
   }
 
   const mirror = createMirror({
     service: { syncCanvas: (input) => service.syncRecord(input), noteMirror: (patch) => { if (patch.lastError) { stats.lastError = { where: "commit", key: patch.lastErrorImage, message: patch.lastError, at: patch.lastErrorAt }; note(); } } }, idleMs, maxWaitMs, log,
-    read: async (key) => { const r = await readPending(key); return r && { key, value: r.value, seq: r.seq, legacyHash: r.legacyHash }; },
+    read: async (key) => { const r = await readPending(key); return r && { key, value: r.value, seq: r.seq, log: r.log ?? [] }; },
     onSynced: async (key, result) => {
       if (result.status === "blocked") { track(key, { blocked: result.issues?.[0]?.message ?? true }); fault("commit", key, result.issues?.[0]?.message ?? "blocked"); return; }
       await queued(key, async () => {
         const r = await readPending(key);
         track(key, { committedSeq: result.seq ?? r?.seq ?? null, blocked: false });
-        if (!r || hashJson(r.value) !== result.sourceHash) { note(); return; }
+        if (!r || hashJson(r.value) !== result.sourceHash || logHashOf(r.log) !== result.logHash) { note(); return; }
         await unlink(pendingFile(key));
         await syncDir(dir);
         stats.committed++; note();
@@ -122,120 +126,103 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
     },
   });
 
-  async function nextSeq(key) {
+  // Inside the key's queue: the record's current value, migrating an older
+  // file in when the store has none.
+  async function current(key) {
+    if (known.get(key)?.value !== undefined) return known.get(key).value;
+    const [uva, pending] = await Promise.all([readUva(key), readPending(key)]);
+    const choice = chooseRecord({ uva, pending });
+    if (choice) {
+      known.set(key, { hash: hashJson(choice.value), seq: choice.seq, value: choice.value, log: choice.log });
+      stats.read[choice.from]++;
+      if (choice.from === "pending") mirror.schedule(key);
+      return choice.value;
+    }
+    const legacy = await readLegacy(key);
+    known.set(key, { hash: null, seq: 0, value: null, log: [] });
+    if (!legacy) return null;
+    await put(key, legacy.value, { log: legacy.log });
+    stats.migrated++;
+    note();
+    return legacy.value;
+  }
+  // Inside the key's queue: writes the next pending record durably, with
+  // `line` appended to its log (or the whole `log` replaced, on migration).
+  async function put(key, value, { line = null, log = null } = {}) {
     if (!known.has(key)) {
       const [pending, uva] = await Promise.all([readPending(key), readUva(key)]);
-      known.set(key, { hash: null, seq: Math.max(pending?.seq ?? 0, uva?.seq ?? 0) });
+      known.set(key, { hash: null, seq: Math.max(pending?.seq ?? 0, uva?.seq ?? 0), log: chooseRecord({ uva, pending })?.log ?? [] });
     }
-    return known.get(key).seq + 1;
-  }
-  // Resolves once the pending record is durable; rejects when it is not.
-  // `value` is the content just read from the record's file.
-  function write(key, value) {
-    if (!parts(key)) return Promise.resolve(null);
-    const copy = JSON.parse(JSON.stringify(value)), h = hashJson(copy);
-    return queued(key, async () => {
-      // Every value written here was read from the file itself, so its hash is
-      // what the file held. Reading the file again could pair this value with a
-      // newer edit's hash, which restore would then overwrite as already known.
-      const seq = await nextSeq(key), legacyHash = h;
-      await durableWrite(pendingFile(key), JSON.stringify({ schema: RECORD, key, seq, legacyHash, value: copy }));
-      known.set(key, { hash: h, seq });
-      stats.writes++;
-      track(key, { pendingSeq: seq, legacy: "matches" });
-      note();
-      mirror.schedule(key);
-      return seq;
-    }).catch((error) => { stats.failedWrites++; track(key, { failedSeq: (known.get(key)?.seq ?? 0) + 1 }); fault("pending write", key, error); throw error; });
-  }
-
-  async function resolve(key) {
-    const [uva, pending, legacy] = await Promise.all([readUva(key), readPending(key), readLegacy(key)]);
-    const choice = chooseRecord({ uva, pending, legacy });
-    if (!choice) return null;
-    known.set(key, { hash: hashJson(choice.value), seq: choice.seq });
-    if (choice.adopt) {
-      if (choice.seq) stats.adopted++; else stats.migrated++;
-      known.set(key, { hash: null, seq: choice.seq });
-      await write(key, choice.value);
-    } else {
-      if (choice.repairLegacy) {
-        await mkdir(dirname(legacyFile(key)), { recursive: true, mode: 0o700 });
-        await durableWrite(legacyFile(key), JSON.stringify(choice.value));
-        stats.repaired++;
-      }
-      if (choice.from === "pending") mirror.schedule(key);
-    }
-    stats.restored[choice.from]++;
-    return choice;
-  }
-
-  // Records whose file changed since it was last read are written as pending.
-  async function scan() {
-    stats.scans++;
-    const jobs = [];
-    for (const [kind, k] of Object.entries(KINDS)) {
-      const base = join(storageDir, ...k.dir);
-      let names = [];
-      try { names = await readdir(base); } catch { continue; }
-      for (const name of names) {
-        const m = k.file.exec(name);
-        if (!m) continue;
-        const key = kind + "/" + k.id(m[1]), path = join(base, name);
-        jobs.push((async () => {
-          let st;
-          try { st = await stat(path); } catch { return; }
-          const mark = st.ino + ":" + st.size + ":" + st.mtimeMs;
-          if (seen.get(key) === mark) return;
-          const value = await readLegacy(key);
-          if (!value) return;
-          seen.set(key, mark);
-          if (known.get(key)?.hash === hashJson(value)) return;
-          await write(key, value);
-        })().catch((error) => { seen.delete(key); fault("scan", key, error); }));
-      }
-    }
-    await Promise.all(jobs);
+    const was = known.get(key), copy = JSON.parse(JSON.stringify(value)), hash = hashJson(copy), seq = was.seq + 1;
+    if (was.hash === hash && !line && !log) return was.seq;
+    const lines = log ? log.slice(-LOG_LINES) : line ? [...(was.log ?? []), JSON.parse(JSON.stringify(line))].slice(-LOG_LINES) : (was.log ?? []);
+    await durableWrite(pendingFile(key), JSON.stringify({ schema: RECORD, key, seq, value: copy, log: lines }));
+    known.set(key, { hash, seq, value: copy, log: lines });
+    ids.get(parts(key).kind)?.add(parts(key).id);
+    stats.writes++;
+    track(key, { pendingSeq: seq });
     note();
-  }
-  let scanning = null, again = false;
-  // One scan at a time; a call made while one runs gets one more after it.
-  function settle() {
-    if (scanning) { again = true; return scanning; }
-    scanning = (async () => { do { again = false; await scan(); } while (again); })().finally(() => { scanning = null; });
-    return scanning;
+    mirror.schedule(key);
+    return seq;
   }
 
-  // Startup: every record on disk, in UVA or pending is checked before any
-  // module reads its file.
-  const leftovers = [];
+  const api = {
+    chooseRecord,
+    // The value of <kind>/<id>, or null.
+    read(kind, id) {
+      const key = keyOf(kind, id);
+      if (!key) return Promise.resolve(null);
+      return queued(key, () => current(key)).then((v) => (v === null || v === undefined ? null : JSON.parse(JSON.stringify(v))));
+    },
+    // Resolves with the seq once the record is durable; rejects when it is not.
+    // `line`: one entry for the record's change log.
+    write(kind, id, value, { line = null } = {}) {
+      const key = keyOf(kind, id);
+      if (!key) return Promise.reject(new Error("Invalid record " + kind + "/" + id));
+      if (!KINDS[kind].valid(value, id)) return Promise.reject(new Error("Not a valid " + kind + " record for " + id));
+      return queued(key, async () => { if (known.get(key)?.value === undefined) await current(key); return put(key, value, { line }); })
+        .catch((error) => { stats.failedWrites++; track(key, { failedSeq: (known.get(key)?.seq ?? 0) + 1 }); fault("pending write", key, error); throw new Error("The " + kind + " was not saved (its durable record could not be written: " + String(error?.message || error) + ")"); });
+    },
+    // The record's change log, oldest first.
+    log(kind, id) {
+      const key = keyOf(kind, id);
+      if (!key) return Promise.resolve([]);
+      return queued(key, async () => { await current(key); return JSON.parse(JSON.stringify(known.get(key)?.log ?? [])); });
+    },
+    // Every id of a kind: in the store, pending, or in an older file.
+    async list(kind) {
+      const k = KINDS[kind];
+      if (!ids.has(kind)) {
+        const found = new Set();
+        for (const key of await service.recordKeys()) { const p = parts(key); if (p?.kind === kind) found.add(p.id); }
+        for (const name of await readdir(dir).catch(() => [])) { const m = PENDING.exec(name); if (m?.[1] === kind && keyOf(kind, m[2] + ":" + m[3])) found.add(m[2] + ":" + m[3]); }
+        for (const name of await readdir(join(storageDir, ...k.dir)).catch(() => [])) { const m = k.file.exec(name); if (m) found.add(k.id(m[1])); }
+        ids.set(kind, found);
+      }
+      return [...ids.get(kind)];
+    },
+    recovered: [],
+    flush: async () => { await retryPending(); await mirror.flush(); },
+    async close() { clearInterval(timer); await mirror.stop(); await Promise.all([...queues.values()]); },
+    get pending() { return mirror.pending; },
+  };
+
+  // Startup: pending records a stopped server left are committed again.
   for (const name of await readdir(dir)) {
     const m = PENDING.exec(name);
-    if (m) leftovers.push(m[1] + "/" + m[2] + ":" + m[3]);
+    if (m && parts(m[1] + "/" + m[2] + ":" + m[3])) api.recovered.push(m[1] + "/" + m[2] + ":" + m[3]);
     else if (name.endsWith(".tmp")) await unlink(join(dir, name)).catch(() => {});
   }
-  const onDisk = [];
-  for (const [kind, k] of Object.entries(KINDS)) for (const name of await readdir(join(storageDir, ...k.dir)).catch(() => [])) { const m = k.file.exec(name); if (m) onDisk.push(kind + "/" + k.id(m[1])); }
-  for (const key of new Set([...leftovers, ...await service.recordKeys(), ...onDisk])) {
-    if (!parts(key)) continue;
-    try { await resolve(key); } catch (error) { fault("startup check", key, error); }
-  }
-  stats.restored = { uva: 0, pending: 0, legacy: 0 };
+  for (const key of api.recovered) mirror.schedule(key);
   note();
-  // A pending record whose commit failed (a transient storage error) is tried
-  // again, even though its file has not changed since.
+  // A pending record whose commit failed (a transient storage error) is tried again.
   async function retryPending() {
     for (const name of await readdir(dir).catch(() => [])) {
       const m = PENDING.exec(name);
-      if (m) mirror.schedule(m[1] + "/" + m[2] + ":" + m[3]);
+      if (m && parts(m[1] + "/" + m[2] + ":" + m[3])) mirror.schedule(m[1] + "/" + m[2] + ":" + m[3]);
     }
   }
-  const timer = scanEveryMs > 0 ? setInterval(() => { settle().then(retryPending).catch(() => {}); }, scanEveryMs) : null;
+  const timer = retryEveryMs > 0 ? setInterval(() => { retryPending().catch(() => {}); }, retryEveryMs) : null;
   timer?.unref?.();
-  return {
-    settle, chooseRecord, recovered: leftovers,
-    flush: async () => { await settle(); await retryPending(); await mirror.flush(); },
-    async close() { clearInterval(timer); await settle().catch(() => {}); await mirror.stop(); await Promise.all([...queues.values()]); },
-    get pending() { return mirror.pending; },
-  };
+  return api;
 }

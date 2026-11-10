@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Workspaces (with their change logs), panel layouts and calculator notebooks now live
+  only in the UVA store when it is on: their modules read and write through it
+  and no `workspaces/`, `surfaces/` or `cas/notebooks/` file is written. A save
+  is acknowledged once its record is durable, and fails when it cannot be.
+  Files an older version wrote are migrated in once, the first time they are
+  read. With `ESTAMPES_CANVAS_STORE=legacy` nothing changes.
 - Removed the UVA Beta editor (`experimental_workspace`, the app-only
   `uva_user_command`, the Workbench's UVA editor and `compose.uva-beta.yaml`)
   and the read-only canvas mirror (`ESTAMPES_UVA_BETA`, `ESTAMPES_UVA_MIRROR`).

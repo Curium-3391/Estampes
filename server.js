@@ -35,7 +35,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, restoreCanvas, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory } from "./src/storage.js";
+import { readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, restoreCanvas, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, useRecords } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -154,11 +154,10 @@ async function canvasKeys(value) {
   }
   return [...keys].slice(0, 64);
 }
-// Workspaces, panel surfaces and calculator notebooks are written by their own
-// (sealed) modules; after a tool call, the files that changed are recorded for
-// their UVA commit (src/uva/record-store.js). Never throws: the file is saved.
+// Workspaces, their change logs, panel surfaces and calculator notebooks live in
+// the UVA store when it is on (src/uva/record-store.js): their modules read and
+// write through it, and write no files of their own.
 let recordStore = null;
-const settleRecords = () => recordStore ? flushStorage().then(() => recordStore.settle()).catch((error) => log("error", "[record-store] settle failed", { error: String(error?.message || error) })) : Promise.resolve();
 function refreshCanvases(ids, result) {
   if (!canvasStore) return;
   const refresh = (id) => { if (hasImage(id.split("#")[0])) (id.includes("#") ? ensureSet(id) : ensureImage(id)).then((entry) => canvasStore.refresh(entry)).catch(() => {}); };
@@ -816,7 +815,7 @@ function makeServer() {
     const touched = await warmCanvases(args[0]);
     let result;
     try { result = await handler(...args); }
-    finally { refreshCanvases(touched, result?.structuredContent); await settleRecords(); }
+    finally { refreshCanvases(touched, result?.structuredContent); }
     return fitResult(await budgetObjectPixels(result), config.maxResultChars);
   });
 
@@ -1583,8 +1582,6 @@ function makeServer() {
           ref = made.workspace.id;
         }
         const first = (await resolveRef(ref)).doc.items[0];
-        // The bundle is built from records the UVA store already holds.
-        await settleRecords();
         const extras = await collectBundleExtras({ surfaceStore, notebooks: notebookStore(), keys: [workspace, ref, first?.set?.split("#")[0]] });
         const built = await exportBundle(ref, { version: VERSION, fileNames, extras });
         bundleCache.set(ref.slice(3), built);
@@ -2923,7 +2920,7 @@ const httpServer = createHttpServer((req, res) => {
     // The file the tool described; after a restart it is built again from the stored workspace.
     const cached = bundleCache.get(bundleMatch[1]);
     if (cached) { send(cached); return; }
-    warmCanvases({ workspaceId: "ws:" + bundleMatch[1] }).then(settleRecords).then(() => exportBundle("ws:" + bundleMatch[1], { version: VERSION })).then(send, (error) => {
+    warmCanvases({ workspaceId: "ws:" + bundleMatch[1] }).then(() => exportBundle("ws:" + bundleMatch[1], { version: VERSION })).then(send, (error) => {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Workspace not found on this server: " + String(error?.message || error));
     });
@@ -3100,8 +3097,8 @@ const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
 const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
 if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in the chat; approve a plan with: node scripts/estampes-module.js approve <planId>");
 const casClientInstance = createCasClient({ socketPath: config.casSocket });
-configureCas({ client: casClientInstance, notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "" }) });
-const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "" });
+configureCas({ client: casClientInstance, notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "", records: () => recordStore }) });
+const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "", records: () => recordStore });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
   canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
@@ -3128,7 +3125,8 @@ if (uvaService.enabled && uvaService.canvasStore) {
     .catch((error) => { log("error", "[canvas-store] could not start; canvases stay in legacy storage", { error: String(error?.message || error) }); return null; });
   if (canvasStore) recordStore = await createRecordStore({ service: uvaService, storageDir: config.storageDir, idleMs: config.uvaMirrorIdleSec * 1000, log })
     .catch((error) => { log("error", "[record-store] could not start; workspaces, surfaces and notebooks stay in legacy storage", { error: String(error?.message || error) }); return null; });
-  if (canvasStore) log("info", "[canvas-store] canvases, workspaces, surfaces and notebooks are committed to UVA; the legacy files are still written, so ESTAMPES_CANVAS_STORE=legacy switches back", { directory: config.uvaBetaDir, recovering: canvasStore.recovered.length });
+  useRecords(recordStore);
+  if (canvasStore) log("info", "[canvas-store] canvases are committed to UVA (their legacy files are still written); workspaces, surfaces and notebooks live only in UVA", { directory: config.uvaBetaDir, recovering: canvasStore.recovered.length });
 }
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {

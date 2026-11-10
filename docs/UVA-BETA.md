@@ -66,19 +66,20 @@ unchanged; only where the canvas is kept moves.
   committed under their set key `img:<hex>#<setId>`, one document per copy. The
   workspace module loads a copy from its set file, which startup keeps equal to
   the record; edits are committed after each tool call.
-- **Workspaces, panel surfaces and calculator notebooks** (`workspaces/<hex>.json`,
-  `surfaces/sf_<hex>.json`, `cas/notebooks/nb_<hex>.json`) are records too: each
-  is one UVA document (kind `graph`, one empty scene) whose `estampes.beta:record`
-  extension holds the record's JSON, its hash and its seq, so it shares the store's
-  history, recovery points and compaction. Their sealed modules still write the
-  file; after every tool call (and every 30 s) a changed file is written durably to
-  `uva-pending/records/` with the next seq, then committed. Startup restores each
-  file from its latest record, or adopts a file the records do not know, exactly
-  as for canvases. `diagnostics.mirror.recordStore.records` lists, per record,
-  whether the file matches, the pending seq and the committed seq. A
-  `.estampes` bundle is exported only after every changed record is recorded, and
-  an imported bundle's workspace, surface and notebooks are recorded after the
-  import. These documents are not listed by `uva_store`. The workspace's `history.jsonl` (an audit log) stays legacy.
+- **Workspaces, their change logs, panel surfaces and calculator notebooks** live
+  only in the store; no file of theirs is written. Each is one UVA document (kind
+  `graph`, one empty scene) whose `estampes.beta:record` extension holds the
+  record's JSON, its hash and its seq, so it shares the store's history, recovery
+  points and compaction. Their modules read and write through the store
+  (`src/uva/record-store.js`): a save is acknowledged once it is written durably
+  to `uva-pending/records/` with the next seq (and fails when it cannot be), then
+  a coalesced commit puts it in its document. A read takes the higher seq of the
+  pending copy and the document. A workspace's change log keeps its last 200
+  lines. Files an older version wrote (`workspaces/<hex>.json` and its
+  `.history.jsonl`, `surfaces/sf_<hex>.json`, `cas/notebooks/nb_<hex>.json`) are
+  migrated in the first time their id is read and never read or written again.
+  `diagnostics.mirror.recordStore.records` lists, per record, the pending seq and
+  the committed seq. These documents are not listed by `uva_store`.
 - **Not yet in UVA**: more than 512 marks or 64 objects per
   canvas, malformed links (for example one without its far end), or a store over
   its limits. Such a canvas keeps its pending file, which then wins on
@@ -219,8 +220,16 @@ remain in the recovery source archive. The original directory is preserved.
 Recovery with archives exceeding the 1 MiB Beta bound is rejected explicitly.
 Arbitrary foreign archives are not adopted as locally authenticated state.
 
-Set `ESTAMPES_CANVAS_STORE=legacy` and restart to return to legacy operation;
-the legacy files were kept up to date. Keep the store directory and its mount if
+To return to legacy operation, stop the server, write the records that live only
+in the store back to their files, then set `ESTAMPES_CANVAS_STORE=legacy` and
+start it again:
+
+```sh
+node scripts/uva-to-legacy.mjs /srv/estampes            # the store: /srv/estampes-uva
+node scripts/uva-to-legacy.mjs /data /uva-beta           # inside the Docker image
+```
+
+Canvases and images still keep their legacy files up to date. Keep the store directory and its mount if
 existing export links must remain readable. Switching back to `uva` with the same
 directory and profile reopens the store.
 

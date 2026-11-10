@@ -7,6 +7,7 @@
 //   images/<hash>/sets/<setId>.json  a copy of the canvas made by a workspace
 //                              Copy (its own marks, layers and links)
 //   workspaces/<hash>.json     a workspace: which canvases it shows and where
+//                              (in the UVA store instead, when it is on: useRecords)
 //   images/<hash>/derived.json  recipes of processed views (no pixels; each
 //                               one renders again from source + recipe)
 // Memory stays the working copy; disk is what lets an image come back after
@@ -24,6 +25,10 @@ let root = config.storageDir;
 export const storageDir = () => root;
 // Tests point storage at a temporary folder.
 export function useStorageDir(dir) { root = dir; }
+// With the UVA store on (src/uva/record-store.js), workspaces and their change
+// logs are read from and written to it, and no workspace file is written here.
+let records = null;
+export function useRecords(store) { records = store; }
 
 const CANVAS_VERSION = 1;
 const folder = (imageId) => join(root, "images", imageId.slice(4));
@@ -176,6 +181,8 @@ export async function readMeta(imageId) {
 const WS_HEX = /^[0-9a-f]{16}$/;
 const wsPath = (hex) => join(root, "workspaces", hex + ".json");
 export function saveWorkspaceFile(doc, line) {
+  // A save is acknowledged only once it is durable in the store: a failure rejects.
+  if (records) return records.write("workspace", doc.id, doc, { line }).then(() => undefined);
   if (!root) return Promise.resolve();
   const hex = doc.id.slice(3);
   return queued(doc.id, async () => {
@@ -185,12 +192,14 @@ export function saveWorkspaceFile(doc, line) {
   }).catch((error) => log("error", "[storage] workspace save failed", { workspace: doc.id, error: String(error?.message || error) }));
 }
 export async function readWorkspaceFile(id) {
+  if (records) { const doc = await records.read("workspace", String(id)); return doc?.id === id ? doc : null; }
   const hex = String(id).slice(3);
   if (!root || !WS_HEX.test(hex)) return null;
   const doc = await readJson(wsPath(hex));
   return doc?.id === id ? doc : null;
 }
 export async function workspaceHistory(id, limit = 50) {
+  if (records) return (await records.log("workspace", String(id))).slice(-limit);
   const hex = String(id).slice(3);
   if (!root || !WS_HEX.test(hex)) return [];
   try {
@@ -199,6 +208,7 @@ export async function workspaceHistory(id, limit = 50) {
   } catch { return []; }
 }
 export async function listWorkspaceFiles() {
+  if (records) return (await Promise.all((await records.list("workspace")).map((id) => records.read("workspace", id)))).filter((d) => d && typeof d.id === "string");
   if (!root) return [];
   const names = await readdir(join(root, "workspaces")).catch(() => []);
   const docs = await Promise.all(names.filter((n) => /^[0-9a-f]{16}\.json$/.test(n)).map((n) => readJson(join(root, "workspaces", n))));
