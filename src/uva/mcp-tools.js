@@ -1,9 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { RequestIdSchema, DocumentIdSchema, SceneIdSchema } from '../documents/identity.js';
-// One versioned command contract for GPT and the user's Workbench. The actor
-// is selected by registration, never by a caller-provided provenance field.
+// The store's internal command contract (src/uva/service.js dispatch).
 export const UvaInput=z.object({action:z.enum(['status','list','open','prepare','commit','render','modules','export','read_chunk']),documentId:DocumentIdSchema.optional(),sceneId:SceneIdSchema.optional(),requestId:RequestIdSchema.optional(),expectedRevision:z.number().int().positive().optional(),operation:z.record(z.string(),z.unknown()).optional(),prepared:z.record(z.string(),z.unknown()).optional(),transportId:z.string().regex(/^[0-9a-f]{64}$/).optional(),offset:z.number().int().min(0).max(16*1024**2).optional()}).strict();
 // Read-only transport snapshots are bounded and never become writer authority.
 const chunks=new Map();let chunkBytes=0;
@@ -29,8 +27,7 @@ function chunk(id,offset,maxChars){
 }
 // The store's read-only view, always there when UVA is on.
 export const UvaStoreInput=z.object({action:z.enum(['status','list','open','render','export','read_chunk']),documentId:DocumentIdSchema.optional(),sceneId:SceneIdSchema.optional(),transportId:z.string().regex(/^[0-9a-f]{64}$/).optional(),offset:z.number().int().min(0).max(16*1024**2).optional()}).strict();
-// `editor`: also the Beta editor (experimental_workspace, ESTAMPES_UVA_BETA=1).
-export function registerUvaTools(server,{service,visualUri,exportLink,maxResultChars=145000,editor=true}){
+export function registerUvaTools(server,{service,exportLink,maxResultChars=145000}){
   if(!service?.enabled)return;
   const run=author=>async input=>{
     try{
@@ -52,11 +49,4 @@ export function registerUvaTools(server,{service,visualUri,exportLink,maxResultC
     description:'Read-only view of the UVA store where canvases, workspaces, panel layouts and calculator notebooks are committed. status: store health, commit counts, and per canvas/record whether the legacy file matches, the durable pending seq and the committed seq (diagnostics.mirror). list: the canvas documents. open {documentId}: one document and its revision. render {documentId,sceneId?}: its pixels. export {documentId}: an editable logical archive with its images, as a download URL. Large results: read the rest with read_chunk {transportId, offset: transport.next}. Edit canvases with the canvas tools, never here.',
     inputSchema:UvaStoreInput,annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
   },run('assistant'));
-  if(!editor)return;
-  registerAppTool(server,'experimental_workspace',{
-    title:'UVA Experimental Beta workspace',
-    description:'Opt-in persistent editable workspace, separate from legacy ws/img workspaces. Use list/open to read the authoritative document and revision. To create/import: prepare with requestId req:<UUIDv4> and operation {type:"create",imageIds:["img:..."]} or {type:"import",sourceRef:"ws:..."}. create and item.add take only the image pixels (legacy marks/layers on those images are not copied); use import to migrate a legacy workspace. With no image yet, call list: the Workbench lets the user choose or photograph images. Add visual items with operation {type:"item.add",imageIds:["img:..."]}. For edits supply documentId, expectedRevision, requestId and operation: rename {title}; layer.create {name,sceneId}; layer.update {id,patch:{visible,opacity,name},sceneId}; annotation.add {sceneId,annotation:{type,geometry,layerId,label,style}}; annotation.update {sceneId,id,annotation:{geometry,label,style}}; annotation.remove {sceneId,id}; module {sceneId,module,capability,params}. PREPARE DOES NOT WRITE. Commit by passing the exact returned prepared value to action commit. Retry that same value unchanged after interruptions; Ledger returns the same ACK. Stale revisions require refresh and review, never automatic rebase. render returns actual image pixels and Graph SVG; annotations remain editable in document. modules discovers enabled synchronous visual modules and their input schemas. export saves an editable logical archive with assets and returns a download URL. Large results use an immutable transport snapshot: read each remaining segment with action read_chunk, transportId and offset=transport.next, concatenate transport.data and parse JSON before using the document/prepared command. These are read snapshots, not a second writer. No production durability qualification.',
-    inputSchema:UvaInput,annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},_meta:{ui:{resourceUri:visualUri}},
-  },run('assistant'));
-  registerAppTool(server,'uva_user_command',{title:'Edit experimental workspace in Workbench',description:'Private Workbench command adapter.',inputSchema:UvaInput,annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},_meta:{ui:{visibility:['app']}}},run('user'));
 }

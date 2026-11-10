@@ -1,7 +1,7 @@
 {
-  "_comment": "Inputs to scripts/check-docs.mjs. nonTools: snake_case names in docs that are not MCP tools (scene fields, widget-only calls). envNames: ESTAMPES_* names docs may mention that code does not read (examples, placeholders). stale: phrases that were wrong once and must not come back.",
+  "_comment": "Inputs to scripts/check-docs.mjs. nonTools: snake_case names in docs that are not MCP tools (scene fields, widget-only calls). envNames: ESTAMPES_* names docs may mention that code does not read (examples, placeholders, removed settings the changelog and RFC history name). stale: phrases that were wrong once and must not come back.",
   "nonTools": [],
-  "envNames": ["ESTAMPES_MODULE_SECRET_ORG_DEXAMPLE_DOCR_SAPI_KEY"],
+  "envNames": ["ESTAMPES_MODULE_SECRET_ORG_DEXAMPLE_DOCR_SAPI_KEY", "ESTAMPES_UVA_BETA", "ESTAMPES_UVA_MIRROR"],
   "stale": [
     { "pattern": "is_default_branch", "reason": "the Docker workflow does not use it; `latest` comes from a stable v* tag", "except": ["docs/RELEASE.md", "docs/DOCUMENTATION-MAINTENANCE.md"] },
     { "pattern": "cannot carry notebooks", "reason": ".estampes bundles do carry notebooks and surfaces" }

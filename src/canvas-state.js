@@ -8,6 +8,11 @@ import { markFindings, MARK_STATUSES } from "./scene-catalog.js";
 import {
   assessmentInput, markRegion, findRejection, bringsNewEvidence, rejectionOf, addRejection, dropRejections,
 } from "./assessment.js";
+import { claimOf, withoutClaim, geometryChanged } from "./visual/annotation-contract.js";
+import {
+  LAYER_NAME_MAX, AUTHOR_NAME, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
+} from "./visual/layer-contract.js";
+export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
 
@@ -19,13 +24,8 @@ export function canvasMarks(entry) {
 // each GPT drawing call starts one, unless GPT names an existing layer.
 // A mark carries its layer id; the widget shows or hides whole layers.
 const layersOf = (entry) => (entry.layers ??= []);
-const AUTHOR_NAME = { user: "你", assistant: "AI" };
-
 function newLayer(entry, author, name) {
-  const layers = layersOf(entry);
-  const n = layers.filter((l) => l.author === author).length + 1;
-  const layer = { id: "L" + (layers.reduce((m, l) => Math.max(m, +l.id.slice(1) || 0), 0) + 1), author,
-    name: name || AUTHOR_NAME[author] + " · 第" + n + "次" };
+  const layers = layersOf(entry), layer = newLayerRecord(layers, author, name);
   layers.push(layer);
   return layer;
 }
@@ -47,8 +47,8 @@ export function moduleLayer(entry, name, module) {
 // A layer can be renamed, reordered, locked and faded by the user. Locked
 // means nobody (user or GPT) moves, restyles or deletes its marks; notes
 // (findings) can still be attached. Opacity only changes how it is drawn.
-const findLayer = (entry, id) => layersOf(entry).find((l) => l.id === id);
-export const markLocked = (entry, mark) => !!mark?.layer && findLayer(entry, mark.layer)?.locked === true;
+const findLayer = (entry, id) => findLayerIn(layersOf(entry), id);
+export const markLocked = (entry, mark) => !!mark?.layer && layerLocked(findLayer(entry, mark.layer));
 const lockedText = (entry, mark) => {
   const l = findLayer(entry, mark.layer);
   return "is in layer " + l.id + " " + JSON.stringify(l.name) + ", which the user locked; leave it as it is or ask the user to unlock it";
@@ -114,9 +114,6 @@ export function snapshotCanvas(entry) {
 // over. A note the user already rejected at the same place is refused
 // unless new evidence comes with it; refusals are reported, not thrown, so
 // the rest of the call still lands.
-const CLAIM_FIELDS = ["confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected"];
-export const claimOf = (m) => Object.fromEntries(CLAIM_FIELDS.filter((k) => m?.[k] !== undefined).map((k) => [k, m[k]]));
-const withoutClaim = (m) => { const c = { ...m }; for (const k of CLAIM_FIELDS) delete c[k]; return c; };
 
 function settleClaimData(entry, old, mark, raw, { images, refused = [], where }) {
   const assess = assessmentInput(raw, { observer: "model", images: images ?? { left: entry.imageId }, where: where + ".evidence" });
@@ -241,8 +238,6 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
 // Layer settings, moving or restyling marks the user drew in earlier turns,
 // and deleting marks (the user owns the canvas, so GPT's marks too). GPT
 // learns about them from `userEdits` on its next call. All or nothing.
-export const LAYER_NAME_MAX = 40;
-const opacityOf = (v) => Math.round(Math.min(1, Math.max(0, v)) * 20) / 20;
 
 export function editCanvas(entry, { layers = [], order, marks = [], remove = [], resolveUser }) {
   const restore = snapshotCanvas(entry), state = marksOf(entry), edits = [];
@@ -252,26 +247,10 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
     layers.forEach((edit, i) => {
       const layer = findLayer(entry, edit.id);
       if (!layer) throw fail("layers", i, edit.id, "no such layer");
-      if (edit.name !== undefined) {
-        const name = String(edit.name).trim().slice(0, LAYER_NAME_MAX);
-        if (!name) throw fail("layers", i, edit.id, "name is empty");
-        if (name !== layer.name) edits.push({ kind: "rename-layer", layer: layer.id, from: layer.name, to: name });
-        layer.name = name;
-      }
-      if (edit.locked !== undefined && !!edit.locked !== !!layer.locked) {
-        edits.push({ kind: edit.locked ? "lock-layer" : "unlock-layer", layer: layer.id });
-        if (edit.locked) layer.locked = true; else delete layer.locked;
-      }
-      if (edit.opacity !== undefined) {
-        const o = opacityOf(Number(edit.opacity));
-        if (o >= 1) delete layer.opacity; else layer.opacity = o;
-      }
+      edits.push(...applyLayerEdit(layer, edit, (message) => fail("layers", i, edit.id, message)));
     });
     if (order) {
-      const all = layersOf(entry), byId = new Map(all.map((l) => [l.id, l]));
-      if (new Set(order).size !== order.length || order.some((id) => !byId.has(id))) throw fail("order", 0, order.join(","), "unknown or repeated layer id");
-      const rest = all.filter((l) => !order.includes(l.id));
-      entry.layers = [...order.map((id) => byId.get(id)), ...rest];
+      entry.layers = reorderLayers(layersOf(entry), order, (message) => fail("order", 0, order.join(","), message));
       edits.push({ kind: "reorder-layers", order: entry.layers.map((l) => l.id) });
     }
     remove.forEach((id, i) => {
@@ -288,7 +267,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
-      const moved = ["x", "y", "x2", "y2"].some((k) => next[k] !== old[k]) || JSON.stringify(next.points) !== JSON.stringify(old.points);
+      const moved = geometryChanged(old, next);
       state.set(edit.id, { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) });
       edits.push({ kind: moved ? "move-mark" : "restyle-mark", id: edit.id, ...(next.label ? { label: next.label } : {}) });
     });

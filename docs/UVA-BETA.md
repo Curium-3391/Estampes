@@ -1,45 +1,14 @@
-# UVA Experimental Beta
+# UVA store
 
-UVA connects the Workbench's image annotation editor and existing visual modules
-(such as Graph) to the same persistent document that GPT reads and edits. It is
-**off by default**. Legacy images, workspaces, modules and their writer continue
-working. No startup migration occurs.
+UVA is the store where Estampes commits canvases, workspace copies, workspaces,
+panel layouts and calculator notebooks. It is **on by default** whenever
+`ESTAMPES_STORAGE_DIR` is set. GPT reads it through `uva_store` (read-only);
+edits go through the ordinary canvas, workspace, surface and calculator tools.
 
 Production qualification: **NOT QUALIFIED**. The native A/B result remains
 **INCONCLUSIVE — DEFAULT TO BASELINE**. The G2 intermittent (#90) is reproduced,
 explained and fixed; see the [root cause](rfc/unified-visual-architecture/PR-1D-G2-ROOT-CAUSE.md).
-
-## Canvas mirror (optional)
-
-`ESTAMPES_UVA_MIRROR=1` (with the Beta on) copies **checkpoints of the ordinary canvas**
-into UVA documents. The canvas stays the only writer, so its editing tools, undo,
-links and reviews are unchanged and a slow or full UVA store never delays or loses a
-canvas edit. GPT reads the same marks and layers with `experimental_workspace`
-(`list`, `open`, `render`).
-
-- A mirror document is read-only through UVA (`prepare` is refused with a message
-  that names the canvas). Edit the canvas instead.
-- A save is copied after `ESTAMPES_UVA_MIRROR_IDLE_SEC` seconds without another
-  save (default 15), and at the latest two minutes after the first unsynced save.
-  An unchanged canvas writes nothing. Pending checkpoints are flushed on shutdown.
-- A canvas restored from a bundle is mirrored at its next save.
-- Only a single image's own canvas is mirrored (not copies or workspaces). A
-  canvas the document model cannot hold yet, for example one with an image layer,
-  is skipped and listed under `diagnostics.mirror.blocked` in `action: status`.
-- Cost: since index pages are reclaimed (see the changelog), a commit uses about
-  0.07 MB of disk and 1–2 s on the development machine, so 1000 commits fit in
-  about 73 MB of the 256 MiB Beta quota. Saves are still coalesced because of the
-  commit time.
-- Mirror documents use higher Beta limits (64 workspaces, 512 annotations each).
-- **History compaction.** The store keeps what its 20 recovery points, named
-  checkpoints and readers need, plus about the last 7 days of commits (the ACK
-  replay window). Older history is retired automatically in small steps, mostly
-  while the writer is idle, and its files are deleted after a 1-day grace. See
-  [history compaction](rfc/unified-visual-architecture/HISTORY-COMPACTION.md).
-  `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) only caps commits retained in
-  that window; it is no longer a lifetime limit. When it is reached the mirror
-  reports `budgetExhausted` in `diagnostics.mirror` and the canvas is unaffected.
-  If a UVA store cannot start at all, the server logs it and runs without UVA.
+A power cut is simulated at every fsync in [UVA power loss](UVA-POWERLOSS.md).
 
 ## Canvas store: commit canvases to UVA (default)
 
@@ -47,8 +16,7 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
 the UVA store on by itself with `ESTAMPES_UVA_DIR` or its default; `legacy`
 switches back) makes an image's own canvas **committed to its UVA document and
 restored from it**. The canvas editor, its tools, undo and the widget are
-unchanged; only where the canvas is kept moves. It replaces the mirror for those
-canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
+unchanged; only where the canvas is kept moves.
 
 - **Save.** Every save writes a record durably (file and folder fsync) to
   `<storage>/uva-pending/<hex>.json`, then a coalesced background commit puts it in
@@ -110,8 +78,7 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   whether the file matches, the pending seq and the committed seq. A
   `.estampes` bundle is exported only after every changed record is recorded, and
   an imported bundle's workspace, surface and notebooks are recorded after the
-  import. These documents are read-only through `experimental_workspace` and
-  not listed there. The workspace's `history.jsonl` (an audit log) stays legacy.
+  import. These documents are not listed by `uva_store`. The workspace's `history.jsonl` (an audit log) stays legacy.
 - **Not yet in UVA**: more than 512 marks or 64 objects per
   canvas, malformed links (for example one without its far end), or a store over
   its limits. Such a canvas keeps its pending file, which then wins on
@@ -127,6 +94,15 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   server touches it. Because `canvas.json` is kept equal to the record, modules
   that read it directly see the committed canvas too, and a save that still
   bypasses the server is adopted at the next restore.
+- **History compaction.** The store keeps what its 20 recovery points, named
+  checkpoints and readers need, plus about the last 7 days of commits (the ACK
+  replay window). Older history is retired automatically in small steps, mostly
+  while the writer is idle, and its files are deleted after a 1-day grace. See
+  [history compaction](rfc/unified-visual-architecture/HISTORY-COMPACTION.md).
+  `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) only caps commits retained in
+  that window; it is not a lifetime limit. When it is reached the store reports
+  `budgetExhausted` in `diagnostics.mirror`. If the store cannot start at all,
+  the server logs it and runs on the legacy files.
 - `diagnostics.mirror.canvasStore` also counts writes, refused writes, commits,
   restores by source, migrations, adopted bypassing saves, repaired legacy copies
   and the last error.
@@ -146,14 +122,15 @@ Production qualification is unchanged: **NOT QUALIFIED** (power loss #89/#91).
 ## Enable on Linux
 
 Use Node 22, `/usr/bin/flock` (Debian package `util-linux`), and an existing trusted
-parent directory. The Beta directory must be private to the server UID (0700),
-without symlinks, and neither inside nor above `ESTAMPES_STORAGE_DIR`.
+parent directory. The store directory must be private to the server UID (0700),
+without symlinks, and neither inside nor above `ESTAMPES_STORAGE_DIR`. Without
+`ESTAMPES_UVA_DIR` it is `<storage dir>-uva`.
 
 ```sh
 npm ci
-export ESTAMPES_UVA_BETA=1
-export ESTAMPES_UVA_BETA_DIR=/srv/estampes-beta
-export ESTAMPES_UVA_BETA_PROFILE=linux-process-crash-test
+export ESTAMPES_STORAGE_DIR=/srv/estampes
+export ESTAMPES_UVA_DIR=/srv/estampes-uva            # optional
+export ESTAMPES_UVA_PROFILE=linux-process-crash-test # the default on Linux
 npm start
 ```
 
@@ -181,51 +158,13 @@ test store to this profile is rejected. Use a new directory instead.
 The Docker image includes `flock`, creates `/uva-beta` owned by uid 1000 and makes
 it the default store folder (as `ESTAMPES_UVA_BETA_DIR`, so an explicit
 `ESTAMPES_UVA_DIR` or `ESTAMPES_UVA_BETA_DIR` still wins). `compose.yaml` mounts the `uva-beta` volume there, so
-the canvas store is on with `docker compose up -d`. The overlay adds the Beta
-editor and the mirror:
+the canvas store is on with `docker compose up -d`.
 
-```sh
-docker compose -f compose.yaml -f compose.uva-beta.yaml up -d --build
-```
-
-Do not use `docker compose down -v` to turn Beta off: that deletes volumes.
-
-## Use the Workbench
-
-Open **UVA Experimental Beta** from the existing Workbench, or call
-`experimental_workspace` with `action: list` from ChatGPT. Upload one to four
-images directly in the editor; each becomes a separate editable visual item.
-Existing image/workspace references can be copied in the advanced controls.
-
-Create layers, select an active layer, draw points/boxes/arrows/freehand lines,
-select and move annotations, or edit their coordinates, curve vertices, label and color. Layer
-visibility, lock, opacity and names are document state. Zoom, pan, selection and
-closing the editor are local view state. Select a saved workspace to reopen it.
-
-The module section discovers existing synchronous visual capabilities and their
-parameter schemas from the existing registry. Enable modules through the normal
-Store consent flow. Module outputs become editable scene objects on the selected
-item; their results and image annotations share one authoritative revision.
-Graph and image annotation are the demonstrated capabilities. CAS calculators
-and legacy Workbench panels remain available in their original path; CAS notebook
-persistence is not represented as a UVA scene transaction in this Beta. Async,
-network-backed and custom interactive module views need additional adapters
-(existing architecture follow-ups [#84](https://github.com/Curium-3391/Estampes/issues/84)
-and [#85](https://github.com/Curium-3391/Estampes/issues/85)).
-
-GPT uses `experimental_workspace` to read `open`, discover `modules`, or `render`
-actual image/composite pixels. For a write it calls `prepare` with a UUID request
-ID, the observed document revision and a typed operation, then `commit` with the
-**exact** returned prepared value. The UI does the same through app-only
-`uva_user_command`; caller-supplied author fields cannot change the actor.
-Prepared commands are signed and survive restart. Retry the original prepared
-value unchanged after interruption to obtain the original Ledger ACK. A stale
-revision requires refreshing and reviewing the edit. Never automatically rebase
-an old visual edit. Failed writes display an error and do not change the view.
+Do not use `docker compose down -v`: that deletes volumes.
 
 ## Assets and legacy copies
 
-Original image bytes are copied into the separate content-addressed Beta asset
+Original image bytes are copied into the separate content-addressed asset
 directory, hash-checked and synced **before** publishing a document reference.
 There is no cross-store atomic transaction: a failed preparation can leave an
 unreferenced asset, but an annotation ACK alone does not certify external image
@@ -233,21 +172,13 @@ bytes. Every image read/export and every commit rechecks referenced assets.
 Missing or corrupted images produce an actionable error; document metadata and
 saved exports remain accessible.
 
-Legacy image/workspace import is explicit and copy-based. Original bytes, marks,
-layers and their local IDs are preserved, scoped to the new scenes. Historical
-fields are retained verbatim in document source archives. Unsupported external
-links, image/embedded scene objects or unrepresentable geometry block the copy
-with a report; they are never silently discarded. The legacy source is not
-changed. Imported findings are not upgraded into newly verified claims.
-
 ## Limits and maintenance
 
-Fixed limits are four workspaces, four items per workspace, 25 revisions per
-workspace (including creation), 128 annotations, 64 objects and 1 MiB of document
-JSON, including recovery archives. Each source image is at most 8 MiB; the Beta
-asset directory is capped at 64 MiB. Saved exports are capped at 128 MiB. These
-limits can reject large legacy copies; export or keep using the source. No-op
-commands are rejected, and exact retries do not create additional revisions.
+Limits per store: 512 documents, 512 annotations and 64 objects per canvas, and
+1 MiB of document JSON, including recovery archives. Each image is at most
+32 MiB; the asset directory is capped by `ESTAMPES_UVA_ASSET_MAX_MB` (default
+1024). Saved exports are capped at 128 MiB. A canvas over these limits keeps its
+pending record (see above). Exact retries do not create additional revisions.
 Underlying 256 MiB document-store quota and storage reserve checks remain intact.
 
 Automatic lifecycle maintenance and GC are **disabled** for this bounded Beta.
@@ -269,12 +200,12 @@ Restored engine backups remain read-only without continuation proof.
 
 ## Export, recover, and return to legacy
 
-Click **保存／匯出** or use action `export`. Save the returned `.uva.zip` outside
+Use `uva_store` action `export`. Save the returned `.uva.zip` outside
 the server. It contains the exact editable document, original image assets and
 hash manifest. It is a portable logical copy, not a transaction Ledger/history
 backup. The saved server artifact remains downloadable at its signed URL after
-writer interruption or Beta deactivation, provided the configured Beta directory
-and access key remain available. No active writer is needed to download it.
+writer interruption or with `ESTAMPES_CANVAS_STORE=legacy`, provided the store
+directory and access key remain available. No active writer is needed to download it.
 
 For non-destructive recovery into a **new, empty, separate** directory:
 
@@ -288,12 +219,10 @@ remain in the recovery source archive. The original directory is preserved.
 Recovery with archives exceeding the 1 MiB Beta bound is rejected explicitly.
 Arbitrary foreign archives are not adopted as locally authenticated state.
 
-Set `ESTAMPES_CANVAS_STORE=legacy` (and `ESTAMPES_UVA_BETA=0`) and restart to
-return to legacy operation; the legacy files were kept up to date. Keep
-`ESTAMPES_UVA_BETA_DIR` configured if existing export links must remain readable.
-For Compose, remove the opt-in overlay and retain both volumes; add
-`ESTAMPES_UVA_BETA_DIR=/uva-beta` and retain its mount if serving saved exports
-while disabled. Re-enabling with the same directory/profile reopens Beta state.
+Set `ESTAMPES_CANVAS_STORE=legacy` and restart to return to legacy operation;
+the legacy files were kept up to date. Keep the store directory and its mount if
+existing export links must remain readable. Switching back to `uva` with the same
+directory and profile reopens the store.
 
 ## Durability qualification (what was measured)
 

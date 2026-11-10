@@ -19,6 +19,12 @@
   (shown in the canvas, with the confirm button again) until the user confirms
   it again. The geometry seen at confirmation is stored with the link and
   travels in bundles.
+
+- Removed the UVA Beta editor (`experimental_workspace`, the app-only
+  `uva_user_command`, the Workbench's UVA editor and `compose.uva-beta.yaml`)
+  and the read-only canvas mirror (`ESTAMPES_UVA_BETA`, `ESTAMPES_UVA_MIRROR`).
+  The UVA canvas store, which replaced both, is unchanged; `uva_store` remains
+  the read-only view of it.
 - Power-loss simulation for the UVA store (issue #91, `scripts/powerloss/`,
   docs/UVA-POWERLOSS.md). Every fsync is recorded and each crash point is
   rebuilt as a power cut could leave the folders. The store, or the whole

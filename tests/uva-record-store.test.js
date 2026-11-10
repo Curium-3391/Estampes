@@ -24,7 +24,7 @@ async function start(storage, beta, { idle = "0", cas = false } = {}) {
   if (casProc) running.add(casProc);
   const proc = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), stdio: "ignore", env: { ...process.env, PORT: String(port),
     ESTAMPES_STORAGE_DIR: storage, ESTAMPES_ALLOW_OPEN: "1", ESTAMPES_REQUIRE_KEY: "0", ESTAMPES_RATE_LIMIT_PER_MIN: "0",
-    ESTAMPES_UVA_BETA: "1", ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: "linux-process-crash-test",
+    ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: "linux-process-crash-test",
     ESTAMPES_CANVAS_STORE: "uva", ESTAMPES_UVA_MIRROR_IDLE_SEC: idle, ...(cas ? { ESTAMPES_CAS_SOCKET: sock } : {}) } });
   for (let i = 0; i < 300; i++) { try { if ((await fetch("http://127.0.0.1:" + port + "/")).ok) break; } catch {} await sleep(100); }
   const client = new Client({ name: "record-store", version: "0" }, { versionNegotiation: { mode: "auto" } });
@@ -32,7 +32,7 @@ async function start(storage, beta, { idle = "0", cas = false } = {}) {
   const call = async (name, args) => { const r = await client.callTool({ name, arguments: args }); assert.ok(!r.isError, name + ": " + JSON.stringify(r.content)); return r; };
   running.add(proc);
   const exited = new Promise((r) => proc.once("exit", () => { running.delete(proc); casProc?.kill("SIGKILL"); if (casProc) running.delete(casProc); r(); }));
-  const diagnostics = async () => (await call("experimental_workspace", { action: "status" })).structuredContent.diagnostics;
+  const diagnostics = async () => (await call("uva_store", { action: "status" })).structuredContent.diagnostics;
   return {
     call, diagnostics, port,
     records: async () => (await diagnostics()).mirror.recordStore,
@@ -138,7 +138,7 @@ test("workspaces are committed to UVA and restored from it after a restart", { t
   await settled(s, storage);
   const r = await s.records();
   assert.ok(r.records["workspace/" + ws]?.committedSeq >= 2, JSON.stringify(r.records));
-  assert.equal((await s.call("experimental_workspace", { action: "list" })).structuredContent.workspaces.filter((d) => /^Record /.test(d.title)).length, 0, "record documents are not offered as Beta workspaces");
+  assert.equal((await s.call("uva_store", { action: "list" })).structuredContent.workspaces.filter((d) => /^Record /.test(d.title)).length, 0, "record documents are not offered as Beta workspaces");
   const before = await readJson(wsFile(storage, ws));
   assert.equal(before.name, "改名後");
   await s.stop();
