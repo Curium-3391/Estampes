@@ -25,8 +25,14 @@
   (shown in the canvas, with the confirm button again) until the user confirms
   it again. The geometry seen at confirmation is stored with the link and
   travels in bundles.
-
-
+- The canvas's Undo / Redo buttons now also undo and redo edits you already
+  sent (move, resize, restyle, relabel, delete of a mark), through
+  `edit_visual_canvas` `history`. Each step restores the exact mark and is
+  refused, with the reason, if the mark changed since or its layer is locked.
+  The AI is told about an undo or redo on its next call. Layer edits (rename,
+  lock, opacity, order) are not part of this history. History is kept in
+  memory per image, up to 50 steps, and is not shown again after the widget
+  reloads until the next edit.
 - A server whose UVA store holds data but cannot open now exits with the reason
   instead of running on legacy files that lack what was saved to the store. A
   store that never held anything still falls back with a warning.
