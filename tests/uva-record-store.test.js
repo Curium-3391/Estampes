@@ -105,6 +105,28 @@ test("a pending record whose commit failed is committed again without another ed
   assert.deepEqual(held.get("workspace/" + ws).value, doc);
 });
 
+test("an edit that lands while its record is being written is adopted on restart, not overwritten", { timeout: 30000 }, async (t) => {
+  const { storage } = await folders(t);
+  const ws = "ws:" + "cd".repeat(8), a = { id: ws, name: "A", items: [], revision: 1 }, b = { ...a, name: "B", revision: 2 };
+  await mkdir(join(storage, "workspaces"), { recursive: true });
+  let raced = false;
+  // Commits never happen here; the edit lands between the scan's read and the pending write.
+  const service = { noteMirror() {}, recordKeys: async () => [], syncRecord: async () => { throw new Error("offline"); },
+    async recordState() { if (!raced) { raced = true; await writeFile(wsFile(storage, ws), JSON.stringify(b)); } return null; } };
+  const store = await createRecordStore({ service, storageDir: storage, idleMs: 600000, scanEveryMs: 0 });
+  await writeFile(wsFile(storage, ws), JSON.stringify(a));
+  await store.settle();
+  assert.ok(raced);
+  const [name] = await pendingRecords(storage);
+  const pending = await readJson(join(storage, "uva-pending", "records", name));
+  // The server dies before its next scan would record B (no close()).
+  assert.equal(pending.value.name, "A");
+  assert.equal(pending.legacyHash, hashJson(a), "the pending copy names the content it holds, not the newer file");
+  const again = await createRecordStore({ service: { ...service, recordState: async () => null }, storageDir: storage, idleMs: 600000, scanEveryMs: 0 });
+  await again.close();
+  assert.equal((await readJson(wsFile(storage, ws))).name, "B", "the newer file is adopted, never rewritten to A");
+});
+
 test("workspaces are committed to UVA and restored from it after a restart", { timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta);

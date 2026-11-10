@@ -130,15 +130,19 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
     return known.get(key).seq + 1;
   }
   // Resolves once the pending record is durable; rejects when it is not.
+  // `value` is the content just read from the record's file.
   function write(key, value) {
     if (!parts(key)) return Promise.resolve(null);
     const copy = JSON.parse(JSON.stringify(value)), h = hashJson(copy);
     return queued(key, async () => {
-      const seq = await nextSeq(key), now = await readLegacy(key).catch(() => null), legacyHash = now ? hashJson(now) : null;
+      // Every value written here was read from the file itself, so its hash is
+      // what the file held. Reading the file again could pair this value with a
+      // newer edit's hash, which restore would then overwrite as already known.
+      const seq = await nextSeq(key), legacyHash = h;
       await durableWrite(pendingFile(key), JSON.stringify({ schema: RECORD, key, seq, legacyHash, value: copy }));
       known.set(key, { hash: h, seq });
       stats.writes++;
-      track(key, { pendingSeq: seq, legacy: legacyHash === h ? "matches" : legacyHash ? "differs" : "missing" });
+      track(key, { pendingSeq: seq, legacy: "matches" });
       note();
       mirror.schedule(key);
       return seq;
