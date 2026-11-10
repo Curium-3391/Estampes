@@ -215,3 +215,21 @@ test("bytes that are not an image never become a stored asset", async () => {
     assert.equal(stored.length, 0, "nothing was installed");
   } finally { useCanvasStore(null); }
 });
+
+test("a caller that arrives while an image is being restored waits for its saved canvas", async () => {
+  const bytes = (await threeImageFixture(registerImage)).a.sourceBytes;
+  clearImages();
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  useCanvasStore({ read: async () => null, write: async () => 1, putImage: async () => { await gate; }, imageBytes: async () => null, note() {} });
+  try {
+    const first = intakeImage(bytes, { source: "upload" });
+    await new Promise((r) => setTimeout(r, 20));
+    let settled = false;
+    const second = intakeImage(bytes, { source: "upload" }).then((e) => { settled = true; return e; });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(settled, false, "the second caller waits for the first load");
+    release();
+    assert.equal((await second).imageId, (await first).imageId);
+  } finally { release(); useCanvasStore(null); }
+});

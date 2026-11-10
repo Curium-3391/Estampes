@@ -203,7 +203,8 @@ export async function intakeImage(bytes, options) {
 
 // The image for an id: memory first, then disk (after eviction or restart).
 export async function ensureImage(imageId) {
-  if (canvases && !hasImage(imageId) && hexOk(imageId)) return once(imageId, async () => {
+  // An image whose load is under way is waited for even if already cached.
+  if (canvases && hexOk(imageId) && (loading.has(imageId) || !hasImage(imageId))) return once(imageId, async () => {
     if (hasImage(imageId)) return getImage(imageId);
     const record = await canvases.read(imageId);
     if (!record) return (await migrateImage(imageId)) ?? getImage(imageId);
