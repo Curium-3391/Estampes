@@ -115,7 +115,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     for(const s of d.scenes){
       if(s.background.kind!=='asset'&&!(canvasDoc&&s.background.kind==='transparent'))fail('UNSUPPORTED_TARGET','Beta scenes require an image background');
       const anchor=s.background.kind==='asset'?s.background.asset:s.annotations[0]?.anchor.asset;
-      if(s.background.kind!=='asset'&&anchor&&anchor.legacyImageId!==d.provenance.legacySetKey)fail('INTEGRITY_ERROR','Marks of a canvas are anchored to another image');
+      if(s.background.kind!=='asset'&&anchor&&anchor.legacyImageId!==d.provenance.legacySetKey.split('#')[0])fail('INTEGRITY_ERROR','Marks of a canvas are anchored to another image');
       if(s.background.kind==='asset')await assetBytes(s.background.asset);
       for(const a of s.annotations)if(a.anchor.space!=='image-normalized'||!same(a.anchor.asset,anchor)||!same(a.anchor.sourceToDocument,matrix(s.extent.width,s.extent.height)))fail('UNSUPPORTED_TARGET','Beta editor supports only explicit image-normalized annotations');
       if(s.background.kind!=='asset'&&s.annotations.length)await assetBytes(anchor);

@@ -257,6 +257,8 @@ test("a workspace copy of a canvas is committed under its set key and restored f
   let s = await start(storage, beta);
   const imageId = await upload(s, "#335577");
   await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .3, y: .3, label: "orig" }] });
+  // The base image is promoted to an image layer, so the copy has a transparent background.
+  await s.call("add_image_layer", { imageId });
   const preview = await s.call("split_workspace", { source: imageId, mode: "copy" });
   const done = await s.call("split_workspace", { source: imageId, mode: "copy", commit: true, previewId: preview.structuredContent.previewId });
   const ws = done.structuredContent.workspaceId;
@@ -276,6 +278,7 @@ test("a workspace copy of a canvas is committed under its set key and restored f
   });
   const before = JSON.parse(await readFile(setFile, "utf8"));
   assert.equal(before.setId, key.split("#")[1]);
+  assert.equal(before.baseAsObject, true);
   // The image's own canvas did not get the copy's mark.
   assert.deepEqual(await s.labels(imageId), ["orig"]);
   await s.stop();
