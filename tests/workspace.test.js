@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { clearImages, registerImage } from "../src/image-store.js";
 import { canvasMarks, applyWorkspaceChanges, applyPairChanges, pairLinks, workspaceLinks, reviewWorkspaceLink } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
-import { useStorageDir, intakeImage, flushStorage } from "../src/storage.js";
+import { useStorageDir, useRecords, useCanvasStore, intakeImage, ensureImage, flushStorage } from "../src/storage.js";
 import {
   resolveRef, previewTransfer, commitTransfer, createWorkspace, editWorkspace, undoChange, workspaceItems, workspaceDocument,
   clearWorkspaces, getWorkspace, ensureSet,
@@ -187,4 +187,109 @@ test("review fixes: retry after a stale preview, annotation changes stale a prev
   // Duplicate identifiers for one item add it once.
   const dup = await previewTransfer({ source: b1.imageId + "+" + b2.imageId, target: "new", items: ["wi-1", b1.imageId], mode: "link" });
   assert.equal(dup.plan.add.length, 1);
+});
+
+test("a change that could not be saved is not acknowledged; a retry with the same key runs again", async () => {
+  const held = new Map(); let down = true;
+  useRecords({
+    write: async (kind, id, doc) => { if (down) throw new Error("store unavailable"); held.set(id, structuredClone(doc)); return 1; },
+    read: async (kind, id) => held.get(id) ?? null, list: async () => [...held.keys()], log: async () => [],
+  });
+  try {
+    await assert.rejects(createWorkspace({ name: "W", key: "k-retry" }), /store unavailable/);
+    assert.equal(held.size, 0);
+    down = false;
+    const done = await createWorkspace({ name: "W", key: "k-retry" });
+    assert.notEqual(done.repeated, true, "the failed attempt left no replay record behind");
+    assert.equal(held.size, 1, "the retry was saved");
+    const again = await createWorkspace({ name: "W", key: "k-retry" });
+    assert.equal(again.repeated, true);
+  } finally { useRecords(null); }
+});
+
+test("bytes that are not an image never become a stored asset", async () => {
+  const stored = [];
+  useCanvasStore({ read: async () => null, write: async () => 1, putImage: async (b) => { stored.push(b); }, imageBytes: async () => null, note() {} });
+  try {
+    await assert.rejects(intakeImage(Buffer.from("not an image at all"), { source: "upload" }), /not a supported image/);
+    assert.equal(stored.length, 0, "nothing was installed");
+  } finally { useCanvasStore(null); }
+});
+
+test("a caller that arrives while an image is being restored waits for its saved canvas", async () => {
+  const bytes = (await threeImageFixture(registerImage)).a.sourceBytes;
+  clearImages();
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  useCanvasStore({ read: async () => null, write: async () => 1, putImage: async () => { await gate; }, imageBytes: async () => null, note() {} });
+  try {
+    const first = intakeImage(bytes, { source: "upload" });
+    await new Promise((r) => setTimeout(r, 20));
+    let settled = false;
+    const second = intakeImage(bytes, { source: "upload" }).then((e) => { settled = true; return e; });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(settled, false, "the second caller waits for the first load");
+    release();
+    assert.equal((await second).imageId, (await first).imageId);
+  } finally { release(); useCanvasStore(null); }
+});
+
+test("a move where only one of the two workspaces could be saved leaves neither half-changed", async () => {
+  const held = new Map(); let failFor = null;
+  useRecords({
+    write: async (kind, id, doc) => { if (id === failFor) throw new Error("store unavailable"); held.set(id, structuredClone(doc)); return 1; },
+    read: async (kind, id) => held.get(id) ?? null, list: async () => [...held.keys()], log: async () => [],
+  });
+  try {
+    const { a, b1, b2 } = await threeImageFixture(registerImage);
+    const merged = await commitTransfer({ source: b1.imageId + "+" + b2.imageId, target: a.imageId });
+    const other = await createWorkspace({ name: "B" });
+    failFor = other.workspace.id;
+    await assert.rejects(commitTransfer({ source: merged.workspaceId, target: other.workspace.id, items: ["wi-3"], removeFromSource: true, key: "k-move" }), /store unavailable/);
+    assert.equal(held.get(merged.workspaceId).items.length, 3, "the source's saved record is back to what it was");
+    assert.deepEqual((held.get(merged.workspaceId).keys ?? []).filter((k) => k.key === "k-move"), []);
+    failFor = null;
+    const done = await commitTransfer({ source: merged.workspaceId, target: other.workspace.id, items: ["wi-3"], removeFromSource: true, key: "k-move" });
+    assert.notEqual(done.repeated, true);
+    assert.equal(held.get(other.workspace.id).items.length, 1);
+  } finally { useRecords(null); }
+});
+
+test("a restore that failed part-way is run again by the next ensureImage", async () => {
+  const { a } = await threeImageFixture(registerImage);
+  const bytes = a.sourceBytes, imageId = a.imageId;
+  clearImages();
+  let fail = true, writes = 0, reads = 0;
+  const record = { canvas: { marks: [] }, extra: { meta: { source: "storage" }, derived: null, log: [] }, seq: 1 };
+  useCanvasStore({ read: async () => { reads++; return record; }, write: async () => { writes++; return 2; }, imageBytes: async () => bytes,
+    putImage: async () => {}, note() {} });
+  try {
+    // First load fails inside the restore (after the entry is cached).
+    const real = record.canvas; Object.defineProperty(record, "canvas", { get() { if (fail) throw new Error("restore failed"); return real; } });
+    await assert.rejects(ensureImage(imageId), /restore failed/);
+    fail = false;
+    const entry = await ensureImage(imageId);
+    assert.equal(entry.imageId, imageId);
+    assert.equal(reads, 2, "the failed restore was run again");
+    await ensureImage(imageId);
+    assert.equal(reads, 2, "a finished restore is not repeated");
+  } finally { useCanvasStore(null); }
+});
+
+test("an older workspace copy's change log comes into its store record once", async () => {
+  const root = mkdtempSync(join(tmpdir(), "est-set-"));
+  useStorageDir(root);
+  const imageId = "img:" + "ab12cd34ef56ab78", setId = "c0a1b2c3d4", key = imageId + "#" + setId;
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  mkdirSync(join(root, "images", imageId.slice(4), "sets"), { recursive: true });
+  writeFileSync(join(root, "images", imageId.slice(4), "sets", setId + ".history.jsonl"), JSON.stringify({ tool: "old" }) + "\n");
+  const writes = [];
+  const record = { canvas: { setId, imageId, marks: [] }, extra: { log: [], meta: null, derived: null }, seq: 1 };
+  useCanvasStore({ read: async () => record, write: async (k, v) => { writes.push([k, v]); return 2; }, imageBytes: async () => null, putImage: async () => {}, note() {} });
+  try {
+    const { readSet } = await import("../src/storage.js");
+    assert.equal((await readSet(imageId, setId)).setId, setId);
+    assert.equal(writes.length, 1);
+    assert.deepEqual(writes[0][1].log, [{ tool: "old" }]);
+  } finally { useCanvasStore(null); useStorageDir(""); }
 });

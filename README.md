@@ -102,9 +102,9 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 
 ### UVA store
 
-Canvases, workspaces, panel layouts and calculator notebooks are committed to
-the UVA store by default (Docker: its own `uva-beta` volume). Existing data move
-in on first open, the older files are still written, and
+Images, canvases, workspaces, panel layouts and calculator notebooks are kept
+only in the UVA store by default (Docker: its own `uva-beta` volume). Existing
+data move in on first open; `scripts/uva-to-legacy.mjs` writes them back out before
 `ESTAMPES_CANVAS_STORE=legacy` switches back. The default profile survives a
 killed process but is not qualified for power loss. See
 [setup, limitations, export and rollback](docs/UVA-BETA.md).

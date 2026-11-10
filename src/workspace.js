@@ -229,14 +229,34 @@ async function commitDocs({ kind, before, after, sets = [], key, result }) {
   if (result) result.undoToken = token;
   const record = { token, kind, at, before: [...before].map(([id, doc]) => ({ id, doc: doc ? strip(doc) : null })),
     after: after.map((d) => ({ id: d.id, revision: d.revision + 1 })) };
+  const saved = after.map((doc) => ({ doc, revision: doc.revision, updatedAt: doc.updatedAt, undo: doc.undo, keys: doc.keys,
+    held: workspaces.has(doc.id), prev: workspaces.get(doc.id), indexed: key ? keyIndex.get(key) : undefined }));
   for (const doc of after) {
     doc.revision += 1; doc.updatedAt = at;
     doc.undo = [...(doc.undo ?? []), record].slice(-UNDO_KEEP);
     if (key) { doc.keys = [...(doc.keys ?? []), { key, token, result }].slice(-KEYS_KEEP); keyIndex.set(key, doc.id); }
     workspaces.set(doc.id, doc);
   }
-  for (const entry of sets) await saveCanvas(entry, { tool: "workspace", changed: [], note: kind + " from " + entry.derivedFrom?.set });
-  await Promise.all(after.map((doc) => saveWorkspaceFile(doc, { at, kind, token, revision: doc.revision, items: doc.items.length })));
+  const written = new Set();
+  try {
+    for (const entry of sets) await saveCanvas(entry, { tool: "workspace", changed: [], note: kind + " from " + entry.derivedFrom?.set });
+    await Promise.all(after.map((doc) => saveWorkspaceFile(doc, { at, kind, token, revision: doc.revision, items: doc.items.length })
+      .then(() => { written.add(doc.id); })));
+  } catch (error) {
+    // Not saved: forget the change and its idempotency key, so a retry
+    // with the same key runs again instead of being acknowledged unsaved.
+    for (const r of saved) {
+      Object.assign(r.doc, { revision: r.revision, updatedAt: r.updatedAt, undo: r.undo, keys: r.keys });
+      if (r.held) workspaces.set(r.doc.id, r.prev); else workspaces.delete(r.doc.id);
+      if (key) { if (r.indexed === undefined) keyIndex.delete(key); else keyIndex.set(key, r.indexed); }
+    }
+    // A change over several workspaces may have reached some of them: put the
+    // previous document back there, so none keeps half of the change (or the
+    // idempotency key that would acknowledge a retry).
+    await Promise.all(saved.filter((r) => written.has(r.doc.id) && r.held && r.prev)
+      .map((r) => saveWorkspaceFile(r.prev, { kind: "rollback", token, revision: r.prev.revision }).catch(() => {})));
+    throw error;
+  }
   return { undoToken: token, revisions: Object.fromEntries(after.map((d) => [d.id, d.revision])) };
 }
 

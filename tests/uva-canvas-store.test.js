@@ -1,5 +1,6 @@
 // ESTAMPES_CANVAS_STORE=uva: real server processes over real storage folders,
-// restarted and killed between steps.
+// restarted and killed between steps. Canvases, their copies and the images
+// themselves live only in the UVA store; no canvas, set or image file is written.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -53,31 +54,36 @@ async function upload(server, color) {
 }
 const pendingFiles = async (storage) => (await readdir(join(storage, "uva-pending")).catch(() => [])).filter((n) => n.endsWith(".json"));
 const canvasJson = (storage, imageId) => join(storage, "images", imageId.slice(4), "canvas.json");
+// What the server wrote under images/ (the legacy store's folder).
+const imageFiles = async (storage) => (await readdir(join(storage, "images"), { recursive: true }).catch(() => [])).sort();
+const pendingPath = (storage, key) => join(storage, "uva-pending", key.slice(4).replace("#", "-") + ".json");
 const committed = (server, storage) => until(async () => !(await pendingFiles(storage)).length && (await server.diagnostics()).mirror.canvasStore?.committed > 0);
 
-test("a canvas is committed to its UVA document and restored from it after a restart", { timeout: 120000 }, async (t) => {
+const state = async (s, imageId) => (await s.call("get_visual_state", { imageId })).structuredContent;
+const pixels = async (s, imageId) => (await s.call("render_canvas", { imageId, maxSide: 256 })).content.find((c) => c.type === "image").data;
+const openDoc = async (s, title) => {
+  const doc = (await s.documents()).find((d) => d.title === title);
+  return doc && (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
+};
+
+test("a canvas is committed to its UVA document, writes no file of its own, and comes back after a restart", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta);
   const imageId = await upload(s, "#336699");
   await s.call("present_visual", { imageId, layer: "第一輪", annotations: [{ id: "a1", type: "rect", x: .1, y: .2, x2: .4, y2: .5, label: "first" }, { id: "a2", type: "point", x: .7, y: .7, label: "second" }] });
   await committed(s, storage);
-  const [doc] = await s.documents();
-  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
-  const ext = open.extensions["estampes.beta:mirror"];
-  assert.equal(ext.authority, "uva");
-  assert.equal(open.extensions["estampes.beta:legacyArchives"], undefined, "the raw canvas is not stored again as a sidecar");
+  assert.deepEqual(await imageFiles(storage), [], "no canvas, history or image file");
+  const open = await openDoc(s, "Canvas " + imageId);
+  assert.equal(open.extensions["estampes.beta:mirror"].authority, "uva");
   assert.deepEqual(open.scenes[0].annotations.map((a) => a.label).sort(), ["first", "second"]);
-  assert.equal((await s.diagnostics()).mirror.lastResidualBytes, 0, JSON.stringify(ext.residual));
+  assert.equal((await s.diagnostics()).mirror.lastResidualBytes, 0);
+  const before = await pixels(s, imageId);
   await s.stop();
 
-  // canvas.json is only the legacy copy now: without it the canvas comes from
-  // UVA, and the copy is written again at startup for the sealed modules.
-  await unlink(canvasJson(storage, imageId));
   s = await start(storage, beta);
-  const repaired = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
-  assert.deepEqual(repaired.marks.map((m) => m.label).sort(), ["first", "second"]);
-  assert.equal((await s.diagnostics()).mirror.canvasStore.repaired, 1);
   assert.deepEqual(await s.labels(imageId), ["first", "second"]);
+  assert.equal(await pixels(s, imageId), before, "the image bytes come back from the store");
+  assert.equal((await s.diagnostics()).mirror.canvasStore.read.uva, 1, JSON.stringify((await s.diagnostics()).mirror.canvasStore));
   // Further edits keep updating the same document.
   await s.call("present_visual", { imageId, annotations: [{ id: "a3", type: "point", x: .2, y: .8, label: "third" }] });
   await committed(s, storage);
@@ -85,6 +91,7 @@ test("a canvas is committed to its UVA document and restored from it after a res
   await s.stop();
   s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["first", "second", "third"]);
+  assert.deepEqual(await imageFiles(storage), []);
   await s.stop();
 });
 
@@ -96,44 +103,40 @@ test("an edit killed before its commit is recovered from the pending copy and th
   assert.equal((await pendingFiles(storage)).length, 1);
   assert.equal((await s.documents()).length, 0, "the commit waits for the idle time");
   await s.kill();
-  // The legacy copy is gone too: only the pending copy holds the edit.
-  await unlink(canvasJson(storage, imageId));
   s = await start(storage, beta);
-  await committed(s, storage);
   assert.deepEqual(await s.labels(imageId), ["unsaved?"]);
+  await committed(s, storage);
   assert.equal((await s.documents()).length, 1);
   await s.stop();
 });
 
-test("a legacy canvas moves into UVA on open, and a newer canvas.json written behind the server's back wins", { timeout: 120000 }, async (t) => {
+test("a canvas saved by the legacy store moves into UVA once and no longer needs its files", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta, { mode: "legacy" });
   const imageId = await upload(s, "#669933");
   await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "old canvas" }] });
+  const before = await pixels(s, imageId);
   await s.stop();
+  assert.ok((await imageFiles(storage)).length > 0, "the legacy store wrote its files");
+
   s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["old canvas"]);
   await committed(s, storage);
-  assert.equal((await s.diagnostics()).mirror.canvasStore.migrated, 1);
   await s.stop();
-
-  // e.g. the workspace or bundle modules, which write canvas.json themselves.
-  // Its clock time does not matter (here it is far in the past): content the
-  // store's records do not know is a newer save.
-  const legacy = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
-  legacy.marks.push({ ...legacy.marks[0], id: "a2", label: "written later" });
-  await writeFile(canvasJson(storage, imageId), JSON.stringify({ ...legacy, savedAt: "2000-01-01T00:00:00.000Z" }));
+  // The legacy files are left alone; the store no longer reads them.
+  const legacy = await readFile(canvasJson(storage, imageId), "utf8");
+  await rm(join(storage, "images"), { recursive: true });
   s = await start(storage, beta);
-  assert.deepEqual(await s.labels(imageId), ["old canvas", "written later"]);
+  assert.deepEqual(await s.labels(imageId), ["old canvas"]);
+  assert.equal(await pixels(s, imageId), before);
+  await s.call("present_visual", { imageId, annotations: [{ id: "a2", type: "point", x: .2, y: .2, label: "new" }] });
   await committed(s, storage);
-  const [doc] = await s.documents();
-  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
-  assert.equal(open.scenes[0].annotations.length, 2);
   await s.stop();
-
-  // Switching back to legacy still has every edit.
-  s = await start(storage, beta, { mode: "legacy" });
-  assert.deepEqual(await s.labels(imageId), ["old canvas", "written later"]);
+  // A legacy file put back later does not replace the store's record.
+  await mkdir(join(storage, "images", imageId.slice(4)), { recursive: true });
+  await writeFile(canvasJson(storage, imageId), legacy);
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["new", "old canvas"]);
   await s.stop();
 });
 
@@ -145,12 +148,7 @@ test("image layers are committed as verified assets and come back byte for byte"
   await s.call("add_image_layer", { imageId, sourceImageId: other, region: { x: .1, y: .1, x2: .5, y2: .6 } });
   await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }] });
   await committed(s, storage);
-  const before = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
-  const pngs = before.objects.filter((o) => o.type === "image").map((o) => o.props.png);
-  assert.equal(pngs.length, 2);
-  assert.equal(before.baseAsObject, true);
-  const [doc] = (await s.documents()).filter((d) => d.title === "Canvas " + imageId);
-  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = await openDoc(s, "Canvas " + imageId);
   const scene = open.scenes[0];
   assert.equal(scene.background.kind, "transparent");
   const images = scene.objects.filter((o) => o.type === "image");
@@ -159,33 +157,29 @@ test("image layers are committed as verified assets and come back byte for byte"
   for (const o of images) assert.match(o.props.asset.assetId, /^asset:sha256:[0-9a-f]{64}$/);
   assert.ok(!JSON.stringify(open).includes("data:image/png"));
   assert.ok(Buffer.byteLength(JSON.stringify(open)) < 64 * 1024);
-  // Render works without a background asset.
-  const r = await s.call("uva_store", { action: "render", documentId: doc.id });
-  const pixels = r.content.find((c) => c.type === "image");
-  assert.ok(pixels?.data.length > 100, JSON.stringify(r.content).slice(0, 300));
+  const r = await s.call("uva_store", { action: "render", documentId: (await s.documents()).find((d) => d.title === "Canvas " + imageId).id });
+  assert.ok(r.content.find((c) => c.type === "image")?.data.length > 100);
   // The export carries every image the document references.
-  const exported = (await s.call("uva_store", { action: "export", documentId: doc.id })).structuredContent;
+  const exported = (await s.call("uva_store", { action: "export", documentId: (await s.documents()).find((d) => d.title === "Canvas " + imageId).id })).structuredContent;
   const zip = await readFile(join(beta, "exports", exported.exportId + ".zip"));
   for (const o of images) assert.ok(zip.includes(Buffer.from("assets/" + o.props.asset.assetId.slice(13))), o.props.asset.assetId);
+  const before = await pixels(s, imageId);
   await s.stop();
 
-  // The legacy copy is gone: the canvas, including every PNG, comes back from UVA.
-  await unlink(canvasJson(storage, imageId));
   s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["kept"]);
-  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.uva, 1);
-  const after = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
-  assert.deepEqual(after.objects.filter((o) => o.type === "image").map((o) => o.props.png), pngs);
+  assert.equal(await pixels(s, imageId), before);
   // Moving an image layer is an object edit; it commits and survives a restart.
-  const moved = after.objects.find((o) => o.type === "image" && o.props.region.x === .1);
+  const moved = images.find((o) => o.props.region?.x === .1) ?? images[1];
   await s.call("edit_scene_object", { imageId, id: moved.id, props: { region: { x: .2, y: .2, x2: .6, y2: .7 } } });
   await committed(s, storage);
+  const movedPixels = await pixels(s, imageId);
+  assert.notEqual(movedPixels, before);
   await s.stop();
-  await unlink(canvasJson(storage, imageId));
   s = await start(storage, beta);
-  const last = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
-  assert.deepEqual(last.objects.find((o) => o.id === moved.id).props.region, { x: .2, y: .2, x2: .6, y2: .7 });
-  assert.equal(last.objects.find((o) => o.id === moved.id).props.png, moved.props.png);
+  assert.equal(await pixels(s, imageId), movedPixels);
+  const again = (await openDoc(s, "Canvas " + imageId)).scenes[0].objects.find((o) => o.id === moved.id);
+  assert.deepEqual(again.props.asset, moved.props.asset, "the same verified asset");
   await s.stop();
 });
 
@@ -198,58 +192,48 @@ test("links to another canvas and their reviews are committed as relation bindin
   // The user's verdict is part of the link record.
   await s.call("review_visual_link", { imageId: left, pairImageId: right, linkId: "k1", review: "confirmed" });
   await until(async () => { if ((await pendingFiles(storage)).length) return false; const im = (await s.diagnostics()).mirror.canvasStore.images; return Object.values(im).every((x) => x.committedSeq >= x.pendingSeq); });
-  const before = { left: JSON.parse(await readFile(canvasJson(storage, left), "utf8")), right: JSON.parse(await readFile(canvasJson(storage, right), "utf8")) };
-  assert.equal(before.left.links[right].length, 1);
   assert.equal((await s.diagnostics()).mirror.blocked?.[left], undefined);
   const docs = await s.documents();
-  const doc = docs.find((d) => d.title === "Canvas " + left);
-  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = await openDoc(s, "Canvas " + left);
   const binding = open.bindings.find((b) => b.kind === "relation");
-  assert.ok(binding, JSON.stringify({ bindings: open.bindings, ext: open.extensions, diag: (await s.diagnostics()).mirror }).slice(0, 1500));
+  assert.ok(binding, JSON.stringify({ bindings: open.bindings, diag: (await s.diagnostics()).mirror }).slice(0, 1500));
   assert.equal(binding.from.id, "a1");
   assert.equal(binding.to.id, "b1");
-  // The far end names the other canvas's own document.
   assert.equal(binding.to.documentId, docs.find((d) => d.title === "Canvas " + right).id);
   assert.equal(binding.label, "same");
   assert.equal(binding.original.review, "confirmed");
-  // The link lives in the document structure, not in the exact-difference patch.
   assert.equal(JSON.stringify(open.extensions["estampes.beta:mirror"].residual ?? {}).includes("links"), false);
+  const pair = async () => (await s.call("get_visual_state", { imageId: left, pairImageId: right })).structuredContent;
+  const strip = (v) => JSON.parse(JSON.stringify(v, (k, x) => (k === "savedAt" || k === "revision" ? undefined : x)));
+  const before = strip(await pair());
   await s.stop();
 
   // Both canvases, links included, come back from UVA alone.
-  await unlink(canvasJson(storage, left));
-  await unlink(canvasJson(storage, right));
   s = await start(storage, beta);
-  assert.deepEqual(await s.labels(left), ["left"]);
-  const after = JSON.parse(await readFile(canvasJson(storage, left), "utf8")), afterRight = JSON.parse(await readFile(canvasJson(storage, right), "utf8"));
-  const strip = ({ savedAt, ...rest }) => rest;
-  assert.deepEqual(strip(after), strip(before.left));
-  assert.deepEqual(strip(afterRight), strip(before.right));
+  assert.deepEqual(strip(await pair()), before);
   await s.stop();
 });
 
 test("a canvas the document cannot hold yet stays in its pending copy and is reported", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);
-  let s = await start(storage, beta);
+  let s = await start(storage, beta, { idle: "3600" });
   const imageId = await upload(s, "#336633");
   await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }] });
-  await committed(s, storage);
   await s.stop();
-  // A link without its far end, written past the server (adopted on restore).
-  const legacy = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
-  legacy.links = { "img:0000000000000000": [{ id: "k9", left: "a1", label: "half" }] };
-  await writeFile(canvasJson(storage, imageId), JSON.stringify(legacy));
+  // A link without its far end, in a later pending record (as a crashed
+  // server of another version might leave it).
+  const path = pendingPath(storage, imageId), record = JSON.parse(await readFile(path, "utf8"));
+  record.canvas.links = { "img:0000000000000000": [{ id: "k9", left: "a1", label: "half" }] };
+  record.seq++;
+  await writeFile(path, JSON.stringify(record));
   s = await start(storage, beta);
   const d = await until(async () => { const m = (await s.diagnostics()).mirror; return m.blocked?.[imageId] ? m : null; });
   assert.match(d.blocked[imageId], /endpoint|binding/i);
   assert.equal((await pendingFiles(storage)).length, 1);
-  await s.stop();
-  await unlink(canvasJson(storage, imageId));
-  s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["kept"]);
-  assert.deepEqual(JSON.parse(await readFile(canvasJson(storage, imageId), "utf8")).links, legacy.links);
-  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.pending, 1);
+  assert.equal((await s.diagnostics()).mirror.canvasStore.read.pending, 1);
   await s.stop();
+  assert.deepEqual(JSON.parse(await readFile(path, "utf8")).canvas.links, record.canvas.links, "the pending record is kept");
 });
 
 test("a workspace copy of a canvas is committed under its set key and restored from it", { timeout: 120000 }, async (t) => {
@@ -257,7 +241,6 @@ test("a workspace copy of a canvas is committed under its set key and restored f
   let s = await start(storage, beta);
   const imageId = await upload(s, "#335577");
   await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .3, y: .3, label: "orig" }] });
-  // The base image is promoted to an image layer, so the copy has a transparent background.
   await s.call("add_image_layer", { imageId });
   const preview = await s.call("split_workspace", { source: imageId, mode: "copy" });
   const done = await s.call("split_workspace", { source: imageId, mode: "copy", commit: true, previewId: preview.structuredContent.previewId });
@@ -265,86 +248,161 @@ test("a workspace copy of a canvas is committed under its set key and restored f
   const doc = await s.get("/api/v1/workspaces/" + ws.slice(3));
   const key = JSON.stringify(doc).match(/img:[0-9a-f]{16}#c[0-9a-f]{12}/)?.[0];
   assert.ok(key, JSON.stringify(doc).slice(0, 400));
-  const setFile = join(storage, "images", imageId.slice(4), "sets", key.split("#")[1] + ".json");
-  await until(async () => !(await pendingFiles(storage)).length && (await s.documents()).some((d) => d.title === "Canvas " + key));
-  // An edit of the copy through the workspace is committed too.
   const item = JSON.stringify(doc).match(/"id":"(wi-\d+)"/)[1];
   await s.call("present_visual", { workspaceId: ws, verify: false, annotations: [{ id: "c1", type: "point", x: .6, y: .6, label: "copy only", item }] });
   await until(async () => {
     if ((await pendingFiles(storage)).length) return false;
-    const d = (await s.documents()).find((x) => x.title === "Canvas " + key);
-    const open = (await s.call("uva_store", { action: "open", documentId: d.id })).structuredContent.document;
-    return open.scenes[0].annotations.some((a) => a.label === "copy only");
+    const open = await openDoc(s, "Canvas " + key);
+    return open?.scenes[0].annotations.some((a) => a.label === "copy only");
   });
-  const before = JSON.parse(await readFile(setFile, "utf8"));
-  assert.equal(before.setId, key.split("#")[1]);
-  assert.equal(before.baseAsObject, true);
-  // The image's own canvas did not get the copy's mark.
-  assert.deepEqual(await s.labels(imageId), ["orig"]);
+  assert.deepEqual(await s.labels(imageId), ["orig"], "the image's own canvas did not get the copy's mark");
+  assert.deepEqual(await imageFiles(storage), [], "no set file");
   await s.stop();
 
-  // The copy's set file is gone: it comes back from its UVA document.
-  await unlink(setFile);
   s = await start(storage, beta);
-  const strip = ({ savedAt, ...rest }) => rest;
-  assert.deepEqual(strip(JSON.parse(await readFile(setFile, "utf8"))), strip(before));
   const again = await s.get("/api/v1/workspaces/" + ws.slice(3));
   assert.ok(JSON.stringify(again).includes("copy only"), JSON.stringify(again).slice(0, 300));
-  await s.stop();
-});
-
-test("a workspace read over HTTP after a restart shows the committed canvas, and later edits keep it", { timeout: 120000 }, async (t) => {
-  const { storage, beta } = await folders(t);
-  let s = await start(storage, beta);
-  const imageId = await upload(s, "#663399");
-  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .3, y: .3, label: "committed" }] });
-  await committed(s, storage);
-  const ws = (await s.call("create_workspace", { canvases: [imageId] })).structuredContent.workspaceId;
-  await s.stop();
-  await unlink(canvasJson(storage, imageId));
-  s = await start(storage, beta);
-  // The HTTP route loads the images through the workspace module itself.
-  const doc = await s.get("/api/v1/workspaces/" + ws.slice(3));
-  assert.ok(JSON.stringify(doc).includes("committed"), JSON.stringify(doc).slice(0, 300));
+  assert.deepEqual(await s.labels(imageId), ["orig"]);
   await s.call("present_visual", { imageId, annotations: [{ id: "a2", type: "point", x: .6, y: .6, label: "later" }] });
-  assert.deepEqual(await s.labels(imageId), ["committed", "later"]);
+  assert.deepEqual(await s.labels(imageId), ["later", "orig"]);
   await s.stop();
 });
 
-test("a save is acknowledged only once its pending record is durable; legacy, pending and committed are reported apart", { timeout: 120000 }, async (t) => {
+test("a save is acknowledged only once its pending record is durable; pending and committed are reported apart", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta, { idle: "3600" });
   const imageId = await upload(s, "#996699");
   const image = async () => (await s.diagnostics()).mirror.canvasStore.images[imageId];
   await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .2, y: .2, label: "one" }] });
-  assert.deepEqual(await image(), { pendingSeq: 1, legacy: "matches" });
+  const first = (await image()).pendingSeq;
+  assert.ok(first >= 1);
+  assert.equal((await image()).committedSeq, undefined);
 
-  // The pending record cannot be written: the save fails, although canvas.json has it.
-  const pending = join(storage, "uva-pending", imageId.slice(4) + ".json");
+  // The pending record cannot be written: the save fails and nothing else holds it.
+  const pending = pendingPath(storage, imageId);
   await unlink(pending);
   await mkdir(join(pending, "blocker"), { recursive: true });
   const failed = await s.raw("present_visual", { imageId, annotations: [{ id: "a2", type: "point", x: .4, y: .4, label: "two" }] });
   assert.equal(failed.isError, true, JSON.stringify(failed.content));
-  assert.match(failed.content[0].text, /not saved to the UVA canvas store/);
-  assert.ok((await readFile(canvasJson(storage, imageId), "utf8")).includes('"two"'), "the legacy copy was written");
+  assert.match(failed.content[0].text, /was not saved/);
   const after = await image();
-  assert.equal(after.pendingSeq, 1);
-  assert.equal(after.failedSeq, 2);
-  assert.equal(after.committedSeq, undefined);
+  assert.equal(after.pendingSeq, first);
+  assert.equal(after.failedSeq, first + 1);
+  assert.deepEqual(await imageFiles(storage), []);
   await rm(pending, { recursive: true });
 
-  // The next save gets a later sequence number, and its commit is reported.
-  // (The store may first re-record the legacy copy that holds "two", so the
-  // number is 2 or 3 depending on timing; it never reuses 1.)
+  // The next save gets the next sequence number, and its commit is reported.
   await s.call("present_visual", { imageId, annotations: [{ id: "a3", type: "point", x: .6, y: .6, label: "three" }] });
-  const seq = (await image()).pendingSeq;
-  assert.ok(seq === 2 || seq === 3, "pendingSeq " + seq);
+  assert.equal((await image()).pendingSeq, first + 1);
   await s.stop();
   s = await start(storage, beta);
   await committed(s, storage);
-  assert.deepEqual(await s.labels(imageId), ["one", "three", "two"]);
-  const [doc] = await s.documents();
-  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
-  assert.equal(open.extensions["estampes.beta:mirror"].sourceSeq, seq);
+  assert.equal((await image()).committedSeq, first + 1);
+  assert.ok((await s.labels(imageId)).includes("three"));
+  const open = await openDoc(s, "Canvas " + imageId);
+  assert.equal(open.extensions["estampes.beta:mirror"].sourceSeq, first + 1);
+  await s.stop();
+});
+
+test("uva-to-legacy writes canvases, copies and image bytes back, so the legacy store has every edit", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { idle: "3600" });
+  const committedId = await upload(s, "#225588"), pendingId = await upload(s, "#882255");
+  await s.call("present_visual", { imageId: committedId, annotations: [{ id: "a1", type: "point", x: .3, y: .3, label: "committed" }] });
+  await s.call("present_visual", { imageId: pendingId, annotations: [{ id: "a1", type: "point", x: .6, y: .6, label: "only pending" }] });
+  const before = { committed: await pixels(s, committedId) };
+  await s.kill();
+  // One canvas reaches its document; the other stays a pending record.
+  s = await start(storage, beta);
+  await committed(s, storage);
+  await s.stop();
+  s = await start(storage, beta, { idle: "3600" });
+  await s.call("present_visual", { imageId: pendingId, annotations: [{ id: "a2", type: "point", x: .1, y: .1, label: "later" }] });
+  before.pending = await pixels(s, pendingId);
+  await s.kill();
+  assert.equal((await pendingFiles(storage)).length, 1, "the later edit is only a pending record");
+  assert.deepEqual(await imageFiles(storage), []);
+
+  const run = spawn(process.execPath, ["scripts/uva-to-legacy.mjs", storage, beta], { cwd: process.cwd(), stdio: ["ignore", "pipe", "inherit"] });
+  let out = ""; run.stdout.on("data", (d) => { out += d; });
+  assert.equal(await new Promise((r) => run.once("exit", r)), 0);
+  assert.deepEqual(JSON.parse(out).written.canvas, 2, out);
+  assert.deepEqual(JSON.parse(out).written.image, 2, out);
+
+  s = await start(storage, beta, { mode: "legacy" });
+  assert.deepEqual(await s.labels(committedId), ["committed"]);
+  assert.deepEqual(await s.labels(pendingId), ["later", "only pending"]);
+  assert.equal(await pixels(s, committedId), before.committed);
+  assert.equal(await pixels(s, pendingId), before.pending);
+  await s.stop();
+});
+
+test("a server whose UVA store holds data but cannot open stops instead of running on stale legacy files", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const imageId = await upload(s, "#557799");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "in the store" }] });
+  await committed(s, storage);
+  // A second server on the same folders: the running one holds the store's lease.
+  const run = (env) => new Promise((done) => {
+    const proc = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PORT: "0",
+      ESTAMPES_STORAGE_DIR: storage, ESTAMPES_ALLOW_OPEN: "1", ESTAMPES_REQUIRE_KEY: "0", ESTAMPES_UVA_DIR: beta, ESTAMPES_UVA_PROFILE: "linux-process-crash-test", ...env } });
+    let err = ""; proc.stderr.on("data", (d) => { err += d; }); proc.stdout.on("data", (d) => { err += d; });
+    const timer = setTimeout(() => proc.kill("SIGKILL"), 15000);
+    proc.once("exit", (code) => { clearTimeout(timer); done({ code, err }); });
+  });
+  const { code, err } = await run({});
+  assert.equal(code, 1, err.slice(-600));
+  assert.match(err, /could not open; stopping/);
+  await s.stop();
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["in the store"]);
+  await s.stop();
+});
+
+test("an upload whose durable record failed is not cached as saved: retrying it writes the record", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { idle: "3600" });
+  const bytes = await sharp({ create: { width: 320, height: 200, channels: 3, background: "#123456" } }).png().toBuffer();
+  const imageId = "img:" + (await import("node:crypto")).createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  const pending = pendingPath(storage, imageId);
+  await mkdir(join(pending, "blocker"), { recursive: true });
+  const data = bytes.toString("base64");
+  const args = { total: data.length, offset: 0, data, fileName: "r.png" };
+  const failed = await s.raw("upload_visual_image", args);
+  assert.equal(failed.isError, true, JSON.stringify(failed.content).slice(0, 300));
+  await rm(pending, { recursive: true });
+  assert.equal((await s.call("upload_visual_image", args)).structuredContent.imageId, imageId);
+  assert.equal((await pendingFiles(storage)).length, 1, "the retry wrote the record");
+  await s.kill();
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), []);
+  await s.stop();
+});
+
+test("a canvas record from before metadata, views and history moved into the store takes them from the older files once", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { mode: "legacy" });
+  const imageId = await upload(s, "#445566");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "older" }] });
+  const view = (await s.call("process_image", { imageId, ops: [{ op: "levels" }], output: { format: "png" } })).structuredContent.derivedViewId;
+  await s.stop();
+  // What an earlier UVA canvas store left: the canvas alone.
+  const canvas = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  await mkdir(join(storage, "uva-pending"), { recursive: true });
+  await writeFile(pendingPath(storage, imageId), JSON.stringify({ schema: "estampes.canvas-pending/1", seq: 1, canvas }));
+  s = await start(storage, beta, { idle: "3600" });
+  assert.deepEqual(await s.labels(imageId), ["older"]);
+  const record = JSON.parse(await readFile(pendingPath(storage, imageId), "utf8"));
+  assert.equal(record.seq, 2);
+  assert.equal(record.extra.meta.imageId, imageId);
+  assert.ok(record.extra.derived?.views?.some((v) => v.id === view || v.derivedViewId === view), JSON.stringify(record.extra.derived).slice(0, 300));
+  assert.ok(record.extra.log.length >= 1);
+  await s.kill();
+  // The older files are no longer needed.
+  await rm(join(storage, "images"), { recursive: true });
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["older"]);
+  assert.equal((await s.raw("get_derived_view", { imageId, derivedViewId: view })).isError, undefined);
   await s.stop();
 });

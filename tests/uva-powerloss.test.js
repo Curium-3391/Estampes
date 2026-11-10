@@ -76,7 +76,7 @@ test("an initialization a power cut interrupted is started again, not refused", 
   assert.equal(await readFile(join(foreign, "assets", "important.png"), "utf8"), "keep");
 });
 
-test("an image whose legacy file a power cut emptied comes back from the UVA asset store", { timeout: 120000 }, async (t) => {
+test("an image killed right after its first mark comes back from the UVA store alone, with no legacy file", { timeout: 120000 }, async (t) => {
   const { spawn } = await import("node:child_process");
   const { createServer } = await import("node:net");
   const { Client, StreamableHTTPClientTransport } = await import("@modelcontextprotocol/client");
@@ -104,13 +104,13 @@ test("an image whose legacy file a power cut emptied comes back from the UVA ass
     await new Promise((r) => setTimeout(r, 100));
   }
   await s.stop();
-  const folderOf = join(storage, "images", imageId.slice(4));
-  await writeFile(join(folderOf, "source"), "");
-  for (const name of await readdir(folderOf)) if (name === "meta.json") await unlink(join(folderOf, name));
+  // Nothing of the image is kept as a legacy file.
+  assert.deepEqual(await readdir(join(storage, "images")).catch(() => []), []);
   s = await start();
   t.after(() => s.stop());
   const state = await s.call("get_visual_state", { imageId });
   assert.ok(!state.isError, JSON.stringify(state.content));
   assert.deepEqual(state.structuredContent.marks.map((m) => m.id), ["k1"]);
-  assert.ok((await readFile(join(folderOf, "source"))).length > 0, "the legacy copy is repaired");
+  const pixels = await s.call("render_canvas", { imageId, maxSide: 128 });
+  assert.ok(!pixels.isError && pixels.content.some((c) => c.type === "image"), "the image bytes come back from the asset store");
 });
