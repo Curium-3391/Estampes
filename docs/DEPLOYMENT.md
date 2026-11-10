@@ -50,7 +50,7 @@ PDF page rendering is optional: build with `docker compose build --build-arg EST
 
 ### What is stored
 
-With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`), every image gets a folder `images/<hash>/`:
+With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`) and the default UVA store, images, canvases, workspaces and panels are kept in the store (`uva-pending/` plus the store folder) and no `images/` file is written; see [UVA store](UVA-BETA.md). With `ESTAMPES_CANVAS_STORE=legacy`, every image gets a folder `images/<hash>/`:
 
 | File | Content |
 | --- | --- |
@@ -183,8 +183,9 @@ back without losing an edit. Servers without storage keep everything in memory.
   profile states what the host can promise. A simulated power cut at every
   fsync loses no acknowledged result ([UVA-POWERLOSS.md](UVA-POWERLOSS.md));
   whether your disk or Docker Desktop VM honours fsync is outside that test.
-  `ESTAMPES_UVA_BETA_PROFILE` is still read as the older name. The UVA lease needs Linux `flock`; where the store cannot start, the
-  server logs it and uses the legacy files.
+  `ESTAMPES_UVA_BETA_PROFILE` is still read as the older name. The UVA lease needs Linux `flock`; where the store cannot start before it
+  holds any data, the server logs it and uses the legacy files; once it holds data,
+  the server exits instead (see [UVA store](UVA-BETA.md)).
 - `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024) caps the store's image copies;
   `ESTAMPES_UVA_MIRROR_IDLE_SEC` (default 15) is the quiet time before a commit;
   `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) caps the commits kept in the

@@ -17,12 +17,15 @@ export class NotebookError extends Error {
   constructor(message, code = "invalid") { super(message); this.code = code; }
 }
 
-export function createNotebooks({ dir = "" } = {}) {
+// `records()`: the UVA record store when it is on (src/uva/record-store.js);
+// notebooks are then read from and written to it, and no file is written here.
+export function createNotebooks({ dir = "", records = () => null } = {}) {
   const books = new Map();
   const queues = new Map();
   const file = (id) => join(dir, id.replace(":", "_") + ".json");
 
   async function persist(nb) {
+    if (records()) { await records().write("notebook", nb.id, nb); return; }
     if (!dir) return;
     await mkdir(dir, { recursive: true });
     const path = file(nb.id), tmp = path + "." + process.pid + "." + Date.now() + ".tmp";
@@ -32,13 +35,13 @@ export function createNotebooks({ dir = "" } = {}) {
 
   async function load(id) {
     if (books.has(id)) return books.get(id);
-    if (!dir || !NOTEBOOK_ID.test(id)) return null;
-    try {
-      const nb = JSON.parse(await readFile(file(id), "utf8"));
-      if (nb?.schema !== NOTEBOOK_SCHEMA || nb.id !== id) return null;
-      books.set(id, nb);
-      return nb;
-    } catch { return null; }
+    if (!(dir || records()) || !NOTEBOOK_ID.test(id)) return null;
+    // A store that cannot be read throws, rather than passing for "no notebook".
+    const read = records() ? () => records().read("notebook", id) : async () => { try { return JSON.parse(await readFile(file(id), "utf8")); } catch { return null; } };
+    const nb = await read();
+    if (nb?.schema !== NOTEBOOK_SCHEMA || nb.id !== id) return null;
+    books.set(id, nb);
+    return nb;
   }
 
   const api = {
@@ -56,7 +59,8 @@ export function createNotebooks({ dir = "" } = {}) {
     },
     async list() {
       const ids = new Set(books.keys());
-      if (dir) { try { for (const f of await readdir(dir)) { const m = /^nb_([0-9a-f]{12})\.json$/.exec(f); if (m) ids.add("nb:" + m[1]); } } catch {} }
+      if (records()) { for (const id of await records().list("notebook")) ids.add(id); }
+      else if (dir) { try { for (const f of await readdir(dir)) { const m = /^nb_([0-9a-f]{12})\.json$/.exec(f); if (m) ids.add("nb:" + m[1]); } } catch {} }
       const out = [];
       for (const id of ids) { const nb = await load(id); if (nb) out.push(nb); }
       return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
