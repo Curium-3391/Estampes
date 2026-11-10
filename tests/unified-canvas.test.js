@@ -114,14 +114,20 @@ test("users pick colour, size and a translucent highlighter",()=>{
 test("undo and redo step through marks, including a clear",()=>{
   const start=source.indexOf("let past=[],future=[];"),stop=source.indexOf("undoBtn.addEventListener",start);
   assert.ok(start>=0&&stop>start);
-  const h=new Function("let userMarks=[],selectedFocusId=null;const render=()=>{};\n"+source.slice(start,stop)+
-    "\nreturn {commitMarks,undo,redo,get marks(){return userMarks}};")();
+  const h=new Function("let userMarks=[],selectedFocusId=null;const render=()=>{};const steps=[];const serverStep=a=>steps.push(a);\n"+source.slice(start,stop)+
+    "\nreturn {commitMarks,undo,redo,steps,get marks(){return userMarks}};")();
   h.commitMarks([...h.marks,"a"]);h.commitMarks([...h.marks,"b"]);h.commitMarks([]);
   assert.deepEqual(h.marks,[]);
   h.undo();assert.deepEqual(h.marks,["a","b"]);
   h.undo();assert.deepEqual(h.marks,["a"]);
   h.redo();assert.deepEqual(h.marks,["a","b"]);
   h.commitMarks([...h.marks,"c"]);h.redo();assert.deepEqual(h.marks,["a","b","c"]);
+  // With nothing local left to step through, the buttons ask the server (sent edits).
+  assert.deepEqual(h.steps,["redo"]);
+  for(let i=0;i<10;i++)h.undo();
+  assert.deepEqual(h.marks,[]);
+  assert.deepEqual([...new Set(h.steps)],["redo","undo"]);
+  assert.ok(h.steps.at(-1)==="undo");
   assert.match(html,/id="redo"/);
   assert.match(source,/k==="z"/);
 });

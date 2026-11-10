@@ -528,6 +528,20 @@ function renderLayers(){
 // Layer settings and edits of earlier marks go to the server (app-only
 // tool); AI reads them on its next call and in the next message.
 let unsentEdits=[];
+// Undo/redo of edits already sent (move, restyle, delete) lives on the server,
+// per image: {left|right|item:{canUndo,canRedo}} from the last edit response.
+let serverHistory={},lastEditKey=null;
+const canServerStep=a=>!!ready&&Object.values(serverHistory).some(h=>a==="undo"?h.canUndo:h.canRedo);
+async function serverStep(action){
+ const can=h=>h&&(action==="undo"?h.canUndo:h.canRedo);
+ const key=can(serverHistory[lastEditKey])?lastEditKey:Object.keys(serverHistory).find(k=>can(serverHistory[k]));
+ if(!key)return;
+ try{
+  await editOnServer({history:{action,...(ws?{item:key}:pair?{side:key}:{})}});
+  status.textContent=action==="undo"?"已復原上一個已送出的修改。":"已重做。";
+ }catch(err){status.textContent=(action==="undo"?"無法復原：":"無法重做：")+String(err.message||err);}
+ selectedFocusId=null;render();
+}
 // In a workspace an edit names its item where a paired view names its side.
 const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
 async function editOnServer(args){
@@ -540,6 +554,9 @@ async function editOnServer(args){
  if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
+ if(r.history&&typeof r.history==="object")serverHistory=r.history;
+ const lastEdit=Array.isArray(r.edits)?r.edits[r.edits.length-1]:null;
+ if(lastEdit?.side)lastEditKey=lastEdit.side;else if(!pair&&!ws)lastEditKey="left";
  return r;
 }
 // The server's canvas after an edit. Unsent marks stay as they are.
@@ -1274,7 +1291,7 @@ function render(){
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
- undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
+ undoBtn.disabled=!past.length&&!canServerStep("undo");redoBtn.disabled=!future.length&&!canServerStep("redo");
  exportImageBtn.hidden=!!frames||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!frames||!(imageId&&exportLinks?.marks);
  renderLayers();renderObjectsPanel();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
  refreshFocus();renderView();
@@ -1330,7 +1347,7 @@ function applyInput(args){
  const incoming=fromServerList(args.annotations);
  assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,ws?200:60);
  priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,ws?200:60);
- userMarks=[];past=[];future=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
+ userMarks=[];past=[];future=[];serverHistory={};lastEditKey=null;selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
  // The result normally brings the pixels; if it never does, fetch them.
  if(imageId)setTimeout(()=>{if(imageId&&!allPhotos())syncCanvas()},6000);
 }
@@ -1851,8 +1868,8 @@ intentSelect.addEventListener("change",render);
 // Undo/redo over this canvas's marks since the last send.
 let past=[],future=[];
 function commitMarks(next){past.push(userMarks);if(past.length>60)past.shift();future=[];userMarks=next;}
-function undo(){if(!past.length)return;future.push(userMarks);userMarks=past.pop();selectedFocusId=null;render();}
-function redo(){if(!future.length)return;past.push(userMarks);userMarks=future.pop();selectedFocusId=null;render();}
+function undo(){if(!past.length){serverStep("undo");return;}future.push(userMarks);userMarks=past.pop();selectedFocusId=null;render();}
+function redo(){if(!future.length){serverStep("redo");return;}past.push(userMarks);userMarks=future.pop();selectedFocusId=null;render();}
 undoBtn.addEventListener("click",undo);redoBtn.addEventListener("click",redo);
 // Downloads open in the browser (sandboxed widgets cannot save files).
 function openLink(href){
@@ -2000,6 +2017,8 @@ const EDIT_ZH={
  "remove-mark":e=>"刪除了"+(e.author==="user"?"我的":"你的")+"標記 "+e.id+(e.label?"「"+e.label+"」":""),
  "move-mark":e=>"移動或改了形狀：我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+"（你先前對它的說明可能不再適用）",
  "restyle-mark":e=>"改了我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+" 的樣式或標籤",
+ "undo-edit":e=>"復原了標記 "+e.id+" 的上一個修改（"+(e.steps??[]).join("+")+"），它回到修改前的樣子",
+ "redo-edit":e=>"重做了標記 "+e.id+" 的修改（"+(e.steps??[]).join("+")+"）",
 };
 function editMessage(list){
  return "我在 Estampes 畫布上手動修改了（"+canvasName()+"）：\n"+
