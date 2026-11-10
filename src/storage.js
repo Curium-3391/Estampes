@@ -164,7 +164,7 @@ export async function intakeImage(bytes, options) {
   const fresh = !hasImage(imageIdOf(bytes));
   // An intake whose durable record failed is not acknowledged; its entry may
   // still be cached, so a retry runs the store path again.
-  if (canvases && (fresh || unsaved.has(imageIdOf(bytes)))) return once(imageIdOf(bytes), async () => {
+  if (canvases && (fresh || unsaved.has(imageIdOf(bytes)) || loading.has(imageIdOf(bytes)))) return once(imageIdOf(bytes), async () => {
     const imageId = imageIdOf(bytes);
     if (hasImage(imageId) && !unsaved.has(imageId)) return getImage(imageId);
     unsaved.add(imageId);
