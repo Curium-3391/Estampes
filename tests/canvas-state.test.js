@@ -219,3 +219,10 @@ test("locked layers are enforced on every write path with LAYER_LOCKED (#72)", a
   applyCanvasChanges(entry, { findings: [{ id: "a", note: "still allowed" }], resolve });
   assert.equal(canvasMarks(entry).find((m) => m.id === "a").note, "still allowed");
 });
+
+test("a conditional finding on a deleted mark is a CONFLICT in paired and workspace calls too (#74)", async () => {
+  const { applyPairChanges } = await import("../src/canvas-state.js");
+  const left = await photo(), right = await sharp({ create: { width: 300, height: 400, channels: 3, background: "#642" } }).png().toBuffer().then((b) => registerImage(b, { source: "url" }));
+  assert.throws(() => applyPairChanges(left, right, { findings: [{ id: "gone", note: "x", ifMatch: "0123456789ab" }], resolve }), (e) => e.code === "CONFLICT");
+  assert.throws(() => applyPairChanges(left, right, { findings: [{ id: "gone", note: "x" }], resolve }), (e) => e.code === undefined && /no such mark/.test(e.message));
+});

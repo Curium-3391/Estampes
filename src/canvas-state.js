@@ -377,6 +377,7 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
       // A mark added in this same call counts, on whichever side it was added.
       const added = ["left", "right"].find((s) => split[s].annotations.some((a) => a.id === f.id));
       const side = added ?? (reset ? null : sideOf(f.id));
+      if (!side && f.ifMatch !== undefined) throw stageError("findings", i, f.id, "ifMatch was given but there is no such mark any more", "CONFLICT");
       if (!side) throw sideError("findings", i, f.id, "no such mark on either image");
       split[side].findings.push(f);
     });
@@ -566,6 +567,7 @@ export function applyWorkspaceChanges(items, { annotations = [], findings = [], 
       const added = items.filter((it) => split.get(it.id).annotations.some((a) => a.id === f.id));
       let it = itemOf("findings", i, f.id, f.item);
       if (!it && added.length === 1) it = added[0];
+      if (!it && f.ifMatch !== undefined && !reset && !items.some((x) => marksOf(x.entry).has(f.id))) throw stageError("findings", i, f.id, "ifMatch was given but there is no such mark any more", "CONFLICT");
       if (!it) it = reset ? null : findMark("findings", i, f.id);
       if (!it) throw wsError("findings", i, f.id, "no such mark on any item");
       const { item: _i, ...finding } = evidenceIn(f, it.id);
