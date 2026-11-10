@@ -897,6 +897,7 @@ function makeServer() {
         }).refine((f) => Boolean(f.derivedViewId) !== Boolean(f.region), { message: "coordinateFrame needs exactly one of derivedViewId or region" })
           .optional().describe("Coordinates in `annotations` (of that side) are in a processed output: give its derivedViewId, or (older form) its region with 0..1 coordinates or pixels of a width×height output of it"),
         verify: z.boolean().default(true).describe("Return the verification image of changed marks"),
+        dryRun: z.boolean().default(false).describe("Single canvas only: check this call without saving it. Every refusal (locked layer, stale ifMatch, invalid mark) is reported exactly as in a real call; if nothing is refused, the result lists what WOULD change and the canvas stays as it is. Safe for tests and for asking 'may I edit this?'."),
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.visual_surface"),
@@ -922,8 +923,11 @@ function makeServer() {
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile", "pairImage"] },
     },
     async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify,
-      pairImage, pairImageUrl, pairImageId, links, removeLinks, workspaceId, upload }) => {
+      pairImage, pairImageUrl, pairImageId, links, removeLinks, workspaceId, upload, dryRun }) => {
       try {
+        if (dryRun && (workspaceId || upload || pairImage || pairImageUrl || pairImageId || scene)) {
+          throw new Error("dryRun works on one image's canvas (imageId, image or imageUrl), not on a workspace, a paired view, a scene or an upload canvas");
+        }
         if (upload) {
           if ([image, imageUrl, imageId, scene, workspaceId, pairImage, pairImageUrl, pairImageId, marksFile].some(Boolean) || annotations.length) {
             throw new Error("upload opens an empty canvas; it takes no image, scene, workspace or marks");
@@ -995,7 +999,10 @@ function makeServer() {
             resolve: resolveCoordinateAnnotation,
           });
         } catch (error) { restore(); throw error; }
-        const edits = takeUserEdits(entry);
+        // dryRun: everything above was checked for real; undo it and report.
+        const preview = dryRun ? { changed: [...changed], imported: [...imported] } : null;
+        if (dryRun) { restore(); changed = []; imported = []; }
+        const edits = dryRun ? [] : takeUserEdits(entry);
         if (imported.length || changed.length || remove.length || reset || edits.length) {
           await saveCanvas(entry, { tool: "present_visual", changed: [...imported, ...changed], removed: remove, ...(reset ? { note: "reset" } : {}) });
         }
@@ -1018,7 +1025,10 @@ function makeServer() {
         return logSizes("present_visual", {
           content: [{
             type: "text",
-            text: "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
+            text: (preview ? "DRY RUN: nothing was saved and the canvas is unchanged. This call would " +
+              (preview.changed.length || preview.imported.length || remove.length || reset ? "change: " + JSON.stringify({ marks: preview.changed, removed: remove, reset, restoredFromFile: preview.imported }) : "change nothing") +
+              " and no rule refused it. " : "") +
+              "Showing " + imageId + " (" + entry.width + "x" + entry.height + " px) to the user (original by default" +
               (rendered.length ? "; extra tabs: " + rendered.map(v => v.label).join(", ") : "") + "). Canvas now has " +
               resolved.length + " marks (ids persist; edit by re-using an id; boxes rounded): " + JSON.stringify(resolved.map(compactMark)) +
               (layers.length ? ". Layers (the user can hide, rename, reorder, fade or lock any): " + layerText(layers) : "") + objectsText(entry) + userEditsText(edits) +
