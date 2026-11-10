@@ -50,6 +50,9 @@ async function startServer(run, env = {}, cwd = ROOT) {
   return { call, stop, stderr: () => stderr };
 }
 
+// What a mark must still be after recovery: its kind, label and geometry.
+const fingerprint = (m) => JSON.stringify({ type: m.type, label: m.label ?? null, geometry: m.geometry ?? null });
+
 async function photo(seed) {
   const bytes = await sharp({ create: { width: 320, height: 200, channels: 3, background: { r: seed * 70 % 255, g: 120, b: 60 } } }).png().toBuffer();
   return bytes.toString("base64");
@@ -65,13 +68,15 @@ async function workload(run, log) {
     for (const seed of [1, 2]) {
       const data = await photo(seed);
       const id = (await s.call("upload_visual_image", { total: data.length, offset: 0, data, fileName: "p" + seed + ".png" })).structuredContent.imageId;
-      images.push({ id, marks: [] }); ack({ key: id, kind: "image", marks: [] });
+      images.push({ id, marks: {} }); ack({ key: id, kind: "image", marks: {} });
     }
     const edits = +arg("edits", 12);
     for (let i = 1; i <= edits; i++) {
       const img = images[i % 2], id = "e" + i;
       await s.call("present_visual", { imageId: img.id, verify: false, annotations: [{ id, type: "point", x: (i % 9) / 10 + .05, y: .5, label: "edit " + i }] });
-      img.marks.push(id); ack({ key: img.id, kind: "image", marks: [...img.marks] });
+      // The acknowledged content, as the server reports it right after the save.
+      const saved = (await s.call("get_visual_state", { imageId: img.id })).structuredContent.marks.find((m) => m.id === id);
+      img.marks[id] = fingerprint(saved); ack({ key: img.id, kind: "image", marks: { ...img.marks } });
       // Give the UVA commit of this edit time to run, so cuts land inside it too.
       await sleep(+arg("pause-ms", 400));
       if (i === 3) { await s.call("add_image_layer", { imageId: img.id }); ack({ key: img.id + "/layer", kind: "layer", imageId: img.id }); }
@@ -100,9 +105,11 @@ async function check(events, k, run, scratch) {
     for (const [key, a] of state.acks) {
       if (a.kind === "image") {
         const doc = (await s.call("get_visual_state", { imageId: key })).structuredContent;
-        const have = new Set(doc.marks.map((m) => m.id));
-        const lost = a.marks.filter((id) => !have.has(id));
+        const have = new Map(doc.marks.map((m) => [m.id, fingerprint(m)]));
+        const lost = Object.keys(a.marks).filter((id) => !have.has(id));
         if (lost.length) throw new Error(key + " lost acknowledged marks " + lost.join(","));
+        const changed = Object.keys(a.marks).filter((id) => have.get(id) !== a.marks[id]);
+        if (changed.length) throw new Error(key + " changed acknowledged marks " + changed.map((id) => id + ": " + have.get(id) + " != " + a.marks[id]).join("; ").slice(0, 400));
       } else if (a.kind === "layer") {
         const doc = (await s.call("get_visual_state", { imageId: a.imageId })).structuredContent;
         if (!(doc.objects ?? []).some((o) => o.type === "image")) throw new Error(a.imageId + " lost its acknowledged image layer");
