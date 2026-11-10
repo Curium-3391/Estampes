@@ -1046,7 +1046,28 @@ const cleanObjects=list=>(Array.isArray(list)?list:[]).filter(o=>o&&/^o\d{1,6}$/
      rows:o.card.rows.slice(0,24).filter(r=>r&&typeof r==="object").map(r=>({label:String(r.label??"").slice(0,40),value:String(r.value??"").slice(0,240),
        href:/^https:\/\//.test(String(r.href??""))?String(r.href).slice(0,300):""}))}:null,
    primitives:o.primitives.slice(0,4000)}));
-function setObjects(list){objects=pair?[]:cleanObjects(list);}
+function setObjects(list){objects=pair?[]:cleanObjects(list);fullLayers(objects,imageId,null);}
+// Image layers arrive as small previews (full:false, ref) so a result stays
+// under the host cap; the full PNG follows from load_visual_pixels {object}.
+const layerPixels=new Map(),layerLoading=new Set();
+const itemSet=it=>it.set?.includes("#")?it.set.split("#")[1]:null;
+function patchLayers(list,key,href){let hit=false;for(const o of list??[])for(const p of o.primitives)if(p?.k==="image"&&p.full===false&&key===p.ref+"|"+o.id){p.href=href;p.full=true;hit=true;}return hit;}
+function fullLayers(list,id,setId){
+ for(const o of list??[])for(const p of o.primitives){
+   if(p?.k!=="image"||p.full!==false||typeof p.ref!=="string"||!/^[0-9a-f]{16}$/.test(p.ref))continue;
+   const key=p.ref+"|"+o.id,cacheKey=id+"|"+(setId||"")+"|"+key;
+   if(layerPixels.has(cacheKey)){p.href=layerPixels.get(cacheKey);p.full=true;continue;}
+   if(!id||layerLoading.has(cacheKey))continue;
+   layerLoading.add(cacheKey);
+   fetchPixels(id,{setId,object:o.id}).then(href=>{
+     if(!href||!/^data:image\/png;base64,iVBORw0KGgo/.test(href))return;
+     layerPixels.set(cacheKey,href);if(layerPixels.size>24)layerPixels.delete(layerPixels.keys().next().value);
+     let hit=imageId===id&&!setId&&patchLayers(objects,key,href);
+     for(const it of ws?.items??[])if(it.imageId===id&&itemSet(it)===setId)hit=patchLayers(it.objects,key,href)||hit;
+     if(hit)render();
+   }).catch(err=>{status.textContent="圖層清晰版載入失敗，先顯示預覽："+String(err.message||err);}).finally(()=>layerLoading.delete(cacheKey));
+ }
+}
 function renderObjects(){
  objectsEl.replaceChildren();
  if(!imageId)return;
@@ -1056,7 +1077,7 @@ function renderObjects(){
    if(o.layer&&hiddenLayers.has(prefix+o.layer))continue;
    const g=node("g",{"data-layer":prefix+(o.layer??""),"data-object":o.id,transform,opacity:layerOf(prefix+o.layer)?.opacity??1},parent);
    for(const p of o.primitives){
-     if(p?.k==="image"&&/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=]+$/.test(p.href)){
+     if(p?.k==="image"&&/^data:image\/(png;base64,iVBORw0KGgo|webp;base64,UklGR)[A-Za-z0-9+/=]+$/.test(p.href)){
        node("image",{href:p.href,x:X(p.x),y:Y(p.y),width:X(p.x2-p.x),height:Y(p.y2-p.y),preserveAspectRatio:"none"},g);
      }else if(p?.k==="path"&&Array.isArray(p.pts)&&p.pts.length>=2&&p.pts.length<=5000){
        const pts=p.pts.filter(q=>Array.isArray(q)&&num(q[0])&&num(q[1]));if(pts.length<2)continue;
@@ -1318,11 +1339,11 @@ const dataUrl=img=>img&&/^image\/(png|jpeg)$/.test(img.mimeType)&&typeof img.dat
 // in slices from load_visual_pixels (app-only). Views can be deferred too.
 const readyWaiters=[];
 const whenReady=()=>ready?Promise.resolve():new Promise(resolve=>readyWaiters.push(resolve));
-async function fetchPixels(id,{setId=null,view=null}={}){
+async function fetchPixels(id,{setId=null,view=null,object=null}={}){
  await whenReady();
  let offset=0,mime="image/jpeg";const parts=[];
- for(let i=0;i<120;i++){
-   const result=await request("tools/call",{name:"load_visual_pixels",arguments:{imageId:id,...(setId?{setId}:{}),...(view!=null?{view}:{}),offset}});
+ for(let i=0;i<200;i++){
+   const result=await request("tools/call",{name:"load_visual_pixels",arguments:{imageId:id,...(setId?{setId}:{}),...(view!=null?{view}:{}),...(object?{object}:{}),offset}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
    const r=result?.structuredContent;
    if(r?.kind!=="estampes.visual_pixels"||r.imageId!==id||r.offset!==offset||typeof r.data!=="string")throw Error("Unexpected response");
@@ -1371,7 +1392,7 @@ function applyResult(result){
  if(typeof meta["estampes/canRestoreObjects"]==="boolean")canRestoreObjects=meta["estampes/canRestoreObjects"];
  if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;upgradePair(meta["estampes/pairImage"]);}
  if(ws){
-   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=dataUrl(px)??it.photo;it.objects=cleanObjects(px.objects);it.baseAsObject=!!px.baseAsObject;upgradeItem(it,px);}}
+   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=dataUrl(px)??it.photo;it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;upgradeItem(it,px);}}
    links=viewLinks(meta["estampes/links"]??r.links);
    if(!allPhotos()||!full)syncCanvas(!full);
    render();return;
@@ -1452,7 +1473,7 @@ async function syncWorkspace(force){
      const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:it.imageId,...(it.set?.includes("#")?{setId:it.set.split("#")[1]}:{}),part:"image"}});
      if(ws?.id!==id)return;
      const r=result?.structuredContent;
-     if(!result?.isError&&r?.imageId===it.imageId){it.photo=dataUrl(r.image);upgradeItem(it,r.image);it.objects=cleanObjects(r.objects);it.baseAsObject=!!r.baseAsObject;}
+     if(!result?.isError&&r?.imageId===it.imageId){it.photo=dataUrl(r.image);upgradeItem(it,r.image);it.objects=cleanObjects(r.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!r.baseAsObject;}
      render();
    }
    status.textContent=allPhotos()?"已載入工作區的圖片與標記。":"有些圖片無法載入。";
