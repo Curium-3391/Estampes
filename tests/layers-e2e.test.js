@@ -26,6 +26,14 @@ test("layers in a browser: base image + overlay image + Graph curve, fade and re
     await rows.first().waitFor({ timeout: 20000 });
     const n = await rows.count();
     assert.ok(n >= 3, "layers listed: " + n);
+    // Image layers arrive as previews; the widget swaps in the full PNG.
+    let hrefs = [];
+    for (let i = 0; i < 60; i++) {
+      hrefs = await ui.frame.locator("#scene-objects image, #unified-layers image").evaluateAll((els) => els.map((e) => e.getAttribute("href").slice(0, 30)));
+      if (hrefs.length >= 2 && hrefs.every((h) => h.startsWith("data:image/png"))) break;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    assert.ok(hrefs.length >= 2 && hrefs.every((h) => h.startsWith("data:image/png")), "full layer pixels loaded: " + hrefs);
     await ui.shot("layers-1-before");
 
     // Fade the top layer to 50% with its slider; the server remembers it.

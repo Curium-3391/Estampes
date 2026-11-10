@@ -533,6 +533,94 @@ const uploads = new Map();
 const INLINE_IMAGE_CHARS = 80_000;
 const INLINE_TOTAL_CHARS = 90_000;
 const metaImage = (img) => ({ mimeType: img.mimeType, data: img.data, width: img.width, height: img.height, ...(img.full ? {} : { preview: true }) });
+
+// Image layers (add_image_layer, a promoted base image, a copied canvas) keep
+// their full PNG inline in the scene, up to 8 MB. Inside a tool result that
+// alone breaks the host cap, so every result is rewritten on its way out:
+// a widget object's image primitive carries a small preview (full: false,
+// ref) and the widget fetches the full PNG with load_visual_pixels {object};
+// a model-facing document lists the layer without its pixels (render_canvas
+// shows them). Nothing stored changes.
+const OBJECT_PREVIEW_CHARS = 16_000;
+// A scan, not a regular expression: a regex over megabytes of base64
+// overflows V8's stack.
+const B64 = new Uint8Array(128);
+for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=") B64[c.charCodeAt(0)] = 1;
+function omitLongPngs(text) {
+  const head = "data:image/png;base64,";
+  let out = "", from = 0;
+  for (let at = text.indexOf(head); at >= 0; at = text.indexOf(head, from)) {
+    let end = at + head.length;
+    while (end < text.length && B64[text.charCodeAt(end)] === 1) end++;
+    if (end - at < 2000) { out += text.slice(from, end); from = end; continue; }
+    out += text.slice(from, at) + "[image layer PNG omitted: " + (end - at) + " characters; render_canvas shows it]";
+    from = end;
+  }
+  return from ? out + text.slice(from) : text;
+}
+const objectPreviews = new Map();
+const pngRef = (href) => createHash("sha256").update(href).digest("hex").slice(0, 16);
+async function objectPreview(href, ref, maxChars) {
+  const key = ref + ":" + maxChars;
+  if (!objectPreviews.has(key)) {
+    objectPreviews.set(key, (async () => {
+      const source = Buffer.from(href.slice(href.indexOf(",") + 1), "base64");
+      for (const side of [640, 480, 360, 256, 180, 120, 80]) {
+        const data = await sharp(source).resize({ width: side, height: side, fit: "inside", withoutEnlargement: true })
+          .webp({ quality: side > 300 ? 60 : 50, alphaQuality: 80 }).toBuffer();
+        const uri = "data:image/webp;base64," + data.toString("base64");
+        if (uri.length <= maxChars) return uri;
+      }
+      return "";
+    })().catch(() => ""));
+    if (objectPreviews.size > 64) objectPreviews.delete(objectPreviews.keys().next().value);
+  }
+  return objectPreviews.get(key);
+}
+async function budgetObjectPixels(result) {
+  if (!result || typeof result !== "object") return result;
+  const long = new Map();
+  const visit = (node, depth = 0) => {
+    if (!node || typeof node !== "object" || depth > 40) return;
+    if (Array.isArray(node)) { for (const v of node) visit(v, depth + 1); return; }
+    if (node.k === "image" && typeof node.href === "string" && node.href.length > 2000 && node.href.startsWith("data:image/png;base64,")) long.set(node.href, null);
+    for (const v of Object.values(node)) visit(v, depth + 1);
+  };
+  visit(result.structuredContent); visit(result._meta);
+  const share = long.size ? Math.floor(OBJECT_PREVIEW_CHARS / long.size) : 0;
+  for (const href of long.keys()) {
+    const ref = pngRef(href);
+    long.set(href, { ref, preview: href.length <= share ? href : await objectPreview(href, ref, share) });
+  }
+  const rewrite = (node, objectId = null, depth = 0) => {
+    if (!node || typeof node !== "object" || depth > 40) return node;
+    if (Array.isArray(node)) return node.map((v) => rewrite(v, objectId, depth + 1));
+    if (node.k === "image" && long.has(node.href)) {
+      const { ref, preview } = long.get(node.href);
+      return preview === node.href ? node : { ...node, href: preview, full: false, ref, ...(objectId ? { object: objectId } : {}) };
+    }
+    // A stored-form image object (get_visual_state, get_workspace_state).
+    if (node.type === "image" && node.props && typeof node.props.png === "string" && node.props.png.length > 2000) {
+      const { png, ...props } = node.props;
+      return { ...node, props: { ...props, pixels: { omitted: true, characters: png.length, ref: pngRef(png), read: "render_canvas" } } };
+    }
+    const id = typeof node.id === "string" && /^o\d{1,6}$/.test(node.id) && Array.isArray(node.primitives) ? node.id : objectId;
+    const out = {};
+    for (const [k, v] of Object.entries(node)) out[k] = rewrite(v, id, depth + 1);
+    return out;
+  };
+  const content = Array.isArray(result.content) ? result.content.map((part) => part?.type === "text" && typeof part.text === "string" && part.text.length > 2000
+    ? { ...part, text: omitLongPngs(part.text) } : part) : result.content;
+  return { ...result, content,
+    ...(result.structuredContent ? { structuredContent: rewrite(result.structuredContent) } : {}),
+    ...(result._meta ? { _meta: rewrite(result._meta) } : {}) };
+}
+// The full PNG of one public image object, for the widget (load_visual_pixels).
+function objectPng(entry, objectId) {
+  const o = entry.objects?.get(objectId);
+  if (!o || o.type !== "image" || o.visibility !== "public" || typeof o.props?.png !== "string") throw new Error("No image layer " + objectId + " on " + entry.imageId);
+  return o.props.png.slice(o.props.png.indexOf(",") + 1);
+}
 // Processed views ride along only while the result stays under budget; the
 // rest are listed without pixels and fetched by the widget.
 function budgetViews(views, used) {
@@ -693,7 +781,7 @@ function makeServer() {
     let result;
     try { result = await handler(...args); }
     finally { refreshCanvases(touched, result?.structuredContent); await settleRecords(); }
-    return fitResult(result, config.maxResultChars);
+    return fitResult(await budgetObjectPixels(result), config.maxResultChars);
   });
 
   registerAppResource(
@@ -1052,16 +1140,20 @@ function makeServer() {
       inputSchema: z.object({
         imageId: ImageIdSchema, setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
         view: z.number().int().min(0).max(2).optional().describe("Index of a processed view; omit for the photo"),
+        object: z.string().regex(/^o\d{1,6}$/).optional().describe("An image layer's object id: its full PNG"),
         offset: z.number().int().min(0).default(0),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, setId, view, offset }) => {
+    async ({ imageId, setId, view, object, offset }) => {
       try {
         const entry = await ensureSet(imageId + (setId ? "#" + setId : ""));
         let source;
-        if (view == null) {
+        if (object != null) {
+          if (view != null) throw new Error("Pass view or object, not both");
+          source = { mimeType: "image/png", data: objectPng(entry, object) };
+        } else if (view == null) {
           const shown = await displayImage(entry);
           source = { mimeType: shown.mimeType, width: shown.width, height: shown.height, data: shown.data.toString("base64") };
         } else {
@@ -1074,7 +1166,7 @@ function makeServer() {
         const slice = data.slice(offset, offset + PIXEL_SLICE);
         return {
           content: [{ type: "text", text: "Pixels for " + imageId + " sent to the widget." }],
-          structuredContent: { kind: "estampes.visual_pixels", imageId, ...(view == null ? {} : { view }), ...info,
+          structuredContent: { kind: "estampes.visual_pixels", imageId, ...(view == null ? {} : { view }), ...(object == null ? {} : { object }), ...info,
             total: data.length, offset, data: slice, done: offset + slice.length >= data.length },
         };
       } catch (error) {

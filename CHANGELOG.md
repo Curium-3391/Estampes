@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Fix: a canvas with an image layer (`add_image_layer`, a promoted base image
+  or a copied canvas) made every result about it overflow the host's
+  145,000-character limit (`add_image_layer`, `get_visual_state`,
+  `get_workspace_state`, `present_visual` on its workspace, panels showing it).
+  Image layers kept their whole PNG inline in each result. Results now carry a
+  small preview of each layer and the canvas fetches the full PNG itself
+  (`load_visual_pixels` with `object`); `get_visual_state` and
+  `get_workspace_state` list image layers without their pixels
+  (`props.pixels.omitted`, read them with `render_canvas`). Stored canvases are
+  unchanged.
 - Canvas store phase 5: the UVA store is the default. With
   `ESTAMPES_STORAGE_DIR` set, canvases, workspaces, panel layouts and notebooks
   are committed to UVA without further settings: `compose.yaml` mounts the
