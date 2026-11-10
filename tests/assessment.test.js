@@ -173,3 +173,13 @@ test("a polyline end that is closed or smoothed after confirmation also goes sta
   applyPairChanges(left, right, { annotations: [{ id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }, { x: 0.3, y: 0.6 }], closed: true }], resolve });
   assert.ok(linkIsStale(left, right, pairLinks(left, right)[0]));
 });
+
+test("a confirmed link to a polyline survives a bundle-style round trip that drops derived bounds (#71)", async () => {
+  const { linkIsStale } = await import("../src/canvas-state.js");
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  applyPairChanges(left, right, { annotations: [box("s1", "left"), { id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }] }], links: [{ id: "k", left: "s1", right: "pl" }], resolve });
+  reviewLink(left, right, "k", "confirmed");
+  const mark = canvasMarks(right).find((m) => m.id === "pl");
+  for (const k of ["x", "y", "x2", "y2"]) delete mark[k];
+  assert.ok(!linkIsStale(left, right, pairLinks(left, right)[0]), "dropping derived bounds is not a move");
+});

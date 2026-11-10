@@ -466,7 +466,9 @@ const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete
 // confirms it again. The link itself and its ids are kept.
 const geometryKey = (m) => {
   const r = (v) => typeof v === "number" ? Math.round(v * 1000) : undefined;
-  return m ? JSON.stringify([m.type, r(m.x), r(m.y), r(m.x2), r(m.y2), m.points?.map((p) => [r(p.x), r(p.y)]), m.smooth === true, m.closed === true]) : null;
+  // A polyline is its vertices: its x/y/x2/y2 bounds are derived and not always stored (bundles drop them).
+  return m ? JSON.stringify(m.points ? [m.type, m.points.map((p) => [r(p.x), r(p.y)]), m.smooth === true, m.closed === true]
+    : [m.type, r(m.x), r(m.y), r(m.x2), r(m.y2)]) : null;
 };
 export function linkIsStale(left, right, link) {
   const g = link.review === "confirmed" ? link.confirmedGeometry : null;
