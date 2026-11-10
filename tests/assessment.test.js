@@ -158,7 +158,18 @@ test("a confirmed link goes stale when an end moves, and confirming again refres
   assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "stale-confirmation");
   reviewLink(left, right, "k2", "confirmed");
   assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "user-confirmed");
+  assert.ok(needsReview({ ...pairLinks(left, right)[0], stale: true, review: "confirmed" }), "a stale confirmation is back in the review queue");
   // Withdrawing forgets the remembered geometry.
   reviewLink(left, right, "k2", "unreviewed");
   assert.equal(pairLinks(left, right).find((l) => l.id === "k2").confirmedGeometry, undefined);
+});
+
+test("a polyline end that is closed or smoothed after confirmation also goes stale (#71)", async () => {
+  const { editCanvas, linkIsStale } = await import("../src/canvas-state.js");
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  applyPairChanges(left, right, { annotations: [box("s1", "left"), { id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }, { x: 0.3, y: 0.6 }] }], links: [{ id: "k", left: "s1", right: "pl" }], resolve });
+  reviewLink(left, right, "k", "confirmed");
+  assert.ok(!linkIsStale(left, right, pairLinks(left, right)[0]));
+  applyPairChanges(left, right, { annotations: [{ id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }, { x: 0.3, y: 0.6 }], closed: true }], resolve });
+  assert.ok(linkIsStale(left, right, pairLinks(left, right)[0]));
 });

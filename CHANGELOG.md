@@ -6,7 +6,7 @@
   `get_visual_state` / `get_workspace_state` carries an `etag`; pass it back as
   `ifMatch` on an `annotations` or `findings` entry of `present_visual`. If the
   mark changed since (another conversation, or the user), the whole call is
-  refused with `CONFLICT` and nothing is written. Without `ifMatch` the old
+  refused with `CONFLICT` (error text ends with `[CONFLICT]`) and nothing is written. Without `ifMatch` the old
   last-write-wins behaviour is unchanged.
 - Hardening (#72): every refusal to touch a locked layer carries the code
   `LAYER_LOCKED`, and importing marks no longer overwrites a mark in a locked

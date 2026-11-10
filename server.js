@@ -494,6 +494,7 @@ const widgetLink = (l) => ({ ...compactLink(l), evidence: l.evidence ?? [], ambi
 const STATE_TEXT = {
   "user-confirmed": "USER CONFIRMED", "user-rejected": "USER REJECTED (do not rely on it)",
   "independently-verified": "VERIFIED by a tool", unverified: "UNVERIFIED",
+  "stale-confirmation": "STALE CONFIRMATION (an end was moved after the user confirmed; do not rely on it until they confirm again)",
 };
 const claimTag = (c) => {
   const n = evidenceCount(c), state = verificationOf(c);

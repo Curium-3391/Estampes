@@ -72,7 +72,7 @@ export function verificationOf(claim) {
   return hasTool(claim) ? "independently-verified" : "unverified";
 }
 
-export const needsReview = (claim) => verificationOf(claim) === "unverified";
+export const needsReview = (claim) => ["unverified", "stale-confirmation"].includes(verificationOf(claim));
 
 export function evidenceCount(claim) {
   const n = { model: 0, tool: 0, user: 0 };

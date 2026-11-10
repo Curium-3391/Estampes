@@ -150,7 +150,7 @@ function settleClaim(entry, old, mark, raw, options) {
 }
 
 const stageError = (stage, i, id, error, code) => {
-  const e = new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + (error?.message || error));
+  const e = new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + (error?.message || error) + (code ? " [" + code + "]" : ""));
   if (code) e.code = code;
   return e;
 };
@@ -277,7 +277,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
     remove.forEach((id, i) => {
       const old = state.get(id);
       if (!old) throw fail("remove", i, id, "no such mark");
-      if (markLocked(entry, old)) throw Object.assign(fail("remove", i, id, "its layer is locked"), { code: "LAYER_LOCKED" });
+      if (markLocked(entry, old)) throw Object.assign(fail("remove", i, id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
       state.delete(id);
       edits.push({ kind: "remove-mark", id, author: old.author, ...(old.label ? { label: old.label } : {}) });
     });
@@ -285,7 +285,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       const old = state.get(edit.id);
       if (!old) throw fail("marks", i, edit.id, "no such mark");
       if (old.author !== "user") throw fail("marks", i, edit.id, "only your own marks can be moved or restyled; the AI's marks can be deleted");
-      if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked"), { code: "LAYER_LOCKED" });
+      if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
       const moved = ["x", "y", "x2", "y2"].some((k) => next[k] !== old[k]) || JSON.stringify(next.points) !== JSON.stringify(old.points);
@@ -467,7 +467,7 @@ const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete
 // confirms it again. The link itself and its ids are kept.
 const geometryKey = (m) => {
   const r = (v) => typeof v === "number" ? Math.round(v * 1000) : undefined;
-  return m ? JSON.stringify([m.type, r(m.x), r(m.y), r(m.x2), r(m.y2), m.points?.map((p) => [r(p.x), r(p.y)])]) : null;
+  return m ? JSON.stringify([m.type, r(m.x), r(m.y), r(m.x2), r(m.y2), m.points?.map((p) => [r(p.x), r(p.y)]), m.smooth === true, m.closed === true]) : null;
 };
 export function linkIsStale(left, right, link) {
   const g = link.review === "confirmed" ? link.confirmedGeometry : null;
