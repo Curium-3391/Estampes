@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `present_visual` takes `dryRun: true` (one image's canvas): it runs every
+  check of a real call (locked layers, stale `ifMatch`, invalid marks) and
+  reports the refusal, or what would change, without saving anything (#72).
+- A `CONFLICT` refusal now includes the mark's current note, status and place
+  and the etag to pass on a retry, so the assistant can decide without another
+  read (#74).
 - Fix (#74): stale edits no longer overwrite silently. Every mark in
   `get_visual_state` / `get_workspace_state` carries an `etag`; pass it back as
   `ifMatch` on an `annotations` or `findings` entry of `present_visual`. If the
