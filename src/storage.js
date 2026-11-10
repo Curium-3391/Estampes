@@ -204,8 +204,19 @@ export async function intakeImage(bytes, options) {
 // The image for an id: memory first, then disk (after eviction or restart).
 export async function ensureImage(imageId) {
   // An image whose load is under way is waited for even if already cached.
-  if (canvases && hexOk(imageId) && (loading.has(imageId) || !hasImage(imageId))) return once(imageId, async () => {
-    if (hasImage(imageId)) return getImage(imageId);
+  // A load that failed part-way leaves a cached entry without its saved canvas:
+  // it counts as unsaved, so the next call runs the load again.
+  if (canvases && hexOk(imageId) && (loading.has(imageId) || unsaved.has(imageId) || !hasImage(imageId))) return once(imageId, async () => {
+    if (hasImage(imageId) && !unsaved.has(imageId)) return getImage(imageId);
+    unsaved.add(imageId);
+    const entry = await restoreImage(imageId);
+    unsaved.delete(imageId);
+    return entry;
+  });
+  return ensureFromFiles(imageId);
+}
+async function restoreImage(imageId) {
+  {
     const record = await canvases.read(imageId);
     if (!record) return (await migrateImage(imageId)) ?? getImage(imageId);
     let meta = record.extra.meta;
@@ -220,7 +231,9 @@ export async function ensureImage(imageId) {
     await hydrate(imageId, record, entry, meta);
     log("info", "[storage] restored", { imageId, marks: entry.marks?.size ?? 0 });
     return entry;
-  });
+  }
+}
+async function ensureFromFiles(imageId) {
   if (hasImage(imageId) || !root || !hexOk(imageId)) return getImage(imageId);
   const dir = folder(imageId);
   const meta = await readJson(join(dir, "meta.json"));

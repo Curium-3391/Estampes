@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { clearImages, registerImage } from "../src/image-store.js";
 import { canvasMarks, applyWorkspaceChanges, applyPairChanges, pairLinks, workspaceLinks, reviewWorkspaceLink } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
-import { useStorageDir, useRecords, useCanvasStore, intakeImage, flushStorage } from "../src/storage.js";
+import { useStorageDir, useRecords, useCanvasStore, intakeImage, ensureImage, flushStorage } from "../src/storage.js";
 import {
   resolveRef, previewTransfer, commitTransfer, createWorkspace, editWorkspace, undoChange, workspaceItems, workspaceDocument,
   clearWorkspaces, getWorkspace, ensureSet,
@@ -253,4 +253,25 @@ test("a move where only one of the two workspaces could be saved leaves neither 
     assert.notEqual(done.repeated, true);
     assert.equal(held.get(other.workspace.id).items.length, 1);
   } finally { useRecords(null); }
+});
+
+test("a restore that failed part-way is run again by the next ensureImage", async () => {
+  const { a } = await threeImageFixture(registerImage);
+  const bytes = a.sourceBytes, imageId = a.imageId;
+  clearImages();
+  let fail = true, writes = 0, reads = 0;
+  const record = { canvas: { marks: [] }, extra: { meta: { source: "storage" }, derived: null, log: [] }, seq: 1 };
+  useCanvasStore({ read: async () => { reads++; return record; }, write: async () => { writes++; return 2; }, imageBytes: async () => bytes,
+    putImage: async () => {}, note() {} });
+  try {
+    // First load fails inside the restore (after the entry is cached).
+    const real = record.canvas; Object.defineProperty(record, "canvas", { get() { if (fail) throw new Error("restore failed"); return real; } });
+    await assert.rejects(ensureImage(imageId), /restore failed/);
+    fail = false;
+    const entry = await ensureImage(imageId);
+    assert.equal(entry.imageId, imageId);
+    assert.equal(reads, 2, "the failed restore was run again");
+    await ensureImage(imageId);
+    assert.equal(reads, 2, "a finished restore is not repeated");
+  } finally { useCanvasStore(null); }
 });
