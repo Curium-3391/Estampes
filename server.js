@@ -1003,7 +1003,7 @@ function makeServer() {
         const preview = dryRun ? { changed: [...changed], imported: [...imported] } : null;
         if (dryRun) { restore(); changed = []; imported = []; }
         const edits = dryRun ? [] : takeUserEdits(entry);
-        if (imported.length || changed.length || remove.length || reset || edits.length) {
+        if (!dryRun && (imported.length || changed.length || remove.length || reset || edits.length)) {
           await saveCanvas(entry, { tool: "present_visual", changed: [...imported, ...changed], removed: remove, ...(reset ? { note: "reset" } : {}) });
         }
         const resolved = canvasMarks(entry), layers = canvasLayers(entry);

@@ -46,6 +46,11 @@ test("dryRun reports refusals and changes without saving, over MCP (#72, #74)", 
     assert.equal(dry.structuredContent.marks.length, 0);
     const first = await call({ annotations: [mark] });
     assert.equal(first.structuredContent.marks.length, 1);
+    // A dry-run reset/remove must not save or write history either.
+    const dryReset = await call({ reset: true, dryRun: true });
+    assert.equal(dryReset.structuredContent.marks.length, 1);
+    const dryRemove = await call({ remove: ["m1"], dryRun: true });
+    assert.equal(dryRemove.structuredContent.marks.length, 1);
     // A stale ifMatch is refused in a dry run exactly as in a real call, tagged [CONFLICT].
     const stale = await call({ annotations: [{ ...mark, note: "x", ifMatch: "0123456789ab" }], dryRun: true });
     assert.equal(stale.isError, true);
