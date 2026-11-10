@@ -23,8 +23,8 @@ export function exportMarksSvg(entry, marks, layers = []) {
   const objects = renderedObjects(entry).filter((r) => r.object.visibility === "public");
   const objectSvg = (layerId) => objects.filter((r) => (r.object.layer ?? null) === layerId)
     .map((r) => `<g id="object-${xml(r.object.id)}">${primitivesSvg(r.primitives, W, H)}</g>`).join("");
-  const layer = (id, name, list, opacity, layerId = undefined) => !list.length && !(layerId && objectSvg(layerId)) ? "" :
-    `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${xml(name)}"${opacity < 1 ? ` opacity="${opacity}"` : ""}>` + (layerId ? objectSvg(layerId) : "") + list.map((m) => {
+  const layer = (id, name, list, opacity, layerId = undefined, visible = true) => !list.length && !(layerId && objectSvg(layerId)) ? "" :
+    `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${xml(name)}"${opacity < 1 ? ` opacity="${opacity}"` : ""}${visible === false ? ' style="display:none"' : ""}>` + (layerId ? objectSvg(layerId) : "") + list.map((m) => {
       const a = m.type === "polyline" ? m.points[0] : { x: m.x, y: m.y };
       const [lx, ly] = map(a.x, a.y), fs = 15 * K * toPx;
       const label = m.label ? `<text x="${lx + fs * 0.6}" y="${ly - fs * 0.8}" font-size="${fs}" font-weight="700" fill="${m.author === "user" ? "#579DF6" : "#E4AE57"}" stroke="#17212A" stroke-width="${0.8 * K * toPx}" paint-order="stroke">${xml(m.label)}</text>` : "";
@@ -32,13 +32,13 @@ export function exportMarksSvg(entry, marks, layers = []) {
     }).join("") + "</g>";
   const known = new Set(layers.map((l) => l.id));
   const groups = [
-    ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity, l.id)),
+    ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity, l.id, l.visible)),
     layer("estampes-user", "使用者", marks.filter((m) => m.author === "user" && !known.has(m.layer))),
     layer("estampes-gpt", "AI", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
   ].filter(Boolean).join("\n");
   const payload = JSON.stringify({ format: MARKS_FORMAT, version: 2, imageId: entry.imageId, width: W, height: H,
-    layers: layers.map(({ id, author, name, locked, opacity }) => ({ id, author, name,
-      ...(locked ? { locked: true } : {}), ...(opacity < 1 ? { opacity } : {}) })), marks })
+    layers: layers.map(({ id, author, name, locked, opacity, visible }) => ({ id, author, name,
+      ...(locked ? { locked: true } : {}), ...(visible === false ? { visible: false } : {}), ...(opacity < 1 ? { opacity } : {}) })), marks })
     .replace(/]]>/g, "]]\\u003e");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">

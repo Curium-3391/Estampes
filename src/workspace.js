@@ -57,7 +57,7 @@ const serial = (job) => { const next = chain.then(job, job); chain = next.catch(
 function makeFork(base, setId, data) {
   const fork = Object.create(base);
   Object.assign(fork, {
-    baseAsObject:false, deletedObjectBatches:[], setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
+    baseAsObject:false, layerHistory:{past:[],future:[]}, deletedObjectBatches:[], setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
     pairLinks: new Map(), gestureDecisions: [], objects: undefined, lastViews: undefined, lastCheck: undefined, derivedFrom: undefined,
   });
   if (data) restoreCanvas(fork, data);
@@ -601,7 +601,7 @@ export async function workspaceDocument(doc, { history = 0 } = {}) {
     if (!assets.has(entry.imageId)) assets.set(entry.imageId, await assetInfo(entry));
     sets.push(defined({
       key: item.set, asset: entry.imageId, derivedFrom: entry.derivedFrom,
-      layers: canvasLayers(entry).map((l, order) => defined({ id: l.id, author: l.author, name: l.name, order, count: l.count, locked: l.locked ? true : undefined, opacity: l.opacity })),
+      layers: canvasLayers(entry).map((l, order) => defined({ id: l.id, author: l.author, name: l.name, order, count: l.count, locked: l.locked ? true : undefined, visible: l.visible, opacity: l.opacity })),
       marks: canvasMarks(entry).map((m) => defined({ ...protocolMark(m, entry.imageId), derivedFrom: m.derivedFrom })),
       rejections: listOrNone(entry.rejections), objects: entry.objects?.size ? serializeObjects(entry) : undefined,
     }));

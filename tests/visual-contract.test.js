@@ -64,7 +64,7 @@ test("geometryChanged ignores style, label and flags; sees bounds and vertices",
 
 test("layer contract: ids, default names, opacity steps, edits and ordering", () => {
   assert.equal(LAYER_NAME_MAX, CONTRACT_NAME_MAX);
-  assert.deepEqual(LAYER_FIELDS, ["id", "author", "name", "module", "locked", "opacity"]);
+  assert.deepEqual(LAYER_FIELDS, ["id", "author", "name", "module", "locked", "opacity", "visible"]);
   const layers = [];
   layers.push(newLayerRecord(layers, "assistant"));
   layers.push(newLayerRecord(layers, "user"));

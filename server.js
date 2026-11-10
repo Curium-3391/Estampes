@@ -70,6 +70,7 @@ import { fitResult } from "./src/result-budget.js";
 import { createHash, randomBytes } from "node:crypto";
 import { createOAuth, readBody } from "./src/oauth.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
+import { registerLayerTools } from "./src/visual/layer-tools.js";
 import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
@@ -376,7 +377,7 @@ function compactMark(m) {
   };
 }
 const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
-  locked: z.boolean().optional(), opacity: z.number().optional(), side: z.string().regex(/^(left|right|wi-\d{1,4})$/).optional() });
+  module: z.string().optional(), visible: z.boolean().optional(), locked: z.boolean().optional(), opacity: z.number().optional(), side: z.string().regex(/^(left|right|wi-\d{1,4})$/).optional() });
 const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
   ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}), claim: claimSummary(l) });
 // The widget also gets each piece of evidence, to show where it is.
@@ -1845,7 +1846,7 @@ function makeServer() {
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Edits in a workspace view: entries name their `item`"),
         layers: z.array(z.object({
           id: z.string().regex(/^L\d{1,6}$/), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
-          name: z.string().max(LAYER_NAME_MAX).optional(), locked: z.boolean().optional(), opacity: z.number().min(0).max(1).optional(),
+          name: z.string().max(LAYER_NAME_MAX).optional(), locked: z.boolean().optional(), visible: z.boolean().optional(), opacity: z.number().min(0).max(1).optional(),
         }).strict()).max(60).default([]),
         order: z.record(z.string().regex(/^(left|right|wi-\d{1,4})$/), LayerIds).optional().describe("Layer ids bottom to top, per image (left/right, or workspace item id)"),
         marks: z.array(EditMarkSchema).max(30).default([]),
@@ -2202,7 +2203,7 @@ function makeServer() {
 
   server.registerTool("render_canvas", {
     title: "Read visible canvas pixels",
-    description: "Render the base image, public scene objects and saved marks, including Graph and handwriting. Use for whiteboards and mixed scenes; process_image reads only source pixels. Pass the submission's canvasReads request (expectedRevision and hiddenLayers) to preserve its state and visibility; STALE_CANVAS means that old state is unavailable. Mark labels default to none; formula and axis text stay visible. Returns a pixel-to-canvas mapping. Does not run modules or include scratch. Without hiddenLayers all saved layers are shown. Workspace copies require setId from canvasReads.",
+    description: "Render the base image, public scene objects and saved marks, including Graph and handwriting. Use for whiteboards and mixed scenes; process_image reads only source pixels. Pass the submission's canvasReads request (expectedRevision and hiddenLayers) to preserve its state and visibility; STALE_CANVAS means that old state is unavailable. Mark labels default to none; formula and axis text stay visible. Returns a pixel-to-canvas mapping. Does not run modules or include scratch. Shared layer visibility is respected; hiddenLayers can additionally hide layers for this render. Workspace copies require setId from canvasReads.",
     inputSchema: z.object({ imageId: ImageIdSchema, setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
       region: RegionSchema.optional(), maxSide: z.number().int().min(64).max(4096).default(1600),
       format: z.enum(["png", "webp"]).default("png"), labels: z.enum(["none", "all"]).default("none"),
@@ -2621,6 +2622,7 @@ function makeServer() {
   );
 
   // ---- Modules and the Store (src/modules) --------------------------------
+  registerLayerTools(server, { ensureSet, saveCanvas });
   registerModuleTools(server, {
     host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
     ensureImage, saveCanvas, canvasLayers,

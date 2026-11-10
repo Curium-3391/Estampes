@@ -141,7 +141,8 @@ function cleanSet(raw, where, warnings) {
   if (unsupported.length) warnings.push(where + ": " + unsupported.length + " mark(s) were not imported (" + unsupported.slice(0, 3).map((u) => u.id + ": " + u.why).join("; ") + ")");
   const layers = (Array.isArray(raw.layers) ? raw.layers : []).filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author)).slice(0, MAX_LAYERS)
     .map((l) => defined({ id: l.id, author: l.author, name: text(l.name, 40) || l.id, locked: l.locked === true ? true : undefined,
-      opacity: typeof l.opacity === "number" && l.opacity >= 0.1 && l.opacity <= 1 ? l.opacity : undefined }));
+      visible: l.visible === false ? false : undefined,
+      opacity: typeof l.opacity === "number" && l.opacity >= 0 && l.opacity <= 1 ? l.opacity : undefined }));
   let links = 0;
   const linkMap = {};
   for (const [k, list] of Object.entries(raw.links && typeof raw.links === "object" ? raw.links : {})) {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added `get_visual_layers` and `edit_visual_layers` for assistant layer opacity,
+  visibility and ordering, with revision checks, lock protection and persistent
+  appearance undo/redo. The canvas visibility checkbox now updates shared state;
+  rendering and portable exports preserve it, including fully transparent layers.
 - `present_visual` takes `dryRun: true` (one image's canvas): it runs every
   check of a real call (locked layers, stale `ifMatch`, invalid marks) and
   reports the refusal, or what would change, without saving anything (#72).
@@ -25,6 +29,7 @@
   (shown in the canvas, with the confirm button again) until the user confirms
   it again. The geometry seen at confirmation is stored with the link and
   travels in bundles.
+
 - The canvas's Undo / Redo buttons now also undo and redo edits you already
   sent (move, resize, restyle, relabel, delete of a mark), through
   `edit_visual_canvas` `history`. Each step restores the exact mark and is
