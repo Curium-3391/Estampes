@@ -7,7 +7,7 @@
 // Each record is written from the higher seq of its committed document and its
 // durable pending copy, the same choice the server makes. Nothing in the UVA
 // store is changed, so switching back to uva later is safe.
-import { mkdir, writeFile, rename, readdir } from "node:fs/promises";
+import { mkdir, writeFile, rename, readdir, access } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createUvaService } from "../src/uva/service.js";
 import { createRecordStore, KINDS } from "../src/uva/record-store.js";
@@ -28,6 +28,9 @@ for (const name of await readdir(join(storageDir, "uva-pending", "records")).cat
 }
 const written = { canvas: 0, image: 0 };
 const put = async (path, data) => { const tmp = path + ".uva-to-legacy.tmp"; await writeFile(tmp, data); await rename(tmp, path); };
+// A record that holds no history yet (it was never opened since the older
+// files were written) must not erase the history file already on disk.
+const putHistory = async (path, log) => { if (!log.length && await access(path).then(() => true, () => false)) return; await put(path, lines(log)); };
 const lines = (log) => log.map((l) => JSON.stringify(l) + "\n").join("");
 try {
   // Canvases: the store's documents and their pending copies.
@@ -50,10 +53,10 @@ try {
     if (setId) {
       await mkdir(join(folder, "sets"), { recursive: true });
       await put(join(folder, "sets", setId + ".json"), JSON.stringify(record.canvas));
-      await put(join(folder, "sets", setId + ".history.jsonl"), lines(record.extra.log));
+      await putHistory(join(folder, "sets", setId + ".history.jsonl"), record.extra.log);
     } else {
       await put(join(folder, "canvas.json"), JSON.stringify(record.canvas));
-      await put(join(folder, "history.jsonl"), lines(record.extra.log));
+      await putHistory(join(folder, "history.jsonl"), record.extra.log);
       if (record.extra.meta) await put(join(folder, "meta.json"), JSON.stringify(record.extra.meta));
       if (record.extra.derived) await put(join(folder, "derived.json"), JSON.stringify(record.extra.derived));
     }
@@ -72,8 +75,7 @@ try {
       await rename(tmp, path);
       if (k.logName) {
         const logPath = join(folder, k.logName(id));
-        await writeFile(logPath + ".uva-to-legacy.tmp", (await records.log(kind, id)).map((l) => JSON.stringify(l) + "\n").join(""));
-        await rename(logPath + ".uva-to-legacy.tmp", logPath);
+        await putHistory(logPath, await records.log(kind, id));
       }
       written[kind]++;
     }
