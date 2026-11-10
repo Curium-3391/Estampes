@@ -150,7 +150,8 @@ function cleanSet(raw, where, warnings) {
       .map((l) => defined({ id: l.id.slice(0, 64), left: l.left, right: l.right, label: text(l.label, 64), note: text(l.note, 200),
         confidence: ["high", "medium", "low"].includes(l.confidence) ? l.confidence : "medium", evidence: l.evidence, ambiguities: l.ambiguities,
         review: ["confirmed", "rejected"].includes(l.review) ? l.review : undefined, reviewReason: text(l.reviewReason, 200),
-        author: l.author === "user" ? "user" : "assistant", previouslyRejected: l.previouslyRejected, derivedFrom: l.derivedFrom }));
+        author: l.author === "user" ? "user" : "assistant", previouslyRejected: l.previouslyRejected, derivedFrom: l.derivedFrom,
+        confirmedGeometry: l.review === "confirmed" && l.confirmedGeometry && typeof l.confirmedGeometry.left === "string" && typeof l.confirmedGeometry.right === "string" ? { left: l.confirmedGeometry.left.slice(0, 20000), right: l.confirmedGeometry.right.slice(0, 20000) } : undefined }));
     links += linkMap[k].length;
   }
   return {

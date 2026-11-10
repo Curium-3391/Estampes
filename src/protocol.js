@@ -8,7 +8,7 @@
 // back as a marks file. Version 2 adds confidence, evidence and verification
 // to every claim (a mark's note, a link) and the list of claims the user
 // rejected. See docs/PROTOCOL-V2.md; version 1 documents are still read.
-import { canvasMarks, canvasLayers, pairLinks } from "./canvas-state.js";
+import { canvasMarks, canvasLayers, shownLinks, markEtag } from "./canvas-state.js";
 import { verificationOf } from "./assessment.js";
 import { gestureGroups } from "./gesture-groups.js";
 import { canvasObjects, sceneRevision } from "./scene/scene-ops.js";
@@ -47,6 +47,8 @@ export function protocolMark(m, image) {
     // re-sent without proof; scene-anchor = a known demo landmark).
     provenance: defined({ author: m.author, grounding: m.grounding, editedByUser: m.edited ? true : undefined }),
     stroke: strokeOf(m),
+    // Pass back as ifMatch when editing this mark, to refuse stale edits.
+    etag: markEtag(m),
   });
 }
 
@@ -66,7 +68,7 @@ export function canvasDocument(left, right = null, { history } = {}) {
     })));
     marks.push(...canvasMarks(entry).map((m) => protocolMark(m, entry.imageId)));
   }
-  const links = right ? pairLinks(left, right).map((l) => defined({
+  const links = right ? shownLinks(left, right).map((l) => defined({
     id: l.id, from: { image: left.imageId, mark: l.left }, to: { image: right.imageId, mark: l.right },
     label: l.label, note: l.note, ...claimFields(l), review: l.review, author: l.author,
   })) : [];
