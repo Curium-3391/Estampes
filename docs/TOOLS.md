@@ -100,15 +100,3 @@ the legacy file, the durable pending seq and the committed seq), `list`, `open`,
 `render`, `export` and `read_chunk`. It is registered whenever the store is on.
 Edits go through the canvas, workspace, surface and calculator tools.
 
-## UVA Experimental Beta editor (opt-in)
-
-`experimental_workspace` exposes versioned `estampes.uva/1` state and commands:
-`list`, `open`, `status`, `render`, `modules`, `prepare`, `commit`, `export`.
-GPT and the Workbench use the same authoritative document. `prepare` returns a
-signed command; `commit` requires that exact value. Stale revisions reject writes;
-unchanged retry payloads retain their Ledger ACK. It is registered only when Beta
-is explicitly enabled. Existing workspace/visual tool contracts remain intact.
-
-`uva_user_command` is the app-only entrypoint for the same command service; it
-attributes edits to the user without accepting caller-provided author fields.
-See [UVA Beta](UVA-BETA.md) for operation examples, limits and recovery boundaries.

@@ -19,7 +19,7 @@ async function start(storage, beta, { mode = "uva", idle = "0", env = {} } = {})
   const port = await freePort();
   const proc = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), stdio: "ignore", env: { ...process.env, PORT: String(port),
     ESTAMPES_STORAGE_DIR: storage, ESTAMPES_ALLOW_OPEN: "1", ESTAMPES_REQUIRE_KEY: "0", ESTAMPES_RATE_LIMIT_PER_MIN: "0",
-    ESTAMPES_UVA_BETA: "1", ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: "linux-process-crash-test",
+    ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: "linux-process-crash-test",
     ESTAMPES_CANVAS_STORE: mode, ESTAMPES_UVA_MIRROR_IDLE_SEC: idle, ...env } });
   for (let i = 0; i < 300; i++) { try { if ((await fetch("http://127.0.0.1:" + port + "/")).ok) break; } catch {} await sleep(100); }
   const client = new Client({ name: "canvas-store", version: "0" }, { versionNegotiation: { mode: "auto" } });
@@ -33,8 +33,8 @@ async function start(storage, beta, { mode = "uva", idle = "0", env = {} } = {})
     get: async (path) => (await fetch("http://127.0.0.1:" + port + path)).json(),
     async stop() { await client.close().catch(() => {}); proc.kill("SIGTERM"); await exited; },
     async kill() { await client.close().catch(() => {}); proc.kill("SIGKILL"); await exited; },
-    diagnostics: async () => (await call("experimental_workspace", { action: "status" })).structuredContent.diagnostics,
-    documents: async () => (await call("experimental_workspace", { action: "list" })).structuredContent.workspaces,
+    diagnostics: async () => (await call("uva_store", { action: "status" })).structuredContent.diagnostics,
+    documents: async () => (await call("uva_store", { action: "list" })).structuredContent.workspaces,
     labels: async (imageId) => (await call("get_visual_state", { imageId })).structuredContent.marks.map((m) => m.label ?? m.id).sort(),
   };
 }
@@ -62,7 +62,7 @@ test("a canvas is committed to its UVA document and restored from it after a res
   await s.call("present_visual", { imageId, layer: "第一輪", annotations: [{ id: "a1", type: "rect", x: .1, y: .2, x2: .4, y2: .5, label: "first" }, { id: "a2", type: "point", x: .7, y: .7, label: "second" }] });
   await committed(s, storage);
   const [doc] = await s.documents();
-  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
   const ext = open.extensions["estampes.beta:mirror"];
   assert.equal(ext.authority, "uva");
   assert.equal(open.extensions["estampes.beta:legacyArchives"], undefined, "the raw canvas is not stored again as a sidecar");
@@ -127,7 +127,7 @@ test("a legacy canvas moves into UVA on open, and a newer canvas.json written be
   assert.deepEqual(await s.labels(imageId), ["old canvas", "written later"]);
   await committed(s, storage);
   const [doc] = await s.documents();
-  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
   assert.equal(open.scenes[0].annotations.length, 2);
   await s.stop();
 
@@ -150,7 +150,7 @@ test("image layers are committed as verified assets and come back byte for byte"
   assert.equal(pngs.length, 2);
   assert.equal(before.baseAsObject, true);
   const [doc] = (await s.documents()).filter((d) => d.title === "Canvas " + imageId);
-  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
   const scene = open.scenes[0];
   assert.equal(scene.background.kind, "transparent");
   const images = scene.objects.filter((o) => o.type === "image");
@@ -160,11 +160,11 @@ test("image layers are committed as verified assets and come back byte for byte"
   assert.ok(!JSON.stringify(open).includes("data:image/png"));
   assert.ok(Buffer.byteLength(JSON.stringify(open)) < 64 * 1024);
   // Render works without a background asset.
-  const r = await s.call("experimental_workspace", { action: "render", documentId: doc.id });
+  const r = await s.call("uva_store", { action: "render", documentId: doc.id });
   const pixels = r.content.find((c) => c.type === "image");
   assert.ok(pixels?.data.length > 100, JSON.stringify(r.content).slice(0, 300));
   // The export carries every image the document references.
-  const exported = (await s.call("experimental_workspace", { action: "export", documentId: doc.id })).structuredContent;
+  const exported = (await s.call("uva_store", { action: "export", documentId: doc.id })).structuredContent;
   const zip = await readFile(join(beta, "exports", exported.exportId + ".zip"));
   for (const o of images) assert.ok(zip.includes(Buffer.from("assets/" + o.props.asset.assetId.slice(13))), o.props.asset.assetId);
   await s.stop();
@@ -203,7 +203,7 @@ test("links to another canvas and their reviews are committed as relation bindin
   assert.equal((await s.diagnostics()).mirror.blocked?.[left], undefined);
   const docs = await s.documents();
   const doc = docs.find((d) => d.title === "Canvas " + left);
-  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
   const binding = open.bindings.find((b) => b.kind === "relation");
   assert.ok(binding, JSON.stringify({ bindings: open.bindings, ext: open.extensions, diag: (await s.diagnostics()).mirror }).slice(0, 1500));
   assert.equal(binding.from.id, "a1");
@@ -273,7 +273,7 @@ test("a workspace copy of a canvas is committed under its set key and restored f
   await until(async () => {
     if ((await pendingFiles(storage)).length) return false;
     const d = (await s.documents()).find((x) => x.title === "Canvas " + key);
-    const open = (await s.call("experimental_workspace", { action: "open", documentId: d.id })).structuredContent.document;
+    const open = (await s.call("uva_store", { action: "open", documentId: d.id })).structuredContent.document;
     return open.scenes[0].annotations.some((a) => a.label === "copy only");
   });
   const before = JSON.parse(await readFile(setFile, "utf8"));
@@ -344,7 +344,7 @@ test("a save is acknowledged only once its pending record is durable; legacy, pe
   await committed(s, storage);
   assert.deepEqual(await s.labels(imageId), ["one", "three", "two"]);
   const [doc] = await s.documents();
-  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const open = (await s.call("uva_store", { action: "open", documentId: doc.id })).structuredContent.document;
   assert.equal(open.extensions["estampes.beta:mirror"].sourceSeq, seq);
   await s.stop();
 });

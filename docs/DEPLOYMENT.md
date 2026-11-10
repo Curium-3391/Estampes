@@ -191,7 +191,5 @@ back without losing an edit. Servers without storage keep everything in memory.
   7-day replay window (older history is compacted automatically).
 - `uva_store` shows the store's state (`status`) and documents; it never edits.
 
-`ESTAMPES_UVA_BETA=1` additionally offers the older Beta editor
-(`experimental_workspace`), and `ESTAMPES_UVA_MIRROR=1` the read-only checkpoint
-mirror used when the store is `legacy`. Details, limits, recovery and the
-qualification still open are in [UVA](UVA-BETA.md).
+Details, limits, recovery and the qualification still open are in
+[UVA](UVA-BETA.md).
