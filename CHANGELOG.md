@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A server whose UVA store holds data but cannot open now exits with the reason
+  instead of running on legacy files that lack what was saved to the store. A
+  store that never held anything still falls back with a warning.
 - Images, their canvases and workspace copies now live only in the UVA store
   when it is on: no `images/<hex>/` file is written. Each record holds the
   canvas, its change log, the image's metadata and its processed-view recipes;
@@ -205,6 +208,9 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- A server whose UVA store holds data but cannot open now exits with the reason
+  instead of running on legacy files that lack what was saved to the store. A
+  store that never held anything still falls back with a warning.
 - Docs: `npm run docs:check` (`scripts/check-docs.mjs`, no install, no Docker) checks local links and anchors, duplicate headings and index entries, tool names against the registered tools, `ESTAMPES_*` names against the code, versions and image tags, statements known to be stale, and shell examples. Runs in `node-tests` and in a new light docs-only workflow; `docs/DOCUMENTATION-MAINTENANCE.md` explains it. It found and fixed an undocumented `ESTAMPES_TUNNEL_METRICS`.
 - Docs: `docs/DEVELOPMENT.md` (setup, tests, code tour, public interfaces versus internals), `docs/modules/QUICKSTART.md` and `docs/modules/TESTING.md` (declarative, WebAssembly and http paths). New `tests/module-authoring.test.js` runs the author walkthrough for real (init, test, sign, trust, install with administrator approval, enable, run, refused input) and every bundled example module.
 - Docs: `SECURITY.md` (single-owner security model, private vulnerability reporting), `docs/BACKUP-RESTORE.md` (what is stored, backup, restore into a new volume, upgrade, rollback, key rotation and leak response) and `docs/TROUBLESHOOTING.md`. New `scripts/verify-backup-restore.mjs` packs a storage folder with `tar`, restores it into another and compares what two servers report (canvases, marks, links, workspaces, module state, calculator notebooks). The Docker commands themselves were not run.

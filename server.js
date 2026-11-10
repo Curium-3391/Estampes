@@ -1,5 +1,5 @@
 import { createServer as createHttpServer } from "node:http";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
@@ -3019,6 +3019,17 @@ if (uvaService.enabled && uvaService.canvasStore) {
   if (canvasStore && recordStore) { useCanvasStore(canvasStore); useRecords(recordStore); }
   else if (canvasStore) { await canvasStore.close(); canvasStore = null; }
   if (canvasStore) log("info", "[canvas-store] canvases, images, workspaces, surfaces and notebooks live only in UVA; no legacy file is written (scripts/uva-to-legacy.mjs writes them back out)", { directory: config.uvaBetaDir, recovering: canvasStore.recovered.length + recordStore.recovered.length });
+}
+// Once the store holds data, the legacy files no longer have it: running on
+// them would show stale canvases and write edits the store never sees. A
+// store that held nothing yet (e.g. a host without flock) may fall back.
+if (wantCanvasStore && !canvasStore) {
+  const used = [join(config.storageDir, "uva-pending"), join(config.uvaBetaDir, "init.json"), join(config.uvaBetaDir, "estampes-pr1c-beta")].filter((p) => existsSync(p));
+  if (used.length) {
+    log("error", "[canvas-store] the UVA store holds this server's canvases and workspaces but could not open; stopping instead of running on stale legacy files. Fix the cause logged above, or stop, run node scripts/uva-to-legacy.mjs <storage dir> and set ESTAMPES_CANVAS_STORE=legacy.", { found: used });
+    process.exit(1);
+  }
+  log("warn", "[canvas-store] the UVA store could not open and holds nothing yet; using the legacy files (ESTAMPES_CANVAS_STORE=legacy silences this)");
 }
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {

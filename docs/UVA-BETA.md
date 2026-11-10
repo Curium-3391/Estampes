@@ -96,9 +96,12 @@ kept moves.
   [history compaction](rfc/unified-visual-architecture/HISTORY-COMPACTION.md).
   `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) only caps commits retained in
   that window; it is not a lifetime limit. When it is reached the store reports
-  `budgetExhausted` in `diagnostics.mirror`. If the store cannot start at all,
-  the server logs it and runs on the legacy files, which do not have what was
-  saved to the store; run `scripts/uva-to-legacy.mjs` first (see below).
+  `budgetExhausted` in `diagnostics.mirror`. If the store cannot open once it
+  holds data (for example another server holds its lease), the server logs the
+  reason and **exits** rather than run on legacy files that lack what was saved
+  to the store; fix the cause, or run `scripts/uva-to-legacy.mjs` and switch to
+  legacy (see below). A store that never held anything (for example on a host
+  without `flock`) falls back to the legacy files with a warning.
 - `diagnostics.mirror.canvasStore` also counts writes, refused writes, commits,
   reads by source (`uva` or `pending`) and the last error.
 
