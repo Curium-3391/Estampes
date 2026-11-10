@@ -35,17 +35,14 @@ export const config = Object.freeze({
   rateLimitPerMin: num("ESTAMPES_RATE_LIMIT_PER_MIN", 120),
   // Empty = memory only (the old behaviour). Docker sets /data.
   storageDir: str("ESTAMPES_STORAGE_DIR"),
-  // The UVA Beta editor (experimental_workspace). The UVA store itself is on
-  // whenever the canvas store is "uva" (the default) and storage is on disk.
-  uvaBeta: str("ESTAMPES_UVA_BETA") === "1",
-  // The UVA store's own folder, never inside ESTAMPES_STORAGE_DIR. Docker sets
+  // The UVA store is on whenever the canvas store is "uva" (the default) and
+  // storage is on disk. The UVA store's own folder, never inside ESTAMPES_STORAGE_DIR. Docker sets
   // /uva-beta (its own volume); otherwise a sibling "<storage>-uva" folder.
   uvaBetaDir: str("ESTAMPES_UVA_DIR") || str("ESTAMPES_UVA_BETA_DIR") || (str("ESTAMPES_STORAGE_DIR") ? resolve(str("ESTAMPES_STORAGE_DIR")).replace(/\/+$/, "") + "-uva" : ""),
-  // linux-process-crash-test survives a killed process, not a power loss
-  // (docs/UVA-BETA.md). It is the default on Linux; elsewhere UVA needs a choice.
+  // Both profiles use the same fsync barriers; linux-local-durable also requires
+  // a local ext4/XFS mount (docs/UVA-POWERLOSS.md). The test profile is the
+  // default on Linux; elsewhere UVA needs a choice.
   uvaBetaProfile: str("ESTAMPES_UVA_PROFILE") || str("ESTAMPES_UVA_BETA_PROFILE") || (process.platform === "linux" ? "linux-process-crash-test" : ""),
-  // Copy canvas checkpoints into UVA documents (needs the UVA Beta). Default off.
-  uvaMirror: str("ESTAMPES_UVA_MIRROR") === "1",
   // Where canvases, workspaces, surfaces and notebooks are committed: "uva" (the
   // default: their UVA documents; needs ESTAMPES_STORAGE_DIR) or "legacy" (the
   // older files only). The legacy files are still written in "uva" mode, so

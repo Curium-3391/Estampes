@@ -47,7 +47,6 @@ import {
   overlayGrid, previewImage, cellCenter, rowLabel, displayImage, widgetImage, compactForDisplay, regionTile,
 } from "./src/image-ops.js";
 import { createUvaService } from "./src/uva/service.js";
-import { createMirror } from "./src/uva/mirror.js";
 import { createCanvasStore } from "./src/uva/canvas-store.js";
 
 // Every canvas save made through the server goes through here, so the optional
@@ -56,17 +55,14 @@ import { createCanvasStore } from "./src/uva/canvas-store.js";
 // With ESTAMPES_CANVAS_STORE=uva an image's own canvas is also written durably
 // for its UVA commit (src/uva/canvas-store.js); the content is captured now, in
 // save order.
-let canvasSaved = null, canvasStore = null;
+let canvasStore = null;
 // In that mode a save resolves only once the pending record is durable, and
 // rejects when it could not be written (canvas.json may still hold the edit).
 const saveCanvas = (entry, meta) => {
   const legacy = saveCanvasFile(entry, meta);
   // A workspace copy is committed under its set key (img:<hex>#<setId>).
   const stored = canvasStore ? canvasStore.write(entry.imageId + (entry.setId ? "#" + entry.setId : ""), serializeCanvas(entry), { entry, after: legacy }) : null;
-  return Promise.all([legacy, stored]).then(([result]) => {
-    if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
-    return result;
-  });
+  return Promise.all([legacy, stored]).then(([result]) => result);
 };
 // With the canvas store on, every image entry is restored from it once, however
 // it got into memory (the sealed workspace and bundle modules load images
@@ -2704,7 +2700,7 @@ function makeServer() {
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
-  registerUvaTools(server, { editor: config.uvaBeta, service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
+  registerUvaTools(server, { service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
   return server;
 }
 
@@ -2739,7 +2735,7 @@ const port = config.port;
 // it is generated on first start. Set before the server listens.
 let ACCESS_KEY = "";
 // Created at startup, once storage is checked (see below).
-let moduleHost = null, surfaceService = null, uvaService = null, uvaMirror = null;
+let moduleHost = null, surfaceService = null, uvaService = null;
 // "*" by default so browser tools such as MCP Inspector keep working; ChatGPT
 // calls /mcp server-to-server and does not need CORS at all.
 const CORS_ORIGINS = config.corsOrigins;
@@ -3123,41 +3119,16 @@ const startUva = (options) => createUvaService(options).catch((error) => {
 // store to commit to and keep everything in memory, as before.
 const wantCanvasStore = config.canvasStore === "uva" && !!modulesDir;
 if (config.canvasStore === "uva" && !modulesDir) log("info", "[canvas-store] no writable ESTAMPES_STORAGE_DIR: nothing is committed to UVA");
-uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: config.uvaBeta || wantCanvasStore, mirror: config.uvaBeta && config.uvaMirror,
+uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: wantCanvasStore,
   canvasStore: wantCanvasStore, assetCapBytes: config.uvaAssetMaxMb * 1024 * 1024, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
-  legacyItems: async (op) => {
-    let entries;
-    if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }
-    else {
-      // Creating from images starts from their pixels only. Legacy marks,
-      // layers and scene objects on the same image (e.g. image layers that
-      // cannot be migrated yet) belong to an explicit import, not to a new
-      // workspace, and must not block it.
-      entries = await Promise.all((op.imageIds ?? []).map(ensureImage));
-      return Promise.all(entries.map(async entry => ({ canvas: { version: serializeCanvas(entry).version, imageId: entry.imageId, width: entry.width, height: entry.height, marks: [], layers: [], links: {} }, bytes: entry.sourceBytes ?? await readSource(entry.imageId) })));
-    }
-    return Promise.all(entries.map(async entry => ({ canvas: serializeCanvas(entry), bytes: entry.sourceBytes ?? await readSource(entry.imageId) })));
-  },
 });
-if (uvaService.enabled && config.uvaBeta) log("warn", "[uva] Experimental Beta editor enabled", { profile: config.uvaBetaProfile });
-if (uvaService.enabled && config.uvaBetaProfile === "linux-process-crash-test") log("warn", "[uva] store profile linux-process-crash-test: a killed process loses nothing, a power loss may (docs/UVA-BETA.md)", { directory: config.uvaBetaDir });
+if (uvaService.enabled && config.uvaBetaProfile === "linux-process-crash-test") log("info", "[uva] store profile linux-process-crash-test: the same fsync barriers as linux-local-durable, which also checks for a local ext4/XFS mount (docs/UVA-POWERLOSS.md)", { directory: config.uvaBetaDir });
 if (uvaService.enabled && uvaService.canvasStore) {
   canvasStore = await createCanvasStore({ service: uvaService, storageDir: config.storageDir, readSource, restoreCanvas, serializeCanvas, idleMs: config.uvaMirrorIdleSec * 1000, log })
     .catch((error) => { log("error", "[canvas-store] could not start; canvases stay in legacy storage", { error: String(error?.message || error) }); return null; });
   if (canvasStore) recordStore = await createRecordStore({ service: uvaService, storageDir: config.storageDir, idleMs: config.uvaMirrorIdleSec * 1000, log })
     .catch((error) => { log("error", "[record-store] could not start; workspaces, surfaces and notebooks stay in legacy storage", { error: String(error?.message || error) }); return null; });
   if (canvasStore) log("info", "[canvas-store] canvases, workspaces, surfaces and notebooks are committed to UVA; the legacy files are still written, so ESTAMPES_CANVAS_STORE=legacy switches back", { directory: config.uvaBetaDir, recovering: canvasStore.recovered.length });
-} else if (uvaService.enabled && config.uvaMirror) {
-  uvaMirror = createMirror({
-    service: uvaService, idleMs: config.uvaMirrorIdleSec * 1000, log,
-    read: async (imageId) => {
-      const entry = await ensureImage(imageId);
-      if (!entry?.imageId) return null;
-      return { canvas: serializeCanvas(entry), bytes: entry.sourceBytes ?? await readSource(entry.imageId) };
-    },
-  });
-  canvasSaved = (imageId) => uvaMirror.schedule(imageId);
-  log("warn", "[uva] canvas mirror on: checkpoints are copied into read-only UVA documents; the canvas stays the writer", { idleSec: config.uvaMirrorIdleSec });
 }
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
@@ -3199,6 +3170,6 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
     httpServer.close();
     const force = setTimeout(() => process.exit(0), 8000);
     force.unref();
-    flushStorage().then(() => recordStore?.close()).then(() => canvasStore?.close()).then(() => uvaMirror?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
+    flushStorage().then(() => recordStore?.close()).then(() => canvasStore?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
   });
 }
