@@ -23,6 +23,10 @@ services:
       ESTAMPES_TUNNEL_METRICS: http://tunnel:20241
       # The SymPy calculator service (below) shares this one socket volume.
       ESTAMPES_CAS_SOCKET: /run/estampes-cas/cas.sock
+      # Canvases, workspaces, surfaces and notebooks are committed to the UVA
+      # store in its own volume (ESTAMPES_CANVAS_STORE=legacy in .env switches
+      # back; the legacy files in /data are kept up to date either way).
+      ESTAMPES_UVA_DIR: /uva-beta
     ports:
       # Only this machine can reach the server by default; put a reverse
       # proxy or tunnel with https in front. ESTAMPES_BIND=0.0.0.0 in .env
@@ -30,6 +34,7 @@ services:
       - "${ESTAMPES_BIND:-127.0.0.1}:${ESTAMPES_HOST_PORT:-8787}:8787"
     volumes:
       - estampes-data:/data
+      - uva-beta:/uva-beta
       - cas-run:/run/estampes-cas
     # Least privilege: nothing but /data (and a small /tmp) is writable, no
     # Linux capabilities, no privilege escalation, bounded processes.
@@ -107,3 +112,5 @@ services:
 volumes:
   estampes-data:
   cas-run:
+  # The UVA store (named uva-beta so earlier opt-in deployments keep their data).
+  uva-beta:

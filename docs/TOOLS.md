@@ -91,7 +91,16 @@ Kept for older conversations and regression tests; new conversations do not need
 | `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/register`, `/oauth/authorize`, `/oauth/token` | OAuth 2.1 sign-in (PKCE, dynamic registration, client ID metadata documents) for hosts such as Claude; only when a key is set. See [Connecting Claude](DEPLOYMENT.md#connecting-claude). |
 | `/healthz`, `/version` | Public health check and build summary. |
 
-## UVA Experimental Beta (opt-in)
+## UVA store
+
+`uva_store` is a read-only view of the UVA store, where canvases, workspaces,
+panel layouts and calculator notebooks are committed by default
+(`ESTAMPES_CANVAS_STORE=uva`): `status` (store health and, per canvas or record,
+the legacy file, the durable pending seq and the committed seq), `list`, `open`,
+`render`, `export` and `read_chunk`. It is registered whenever the store is on.
+Edits go through the canvas, workspace, surface and calculator tools.
+
+## UVA Experimental Beta editor (opt-in)
 
 `experimental_workspace` exposes versioned `estampes.uva/1` state and commands:
 `list`, `open`, `status`, `render`, `modules`, `prepare`, `commit`, `export`.

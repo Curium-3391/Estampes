@@ -41,10 +41,11 @@ canvas edit. GPT reads the same marks and layers with `experimental_workspace`
   reports `budgetExhausted` in `diagnostics.mirror` and the canvas is unaffected.
   If a UVA store cannot start at all, the server logs it and runs without UVA.
 
-## Canvas store: commit canvases to UVA (optional, phase 1)
+## Canvas store: commit canvases to UVA (default)
 
-`ESTAMPES_CANVAS_STORE=uva` (needs the Beta and `ESTAMPES_STORAGE_DIR`; the default
-is `legacy`) makes an image's own canvas **committed to its UVA document and
+`ESTAMPES_CANVAS_STORE=uva` (the default; needs `ESTAMPES_STORAGE_DIR`, and turns
+the UVA store on by itself with `ESTAMPES_UVA_DIR` or its default; `legacy`
+switches back) makes an image's own canvas **committed to its UVA document and
 restored from it**. The canvas editor, its tools, undo and the widget are
 unchanged; only where the canvas is kept moves. It replaces the mirror for those
 canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
@@ -177,11 +178,12 @@ test store to this profile is rejected. Use a new directory instead.
 | Docker Desktop / WSL2 | Linux VM filesystem is a distinct environment; no macOS/Windows host durability claim |
 | Read-only storage / wrong UID / symlink / incompatible data | Activation fails closed; no fallback writer or automatic directory adoption |
 
-The Docker image includes `flock` and creates `/uva-beta` owned by uid 1000.
-The standard Compose file remains legacy-only. To opt in with a separate volume:
+The Docker image includes `flock`, creates `/uva-beta` owned by uid 1000 and sets
+`ESTAMPES_UVA_DIR=/uva-beta`. `compose.yaml` mounts the `uva-beta` volume there, so
+the canvas store is on with `docker compose up -d`. The overlay adds the Beta
+editor and the mirror:
 
 ```sh
-export ESTAMPES_UVA_BETA_PROFILE=linux-process-crash-test
 docker compose -f compose.yaml -f compose.uva-beta.yaml up -d --build
 ```
 
@@ -285,7 +287,8 @@ remain in the recovery source archive. The original directory is preserved.
 Recovery with archives exceeding the 1 MiB Beta bound is rejected explicitly.
 Arbitrary foreign archives are not adopted as locally authenticated state.
 
-Set `ESTAMPES_UVA_BETA=0` and restart to return to legacy operation. Keep
+Set `ESTAMPES_CANVAS_STORE=legacy` (and `ESTAMPES_UVA_BETA=0`) and restart to
+return to legacy operation; the legacy files were kept up to date. Keep
 `ESTAMPES_UVA_BETA_DIR` configured if existing export links must remain readable.
 For Compose, remove the opt-in overlay and retain both volumes; add
 `ESTAMPES_UVA_BETA_DIR=/uva-beta` and retain its mount if serving saved exports

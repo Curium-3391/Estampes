@@ -24,8 +24,10 @@ FROM ${BASE_IMAGE}
 ENV NODE_ENV=production \
     PORT=8787 \
     ESTAMPES_STORAGE_DIR=/data \
+    ESTAMPES_UVA_DIR=/uva-beta \
     ESTAMPES_REQUIRE_KEY=1
-# The existing UVA lease requires the OS flock backend. Keep Beta opt-in.
+# The UVA store (the default canvas store, in /uva-beta: mount a volume there)
+# needs the OS flock backend for its writer lease.
 RUN apt-get update && apt-get install -y --no-install-recommends util-linux \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

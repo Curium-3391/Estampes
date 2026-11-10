@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { startStack } from './helpers/widget-host.js';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const env = beta => ({ ESTAMPES_UVA_BETA: '1', ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: 'linux-process-crash-test', ESTAMPES_UVA_MIRROR: '1', ESTAMPES_UVA_MIRROR_IDLE_SEC: '0', ESTAMPES_RATE_LIMIT_PER_MIN: '0' });
+const env = beta => ({ ESTAMPES_UVA_BETA: '1', ESTAMPES_UVA_BETA_DIR: beta, ESTAMPES_UVA_BETA_PROFILE: 'linux-process-crash-test', ESTAMPES_CANVAS_STORE: 'legacy', ESTAMPES_UVA_MIRROR: '1', ESTAMPES_UVA_MIRROR_IDLE_SEC: '0', ESTAMPES_RATE_LIMIT_PER_MIN: '0' });
 async function upload(stack, color) {
   const data = (await sharp({ create: { width: 320, height: 200, channels: 3, background: color } }).png().toBuffer()).toString('base64');
   return (await stack.call('upload_visual_image', { total: data.length, offset: 0, data, fileName: color + '.png' })).structuredContent.imageId;
