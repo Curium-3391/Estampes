@@ -101,6 +101,14 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   let names,format,store;
   try{
   names=(await readdir(root)).filter(n=>n!=='init.lock');
+  // A cut while init.json itself was being installed leaves only its
+  // temporary file: nothing else was made yet, so start from empty.
+  const markTemp=/^init\.json\.[0-9a-f-]{36}\.tmp$/;
+  if(names.length&&names.every(n=>markTemp.test(n))){
+    for(const n of names){const st=await lstat(join(root,n));if(!st.isFile())fail('UNSUPPORTED_STORAGE','Unrecognized Beta directory; select a new empty private directory');}
+    for(const n of names)await unlink(join(root,n));
+    await syncDir(root);names=[];
+  }
   // beta-format.json is written last, after the store is ready, and the
   // service returns only after that. A folder that carries our init.json mark,
   // holds only our own children and lacks beta-format.json is therefore an

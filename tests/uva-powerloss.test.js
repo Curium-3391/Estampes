@@ -55,6 +55,14 @@ test("an initialization a power cut interrupted is started again, not refused", 
   } finally { holder.stdin.end(); await new Promise((done) => holder.once("exit", done)); }
   const again = await createUvaService({ enabled: true, directory: root, profile: "linux-process-crash-test", canvasStore: true });
   await again.close();
+  // A cut while the init.json mark itself was being installed leaves only its temporary file.
+  const marking = join(dir, "marking");
+  await mkdir(marking, { mode: 0o700 });
+  await writeFile(join(marking, "init.lock"), "", { mode: 0o600 });
+  await writeFile(join(marking, "init.json.0f0e0d0c-0b0a-4908-8706-050403020100.tmp"), "{\"sch", { mode: 0o600 });
+  const fresh = await createUvaService({ enabled: true, directory: marking, profile: "linux-process-crash-test", canvasStore: true });
+  assert.equal(fresh.store.status.state, "ready");
+  await fresh.close();
   // A folder with anything else in it is still refused.
   const other = join(dir, "other");
   await mkdir(other, { mode: 0o700 });
