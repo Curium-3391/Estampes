@@ -6,6 +6,12 @@
   visibility and ordering, with revision checks, lock protection and persistent
   appearance undo/redo. The canvas visibility checkbox now updates shared state;
   rendering and portable exports preserve it, including fully transparent layers.
+- `present_visual` takes `dryRun: true` (one image's canvas): it runs every
+  check of a real call (locked layers, stale `ifMatch`, invalid marks) and
+  reports the refusal, or what would change, without saving anything (#72).
+- A `CONFLICT` refusal now includes the mark's current note, status and place
+  and the etag to pass on a retry, so the assistant can decide without another
+  read (#74).
 - Fix (#74): stale edits no longer overwrite silently. Every mark in
   `get_visual_state` / `get_workspace_state` carries an `etag`; pass it back as
   `ifMatch` on an `annotations` or `findings` entry of `present_visual`. If the
@@ -23,7 +29,6 @@
   (shown in the canvas, with the confirm button again) until the user confirms
   it again. The geometry seen at confirmation is stored with the link and
   travels in bundles.
-
 
 - A server whose UVA store holds data but cannot open now exits with the reason
   instead of running on legacy files that lack what was saved to the store. A
