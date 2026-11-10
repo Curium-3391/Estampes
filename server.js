@@ -2018,7 +2018,7 @@ function makeServer() {
             kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}),
             edits: [...edits.map((e) => ({ ...e, side: "left" })), ...rightEdits.map((e) => ({ ...e, side: "right" }))],
             annotations: all, layers: right ? pairLayers(left, right) : canvasLayers(left),
-            ...(right ? { links: shownLinks(left, right).map(compactLink) } : {}),
+            ...(right ? { links: shownLinks(left, right).map(widgetLink) } : {}),
           },
         };
       } catch (error) {
