@@ -141,3 +141,45 @@ test("same region: half overlap or the new centre inside the old box", () => {
   assert.ok(sameRegion([0.14, 0.14, 0.16, 0.16], [0.1, 0.1, 0.2, 0.2]));
   assert.ok(!sameRegion([0.3, 0.3, 0.4, 0.4], [0.1, 0.1, 0.2, 0.2]));
 });
+
+test("a confirmed link goes stale when an end moves, and confirming again refreshes it (#71)", async () => {
+  const { editCanvas, linkIsStale } = await import("../src/canvas-state.js");
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  applyPairChanges(left, right, { annotations: [box("s1", "left"), box("p1", "right")], links: [{ id: "k1", left: "s1", right: "p1", label: "same" }], resolve });
+  storeUserMarks(right, [{ id: "user-r-1", type: "rect", x: 0.4, y: 0.5, x2: 0.5, y2: 0.6, label: "YOU 1" }]);
+  applyPairChanges(left, right, { links: [{ id: "k2", left: "s1", right: "user-r-1", label: "same 2" }], resolve });
+  reviewLink(left, right, "k2", "confirmed");
+  assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "user-confirmed");
+  // The user drags the right end far away: the link stays, its confirmation is stale.
+  editCanvas(right, { marks: [{ id: "user-r-1", x: 0.2, y: 0.3, x2: 0.3, y2: 0.4 }], resolveUser: (m) => m });
+  const k2 = pairLinks(left, right).find((l) => l.id === "k2");
+  assert.ok(k2 && linkIsStale(left, right, k2));
+  assert.equal(k2.stale, undefined, "staleness is shown, never stored");
+  assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "stale-confirmation");
+  reviewLink(left, right, "k2", "confirmed");
+  assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "user-confirmed");
+  assert.ok(needsReview({ ...pairLinks(left, right)[0], stale: true, review: "confirmed" }), "a stale confirmation is back in the review queue");
+  // Withdrawing forgets the remembered geometry.
+  reviewLink(left, right, "k2", "unreviewed");
+  assert.equal(pairLinks(left, right).find((l) => l.id === "k2").confirmedGeometry, undefined);
+});
+
+test("a polyline end that is closed or smoothed after confirmation also goes stale (#71)", async () => {
+  const { editCanvas, linkIsStale } = await import("../src/canvas-state.js");
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  applyPairChanges(left, right, { annotations: [box("s1", "left"), { id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }, { x: 0.3, y: 0.6 }] }], links: [{ id: "k", left: "s1", right: "pl" }], resolve });
+  reviewLink(left, right, "k", "confirmed");
+  assert.ok(!linkIsStale(left, right, pairLinks(left, right)[0]));
+  applyPairChanges(left, right, { annotations: [{ id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }, { x: 0.3, y: 0.6 }], closed: true }], resolve });
+  assert.ok(linkIsStale(left, right, pairLinks(left, right)[0]));
+});
+
+test("a confirmed link to a polyline survives a bundle-style round trip that drops derived bounds (#71)", async () => {
+  const { linkIsStale } = await import("../src/canvas-state.js");
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  applyPairChanges(left, right, { annotations: [box("s1", "left"), { id: "pl", side: "right", type: "polyline", points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.2 }] }], links: [{ id: "k", left: "s1", right: "pl" }], resolve });
+  reviewLink(left, right, "k", "confirmed");
+  const mark = canvasMarks(right).find((m) => m.id === "pl");
+  for (const k of ["x", "y", "x2", "y2"]) delete mark[k];
+  assert.ok(!linkIsStale(left, right, pairLinks(left, right)[0]), "dropping derived bounds is not a move");
+});

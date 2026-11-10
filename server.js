@@ -19,7 +19,7 @@ import { INTENTS, buildAnnotationEvent, formatAnnotationChatMessage } from "./sr
 import { GESTURE_VERDICTS, gestureGroups, recordGestureDecision } from "./src/gesture-groups.js";
 import { createVisualEvidence } from "./src/visual-input.js";
 import {
-  applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks,
+  applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks, shownLinks,
   applyPairChanges, pairLinks, reviewLink, reviewFinding, applyWorkspaceChanges, workspaceLinks, reviewWorkspaceLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
   undoCanvasEdit, redoCanvasEdit, canvasHistory,
 } from "./src/canvas-state.js";
@@ -213,6 +213,7 @@ const ModelAnnotationSchema = z.object({
   author: z.literal("assistant").optional(),
   side: z.enum(["left", "right"]).optional().describe("Paired view only: the image this mark is on (default left); coordinates are normalized to that image"),
   item: WorkspaceItemId.optional().describe("Workspace only: the item (image) this mark is on (default the first); coordinates are normalized to that image"),
+  ifMatch: z.string().regex(/^[0-9a-f]{12}$/).optional().describe("The mark's etag from your last read (get_visual_state / get_workspace_state / a previous result). If the mark changed since then (another conversation or the user edited it), the whole call is refused with CONFLICT instead of overwriting; read again and retry. Recommended whenever you edit an existing mark."),
   ...ClaimFields,
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
@@ -238,6 +239,7 @@ const FindingSchema = z.object({
   item: WorkspaceItemId.optional().describe("Workspace: the item the mark is on, when the id is used on several"),
   note: z.string().max(200).optional().describe("Empty string clears the note"),
   status: z.enum(MARK_STATUSES).optional(),
+  ifMatch: z.string().regex(/^[0-9a-f]{12}$/).optional().describe("The mark's etag from your last read (get_visual_state / get_workspace_state / a previous result). If the mark changed since then (another conversation or the user edited it), the whole call is refused with CONFLICT instead of overwriting; read again and retry. Recommended whenever you edit an existing mark."),
   ...ClaimFields,
 }).strict();
 
@@ -383,6 +385,7 @@ const widgetLink = (l) => ({ ...compactLink(l), evidence: l.evidence ?? [], ambi
 const STATE_TEXT = {
   "user-confirmed": "USER CONFIRMED", "user-rejected": "USER REJECTED (do not rely on it)",
   "independently-verified": "VERIFIED by a tool", unverified: "UNVERIFIED",
+  "stale-confirmation": "STALE CONFIRMATION (an end was moved after the user confirmed; do not rely on it until they confirm again)",
 };
 const claimTag = (c) => {
   const n = evidenceCount(c), state = verificationOf(c);
@@ -579,7 +582,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
   const edits = [...takeUserEdits(left).map((e) => ({ ...e, side: "left" })), ...takeUserEdits(right).map((e) => ({ ...e, side: "right" }))];
   await Promise.all([saveCanvas(left, history), saveCanvas(right, history)]);
   const marks = pairMarks(left, right), byId = new Map(marks.map((m) => [m.id, m]));
-  const linkList = pairLinks(left, right), layers = pairLayers(left, right);
+  const linkList = shownLinks(left, right), layers = pairLayers(left, right);
   const sides = { left, right }, checks = [], ink = [];
   for (const side of ["left", "right"]) {
     const entry = sides[side], own = canvasMarks(entry);
@@ -1213,7 +1216,7 @@ function makeServer() {
               image: metaImage(own),
               pair: { imageId: pairImageId, width: right.width, height: right.height, image: metaImage(shown),
                 ...(exportLinks(pairImageId) ? { exports: exportLinks(pairImageId) } : {}) },
-              annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: pairLinks(entry, right).map(widgetLink), views: [],
+              annotations: pairMarks(entry, right), layers: pairLayers(entry, right), links: shownLinks(entry, right).map(widgetLink), views: [],
               gestureGroups: [...gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
                 ...gestureGroups(canvasMarks(right), right, right.gestureDecisions).map((g) => ({ ...g, side: "right" }))],
               ...(exportLinks(imageId) ? { exports: exportLinks(imageId) } : {}),
@@ -1902,7 +1905,7 @@ function makeServer() {
           return {
             content: [{ type: "text", text: (step.action === "undo" ? "Undid" : "Redid") + " the last edit of mark " + edit.id + " on " + (side === "right" ? pairImageId : imageId) + "." }],
             structuredContent: { kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}), edits: [{ ...edit, side }], annotations: all,
-              layers: right ? pairLayers(left, right) : canvasLayers(left), ...(right ? { links: pairLinks(left, right).map(compactLink) } : {}),
+              layers: right ? pairLayers(left, right) : canvasLayers(left), ...(right ? { links: shownLinks(left, right).map(widgetLink) } : {}),
               history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]) },
           };
         }
@@ -1930,7 +1933,7 @@ function makeServer() {
             kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}),
             edits: [...edits.map((e) => ({ ...e, side: "left" })), ...rightEdits.map((e) => ({ ...e, side: "right" }))],
             annotations: all, layers: right ? pairLayers(left, right) : canvasLayers(left),
-            ...(right ? { links: pairLinks(left, right).map(compactLink) } : {}),
+            ...(right ? { links: shownLinks(left, right).map(widgetLink) } : {}),
             history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]),
           },
         };
