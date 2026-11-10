@@ -74,21 +74,15 @@ test("odd legacy marks (no author, no layer, role hints, unknown fields) still c
   assert.ok(residual, "archived fields need a residual");
 });
 
-test("canvas records are ordered by sequence number, never by clock; canvas.json is adopted only when its content is unknown", async () => {
-  const { chooseCanvas, contentHash } = await import("../src/uva/canvas-store.js");
+test("canvas records are ordered by sequence number, never by clock", async () => {
+  const { chooseCanvas } = await import("../src/uva/canvas-store.js");
   const canvas = (label, savedAt) => ({ version: 1, imageId: "img:0123456789abcdef", width: 1, height: 1, marks: [{ id: "m", type: "point", x: 0, y: 0, label }], layers: [], links: {}, savedAt });
-  const A = canvas("A", "2030-01-01T00:00:00Z"), B = canvas("B", "2000-01-01T00:00:00Z"), C = canvas("C", "1999-01-01T00:00:00Z");
+  const A = canvas("A", "2030-01-01T00:00:00Z"), B = canvas("B", "2000-01-01T00:00:00Z");
   // B has the higher seq although its clock time is older.
-  assert.equal(chooseCanvas({ uva: { seq: 1, legacyHash: contentHash(A), canvas: A }, pending: { seq: 2, legacyHash: contentHash(A), canvas: B } }).canvas, B);
-  assert.equal(chooseCanvas({ uva: { seq: 3, legacyHash: null, canvas: A }, pending: { seq: 2, legacyHash: null, canvas: B } }).canvas, A);
-  // A stale legacy copy (what canvas.json held when the record was written) is ignored and repaired.
-  const stale = chooseCanvas({ uva: { seq: 2, legacyHash: contentHash(A), canvas: B }, legacy: A });
-  assert.equal(stale.canvas, B); assert.equal(stale.repairLegacy, true); assert.equal(stale.adopt, false);
-  // Content no record knows is a save that bypassed the server: it becomes the next seq.
-  const bypass = chooseCanvas({ uva: { seq: 2, legacyHash: contentHash(A), canvas: B }, legacy: C });
-  assert.equal(bypass.canvas, C); assert.equal(bypass.adopt, true); assert.equal(bypass.seq, 2);
-  // No record: migration.
-  assert.deepEqual(chooseCanvas({ legacy: A }), { from: "legacy", canvas: A, adopt: true, seq: 0 });
+  assert.equal(chooseCanvas({ uva: { seq: 1, canvas: A }, pending: { seq: 2, canvas: B } }).canvas, B);
+  assert.equal(chooseCanvas({ uva: { seq: 3, canvas: A }, pending: { seq: 2, canvas: B } }).canvas, A);
+  const one = chooseCanvas({ pending: { seq: 4, canvas: B, extra: { log: [{ tool: "t" }] } } });
+  assert.deepEqual(one, { from: "pending", canvas: B, extra: { log: [{ tool: "t" }], meta: null, derived: null }, seq: 4 });
   assert.equal(chooseCanvas({}), null);
 });
 

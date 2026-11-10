@@ -15,11 +15,14 @@ export class SurfaceError extends Error {
 }
 export const surfaceIdFor = (canvasKey) => "sf:" + createHash("sha256").update(String(canvasKey)).digest("hex").slice(0, 16);
 
-export function createSurfaceStore({ dir = "" } = {}) {
+// `records()`: the UVA record store when it is on (src/uva/record-store.js);
+// surfaces are then read from and written to it, and no file is written here.
+export function createSurfaceStore({ dir = "", records = () => null } = {}) {
   const docs = new Map(), queues = new Map();
   const file = (id) => join(dir, id.replace(":", "_") + ".json");
 
   async function persist(doc) {
+    if (records()) { await records().write("surface", doc.surfaceId, doc); return; }
     if (!dir) return;
     await mkdir(dir, { recursive: true });
     const path = file(doc.surfaceId), tmp = path + "." + process.pid + "." + Date.now() + ".tmp";
@@ -28,13 +31,13 @@ export function createSurfaceStore({ dir = "" } = {}) {
   }
   async function load(id) {
     if (docs.has(id)) return docs.get(id);
-    if (!dir || !SURFACE_ID.test(id)) return null;
-    try {
-      const doc = JSON.parse(await readFile(file(id), "utf8"));
-      if (doc?.schema !== SURFACE_SCHEMA || doc.surfaceId !== id) return null;
-      docs.set(id, doc);
-      return doc;
-    } catch { return null; }
+    if (!(dir || records()) || !SURFACE_ID.test(id)) return null;
+    // A store that cannot be read throws: "no surface" would let a fresh one replace it.
+    const read = records() ? () => records().read("surface", id) : async () => { try { return JSON.parse(await readFile(file(id), "utf8")); } catch { return null; } };
+    const doc = await read();
+    if (doc?.schema !== SURFACE_SCHEMA || doc.surfaceId !== id) return null;
+    docs.set(id, doc);
+    return doc;
   }
   const fresh = (canvasKey) => {
     const panels = [{ panelId: "p:canvas", module: "core", panel: "canvas", kind: "canvas", title: "Canvas", open: true }];
