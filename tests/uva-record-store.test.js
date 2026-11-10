@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import sharp from "sharp";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { chooseRecord } from "../src/uva/record-store.js";
+import { chooseRecord, createRecordStore } from "../src/uva/record-store.js";
 import { hashJson } from "../src/documents/validation.js";
 
 const python = process.env.PYTHON ?? "python3";
@@ -80,6 +80,29 @@ test("chooseRecord orders records by seq and adopts only a file it does not know
   assert.equal(adopted.adopt, true, "a file neither record knows was written behind the server's back");
   assert.equal(adopted.seq, 5);
   assert.equal(chooseRecord({ uva, legacy: { ...v1 } }).adopt, false);
+});
+
+test("a pending record whose commit failed is committed again without another edit", { timeout: 30000 }, async (t) => {
+  const { storage } = await folders(t);
+  const ws = "ws:" + "ab".repeat(8), doc = { id: ws, name: "w", items: [], revision: 1 };
+  await mkdir(join(storage, "workspaces"), { recursive: true });
+  await writeFile(wsFile(storage, ws), JSON.stringify(doc));
+  let calls = 0;
+  const held = new Map();
+  const service = {
+    noteMirror() {}, recordKeys: async () => [...held.keys()], recordState: async (key) => held.get(key) ?? null,
+    async syncRecord({ key, value, seq }) {
+      if (++calls === 1) throw Object.assign(new Error("disk briefly unavailable"), { code: "EIO" });
+      held.set(key, { value, seq, valueHash: hashJson(value), legacyHash: hashJson(value) });
+      return { status: "created", sourceHash: hashJson(value), seq };
+    },
+  };
+  const store = await createRecordStore({ service, storageDir: storage, idleMs: 0, scanEveryMs: 50 });
+  t.after(() => store.close());
+  await until(async () => calls >= 1);
+  await until(async () => held.has("workspace/" + ws) && !(await pendingRecords(storage)).length, 10000);
+  assert.ok(calls >= 2, "retried after the failure");
+  assert.deepEqual(held.get("workspace/" + ws).value, doc);
 });
 
 test("workspaces are committed to UVA and restored from it after a restart", { timeout: 180000 }, async (t) => {

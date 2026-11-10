@@ -218,11 +218,19 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
   }
   stats.restored = { uva: 0, pending: 0, legacy: 0 };
   note();
-  const timer = scanEveryMs > 0 ? setInterval(() => { settle().catch(() => {}); }, scanEveryMs) : null;
+  // A pending record whose commit failed (a transient storage error) is tried
+  // again, even though its file has not changed since.
+  async function retryPending() {
+    for (const name of await readdir(dir).catch(() => [])) {
+      const m = PENDING.exec(name);
+      if (m) mirror.schedule(m[1] + "/" + m[2] + ":" + m[3]);
+    }
+  }
+  const timer = scanEveryMs > 0 ? setInterval(() => { settle().then(retryPending).catch(() => {}); }, scanEveryMs) : null;
   timer?.unref?.();
   return {
     settle, chooseRecord, recovered: leftovers,
-    flush: async () => { await settle(); await mirror.flush(); },
+    flush: async () => { await settle(); await retryPending(); await mirror.flush(); },
     async close() { clearInterval(timer); await settle().catch(() => {}); await mirror.stop(); await Promise.all([...queues.values()]); },
     get pending() { return mirror.pending; },
   };
