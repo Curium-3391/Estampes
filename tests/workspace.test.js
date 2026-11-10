@@ -275,3 +275,21 @@ test("a restore that failed part-way is run again by the next ensureImage", asyn
     assert.equal(reads, 2, "a finished restore is not repeated");
   } finally { useCanvasStore(null); }
 });
+
+test("an older workspace copy's change log comes into its store record once", async () => {
+  const root = mkdtempSync(join(tmpdir(), "est-set-"));
+  useStorageDir(root);
+  const imageId = "img:" + "ab12cd34ef56ab78", setId = "c0a1b2c3d4", key = imageId + "#" + setId;
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  mkdirSync(join(root, "images", imageId.slice(4), "sets"), { recursive: true });
+  writeFileSync(join(root, "images", imageId.slice(4), "sets", setId + ".history.jsonl"), JSON.stringify({ tool: "old" }) + "\n");
+  const writes = [];
+  const record = { canvas: { setId, imageId, marks: [] }, extra: { log: [], meta: null, derived: null }, seq: 1 };
+  useCanvasStore({ read: async () => record, write: async (k, v) => { writes.push([k, v]); return 2; }, imageBytes: async () => null, putImage: async () => {}, note() {} });
+  try {
+    const { readSet } = await import("../src/storage.js");
+    assert.equal((await readSet(imageId, setId)).setId, setId);
+    assert.equal(writes.length, 1);
+    assert.deepEqual(writes[0][1].log, [{ tool: "old" }]);
+  } finally { useCanvasStore(null); useStorageDir(""); }
+});

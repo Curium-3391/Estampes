@@ -273,7 +273,14 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
 export async function readSet(imageId, setId) {
   if (canvases && hexOk(imageId) && SET_ID.test(setId)) {
     const key = imageId + "#" + setId, record = await canvases.read(key);
-    if (record) return record.canvas?.setId === setId ? record.canvas : null;
+    if (record) {
+      // A copy stored before change logs moved into the store: its log file comes in once.
+      if (root && !record.extra.log.length) {
+        const older = await readHistory(imageId, LOG_LINES, { files: true, base: join("sets", setId + ".") });
+        if (older.length) await canvases.write(key, { log: older });
+      }
+      return record.canvas?.setId === setId ? record.canvas : null;
+    }
     const data = root ? await readJson(join(folder(imageId), "sets", setId + ".json")) : null;
     if (data?.setId !== setId || data.imageId !== imageId) return null;
     // An older copy file: migrated in once, with its own change log.
