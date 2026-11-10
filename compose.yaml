@@ -30,6 +30,10 @@ services:
       - "${ESTAMPES_BIND:-127.0.0.1}:${ESTAMPES_HOST_PORT:-8787}:8787"
     volumes:
       - estampes-data:/data
+      # Canvases, workspaces, surfaces and notebooks are committed to the UVA
+      # store in its own volume (the image's default folder; ESTAMPES_CANVAS_STORE=legacy
+      # in .env switches back, and the legacy files in /data stay up to date).
+      - uva-beta:/uva-beta
       - cas-run:/run/estampes-cas
     # Least privilege: nothing but /data (and a small /tmp) is writable, no
     # Linux capabilities, no privilege escalation, bounded processes.
@@ -107,3 +111,5 @@ services:
 volumes:
   estampes-data:
   cas-run:
+  # The UVA store (named uva-beta so earlier opt-in deployments keep their data).
+  uva-beta:

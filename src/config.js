@@ -1,6 +1,8 @@
 // Every deployment setting comes from the environment, so Docker, Heroku and
 // Render run the same code with different .env files. Bad values fall back
 // to the default with a warning instead of stopping the server.
+import { resolve } from "node:path";
+
 const warnings = [];
 
 function num(name, fallback, { min = 0, max = Infinity, integer = true } = {}) {
@@ -33,14 +35,22 @@ export const config = Object.freeze({
   rateLimitPerMin: num("ESTAMPES_RATE_LIMIT_PER_MIN", 120),
   // Empty = memory only (the old behaviour). Docker sets /data.
   storageDir: str("ESTAMPES_STORAGE_DIR"),
+  // The UVA Beta editor (experimental_workspace). The UVA store itself is on
+  // whenever the canvas store is "uva" (the default) and storage is on disk.
   uvaBeta: str("ESTAMPES_UVA_BETA") === "1",
-  uvaBetaDir: str("ESTAMPES_UVA_BETA_DIR"),
-  uvaBetaProfile: str("ESTAMPES_UVA_BETA_PROFILE"),
+  // The UVA store's own folder, never inside ESTAMPES_STORAGE_DIR. Docker sets
+  // /uva-beta (its own volume); otherwise a sibling "<storage>-uva" folder.
+  uvaBetaDir: str("ESTAMPES_UVA_DIR") || str("ESTAMPES_UVA_BETA_DIR") || (str("ESTAMPES_STORAGE_DIR") ? resolve(str("ESTAMPES_STORAGE_DIR")).replace(/\/+$/, "") + "-uva" : ""),
+  // linux-process-crash-test survives a killed process, not a power loss
+  // (docs/UVA-BETA.md). It is the default on Linux; elsewhere UVA needs a choice.
+  uvaBetaProfile: str("ESTAMPES_UVA_PROFILE") || str("ESTAMPES_UVA_BETA_PROFILE") || (process.platform === "linux" ? "linux-process-crash-test" : ""),
   // Copy canvas checkpoints into UVA documents (needs the UVA Beta). Default off.
   uvaMirror: str("ESTAMPES_UVA_MIRROR") === "1",
-  // Where an image's own canvas is committed: "legacy" (canvas.json, the default)
-  // or "uva" (its UVA document; needs the UVA Beta and ESTAMPES_STORAGE_DIR).
-  canvasStore: str("ESTAMPES_CANVAS_STORE", "legacy").toLowerCase() === "uva" ? "uva" : "legacy",
+  // Where canvases, workspaces, surfaces and notebooks are committed: "uva" (the
+  // default: their UVA documents; needs ESTAMPES_STORAGE_DIR) or "legacy" (the
+  // older files only). The legacy files are still written in "uva" mode, so
+  // ESTAMPES_CANVAS_STORE=legacy switches back without losing an edit.
+  canvasStore: str("ESTAMPES_CANVAS_STORE", "uva").toLowerCase() === "legacy" ? "legacy" : "uva",
   uvaAssetMaxMb: num("ESTAMPES_UVA_ASSET_MAX_MB", 1024, { min: 64, max: 1048576 }),
   // Total commits a UVA store accepts from canvases (its open time grows with them).
   uvaMirrorMaxCommits: num("ESTAMPES_UVA_MIRROR_MAX_COMMITS", 10000, { min: 1, max: 1000000 }),

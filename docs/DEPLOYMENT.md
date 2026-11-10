@@ -165,21 +165,30 @@ Invalid values fall back to the default and are reported in the log at startup.
 - One process per storage folder: two containers must not share a volume.
 - If the host cannot show a widget, inspect tool discovery, MCP responses, the `ui://` resource, and the MCP Apps bridge handshake.
 
-## Optional UVA Experimental Beta
+## UVA store (default)
 
-Legacy remains the default writer. `ESTAMPES_UVA_BETA=1` opts in;
-`ESTAMPES_UVA_BETA_DIR` must name a separate private directory with an existing
-trusted parent. `ESTAMPES_UVA_BETA_PROFILE` must be explicitly set to
-`linux-process-crash-test` (NOT power-loss durable), or the existing strict
-`linux-local-durable` Linux ext4/XFS profile (production NOT QUALIFIED). There is
-no silent profile fallback, directory adoption, or automatic migration. Full
-instructions, Docker overlay, platform matrix, export/recovery and rollback are
-in [UVA Experimental Beta](UVA-BETA.md).
-`ESTAMPES_UVA_MIRROR=1` (optional, needs the Beta) copies canvas checkpoints into read-only
-UVA documents so GPT reads the same marks; `ESTAMPES_UVA_MIRROR_IDLE_SEC` sets the
-quiet time before a copy; `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) caps the commits kept in
-the 7-day replay window; older history is compacted automatically. See [Canvas mirror](UVA-BETA.md#canvas-mirror-optional).
-`ESTAMPES_CANVAS_STORE=uva` (Beta, needs `ESTAMPES_STORAGE_DIR`; default `legacy`) commits each
-image's own canvas to its UVA document and restores it from there, still writing `canvas.json` so
-legacy can be switched back; `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024) caps its image copies. See
-[Canvas store](UVA-BETA.md#canvas-store-commit-canvases-to-uva-optional-phase-1).
+With `ESTAMPES_STORAGE_DIR` set, canvases, workspaces, panel layouts and
+calculator notebooks are committed to the UVA store and restored from it
+(`ESTAMPES_CANVAS_STORE=uva`, the default). Existing data move in on first open;
+the legacy files keep being written, so `ESTAMPES_CANVAS_STORE=legacy` switches
+back without losing an edit. Servers without storage keep everything in memory.
+
+- `ESTAMPES_UVA_DIR`: the store's own private folder, never inside or above
+  `ESTAMPES_STORAGE_DIR`. Docker uses `/uva-beta` (volume `uva-beta` in
+  `compose.yaml`); elsewhere the default is `<storage dir>-uva`.
+  `ESTAMPES_UVA_BETA_DIR` is still read as the older name.
+- `ESTAMPES_UVA_PROFILE`: `linux-process-crash-test` (default on Linux) survives a
+  killed process, **not a power loss**; `linux-local-durable` needs an eligible
+  local ext4/XFS mount. `ESTAMPES_UVA_BETA_PROFILE` is still read as the older
+  name. The UVA lease needs Linux `flock`; where the store cannot start, the
+  server logs it and uses the legacy files.
+- `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024) caps the store's image copies;
+  `ESTAMPES_UVA_MIRROR_IDLE_SEC` (default 15) is the quiet time before a commit;
+  `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) caps the commits kept in the
+  7-day replay window (older history is compacted automatically).
+- `uva_store` shows the store's state (`status`) and documents; it never edits.
+
+`ESTAMPES_UVA_BETA=1` additionally offers the older Beta editor
+(`experimental_workspace`), and `ESTAMPES_UVA_MIRROR=1` the read-only checkpoint
+mirror used when the store is `legacy`. Details, limits, recovery and the
+qualification still open are in [UVA](UVA-BETA.md).

@@ -20,11 +20,11 @@ jobs:
       # Optional PDF support, so its tests run here (they skip without it).
       - run: npm install --no-save --no-audit --no-fund pdfjs-dist@4.10.38 @napi-rs/canvas
       - run: npm test
-      # The canvas tools again, with canvases committed to UVA (ESTAMPES_CANVAS_STORE=uva).
-      - run: node --test tests/claims-mcp.test.js tests/workspace-mcp.test.js tests/gesture-mcp.test.js tests/bundle-mcp.test.js tests/geometry-tools.test.js tests/derived-view.test.js tests/upload-e2e.test.js tests/cards-e2e.test.js
+      # The canvas tools again with the older store only (ESTAMPES_CANVAS_STORE=legacy),
+      # which stays the way back from the default UVA store.
+      - run: node --test tests/claims-mcp.test.js tests/workspace-mcp.test.js tests/gesture-mcp.test.js tests/bundle-mcp.test.js tests/geometry-tools.test.js tests/derived-view.test.js tests/upload-e2e.test.js tests/cards-e2e.test.js tests/surface.test.js
         env:
-          ESTAMPES_TEST_CANVAS_STORE: uva
-          NODE_OPTIONS: --import ${{ github.workspace }}/tests/helpers/canvas-store-env.mjs
+          ESTAMPES_CANVAS_STORE: legacy
       - run: npm run docs:check
       - run: node --check server.js
   cas-tests:

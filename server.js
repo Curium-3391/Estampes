@@ -2571,7 +2571,7 @@ function makeServer() {
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
-  registerUvaTools(server, { service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
+  registerUvaTools(server, { editor: config.uvaBeta, service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
   return server;
 }
 
@@ -2985,10 +2985,13 @@ const startUva = (options) => createUvaService(options).catch((error) => {
   log("error", "[uva] could not start; continuing without UVA. The canvas is unaffected. Export the workspaces from a copy, or start a new ESTAMPES_UVA_BETA_DIR.", { code: error.code, error: error.message });
   return createUvaService({ enabled: false });
 });
-const wantCanvasStore = config.canvasStore === "uva";
-if (wantCanvasStore && (!config.uvaBeta || !config.storageDir)) log("error", "[canvas-store] ESTAMPES_CANVAS_STORE=uva needs ESTAMPES_UVA_BETA=1 and ESTAMPES_STORAGE_DIR; canvases stay in legacy storage");
-uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: config.uvaBeta, mirror: config.uvaBeta && config.uvaMirror,
-  canvasStore: wantCanvasStore && config.uvaBeta && !!config.storageDir, assetCapBytes: config.uvaAssetMaxMb * 1024 * 1024, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
+// The canvas store is the default: with storage on disk, canvases, workspaces,
+// surfaces and notebooks are committed to UVA. Memory-only servers have no
+// store to commit to and keep everything in memory, as before.
+const wantCanvasStore = config.canvasStore === "uva" && !!modulesDir;
+if (config.canvasStore === "uva" && !modulesDir) log("info", "[canvas-store] no writable ESTAMPES_STORAGE_DIR: nothing is committed to UVA");
+uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enabled: config.uvaBeta || wantCanvasStore, mirror: config.uvaBeta && config.uvaMirror,
+  canvasStore: wantCanvasStore, assetCapBytes: config.uvaAssetMaxMb * 1024 * 1024, directory: config.uvaBetaDir, profile: config.uvaBetaProfile, legacyDirectory: config.storageDir, moduleHost,
   legacyItems: async (op) => {
     let entries;
     if (op.sourceRef) { const { doc } = await resolveRef(op.sourceRef); entries = (await workspaceItems(doc)).map(x => x.entry); }
@@ -3003,13 +3006,14 @@ uvaService = await startUva({ mirrorMaxCommits: config.uvaMirrorMaxCommits, enab
     return Promise.all(entries.map(async entry => ({ canvas: serializeCanvas(entry), bytes: entry.sourceBytes ?? await readSource(entry.imageId) })));
   },
 });
-if (uvaService.enabled) log("warn", "[uva] Experimental Beta enabled; production NOT QUALIFIED", { profile: config.uvaBetaProfile });
+if (uvaService.enabled && config.uvaBeta) log("warn", "[uva] Experimental Beta editor enabled", { profile: config.uvaBetaProfile });
+if (uvaService.enabled && config.uvaBetaProfile === "linux-process-crash-test") log("warn", "[uva] store profile linux-process-crash-test: a killed process loses nothing, a power loss may (docs/UVA-BETA.md)", { directory: config.uvaBetaDir });
 if (uvaService.enabled && uvaService.canvasStore) {
   canvasStore = await createCanvasStore({ service: uvaService, storageDir: config.storageDir, readSource, restoreCanvas, serializeCanvas, idleMs: config.uvaMirrorIdleSec * 1000, log })
     .catch((error) => { log("error", "[canvas-store] could not start; canvases stay in legacy storage", { error: String(error?.message || error) }); return null; });
   if (canvasStore) recordStore = await createRecordStore({ service: uvaService, storageDir: config.storageDir, idleMs: config.uvaMirrorIdleSec * 1000, log })
     .catch((error) => { log("error", "[record-store] could not start; workspaces, surfaces and notebooks stay in legacy storage", { error: String(error?.message || error) }); return null; });
-  if (canvasStore) log("warn", "[canvas-store] ESTAMPES_CANVAS_STORE=uva: image canvases are committed to UVA documents (Beta, NOT QUALIFIED); canvas.json is still written so legacy can be switched back", { recovering: canvasStore.recovered.length });
+  if (canvasStore) log("info", "[canvas-store] canvases, workspaces, surfaces and notebooks are committed to UVA; the legacy files are still written, so ESTAMPES_CANVAS_STORE=legacy switches back", { directory: config.uvaBetaDir, recovering: canvasStore.recovered.length });
 } else if (uvaService.enabled && config.uvaMirror) {
   uvaMirror = createMirror({
     service: uvaService, idleMs: config.uvaMirrorIdleSec * 1000, log,
