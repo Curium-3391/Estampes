@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Canvas store phase 4: workspaces, panel surfaces (layouts) and calculator
+  notebooks are committed to UVA as record documents and restored from them, with
+  the same durable pending copy, seq ordering and startup repair or adoption as
+  canvases (`src/uva/record-store.js`). Bundle export waits until every changed
+  record is recorded. The workspace audit log (`history.jsonl`) stays legacy.
 - Canvas store phase 3: links between canvases (paired views, workspace links)
   and their reviews are stored as relation bindings in the UVA document instead of
   blocking the canvas; the link record is kept verbatim, so the canvas round-trips

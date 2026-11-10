@@ -118,6 +118,11 @@ async function canvasKeys(value) {
   }
   return [...keys].slice(0, 64);
 }
+// Workspaces, panel surfaces and calculator notebooks are written by their own
+// (sealed) modules; after a tool call, the files that changed are recorded for
+// their UVA commit (src/uva/record-store.js). Never throws: the file is saved.
+let recordStore = null;
+const settleRecords = () => recordStore ? flushStorage().then(() => recordStore.settle()).catch((error) => log("error", "[record-store] settle failed", { error: String(error?.message || error) })) : Promise.resolve();
 function refreshCanvases(ids, result) {
   if (!canvasStore) return;
   const refresh = (id) => { if (hasImage(id.split("#")[0])) (id.includes("#") ? ensureSet(id) : ensureImage(id)).then((entry) => canvasStore.refresh(entry)).catch(() => {}); };
@@ -125,6 +130,7 @@ function refreshCanvases(ids, result) {
   if (result) canvasKeys(result).then((keys) => { for (const id of keys) if (!ids.includes(id)) refresh(id); }).catch(() => {});
 }
 import { registerUvaTools } from "./src/uva/mcp-tools.js";
+import { createRecordStore } from "./src/uva/record-store.js";
 import { serializeCanvas } from "./src/storage.js";
 import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
@@ -685,8 +691,9 @@ function makeServer() {
   server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => {
     const touched = await warmCanvases(args[0]);
     let result;
-    try { result = await handler(...args); return fitResult(result, config.maxResultChars); }
-    finally { refreshCanvases(touched, result?.structuredContent); }
+    try { result = await handler(...args); }
+    finally { refreshCanvases(touched, result?.structuredContent); await settleRecords(); }
+    return fitResult(result, config.maxResultChars);
   });
 
   registerAppResource(
@@ -1448,6 +1455,8 @@ function makeServer() {
           ref = made.workspace.id;
         }
         const first = (await resolveRef(ref)).doc.items[0];
+        // The bundle is built from records the UVA store already holds.
+        await settleRecords();
         const extras = await collectBundleExtras({ surfaceStore, notebooks: notebookStore(), keys: [workspace, ref, first?.set?.split("#")[0]] });
         const built = await exportBundle(ref, { version: VERSION, fileNames, extras });
         bundleCache.set(ref.slice(3), built);
@@ -2785,7 +2794,7 @@ const httpServer = createHttpServer((req, res) => {
     // The file the tool described; after a restart it is built again from the stored workspace.
     const cached = bundleCache.get(bundleMatch[1]);
     if (cached) { send(cached); return; }
-    warmCanvases({ workspaceId: "ws:" + bundleMatch[1] }).then(() => exportBundle("ws:" + bundleMatch[1], { version: VERSION })).then(send, (error) => {
+    warmCanvases({ workspaceId: "ws:" + bundleMatch[1] }).then(settleRecords).then(() => exportBundle("ws:" + bundleMatch[1], { version: VERSION })).then(send, (error) => {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Workspace not found on this server: " + String(error?.message || error));
     });
@@ -2998,6 +3007,8 @@ if (uvaService.enabled) log("warn", "[uva] Experimental Beta enabled; production
 if (uvaService.enabled && uvaService.canvasStore) {
   canvasStore = await createCanvasStore({ service: uvaService, storageDir: config.storageDir, readSource, restoreCanvas, serializeCanvas, idleMs: config.uvaMirrorIdleSec * 1000, log })
     .catch((error) => { log("error", "[canvas-store] could not start; canvases stay in legacy storage", { error: String(error?.message || error) }); return null; });
+  if (canvasStore) recordStore = await createRecordStore({ service: uvaService, storageDir: config.storageDir, idleMs: config.uvaMirrorIdleSec * 1000, log })
+    .catch((error) => { log("error", "[record-store] could not start; workspaces, surfaces and notebooks stay in legacy storage", { error: String(error?.message || error) }); return null; });
   if (canvasStore) log("warn", "[canvas-store] ESTAMPES_CANVAS_STORE=uva: image canvases are committed to UVA documents (Beta, NOT QUALIFIED); canvas.json is still written so legacy can be switched back", { recovering: canvasStore.recovered.length });
 } else if (uvaService.enabled && config.uvaMirror) {
   uvaMirror = createMirror({
@@ -3051,6 +3062,6 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
     httpServer.close();
     const force = setTimeout(() => process.exit(0), 8000);
     force.unref();
-    flushStorage().then(() => canvasStore?.close()).then(() => uvaMirror?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
+    flushStorage().then(() => recordStore?.close()).then(() => canvasStore?.close()).then(() => uvaMirror?.close()).catch(() => {}).then(() => uvaService?.close()).finally(() => process.exit(0));
   });
 }

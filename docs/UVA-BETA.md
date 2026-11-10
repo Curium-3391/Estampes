@@ -96,9 +96,22 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
 - **Workspace copies** (`mode: copy`, `images/<hex>/sets/<setId>.json`) are
   committed under their set key `img:<hex>#<setId>`, one document per copy. The
   workspace module loads a copy from its set file, which startup keeps equal to
-  the record; edits are committed after each tool call. The workspace record
-  itself (`ws:` item list and layout) is still legacy.
-- **Not yet in UVA**: the workspace record, more than 512 marks or 64 objects per
+  the record; edits are committed after each tool call.
+- **Workspaces, panel surfaces and calculator notebooks** (`workspaces/<hex>.json`,
+  `surfaces/sf_<hex>.json`, `cas/notebooks/nb_<hex>.json`) are records too: each
+  is one UVA document (kind `graph`, one empty scene) whose `estampes.beta:record`
+  extension holds the record's JSON, its hash and its seq, so it shares the store's
+  history, recovery points and compaction. Their sealed modules still write the
+  file; after every tool call (and every 30 s) a changed file is written durably to
+  `uva-pending/records/` with the next seq, then committed. Startup restores each
+  file from its latest record, or adopts a file the records do not know, exactly
+  as for canvases. `diagnostics.mirror.recordStore.records` lists, per record,
+  whether the file matches, the pending seq and the committed seq. A
+  `.estampes` bundle is exported only after every changed record is recorded, and
+  an imported bundle's workspace, surface and notebooks are recorded after the
+  import. These documents are read-only through `experimental_workspace` and
+  not listed there. The workspace's `history.jsonl` (an audit log) stays legacy.
+- **Not yet in UVA**: more than 512 marks or 64 objects per
   canvas, malformed links (for example one without its far end), or a store over
   its limits. Such a canvas keeps its pending file, which then wins on
   restore, and is listed under `diagnostics.mirror.blocked`.
