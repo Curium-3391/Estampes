@@ -1572,15 +1572,16 @@ function makeServer() {
         bundleUrl: z.string().url().optional().describe("Public https URL of a .estampes file"),
         name: z.string().max(60).optional(),
         collision: z.enum(["reuse", "copy"]).default("reuse"),
+        allowPartial: z.boolean().default(false).describe("Default false: a bundle with invalid marks or totals that disagree with its manifest is refused and nothing is created. true imports the valid part and reports what was dropped."),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
       _meta: { "openai/fileParams": ["file"] },
     },
-    async ({ file, bundleUrl, name, collision }) => {
+    async ({ file, bundleUrl, name, collision, allowPartial }) => {
       try {
         if (Boolean(file) === Boolean(bundleUrl)) throw new Error("Give exactly one of file or bundleUrl");
         const bytes = await downloadImage(file ? file.download_url : bundleUrl, { maxBytes: 256 * 1024 * 1024, accept: "application/octet-stream,application/zip,*/*" });
-        const r = await importBundle(bytes, { name, collision });
+        const r = await importBundle(bytes, { name, collision, allowPartial });
         const installed = r.repeated ? null : await installBundleExtras({ surfaceStore, notebooks: notebookStore(), workspaceId: r.workspace?.id, extras: r.extras });
         if (installed?.notes.length) r.warnings = [...(r.warnings ?? []), ...installed.notes];
         return {

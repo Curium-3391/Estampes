@@ -2,6 +2,8 @@
   "baseline": "7fb9b73",
   "authorizedIntegrationSeams": [
     "server.js",
+    "src/bundle.js",
+    "src/canvas-state.js",
     "src/config.js",
     "src/surface/widget-source.js",
     "public/workbench.js",
