@@ -184,7 +184,14 @@ test("pinch, wheel and pan never draw; labels and drawing tolerances follow the 
 
 test("layers can be hidden without losing marks; unsent marks always show",()=>{
   assert.match(html,/id="layers"/);
-  assert.match(source,/const shown=m=>!m\.layer\|\|!hiddenLayers\.has\(m\.layer\)/);
+  const hiddenLayers=new Set(["local"]), layers=new Map([["shared",{visible:false}],["shown",{visible:true}]]);
+  const declaration=source.match(/const shown=[^;]+;/)?.[0];
+  assert.ok(declaration,"visibility predicate exists");
+  const shown=new Function("hiddenLayers","layerOf",declaration+"return shown;")(hiddenLayers,id=>layers.get(id));
+  assert.equal(shown({}),true,"unsent/unlayered marks stay visible");
+  assert.equal(shown({layer:"shown"}),true);
+  assert.equal(shown({layer:"local"}),false,"local view filter is preserved");
+  assert.equal(shown({layer:"shared"}),false,"shared hidden layers stay hidden");
   assert.match(source,/userMarks\.filter\(m=>sentIds\.has\(m\.id\)\)\]\.filter\(shown\)/);
   assert.match(source,/renderMarks\(freshEl,userMarks\.filter\(m=>!sentIds\.has\(m\.id\)\),/);
   assert.match(source,/\]\.filter\(item=>shown\(item\.mark\)\)/);

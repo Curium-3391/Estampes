@@ -126,7 +126,7 @@ export function serializeCanvas(entry) {
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     ...(entry.setId ? { setId: entry.setId, ...(entry.derivedFrom ? { derivedFrom: entry.derivedFrom } : {}) } : {}),
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
-    ...(entry.layerHistory ? { layerHistory: entry.layerHistory } : {}),
+    ...(entry.layerHistory?.past.length || entry.layerHistory?.future.length ? { layerHistory: entry.layerHistory } : {}),
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
     ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
     ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}),
