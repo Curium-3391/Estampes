@@ -93,6 +93,10 @@ async function check(events, k, run, scratch) {
   let s;
   try {
     s = await startServer(target, {}, checkerRoot);
+    // The server falls back to the legacy files when UVA cannot open; that is
+    // a failed recovery here, even if the legacy files hold every result.
+    const store = async () => (await s.call("uva_store", { action: "status" })).structuredContent?.diagnostics?.mirror?.canvasStore;
+    if (!(await store())) throw new Error("the UVA canvas store did not open");
     for (const [key, a] of state.acks) {
       if (a.kind === "image") {
         const doc = (await s.call("get_visual_state", { imageId: key })).structuredContent;
@@ -108,7 +112,13 @@ async function check(events, k, run, scratch) {
       }
     }
     const image = [...state.acks.values()].find((a) => a.kind === "image");
-    if (image) await s.call("present_visual", { imageId: image.key, verify: false, annotations: [{ id: "after-cut", type: "point", x: .5, y: .5, label: "after" }] });
+    if (image) {
+      const before = (await store()).writes;
+      await s.call("present_visual", { imageId: image.key, verify: false, annotations: [{ id: "after-cut", type: "point", x: .5, y: .5, label: "after" }] });
+      // The new write must reach its UVA durability boundary (a pending record).
+      const after = await store();
+      if (!(after.writes > before) || !Number.isSafeInteger(after.images?.[image.key]?.pendingSeq)) throw new Error("the write after the cut was not recorded durably in UVA: " + JSON.stringify(after).slice(0, 300));
+    }
     out.pass = true;
   } catch (error) {
     out.pass = false; out.error = String(error?.message || error).slice(0, 600);
