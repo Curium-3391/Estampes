@@ -2616,17 +2616,19 @@ function makeServer() {
     {
       title: "Detect structure with an analysis engine",
       description:
-        "Run an analysis engine on an image or region and get structured detections in normalized image coordinates: `components` (connected dark/light regions as boxes), `blobs` (point-like sources: stars, solder joints, particles, with centroid, flux and FWHM), `lines` (straight segments), `circles` (rings, holes, dials), `ocr` (words with boxes; optional install). Each detection has geometry, attributes and, where meaningful, a confidence, plus a ready `mark` you can pass to present_visual once you have checked it against the image. Detections are candidates: they say where pixels have a shape, not what the thing is (two lines are not a verified wire; recognised text is not a verified part number). Nothing is drawn on the canvas. Call with `engine` omitted to list engines and whether each is available. Results state the analysis resolution; use sampling native for small features.",
+        "Run an analysis engine on an image or region and get structured detections in normalized image coordinates: `components` (connected dark/light regions as boxes), `regions` (closed regions such as grains, cells, particles or pads, with touching blobs split by shape; outline, area, perimeter, equivalent diameter, axes, circularity per region), `blobs` (point-like sources: stars, solder joints, particles, with centroid, flux and FWHM), `lines` (straight segments), `circles` (rings, holes, dials), `ocr` (words with boxes; optional install). Each detection has geometry, attributes and, where meaningful, a confidence, plus a ready `mark` you can pass to present_visual once you have checked it against the image. Detections are candidates: they say where pixels have a shape, not what the thing is (two lines are not a verified wire; recognised text is not a verified part number; a region count is not a verified count of objects). Nothing is drawn on the canvas. Call with `engine` omitted to list engines and whether each is available. Results state the analysis resolution; use sampling native for small features. " +
+        "To detect on processed pixels (after threshold, CLAHE, denoise, morphology, a perspective fix...), pass `derivedViewId` from process_image: the engine then reads that view's pixels, not the source, and each detection carries both image coordinates and `view` pixel coordinates. Without it the engine always reads source pixels, whatever was processed before.",
       inputSchema: z.object({
         imageId: ImageIdSchema.optional(),
-        engine: z.enum(["components", "blobs", "lines", "circles", "ocr"]).optional(),
+        engine: z.enum(["components", "regions", "blobs", "lines", "circles", "ocr"]).optional(),
+        derivedViewId: DerivedViewIdSchema.optional().describe("Run on the pixels of this processed view of imageId instead of the source pixels. Do not combine with region or sampling: the view has its own"),
         region: RegionSchema.optional(),
         sampling: SamplingSchema.optional(),
         params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}).describe("Engine parameters, see the engine list"),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
-    async ({ imageId, engine, region, sampling, params }) => {
+    async ({ imageId, engine, derivedViewId, region, sampling, params }) => {
       try {
         if (!engine) {
           const engines = await listEngines();
@@ -2634,10 +2636,12 @@ function makeServer() {
             structuredContent: { kind: "estampes.engines", engines } };
         }
         if (!imageId) throw new Error("imageId is required with engine");
-        const res = await runEngine(await ensureImage(imageId), engine, { region, sampling, params });
+        const res = await runEngine(await ensureImage(imageId), engine, { region, sampling, params, derivedViewId });
         const n = res.detections.length;
         const text = engine + " " + res.status + (res.reasons?.length ? " (" + res.reasons.join("; ") + ")" : "") + ": " + n + " detection" + (n === 1 ? "" : "s") +
+          (derivedViewId ? " on processed view " + derivedViewId : " on source pixels") +
           (res.analysis ? " at " + res.analysis.space + " resolution " + res.analysis.width + "x" + res.analysis.height : "") +
+          (res.quality ? ". Summary: " + JSON.stringify(res.quality) : "") +
           (res.warnings?.length ? ". Notes: " + res.warnings.join("; ") : "") + ". Candidates only; check them against the image before marking. " +
           JSON.stringify(res.detections.slice(0, 12)) + (n > 12 ? " ... (all in structuredContent)" : "");
         return { content: [{ type: "text", text }], structuredContent: { kind: "estampes.detections", ...res } };

@@ -12,8 +12,10 @@
 // input  = { img (analysis pixels), toNormalized(x, y) -> {x, y}, scaleToNormalized (px -> normalized length),
 //            params, region, entry }
 import { rawImage, fromRaw, toGray, sameBands } from "../image-ops.js";
-import { analysisFor } from "./view.js";
+import { analysisFor, viewAnalysis, findView } from "./view.js";
 import { canny } from "./ops-extra.js";
+import { apply, axisAligned, isAffine, mapMark } from "./transform.js";
+import { splitByDistance, labelMask, fillHoles, regionStats, traceContour, simplifyClosed, squaredDistanceTransform } from "./segment.js";
 
 export const ENGINE_API = "estampes.engine/1";
 const registry = new Map();
@@ -33,30 +35,146 @@ export async function listEngines() {
 
 const r5 = (v) => Number(v.toFixed(5));
 
-// Run one engine on a region. Failure is a result, not a thrown error:
-// { status: "failed", reasons } keeps the shape the same for GPT.
-export async function runEngine(entry, id, { region, sampling, params = {} } = {}) {
+// Run one engine on a region of the image, or on a processed view of it
+// (`derivedViewId`). Failure is a result, not a thrown error:
+// { status: "failed", reasons } keeps the shape the same for GPT. A wrong,
+// unknown or stale view is a thrown error: the call itself is mistaken.
+export async function runEngine(entry, id, { region, sampling, params = {}, derivedViewId } = {}) {
   const engine = registry.get(id);
   if (!engine) throw new Error("Unknown engine " + id + "; available: " + [...registry.keys()].join(", "));
   const base = { apiVersion: ENGINE_API, engine: id, engineVersion: engine.version, kind: engine.kind, imageId: entry.imageId, sourceAssetId: entry.sourceAssetId ?? null };
+  const target = derivedViewId ? await viewTarget(entry, derivedViewId, { region, sampling }) : await imageTarget(entry, { region, sampling });
   const avail = await engine.available();
-  if (!avail.ok) return { ...base, status: "unavailable", reasons: [avail.reason], detections: [] };
-  const { analysisPixels: a } = await analysisFor(entry, { region, sampling: { mode: "working", ...sampling } });
-  const r = a.region;
-  const toNormalized = (x, y) => ({ x: r5(r.x + (x / a.img.width) * (r.x2 - r.x)), y: r5(r.y + (y / a.img.height) * (r.y2 - r.y)) });
-  const sx = (r.x2 - r.x) / a.img.width, sy = (r.y2 - r.y) / a.img.height;
+  if (!avail.ok) return { ...base, ...target.envelope, status: "unavailable", reasons: [avail.reason], detections: [] };
   try {
-    const out = await engine.run({ img: a.img, toNormalized, sx, sy, params, region: r, entry });
+    const out = await engine.run({ img: target.img, toNormalized: target.toNormalized, params, region: target.region, entry, scale: target.scale });
+    const detections = (out.detections ?? []).map((d, i) => ({ id: id + "-" + (i + 1), ...d }));
+    const mapped = target.finish ? target.finish(detections) : { detections, warnings: [] };
     return {
-      ...base, status: out.status ?? "ok", region: r,
-      analysis: { space: a.space, width: a.img.width, height: a.img.height, sourcePixelsPerAnalysisPixel: a.srcPerPx },
-      detections: (out.detections ?? []).map((d, i) => ({ id: id + "-" + (i + 1), ...d })),
+      ...base, ...target.envelope, status: out.status ?? "ok", region: target.region,
+      analysis: target.analysis,
+      detections: mapped.detections,
       ...(out.quality ? { quality: out.quality } : {}), ...(out.reasons?.length ? { reasons: out.reasons } : {}),
-      warnings: [...a.warnings, ...(out.warnings ?? [])],
+      warnings: [...target.warnings, ...(out.warnings ?? []), ...mapped.warnings],
     };
   } catch (error) {
-    return { ...base, status: "failed", reasons: [String(error?.message ?? error)], detections: [] };
+    return { ...base, ...target.envelope, status: "failed", reasons: [String(error?.message ?? error)], detections: [] };
   }
+}
+
+// A known length per analysis pixel, when calibrate_scale set one for this
+// measurement space (the source image, or one derived view).
+function scaleFor(entry, key, spacePixelsPerAnalysisPixel) {
+  const cal = entry.calibrations?.get(key);
+  if (!cal || !Number.isFinite(cal.unitsPerPixel)) return null;
+  return { unit: cal.unit, unitsPerPixel: cal.unitsPerPixel * spacePixelsPerAnalysisPixel, relativeUncertainty: cal.relativeUncertainty ?? 0 };
+}
+
+// Source pixels of the image, cropped at the analysis resolution.
+async function imageTarget(entry, { region, sampling }) {
+  const { analysisPixels: a } = await analysisFor(entry, { region, sampling: { mode: "working", ...sampling } });
+  const r = a.region;
+  return {
+    img: a.img, region: r, warnings: a.warnings, envelope: {},
+    toNormalized: (x, y) => ({ x: r5(r.x + (x / a.img.width) * (r.x2 - r.x)), y: r5(r.y + (y / a.img.height) * (r.y2 - r.y)) }),
+    analysis: { space: a.space, width: a.img.width, height: a.img.height, sourcePixelsPerAnalysisPixel: a.srcPerPx },
+    scale: scaleFor(entry, "image", a.srcPerPx),
+  };
+}
+
+// The pixels of a processed view (after its geometry and ops, before the
+// delivery resize and codec). The engine works in the view's own pixel
+// frame; detections are then mapped back to the image with the view's
+// stored matrix, and keep their view-pixel geometry under `view`.
+async function viewTarget(entry, derivedViewId, { region, sampling }) {
+  if (region || sampling) throw new Error("With derivedViewId the view's own region and sampling apply; do not pass region or sampling");
+  const record = findView(entry, derivedViewId);
+  if (!record) throw new Error(derivedViewId + " is not a processed view of " + entry.imageId + " (recipes are kept per image); call process_image on this image first");
+  const m = record.coordinateMapping?.derivedToNormalized;
+  if (!m) throw new Error("Derived view " + derivedViewId + " has no invertible mapping back to the image, so detections on it could not be placed");
+  const a = await viewAnalysis(entry, record);
+  // Analysis pixels -> delivered view pixels (the frame of coordinateFrame {derivedViewId}).
+  const kx = record.pixelDimensions.width / a.img.width, ky = record.pixelDimensions.height / a.img.height;
+  const r2 = (v) => Number(v.toFixed(2));
+  const aligned = axisAligned(m), affine = isAffine(m);
+  const perPx = affine ? Number((record.evidence.sourcePixelsPerOutputPixel * kx).toFixed(4)) : null;
+  const warnings = [...a.warnings, "detected on the processed pixels of " + derivedViewId + " (" + (record.recipe.ops.map((o) => o.op).join(" > ") || "no ops") + "), not on the source pixels"];
+  if (!affine) warnings.push("the view is a perspective warp: pixel sizes (areaPx, lengthPx, radiusPx) are in the view's pixels and do not correspond to one fixed length on the image");
+  if (!aligned) warnings.push("the view is rotated or warped: boxes are given on the image as four-corner polygons, with x/y/x2/y2 their bounding box");
+  if (record.validity && record.validity.validFraction < 0.999) warnings.push(Math.round((1 - record.validity.validFraction) * 100) + "% of the view is fill, not image; detections there are marked outsideSource");
+  return {
+    img: a.img, region: record.recipe.region, warnings,
+    toNormalized: (x, y) => ({ x: r2(x * kx), y: r2(y * ky) }),
+    analysis: { space: "view", width: a.img.width, height: a.img.height, sourcePixelsPerAnalysisPixel: perPx },
+    scale: scaleFor(entry, derivedViewId, Math.sqrt(kx * ky)),
+    envelope: {
+      derivedViewId,
+      view: {
+        derivedViewId, reproduced: true,
+        ops: record.recipe.ops, geometry: record.recipe.geometry ?? [], sampling: record.recipe.sampling,
+        versions: record.versions,
+        pixelDimensions: record.pixelDimensions,
+        mapping: record.coordinateMapping.kind, axisAligned: aligned,
+        ...(record.validity ? { validFraction: record.validity.validFraction } : {}),
+        pixelsRead: "after geometry and ops, before delivery resize and codec (lossless)",
+      },
+      coordinates: {
+        detections: "normalized source image (0..1, top-left origin)",
+        "detections[].view": "pixels of the derived view; usable as present_visual coordinateFrame {derivedViewId}",
+      },
+    },
+    finish(detections) {
+      let outside = 0;
+      const mappedList = detections.map((d) => { const out = mapDetection(d, m, aligned); if (out.outsideSource) outside++; return out; });
+      return { detections: mappedList, warnings: outside ? [outside + " detection" + (outside === 1 ? " lies" : "s lie") + " partly outside the source image (in the view's fill); they carry outsideSource and no mark"] : [] };
+    },
+  };
+}
+
+// One detection from view pixels to normalized image coordinates. The
+// view-pixel geometry is kept under `view`. A box stays a box only when
+// the mapping is axis-aligned; otherwise its four corners are given as
+// `polygon` and x/y/x2/y2 become their bounding box.
+function mapDetection(d, m, aligned) {
+  let outside = false;
+  const P = (p) => {
+    const q = apply(m, p.x, p.y);
+    if (q.x < -1e-6 || q.y < -1e-6 || q.x > 1 + 1e-6 || q.y > 1 + 1e-6) outside = true;
+    return { x: r5(q.x), y: r5(q.y) };
+  };
+  const bounds = (pts) => ({ x: Math.min(...pts.map((p) => p.x)), y: Math.min(...pts.map((p) => p.y)), x2: Math.max(...pts.map((p) => p.x)), y2: Math.max(...pts.map((p) => p.y)) });
+  const box = (b) => {
+    const corners = [[b.x, b.y], [b.x2, b.y], [b.x2, b.y2], [b.x, b.y2]].map(([x, y]) => P({ x, y }));
+    return { ...bounds(corners), ...(aligned ? {} : { polygon: corners }) };
+  };
+  const out = { ...d }, view = {};
+  if (d.x2 !== undefined) {
+    view.x = d.x; view.y = d.y; view.x2 = d.x2; view.y2 = d.y2;
+    if (d.type === "line") { const a = P({ x: d.x, y: d.y }), b = P({ x: d.x2, y: d.y2 }); Object.assign(out, { x: a.x, y: a.y, x2: b.x, y2: b.y }); }
+    else Object.assign(out, box(d));
+  } else if (d.x !== undefined) {
+    view.x = d.x; view.y = d.y;
+    Object.assign(out, P(d));
+  }
+  if (d.centroid) { view.centroid = d.centroid; out.centroid = P(d.centroid); }
+  if (d.box) { view.box = d.box; out.box = box(d.box); }
+  if (d.mark) {
+    const mk = mapMark(d.mark, m);
+    // Rounds, and counts a mark that leaves the image as outside.
+    const fix = (p) => { if (p.x < -1e-6 || p.y < -1e-6 || p.x > 1 + 1e-6 || p.y > 1 + 1e-6) outside = true; return { x: r5(p.x), y: r5(p.y) }; };
+    out.mark = {
+      ...mk,
+      ...(mk.x !== undefined ? fix({ x: mk.x, y: mk.y }) : {}),
+      ...(mk.x2 !== undefined ? (({ x, y }) => ({ x2: x, y2: y }))(fix({ x: mk.x2, y: mk.y2 })) : {}),
+      ...(mk.points ? { points: mk.points.map(fix) } : {}),
+    };
+    // A region's outline is its mark; its box follows the outline exactly.
+    if (d.type === "region" && out.mark.points?.length) { Object.assign(out, bounds(out.mark.points)); delete out.polygon; }
+    if (out.mark.type === "rect") { const { x, y, x2, y2 } = out.mark; Object.assign(out.mark, { x: Math.min(x, x2), y: Math.min(y, y2), x2: Math.max(x, x2), y2: Math.max(y, y2) }); }
+  }
+  out.view = view;
+  if (outside) { out.outsideSource = true; delete out.mark; }
+  return out;
 }
 
 // ---- helpers ---------------------------------------------------------
@@ -308,6 +426,108 @@ registerEngine({
         return { type: "circle", x: p.x, y: p.y, radiusPx: c.r, confidence: Number(c.score.toFixed(3)), box: { x: a.x, y: a.y, x2: b.x, y2: b.y }, mark: { type: "rect", x: a.x, y: a.y, x2: b.x, y2: b.y } };
       }),
       quality: { candidates: cands.length },
+    };
+  },
+});
+
+// Regions: connected foreground split where blobs touch, with shape
+// statistics and an outline per region. Generic: it knows nothing about
+// grains, cells or pads.
+const MAX_REGION_PIXELS = 6_000_000;
+const median = (values) => { if (!values.length) return null; const s = [...values].sort((a, b) => a - b); return s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
+registerEngine({
+  id: "regions", version: "1", kind: "segment", builtin: true,
+  description: "Closed regions (grains, cells, particles, pads) of dark or light pixels, with touching blobs split by shape (watershed of the distance transform). Per region: outline polygon, area, perimeter, equivalent diameter, axes, eccentricity, circularity, whether it touches the frame, and whether it was split from a larger blob. Best on a cleaned binary view (process_image threshold/morphology, then derivedViewId). A split is inferred from shape, not seen; counts are candidates, not a verified count of objects.",
+  params: {
+    polarity: "dark|light (default dark)", method: "otsu|adaptive|fixed (default otsu)", value: "0-255 for fixed",
+    split: "true|false (default true): split touching blobs", minDepth: "px a neck must dip below the smaller part's inner radius to split (default 1.5)",
+    minRelativeDepth: "the same as a fraction of that radius, 0-1 (default 0.12; higher splits less)",
+    fillHoles: "true|false (default false)", minArea: "px (default 20)", excludeBorder: "true|false (default false): drop regions cut by the frame",
+    maxCount: "regions returned, largest first (default 80; statistics cover all)", contours: "true|false (default true): outline polygons", maxVertices: "per outline (default 16, max 64)", tolerance: "outline simplification in px (default 1)",
+  },
+  async run({ img, toNormalized, params, scale }) {
+    const bin = await binaryMask(img, params);
+    const { width, height, threshold } = bin;
+    if (width * height > MAX_REGION_PIXELS) throw new Error("region of " + width + "x" + height + " px is too large to segment (limit " + MAX_REGION_PIXELS + " px); use a smaller region or working sampling");
+    let mask = bin.mask, filled = 0;
+    if (params.fillHoles === true) ({ mask, filled } = fillHoles(mask, width, height));
+    let fg = 0; for (let i = 0; i < mask.length; i++) if (mask[i]) fg++;
+    const warnings = [];
+    const frac = fg / mask.length;
+    if (!fg) return { detections: [], quality: { regions: 0, foregroundFraction: 0, threshold }, warnings: ["no foreground pixels"] };
+    const split = params.split !== false;
+    const d2 = squaredDistanceTransform(mask, width, height, { borderIsBackground: true });
+    let labels, count, info, components;
+    if (split) {
+      const res = splitByDistance(mask, width, height, { minDepth: params.minDepth ?? 1.5, minRelativeDepth: params.minRelativeDepth ?? 0.12, distance2: d2 });
+      ({ labels, count, components } = res); info = res.regions;
+    } else {
+      ({ labels, count } = labelMask(mask, width, height)); components = count;
+      info = Array.from({ length: count }, (_, i) => ({ label: i + 1, component: i + 1, weakestSplit: null, peak: 0 }));
+      for (let i = 0; i < labels.length; i++) { const l = labels[i]; if (l) { const r = Math.sqrt(d2[i]); if (r > info[l - 1].peak) info[l - 1].peak = r; } }
+    }
+    const perComponent = new Map();
+    for (const r of info) perComponent.set(r.component, (perComponent.get(r.component) ?? 0) + 1);
+    const stats = regionStats(labels, width, height, count);
+    const minArea = params.minArea ?? 20;
+    let small = 0, cut = 0;
+    const all = [];
+    for (const st of stats) {
+      if (!st) continue;
+      if (st.area < minArea) { small++; continue; }
+      if (st.touchesBorder) { cut++; if (params.excludeBorder === true) continue; }
+      all.push(st);
+    }
+    all.sort((a, b) => b.area - a.area || a.label - b.label);
+    const maxCount = Math.max(1, Math.min(300, params.maxCount ?? 80));
+    const withContours = params.contours !== false;
+    const maxVertices = Math.max(4, Math.min(64, params.maxVertices ?? 16));
+    if (all.length > maxCount) warnings.push(all.length + " regions; the largest " + maxCount + " returned (quality covers all " + all.length + ")");
+    const splitRegions = all.filter((st) => perComponent.get(info[st.label - 1].component) > 1).length;
+    if (splitRegions) warnings.push(splitRegions + " regions come from splitting touching blobs by shape; no boundary was seen between them (see attributes.splitFrom and weakestSplit)");
+    if (cut && params.excludeBorder !== true) warnings.push(cut + " regions touch the frame and are probably cut off (touchesBorder); their sizes are lower bounds");
+    const n2 = (v, d = 2) => Number(v.toFixed(d));
+    const k = scale?.unitsPerPixel ?? null;
+    const first = new Int32Array(count + 1).fill(-1);
+    if (withContours) for (let i = 0; i < labels.length; i++) { const l = labels[i]; if (l && first[l] < 0) first[l] = i; }
+    const detections = all.slice(0, maxCount).map((st) => {
+      const r = info[st.label - 1], parts = perComponent.get(r.component);
+      const a = toNormalized(st.bbox.x0, st.bbox.y0), b = toNormalized(st.bbox.x1, st.bbox.y1), c = toNormalized(st.centroid.x, st.centroid.y);
+      let mark = { type: "rect", x: a.x, y: a.y, x2: b.x, y2: b.y }, outline = null;
+      if (withContours) {
+        const ring = traceContour(labels, width, height, st.label, first[st.label]);
+        const simple = simplifyClosed(ring, { tolerance: params.tolerance ?? 1, maxVertices });
+        if (simple.points.length >= 3) {
+          mark = { type: "polyline", closed: true, points: simple.points.map((p) => toNormalized(p.x, p.y)) };
+          outline = { vertices: simple.points.length, tolerancePx: simple.tolerance };
+        }
+      }
+      return {
+        type: "region", x: a.x, y: a.y, x2: b.x, y2: b.y, centroid: c,
+        attributes: {
+          areaPx: st.area, perimeterPx: n2(st.perimeter, 1), equivalentDiameterPx: n2(st.equivalentDiameter),
+          majorPx: n2(st.major), minorPx: n2(st.minor), eccentricity: n2(st.eccentricity, 3), orientationDeg: n2(st.orientation, 1),
+          circularity: n2(st.circularity, 3), inscribedRadiusPx: n2(r.peak),
+          touchesBorder: st.touchesBorder,
+          ...(parts > 1 ? { splitFrom: "component-" + r.component, splitParts: parts, weakestSplit: r.weakestSplit === null ? null : n2(r.weakestSplit, 3) } : {}),
+          ...(outline ? { outline } : {}),
+          ...(k ? { area: Number((st.area * k * k).toPrecision(5)), equivalentDiameter: Number((st.equivalentDiameter * k).toPrecision(5)), perimeter: Number((st.perimeter * k).toPrecision(5)), unit: scale.unit } : {}),
+        },
+        verification: "unverified",
+        mark,
+      };
+    });
+    const diam = all.map((st) => st.equivalentDiameter), areas = all.map((st) => st.area);
+    return {
+      detections,
+      quality: {
+        regions: all.length, returned: detections.length, components, splitRegions, touchingBorder: cut, belowMinArea: small,
+        foregroundFraction: n2(frac, 4), threshold, ...(filled ? { holePixelsFilled: filled } : {}),
+        medianEquivalentDiameterPx: diam.length ? n2(median(diam)) : null, meanAreaPx: areas.length ? n2(areas.reduce((s, v) => s + v, 0) / areas.length, 1) : null,
+        ...(k ? { calibration: { unit: scale.unit, unitsPerAnalysisPixel: Number(k.toPrecision(6)), relativeUncertainty: Number((scale.relativeUncertainty ?? 0).toPrecision(3)), medianEquivalentDiameter: diam.length ? Number((median(diam) * k).toPrecision(5)) : null } } : { calibration: null }),
+        split: split ? { minDepth: params.minDepth ?? 1.5, minRelativeDepth: params.minRelativeDepth ?? 0.12 } : null,
+      },
+      warnings,
     };
   },
 });
