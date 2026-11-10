@@ -233,3 +233,24 @@ test("a caller that arrives while an image is being restored waits for its saved
     assert.equal((await second).imageId, (await first).imageId);
   } finally { release(); useCanvasStore(null); }
 });
+
+test("a move where only one of the two workspaces could be saved leaves neither half-changed", async () => {
+  const held = new Map(); let failFor = null;
+  useRecords({
+    write: async (kind, id, doc) => { if (id === failFor) throw new Error("store unavailable"); held.set(id, structuredClone(doc)); return 1; },
+    read: async (kind, id) => held.get(id) ?? null, list: async () => [...held.keys()], log: async () => [],
+  });
+  try {
+    const { a, b1, b2 } = await threeImageFixture(registerImage);
+    const merged = await commitTransfer({ source: b1.imageId + "+" + b2.imageId, target: a.imageId });
+    const other = await createWorkspace({ name: "B" });
+    failFor = other.workspace.id;
+    await assert.rejects(commitTransfer({ source: merged.workspaceId, target: other.workspace.id, items: ["wi-3"], removeFromSource: true, key: "k-move" }), /store unavailable/);
+    assert.equal(held.get(merged.workspaceId).items.length, 3, "the source's saved record is back to what it was");
+    assert.deepEqual((held.get(merged.workspaceId).keys ?? []).filter((k) => k.key === "k-move"), []);
+    failFor = null;
+    const done = await commitTransfer({ source: merged.workspaceId, target: other.workspace.id, items: ["wi-3"], removeFromSource: true, key: "k-move" });
+    assert.notEqual(done.repeated, true);
+    assert.equal(held.get(other.workspace.id).items.length, 1);
+  } finally { useRecords(null); }
+});
