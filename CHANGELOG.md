@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `get_visual_layers` and `edit_visual_layers` for assistant layer opacity,
+  visibility and ordering, with revision checks, lock protection and persistent
+  appearance undo/redo. The canvas visibility checkbox now updates shared state;
+  rendering and portable exports preserve it, including fully transparent layers.
+
 - A server whose UVA store holds data but cannot open now exits with the reason
   instead of running on legacy files that lack what was saved to the store. A
   store that never held anything still falls back with a warning.

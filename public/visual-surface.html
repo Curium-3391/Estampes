@@ -457,13 +457,14 @@ function reviewControls(li,c){
 // viewer hides whole layers; hidden layers stay on the canvas and in AI's
 // context. Unsent marks have no layer yet and are always shown. Name,
 // order (bottom to top), opacity and lock live on the server, so AI sees
-// them and they survive reloads; hiding is this viewer's own choice.
+// them and they survive reloads. Visibility is shared; old viewer-local hiding
+// can additionally hide a layer.
 const layersEl=document.querySelector("#layers");
 let layers=[],hiddenLayers=new Set(),renamingLayer=null;
-const shown=m=>!m.layer||!hiddenLayers.has(m.layer);
+const shown=m=>!m.layer||(!hiddenLayers.has(m.layer)&&layerOf(m.layer)?.visible!==false);
 const LAYER_ID=/^(R|W\d{1,2}_)?L\d{1,6}$/;
 const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
- .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(l.locked===true?{locked:true}:{}),
+ .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(l.visible===false?{visible:false}:{}),...(l.locked===true?{locked:true}:{}),
    ...(typeof l.opacity==="number"&&l.opacity>=0&&l.opacity<1?{opacity:l.opacity}:{})})).slice(0,60);
 const layerOf=id=>layers.find(l=>l.id===id);
 const isLocked=m=>!!m?.layer&&layerOf(m.layer)?.locked===true;
@@ -503,8 +504,8 @@ function renderLayers(){
  // Top of the list = drawn last = on top.
  const shownOrder=[...list].reverse();
  shownOrder.forEach((l,i)=>{
-   const off=hiddenLayers.has(l.id),row=el("div",{className:"row"+(off?" off":"")+(l.locked?" locked":""),dataset:{layer:l.id}});
-   const box=el("input",{type:"checkbox",checked:!off,title:"顯示／隱藏（只影響你的畫面）",dataset:{layer:l.id,act:"toggle"}});
+   const off=hiddenLayers.has(l.id)||l.visible===false,row=el("div",{className:"row"+(off?" off":"")+(l.locked?" locked":""),dataset:{layer:l.id}});
+   const box=el("input",{type:"checkbox",checked:!off,title:"顯示／隱藏圖層（同步至共用畫布）",dataset:{layer:l.id,act:"toggle"}});
    const name=el("span",{className:"name"});
    if(renamingLayer===l.id){
      const input=el("input",{value:l.name,maxLength:40,"aria-label":"圖層名稱",dataset:{layer:l.id,act:"name"}});
@@ -569,7 +570,7 @@ function reorder(id,dir){
 }
 layersEl.addEventListener("change",e=>{
  const t=e.target,id=t?.dataset?.layer;if(!id)return;
- if(t.dataset.act==="toggle"){t.checked?hiddenLayers.delete(id):hiddenLayers.add(id);saveHidden();render();}
+ if(t.dataset.act==="toggle"){hiddenLayers.delete(id);saveHidden();const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,visible:t.checked}]},"已調整圖層顯示。");}
  if(t.dataset.act==="opacity"){const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,opacity:Number(t.value)/100}]},"已調整透明度。");}
 });
 // Live preview while the slider moves; the panel itself is not rebuilt.
@@ -591,7 +592,7 @@ layersEl.addEventListener("keydown",e=>{
 });
 layersEl.addEventListener("focusout",e=>{if(e.target?.dataset?.act==="name"&&renamingLayer)finishRename(e.target,true);});
 layersEl.addEventListener("click",e=>{
- if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();render();return;}
+ if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();const edits=layers.filter(l=>l.visible===false).map(l=>{const {side,id}=serverLayer(l.id);return {id,side,visible:true};});if(edits.length)layerEdit({layers:edits},"已顯示所有圖層。");else render();return;}
  const b=e.target.closest("button[data-act]");if(!b)return;
  const id=b.dataset.layer,l=layerOf(id);if(!l)return;
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
@@ -821,7 +822,7 @@ function renderFindings(){
  const manager=el("details",{id:"layer-manager",open:layersExpanded});
  manager.append(el("summary",{title:"圖層由上到下疊放；每層證據依最新更新排序",textContent:"圖層與證據 · "+layerRows.size+" 層 · "+[...groups.values()].flat().filter(({mark})=>mark.note&&stateOf(mark)==="unverified").length+" 待確認"}));
  manager.addEventListener("toggle",()=>{if(manager.isConnected)layersExpanded=manager.open;});
- if(hiddenLayers.size)manager.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
+ if(hiddenLayers.size||layers.some(l=>l.visible===false))manager.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
  for(const [key,items] of [...groups].sort((a,b)=>(order.get(b[0])??-1)-(order.get(a[0])??-1))){
    // Evidence order is independent from layer/ink stacking. Legacy entries
    // without timestamps retain reverse insertion order as a stable fallback.
@@ -1076,7 +1077,7 @@ function renderObjects(){
  const draw=(list,W,H,parent,prefix="",transform="")=>{
  const X=x=>x*W,Y=y=>y*H,u=W/1000;
  for(const o of list){
-   if(o.layer&&hiddenLayers.has(prefix+o.layer))continue;
+   if(o.layer&&(hiddenLayers.has(prefix+o.layer)||layerOf(prefix+o.layer)?.visible===false))continue;
    const g=node("g",{"data-layer":prefix+(o.layer??""),"data-object":o.id,transform,opacity:layerOf(prefix+o.layer)?.opacity??1},parent);
    for(const p of o.primitives){
      if(p?.k==="image"&&/^data:image\/(png;base64,iVBORw0KGgo|webp;base64,UklGR)[A-Za-z0-9+/=]+$/.test(p.href)){
