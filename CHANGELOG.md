@@ -15,6 +15,15 @@
   - uploaded images were answered before their files were fsynced;
   - an image whose legacy copy was lost had no fallback (it now comes back
     from the UVA asset store and the legacy file is repaired).
+- Fix (#73): `import_workspace_bundle` is now all-or-nothing. A bundle with
+  invalid marks, or whose manifest totals (items, marks, user marks) disagree
+  with its content, is refused before any workspace is created. Pass
+  `allowPartial: true` to import the valid part and see what was dropped.
+- Fix (#75): re-using a mark id in `present_visual` changes only the fields the
+  call states. Omitted `label`, `color`, `size`, `pen`, `note` and `status`
+  keep their stored values; `label: ""` clears the label.
+- UX (#76): each row of the layer panel shows the stable layer id (`L6`);
+  clicking it copies the id.
 - Fix: a canvas with an image layer (`add_image_layer`, a promoted base image
   or a copied canvas) made every result about it overflow the host's
   145,000-character limit (`add_image_layer`, `get_visual_state`,

@@ -170,7 +170,7 @@ const sameState = (entry, def) => byId(canvasMarks(entry)) === byId(def.marks)
   && JSON.stringify(entry.gestureDecisions ?? []) === JSON.stringify(def.gestureDecisions)
   && [...(entry.pairLinks ?? []).values()].reduce((n, m) => n + m.size, 0) === def.linkCount;
 
-export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
+export async function importBundle(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
   if (!["reuse", "copy"].includes(collision)) throw new Error("collision must be reuse or copy");
   const files = unzipFiles(buffer);
   const parse = (file) => {
@@ -194,6 +194,28 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
   if (ws.protocol !== WORKSPACE_PROTOCOL) throw new Error("This bundle's workspace uses " + ws.protocol + "; this server reads " + WORKSPACE_PROTOCOL);
   if (!Array.isArray(ws.items) || !ws.items.length || ws.items.length > MAX_ITEMS) throw new Error("The bundle's workspace has no items or too many (max " + MAX_ITEMS + ")");
 
+  const setDefs = new Map();
+  for (const s of Array.isArray(manifest.sets) ? manifest.sets : []) {
+    const c = cleanSet(parse(s.file), s.file, warnings);
+    setDefs.set(c.key, c);
+  }
+  const used = new Set(ws.items.map((it) => it.set));
+  for (const key of used) if (!setDefs.has(key)) throw new Error("Bundle is incomplete: no annotation set for " + key);
+
+  // All-or-nothing by default: refuse before anything is created when marks
+  // would be dropped or the manifest's own totals disagree with the content.
+  const assetIds = new Set((Array.isArray(manifest.assets) ? manifest.assets : []).map((a) => a?.id));
+  for (const key of used) { const img = setDefs.get(key).imageId ?? key.split("#")[0]; if (!assetIds.has(img)) throw new Error("Bundle set " + key + " refers to an image that is not in the bundle"); }
+  if (!allowPartial) {
+    const dropped = [...used].flatMap((k) => setDefs.get(k).unsupported.map((u) => k + " " + u.id + ": " + u.why));
+    if (dropped.length) throw new Error("Bundle not imported: " + dropped.length + " mark(s) are invalid (" + dropped.slice(0, 3).join("; ") + "). Nothing was created. Pass allowPartial:true to import the valid rest.");
+    const ex = manifest.workspace ?? {};
+    const sum = (f) => ws.items.reduce((n, it) => n + f(setDefs.get(it.set)), 0);
+    const actual = { items: ws.items.length, marks: sum((d) => d.marks.length), userMarks: sum((d) => d.marks.filter((m) => m.author === "user").length) };
+    const off = Object.keys(actual).filter((k) => typeof ex[k] === "number" && ex[k] !== actual[k]);
+    if (off.length) throw new Error("Bundle not imported: its manifest says " + off.map((k) => k + " " + ex[k]).join(", ") + " but the content has " + off.map((k) => actual[k]).join(", ") + ". Nothing was created. Pass allowPartial:true to import anyway.");
+  }
+
   // Images: registered under the id this server derives from the bytes.
   const idMap = new Map(), entries = new Map();
   for (const a of Array.isArray(manifest.assets) ? manifest.assets : []) {
@@ -206,14 +228,6 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
     idMap.set(a.id, entry.imageId); entries.set(a.id, entry);
     if (!a.sourceIncluded) warnings.push("Image " + a.id + " came as a working copy, not the original file; it now has the id " + entry.imageId + ".");
   }
-  const setDefs = new Map();
-  for (const s of Array.isArray(manifest.sets) ? manifest.sets : []) {
-    const c = cleanSet(parse(s.file), s.file, warnings);
-    setDefs.set(c.key, c);
-  }
-  const used = new Set(ws.items.map((it) => it.set));
-  for (const key of used) if (!setDefs.has(key)) throw new Error("Bundle is incomplete: no annotation set for " + key);
-
   // Sets: restore an image's own canvas when it is empty here, reuse it when
   // identical, otherwise make an independent copy. Copies stay copies.
   const keyMap = new Map(), touched = [], summary = [];
