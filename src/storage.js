@@ -57,8 +57,9 @@ async function migrateImage(imageId, bytes = null, options = {}) {
   const dir = folder(imageId), meta = root ? await readJson(join(dir, "meta.json")) : null;
   if (!bytes && root) { try { bytes = await readFile(join(dir, "source")); } catch { return null; } }
   if (!bytes || imageIdOf(bytes) !== imageId) return null;
-  await canvases.putImage(bytes);
+  // Decoded first: bytes that are not an image never become a stored asset.
   const entry = await registerImage(bytes, meta ? { source: meta.source ?? "storage", fileName: meta.fileName ?? null, page: meta.page ?? null } : { source: "storage", ...options });
+  await canvases.putImage(bytes);
   if (root) {
     restoreCanvas(entry, await readJson(join(dir, "canvas.json")));
     restoreDerived(entry, await readJson(join(dir, "derived.json")));
@@ -172,8 +173,8 @@ export async function intakeImage(bytes, options) {
     if (!record) entry = await migrateImage(imageId, bytes, options);
     else {
       // Seen before: its canvas comes back with it.
-      await canvases.putImage(bytes);
       entry = await registerImage(bytes, options);
+      await canvases.putImage(bytes);
       restoreCanvas(entry, record.canvas);
       await hydrate(imageId, record, entry);
     }

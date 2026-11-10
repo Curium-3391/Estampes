@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { clearImages, registerImage } from "../src/image-store.js";
 import { canvasMarks, applyWorkspaceChanges, applyPairChanges, pairLinks, workspaceLinks, reviewWorkspaceLink } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
-import { useStorageDir, useRecords, intakeImage, flushStorage } from "../src/storage.js";
+import { useStorageDir, useRecords, useCanvasStore, intakeImage, flushStorage } from "../src/storage.js";
 import {
   resolveRef, previewTransfer, commitTransfer, createWorkspace, editWorkspace, undoChange, workspaceItems, workspaceDocument,
   clearWorkspaces, getWorkspace, ensureSet,
@@ -205,4 +205,13 @@ test("a change that could not be saved is not acknowledged; a retry with the sam
     const again = await createWorkspace({ name: "W", key: "k-retry" });
     assert.equal(again.repeated, true);
   } finally { useRecords(null); }
+});
+
+test("bytes that are not an image never become a stored asset", async () => {
+  const stored = [];
+  useCanvasStore({ read: async () => null, write: async () => 1, putImage: async (b) => { stored.push(b); }, imageBytes: async () => null, note() {} });
+  try {
+    await assert.rejects(intakeImage(Buffer.from("not an image at all"), { source: "upload" }), /not a supported image/);
+    assert.equal(stored.length, 0, "nothing was installed");
+  } finally { useCanvasStore(null); }
 });
