@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { clearImages, registerImage } from "../src/image-store.js";
+import { clearImages, registerImage, hasImage } from "../src/image-store.js";
 import { canvasMarks, applyWorkspaceChanges } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
 import { useStorageDir, intakeImage, flushStorage } from "../src/storage.js";
@@ -99,7 +99,9 @@ test("a bundle with an out-of-range mark is refused whole, or imported partly on
     f.set("sets/1.json", data); f.set("manifest.json", Buffer.from(JSON.stringify(m)));
   });
   clearImages(); clearWorkspaces();
+  const ids = JSON.parse(unzipFiles(bad).get("manifest.json")).assets.map((a) => a.id);
   await assert.rejects(importBundle(bad), /Nothing was created/);
+  assert.ok(ids.every((id) => !hasImage(id)), "a refused import registers no images");
   const r = await importBundle(bad, { allowPartial: true });
   assert.equal(r.verified, false);
   assert.equal(r.unsupported.length, 2);
