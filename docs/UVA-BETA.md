@@ -178,8 +178,9 @@ test store to this profile is rejected. Use a new directory instead.
 | Docker Desktop / WSL2 | Linux VM filesystem is a distinct environment; no macOS/Windows host durability claim |
 | Read-only storage / wrong UID / symlink / incompatible data | Activation fails closed; no fallback writer or automatic directory adoption |
 
-The Docker image includes `flock`, creates `/uva-beta` owned by uid 1000 and sets
-`ESTAMPES_UVA_DIR=/uva-beta`. `compose.yaml` mounts the `uva-beta` volume there, so
+The Docker image includes `flock`, creates `/uva-beta` owned by uid 1000 and makes
+it the default store folder (as `ESTAMPES_UVA_BETA_DIR`, so an explicit
+`ESTAMPES_UVA_DIR` or `ESTAMPES_UVA_BETA_DIR` still wins). `compose.yaml` mounts the `uva-beta` volume there, so
 the canvas store is on with `docker compose up -d`. The overlay adds the Beta
 editor and the mirror:
 

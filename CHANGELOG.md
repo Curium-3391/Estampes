@@ -5,7 +5,7 @@
 - Canvas store phase 5: the UVA store is the default. With
   `ESTAMPES_STORAGE_DIR` set, canvases, workspaces, panel layouts and notebooks
   are committed to UVA without further settings: `compose.yaml` mounts the
-  `uva-beta` volume at `/uva-beta` (the image sets `ESTAMPES_UVA_DIR`), elsewhere
+  `uva-beta` volume at `/uva-beta` (the image's default folder), elsewhere
   the folder defaults to `<storage dir>-uva`, and the profile to
   `linux-process-crash-test` on Linux (survives a killed process, not a power
   loss; qualification #88, #89, #91 is still open). Existing data move in on

@@ -2,7 +2,7 @@
 // commits to "<storage>-uva"; ESTAMPES_CANVAS_STORE=legacy turns it off.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdtemp, rm, readdir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -51,4 +51,15 @@ test("with storage and no UVA settings, canvases are committed to the default UV
     assert.ok(!(await s.client.listTools()).tools.some((x) => x.name === "uva_store"), "legacy: no UVA store");
     assert.deepEqual((await readdir(join(storage, "uva-pending"))).filter((n) => n.endsWith(".json")), []);
   } finally { await s.stop(); }
+});
+
+test("an explicit store folder or profile, under either name, wins over the defaults", () => {
+  const read = (env) => JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", "const { config } = await import('./src/config.js'); console.log(JSON.stringify({ dir: config.uvaBetaDir, profile: config.uvaBetaProfile, store: config.canvasStore }))"],
+    { cwd: process.cwd(), env: { PATH: process.env.PATH, ...env } }).toString());
+  assert.deepEqual(read({ ESTAMPES_STORAGE_DIR: "/srv/data" }), { dir: "/srv/data-uva", profile: process.platform === "linux" ? "linux-process-crash-test" : "", store: "uva" });
+  // The Docker image's default sits in the older name, so a deployment's own older setting replaces it.
+  assert.equal(read({ ESTAMPES_STORAGE_DIR: "/data", ESTAMPES_UVA_BETA_DIR: "/mnt/store" }).dir, "/mnt/store");
+  assert.equal(read({ ESTAMPES_UVA_BETA_DIR: "/old", ESTAMPES_UVA_DIR: "/new" }).dir, "/new");
+  assert.equal(read({ ESTAMPES_UVA_BETA_PROFILE: "linux-local-durable" }).profile, "linux-local-durable", "an older overlay's profile is kept");
+  assert.equal(read({ ESTAMPES_CANVAS_STORE: "legacy" }).store, "legacy");
 });
