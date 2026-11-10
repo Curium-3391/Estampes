@@ -115,7 +115,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     for(const s of d.scenes){
       if(s.background.kind!=='asset'&&!(canvasDoc&&s.background.kind==='transparent'))fail('UNSUPPORTED_TARGET','Beta scenes require an image background');
       const anchor=s.background.kind==='asset'?s.background.asset:s.annotations[0]?.anchor.asset;
-      if(s.background.kind!=='asset'&&anchor&&anchor.legacyImageId!==d.provenance.legacySetKey)fail('INTEGRITY_ERROR','Marks of a canvas are anchored to another image');
+      if(s.background.kind!=='asset'&&anchor&&anchor.legacyImageId!==d.provenance.legacySetKey.split('#')[0])fail('INTEGRITY_ERROR','Marks of a canvas are anchored to another image');
       if(s.background.kind==='asset')await assetBytes(s.background.asset);
       for(const a of s.annotations)if(a.anchor.space!=='image-normalized'||!same(a.anchor.asset,anchor)||!same(a.anchor.sourceToDocument,matrix(s.extent.width,s.extent.height)))fail('UNSUPPORTED_TARGET','Beta editor supports only explicit image-normalized annotations');
       if(s.background.kind!=='asset'&&s.annotations.length)await assetBytes(anchor);
@@ -333,7 +333,8 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   // unchanged canvas (ignoring the save time) writes nothing.
   async function syncCanvas({canvas,bytes,seq=null,legacyHash=null}){
     if(!mirror)fail('UNSUPPORTED_TARGET','Mirror is not enabled');
-    const {savedAt,...source}=canvas,sourceHash=hashJson(source),key=source.imageId;
+    // The in-memory canvas (mirror mode) can hold undefined fields; compare and map its JSON form.
+    const {savedAt,...source}=JSON.parse(JSON.stringify(canvas)),sourceHash=hashJson(source),key=source.imageId+(source.setId?'#'+source.setId:'');
     const s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; mirror paused');
     const prior=s.documents.find(d=>d.provenance?.legacySetKey===key&&d.extensions?.[MIRROR_KEY]);
     if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash&&(prior.extensions[MIRROR_KEY].authority??'legacy-canvas')===authority)return {status:'unchanged',documentId:prior.id,revision:prior.revision,sourceHash,seq:prior.extensions[MIRROR_KEY].sourceSeq??null};
@@ -352,7 +353,21 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     // inline. Their bytes become verified assets; the document keeps a reference.
     const intake=await intakeImageObjects(source);
     if(intake.blocked)return blocked(intake.blocked);
-    const mapped=mapLegacyCanvas(intake.source,{documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??('Canvas '+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
+    // Links to marks on other canvases become relation bindings. Their far end is
+    // typed by the deterministic mirror identity of the other canvas; it stays
+    // unresolved here (this projection holds one canvas), and the link record is
+    // kept verbatim so the canvas comes back exactly.
+    const relationBindings=[],linkKeys={};
+    if(source.links&&typeof source.links==='object'&&!Array.isArray(source.links))for(const [otherKey,links] of Object.entries(source.links)){
+      if(!Array.isArray(links)||!otherKey||otherKey.length>160)continue;
+      for(const link of links){
+        if(!link||typeof link.id!=='string'||typeof link.right!=='string'||!link.id||link.id.length>80||!link.right||link.right.length>64)continue;
+        const bindingId=allocated('bind','mirror-link:'+key+'\0'+otherKey+'\0'+link.id);
+        relationBindings.push({otherSetKey:otherKey,legacyId:link.id,bindingId,target:{documentId:allocated('doc','mirror:'+otherKey),sceneId:allocated('scene','mirror:'+otherKey),kind:'annotation',id:link.right}});
+        linkKeys[bindingId]=otherKey;
+      }
+    }
+    const mapped=mapLegacyCanvas(intake.source,{relationBindings,documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??('Canvas '+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
     if(mapped.document)restoreImageObjects(mapped.document,intake.images);
     if(!mapped.document)return blocked(mapped.report.issues.filter(i=>i.blocking).map(i=>i.message).join('; '));
     if(mapped.document.scenes[0].annotations.length>limits.annotations||mapped.document.scenes[0].objects.length>limits.objects)return blocked('Canvas exceeds '+limits.annotations+' marks or '+limits.objects+' objects');
@@ -379,17 +394,17 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     }
     let ext={[MIRROR_KEY]:{sourceHash,syncedAt:time,authority:'legacy-canvas'},'estampes.beta:legacyArchives':mapped.sidecars};
     let d,expected=null;
-    if(prior){d=structuredClone(prior);scene.revision=prior.scenes[0].revision+1;d.scenes[0]=scene;d.revision++;d.updatedAt=time;d.extensions=ext;expected=prior.revision;}
-    else d={schema:'estampes.document/1',id:docId,kind:'image',title:'Canvas '+key,revision:1,state:'active',persistence:profile==='linux-local-durable'?'durable':'memory',createdAt:time,updatedAt:time,defaultSceneId:scene.id,scenes:[scene],bindings:[],annotationSupport:'shared-v1',provenance:{createdBy:'migration',legacySetKey:key},extensions:ext};
+    if(prior){d=structuredClone(prior);scene.revision=prior.scenes[0].revision+1;d.scenes[0]=scene;d.bindings=mapped.document.bindings;d.revision++;d.updatedAt=time;d.extensions=ext;expected=prior.revision;}
+    else d={schema:'estampes.document/1',id:docId,kind:'image',title:'Canvas '+key,revision:1,state:'active',persistence:profile==='linux-local-durable'?'durable':'memory',createdAt:time,updatedAt:time,defaultSceneId:scene.id,scenes:[scene],bindings:mapped.document.bindings,annotationSupport:'shared-v1',provenance:{createdBy:'migration',legacySetKey:key},extensions:ext};
     let residualBytes=0;
     if(canvasStore){
       // The document is the record: keep only what its structure does not carry,
       // and prove the canvas comes back exactly before committing.
-      const projected=projectCanvas(d,{unlayeredLayerId:layerId,images:new Map(intake.images.map(i=>[i.asset.assetId,i.base64]))}),residual=diffJson(projected,source)??null;
+      const projected=projectCanvas(d,{unlayeredLayerId:layerId,linkKeys,images:new Map(intake.images.map(i=>[i.asset.assetId,i.base64]))}),residual=diffJson(projected,source)??null;
       if(hashJson(applyPatch(projected,residual))!==sourceHash)fail('INTEGRITY_ERROR','Canvas does not round-trip through its UVA document; it stays in legacy storage');
       residualBytes=residual?Buffer.byteLength(JSON.stringify(residual)):0;
       // sourceSeq orders this record against the pending copies (src/uva/canvas-store.js).
-      d.extensions={[MIRROR_KEY]:{sourceHash,syncedAt:time,sourceSavedAt:typeof savedAt==='string'?savedAt:null,sourceSeq:Number.isSafeInteger(seq)?seq:null,legacyHash:typeof legacyHash==='string'?legacyHash:null,authority,residual}};
+      d.extensions={[MIRROR_KEY]:{sourceHash,syncedAt:time,sourceSavedAt:typeof savedAt==='string'?savedAt:null,sourceSeq:Number.isSafeInteger(seq)?seq:null,legacyHash:typeof legacyHash==='string'?legacyHash:null,authority,residual,...(Object.keys(linkKeys).length?{linkKeys}:{})}};
     }
     checkLimits(d,limits);await verifyAssets(d);
     const command={requestId:'req:'+randomUUID(),changes:[{expectedRevision:expected,document:d}]};
@@ -403,7 +418,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   async function canvasState(imageId){
     const d=(await snapshot()).documents.find(d=>d.provenance?.legacySetKey===imageId&&d.extensions?.[MIRROR_KEY]);
     const ext=d?.extensions[MIRROR_KEY];if(!ext||ext.authority!=='uva')return null;
-    const canvas=applyPatch(projectCanvas(d,{unlayeredLayerId:allocated('layer','mirror:'+imageId),images:await imageData(d.scenes[0])}),ext.residual);
+    const canvas=applyPatch(projectCanvas(d,{unlayeredLayerId:allocated('layer','mirror:'+imageId),linkKeys:ext.linkKeys??{},images:await imageData(d.scenes[0])}),ext.residual);
     if(hashJson(canvas)!==ext.sourceHash)fail('INTEGRITY_ERROR','UVA canvas document does not reproduce its recorded canvas hash');
     return {canvas:{...canvas,...(ext.sourceSavedAt?{savedAt:ext.sourceSavedAt}:{})},sourceHash:ext.sourceHash,seq:ext.sourceSeq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
   }

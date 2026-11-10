@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Canvas store phase 3: links between canvases (paired views, workspace links)
+  and their reviews are stored as relation bindings in the UVA document instead of
+  blocking the canvas; the link record is kept verbatim, so the canvas round-trips
+  exactly. Workspace copies (`mode: copy`) are committed under their set key
+  `img:<hex>#<setId>` and their set file is restored from UVA. Fixed on the way:
+  mirror mode failed with "Expected finite JSON data" on a canvas whose in-memory
+  link had an undefined field. The workspace record itself stays legacy.
 - Canvas store phase 2: image layers go into UVA. Canvases with image objects
   (`add_image_layer`, a promoted base image, a copied canvas) used to stay in
   their pending file as blocked. Each inline PNG is now verified (decodes as PNG,

@@ -60,7 +60,8 @@ let canvasSaved = null, canvasStore = null;
 // rejects when it could not be written (canvas.json may still hold the edit).
 const saveCanvas = (entry, meta) => {
   const legacy = saveCanvasFile(entry, meta);
-  const stored = canvasStore && !entry.setId ? canvasStore.write(entry.imageId, serializeCanvas(entry), { entry, after: legacy }) : null;
+  // A workspace copy is committed under its set key (img:<hex>#<setId>).
+  const stored = canvasStore ? canvasStore.write(entry.imageId + (entry.setId ? "#" + entry.setId : ""), serializeCanvas(entry), { entry, after: legacy }) : null;
   return Promise.all([legacy, stored]).then(([result]) => {
     if (canvasSaved && !entry.setId) { try { canvasSaved(entry.imageId); } catch { /* the save already succeeded */ } }
     return result;
@@ -95,17 +96,33 @@ async function warmCanvases(args) {
   if (!canvasStore) return [];
   let text = "";
   try { text = JSON.stringify(args ?? null) ?? ""; } catch { return []; }
-  const ids = new Set(text.match(/img:[0-9a-f]{16}/g) ?? []);
+  const ids = new Set(text.match(/img:[0-9a-f]{16}(?:#c[0-9a-f]{12})?/g) ?? []);
   for (const ws of new Set(text.match(/ws:[0-9a-f]{16}/g) ?? [])) {
-    try { for (const it of (await getWorkspace(ws)).items ?? []) for (const ref of [it.asset, it.set]) if (/^img:[0-9a-f]{16}$/.test(ref ?? "")) ids.add(ref); } catch { /* not a workspace here */ }
+    try { for (const it of (await getWorkspace(ws)).items ?? []) for (const ref of [it.asset, it.set]) if (/^img:[0-9a-f]{16}(?:#c[0-9a-f]{12})?$/.test(ref ?? "")) ids.add(ref); } catch { /* not a workspace here */ }
   }
+  // A workspace copy also names its image.
+  for (const id of [...ids]) if (id.includes("#")) ids.add(id.split("#")[0]);
   const list = [...ids].slice(0, 64);
-  await Promise.all(list.map((id) => ensureImage(id).catch(() => null)));
+  await Promise.all(list.filter((id) => !id.includes("#")).map((id) => ensureImage(id).catch(() => null)));
   return list;
 }
-function refreshCanvases(ids) {
+// Workspace copies are loaded through the workspace module (from their set file,
+// which the store keeps equal to its record) and committed here when they changed.
+// `result` may name workspaces the call created or changed (their new copies).
+async function canvasKeys(value) {
+  let text = "";
+  try { text = JSON.stringify(value ?? null) ?? ""; } catch { return []; }
+  const keys = new Set();
+  for (const ws of new Set(text.match(/ws:[0-9a-f]{16}/g) ?? [])) {
+    try { for (const it of (await getWorkspace(ws)).items ?? []) if (/^img:[0-9a-f]{16}#c[0-9a-f]{12}$/.test(it.set ?? "")) keys.add(it.set); } catch { /* not a workspace here */ }
+  }
+  return [...keys].slice(0, 64);
+}
+function refreshCanvases(ids, result) {
   if (!canvasStore) return;
-  for (const id of ids) if (hasImage(id)) ensureImage(id).then((entry) => canvasStore.refresh(entry)).catch(() => {});
+  const refresh = (id) => { if (hasImage(id.split("#")[0])) (id.includes("#") ? ensureSet(id) : ensureImage(id)).then((entry) => canvasStore.refresh(entry)).catch(() => {}); };
+  for (const id of ids) refresh(id);
+  if (result) canvasKeys(result).then((keys) => { for (const id of keys) if (!ids.includes(id)) refresh(id); }).catch(() => {});
 }
 import { registerUvaTools } from "./src/uva/mcp-tools.js";
 import { serializeCanvas } from "./src/storage.js";
@@ -667,7 +684,9 @@ function makeServer() {
   const register = server.registerTool.bind(server);
   server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => {
     const touched = await warmCanvases(args[0]);
-    try { return fitResult(await handler(...args), config.maxResultChars); } finally { refreshCanvases(touched); }
+    let result;
+    try { result = await handler(...args); return fitResult(result, config.maxResultChars); }
+    finally { refreshCanvases(touched, result?.structuredContent); }
   });
 
   registerAppResource(
