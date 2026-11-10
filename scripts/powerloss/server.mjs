@@ -18,7 +18,7 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, execFileSync } from "node:child_process";
 import { createServer } from "node:net";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import sharp from "sharp";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
@@ -55,6 +55,9 @@ const canonical = (v) => JSON.stringify(v, (k, x) => (x && typeof x === "object"
 // What a mark must still be after recovery: its kind, label and geometry.
 const fingerprint = (m) => canonical({ type: m.type, label: m.label ?? null, geometry: m.geometry ?? null });
 // What a workspace must still be: each item's id, what it refers to and where it sits, in order.
+// What the image layers must still be: each one's id and props (region, the PNG
+// or its reference), hashed.
+const imageLayers = (doc) => createHash("sha256").update(canonical((doc.objects ?? []).filter((o) => o.type === "image").map((o) => ({ id: o.id, props: o.props ?? null })))).digest("hex");
 const workspaceItems = (doc) => canonical((doc.items ?? []).map((it) => ({ id: it.id, asset: it.asset ?? null, set: it.set ?? null, placement: it.placement ?? null })));
 
 async function photo(seed) {
@@ -83,7 +86,7 @@ async function workload(run, log) {
       img.marks[id] = fingerprint(saved); ack({ key: img.id, kind: "image", marks: { ...img.marks } });
       // Give the UVA commit of this edit time to run, so cuts land inside it too.
       await sleep(+arg("pause-ms", 400));
-      if (i === 3) { await s.call("add_image_layer", { imageId: img.id }); ack({ key: img.id + "/layer", kind: "layer", imageId: img.id }); }
+      if (i === 3) { await s.call("add_image_layer", { imageId: img.id }); ack({ key: img.id + "/layer", kind: "layer", imageId: img.id, layers: imageLayers((await s.call("get_visual_state", { imageId: img.id })).structuredContent) }); }
       if (i === 5) {
         const ws = (await s.call("create_workspace", { canvases: images.map((m) => m.id) })).structuredContent.workspaceId;
         const doc = (await s.call("get_workspace_state", { workspace: ws })).structuredContent;
@@ -118,6 +121,7 @@ async function check(events, k, run, scratch) {
       } else if (a.kind === "layer") {
         const doc = (await s.call("get_visual_state", { imageId: a.imageId })).structuredContent;
         if (!(doc.objects ?? []).some((o) => o.type === "image")) throw new Error(a.imageId + " lost its acknowledged image layer");
+        if (imageLayers(doc) !== a.layers) throw new Error(a.imageId + " image layers differ from the acknowledged ones");
       } else if (a.kind === "workspace") {
         const doc = (await s.call("get_workspace_state", { workspace: key })).structuredContent;
         if (workspaceItems(doc) !== a.items) throw new Error(key + " items differ from the acknowledged ones: " + workspaceItems(doc).slice(0, 300) + " != " + a.items.slice(0, 300));
