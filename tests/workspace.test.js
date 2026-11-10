@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { clearImages, registerImage } from "../src/image-store.js";
 import { canvasMarks, applyWorkspaceChanges, applyPairChanges, pairLinks, workspaceLinks, reviewWorkspaceLink } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
-import { useStorageDir, intakeImage, flushStorage } from "../src/storage.js";
+import { useStorageDir, useRecords, intakeImage, flushStorage } from "../src/storage.js";
 import {
   resolveRef, previewTransfer, commitTransfer, createWorkspace, editWorkspace, undoChange, workspaceItems, workspaceDocument,
   clearWorkspaces, getWorkspace, ensureSet,
@@ -187,4 +187,22 @@ test("review fixes: retry after a stale preview, annotation changes stale a prev
   // Duplicate identifiers for one item add it once.
   const dup = await previewTransfer({ source: b1.imageId + "+" + b2.imageId, target: "new", items: ["wi-1", b1.imageId], mode: "link" });
   assert.equal(dup.plan.add.length, 1);
+});
+
+test("a change that could not be saved is not acknowledged; a retry with the same key runs again", async () => {
+  const held = new Map(); let down = true;
+  useRecords({
+    write: async (kind, id, doc) => { if (down) throw new Error("store unavailable"); held.set(id, structuredClone(doc)); return 1; },
+    read: async (kind, id) => held.get(id) ?? null, list: async () => [...held.keys()], log: async () => [],
+  });
+  try {
+    await assert.rejects(createWorkspace({ name: "W", key: "k-retry" }), /store unavailable/);
+    assert.equal(held.size, 0);
+    down = false;
+    const done = await createWorkspace({ name: "W", key: "k-retry" });
+    assert.notEqual(done.repeated, true, "the failed attempt left no replay record behind");
+    assert.equal(held.size, 1, "the retry was saved");
+    const again = await createWorkspace({ name: "W", key: "k-retry" });
+    assert.equal(again.repeated, true);
+  } finally { useRecords(null); }
 });

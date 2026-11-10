@@ -103,11 +103,14 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
   // A failing UVA read must not pass for "no record": migration would then
   // adopt an old file over newer committed state.
   const readUva = (key) => service.recordState(key);
+  async function readLegacyLog(key) {
+    const { kind, id } = parts(key), k = KINDS[kind];
+    return k.logName ? jsonl((await readText(join(storageDir, ...k.dir, k.logName(id)))) ?? "").slice(-LOG_LINES) : [];
+  }
   async function readLegacy(key) {
     const { kind, id } = parts(key), k = KINDS[kind], v = parseJson(await readText(legacyFile(key)));
     if (!k.valid(v, id)) return null;
-    const log = k.logName ? jsonl((await readText(join(storageDir, ...k.dir, k.logName(id)))) ?? "").slice(-LOG_LINES) : [];
-    return { value: v, log };
+    return { value: v, log: await readLegacyLog(key) };
   }
 
   const mirror = createMirror({
@@ -136,12 +139,22 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
       known.set(key, { hash: hashJson(choice.value), seq: choice.seq, value: choice.value, log: choice.log });
       stats.read[choice.from]++; note();
       if (choice.from === "pending") mirror.schedule(key);
-      return choice.value;
+      // A record from before change logs moved into the store has no log
+      // field: the older log file is taken in once, the value stays as it is.
+      const source = choice.from === "uva" ? uva : pending;
+      if (KINDS[parts(key).kind].logName && !Array.isArray(source.log)) {
+        try {
+          const older = await readLegacyLog(key);
+          if (older.length) await put(key, choice.value, { log: older });
+        } catch (error) { known.delete(key); throw error; }
+      }
+      return known.get(key).value;
     }
     const legacy = await readLegacy(key);
-    known.set(key, { hash: null, seq: 0, value: null, log: [] });
-    if (!legacy) return null;
-    await put(key, legacy.value, { log: legacy.log });
+    if (!legacy) { known.set(key, { hash: null, seq: 0, value: null, log: [] }); return null; }
+    // The empty entry is installed only when there is nothing to migrate: a
+    // failed migration must be tried again by the next read.
+    try { await put(key, legacy.value, { log: legacy.log }); } catch (error) { known.delete(key); throw error; }
     stats.migrated++;
     note();
     return legacy.value;

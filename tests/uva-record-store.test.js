@@ -127,6 +127,29 @@ test("an older file is migrated in once, then never read or written again", { ti
   assert.equal((await readJson(wsFile(storage, ws))).name, "edited by hand", "the old file is never rewritten");
 });
 
+test("a migration that fails is tried again on the next read, and an older record gets its history file", { timeout: 30000 }, async (t) => {
+  const { storage } = await folders(t);
+  const ws = "ws:" + "12".repeat(8), a = { id: ws, name: "A", items: [], revision: 1 };
+  await mkdir(join(storage, "workspaces"), { recursive: true });
+  await writeFile(wsFile(storage, ws), JSON.stringify(a));
+  await writeFile(join(storage, "workspaces", ws.slice(3) + ".history.jsonl"), JSON.stringify({ kind: "create" }) + "\n");
+  const service = fakeService({ failures: 0 });
+  const real = service.syncRecord; let fail = true;
+  service.syncRecord = async (x) => { if (fail) throw Object.assign(new Error("disk briefly unavailable"), { code: "EIO" }); return real(x); };
+  const store = await createRecordStore({ service, storageDir: storage, idleMs: 0, retryEveryMs: 0 });
+  t.after(() => store.close());
+  await store.read("workspace", ws).catch(() => {});
+  fail = false;
+  assert.deepEqual(await store.read("workspace", ws), a, "the next read migrates the file in");
+  assert.deepEqual(await store.log("workspace", ws), [{ kind: "create" }]);
+  // A record written earlier without a history: its history file is carried over once.
+  const other = "ws:" + "34".repeat(8);
+  await writeFile(join(storage, "workspaces", other.slice(3) + ".history.jsonl"), JSON.stringify({ kind: "old" }) + "\n");
+  service.held.set("workspace/" + other, { value: { id: other, name: "N", items: [], revision: 1 }, seq: 1, log: null, valueHash: "x" });
+  await store.read("workspace", other);
+  assert.deepEqual(await store.log("workspace", other), [{ kind: "old" }]);
+});
+
 test("a store that cannot be read fails the read instead of passing for no record", { timeout: 30000 }, async (t) => {
   const { storage } = await folders(t);
   const ws = "ws:" + "ef".repeat(8);
