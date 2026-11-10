@@ -15,6 +15,7 @@
     "CHANGELOG.md",
     ".github/workflows/m0.yml",
     "src/storage.js",
+    "src/workspace.js",
     "src/surface/store.js",
     "src/cas/notebooks.js"
   ],
