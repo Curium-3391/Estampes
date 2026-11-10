@@ -160,3 +160,17 @@ test("GPT can add a trace about user marks after several rounds; nothing is lost
   assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "fake", type: "point", x: 0.1, y: 0.1, label: "YOU 6" }], resolve }),
     /field label "YOU 6" is the user-mark label form/);
 });
+
+test("re-using a mark id changes only the fields the call states", async () => {
+  const entry = await photo();
+  const base = { id: "p", type: "point", x: 0.3, y: 0.3 };
+  applyCanvasChanges(entry, { annotations: [{ ...base, label: "FIELD", note: "n", status: "uncertain", color: "cyan", size: "fine" }], resolve });
+  applyCanvasChanges(entry, { annotations: [{ ...base, color: "red" }], resolve });
+  let m = canvasMarks(entry)[0];
+  assert.deepEqual([m.label, m.note, m.status, m.color, m.size], ["FIELD", "n", "uncertain", "red", "fine"]);
+  applyCanvasChanges(entry, { annotations: [{ ...base, note: "n2" }], resolve });
+  m = canvasMarks(entry)[0];
+  assert.deepEqual([m.label, m.note, m.color, m.size], ["FIELD", "n2", "red", "fine"]);
+  applyCanvasChanges(entry, { annotations: [{ ...base, label: "" }], resolve });
+  assert.equal(canvasMarks(entry)[0].label, undefined);
+});

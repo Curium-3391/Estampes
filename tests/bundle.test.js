@@ -88,7 +88,7 @@ test("tampering, wrong format, missing files and bad marks are refused or droppe
   await assert.rejects(importBundle(Buffer.from("PK nonsense")), /./);
 });
 
-test("a bundle with an out-of-range mark keeps the rest and reports it", async () => {
+test("a bundle with an out-of-range mark is refused whole, or imported partly on request", async () => {
   const { ws } = await mergedWorkspace();
   const { buffer } = await exportBundle(ws);
   const bad = rezip(buffer, (f) => {
@@ -99,10 +99,20 @@ test("a bundle with an out-of-range mark keeps the rest and reports it", async (
     f.set("sets/1.json", data); f.set("manifest.json", Buffer.from(JSON.stringify(m)));
   });
   clearImages(); clearWorkspaces();
-  const r = await importBundle(bad);
+  await assert.rejects(importBundle(bad), /Nothing was created/);
+  const r = await importBundle(bad, { allowPartial: true });
   assert.equal(r.verified, false);
   assert.equal(r.unsupported.length, 2);
   assert.equal(r.check.totals.marks, 27);
+});
+
+test("a bundle whose manifest totals disagree with its content is refused", async () => {
+  const { ws } = await mergedWorkspace();
+  const { buffer } = await exportBundle(ws);
+  const bad = rezip(buffer, (f) => { const m = JSON.parse(f.get("manifest.json")); m.workspace.marks = 999; f.set("manifest.json", Buffer.from(JSON.stringify(m))); });
+  clearImages(); clearWorkspaces();
+  await assert.rejects(importBundle(bad, { collision: "copy" }), /manifest says marks 999/);
+  assert.equal((await importBundle(bad, { collision: "copy", allowPartial: true })).verified, false);
 });
 
 import { createHash } from "node:crypto";

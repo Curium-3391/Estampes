@@ -170,7 +170,7 @@ const sameState = (entry, def) => byId(canvasMarks(entry)) === byId(def.marks)
   && JSON.stringify(entry.gestureDecisions ?? []) === JSON.stringify(def.gestureDecisions)
   && [...(entry.pairLinks ?? []).values()].reduce((n, m) => n + m.size, 0) === def.linkCount;
 
-export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
+export async function importBundle(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
   if (!["reuse", "copy"].includes(collision)) throw new Error("collision must be reuse or copy");
   const files = unzipFiles(buffer);
   const parse = (file) => {
@@ -213,6 +213,18 @@ export async function importBundle(buffer, { name, collision = "reuse" } = {}) {
   }
   const used = new Set(ws.items.map((it) => it.set));
   for (const key of used) if (!setDefs.has(key)) throw new Error("Bundle is incomplete: no annotation set for " + key);
+
+  // All-or-nothing by default: refuse before anything is created when marks
+  // would be dropped or the manifest's own totals disagree with the content.
+  if (!allowPartial) {
+    const dropped = [...used].flatMap((k) => setDefs.get(k).unsupported.map((u) => k + " " + u.id + ": " + u.why));
+    if (dropped.length) throw new Error("Bundle not imported: " + dropped.length + " mark(s) are invalid (" + dropped.slice(0, 3).join("; ") + "). Nothing was created. Pass allowPartial:true to import the valid rest.");
+    const ex = manifest.workspace ?? {};
+    const sum = (f) => ws.items.reduce((n, it) => n + f(setDefs.get(it.set)), 0);
+    const actual = { items: ws.items.length, marks: sum((d) => d.marks.length), userMarks: sum((d) => d.marks.filter((m) => m.author === "user").length) };
+    const off = Object.keys(actual).filter((k) => typeof ex[k] === "number" && ex[k] !== actual[k]);
+    if (off.length) throw new Error("Bundle not imported: its manifest says " + off.map((k) => k + " " + ex[k]).join(", ") + " but the content has " + off.map((k) => actual[k]).join(", ") + ". Nothing was created. Pass allowPartial:true to import anyway.");
+  }
 
   // Sets: restore an image's own canvas when it is empty here, reuse it when
   // identical, otherwise make an independent copy. Copies stay copies.

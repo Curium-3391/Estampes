@@ -61,7 +61,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #layers .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 8px;border:1px solid #8885;border-radius:9px}
 #layers .row.off .name{opacity:.5;text-decoration:line-through}#layers .row.locked{border-style:dashed}
 #layers .dot{width:9px;height:9px;border-radius:50%;flex:none}#layers .count{color:GrayText;font-variant-numeric:tabular-nums}
-#layers .name{flex:1 1 6em;min-width:5em;overflow-wrap:anywhere}#layers .name input{width:100%;font:inherit;padding:2px 6px}
+#layers .layer-id{font:inherit;font-size:.8em;padding:0 5px;border-radius:4px;cursor:pointer;font-variant-numeric:tabular-nums}#layers .name{flex:1 1 6em;min-width:5em;overflow-wrap:anywhere}#layers .name input{width:100%;font:inherit;padding:2px 6px}
 #layers input[type=range]{width:72px}#layers .pct{width:2.6em;color:GrayText;font-size:.75rem;font-variant-numeric:tabular-nums}
 #layers button{padding:2px 7px;font-size:.78rem}
 #selection{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;margin:8px 0 0;padding:7px 10px;border:1px solid #356BD6;border-radius:9px;font-size:.85rem}
@@ -512,7 +512,8 @@ function renderLayers(){
    }else name.append(el("button",{type:"button",className:"layer-evidence-button",textContent:(findingGroupsOpen.has(l.id)?"▾ ":"▸ ")+sideName(l.id)+l.name,"aria-expanded":String(findingGroupsOpen.has(l.id)),dataset:{layer:l.id,act:"evidence"}}));
    const op=Math.round((l.opacity??1)*100);
    const same=shownOrder.filter(o=>serverLayer(o.id).side===serverLayer(l.id).side),pos=same.indexOf(l);
-   row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),name,
+   row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),
+     el("button",{type:"button",className:"layer-id",textContent:serverLayer(l.id).id,title:"圖層 ID "+serverLayer(l.id).id+(frames?"（"+sideTitle(serverLayer(l.id).side)+"）":"")+" · 點擊複製","aria-label":"複製圖層 ID "+serverLayer(l.id).id,dataset:{layer:l.id,act:"copyid"}}),name,
      el("span",{className:"count",textContent:String(counts.get(l.id))}),
      el("button",{textContent:"✎",title:"改名","aria-label":"改名",disabled:!ready,dataset:{layer:l.id,act:"rename"}}),
      el("input",{type:"range",min:"0",max:"100",step:"5",value:String(op),title:"透明度","aria-label":"透明度",disabled:!ready,dataset:{layer:l.id,act:"opacity"}}),
@@ -596,6 +597,7 @@ layersEl.addEventListener("click",e=>{
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
  const {side,id:raw}=serverLayer(id);
  if(b.dataset.act==="rename"){renamingLayer=id;render();}
+ if(b.dataset.act==="copyid"){const text=side&&frames?side+" "+raw:raw;try{navigator.clipboard.writeText(text).then(()=>{b.textContent="已複製";setTimeout(()=>{b.textContent=raw;},900);},()=>{});}catch{}return;}
  if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 AI 都不能再改這層的標記。");
  if(b.dataset.act==="up")reorder(id,1);
  if(b.dataset.act==="down")reorder(id,-1);

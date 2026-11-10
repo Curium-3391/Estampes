@@ -190,7 +190,12 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     const into = old?.layer && !layerName ? old.layer : (layer ??= layerFor(entry, "assistant", layerName)).id;
     let next;
     try {
-      next = settleClaim(entry, old, { ...(old ? markFindings(old) : {}), ...mark, layer: into }, raw, { images, refused, where: "annotations[" + i + "]" });
+      // Omitted fields keep their stored value (label "" clears the label); only what the call states changes.
+      const given = Object.fromEntries(Object.entries(mark).filter(([, v]) => v !== undefined));
+      if (given.label === "") delete given.label;
+      const kept = old ? { ...markFindings(old), ...Object.fromEntries(["label", "color", "size", "pen"].filter((k) => old[k] !== undefined).map((k) => [k, old[k]])) } : {};
+      if (mark.label === "") delete kept.label;
+      next = settleClaim(entry, old, { ...kept, ...given, layer: into }, raw, { images, refused, where: "annotations[" + i + "]" });
     } catch (error) { throw stageError("annotations", i, raw.id, error); }
     state.set(mark.id, next);
     changed.push(mark.id);
