@@ -141,3 +141,24 @@ test("same region: half overlap or the new centre inside the old box", () => {
   assert.ok(sameRegion([0.14, 0.14, 0.16, 0.16], [0.1, 0.1, 0.2, 0.2]));
   assert.ok(!sameRegion([0.3, 0.3, 0.4, 0.4], [0.1, 0.1, 0.2, 0.2]));
 });
+
+test("a confirmed link goes stale when an end moves, and confirming again refreshes it (#71)", async () => {
+  const { editCanvas, linkIsStale } = await import("../src/canvas-state.js");
+  const left = await image(800, 600, "#fff"), right = await image(600, 800, "#264");
+  applyPairChanges(left, right, { annotations: [box("s1", "left"), box("p1", "right")], links: [{ id: "k1", left: "s1", right: "p1", label: "same" }], resolve });
+  storeUserMarks(right, [{ id: "user-r-1", type: "rect", x: 0.4, y: 0.5, x2: 0.5, y2: 0.6, label: "YOU 1" }]);
+  applyPairChanges(left, right, { links: [{ id: "k2", left: "s1", right: "user-r-1", label: "same 2" }], resolve });
+  reviewLink(left, right, "k2", "confirmed");
+  assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "user-confirmed");
+  // The user drags the right end far away: the link stays, its confirmation is stale.
+  editCanvas(right, { marks: [{ id: "user-r-1", x: 0.2, y: 0.3, x2: 0.3, y2: 0.4 }], resolveUser: (m) => m });
+  const k2 = pairLinks(left, right).find((l) => l.id === "k2");
+  assert.ok(k2 && linkIsStale(left, right, k2));
+  assert.equal(k2.stale, undefined, "staleness is shown, never stored");
+  assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "stale-confirmation");
+  reviewLink(left, right, "k2", "confirmed");
+  assert.equal(canvasDocument(left, right).links.find((l) => l.id === "k2").verification.state, "user-confirmed");
+  // Withdrawing forgets the remembered geometry.
+  reviewLink(left, right, "k2", "unreviewed");
+  assert.equal(pairLinks(left, right).find((l) => l.id === "k2").confirmedGeometry, undefined);
+});

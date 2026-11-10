@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Fix (#74): stale edits no longer overwrite silently. Every mark in
+  `get_visual_state` / `get_workspace_state` carries an `etag`; pass it back as
+  `ifMatch` on an `annotations` or `findings` entry of `present_visual`. If the
+  mark changed since (another conversation, or the user), the whole call is
+  refused with `CONFLICT` and nothing is written. Without `ifMatch` the old
+  last-write-wins behaviour is unchanged.
+- Hardening (#72): every refusal to touch a locked layer carries the code
+  `LAYER_LOCKED`, and importing marks no longer overwrites a mark in a locked
+  layer. Tests now cover each write path (annotations, remove, new marks into
+  a locked layer, user move/delete, batches, reset, import). Policy, unchanged
+  and now documented in tests: notes and status (findings) may still be
+  attached to a locked mark; geometry, style and deletion may not.
+- Integrity (#71): a link the user confirmed stays attached when an end mark
+  is moved or reshaped, but its verification becomes `stale-confirmation`
+  (shown in the canvas, with the confirm button again) until the user confirms
+  it again. The geometry seen at confirmation is stored with the link and
+  travels in bundles.
 - Power-loss simulation for the UVA store (issue #91, `scripts/powerloss/`,
   docs/UVA-POWERLOSS.md). Every fsync is recorded and each crash point is
   rebuilt as a power cut could leave the folders. The store, or the whole

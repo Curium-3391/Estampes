@@ -66,7 +66,8 @@ const hasTool = (claim) => (claim.evidence ?? []).some((e) => e.observer === "to
 
 // review: the user's verdict (confirmed | rejected), stored on the claim.
 export function verificationOf(claim) {
-  if (claim.review === "confirmed") return "user-confirmed";
+  // A confirmed link whose end moved since (see linkIsStale in canvas-state.js).
+  if (claim.review === "confirmed") return claim.stale ? "stale-confirmation" : "user-confirmed";
   if (claim.review === "rejected") return "user-rejected";
   return hasTool(claim) ? "independently-verified" : "unverified";
 }

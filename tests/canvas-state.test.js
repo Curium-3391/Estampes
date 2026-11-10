@@ -174,3 +174,48 @@ test("re-using a mark id changes only the fields the call states", async () => {
   applyCanvasChanges(entry, { annotations: [{ ...base, label: "" }], resolve });
   assert.equal(canvasMarks(entry)[0].label, undefined);
 });
+
+test("ifMatch refuses a stale edit of a mark and leaves the canvas unchanged (#74)", async () => {
+  const { markEtag } = await import("../src/canvas-state.js");
+  const entry = await photo();
+  const base = { id: "p", type: "point", x: 0.2, y: 0.2 };
+  applyCanvasChanges(entry, { annotations: [{ ...base, note: "baseline" }], resolve });
+  const seen = markEtag(canvasMarks(entry)[0]);
+  applyCanvasChanges(entry, { annotations: [{ ...base, note: "A", ifMatch: seen }], resolve });
+  const afterA = markEtag(canvasMarks(entry)[0]);
+  assert.notEqual(afterA, seen);
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ ...base, note: "B (stale)", ifMatch: seen }], resolve }), (e) => e.code === "CONFLICT" && /changed since you read it/.test(e.message));
+  assert.throws(() => applyCanvasChanges(entry, { findings: [{ id: "p", note: "B (stale)", ifMatch: seen }], resolve }), (e) => e.code === "CONFLICT");
+  assert.equal(canvasMarks(entry)[0].note, "A");
+  // A fresh tag, or none (last write wins, as before), still edits.
+  applyCanvasChanges(entry, { findings: [{ id: "p", note: "B", ifMatch: afterA }], resolve });
+  assert.equal(canvasMarks(entry)[0].note, "B");
+  // Edits of other marks in the same call are refused with it (all or nothing).
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "q", type: "point", x: 0.5, y: 0.5 }, { ...base, note: "C", ifMatch: seen }], resolve }), (e) => e.code === "CONFLICT");
+  assert.deepEqual(canvasMarks(entry).map((m) => m.id), ["p"]);
+});
+
+test("locked layers are enforced on every write path with LAYER_LOCKED (#72)", async () => {
+  const { editCanvas, importMarks } = await import("../src/canvas-state.js");
+  const entry = await photo();
+  applyCanvasChanges(entry, { annotations: [{ id: "a", type: "point", x: 0.2, y: 0.2, note: "n" }], layer: "kept", resolve });
+  storeUserMarks(entry, [{ id: "user-x-1", type: "point", x: 0.6, y: 0.6, label: "YOU 1" }]);
+  const ids = canvasLayers(entry).map((l) => l.id);
+  editCanvas(entry, { layers: ids.map((id) => ({ id, locked: true })) });
+  const snapshot = JSON.stringify(canvasMarks(entry));
+  const locked = (e) => e.code === "LAYER_LOCKED";
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "a", type: "point", x: 0.3, y: 0.3 }], resolve }), locked);
+  assert.throws(() => applyCanvasChanges(entry, { remove: ["a"], resolve }), locked);
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "new", type: "point", x: 0.1, y: 0.1 }], layer: "kept", resolve }), locked);
+  assert.throws(() => editCanvas(entry, { remove: ["a"] }), locked);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "user-x-1", x: 0.1, y: 0.1 }], resolveUser: (m) => m }), locked);
+  // A batch with one locked target changes nothing.
+  assert.throws(() => applyCanvasChanges(entry, { annotations: [{ id: "free", type: "point", x: 0.4, y: 0.4 }], remove: ["a"], resolve }), locked);
+  storeUserMarks(entry, [{ id: "user-x-1", type: "point", x: 0.9, y: 0.9, label: "YOU 1" }]);
+  importMarks(entry, [{ id: "a", type: "point", x: 0.9, y: 0.9, author: "assistant" }], { resolve, replayUser: (m) => m });
+  applyCanvasChanges(entry, { reset: true, resolve });
+  assert.equal(JSON.stringify(canvasMarks(entry)), snapshot);
+  // Findings (note/status) stay allowed on locked marks, by design.
+  applyCanvasChanges(entry, { findings: [{ id: "a", note: "still allowed" }], resolve });
+  assert.equal(canvasMarks(entry).find((m) => m.id === "a").note, "still allowed");
+});

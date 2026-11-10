@@ -2,6 +2,7 @@
 // stable id, so a later present_visual call adds to, edits or removes marks
 // instead of the model re-sending everything. State lasts as long as the
 // cached image (about an hour, in memory only).
+import { createHash } from "node:crypto";
 import { mapMark } from "./image/transform.js";
 import { markFindings, MARK_STATUSES } from "./scene-catalog.js";
 import {
@@ -148,8 +149,24 @@ function settleClaim(entry, old, mark, raw, options) {
   return next;
 }
 
-const stageError = (stage, i, id, error) =>
-  new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + (error?.message || error));
+const stageError = (stage, i, id, error, code) => {
+  const e = new Error("present_visual " + stage + "[" + i + "] (mark " + JSON.stringify(id) + "): " + (error?.message || error));
+  if (code) e.code = code;
+  return e;
+};
+
+// A mark's version tag: a short hash of everything stored about it. Results
+// show it; a call that edits an existing mark may pass it back as `ifMatch`
+// and is refused (CONFLICT) when the mark changed in the meantime, e.g. by
+// another conversation or by the user. No extra field is stored.
+const canonical = (v) => Array.isArray(v) ? v.map(canonical)
+  : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => [k, canonical(v[k])])) : v;
+export const markEtag = (mark) => createHash("sha256").update(JSON.stringify(canonical(mark))).digest("hex").slice(0, 12);
+const checkIfMatch = (stage, i, id, stored, ifMatch) => {
+  if (ifMatch === undefined) return;
+  if (!stored) throw stageError(stage, i, id, "ifMatch was given but there is no such mark any more", "CONFLICT");
+  if (markEtag(stored) !== ifMatch) throw stageError(stage, i, id, "the mark changed since you read it (ifMatch " + ifMatch + ", now " + markEtag(stored) + "); read it again and decide whether your edit still applies", "CONFLICT");
+};
 
 export function applyCanvasChanges(entry, changes) {
   const restore = snapshotCanvas(entry);
@@ -166,23 +183,25 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     entry.layers = layersOf(entry).filter((l) => l.locked || objectLayers.has(l.id));
   }
   remove.forEach((id, i) => {
-    if (markLocked(entry, state.get(id))) throw stageError("remove", i, id, "mark " + lockedText(entry, state.get(id)));
+    if (markLocked(entry, state.get(id))) throw stageError("remove", i, id, "mark " + lockedText(entry, state.get(id)), "LAYER_LOCKED");
     if (!state.delete(id)) throw stageError("remove", i, id, "no such mark on this canvas");
   });
   const named = layerName && layersOf(entry).find((l) => l.author === "assistant" && l.name === layerName);
   if (named?.locked && annotations.length) {
-    throw stageError("layer", 0, layerName, "layer " + named.id + " is locked by the user; draw into another layer");
+    throw stageError("layer", 0, layerName, "layer " + named.id + " is locked by the user; draw into another layer", "LAYER_LOCKED");
   }
   const changed = [];
   let replay = null, layer = null;
   for (const mark of priorUser) {
     if (!state.has(mark.id)) state.set(mark.id, { ...mark, layer: (replay ??= newLayer(entry, "user", "你 · 重播")).id });
   }
-  annotations.forEach((raw, i) => {
+  const before = new Map(annotations.concat(findings).map((x) => [x.id, state.get(x.id)]));
+  annotations.forEach(({ ifMatch, ...raw }, i) => {
+    checkIfMatch("annotations", i, raw.id, before.get(raw.id), ifMatch);
     if (state.get(raw.id)?.author === "user") {
       throw stageError("annotations", i, raw.id, "field id is a mark the user drew; comment on it with findings instead of replacing it");
     }
-    if (markLocked(entry, state.get(raw.id))) throw stageError("annotations", i, raw.id, "mark " + lockedText(entry, state.get(raw.id)));
+    if (markLocked(entry, state.get(raw.id))) throw stageError("annotations", i, raw.id, "mark " + lockedText(entry, state.get(raw.id)), "LAYER_LOCKED");
     let mark;
     try { mark = resolve(fromFrame(raw, frame)); } catch (error) { throw stageError("annotations", i, raw.id, error); }
     // Re-using an id edits that mark; its old note survives unless replaced.
@@ -200,7 +219,8 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
     state.set(mark.id, next);
     changed.push(mark.id);
   });
-  findings.forEach((finding, i) => {
+  findings.forEach(({ ifMatch, ...finding }, i) => {
+    checkIfMatch("findings", i, finding.id, before.get(finding.id), ifMatch);
     const stored = state.get(finding.id);
     if (!stored) throw stageError("findings", i, finding.id, "no such mark to attach a finding to");
     // Copy: the stored object may belong to a snapshot. Only note/status
@@ -257,7 +277,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
     remove.forEach((id, i) => {
       const old = state.get(id);
       if (!old) throw fail("remove", i, id, "no such mark");
-      if (markLocked(entry, old)) throw fail("remove", i, id, "its layer is locked");
+      if (markLocked(entry, old)) throw Object.assign(fail("remove", i, id, "its layer is locked"), { code: "LAYER_LOCKED" });
       state.delete(id);
       edits.push({ kind: "remove-mark", id, author: old.author, ...(old.label ? { label: old.label } : {}) });
     });
@@ -265,7 +285,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       const old = state.get(edit.id);
       if (!old) throw fail("marks", i, edit.id, "no such mark");
       if (old.author !== "user") throw fail("marks", i, edit.id, "only your own marks can be moved or restyled; the AI's marks can be deleted");
-      if (markLocked(entry, old)) throw fail("marks", i, edit.id, "its layer is locked");
+      if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked"), { code: "LAYER_LOCKED" });
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
       const moved = ["x", "y", "x2", "y2"].some((k) => next[k] !== old[k]) || JSON.stringify(next.points) !== JSON.stringify(old.points);
@@ -305,7 +325,7 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
       if (state.has(mark.id)) continue;
       state.set(mark.id, { ...replayUser(mark), layer: into(mark) });
     } else {
-      if (state.get(mark.id)?.author === "user") continue;
+      if (state.get(mark.id)?.author === "user" || markLocked(entry, state.get(mark.id))) continue;
       state.set(mark.id, { ...resolve(mark), layer: into(mark) });
     }
     added.push(mark.id);
@@ -424,7 +444,7 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
         confidence: assess.confidence ?? (moved ? undefined : old?.confidence) ?? "medium",
         ...(previouslyRejected ? { previouslyRejected } : {}),
       };
-      if (moved) { delete next.review; delete next.reviewReason; }
+      if (moved) { delete next.review; delete next.reviewReason; delete next.confirmedGeometry; }
       store.set(link.id, next);
     });
     return changed;
@@ -439,7 +459,22 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
 // remembered apart from the link (see assessment.js), so it outlives the
 // link and its marks; confirming or withdrawing the verdict forgets it.
 export const linkRef = (rightId, id) => "link:" + rightId + ":" + id;
-const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete c.reviewReason; return c; };
+const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete c.reviewReason; delete c.confirmedGeometry; return c; };
+
+// A confirmation is about the marks as they were: the geometry of both ends is
+// remembered (rounded to 0.001 of the image), and a confirmed link whose end
+// was later moved or reshaped is shown as stale-confirmation until the user
+// confirms it again. The link itself and its ids are kept.
+const geometryKey = (m) => {
+  const r = (v) => typeof v === "number" ? Math.round(v * 1000) : undefined;
+  return m ? JSON.stringify([m.type, r(m.x), r(m.y), r(m.x2), r(m.y2), m.points?.map((p) => [r(p.x), r(p.y)])]) : null;
+};
+export function linkIsStale(left, right, link) {
+  const g = link.review === "confirmed" ? link.confirmedGeometry : null;
+  return !!g && (g.left !== geometryKey(marksOf(left).get(link.left)) || g.right !== geometryKey(marksOf(right).get(link.right)));
+}
+// pairLinks for showing: a stale confirmation is flagged (never stored).
+export const shownLinks = (left, right) => pairLinks(left, right).map((l) => linkIsStale(left, right, l) ? { ...l, stale: true } : l);
 
 export function reviewLink(left, right, id, review, reason) {
   if (!LINK_REVIEW.includes(review) && review !== "unreviewed") throw new Error("review must be confirmed, rejected or unreviewed");
@@ -448,6 +483,7 @@ export function reviewLink(left, right, id, review, reason) {
   const ref = linkRef(setKeyOf(right), id);
   dropRejections(left, ref);
   const next = { ...clearReview(link), ...(review === "unreviewed" ? {} : { review }) };
+  if (review === "confirmed") next.confirmedGeometry = { left: geometryKey(marksOf(left).get(link.left)), right: geometryKey(marksOf(right).get(link.right)) };
   if (review === "rejected") {
     if (reason?.trim()) next.reviewReason = reason.trim().slice(0, 200);
     const lm = marksOf(left).get(link.left), rm = marksOf(right).get(link.right);
@@ -491,7 +527,7 @@ export function workspaceLinks(items) {
   const out = [];
   for (let i = 0; i < items.length; i++) for (let j = 0; j < items.length; j++) {
     if (i === j || !items[i].entry.pairLinks?.has(setKeyOf(items[j].entry))) continue;
-    for (const l of pairLinks(items[i].entry, items[j].entry)) {
+    for (const l of shownLinks(items[i].entry, items[j].entry)) {
       const { left, right, ...rest } = l;
       out.push({ ...rest, fromItem: items[i].id, from: left, toItem: items[j].id, to: right });
     }
@@ -606,7 +642,7 @@ export function applyWorkspaceChanges(items, { annotations = [], findings = [], 
         confidence: assess.confidence ?? (moved ? undefined : old?.confidence) ?? "medium",
         ...(previouslyRejected ? { previouslyRejected } : {}),
       };
-      if (moved) { delete next.review; delete next.reviewReason; }
+      if (moved) { delete next.review; delete next.reviewReason; delete next.confirmedGeometry; }
       store.set(link.id, next);
     });
     return changed;
