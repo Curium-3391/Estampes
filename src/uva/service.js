@@ -393,13 +393,17 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   }
   // One checkpoint of a legacy canvas into its mirror document. Idempotent: an
   // unchanged canvas (ignoring the save time) writes nothing.
-  async function syncCanvas({canvas,bytes,seq=null,legacyHash=null}){
+  // `extra` (canvas store): what the server keeps beside a canvas, as small JSON:
+  // its change log, the image's metadata and its processed-view recipes.
+  async function syncCanvas({canvas,bytes,seq=null,legacyHash=null,extra=null}){
     if(!mirror)fail('UNSUPPORTED_TARGET','Mirror is not enabled');
+    if(extra!==null&&(!extra||typeof extra!=='object'||Array.isArray(extra)||Buffer.byteLength(JSON.stringify(extra))>512*1024))fail('INVALID_INPUT','Invalid canvas extra');
+    const extraJson=extra===null?null:JSON.parse(JSON.stringify(extra)),extraHash=extraJson===null?null:hashJson(extraJson);
     // The in-memory canvas (mirror mode) can hold undefined fields; compare and map its JSON form.
     const {savedAt,...source}=JSON.parse(JSON.stringify(canvas)),sourceHash=hashJson(source),key=source.imageId+(source.setId?'#'+source.setId:'');
     const s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; mirror paused');
     const prior=s.documents.find(d=>d.provenance?.legacySetKey===key&&d.extensions?.[MIRROR_KEY]);
-    if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash&&(prior.extensions[MIRROR_KEY].authority??'legacy-canvas')===authority)return {status:'unchanged',documentId:prior.id,revision:prior.revision,sourceHash,seq:prior.extensions[MIRROR_KEY].sourceSeq??null};
+    if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash&&(prior.extensions[MIRROR_KEY].authority??'legacy-canvas')===authority&&(prior.extensions[MIRROR_KEY].extraHash??null)===extraHash)return {status:'unchanged',documentId:prior.id,revision:prior.revision,sourceHash,extraHash,seq:prior.extensions[MIRROR_KEY].sourceSeq??null};
     // History compaction retires what no recovery point needs, so the store
     // keeps about the last 7 days of commits (the ACK replay window). This cap
     // is a safety net for an unusual burst inside that window, not a lifetime limit.
@@ -466,14 +470,14 @@ export async function createUvaService({enabled=false,directory:root='',profile=
       if(hashJson(applyPatch(projected,residual))!==sourceHash)fail('INTEGRITY_ERROR','Canvas does not round-trip through its UVA document; it stays in legacy storage');
       residualBytes=residual?Buffer.byteLength(JSON.stringify(residual)):0;
       // sourceSeq orders this record against the pending copies (src/uva/canvas-store.js).
-      d.extensions={[MIRROR_KEY]:{sourceHash,syncedAt:time,sourceSavedAt:typeof savedAt==='string'?savedAt:null,sourceSeq:Number.isSafeInteger(seq)?seq:null,legacyHash:typeof legacyHash==='string'?legacyHash:null,authority,residual,...(Object.keys(linkKeys).length?{linkKeys}:{})}};
+      d.extensions={[MIRROR_KEY]:{sourceHash,syncedAt:time,sourceSavedAt:typeof savedAt==='string'?savedAt:null,sourceSeq:Number.isSafeInteger(seq)?seq:null,legacyHash:typeof legacyHash==='string'?legacyHash:null,authority,residual,...(Object.keys(linkKeys).length?{linkKeys}:{}),...(extraJson?{extra:extraJson,extraHash}:{})}};
     }
     checkLimits(d,limits);await verifyAssets(d);
     const command={requestId:'req:'+randomUUID(),changes:[{expectedRevision:expected,document:d}]};
     const actor={principal:principal('user'),authenticatedOwnerId:OWNER,origin:'app-user',effectiveGrants:[],targetScope:[],grantRevision:1,executionId:createId('exec')};
     const started=performance.now(),result=await store.commit(command,actor,s.authority.epoch);
     mirrorState={...mirrorState,syncs:(mirrorState?.syncs??0)+1,lastSyncMs:Math.round(performance.now()-started),lastSyncAt:time,...(canvasStore?{lastResidualBytes:residualBytes}:{})};
-    return {status:prior?'updated':'created',documentId:d.id,revision:d.revision,ack:result.ack,sourceHash,residualBytes,seq};
+    return {status:prior?'updated':'created',documentId:d.id,revision:d.revision,ack:result.ack,sourceHash,extraHash,residualBytes,seq};
   }
   // The committed canvas of an image, rebuilt from its UVA document, or null
   // when the store does not hold it as the record (no document, or a read-only mirror).
@@ -481,8 +485,8 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     const d=(await snapshot()).documents.find(d=>d.provenance?.legacySetKey===imageId&&d.extensions?.[MIRROR_KEY]);
     const ext=d?.extensions[MIRROR_KEY];if(!ext||ext.authority!=='uva')return null;
     const canvas=applyPatch(projectCanvas(d,{unlayeredLayerId:allocated('layer','mirror:'+imageId),linkKeys:ext.linkKeys??{},images:await imageData(d.scenes[0])}),ext.residual);
-    if(hashJson(canvas)!==ext.sourceHash)fail('INTEGRITY_ERROR','UVA canvas document does not reproduce its recorded canvas hash');
-    return {canvas:{...canvas,...(ext.sourceSavedAt?{savedAt:ext.sourceSavedAt}:{})},sourceHash:ext.sourceHash,seq:ext.sourceSeq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
+    if(hashJson(canvas)!==ext.sourceHash||(ext.extra!==undefined&&hashJson(ext.extra)!==ext.extraHash))fail('INTEGRITY_ERROR','UVA canvas document does not reproduce its recorded canvas hash');
+    return {canvas:{...canvas,...(ext.sourceSavedAt?{savedAt:ext.sourceSavedAt}:{})},sourceHash:ext.sourceHash,extra:ext.extra??null,seq:ext.sourceSeq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
   }
   // Images whose canvas this store holds as the record.
   async function canvasImages(){return (await snapshot()).documents.filter(d=>d.extensions?.[MIRROR_KEY]?.authority==='uva').map(d=>d.provenance.legacySetKey);}
@@ -525,7 +529,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     return {value:ext.value,valueHash:ext.valueHash,log:ext.log??null,seq:ext.seq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
   }
   async function recordKeys(){return (await snapshot()).documents.map(d=>d.extensions?.[RECORD_KEY]?.key).filter(Boolean);}
-  const service={enabled:true,store,root,diagnostics,canvasStore,canvasState,canvasImages,imageBytes,syncCanvas:(input)=>serial(()=>syncCanvas(input)),recordState,recordKeys,syncRecord:(input)=>serial(()=>syncRecord(input)),noteMirror(patch){mirrorState={...mirrorState,...patch};},async stageRecovery(bytes){if(bytes.length>40*1024**2)fail('LIMIT','Recovery artifact exceeds limit');const id=hash(bytes);await immutable(join(exportRoot,id+'.zip'),bytes);return id;},async close(){await queue;await store.close();},async readExport(id){if(!/^[0-9a-f]{64}$/.test(id))fail('INVALID_INPUT','Invalid export identity');const b=await bytesAt(join(exportRoot,id+'.zip'),40*1024**2);if(hash(b)!==id)fail('INTEGRITY_ERROR','Saved export hash differs');return b;},
+  const service={enabled:true,store,root,diagnostics,canvasStore,canvasState,canvasImages,imageBytes,putImage:(bytes)=>putAsset(bytes),syncCanvas:(input)=>serial(()=>syncCanvas(input)),recordState,recordKeys,syncRecord:(input)=>serial(()=>syncRecord(input)),noteMirror(patch){mirrorState={...mirrorState,...patch};},async stageRecovery(bytes){if(bytes.length>40*1024**2)fail('LIMIT','Recovery artifact exceeds limit');const id=hash(bytes);await immutable(join(exportRoot,id+'.zip'),bytes);return id;},async close(){await queue;await store.close();},async readExport(id){if(!/^[0-9a-f]{64}$/.test(id))fail('INVALID_INPUT','Invalid export identity');const b=await bytesAt(join(exportRoot,id+'.zip'),40*1024**2);if(hash(b)!==id)fail('INTEGRITY_ERROR','Saved export hash differs');return b;},
     async dispatch(input,author='assistant'){
       if(!['user','assistant'].includes(author))fail('FORBIDDEN','Unknown actor');
       const {action,documentId,sceneId}=input;

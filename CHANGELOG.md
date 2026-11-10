@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Images, their canvases and workspace copies now live only in the UVA store
+  when it is on: no `images/<hex>/` file is written. Each record holds the
+  canvas, its change log, the image's metadata and its processed-view recipes;
+  the image's bytes are a verified asset written durably before the upload is
+  acknowledged. Images an older version stored move in, with their change log,
+  the first time they are opened. `scripts/uva-to-legacy.mjs` now also writes
+  images, canvases and copies back before switching to legacy. Fix: a
+  workspace copy's change log was looked up in the wrong folder when migrated.
 - Workspaces (with their change logs), panel layouts and calculator notebooks now live
   only in the UVA store when it is on: their modules read and write through it
   and no `workspaces/`, `surfaces/` or `cas/notebooks/` file is written. A save

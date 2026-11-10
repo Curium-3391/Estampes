@@ -14,9 +14,11 @@ A power cut is simulated at every fsync in [UVA power loss](UVA-POWERLOSS.md).
 
 `ESTAMPES_CANVAS_STORE=uva` (the default; needs `ESTAMPES_STORAGE_DIR`, and turns
 the UVA store on by itself with `ESTAMPES_UVA_DIR` or its default; `legacy`
-switches back) makes an image's own canvas **committed to its UVA document and
-restored from it**. The canvas editor, its tools, undo and the widget are
-unchanged; only where the canvas is kept moves.
+switches back) keeps every image, its canvas and its workspace copies **only in
+the UVA store**: no `images/<hex>/` file (`source`, `meta.json`, `canvas.json`,
+`marks.svg`, `history.jsonl`, `derived.json`, `sets/`) is written. The canvas
+editor, its tools, undo and the widget are unchanged; only where the canvas is
+kept moves.
 
 - **Save.** Every save writes a record durably (file and folder fsync) to
   `<storage>/uva-pending/<hex>.json`, then a coalesced background commit puts it in
@@ -24,20 +26,16 @@ unchanged; only where the canvas is kept moves.
   minutes). Once the document holds exactly that content the pending file is
   removed. A killed server loses nothing: pending files are committed at the next
   start. **A save is acknowledged only when its pending record is durable**: if it
-  cannot be written, the tool call fails with that reason, even though
-  `canvas.json` may already hold the edit.
+  cannot be written, the tool call fails with that reason (`was not saved`).
 - **Order.** Each record carries a per-image sequence number that grows by one
   with every accepted save; between the UVA document and the pending record the
   higher number wins. Clock times are never compared.
-- **The legacy copy.** `canvas.json` has no sequence number, so each record also
-  keeps the content `canvas.json` held when the record was written. On restore,
-  and for every stored canvas at startup, `canvas.json` is adopted (as the next
-  number) only when it holds content the latest record does not know, which is a
-  save that bypassed the server; a stale, damaged or missing copy is rewritten
-  from the record instead. With no record at all, it is migrated.
-- **Three states per image.** `diagnostics.mirror.canvasStore.images[<imageId>]`
-  reports them apart: `legacy` (`matches`, `differs` or `missing` when the last
-  record was written), `pendingSeq` (the last durable record), `committedSeq` (the
+- **What a record holds.** The canvas, its change log (the last 200 lines), the
+  image's metadata (where it came from, its size) and its processed-view recipes
+  and calibrations. The image's bytes are a verified, content-addressed asset of
+  the store, written durably before the upload is acknowledged.
+- **States per image.** `diagnostics.mirror.canvasStore.images[<imageId>]`
+  reports them apart: `pendingSeq` (the last durable record), `committedSeq` (the
   last record in the UVA document) and `failedSeq` (a save that was refused).
 - **What the document holds.** Marks, layers, scene objects, gesture decisions and
   rejections are stored as document structure. Anything the structure cannot
@@ -46,8 +44,11 @@ unchanged; only where the canvas is kept moves.
   structure + patch gives back the canvas byte for byte (canonical hash).
   `diagnostics.mirror.lastResidualBytes` shows the size of that patch; it is 0 for
   ordinary marks and layers.
-- **Migration** is lazy: a legacy canvas becomes a UVA document the first time it
-  is opened. Startup only checks canvases the store already holds.
+- **Migration** is lazy: an image an older version stored (`images/<hex>/`) moves
+  into the store, bytes, metadata, canvas, processed views and change log, the
+  first time it is opened, and a workspace copy (`sets/<setId>.json`) the first
+  time its workspace is. After that its files are never read or written again
+  (they are left on disk, untouched).
 - **Image layers** (`add_image_layer`, a promoted base image, a copied canvas)
   are stored as verified assets. On commit each inline PNG must decode and
   re-encode to exactly the same base64 text; its bytes go to the content-addressed
@@ -62,10 +63,8 @@ unchanged; only where the canvas is kept moves.
   link record (label, confidence, the user's review) is kept verbatim, so the
   canvas comes back exactly. Gesture decisions and rejected claims are document
   structure too.
-- **Workspace copies** (`mode: copy`, `images/<hex>/sets/<setId>.json`) are
-  committed under their set key `img:<hex>#<setId>`, one document per copy. The
-  workspace module loads a copy from its set file, which startup keeps equal to
-  the record; edits are committed after each tool call.
+- **Workspace copies** (`mode: copy`) are committed under their set key
+  `img:<hex>#<setId>`, one document per copy, with their own change log.
 - **Workspaces, their change logs, panel surfaces and calculator notebooks** live
   only in the store; no file of theirs is written. Each is one UVA document (kind
   `graph`, one empty scene) whose `estampes.beta:record` extension holds the
@@ -84,17 +83,12 @@ unchanged; only where the canvas is kept moves.
   canvas, malformed links (for example one without its far end), or a store over
   its limits. Such a canvas keeps its pending file, which then wins on
   restore, and is listed under `diagnostics.mirror.blocked`.
-- **Still written:** `canvas.json`, `marks.svg` and `history.jsonl`, so switching
-  back to `ESTAMPES_CANVAS_STORE=legacy` keeps every edit. Image bytes are also
-  still kept in legacy storage; the UVA copy is capped by
-  `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024, 32 MiB per image).
-- The workspace and bundle modules load and save canvases themselves. Canvases a
-  tool call or a workspace HTTP route names (or that are in a workspace it names)
-  are loaded from the store first and committed afterwards if they changed. Any
-  image entry that reaches memory another way is restored the first time the
-  server touches it. Because `canvas.json` is kept equal to the record, modules
-  that read it directly see the committed canvas too, and a save that still
-  bypasses the server is adopted at the next restore.
+- **Limits.** Image bytes are capped by `ESTAMPES_UVA_ASSET_MAX_MB` (default
+  1024, 32 MiB per image). Each image is one document, and the store holds at
+  most 512 documents; a canvas past that keeps its pending record (which reads
+  still return) and is listed under `diagnostics.mirror.blocked`.
+  `ESTAMPES_STORAGE_RETENTION_DAYS` does not apply to the store. PDFs
+  (`documents/`) and module state are still files.
 - **History compaction.** The store keeps what its 20 recovery points, named
   checkpoints and readers need, plus about the last 7 days of commits (the ACK
   replay window). Older history is retired automatically in small steps, mostly
@@ -103,10 +97,10 @@ unchanged; only where the canvas is kept moves.
   `ESTAMPES_UVA_MIRROR_MAX_COMMITS` (default 10000) only caps commits retained in
   that window; it is not a lifetime limit. When it is reached the store reports
   `budgetExhausted` in `diagnostics.mirror`. If the store cannot start at all,
-  the server logs it and runs on the legacy files.
+  the server logs it and runs on the legacy files, which do not have what was
+  saved to the store; run `scripts/uva-to-legacy.mjs` first (see below).
 - `diagnostics.mirror.canvasStore` also counts writes, refused writes, commits,
-  restores by source, migrations, adopted bypassing saves, repaired legacy copies
-  and the last error.
+  reads by source (`uva` or `pending`) and the last error.
 
 - **No lifetime limit.** Measured with `node scripts/uva-qualify.mjs --only history
   --history 2500 --store 1 --edit one --day-every 100` (one 120-mark canvas, one
@@ -229,7 +223,10 @@ node scripts/uva-to-legacy.mjs /srv/estampes            # the store: /srv/estamp
 node scripts/uva-to-legacy.mjs /data /uva-beta           # inside the Docker image
 ```
 
-Canvases and images still keep their legacy files up to date. Keep the store directory and its mount if
+It writes every image (`source`, `meta.json`, `canvas.json`, `history.jsonl`,
+`derived.json`) and workspace copy (`sets/`) from the higher seq of its document
+and its pending record, then workspaces, surfaces and notebooks. `marks.svg` is
+not written; the legacy store writes it again on the next save. Keep the store directory and its mount if
 existing export links must remain readable. Switching back to `uva` with the same
 directory and profile reopens the store.
 

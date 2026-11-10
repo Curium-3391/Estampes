@@ -17,7 +17,7 @@ async function freePort() {
 }
 async function start(dir) {
   const port = await freePort();
-  const handle = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), env: { ...process.env, PORT: String(port), ESTAMPES_STORAGE_DIR: dir }, stdio: "ignore" });
+  const handle = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), env: { ...process.env, PORT: String(port), ESTAMPES_STORAGE_DIR: dir, ESTAMPES_UVA_MIRROR_IDLE_SEC: "3600" }, stdio: "ignore" });
   for (let i = 0; i < 80; i++) { try { if ((await fetch("http://127.0.0.1:" + port + "/")).ok) break; } catch {} await sleep(100); }
   const client = new Client({ name: "modules-test", version: "0" }, { versionNegotiation: { mode: "auto" } });
   await client.connect(new StreamableHTTPClientTransport(new URL("http://127.0.0.1:" + port + "/mcp")));
@@ -80,10 +80,9 @@ test("modules over MCP: Store, consent, enable, plot sin(x), edit, restart", { t
     // GPT learns about the user's edit and the objects from the canvas state.
     const visual = await s.client.callTool({ name: "get_visual_state", arguments: { imageId: canvasId } });
     assert.equal(visual.structuredContent.objects.find((o) => o.type === "function-plot").props.expression, "sin(2*x)");
-    const stored = JSON.parse(await readFile(join(dir, "images", canvasId.slice(4), "canvas.json"), "utf8"));
+    // The durable record the save was acknowledged with (the UVA store's pending copy).
+    const stored = JSON.parse(await readFile(join(dir, "uva-pending", canvasId.slice(4) + ".json"), "utf8")).canvas;
     assert.equal(stored.objects.length, 2);
-    const svg = await readFile(join(dir, "images", canvasId.slice(4), "marks.svg"), "utf8");
-    assert.match(svg, /id="object-o2"/);
 
     // Restart: module state and the canvas come back.
     s.handle.kill(); await sleep(300);

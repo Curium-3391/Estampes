@@ -50,7 +50,7 @@ PDF page rendering is optional: build with `docker compose build --build-arg EST
 
 ### What is stored
 
-With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`), every image gets a folder `images/<hash>/`:
+With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`) and the default UVA store, images, canvases, workspaces and panels are kept in the store (`uva-pending/` plus the store folder) and no `images/` file is written; see [UVA store](UVA-BETA.md). With `ESTAMPES_CANVAS_STORE=legacy`, every image gets a folder `images/<hash>/`:
 
 | File | Content |
 | --- | --- |

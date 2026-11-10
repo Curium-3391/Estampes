@@ -134,7 +134,7 @@ export async function createRecordStore({ service, storageDir, idleMs = 15000, m
     const choice = chooseRecord({ uva, pending });
     if (choice) {
       known.set(key, { hash: hashJson(choice.value), seq: choice.seq, value: choice.value, log: choice.log });
-      stats.read[choice.from]++;
+      stats.read[choice.from]++; note();
       if (choice.from === "pending") mirror.schedule(key);
       return choice.value;
     }
