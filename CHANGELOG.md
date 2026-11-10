@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Power-loss simulation for the UVA store (issue #91, `scripts/powerloss/`,
+  docs/UVA-POWERLOSS.md). Every fsync is recorded and each crash point is
+  rebuilt as a power cut could leave the folders. The store, or the whole
+  server through its tools, must reopen with every acknowledged result and
+  accept new writes. It found four gaps, all fixed:
+  - a new UVA folder was not fsynced into its parent;
+  - a first start interrupted by a power cut blocked the store forever (it is
+    now started again; nothing in it was ever acknowledged);
+  - uploaded images were answered before their files were fsynced;
+  - an image whose legacy copy was lost had no fallback (it now comes back
+    from the UVA asset store and the legacy file is repaired).
 - Fix: a canvas with an image layer (`add_image_layer`, a promoted base image
   or a copied canvas) made every result about it overflow the host's
   145,000-character limit (`add_image_layer`, `get_visual_state`,

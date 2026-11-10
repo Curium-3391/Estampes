@@ -1,6 +1,7 @@
 import { createServer as createHttpServer } from "node:http";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve as resolvePath } from "node:path";
+import { open as openFile, mkdir as makeDir, rename as renameFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { toNodeHandler } from "@modelcontextprotocol/node";
@@ -87,8 +88,47 @@ function restored(imageId, load) {
   job.finally(() => restoring.delete(imageId)).catch(() => {});
   return job;
 }
-const ensureImage = (imageId) => restored(imageId, () => ensureImageFile(imageId));
-const intakeImage = (bytes, options) => restored(imageIdOf(bytes), () => intakeImageFile(bytes, options));
+// The legacy store (sealed src/storage.js) writes an image's files without
+// fsync. With the canvas store on, an image is made durable before the tool
+// that brought it in answers, and an image whose legacy copy a power cut took
+// (missing, empty or torn) comes back from the UVA asset store.
+const imageFolder = (imageId) => join(resolvePath(config.storageDir), "images", imageId.slice(4));
+async function fsyncPath(path) {
+  let fd;
+  try { fd = await openFile(path, "r"); } catch (error) { if (error.code === "ENOENT") return; throw error; }
+  try { await fd.sync(); } finally { await fd.close(); }
+}
+async function syncImageFiles(imageId) {
+  if (!canvasStore || !config.storageDir) return;
+  const dir = imageFolder(imageId);
+  for (const path of [join(dir, "source"), join(dir, "meta.json"), dir, dirname(dir), resolvePath(config.storageDir)]) await fsyncPath(path);
+}
+async function imageFromStore(imageId) {
+  const bytes = canvasStore ? await uvaService?.imageBytes?.(imageId) : null;
+  if (!bytes || imageIdOf(bytes) !== imageId) return null;
+  const dir = imageFolder(imageId), temp = join(dir, "source.restore.tmp");
+  await makeDir(dir, { recursive: true });
+  const fd = await openFile(temp, "w", 0o600);
+  try { await fd.writeFile(bytes); await fd.sync(); } finally { await fd.close(); }
+  await renameFile(temp, join(dir, "source"));
+  const entry = await intakeImageFile(bytes, { source: "storage" });
+  await syncImageFiles(imageId);
+  log("warn", "[canvas-store] image restored from the UVA asset store", { imageId });
+  return entry;
+}
+const ensureImage = (imageId) => restored(imageId, async () => {
+  let entry, failure;
+  try { entry = await ensureImageFile(imageId); } catch (error) { failure = error; }
+  if (entry?.imageId === imageId) return entry;
+  const recovered = await imageFromStore(imageId).catch(() => null);
+  if (recovered) return recovered;
+  throw failure ?? new Error("Unknown or expired imageId " + imageId);
+});
+const intakeImage = (bytes, options) => restored(imageIdOf(bytes), async () => {
+  const entry = await intakeImageFile(bytes, options);
+  await syncImageFiles(entry.imageId);
+  return entry;
+});
 // The sealed workspace and bundle modules load and save canvases themselves.
 // Before a tool runs, canvases it names are loaded here (so they come from the
 // store); afterwards, any of them that changed is committed.

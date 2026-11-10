@@ -179,8 +179,11 @@ back without losing an edit. Servers without storage keep everything in memory.
   `ESTAMPES_UVA_BETA_DIR` is still read as the older name.
 - `ESTAMPES_UVA_PROFILE`: `linux-process-crash-test` (default on Linux) survives a
   killed process, **not a power loss**; `linux-local-durable` needs an eligible
-  local ext4/XFS mount. `ESTAMPES_UVA_BETA_PROFILE` is still read as the older
-  name. The UVA lease needs Linux `flock`; where the store cannot start, the
+  local ext4/XFS mount. Both profiles write with the same fsync barriers; the
+  profile states what the host can promise. A simulated power cut at every
+  fsync loses no acknowledged result ([UVA-POWERLOSS.md](UVA-POWERLOSS.md));
+  whether your disk or Docker Desktop VM honours fsync is outside that test.
+  `ESTAMPES_UVA_BETA_PROFILE` is still read as the older name. The UVA lease needs Linux `flock`; where the store cannot start, the
   server logs it and uses the legacy files.
 - `ESTAMPES_UVA_ASSET_MAX_MB` (default 1024) caps the store's image copies;
   `ESTAMPES_UVA_MIRROR_IDLE_SEC` (default 15) is the quiet time before a commit;
