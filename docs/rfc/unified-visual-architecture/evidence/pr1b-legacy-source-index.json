@@ -4,6 +4,8 @@
     "server.js",
     "src/bundle.js",
     "src/canvas-state.js",
+    "src/protocol.js",
+    "src/assessment.js",
     "src/config.js",
     "src/surface/widget-source.js",
     "public/workbench.js",

@@ -397,17 +397,17 @@ function viewLinks(list){
 // Claims (a link, or AI's note on a mark) carry evidence: where on which
 // image, what AI says it saw there, and who observed it. Only the user or
 // a tool's evidence verifies a claim; AI's confidence never does.
-const VERIFICATION=["unverified","user-confirmed","user-rejected","independently-verified"];
+const VERIFICATION=["unverified","user-confirmed","stale-confirmation","user-rejected","independently-verified"];
 const cleanEvidence=list=>(Array.isArray(list)?list:[]).filter(e=>e&&typeof e.says==="string").map(e=>({
   id:String(e.id??"").slice(0,8),observer:["model","tool","user"].includes(e.observer)?e.observer:"model",image:String(e.image??""),
   says:e.says.slice(0,160),region:Array.isArray(e.region)&&e.region.length===4&&e.region.every(v=>Number.isFinite(v)&&v>=0&&v<=1)?e.region:null})).slice(0,6);
 const stateOf=c=>c.verification??(c.review==="confirmed"?"user-confirmed":c.review==="rejected"?"user-rejected":
   cleanEvidence(c.evidence).some(e=>e.observer==="tool")?"independently-verified":"unverified");
-const STATE_ZH={"user-confirmed":"你已確認","user-rejected":"你已否決","independently-verified":"工具已驗證"};
+const STATE_ZH={"user-confirmed":"你已確認","stale-confirmation":"確認已過期：標記移動過，請再確認","user-rejected":"你已否決","independently-verified":"工具已驗證"};
 const SIDE_ZH={left:"左",right:"右"};
 function claimChip(c,cls){
  const state=stateOf(c),tool=cleanEvidence(c.evidence).some(e=>e.observer==="tool");
- const chip=el("span",{className:cls+(state==="unverified"?" ask":state==="independently-verified"?" tool":"")});
+ const chip=el("span",{className:cls+(state==="unverified"||state==="stale-confirmation"?" ask":state==="independently-verified"?" tool":"")});
  chip.textContent=state==="unverified"?(c.confidence?CONFIDENCE_TEXT[c.confidence]+" · ":"")+(tool?"":"僅模型自述 · ")+"待你確認":STATE_ZH[state];
  return chip;
 }
@@ -446,7 +446,7 @@ function renderEvidenceBox(){
  node("rect",{x:r.x,y:r.y,width:r.w,height:r.h,fill:"none",stroke:"#E4572E","stroke-width":2*lk,"stroke-dasharray":(6*lk)+" "+(4*lk)},g);
 }
 function reviewControls(li,c){
- if(stateOf(c)==="unverified"){
+ if(stateOf(c)==="unverified"||stateOf(c)==="stale-confirmation"){
    for(const [verdict,text] of [["confirmed","確認"],["rejected","否決"]])li.append(el("button",{type:"button",textContent:text,dataset:{review:verdict}}));
    li.append(el("input",{className:"reason",maxLength:200,placeholder:"否決理由（選填）"}));
  }else if(c.review)li.append(el("button",{type:"button",textContent:"撤回",title:"取消你的判斷",dataset:{review:"unreviewed"}}));

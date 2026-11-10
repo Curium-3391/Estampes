@@ -2,7 +2,7 @@ import test, { beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { registerImage, clearImages } from "../src/image-store.js";
-import { applyCanvasChanges, applyPairChanges, storeUserMarks, editCanvas, canvasMarks, importMarks } from "../src/canvas-state.js";
+import { applyCanvasChanges, applyPairChanges, storeUserMarks, editCanvas, canvasMarks, importMarks, markEtag } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve, replayUserAnnotation } from "../src/scene-catalog.js";
 import { canvasDocument, VISUAL_PROTOCOL } from "../src/protocol.js";
 import { parseMarksFile } from "../src/marks-file.js";
@@ -24,7 +24,7 @@ test("one image: layers, marks with provenance, style and findings, nothing host
   assert.deepEqual(doc.layers.map((l) => [l.id, l.order, l.locked, l.opacity]), [["L1", 0, true, 0.5], ["L2", 1, undefined, undefined]]);
   const [g, path, user] = doc.marks;
   assert.deepEqual(g, { id: "g", image: entry.imageId, type: "rect", geometry: { x: 0.1, y: 0.2, x2: 0.2, y2: 0.4 }, layer: "L1",
-    style: { color: "red" }, finding: { note: "讀到的字", status: "inspected", verification: { state: "unverified" } }, provenance: { author: "assistant", grounding: "unverified" } });
+    style: { color: "red" }, finding: { note: "讀到的字", status: "inspected", verification: { state: "unverified" } }, provenance: { author: "assistant", grounding: "unverified" }, etag: markEtag(canvasMarks(entry)[0]) });
   assert.deepEqual(path.geometry.bbox, [0.1, 0.7, 0.9, 0.9]);
   assert.equal(path.geometry.smooth, true);
   assert.deepEqual(user.provenance, { author: "user", grounding: "user-pointer", editedByUser: true });
