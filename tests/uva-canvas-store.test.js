@@ -359,3 +359,50 @@ test("a server whose UVA store holds data but cannot open stops instead of runni
   assert.deepEqual(await s.labels(imageId), ["in the store"]);
   await s.stop();
 });
+
+test("an upload whose durable record failed is not cached as saved: retrying it writes the record", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { idle: "3600" });
+  const bytes = await sharp({ create: { width: 320, height: 200, channels: 3, background: "#123456" } }).png().toBuffer();
+  const imageId = "img:" + (await import("node:crypto")).createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  const pending = pendingPath(storage, imageId);
+  await mkdir(join(pending, "blocker"), { recursive: true });
+  const data = bytes.toString("base64");
+  const args = { total: data.length, offset: 0, data, fileName: "r.png" };
+  const failed = await s.raw("upload_visual_image", args);
+  assert.equal(failed.isError, true, JSON.stringify(failed.content).slice(0, 300));
+  await rm(pending, { recursive: true });
+  assert.equal((await s.call("upload_visual_image", args)).structuredContent.imageId, imageId);
+  assert.equal((await pendingFiles(storage)).length, 1, "the retry wrote the record");
+  await s.kill();
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), []);
+  await s.stop();
+});
+
+test("a canvas record from before metadata, views and history moved into the store takes them from the older files once", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { mode: "legacy" });
+  const imageId = await upload(s, "#445566");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "older" }] });
+  const view = (await s.call("process_image", { imageId, ops: [{ op: "levels" }], output: { format: "png" } })).structuredContent.derivedViewId;
+  await s.stop();
+  // What an earlier UVA canvas store left: the canvas alone.
+  const canvas = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  await mkdir(join(storage, "uva-pending"), { recursive: true });
+  await writeFile(pendingPath(storage, imageId), JSON.stringify({ schema: "estampes.canvas-pending/1", seq: 1, canvas }));
+  s = await start(storage, beta, { idle: "3600" });
+  assert.deepEqual(await s.labels(imageId), ["older"]);
+  const record = JSON.parse(await readFile(pendingPath(storage, imageId), "utf8"));
+  assert.equal(record.seq, 2);
+  assert.equal(record.extra.meta.imageId, imageId);
+  assert.ok(record.extra.derived?.views?.some((v) => v.id === view || v.derivedViewId === view), JSON.stringify(record.extra.derived).slice(0, 300));
+  assert.ok(record.extra.log.length >= 1);
+  await s.kill();
+  // The older files are no longer needed.
+  await rm(join(storage, "images"), { recursive: true });
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["older"]);
+  assert.equal((await s.raw("get_derived_view", { imageId, derivedViewId: view })).isError, undefined);
+  await s.stop();
+});

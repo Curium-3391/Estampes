@@ -68,6 +68,18 @@ async function migrateImage(imageId, bytes = null, options = {}) {
   return entry;
 }
 const LOG_LINES = 200;
+const unsaved = new Set();
+// A record written before the image's metadata, processed views and change
+// log moved into the store has no meta: those come from their older files,
+// once, into the record. Restores the entry's processed views either way.
+async function hydrate(imageId, record, entry, meta = record.extra.meta) {
+  if (record.extra.meta) { restoreDerived(entry, record.extra.derived); return; }
+  const dir = root ? folder(imageId) : null;
+  const derived = record.extra.derived ?? (dir ? await readJson(join(dir, "derived.json")) : null);
+  restoreDerived(entry, derived);
+  const history = record.extra.log.length ? [] : (dir ? await readHistory(imageId, LOG_LINES, { files: true }) : []);
+  await canvases.write(imageId, { meta: meta ?? metaOf(entry), derived: derivedOf(entry) ?? undefined, ...(history.length ? { log: history } : {}) });
+}
 
 const CANVAS_VERSION = 1;
 const folder = (imageId) => join(root, "images", imageId.slice(4));
@@ -149,16 +161,23 @@ async function readJson(path) {
 // same image was stored before, its canvas comes back with it.
 export async function intakeImage(bytes, options) {
   const fresh = !hasImage(imageIdOf(bytes));
-  if (canvases && fresh) return once(imageIdOf(bytes), async () => {
-    if (hasImage(imageIdOf(bytes))) return getImage(imageIdOf(bytes));
-    const imageId = imageIdOf(bytes), record = await canvases.read(imageId);
-    if (!record) return migrateImage(imageId, bytes, options);
-    // Seen before: its canvas comes back with it.
-    await canvases.putImage(bytes);
-    const entry = await registerImage(bytes, options);
-    restoreCanvas(entry, record.canvas);
-    restoreDerived(entry, record.extra.derived);
-    if (!record.extra.meta) await canvases.write(imageId, { meta: metaOf(entry) });
+  // An intake whose durable record failed is not acknowledged; its entry may
+  // still be cached, so a retry runs the store path again.
+  if (canvases && (fresh || unsaved.has(imageIdOf(bytes)))) return once(imageIdOf(bytes), async () => {
+    const imageId = imageIdOf(bytes);
+    if (hasImage(imageId) && !unsaved.has(imageId)) return getImage(imageId);
+    unsaved.add(imageId);
+    const record = await canvases.read(imageId);
+    let entry;
+    if (!record) entry = await migrateImage(imageId, bytes, options);
+    else {
+      // Seen before: its canvas comes back with it.
+      await canvases.putImage(bytes);
+      entry = await registerImage(bytes, options);
+      restoreCanvas(entry, record.canvas);
+      await hydrate(imageId, record, entry);
+    }
+    unsaved.delete(imageId);
     return entry;
   });
   const entry = await registerImage(bytes, options);
@@ -195,9 +214,8 @@ export async function ensureImage(imageId) {
     if (!bytes || imageIdOf(bytes) !== imageId) return getImage(imageId);
     const entry = await registerImage(bytes, { source: meta?.source ?? "storage", fileName: meta?.fileName ?? null });
     restoreCanvas(entry, record.canvas);
-    restoreDerived(entry, record.extra.derived);
     if (meta?.page && !entry.page) entry.page = meta.page;
-    if (!record.extra.meta) await canvases.write(imageId, { meta: meta ?? metaOf(entry) });
+    await hydrate(imageId, record, entry, meta);
     log("info", "[storage] restored", { imageId, marks: entry.marks?.size ?? 0 });
     return entry;
   });
