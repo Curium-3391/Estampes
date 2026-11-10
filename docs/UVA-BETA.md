@@ -87,8 +87,19 @@ canvases (`ESTAMPES_UVA_MIRROR` is then not needed).
   A canvas whose base image was promoted has a transparent background; its marks
   stay anchored to the source image, which must still verify. Assets are never
   deleted (no asset GC yet), so removing an image layer does not free its bytes.
-- **Not yet in UVA** (phase 3 and later): canvases with links to other canvases,
-  copies made by workspaces, more than 512 marks or 64 objects, or a store over
+- **Links to other canvases** (paired views, workspace links) are relation
+  bindings in the document. The far end names the other canvas's own document
+  and mark; it stays `unresolved` because each document holds one canvas, and the
+  link record (label, confidence, the user's review) is kept verbatim, so the
+  canvas comes back exactly. Gesture decisions and rejected claims are document
+  structure too.
+- **Workspace copies** (`mode: copy`, `images/<hex>/sets/<setId>.json`) are
+  committed under their set key `img:<hex>#<setId>`, one document per copy. The
+  workspace module loads a copy from its set file, which startup keeps equal to
+  the record; edits are committed after each tool call. The workspace record
+  itself (`ws:` item list and layout) is still legacy.
+- **Not yet in UVA**: the workspace record, more than 512 marks or 64 objects per
+  canvas, malformed links (for example one without its far end), or a store over
   its limits. Such a canvas keeps its pending file, which then wins on
   restore, and is listed under `diagnostics.mirror.blocked`.
 - **Still written:** `canvas.json`, `marks.svg` and `history.jsonl`, so switching

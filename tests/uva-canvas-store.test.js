@@ -189,21 +189,104 @@ test("image layers are committed as verified assets and come back byte for byte"
   await s.stop();
 });
 
+test("links to another canvas and their reviews are committed as relation bindings", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const left = await upload(s, "#336633"), right = await upload(s, "#663333");
+  await s.call("present_visual", { imageId: left, pairImageId: right, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "left" }, { id: "b1", side: "right", type: "point", x: .4, y: .4, label: "right" }],
+    links: [{ id: "k1", left: "a1", right: "b1", label: "same", confidence: "low" }] });
+  // The user's verdict is part of the link record.
+  await s.call("review_visual_link", { imageId: left, pairImageId: right, linkId: "k1", review: "confirmed" });
+  await until(async () => { if ((await pendingFiles(storage)).length) return false; const im = (await s.diagnostics()).mirror.canvasStore.images; return Object.values(im).every((x) => x.committedSeq >= x.pendingSeq); });
+  const before = { left: JSON.parse(await readFile(canvasJson(storage, left), "utf8")), right: JSON.parse(await readFile(canvasJson(storage, right), "utf8")) };
+  assert.equal(before.left.links[right].length, 1);
+  assert.equal((await s.diagnostics()).mirror.blocked?.[left], undefined);
+  const docs = await s.documents();
+  const doc = docs.find((d) => d.title === "Canvas " + left);
+  const open = (await s.call("experimental_workspace", { action: "open", documentId: doc.id })).structuredContent.document;
+  const binding = open.bindings.find((b) => b.kind === "relation");
+  assert.ok(binding, JSON.stringify({ bindings: open.bindings, ext: open.extensions, diag: (await s.diagnostics()).mirror }).slice(0, 1500));
+  assert.equal(binding.from.id, "a1");
+  assert.equal(binding.to.id, "b1");
+  // The far end names the other canvas's own document.
+  assert.equal(binding.to.documentId, docs.find((d) => d.title === "Canvas " + right).id);
+  assert.equal(binding.label, "same");
+  assert.equal(binding.original.review, "confirmed");
+  // The link lives in the document structure, not in the exact-difference patch.
+  assert.equal(JSON.stringify(open.extensions["estampes.beta:mirror"].residual ?? {}).includes("links"), false);
+  await s.stop();
+
+  // Both canvases, links included, come back from UVA alone.
+  await unlink(canvasJson(storage, left));
+  await unlink(canvasJson(storage, right));
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(left), ["left"]);
+  const after = JSON.parse(await readFile(canvasJson(storage, left), "utf8")), afterRight = JSON.parse(await readFile(canvasJson(storage, right), "utf8"));
+  const strip = ({ savedAt, ...rest }) => rest;
+  assert.deepEqual(strip(after), strip(before.left));
+  assert.deepEqual(strip(afterRight), strip(before.right));
+  await s.stop();
+});
+
 test("a canvas the document cannot hold yet stays in its pending copy and is reported", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await start(storage, beta);
-  const imageId = await upload(s, "#336633"), right = await upload(s, "#663333");
-  // Links to another canvas are phase 3.
-  await s.call("present_visual", { imageId, pairImageId: right, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }, { id: "b1", side: "right", type: "point", x: .5, y: .5, label: "other" }],
-    links: [{ id: "k1", left: "a1", right: "b1", label: "same", confidence: "low" }] });
+  const imageId = await upload(s, "#336633");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "kept" }] });
+  await committed(s, storage);
+  await s.stop();
+  // A link without its far end, written past the server (adopted on restore).
+  const legacy = JSON.parse(await readFile(canvasJson(storage, imageId), "utf8"));
+  legacy.links = { "img:0000000000000000": [{ id: "k9", left: "a1", label: "half" }] };
+  await writeFile(canvasJson(storage, imageId), JSON.stringify(legacy));
+  s = await start(storage, beta);
   const d = await until(async () => { const m = (await s.diagnostics()).mirror; return m.blocked?.[imageId] ? m : null; });
-  assert.match(d.blocked[imageId], /Relation|endpoint|binding/i);
-  assert.ok((await pendingFiles(storage)).length >= 1);
+  assert.match(d.blocked[imageId], /endpoint|binding/i);
+  assert.equal((await pendingFiles(storage)).length, 1);
   await s.stop();
   await unlink(canvasJson(storage, imageId));
   s = await start(storage, beta);
   assert.deepEqual(await s.labels(imageId), ["kept"]);
-  assert.ok((await s.diagnostics()).mirror.canvasStore.restored.pending >= 1);
+  assert.deepEqual(JSON.parse(await readFile(canvasJson(storage, imageId), "utf8")).links, legacy.links);
+  assert.equal((await s.diagnostics()).mirror.canvasStore.restored.pending, 1);
+  await s.stop();
+});
+
+test("a workspace copy of a canvas is committed under its set key and restored from it", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta);
+  const imageId = await upload(s, "#335577");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .3, y: .3, label: "orig" }] });
+  const preview = await s.call("split_workspace", { source: imageId, mode: "copy" });
+  const done = await s.call("split_workspace", { source: imageId, mode: "copy", commit: true, previewId: preview.structuredContent.previewId });
+  const ws = done.structuredContent.workspaceId;
+  const doc = await s.get("/api/v1/workspaces/" + ws.slice(3));
+  const key = JSON.stringify(doc).match(/img:[0-9a-f]{16}#c[0-9a-f]{12}/)?.[0];
+  assert.ok(key, JSON.stringify(doc).slice(0, 400));
+  const setFile = join(storage, "images", imageId.slice(4), "sets", key.split("#")[1] + ".json");
+  await until(async () => !(await pendingFiles(storage)).length && (await s.documents()).some((d) => d.title === "Canvas " + key));
+  // An edit of the copy through the workspace is committed too.
+  const item = JSON.stringify(doc).match(/"id":"(wi-\d+)"/)[1];
+  await s.call("present_visual", { workspaceId: ws, verify: false, annotations: [{ id: "c1", type: "point", x: .6, y: .6, label: "copy only", item }] });
+  await until(async () => {
+    if ((await pendingFiles(storage)).length) return false;
+    const d = (await s.documents()).find((x) => x.title === "Canvas " + key);
+    const open = (await s.call("experimental_workspace", { action: "open", documentId: d.id })).structuredContent.document;
+    return open.scenes[0].annotations.some((a) => a.label === "copy only");
+  });
+  const before = JSON.parse(await readFile(setFile, "utf8"));
+  assert.equal(before.setId, key.split("#")[1]);
+  // The image's own canvas did not get the copy's mark.
+  assert.deepEqual(await s.labels(imageId), ["orig"]);
+  await s.stop();
+
+  // The copy's set file is gone: it comes back from its UVA document.
+  await unlink(setFile);
+  s = await start(storage, beta);
+  const strip = ({ savedAt, ...rest }) => rest;
+  assert.deepEqual(strip(JSON.parse(await readFile(setFile, "utf8"))), strip(before));
+  const again = await s.get("/api/v1/workspaces/" + ws.slice(3));
+  assert.ok(JSON.stringify(again).includes("copy only"), JSON.stringify(again).slice(0, 300));
   await s.stop();
 });
 

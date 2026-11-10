@@ -27,8 +27,11 @@ function sort(v) {
 
 // `images` maps the assetId of each image object to its PNG bytes in base64;
 // the canvas carries them inline as a data URI.
-export function projectCanvas(document, { unlayeredLayerId, images = new Map() } = {}) {
-  const scene = document.scenes[0], imageId = document.provenance.legacySetKey;
+// `linkKeys` maps the id of each relation binding to the set key of the other
+// canvas; the binding keeps the legacy link record verbatim.
+export function projectCanvas(document, { unlayeredLayerId, images = new Map(), linkKeys = {} } = {}) {
+  // legacySetKey is img:<hex>, or img:<hex>#<setId> for a workspace copy.
+  const scene = document.scenes[0], [imageId, setId] = document.provenance.legacySetKey.split("#");
   const layerOf = (id) => (id === unlayeredLayerId ? {} : { layer: id });
   const layers = scene.layers.filter((l) => l.id !== unlayeredLayerId).map((l) => ({
     id: l.id, ...(l.author === "unknown" ? {} : { author: l.author }), ...(l.name === undefined ? {} : { name: l.name }),
@@ -63,12 +66,20 @@ export function projectCanvas(document, { unlayeredLayerId, images = new Map() }
     return { id: o.id, type: o.type, ...(o.label === undefined ? {} : { label: o.label }), props, revision: o.revision,
       ...layerOf(o.layerId), visibility: o.visibility, provenance, ...(o.evidence === undefined ? {} : { evidence: clone(o.evidence) }) };
   });
+  const links = {};
+  for (const b of document.bindings) {
+    if (b.kind !== "relation" || b.original === undefined || !Object.hasOwn(linkKeys, b.id)) continue;
+    const key = linkKeys[b.id];
+    if (!Object.hasOwn(links, key)) define(links, key, []);
+    links[key].push(clone(b.original));
+  }
   return {
     ...(scene.background.kind === "transparent" ? { baseAsObject: true } : {}),
-    version: 1, imageId, width: scene.extent.width, height: scene.extent.height, marks, layers, links: {},
+    version: 1, imageId, width: scene.extent.width, height: scene.extent.height, marks, layers, links,
     ...(scene.rejections.length ? { rejections: clone(scene.rejections) } : {}),
     ...(scene.gestureDecisions.length ? { gestureDecisions: scene.gestureDecisions.map((g) => clone(g.original)) } : {}),
     ...(objects.length ? { objects } : {}),
+    ...(setId ? { setId } : {}),
   };
 }
 

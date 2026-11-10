@@ -1,10 +1,10 @@
-// ESTAMPES_CANVAS_STORE=uva: an image's own canvas is committed to its UVA
-// document, and restored from it.
+// ESTAMPES_CANVAS_STORE=uva: an image's own canvas, and each workspace copy of
+// it, is committed to its UVA document, and restored from it.
 //
 // Records of a canvas, each carrying a per-image sequence number `seq` that
 // grows by one with every save the store accepts:
 //   UVA document           the committed record (src/uva/service.js syncCanvas)
-//   uva-pending/<hex>.json written durably (file + folder fsync) for every save
+//   uva-pending/<hex>[-<setId>].json written durably (file + folder fsync) for every save
 //                          before the save is acknowledged; the coalesced commit
 //                          reads it, and it is removed once the document holds
 //                          exactly its content
@@ -27,16 +27,20 @@
 // `diagnostics.mirror.canvasStore.images` shows the three states separately:
 // the legacy copy, the durable pending seq and the committed seq.
 //
-// A canvas the document cannot hold yet (links to other canvases, workspace copies,
-// over the store limits) keeps its pending record, which then wins on restore;
+// A canvas the document cannot hold yet (malformed links, over the store limits)
+// keeps its pending record, which then wins on restore;
 // the reason is in the UVA diagnostics.
 import { mkdir, open, readFile, readdir, rename, unlink, lstat } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { hashJson } from "../documents/validation.js";
 import { createMirror } from "./mirror.js";
 
-const IMAGE = /^img:([0-9a-f]{16})$/;
-const PENDING = /^([0-9a-f]{16})\.json$/;
+// A canvas key: an image's own canvas (img:<hex>) or a workspace copy of it
+// (img:<hex>#c<hex>, stored in images/<hex>/sets/<setId>.json).
+const KEY = /^img:([0-9a-f]{16})(?:#(c[0-9a-f]{12}))?$/;
+const PENDING = /^([0-9a-f]{16})(?:-(c[0-9a-f]{12}))?\.json$/;
+const parts = (key) => { const m = KEY.exec(key ?? ""); return m ? { hex: m[1], setId: m[2] ?? null } : null; };
+const keyOf = (canvas) => (canvas?.imageId ?? "") + (canvas?.setId ? "#" + canvas.setId : "");
 const RECORD = "estampes.canvas-pending/1";
 export const contentHash = (canvas) => { const { savedAt, ...rest } = canvas; return hashJson(rest); };
 const json = (value) => JSON.parse(JSON.stringify(value));
@@ -76,8 +80,8 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   const created = await mkdir(dir, { recursive: true, mode: 0o700 });
   // A new folder must itself survive a crash before its files can.
   if (created) for (let d = dir; ; d = dirname(d)) { await syncDir(dirname(d)); if (d === created || dirname(d) === d) break; }
-  const file = (imageId) => join(dir, imageId.slice(4) + ".json");
-  const legacyFile = (imageId) => join(storageDir, "images", imageId.slice(4), "canvas.json");
+  const file = (key) => { const p = parts(key); return join(dir, p.hex + (p.setId ? "-" + p.setId : "") + ".json"); };
+  const legacyFile = (key) => { const p = parts(key); return join(storageDir, "images", p.hex, ...(p.setId ? ["sets", p.setId + ".json"] : ["canvas.json"])); };
   // `known`: { hash, seq } of the last record written or restored, per image.
   // `restored`: entry objects already restored or saved through this store.
   const queues = new Map(), known = new Map(), restored = new WeakSet(), images = new Map();
@@ -102,7 +106,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   }
   async function readPending(imageId) {
     const r = await readJson(file(imageId));
-    return r?.schema === RECORD && Number.isSafeInteger(r.seq) && r.canvas?.imageId === imageId ? r : null;
+    return r?.schema === RECORD && Number.isSafeInteger(r.seq) && keyOf(r.canvas) === imageId ? r : null;
   }
   async function readUva(imageId) {
     try { return await service.canvasState(imageId); } catch (error) { fault("read UVA record", imageId, error); return null; }
@@ -110,7 +114,8 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   const legacyHashNow = async (imageId) => { const c = await readJson(legacyFile(imageId)); return c ? contentHash(c) : null; };
   // The legacy copy follows the chosen record (sealed modules read it directly).
   async function repairLegacy(imageId, canvas) {
-    try { await lstat(join(storageDir, "images", imageId.slice(4), "source")); } catch { return; }
+    try { await lstat(join(storageDir, "images", parts(imageId).hex, "source")); } catch { return; }
+    if (parts(imageId).setId) await mkdir(dirname(legacyFile(imageId)), { recursive: true, mode: 0o700 });
     await durableWrite(legacyFile(imageId), JSON.stringify(canvas));
     stats.repaired++;
   }
@@ -119,7 +124,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
     service, idleMs, maxWaitMs, log,
     read: async (imageId) => {
       const r = await readPending(imageId);
-      return r && { canvas: r.canvas, seq: r.seq, legacyHash: r.legacyHash, bytes: await readSource(imageId) };
+      return r && { canvas: r.canvas, seq: r.seq, legacyHash: r.legacyHash, bytes: await readSource(imageId.split("#")[0]) };
     },
     onSynced: async (imageId, result) => {
       if (result.status === "blocked") { track(imageId, { blocked: true }); note(); return; }
@@ -145,7 +150,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   // Resolves once the record is durable; rejects when it is not. `value` is the
   // canvas captured at save time; `after` is the legacy save it follows.
   function write(imageId, value, { entry, after } = {}) {
-    if (!IMAGE.test(imageId) || value.setId) return Promise.resolve(null);
+    if (!parts(imageId) || keyOf(value) !== imageId) return Promise.resolve(null);
     if (entry) restored.add(entry);
     const canvas = json(value), hash = contentHash(canvas);
     return queued(imageId, async () => {
@@ -169,7 +174,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   // Applies chooseCanvas for one image: adopts or repairs the legacy copy.
   async function resolve(imageId) {
     const [uva, pending, legacy] = await Promise.all([readUva(imageId), readPending(imageId), readJson(legacyFile(imageId))]);
-    const choice = chooseCanvas({ uva, pending, legacy: legacy?.imageId === imageId && !legacy.setId ? legacy : null });
+    const choice = chooseCanvas({ uva, pending, legacy: keyOf(legacy) === imageId ? legacy : null });
     if (!choice) return null;
     known.set(imageId, { hash: contentHash(choice.canvas), seq: choice.seq });
     if (choice.adopt) {
@@ -187,8 +192,8 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
 
   // `entry` was just loaded by the legacy storage module from canvas.json.
   async function restore(entry) {
-    const imageId = entry?.imageId;
-    if (!IMAGE.test(imageId ?? "") || entry.setId) return null;
+    const imageId = keyOf(entry);
+    if (!parts(imageId)) return null;
     restored.add(entry);
     const choice = await queued(imageId, () => null).then(() => resolve(imageId));
     if (choice) restoreCanvas(entry, choice.canvas);
@@ -197,9 +202,10 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
 
   // Records an in-memory canvas that changed without passing through write().
   function refresh(entry) {
-    if (!IMAGE.test(entry?.imageId ?? "") || entry.setId) return Promise.resolve(null);
+    const key = keyOf(entry);
+    if (!parts(key)) return Promise.resolve(null);
     const canvas = json(serializeCanvas(entry));
-    return known.get(entry.imageId)?.hash === contentHash(canvas) ? Promise.resolve(null) : write(entry.imageId, canvas);
+    return known.get(key)?.hash === contentHash(canvas) ? Promise.resolve(null) : write(key, canvas);
   }
 
   // Startup: every stored canvas and every leftover pending record is checked,
@@ -208,7 +214,7 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   const leftovers = [];
   for (const name of await readdir(dir)) {
     const m = PENDING.exec(name);
-    if (m) leftovers.push("img:" + m[1]);
+    if (m) leftovers.push("img:" + m[1] + (m[2] ? "#" + m[2] : ""));
     else if (name.endsWith(".tmp")) await unlink(join(dir, name)).catch(() => {});
   }
   for (const imageId of new Set([...leftovers, ...await service.canvasImages()])) {
@@ -218,7 +224,9 @@ export async function createCanvasStore({ service, storageDir, readSource, resto
   note();
   return {
     write, restore, refresh, chooseCanvas, recovered: leftovers,
-    current: (entry) => !entry || restored.has(entry) || !IMAGE.test(entry.imageId ?? "") || !!entry.setId,
+    // Workspace copies are loaded by the sealed workspace module from their set
+    // file, which startup keeps equal to the record; refresh() commits their edits.
+    current: (entry) => !entry || restored.has(entry) || !parts(entry.imageId ?? "") || !!entry.setId,
     flush: () => mirror.flush(),
     // Shutdown: finish writes in flight; what waits for a commit stays pending on disk.
     async close() { await mirror.stop(); await Promise.all([...queues.values()]); },
