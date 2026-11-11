@@ -1393,6 +1393,18 @@ async function completeViews(list){
    catch{}
  }
 }
+// Host replays (including cloned JSON after a resize/model-context update)
+// must not replace a canvas loaded locally by the upload tool. Track host
+// deliveries separately: local upload results still apply immediately, and
+// changed host output/metadata still refreshes the canvas.
+let hostResultKey=null;
+function applyHostResult(result){
+ const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
+ const meta=result?._meta??window.openai?.toolResponseMetadata??{};
+ const key=JSON.stringify([r,meta]);
+ if(key===hostResultKey)return;
+ applyResult(result);hostResultKey=key;
+}
 function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
  gotResult=true;
@@ -1967,7 +1979,7 @@ window.addEventListener("message",event=>{if(event.source!==window.parent)return
  // Tool input only previews the call. ChatGPT can deliver it after the
  // result (and again after a chat message); it must never replace a result.
  if(msg.method==="ui/notifications/tool-input"&&!gotResult)applyInput(msg.params?.arguments);
- if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
+ if(msg.method==="ui/notifications/tool-result")applyHostResult(msg.params);
 });
 render();
 // Hosts that set window.openai globals before (or instead of) notifications.
@@ -1975,7 +1987,7 @@ let seenOutput=null,seenMeta=null;
 const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput){if(o?.toolInput&&!gotResult)applyInput(o.toolInput);return;}
  if(o.toolOutput===seenOutput&&o.toolResponseMetadata===seenMeta)return;
  seenOutput=o.toolOutput;seenMeta=o.toolResponseMetadata;
- applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
+ applyHostResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
 // ChatGPT sets window.openai before this script runs. Apply it only after the
 // whole module (including the inlined Workbench/UVA code below) has been
 // evaluated and the handshake has been sent: applying it here, synchronously,
