@@ -30,8 +30,13 @@ try{
    confidence:"high",note:"可見走線；".repeat(20),status:"inspected",ambiguities:["未量測電阻"],
    evidence:[{observer:"model",says:"看見路徑",region:[.2,.1,.7,.2],image:imageId}]}));
  priorUserMarks=[];userMarks=[];hiddenLayers.clear();mode="select";
- let reviewCall=null;
+ let reviewCall=null,layerCall=null;
  request=async(method,params)=>{
+   if(params?.name==="edit_visual_canvas"){
+     layerCall=params.arguments;
+     const updated=layers.map(l=>({...l,...layerCall.layers?.find(edit=>edit.id===l.id)}));
+     return {structuredContent:{kind:"estampes.canvas_edit",imageId,annotations:[...assistantMarks,...priorUserMarks],layers:updated,edits:[]}};
+   }
    if(params?.name==="review_visual_finding"){
      reviewCall=params.arguments;return {structuredContent:{mark:{id:reviewCall.markId,review:reviewCall.review,reviewReason:reviewCall.reason}}};
    }
@@ -88,7 +93,8 @@ try{
  for(const act of ["toggle","rename","opacity","lock","up","down"])check(findingsEl.querySelector("[data-act="+act+"]"),"original layer control: "+act);
  const expandedBefore=findingGroupsOpen.has("L1");
  findingsEl.querySelector("[data-act=toggle]").click();await tick();
- check(hiddenLayers.has("L1")&&findingGroupsOpen.has("L1")===expandedBefore,"visibility control does not toggle evidence");
+ check(layerCall.layers[0].id==="L1"&&layerCall.layers[0].visible===false&&layers.find(l=>l.id==="L1").visible===false,"visibility control persists shared visibility");
+ check(!findingsEl.querySelector(".finding-row")&&findingGroupsOpen.has("L1")===expandedBefore,"visibility control hides evidence without changing expansion");
  objects=[{id:"o1",type:"axes-2d",primitives:[],editable:{xRange:[-3,3],yRange:[-2,2],title:"y = sin(x)"}},
    {id:"o2",type:"function-plot",primitives:[],editable:{expression:"sin(2*x)",domain:null,labelMode:"custom",label:"sin(x)"}}];
  render();

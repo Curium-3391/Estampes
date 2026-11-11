@@ -33,7 +33,7 @@ export async function composeCanvas(target, source=null, region=full){
     const layerMap=new Map(),idMap=new Map(),created=[];
     const prefix="複本 "+(source.fileName||source.imageId)+" · ";
     if(sourceBase)created.push(create("image",{png:sourceBase,region,source:source.imageId},prefix+"圖片"));
-    for(const l of sourceState.layers){const next=moduleLayer(target,prefix+l.name+" "+(target.objectSeq??0),l.module);Object.assign(next,{author:l.author,opacity:l.opacity,locked:l.locked});layerMap.set(l.id,next.id);}
+    for(const l of sourceState.layers){const next=moduleLayer(target,prefix+l.name+" "+(target.objectSeq??0),l.module);Object.assign(next,{author:l.author,opacity:l.opacity,visible:l.visible,locked:l.locked});layerMap.set(l.id,next.id);}
     for(const old of [...(sourceState.objects??[])].sort((a,b)=>(a.type==="axes-2d"?-1:0)-(b.type==="axes-2d"?-1:0))){
       if(old.visibility!=="public")continue;
       const p=structuredClone(old.props);

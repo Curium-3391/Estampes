@@ -317,7 +317,13 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
     const key = mark.author + "\u0000" + (mark.layer ?? "");
     if (!mapped.has(key)) {
       const from = layers.find((l) => l.id === mark.layer && l.author === mark.author);
-      mapped.set(key, newLayer(entry, mark.author, from?.name || AUTHOR_NAME[mark.author] + " · 匯入").id);
+      const created = newLayer(entry, mark.author, from?.name || AUTHOR_NAME[mark.author] + " · 匯入");
+      if (from) applyLayerEdit(created, {
+        opacity: typeof from.opacity === "number" && Number.isFinite(from.opacity) && from.opacity >= 0 && from.opacity <= 1 ? from.opacity : undefined,
+        visible: typeof from.visible === "boolean" ? from.visible : undefined,
+        locked: from.locked === true ? true : undefined,
+      });
+      mapped.set(key, created.id);
     }
     return mapped.get(key);
   };
@@ -331,6 +337,12 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
     }
     added.push(mark.id);
   }
+  // Imported layer order comes from the file, rather than mark iteration order.
+  const imported = new Set(mapped.values());
+  const ordered = layers.map(l => mapped.get(l.author + "\u0000" + l.id)).filter(Boolean);
+  const byId = new Map(layersOf(entry).map(l => [l.id, l]));
+  const ids = [...new Set([...ordered, ...imported])];
+  entry.layers = [...layersOf(entry).filter(l => !imported.has(l.id)), ...ids.map(id => byId.get(id))];
   return added;
 }
 

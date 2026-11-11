@@ -457,13 +457,14 @@ function reviewControls(li,c){
 // viewer hides whole layers; hidden layers stay on the canvas and in AI's
 // context. Unsent marks have no layer yet and are always shown. Name,
 // order (bottom to top), opacity and lock live on the server, so AI sees
-// them and they survive reloads; hiding is this viewer's own choice.
+// them and they survive reloads. Visibility is shared; old viewer-local hiding
+// can additionally hide a layer.
 const layersEl=document.querySelector("#layers");
 let layers=[],hiddenLayers=new Set(),renamingLayer=null;
-const shown=m=>!m.layer||!hiddenLayers.has(m.layer);
+const shown=m=>!m.layer||(!hiddenLayers.has(m.layer)&&layerOf(m.layer)?.visible!==false);
 const LAYER_ID=/^(R|W\d{1,2}_)?L\d{1,6}$/;
 const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
- .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(l.locked===true?{locked:true}:{}),
+ .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(l.visible===false?{visible:false}:{}),...(l.locked===true?{locked:true}:{}),
    ...(typeof l.opacity==="number"&&l.opacity>=0&&l.opacity<1?{opacity:l.opacity}:{})})).slice(0,60);
 const layerOf=id=>layers.find(l=>l.id===id);
 const isLocked=m=>!!m?.layer&&layerOf(m.layer)?.locked===true;
@@ -503,8 +504,8 @@ function renderLayers(){
  // Top of the list = drawn last = on top.
  const shownOrder=[...list].reverse();
  shownOrder.forEach((l,i)=>{
-   const off=hiddenLayers.has(l.id),row=el("div",{className:"row"+(off?" off":"")+(l.locked?" locked":""),dataset:{layer:l.id}});
-   const box=el("input",{type:"checkbox",checked:!off,title:"顯示／隱藏（只影響你的畫面）",dataset:{layer:l.id,act:"toggle"}});
+   const off=hiddenLayers.has(l.id)||l.visible===false,row=el("div",{className:"row"+(off?" off":"")+(l.locked?" locked":""),dataset:{layer:l.id}});
+   const box=el("input",{type:"checkbox",checked:!off,title:"顯示／隱藏圖層（同步至共用畫布）",dataset:{layer:l.id,act:"toggle"}});
    const name=el("span",{className:"name"});
    if(renamingLayer===l.id){
      const input=el("input",{value:l.name,maxLength:40,"aria-label":"圖層名稱",dataset:{layer:l.id,act:"name"}});
@@ -527,6 +528,20 @@ function renderLayers(){
 // Layer settings and edits of earlier marks go to the server (app-only
 // tool); AI reads them on its next call and in the next message.
 let unsentEdits=[];
+// Undo/redo of edits already sent (move, restyle, delete) lives on the server,
+// per image: {left|right|item:{canUndo,canRedo}} from the last edit response.
+let serverHistory={},lastEditKey=null;
+const canServerStep=a=>!!ready&&Object.values(serverHistory).some(h=>a==="undo"?h.canUndo:h.canRedo);
+async function serverStep(action){
+ const can=h=>h&&(action==="undo"?h.canUndo:h.canRedo);
+ const key=can(serverHistory[lastEditKey])?lastEditKey:Object.keys(serverHistory).find(k=>can(serverHistory[k]));
+ if(!key)return;
+ try{
+  await editOnServer({history:{action,...(ws?{item:key}:pair?{side:key}:{})}});
+  status.textContent=action==="undo"?"已復原上一個已送出的修改。":"已重做。";
+ }catch(err){status.textContent=(action==="undo"?"無法復原：":"無法重做：")+String(err.message||err);}
+ selectedFocusId=null;render();
+}
 // In a workspace an edit names its item where a paired view names its side.
 const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
 async function editOnServer(args){
@@ -539,6 +554,9 @@ async function editOnServer(args){
  if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
+ if(r.history&&typeof r.history==="object")serverHistory=r.history;
+ const lastEdit=Array.isArray(r.edits)?r.edits[r.edits.length-1]:null;
+ if(lastEdit?.side)lastEditKey=lastEdit.side;else if(!pair&&!ws)lastEditKey="left";
  return r;
 }
 // The server's canvas after an edit. Unsent marks stay as they are.
@@ -569,7 +587,7 @@ function reorder(id,dir){
 }
 layersEl.addEventListener("change",e=>{
  const t=e.target,id=t?.dataset?.layer;if(!id)return;
- if(t.dataset.act==="toggle"){t.checked?hiddenLayers.delete(id):hiddenLayers.add(id);saveHidden();render();}
+ if(t.dataset.act==="toggle"){hiddenLayers.delete(id);saveHidden();const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,visible:t.checked}]},"已調整圖層顯示。");}
  if(t.dataset.act==="opacity"){const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,opacity:Number(t.value)/100}]},"已調整透明度。");}
 });
 // Live preview while the slider moves; the panel itself is not rebuilt.
@@ -591,7 +609,7 @@ layersEl.addEventListener("keydown",e=>{
 });
 layersEl.addEventListener("focusout",e=>{if(e.target?.dataset?.act==="name"&&renamingLayer)finishRename(e.target,true);});
 layersEl.addEventListener("click",e=>{
- if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();render();return;}
+ if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();const edits=layers.filter(l=>l.visible===false).map(l=>{const {side,id}=serverLayer(l.id);return {id,side,visible:true};});if(edits.length)layerEdit({layers:edits},"已顯示所有圖層。");else render();return;}
  const b=e.target.closest("button[data-act]");if(!b)return;
  const id=b.dataset.layer,l=layerOf(id);if(!l)return;
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
@@ -821,7 +839,7 @@ function renderFindings(){
  const manager=el("details",{id:"layer-manager",open:layersExpanded});
  manager.append(el("summary",{title:"圖層由上到下疊放；每層證據依最新更新排序",textContent:"圖層與證據 · "+layerRows.size+" 層 · "+[...groups.values()].flat().filter(({mark})=>mark.note&&stateOf(mark)==="unverified").length+" 待確認"}));
  manager.addEventListener("toggle",()=>{if(manager.isConnected)layersExpanded=manager.open;});
- if(hiddenLayers.size)manager.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
+ if(hiddenLayers.size||layers.some(l=>l.visible===false))manager.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
  for(const [key,items] of [...groups].sort((a,b)=>(order.get(b[0])??-1)-(order.get(a[0])??-1))){
    // Evidence order is independent from layer/ink stacking. Legacy entries
    // without timestamps retain reverse insertion order as a stable fallback.
@@ -1076,7 +1094,7 @@ function renderObjects(){
  const draw=(list,W,H,parent,prefix="",transform="")=>{
  const X=x=>x*W,Y=y=>y*H,u=W/1000;
  for(const o of list){
-   if(o.layer&&hiddenLayers.has(prefix+o.layer))continue;
+   if(o.layer&&(hiddenLayers.has(prefix+o.layer)||layerOf(prefix+o.layer)?.visible===false))continue;
    const g=node("g",{"data-layer":prefix+(o.layer??""),"data-object":o.id,transform,opacity:layerOf(prefix+o.layer)?.opacity??1},parent);
    for(const p of o.primitives){
      if(p?.k==="image"&&/^data:image\/(png;base64,iVBORw0KGgo|webp;base64,UklGR)[A-Za-z0-9+/=]+$/.test(p.href)){
@@ -1273,7 +1291,7 @@ function render(){
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
  counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
- undoBtn.disabled=!past.length;redoBtn.disabled=!future.length;
+ undoBtn.disabled=!past.length&&!canServerStep("undo");redoBtn.disabled=!future.length&&!canServerStep("redo");
  exportImageBtn.hidden=!!frames||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!frames||!(imageId&&exportLinks?.marks);
  renderLayers();renderObjectsPanel();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
  refreshFocus();renderView();
@@ -1329,7 +1347,7 @@ function applyInput(args){
  const incoming=fromServerList(args.annotations);
  assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,ws?200:60);
  priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,ws?200:60);
- userMarks=[];past=[];future=[];selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
+ userMarks=[];past=[];future=[];serverHistory={};lastEditKey=null;selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
  // The result normally brings the pixels; if it never does, fetch them.
  if(imageId)setTimeout(()=>{if(imageId&&!allPhotos())syncCanvas()},6000);
 }
@@ -1850,8 +1868,8 @@ intentSelect.addEventListener("change",render);
 // Undo/redo over this canvas's marks since the last send.
 let past=[],future=[];
 function commitMarks(next){past.push(userMarks);if(past.length>60)past.shift();future=[];userMarks=next;}
-function undo(){if(!past.length)return;future.push(userMarks);userMarks=past.pop();selectedFocusId=null;render();}
-function redo(){if(!future.length)return;past.push(userMarks);userMarks=future.pop();selectedFocusId=null;render();}
+function undo(){if(!past.length){serverStep("undo");return;}future.push(userMarks);userMarks=past.pop();selectedFocusId=null;render();}
+function redo(){if(!future.length){serverStep("redo");return;}past.push(userMarks);userMarks=future.pop();selectedFocusId=null;render();}
 undoBtn.addEventListener("click",undo);redoBtn.addEventListener("click",redo);
 // Downloads open in the browser (sandboxed widgets cannot save files).
 function openLink(href){
@@ -1999,6 +2017,8 @@ const EDIT_ZH={
  "remove-mark":e=>"刪除了"+(e.author==="user"?"我的":"你的")+"標記 "+e.id+(e.label?"「"+e.label+"」":""),
  "move-mark":e=>"移動或改了形狀：我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+"（你先前對它的說明可能不再適用）",
  "restyle-mark":e=>"改了我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+" 的樣式或標籤",
+ "undo-edit":e=>"復原了標記 "+e.id+" 的上一個修改（"+(e.steps??[]).join("+")+"），它回到修改前的樣子",
+ "redo-edit":e=>"重做了標記 "+e.id+" 的修改（"+(e.steps??[]).join("+")+"）",
 };
 function editMessage(list){
  return "我在 Estampes 畫布上手動修改了（"+canvasName()+"）：\n"+

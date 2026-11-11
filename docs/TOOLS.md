@@ -8,6 +8,8 @@ Estampes exposes its tools at `/mcp`. Users never name them; the AI chooses. Thi
 | --- | --- |
 | `present_visual` | Show the shared canvas. Takes the attached image (`image`), a public `imageUrl`, an earlier `imageId`, a second image for a side-by-side view (`pairImage`, `pairImageUrl`, `pairImageId`), or a whole workspace of three or more images (`workspaceId`; marks, findings and links then name their `item`). `upload: true` opens an empty canvas where the user picks or photographs an image themselves (for hosts such as Claude that do not pass attachments to tools). Adds, edits or removes marks (`annotations`, `remove`, `reset`), attaches notes and status to marks (`findings`), names the layer (`layer`), records links between paired marks (`links`), adds processed tabs (`views`, max 3) and restores a previous export (`marksFile`). Returns a verification image and download links. |
 | `render_canvas` | Read full or cropped canvas pixels: base image, public scene objects and saved marks. Use submission `canvasReads` requests to retain hidden layers and check the revision. See [Canvas reads](CANVAS-READS.md). |
+| `get_visual_layers` | Read stable layer IDs, authors, bottom-to-top order, opacity, shared visibility, locks, editability and the canvas revision. Workspace copies use `setId`. |
+| `edit_visual_layers` | Set existing layer `opacity` (0–1, rounded to 0.05), `visible`, or bottom-to-top `order`. Requires `expectedRevision` from `get_visual_layers`; stale edits return `STALE_CANVAS`, locked edits return `LAYER_LOCKED`. `action: "undo"` / `"redo"` reverses the last unchanged appearance step. |
 | `get_visual_state` | Read everything on a canvas as one `estampes.visual/2` JSON document (images, layers, marks, links, the confidence, evidence and verification of every claim, rejected claims, optional change history). Read-only. See [Visual protocol 2](PROTOCOL-V2.md). |
 | `create_workspace` | Create a workspace with any number of images (up to 24): new files or URLs, existing canvases with their marks (`canvases`), or every image of other workspaces or canvases (`from`). See [Workspaces](WORKSPACES.md). |
 | `edit_workspace` | Add images, detach items (`remove` never deletes images or marks), move, resize, rotate or label them (`arrange`), reorder, rename, re-flow. Checks `expectedRevision`; returns an `undoToken`. |
@@ -49,7 +51,7 @@ These are hidden from the model (`visibility: ["app"]`).
 | `load_visual_region` | Returns a higher-resolution tile while you zoom. |
 | `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
 | `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
-| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, move, restyle, delete). |
+| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, restyle, delete), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
@@ -100,3 +102,26 @@ the legacy file, the durable pending seq and the committed seq), `list`, `open`,
 `render`, `export` and `read_chunk`. It is registered whenever the store is on.
 Edits go through the canvas, workspace, surface and calculator tools.
 
+
+## Shared layer appearance
+
+Read `get_visual_layers({imageId})`, then call `edit_visual_layers` with its
+`revision` as `expectedRevision`, for example
+`{imageId, expectedRevision, layers:[{id:"L2",opacity:0.4,visible:true}]}`.
+Render with `render_canvas` to assess the composite, then present the result
+with `present_visual`. Edits never change image pixels, annotation geometry or
+authorship. The assistant cannot unlock layers or reorder across a locked layer.
+Refresh and review after `STALE_CANVAS`; do not automatically overwrite user edits.
+
+Visibility is now shared and persistent: the canvas checkbox, tool reads and
+composite rendering use the same layer property. Previously saved viewer-local
+`hiddenLayers` remain an additional viewing filter; “show all” clears those and
+restores shared visibility. Appearance and order survive storage, workspace
+movement/copy and bundle export/import. The last 50 assistant appearance steps
+support undo/redo and survive a server restart; imported bundles start a fresh
+appearance history. An intervening appearance edit causes `HISTORY_CONFLICT`.
+A no-op does not create a history step. Workspace copies require the `setId`
+from the item's `set` key or `canvasReads`; omit it for the image's own canvas.
+
+Blend modes are unsupported. Brightness and contrast are separate image
+processing operations, not layer properties.

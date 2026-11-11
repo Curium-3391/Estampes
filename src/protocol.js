@@ -64,7 +64,7 @@ export function canvasDocument(left, right = null, { history } = {}) {
   for (const [role, entry] of sides) {
     canvasLayers(entry).forEach((l, order) => layers.push(defined({
       id: l.id, image: entry.imageId, author: l.author, name: l.name, order, count: l.count,
-      locked: l.locked ? true : undefined, opacity: l.opacity,
+      locked: l.locked ? true : undefined, visible: l.visible, opacity: l.opacity,
     })));
     marks.push(...canvasMarks(entry).map((m) => protocolMark(m, entry.imageId)));
   }
@@ -106,6 +106,6 @@ export function marksFromDocument(doc, { width, height } = {}) {
       ...(m.style ?? {}), note: m.finding?.note, status: m.finding?.status, author: m.provenance?.author,
     });
   });
-  const layers = (doc.layers ?? []).filter((l) => l?.image === image.id).map((l) => ({ id: l.id, author: l.author, name: l.name }));
+  const layers = (doc.layers ?? []).filter((l) => l?.image === image.id).map((l) => ({ id: l.id, author: l.author, name: l.name, opacity: l.opacity, visible: l.visible, locked: l.locked }));
   return { imageId: image.id, width: Number(image.width), height: Number(image.height), marks, layers };
 }
