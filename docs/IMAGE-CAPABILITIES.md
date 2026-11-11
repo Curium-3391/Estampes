@@ -43,12 +43,12 @@ How each item of the Image Preprocessing Audit & RFC's 84-item catalogue (2026-1
 | --- | --- | --- |
 | C01 Sauvola / Niblack | Later | adaptive threshold exists |
 | C02 morphology | Done | `morphology` |
-| C03 connected components | Done | `detect_features` `components` |
+| C03 connected components | Done | `detect_features` `components`; split and measured: `regions` |
 | C04 Canny | Done | `canny` |
 | C05 Hough lines and circles | Done | `lines`, `circles` |
-| C06 contours + hierarchy | Later | |
+| C06 contours + hierarchy | Partly | `regions` gives outer contours as closed polylines; holes are not traced |
 | C07 skeletonization | Later | |
-| C08 distance transform | Later | |
+| C08 distance transform | Partly | exact Euclidean, inside `regions` (`src/image/segment.js`); not a `process_image` op |
 | C09 mask / component overlay as a layer | Partly | detections carry ready marks; no mask layer type |
 | C10 blob detector + centroid | Done | `blobs` |
 | C11 ROI polygon mask | Done | geometry `mask` |

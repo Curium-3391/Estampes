@@ -23,7 +23,9 @@
     "src/marks-file.js",
     "src/protocol.js",
     "src/scene/canvas-render.js",
-    "src/scene/compose.js"
+    "src/scene/compose.js",
+    "src/image/engines.js",
+    "src/image/view.js"
   ],
   "files": [
     {
