@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Keep a locally uploaded photo visible when the host replays the original
+  waiting-for-upload result through notifications or ChatGPT globals (#66).
+  Changed host output or metadata still updates the canvas. Browser tests
+  cover desktop/mobile replay, large portraits, repeated uploads and failures.
+
 - Added `get_visual_layers` and `edit_visual_layers` for assistant layer opacity,
   visibility and ordering, with revision checks, lock protection and persistent
   appearance undo/redo. The canvas visibility checkbox now updates shared state;
