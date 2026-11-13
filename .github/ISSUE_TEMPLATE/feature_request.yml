@@ -1,0 +1,37 @@
+name: "Feature request"
+description: "Suggest a user-facing improvement or new capability."
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For an early-stage idea or open-ended discussion, start in
+        [Discussions](https://github.com/Curium-3391/Estampes/discussions).
+        Use this form when you have a concrete user problem and expected outcome.
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem to solve"
+      description: "Describe the workflow that is difficult today, not just an implementation."
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: "Expected behavior / acceptance criteria"
+      description: "How would a user know the feature works?"
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: "Possible approach (optional)"
+      description: "Include interfaces or compatibility concerns if you have considered them."
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives or workarounds"
+    validations:
+      required: false

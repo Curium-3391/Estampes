@@ -1,0 +1,32 @@
+name: Pre-public Git history preflight
+
+# Do not run an expensive full-history scan on every contribution.
+# Validate this addition once on its dedicated setup branch, then use the
+# manual trigger when the workflow is on the default branch.
+on:
+  push:
+    branches:
+      - 'chore/open-source-community-readiness-*'
+    paths:
+      - 'scripts/audit-git-history.mjs'
+      - '.github/workflows/prepublic-history-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: history-preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Scan reachable Git history without printing secret values
+        run: node scripts/audit-git-history.mjs

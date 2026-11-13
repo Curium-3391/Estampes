@@ -1,0 +1,57 @@
+name: "Module or integration proposal"
+description: "Propose an Estampes module, tool, or external integration."
+title: "[Module]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Modules have explicit permission and package requirements.
+        Read [Modules](https://github.com/Curium-3391/Estampes/blob/main/docs/MODULES.md)
+        and [Module quick start](https://github.com/Curium-3391/Estampes/blob/main/docs/modules/QUICKSTART.md)
+        before proposing a substantial integration.
+  - type: input
+    id: name
+    attributes:
+      label: "Proposed module name"
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: "User problem and example workflow"
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: "Possible runtime / integration"
+      options:
+        - "Declarative"
+        - "WebAssembly"
+        - "HTTP / external service"
+        - "Built-in capability"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: "Data access, external hosts, and permissions"
+      description: "Specify whether image data leaves the user's instance, and where it goes."
+      placeholder: "Data read, external hostname(s), credentials, network permission, and user consent."
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: "Scene objects, operations, and compatibility"
+      description: "Describe the editable objects or results the module would expose."
+    validations:
+      required: false
+  - type: textarea
+    id: verification
+    attributes:
+      label: "How should we verify the behavior?"
+      description: "Prefer reproducible synthetic fixtures and negative/error cases."
+    validations:
+      required: true
