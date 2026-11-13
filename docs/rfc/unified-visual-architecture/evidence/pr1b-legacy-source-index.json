@@ -270,7 +270,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "21e42ee6ef3cb830fedbe2a882487dae734849c590d86e328f171b120667fb93"
+      "sha256": "f6163a0c4d534063a7a86ce25738bdbae4b80f73a206989b16bae9b6b5649701"
     },
     {
       "path": "src/surface/bundle-extras.js",

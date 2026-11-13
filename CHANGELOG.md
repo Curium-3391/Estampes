@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- A canvas save that fails (UVA store) no longer leaves the failed change in
+  memory (architecture review A03). Before, a refused `present_visual`,
+  `execute_module` or object edit stayed visible to later reads, with the
+  scene revision already raised, and the next successful save persisted it.
+  The canvas now goes back to its last durable state before the error is
+  returned. When a later save of the same canvas was already under way, the
+  earlier call reports that save's outcome, since it carries the same change.
+
 - Bundle import: a canvas is reused only when it holds the same marks, layers,
   claims, scene objects (Graph axes, plots, shapes) and link content as the
   bundle; before, a changed Graph was reused and reported `verified: true`
