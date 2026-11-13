@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Module registry: an enable/disable whose `registry.json` write fails no
+  longer leaves the module in the new state in memory, and one failed write no
+  longer makes every later save fail until a restart (architecture review A06).
+  A change is published only after its file is written; queued writes each
+  report their own outcome.
+
 - Keep a locally uploaded photo visible when the host replays the original
   waiting-for-upload result through notifications or ChatGPT globals (#66).
   Changed host output or metadata still updates the canvas. Browser tests

@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/registry.js",
-      "sha256": "3f784288098d07ebb42be0d7ed38d1634ecaee3bc10167bc3a205ba8e0aa3ff3"
+      "sha256": "2fb874493212bbc110bb6449f31c5c741c94899e40bae0359cad747ac6f23111"
     },
     {
       "path": "src/modules/router.js",
