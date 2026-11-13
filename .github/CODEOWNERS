@@ -1,0 +1,21 @@
+# Default owner: every change is visible for maintainer review.
+# This file requests review; it does not independently block merging.
+* @Curium-3391
+
+# High-impact change surfaces
+/.github/ @Curium-3391
+/AGENTS.md @Curium-3391
+/server.js @Curium-3391
+/src/security.js @Curium-3391
+/src/oauth.js @Curium-3391
+/src/modules/ @Curium-3391
+/src/persistence/ @Curium-3391
+/src/uva/ @Curium-3391
+/src/storage.js @Curium-3391
+/src/workspace.js @Curium-3391
+/src/bundle.js @Curium-3391
+/cas-service/ @Curium-3391
+/compose.yaml @Curium-3391
+/Dockerfile @Curium-3391
+/docs/PROTOCOL-V1.md @Curium-3391
+/docs/PROTOCOL-V2.md @Curium-3391
