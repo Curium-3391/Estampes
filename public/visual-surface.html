@@ -1911,7 +1911,7 @@ async function textAction(action,props){
    const id=r.selectedId??session.id,obj=r.objects.find(o=>o.id===id);
    if(textSession===session){Object.assign(session,{id:obj?id:null,revision:r.revision,history:r.history,props:obj?.editable??session.props,displayColor:obj?.primitives.find(p=>p.k==="text")?.fill,locked:!!obj?.locked});fillTextEditor();}
    status.textContent="已儲存文字變更；AI 下次讀取畫布時會看到。";render();
- }catch(err){status.textContent="文字未套用："+err.message+"（可按重新讀取後確認）";}
+ }catch(err){render();status.textContent="文字未套用："+err.message+"（可按重新讀取後確認）";}
  finally{textBusy=false;textButtons();}
 }
 document.querySelector("#text-save").addEventListener("click",()=>{
@@ -2197,8 +2197,8 @@ send.addEventListener("click",async()=>{
    }catch(err){status.textContent="傳送失敗："+String(err.message||err)}
    render();return;
  }
- const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,color,size,pen,side,strokeOrder,relativeStartMs,relativeEndMs,pointerType})=>({
-   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,color,size,pen,...(ws?{item:side}:pair?{side}:{}),
+ const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,note,color,size,pen,side,strokeOrder,relativeStartMs,relativeEndMs,pointerType})=>({
+   id,type,x,y,...(type==="point"?{}:{x2,y2}),...(type==="polyline"?{points,smooth,closed}:{}),label,...(note?{note}:{}),color,size,pen,...(ws?{item:side}:pair?{side}:{}),
    strokeOrder,relativeStartMs,relativeEndMs,pointerType,
    role:sentIds.has(id)?"context":"focus",
    author:"user",grounding:"user-pointer"

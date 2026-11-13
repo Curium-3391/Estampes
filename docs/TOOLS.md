@@ -136,6 +136,9 @@ Assistant annotations and locked annotations show read-only fields. A changed
 note is a new claim and discards the previous evidence/review; it does not
 automatically become confirmed. Undo restores the original note and claim data.
 Saving text sends only the text fields, preserving current geometry and styling.
+Draft notes are retained when sending a new annotation, in both the stored mark
+and the submission event/chat message. Rejected text drags redraw the last
+accepted coordinates.
 
 Choose **文字**, tap a location, enter up to 80 characters (including newlines),
 choose size (6–64) and color, then save. Use **選取** to click or drag existing

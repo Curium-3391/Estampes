@@ -164,3 +164,55 @@ test("paired canvas edits right-side text without touching the left image",{skip
     assert.deepEqual(ui.errors,[]);
   }finally{await s.close();}
 });
+
+test("a freshly drawn annotation keeps its note through send, chat and reload",{skip:noBrowser,timeout:60000},async()=>{
+  const s=await startStack({cas:false});
+  try{
+    const data=(await sharp({create:{width:500,height:400,channels:3,background:"#ddd"}}).png().toBuffer()).toString("base64");
+    const imageId=(await s.call("upload_visual_image",{total:data.length,offset:0,data})).structuredContent.imageId;
+    const ui=await s.open({imageId});
+    await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
+    await ui.page.evaluate(()=>{window.sentMessages=[];addEventListener("message",e=>{if(e.data?.method==="ui/message")window.sentMessages.push(e.data.params);});});
+    await ui.frame.locator('[data-mode="point"]').click();await tap(ui,await point(ui,.7,.7),false);
+    await ui.frame.locator('[data-mode="select"]').click();await tap(ui,await point(ui,.7,.7),false);
+    const note="新畫的備註\n第二行🙂 <img>";
+    await ui.frame.getByRole("textbox",{name:"標籤",exact:true}).fill("新標籤");
+    await ui.frame.getByRole("textbox",{name:"標記備註",exact:true}).fill(note);
+    await ui.frame.getByRole("button",{name:"儲存標籤與備註",exact:true}).click();
+    await ui.frame.locator("#send").click();
+    await ui.frame.locator("#status").filter({hasText:"v0.2 上下文事件已提交"}).waitFor();
+    const state=(await s.call("get_visual_state",{imageId})).structuredContent;
+    const mark=state.marks.find(m=>m.label==="新標籤");assert.ok(mark);assert.equal(mark.finding?.note,note);
+    const message=await ui.page.evaluate(()=>window.sentMessages.at(-1).content[0].text);
+    assert.ok(message.includes(JSON.stringify(note)),"the structured event sent to the assistant includes the note");
+    await ui.reload();await ui.frame.locator("#unified-layers circle").waitFor();
+    await ui.frame.locator('[data-mode="select"]').click();await tap(ui,await point(ui,.7,.7),false);
+    assert.equal(await ui.frame.getByRole("textbox",{name:"標記備註",exact:true}).inputValue(),note);
+    assert.deepEqual(ui.errors,[]);
+  }finally{await s.close();}
+});
+
+test("rejected text drags redraw the last accepted position",{skip:noBrowser,timeout:60000},async()=>{
+  const s=await startStack({cas:false});
+  try{
+    const data=(await sharp({create:{width:800,height:600,channels:3,background:"#ddd"}}).png().toBuffer()).toString("base64");
+    const imageId=(await s.call("upload_visual_image",{total:data.length,offset:0,data})).structuredContent.imageId;
+    const read=(await s.call("edit_canvas_text",{imageId})).structuredContent;
+    const made=(await s.call("edit_canvas_text",{imageId,action:"create",expectedRevision:read.revision,props:{text:"拖曳失敗",x:.3,y:.4,size:28}})).structuredContent;
+    const ui=await s.open({imageId});
+    await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
+    const rendered=ui.frame.locator('#unified-layers g[data-object="'+made.selectedId+'"] text');
+    await rendered.waitFor();await ui.frame.locator('[data-mode="select"]').click();
+    await ui.page.evaluate(()=>{const original=window.hostCall;window.rejectTextCode="";window.hostCall=p=>p.name==="edit_canvas_text"&&p.arguments.action==="update"&&window.rejectTextCode?{isError:true,content:[{type:"text",text:window.rejectTextCode}],structuredContent:{code:window.rejectTextCode}}:original(p);});
+    for(const code of ["SAVE_FAILED","STALE_CANVAS"]){
+      await ui.page.evaluate(code=>{window.rejectTextCode=code;},code);
+      await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
+      await ui.page.mouse.move(from.x,from.y);await ui.page.mouse.down();await ui.frame.locator("#text-editor").waitFor();
+      await ui.page.mouse.move(from.x+40,from.y+30,{steps:4});await ui.page.mouse.up();
+      await ui.frame.locator("#status").filter({hasText:code}).waitFor();
+      const after=await rendered.boundingBox();assert.ok(Math.abs(after.x-before.x)<1&&Math.abs(after.y-before.y)<1,"failed drag restores the saved position: "+code);
+      const saved=(await s.call("get_visual_state",{imageId})).structuredContent.objects[0];assert.equal(saved.props.x,.3);assert.equal(saved.props.y,.4);
+    }
+    assert.deepEqual(ui.errors,[]);
+  }finally{await s.close();}
+});

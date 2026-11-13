@@ -28,7 +28,8 @@
     "src/image/view.js",
     "src/scene/objects.js",
     "src/scene/scene-ops.js",
-    "src/image/register.js"
+    "src/image/register.js",
+    "src/interaction-protocol.js"
   ],
   "files": [
     {
@@ -416,10 +417,11 @@
     {
       "date": "2026-11-13",
       "authorizedBy": "User explicitly requested full issue #82 including standalone text objects",
-      "reason": "Reuse existing shape/text records for multiline rendering and widget editing; keep other legacy source fingerprints intact",
+      "reason": "Reuse existing shape/text records for multiline rendering and widget editing; keep other legacy source fingerprints intact; preserve user annotation notes through submission events and chat under the same issue #82 authorization",
       "files": [
         "src/scene/objects.js",
-        "src/scene/scene-ops.js"
+        "src/scene/scene-ops.js",
+        "src/interaction-protocol.js"
       ]
     }
   ]
