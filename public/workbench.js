@@ -44,17 +44,20 @@ function setSurface(r){
 // Layout and panel changes are serialised, carry the revision they were
 // based on and a key, and retry once on top of a newer revision (a layout
 // move never overwrites someone else's notebook; those have their own revisions).
+// The retry runs inside the same queued job: queueing it behind the current
+// job would make the job wait for itself and stall every later change.
 function wbApply(ops,{retry=true}={}){
- const run=async()=>{
+ const attempt=async(again)=>{
   const key=uuid();
   try{
    const r=await wbCall("surface_apply",{...wbArgs(),expectedRevision:wb.surface.revision,idempotencyKey:key,ops});
    setSurface(r);return r;
   }catch(err){
-   if(retry&&/changed since revision/.test(String(err.message))){await wbLoad();return wbApply(ops,{retry:false});}
+   if(again&&/changed since revision/.test(String(err.message))){await wbLoad();return attempt(false);}
    status.textContent="沒有套用："+String(err.message||err);await wbLoad();
   }
  };
+ const run=()=>attempt(retry);
  wb.chain=wb.chain.then(run,run);return wb.chain;
 }
 const wbLayout=(layout,profile=wb.profile)=>wbApply([{op:"layout",profile,layout}]);
