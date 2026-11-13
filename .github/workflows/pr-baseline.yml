@@ -1,0 +1,40 @@
+name: PR baseline gate
+
+# Always run on PRs to main, including docs-only changes. This supplies a
+# stable future required check without path-filtered "Pending" results.
+# Do not mark it required until GitHub-hosted runners are available and the
+# workflow has passed on a real PR.
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-baseline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    name: baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Syntax check
+        run: node --check server.js
+      - name: Documentation consistency
+        run: npm run docs:check
+      - name: Node regression tests
+        run: npm test
