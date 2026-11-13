@@ -2,7 +2,7 @@ name: Docker image
 # Runs only when a v* tag is pushed (see docs/RELEASE.md): checks the release
 # metadata, smoke-tests the compose stack, then publishes the multi-arch image
 # ghcr.io/<owner>/estampes as X.Y.Z, latest (stable tags only) and sha-<short>.
-# Ordinary pushes and pull requests run the tests in m0.yml, not this workflow.
+# PRs run the baseline gate; full tests run here again before publishing.
 on:
   push:
     tags: ['v*']
@@ -18,9 +18,14 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/check-release.mjs "$GITHUB_REF_NAME"
+  full-checks:
+    needs: verify
+    uses: ./.github/workflows/m0.yml
+    permissions:
+      contents: read
   smoke:
     runs-on: ubuntu-latest
-    needs: verify
+    needs: [verify, full-checks]
     steps:
       - uses: actions/checkout@v4
       - name: Build and start with compose

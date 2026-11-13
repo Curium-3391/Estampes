@@ -1,8 +1,9 @@
 name: Docs checks
-# The main workflow ignores documentation-only changes. This one is deliberately
-# tiny (no npm install, no Docker): it runs the documentation checker only.
+# PR docs are checked by the always-present PR baseline gate. Run this only
+# on main so a feature branch doesn't pay for both push and PR checks.
 on:
   push:
+    branches: [main]
     paths:
       - '**/*.md'
       - 'docs/**'
@@ -10,20 +11,17 @@ on:
       - 'scripts/check-docs.mjs'
       - 'scripts/docs-allowlist.json'
       - '.github/workflows/docs.yml'
-  pull_request:
-    paths:
-      - '**/*.md'
-      - 'docs/**'
-      - 'examples/**'
-      - 'scripts/check-docs.mjs'
-      - 'scripts/docs-allowlist.json'
-      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   docs-check:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

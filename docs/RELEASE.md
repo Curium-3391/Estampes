@@ -8,11 +8,12 @@ Status of this page: the steps and the check script were run locally. A real tag
 
 | Event | Workflow | What runs |
 | --- | --- | --- |
-| Push or pull request that changes code | `m0.yml` | `node-tests`, `cas-tests` (skipped when only `*.md` or `docs/**` change) |
-| Pull request or push to a branch | `docker.yml` | Nothing. No Docker build, no image. |
-| Push of a tag `v*` | `docker.yml` | `verify` (release check) → `smoke` (compose stack) → `image` (multi-arch build and publish) |
+| Pull request to `main` | `pr-baseline.yml` | Always-present `baseline` gate: docs-only, quick visual regression, or full `m0.yml` for storage, server, security, dependency, CI or unknown paths |
+| Push to `main` touching docs | `docs.yml` | Lightweight documentation checks |
+| Sunday or manual dispatch | `m0.yml` | Full Node, legacy-store, Python CAS and browser test suites |
+| Push of a tag `v*` | `docker.yml` | `verify` → full `m0.yml` checks → Compose `smoke` → multi-arch `image` |
 
-Pushing a tag also runs `m0.yml`, because its `push` trigger has no tag filter. That is cheap compared with the image build.
+Feature-branch pushes no longer run the expensive suite separately from PRs. The tag workflow invokes full checks once and will not publish an image if they fail. The always-present `baseline` job is the correct required status check; conditional full jobs should not be required independently.
 
 ## Image tags
 
@@ -68,6 +69,7 @@ It prints the tags a push would publish. The same script runs as the first job o
 | Where it failed | What to do |
 | --- | --- |
 | `verify` | Nothing was built. Fix the cause on `main`, delete the remote tag (`git push origin :refs/tags/vX.Y.Z`; `git tag -d vX.Y.Z`) and tag the new merge commit. |
+| `full-checks` | No image was published. Investigate the failing tests; fix on `main` before a new release attempt. |
 | `smoke` | Same: no image was published. Read the job log (`docker compose logs` is printed at the end), fix on `main`, re-tag. |
 | `image` (build or push) | Re-run the failed job once in the Actions tab. If it fails again, treat it like `smoke`. |
 | Found after publishing | Never move a tag that already has an image. Fix on `main` and release the next patch version. |
