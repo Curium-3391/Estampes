@@ -38,7 +38,7 @@ export async function renderCanvas(entry, { region, maxSide = 1600, format = "pn
   }
   // Snapshot all drawing inputs before the first await: concurrent edits cannot
   // mix a new annotation state into an older revision's pixels.
-  const hidden = new Set(hiddenLayers), layers = canvasLayers(entry);
+  const layers = canvasLayers(entry), hidden = new Set([...hiddenLayers, ...layers.filter(l => l.visible === false).map(l => l.id)]);
   const objects = renderedObjects(entry).filter((r) => (scratch || r.object.visibility === "public") && !hidden.has(r.object.layer));
   const marks = canvasMarks(entry).filter((m) => !hidden.has(m.layer));
   const px = regionToPixels(region, entry.width, entry.height);

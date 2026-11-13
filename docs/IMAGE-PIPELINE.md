@@ -148,16 +148,43 @@ A rectangle read off a rotated or warped view is not a rectangle on the image an
 
 ## Analysis engines
 
-`detect_features` runs an analysis engine on an image or region and returns structured detections. Engines are pure: they read pixels and return evidence, and never write to the canvas. GPT (or you) decides whether to turn a detection into a mark; every detection carries a ready `mark` for `present_visual`.
+`detect_features` runs an analysis engine on an image, a region of it or a processed view of it, and returns structured detections. Engines are pure: they read pixels and return evidence, and never write to the canvas. GPT (or you) decides whether to turn a detection into a mark; every detection carries a ready `mark` for `present_visual`.
 
 | Engine | Finds | Notes |
 | --- | --- | --- |
 | `components` | Connected dark or light regions as boxes | area, fill ratio, centroid; `polarity`, `method` (otsu, adaptive, fixed), `minArea` |
+| `regions` | Closed regions (grains, cells, particles, pads), touching blobs split by shape | outline polygon, area, perimeter, equivalent diameter, axes, eccentricity, circularity, `touchesBorder`, `splitFrom`; see [Regions](#regions) |
 | `blobs` | Point-like sources against the local background | intensity-weighted centroid, flux, peak, FWHM, SNR; for stars, solder joints, particles |
 | `lines` | Straight segments (Hough on Canny edges) | endpoints, length, angle; a thick stroke gives two edge lines |
 | `circles` | Rings, holes, dials | centre, radius, confidence from how much of the ring has edge pixels |
 | `ocr` | Words with boxes and confidence | optional: `npm i tesseract.js`; language data is downloaded on first use unless `ESTAMPES_OCR_LANG_PATH` points at a folder of `.traineddata` files (a network access the owner should know about) |
 
-Every result has the same envelope: `status` (`ok`, `failed` or `unavailable`) with `reasons`, `engine` and `engineVersion`, `imageId` and `sourceAssetId`, the `region` and analysis resolution it ran at, `detections` (normalized source coordinates) and `warnings`. A missing optional engine is a result with status `unavailable`, never an error, and the core starts without it. Detections are candidates: two lines are not a verified wire, recognised text is not a verified part number. Use `sampling: {mode: "native"}` for small features.
+Every result has the same envelope: `status` (`ok`, `failed` or `unavailable`) with `reasons`, `engine` and `engineVersion`, `imageId` and `sourceAssetId`, the `region` and analysis resolution it ran at, `detections` (normalized source coordinates), an optional `quality` summary and `warnings`. A missing optional engine is a result with status `unavailable`, never an error, and the core starts without it. Detections are candidates: two lines are not a verified wire, recognised text is not a verified part number. Use `sampling: {mode: "native"}` for small features.
 
-Engines register through `registerEngine({id, version, kind, description, available, run})` in `src/image/engines.js`; `run` receives the analysis pixels and a `toNormalized` function and must return detections only. The module system wraps engines as built-in capabilities.
+### Detecting on a processed view
+
+Without `derivedViewId` an engine always reads source pixels, whatever `process_image` did before. Pass `derivedViewId` (with the same `imageId`) and the engine reads that view's pixels instead: after its geometry and ops, before the delivery resize and codec, so a JPEG-delivered view is still analysed losslessly.
+
+- The pixels are rebuilt from the stored recipe and the recipe must still give the same id. A view of another image, an unknown id, a view without an invertible mapping, or a stale view (an operator changed since it was made) is an error, not a silent fallback to other pixels. `region` and `sampling` cannot be combined with `derivedViewId`; the view has its own.
+- Each detection has image coordinates as before (normalized, top-left origin) and `view` with the same geometry in pixels of the view, the frame `present_visual` accepts as `coordinateFrame: {derivedViewId}`. Both come from the view's `coordinateMapping`, so they agree exactly.
+- Under a quarter turn, flip or crop a box stays a box. Under any other rotation or a perspective warp its four corners are given as `polygon`, `x/y/x2/y2` are their bounding box, and the ready `mark` is a closed polyline.
+- Detections that fall in a view's fill (the corners of a rotated view, outside a mask) carry `outsideSource: true` and no `mark`.
+- The result adds `derivedViewId`, `view` (`ops`, `geometry`, `sampling`, operator `versions`, `pixelDimensions`, `mapping`, `axisAligned`, `validFraction`) and `coordinates`. `analysis.space` is `view`; pixel attributes (`areaPx`, `lengthPx`, `radiusPx`) are in the view's analysis pixels, and `sourcePixelsPerAnalysisPixel` is `null` for a perspective view, where one view pixel is not one fixed length on the image.
+
+### Regions
+
+`regions` turns a dark-or-light mask into separate closed regions. It thresholds like `components` (`polarity`, `method`, `value`), optionally fills holes (`fillHoles`), and then splits blobs that touch: a watershed of the distance transform, in which two parts stay separate only if the neck between them is narrower than the smaller part's inner radius by at least `minDepth` pixels (default 1.5) and by `minRelativeDepth` of that radius (default 0.12). `split: false` gives plain connected components with the same statistics.
+
+Per region: `areaPx`, `perimeterPx` (a Crofton estimate, within about 1% on smooth outlines and up to 6% low on long axis-aligned straight edges), `equivalentDiameterPx`, `majorPx`/`minorPx`/`eccentricity`/`orientationDeg` of the ellipse with the same second moments, `circularity`, `inscribedRadiusPx`, `touchesBorder`, and an outline as a closed polyline `mark` (`maxVertices`, default 16; `tolerance` in pixels; `contours: false` gives boxes). `quality` summarises every region found (count, median equivalent diameter, mean area, how many were split or touch the frame), also when `maxCount` (default 80) returns fewer.
+
+What the result does not claim:
+
+- A split is inferred from shape; no boundary was seen. Split regions carry `splitFrom` (the blob they came from), `splitParts` and `weakestSplit` (0–1, how much the neck narrows; values near `minRelativeDepth` are the doubtful ones). Every region is `verification: "unverified"`.
+- A region count is not a count of grains, cells or parts. Where the picture shows the boundaries rather than the bodies (etched grain boundaries, cell membranes), segment a cleaned binary view (`process_image` threshold and morphology, then `derivedViewId`) with the polarity of the bodies.
+- Regions touching the frame are probably cut off; their sizes are lower bounds (`excludeBorder: true` drops them).
+- Real units (`area`, `equivalentDiameter`, `perimeter`, `unit`) appear only when `calibrate_scale` set a scale for the space the engine ran in: the source image, or that derived view. A view never borrows the image's scale.
+- Outlines are outer contours; holes are not traced. Inputs above 6 million analysis pixels are refused.
+
+The functions behind it (`squaredDistanceTransform`, `splitByDistance`, `regionStats`, `traceContour`, `simplifyClosed`, `fillHoles`, `labelMask` in `src/image/segment.js`) are pure and deterministic and can be used by other engines.
+
+Engines register through `registerEngine({id, version, kind, description, available, run})` in `src/image/engines.js`; `run` receives the analysis pixels, a `toNormalized` function and, when one is set, the `scale` of its measurement space, and must return detections only. An engine written this way works on derived views without change: the runner maps its detections back to the image. The module system wraps engines as built-in capabilities.

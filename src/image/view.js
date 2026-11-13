@@ -128,13 +128,11 @@ async function encodeView(img, output) {
   return { data: await fromRaw(img).jpeg({ quality: output.quality ?? 88 }).toBuffer(), mimeType: "image/jpeg", lossy: true, quality: output.quality ?? 88 };
 }
 
-// Render a view. `geometryStage` (optional) is a function provided by the
-// geometry module that warps the analysis crop and returns extra transform
-// steps; it runs before pixel ops so ops see rectified pixels.
-export async function renderView(entry, rawSpec, { geometryStage = defaultGeometry } = {}) {
-  const spec = normalizeSpec(rawSpec);
+// Crop, geometry and pixel ops: the pixels a view is made of, before any
+// delivery resize or encoding. Shared by renderView and viewAnalysis.
+async function analysisStage(entry, spec, geometryStage) {
   const crop = await analysisCrop(entry, spec.region, spec.sampling, spec.output);
-  const { covered, box, boxSize } = crop;
+  const { box, boxSize } = crop;
   const warnings = [...crop.warnings];
   // normalized -> crop space pixels -> analysis pixels
   const steps = [
@@ -152,6 +150,35 @@ export async function renderView(entry, rawSpec, { geometryStage = defaultGeomet
     img = g.img; steps.push(...g.steps); warnings.push(...g.warnings); validity = g.validity;
   }
   for (const s of spec.ops) img = (await applyExtraOp(img, s)) ?? (await applyOp(img, s));
+  const recipe = {
+    region: crop.covered, sampling: spec.sampling, ops: spec.ops, ...(spec.geometry.length ? { geometry: spec.geometry } : {}), output: spec.output,
+  };
+  const derivedViewId = "dv:" + hash16({ api: VIEW_API, source: entry.sourceAssetId ?? entry.imageId, recipe, ops: spec.ops.map((s) => s.op + "@" + opVersion(s.op)) });
+  return { crop, steps, img, validity, warnings, recipe, derivedViewId };
+}
+
+// The pixels of a remembered view after its geometry and ops, before the
+// delivery resize and codec, rebuilt from its recipe. For analysis engines:
+// they read exactly what the recipe produces, losslessly. Refuses a view
+// whose recipe no longer gives the same id (an operator changed since).
+export async function viewAnalysis(entry, record, { geometryStage = defaultGeometry } = {}) {
+  if (record.imageId !== entry.imageId) throw new Error("Derived view " + record.derivedViewId + " belongs to " + record.imageId + ", not " + entry.imageId);
+  if (record.sourceAssetId && entry.sourceAssetId && record.sourceAssetId !== entry.sourceAssetId) throw new Error("Derived view " + record.derivedViewId + " was made from different source bytes than " + entry.imageId + " now has");
+  const a = await analysisStage(entry, normalizeSpec(record.recipe), geometryStage);
+  if (a.derivedViewId !== record.derivedViewId) {
+    throw new Error("Derived view " + record.derivedViewId + " is stale: its recipe now gives " + a.derivedViewId + " (an operator changed since it was made); call process_image again and use the new derivedViewId");
+  }
+  return { img: a.img, warnings: a.warnings, validity: a.validity };
+}
+
+// Render a view. `geometryStage` (optional) is a function provided by the
+// geometry module that warps the analysis crop and returns extra transform
+// steps; it runs before pixel ops so ops see rectified pixels.
+export async function renderView(entry, rawSpec, { geometryStage = defaultGeometry } = {}) {
+  const spec = normalizeSpec(rawSpec);
+  const { crop, steps, validity, warnings, recipe, derivedViewId, ...stage } = await analysisStage(entry, spec, geometryStage);
+  const { covered, box, boxSize } = crop;
+  let img = stage.img;
   const binary = spec.ops.some((s) => BINARIZING.has(s.op));
   // Delivery: shrink to fit; enlarge only when asked (interpolation adds no detail).
   const long = Math.max(img.width, img.height);
@@ -178,10 +205,6 @@ export async function renderView(entry, rawSpec, { geometryStage = defaultGeomet
   if (spec.ops.some((s) => s.op === "threshold")) warnings.push("thresholded: grey levels are discarded");
   if (spec.ops.some((s) => ENHANCING.has(s.op))) warnings.push("enhanced pixels can show artefacts (halos, amplified noise); check against the original");
   if (encoded.lossy) warnings.push("delivered as lossy JPEG (quality " + encoded.quality + ")");
-  const recipe = {
-    region: covered, sampling: spec.sampling, ops: spec.ops, ...(spec.geometry.length ? { geometry: spec.geometry } : {}), output: spec.output,
-  };
-  const derivedViewId = "dv:" + hash16({ api: VIEW_API, source: entry.sourceAssetId ?? entry.imageId, recipe, ops: spec.ops.map((s) => s.op + "@" + opVersion(s.op)) });
   const record = {
     apiVersion: VIEW_API,
     derivedViewId, imageId: entry.imageId, sourceAssetId: entry.sourceAssetId ?? null,

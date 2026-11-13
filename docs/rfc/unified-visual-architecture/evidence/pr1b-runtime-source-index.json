@@ -19,7 +19,7 @@
     },
     {
       "path": "src/documents/legacy-shadow.js",
-      "sha256": "f4b13f9fef6c30bf366c591d8e8c982e1be471f413b79f05102614d65e2b5870"
+      "sha256": "953493b67fc5b7b08ca4029a8ecda4645668cdc37ae975515a641216ed00e505"
     },
     {
       "path": "src/documents/provenance.js",
@@ -356,6 +356,18 @@
           "path": "src/persistence/worker.js",
           "from": "624f5c331e5eba8bfb04477a635052ad6870ad51fa2717ac9e9e3370628364af",
           "to": "2df556da17d4e3609b3a3a2f562071f0959e2a85d5c1b74dfbed9ff9f5fbdcc1"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "authorizedBy": "User request to implement issue #83 and fix CI before resolving PR #129 conflicts",
+      "reason": "Recognize and archive assistant layer appearance history so UVA canvas projection preserves undo/redo metadata without changing document or persistence-engine semantics",
+      "files": [
+        {
+          "path": "src/documents/legacy-shadow.js",
+          "from": "f4b13f9fef6c30bf366c591d8e8c982e1be471f413b79f05102614d65e2b5870",
+          "to": "953493b67fc5b7b08ca4029a8ecda4645668cdc37ae975515a641216ed00e505"
         }
       ]
     }

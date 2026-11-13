@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Keep a locally uploaded photo visible when the host replays the original
+  waiting-for-upload result through notifications or ChatGPT globals (#66).
+  Changed host output or metadata still updates the canvas. Browser tests
+  cover desktop/mobile replay, large portraits, repeated uploads and failures.
+
+- Added `get_visual_layers` and `edit_visual_layers` for assistant layer opacity,
+  visibility and ordering, with revision checks, lock protection and persistent
+  appearance undo/redo. The canvas visibility checkbox now updates shared state;
+  rendering and portable exports preserve it, including fully transparent layers.
+
 - Internal: the server's mark drawing (`markSvg`, verification crops and the
   canvas render) now draws from the shared RenderPlan (`src/visual/`) instead of
   its own copy of the ink rules. Output is unchanged byte for byte, checked
@@ -12,6 +22,27 @@
 - A `CONFLICT` refusal now includes the mark's current note, status and place
   and the etag to pass on a retry, so the assistant can decide without another
   read (#74).
+- `detect_features` on processed views (#115): pass `derivedViewId` and the
+  engine reads that view's pixels (after its geometry and ops, before the
+  delivery resize and codec) instead of the source. Before, detection always
+  read source pixels, whatever `process_image` had done. Detections carry image
+  coordinates and `view` pixel coordinates from the view's own mapping; under
+  rotation or perspective a box becomes a four-corner `polygon` and a
+  closed-polyline mark, and detections in a view's fill are flagged
+  `outsideSource`. A view of another image, an unknown or stale view, or
+  `region`/`sampling` together with a view is refused. Calls without
+  `derivedViewId` are unchanged.
+- New engine `regions` and segmentation primitives (part of #117,
+  `src/image/segment.js`): exact Euclidean distance transform, shape-based
+  splitting of touching blobs (a watershed of the distance transform with a
+  depth criterion), hole filling, per-region statistics (area, Crofton
+  perimeter, equivalent diameter, second-moment axes, eccentricity,
+  circularity, frame contact) and pixel-edge outlines simplified to closed
+  polylines. Split regions say which blob they came from and how weak the
+  split is; every region is unverified. Real units appear only with a
+  `calibrate_scale` for the space the engine ran in. Not included yet:
+  seeded watershed from user markers, mask boolean operations, the optical
+  density transform, and a persistent editable region set (#116).
 - Fix (#74): stale edits no longer overwrite silently. Every mark in
   `get_visual_state` / `get_workspace_state` carries an `etag`; pass it back as
   `ifMatch` on an `annotations` or `findings` entry of `present_visual`. If the
@@ -29,6 +60,7 @@
   (shown in the canvas, with the confirm button again) until the user confirms
   it again. The geometry seen at confirmation is stored with the link and
   travels in bundles.
+
 - The canvas's Undo / Redo buttons now also undo and redo edits you already
   sent (move, resize, restyle, relabel, delete of a mark), through
   `edit_visual_canvas` `history`. Each step restores the exact mark and is

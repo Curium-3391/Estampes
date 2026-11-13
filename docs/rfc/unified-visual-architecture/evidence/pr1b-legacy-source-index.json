@@ -19,7 +19,13 @@
     "src/storage.js",
     "src/workspace.js",
     "src/surface/store.js",
-    "src/cas/notebooks.js"
+    "src/cas/notebooks.js",
+    "src/marks-file.js",
+    "src/protocol.js",
+    "src/scene/canvas-render.js",
+    "src/scene/compose.js",
+    "src/image/engines.js",
+    "src/image/view.js"
   ],
   "files": [
     {
@@ -232,7 +238,7 @@
     },
     {
       "path": "src/scene/canvas-render.js",
-      "sha256": "03d57c66d50dbcc173a2e2e34d8d726e559a561cfd19f8f9bc61cb3449388a31"
+      "sha256": "b5d39c3d0719706b1c90e0895db586b5f3ff9efdb0a191a62e4b533fe8ab9602"
     },
     {
       "path": "src/scene/compose.js",

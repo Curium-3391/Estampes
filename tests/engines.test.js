@@ -13,7 +13,7 @@ const board = () => png(`<svg xmlns="http://www.w3.org/2000/svg" width="600" hei
 
 test("engine list reports availability and optional engines degrade to a result, not a crash", async () => {
   const engines = await listEngines();
-  assert.deepEqual(engines.filter((e) => e.builtin).map((e) => e.id).sort(), ["blobs", "circles", "components", "lines", "ocr"]);
+  assert.deepEqual(engines.filter((e) => e.builtin).map((e) => e.id).sort(), ["blobs", "circles", "components", "lines", "ocr", "regions"]);
   assert.equal(engines.find((e) => e.id === "components").ok, true);
   const entry = await registerImage(await board(), { source: "url" });
   const ocr = await runEngine(entry, "ocr", {});
@@ -101,7 +101,7 @@ test("MCP: detect_features lists engines, runs one and refuses a missing image",
     for (let i = 0; i < 100; i++) { try { if ((await fetch(base + "/")).ok) break; } catch {} await sleep(100); }
     await client.connect(new StreamableHTTPClientTransport(new URL(base + "/mcp")));
     const list = await client.callTool({ name: "detect_features", arguments: {} });
-    assert.deepEqual(list.structuredContent.engines.map((e) => e.id), ["components", "blobs", "lines", "circles", "ocr"]);
+    assert.deepEqual(list.structuredContent.engines.map((e) => e.id), ["components", "blobs", "lines", "circles", "regions", "ocr"]);
     const run = await client.callTool({ name: "detect_features", arguments: { imageId: id, engine: "components", params: { minArea: 100 } } });
     assert.equal(run.isError, undefined, run.content?.[0]?.text);
     assert.equal(run.structuredContent.status, "ok");

@@ -2,7 +2,7 @@
 // whom they were made. The user can rename, reorder, lock and fade it. This
 // module owns the record shape and the rules; canvas-state.js applies them
 // to a photo canvas (UVA Phase 2, PR-2A).
-export const LAYER_FIELDS = Object.freeze(["id", "author", "name", "module", "locked", "opacity"]);
+export const LAYER_FIELDS = Object.freeze(["id", "author", "name", "module", "locked", "opacity", "visible"]);
 export const LAYER_NAME_MAX = 40;
 export const AUTHOR_NAME = Object.freeze({ user: "你", assistant: "AI" });
 
@@ -39,6 +39,10 @@ export function applyLayerEdit(layer, edit, fail = (m) => new Error(m)) {
   if (edit.opacity !== undefined) {
     const o = layerOpacity(Number(edit.opacity));
     if (o >= 1) delete layer.opacity; else layer.opacity = o;
+  }
+  if (edit.visible !== undefined) {
+    if (edit.visible !== (layer.visible !== false)) edits.push({ kind: "visibility-layer", layer: layer.id, visible: edit.visible });
+    if (edit.visible) delete layer.visible; else layer.visible = false;
   }
   return edits;
 }
