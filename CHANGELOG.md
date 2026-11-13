@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Surface widget (UVA Phase 3, PR-3A-2): extra viewers can be mounted next to the page viewer in an open shadow root (`window.estampesSurface.mountViewer`), each with its own camera, tool, selection, pointers and keys (a key goes only to the viewer it was typed in). `dispose()` cancels gestures, clears timers and frames, drops late host answers and removes listeners and its DOM; a resize ends a stroke in progress. The layout code (`public/workbench.js`) and the calculator panels (`public/calculator.js`) are now separate sources, inlined in the same order as before. New browser tests mount two viewers (different images and the same image twice). Real-host behaviour is not verified by the fake host.
 - Surface widget (UVA Phase 3, PR-3A-1): the viewer is now a factory (`createViewer`) over one `HostBridge` that owns the host conversation (requests, handshake, `window.openai` globals); the viewer markup lives in a `<template>`, keyboard handling is routed to the focused viewer only. Behaviour is unchanged for the single viewer (all browser E2E pass untouched); this is the groundwork for several viewers in one widget.
 - `register_images` (#68): automatic registration now aligns oblique, defocused,
   unevenly lit views turned by any angle, where it gave up before. It keeps five
