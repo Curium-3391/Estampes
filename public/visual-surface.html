@@ -2172,7 +2172,7 @@ return {sync:wbSync};
 workbenchApi=setupWorkbench();
 }
 // Browser tests inject their probes at the marker below, inside the viewer's scope.
-// __ESTAMPES_VIEWER_END__
+// @viewer-scope-end
 return {scope,rootEl,dispose(){for(const off of disposers.splice(0))try{off()}catch{}}};
 }
 
