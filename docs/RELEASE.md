@@ -8,11 +8,11 @@ Status of this page: the steps and the check script were run locally. A real tag
 
 | Event | Workflow | What runs |
 | --- | --- | --- |
-| Push or pull request that changes code | `m0.yml` | `node-tests`, `cas-tests` (skipped when only `*.md` or `docs/**` change) |
-| Pull request or push to a branch | `docker.yml` | Nothing. No Docker build, no image. |
-| Push of a tag `v*` | `docker.yml` | `verify` (release check) → `smoke` (compose stack) → `image` (multi-arch build and publish) |
+| PR to `main` or merge queue | `pr-baseline.yml` | Stable `baseline` check with a docs, fast, or full tier |
+| Weekly on Monday at 03:23 UTC or manual dispatch | `m0.yml` | Full validation of the selected ref |
+| Push of a tag `v*` | `docker.yml` | `verify` → full validation and compose smoke test → multi-arch build and publish |
 
-Pushing a tag also runs `m0.yml`, because its `push` trigger has no tag filter. That is cheap compared with the image build.
+Branch pushes have no separate test workflow. A push to a branch with an open PR updates the PR check and cancels its previous run.
 
 ## Image tags
 
@@ -35,11 +35,11 @@ There is no image for `main` and no `X.Y` or `X` tag. `latest` moves only when a
 3. In `server.js`, add the previous version's URI tag (for 0.19.5 → 0.19.6, `v0195`) to `LEGACY_VISUAL_URIS` and `LEGACY_EVIDENCE_URIS`, so saved conversations keep resolving. The widget URI contains the version, which is how a release invalidates ChatGPT's cached copy.
 4. In `CHANGELOG.md`, rename `## Unreleased` content into a `## X.Y.Z — title` section at the top, and keep an empty `## Unreleased` above it if you like.
 5. Run the checks (below), open a pull request, merge it.
-6. Tag the merge commit on `main` and push the tag:
+6. Run **Full validation** from the Actions tab on `main` after merging. Confirm it passed for the exact commit you intend to tag. The tag workflow repeats full validation on that commit before it can publish.
+7. Tag that validated commit on `main` and push the tag:
 
    ```sh
-   git switch main && git pull
-   git tag vX.Y.Z
+   git tag vX.Y.Z <validated-commit-sha>
    git push origin vX.Y.Z
    ```
 
@@ -68,7 +68,7 @@ It prints the tags a push would publish. The same script runs as the first job o
 | Where it failed | What to do |
 | --- | --- |
 | `verify` | Nothing was built. Fix the cause on `main`, delete the remote tag (`git push origin :refs/tags/vX.Y.Z`; `git tag -d vX.Y.Z`) and tag the new merge commit. |
-| `smoke` | Same: no image was published. Read the job log (`docker compose logs` is printed at the end), fix on `main`, re-tag. |
+| Full validation or `smoke` | No image was published. Read the failed job log, fix on `main` and validate before re-tagging. |
 | `image` (build or push) | Re-run the failed job once in the Actions tab. If it fails again, treat it like `smoke`. |
 | Found after publishing | Never move a tag that already has an image. Fix on `main` and release the next patch version. |
 

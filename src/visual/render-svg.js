@@ -3,8 +3,8 @@
 // table, and the optional label text is XML-escaped. The legacy-profile
 // output of mark-render.js's markSvg is the reference this must equal.
 import { RENDER_PLAN_VERSION, USER_OPACITY } from "./render-plan.js";
+import { K } from "./ink.js";
 
-const K = 1000 / 640;
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const num = (v) => { if (!Number.isFinite(v)) throw new Error("Non-finite number in render plan"); return v; };
 const xml = (s) => String(s).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -53,7 +53,8 @@ export function itemSvg(item, map, toPx) {
 export function planSvg(plan, { width, height, toPx = width / 1000, objectsSvg = () => "", labels = {} } = {}) {
   if (plan.version !== RENDER_PLAN_VERSION) throw new Error("Unsupported render plan version " + plan.version);
   const map = (x, y) => [x * width, y * height];
-  const body = (item) => itemSvg(item, map, toPx) + (labels[item.id] ? `<text x="${num(item.at.x) * width + 6}" y="${num(item.at.y) * height - 8}" font-size="${15 * width / 640}" fill="#17212A">${xml(labels[item.id])}</text>` : "");
+  const own = (item) => Object.hasOwn(labels, item.id) && labels[item.id] ? labels[item.id] : null;
+  const body = (item) => itemSvg(item, map, toPx) + (own(item) ? `<text x="${num(item.at.x) * width + 6}" y="${num(item.at.y) * height - 8}" font-size="${15 * width / 640}" fill="#17212A">${xml(own(item))}</text>` : "");
   return plan.layers.map((l) => `<g opacity="${l.opacity}">${objectsSvg(l.layer)}` + l.assistant.map(body).join("") +
     `<g opacity="${plan.userOpacity ?? USER_OPACITY}">${l.user.map(body).join("")}</g></g>`).join("");
 }
