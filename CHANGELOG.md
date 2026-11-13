@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Image, bundle, PDF and OAuth client-metadata downloads now check the address
+  the connection actually uses, on every redirect hop, with the same address
+  policy as module egress (architecture review A07). Before, a hostname was
+  resolved and checked, and `fetch()` then resolved it again for the
+  connection, so DNS rebinding could reach a private address. The early check
+  now also refuses the extra reserved ranges egress already refused
+  (documentation, NAT64, 6to4, Teredo).
+
 - Backup and restore cover both data roots (architecture review A01). With the
   default UVA store, images, canvases, workspaces, surfaces and notebooks live
   in the store (`/uva-beta`), not in `/data`, and pending records are deleted

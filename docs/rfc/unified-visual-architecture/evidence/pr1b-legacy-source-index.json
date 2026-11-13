@@ -126,7 +126,7 @@
     },
     {
       "path": "src/image-store.js",
-      "sha256": "772a058383f7516569749a8d67b97be7ea36dc39a2313f6f77e21c4075cd5cfa"
+      "sha256": "3a853c2b4b171a8124ad0c4577d3704451444262e0d2e124119238fdf534c69d"
     },
     {
       "path": "src/interaction-protocol.js",
