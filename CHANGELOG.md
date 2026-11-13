@@ -54,6 +54,39 @@
   A change is published only after its file is written; queued writes each
   report their own outcome.
 
+- Canvas text entry (#82): select a user annotation to edit/clear its label and
+  multiline note, or choose Text to place an editable standalone vector object.
+  Text supports dragging, size/color, locked layers, revision checks and its own
+  persistent undo/redo, including rotated workspace copies. Changed notes drop
+  old evidence/review; source geometry and creator provenance are preserved.
+
+- Surface widget (UVA Phase 3, PR-3A-1): the viewer is now a factory (`createViewer`) over one `HostBridge` that owns the host conversation (requests, handshake, `window.openai` globals); the viewer markup lives in a `<template>`, keyboard handling is routed to the focused viewer only. Behaviour is unchanged for the single viewer (all browser E2E pass untouched); this is the groundwork for several viewers in one widget.
+- `register_images` (#68): automatic registration now aligns oblique, defocused,
+  unevenly lit views turned by any angle, where it gave up before. It keeps five
+  feature scales, votes on the common rotation, and then matches again near the
+  rough transform (guided matching), so repeated structure such as rows of pins
+  no longer drops out at the ratio test. On a synthetic board with known
+  transforms (rotation 10-290 degrees, scale 0.7-1.25, strong perspective,
+  gamma, vignetting, blur, noise, JPEG, glare) the old matcher aligned 11 of 21
+  to within 6 px and reported the other 10 as failed or, for two, as ok at
+  6-6.5 px; the new one aligned 21, 19 and 20 of 21 on three random boards, every
+  accepted one within 6.5 px, and accepted none of 40 unrelated boards. One
+  strongly tilted, shrunk case still fails (it reports failed, not a wrong fit).
+  Acceptance now compares the supporters with what shifted copies of the
+  transform reach by chance (`quality.chanceInliers`), and a fit that mirrors the
+  image is refused with a hint. The inlier ratio is now the share of A's features
+  inside B that found a partner, not inliers over putative matches, so it is
+  lower than before for good fits (0.1-0.35 on hard pairs, `minInlierRatio` is
+  optional and no longer defaults to 0.25).
+- `register_images` result: `quality.heldOut` (error at points the fit did not use:
+  leave-one-out for landmarks, split-half for auto) and `alignmentConfidence`
+  (`high`/`medium`/`low`/`unverified`/`none`) with `confidenceReasons`, separate
+  from `status`. Four landmarks always fit a homography exactly and now rate
+  `unverified`; landmarks in one corner, a landmark that does not fit, or a
+  held-out error above the threshold lower it. `REGISTER_VERSION` is "2", so
+  registration ids change. Only a synthetic board was tested; the PCB photographs
+  of #68 are not in the repository.
+
 - Keep a locally uploaded photo visible when the host replays the original
   waiting-for-upload result through notifications or ChatGPT globals (#66).
   Changed host output or metadata still updates the canvas. Browser tests
@@ -63,6 +96,11 @@
   visibility and ordering, with revision checks, lock protection and persistent
   appearance undo/redo. The canvas visibility checkbox now updates shared state;
   rendering and portable exports preserve it, including fully transparent layers.
+
+- Internal: the server's mark drawing (`markSvg`, verification crops and the
+  canvas render) now draws from the shared RenderPlan (`src/visual/`) instead of
+  its own copy of the ink rules. Output is unchanged byte for byte, checked
+  against a fixture captured before the switch (`tests/visual-render-golden.test.js`).
 - `present_visual` takes `dryRun: true` (one image's canvas): it runs every
   check of a real call (locked layers, stale `ifMatch`, invalid marks) and
   reports the refusal, or what would change, without saving anything (#72).

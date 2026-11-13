@@ -70,6 +70,7 @@ import { fitResult } from "./src/result-budget.js";
 import { createHash, randomBytes } from "node:crypto";
 import { createOAuth, readBody } from "./src/oauth.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
+import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
 import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
 import { composeCanvas } from "./src/scene/compose.js";
@@ -152,7 +153,7 @@ const VisualAnnotationSchema = z.object({
   smooth: z.boolean().optional(),
   closed: z.boolean().optional(),
   label: z.string().max(64).optional(),
-  note: z.string().max(200).optional().describe("Assistant's finding about this mark, shown beside it (e.g. the text, name or value you read there)"),
+  note: z.string().max(200).optional().describe("Note attached to this mark, shown beside it (e.g. the text, name or value you read there)"),
   status: z.enum(MARK_STATUSES).optional().describe("inspected = you looked at the pixels (process_image); uncertain = not confirmed"),
   role: z.enum(["focus", "context"]).optional(),
   color: z.enum(MARK_COLORS).optional(),
@@ -421,6 +422,7 @@ const EDIT_TEXT = {
   "reorder-layers": (e) => "reordered layers (bottom to top) " + e.order.join(", "),
   "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
+  "edit-note": (e) => "edited the note on their mark " + e.id,
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
   "redo-edit": (e) => "redid their change to mark " + e.id + " (" + e.steps.join("+") + ")",
@@ -1831,7 +1833,7 @@ function makeServer() {
     id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
     points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
-    label: z.string().max(64).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
+    label: z.string().max(64).optional(), note: z.string().max(200).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
   }).strict();
   const LayerIds = z.array(z.string().regex(/^L\d{1,6}$/)).max(200);
   registerAppTool(
@@ -2336,7 +2338,7 @@ function makeServer() {
     {
       title: "Align one image to another",
       description:
-        "Estimate how image B maps onto image A (a transform in normalized coordinates, both directions) and report how good it is. `method: auto` matches corner features (needs texture shared by both photos: the same board, page or scene); `method: landmarks` fits a transform from 2-4+ point pairs you or the user identified (`landmarks: [{a:{x,y}, b:{x,y}}]`, normalized to each image); use it when auto fails or the two images are different kinds (a schematic and a photo are NOT alignable by pixels). `mirror: true` aligns a flipped copy of B (front vs back of a board). Result: status ok/failed with reasons, inliers, inlier ratio, median and P95 error in pixels, conditioning, coverage and residuals per area of A; the returned `registrationId` feeds compare_images. A homography is exact only for flat subjects. Optional `mapPoints` maps points of A onto B (or B onto A with `direction: 'b-to-a'`). The alignment is a measurement aid; it creates no marks and does not say what anything is.",
+        "Estimate how image B maps onto image A (a transform in normalized coordinates, both directions) and report how good it is. `method: auto` matches corner features (needs texture shared by both photos: the same board, page or scene); `method: landmarks` fits a transform from 2-4+ point pairs you or the user identified (`landmarks: [{a:{x,y}, b:{x,y}}]`, normalized to each image); use it when auto fails or the two images are different kinds (a schematic and a photo are NOT alignable by pixels). `mirror: true` aligns a flipped copy of B (front vs back of a board). Result: status ok/failed with reasons, inliers, inlier ratio, median and P95 error in pixels, error at held-out points, conditioning, coverage and residuals per area of A; the returned `registrationId` feeds compare_images. `status: ok` means a transform was fitted and passed its checks; `alignmentConfidence` (high, medium, low, unverified) with `confidenceReasons` says how far to trust it across the whole image: four landmarks always fit a homography exactly (unverified), and points clustered in one area leave the rest extrapolated. A homography is exact only for flat subjects. Optional `mapPoints` maps points of A onto B (or B onto A with `direction: 'b-to-a'`). The alignment is a measurement aid; it creates no marks and does not say what anything is.",
       inputSchema: z.object({
         imageId: ImageIdSchema.describe("Image A (the reference)"),
         otherImageId: ImageIdSchema.describe("Image B (the one to align onto A)"),
@@ -2361,6 +2363,8 @@ function makeServer() {
           : undefined;
         const content = [{ type: "text", text: "Registration " + reg.registrationId + " " + reg.status.toUpperCase() + " (" + model + (mirror ? ", mirrored" : "") + "): " +
           (reg.quality ? reg.quality.inliers + "/" + reg.quality.correspondences + " inliers, median " + reg.quality.medianErrorPx + " px, P95 " + reg.quality.p95ErrorPx + " px, coverage " + Math.round(reg.quality.coverage * 100) + "%. " : "") +
+          (reg.quality?.heldOut ? "Held-out points (" + reg.quality.heldOut.scheme + "): median " + reg.quality.heldOut.medianErrorPx + " px, P95 " + reg.quality.heldOut.p95ErrorPx + " px. " : "") +
+          (reg.status === "ok" ? "Alignment confidence: " + reg.alignmentConfidence + (reg.confidenceReasons?.length ? " (" + reg.confidenceReasons.join("; ") + ")" : "") + ". OK means a transform was fitted and passed its checks, not that the whole image is verified. " : "") +
           (reg.reasons?.length ? "Why not: " + reg.reasons.join("; ") + ". " : "") + (reg.notes.length ? "Note: " + reg.notes.join("; ") + ". " : "") +
           "Details in structuredContent; use compare_images to look at the alignment." }];
         if (includeMatches && reg.status === "ok" && method === "auto") content.push(imageBlock(await compareView(a, b, reg, { mode: "matches" })));
@@ -2627,6 +2631,7 @@ function makeServer() {
 
   // ---- Modules and the Store (src/modules) --------------------------------
   registerLayerTools(server, { ensureSet, saveCanvas });
+  registerTextTools(server, { ensureSet, saveCanvas });
   registerModuleTools(server, {
     host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
     ensureImage, saveCanvas, canvasLayers,

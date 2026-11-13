@@ -1,0 +1,43 @@
+name: Run Estampes tests
+description: Run the fast or full regression suite with PDF, CAS and browser dependencies
+inputs:
+  tier:
+    description: Test tier (fast or full)
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: pip
+        cache-dependency-path: cas-service/requirements.lock
+    - name: Install calculator dependencies
+      shell: bash
+      run: python -m pip install -r cas-service/requirements.lock
+    - name: Install Node dependencies and optional test support
+      shell: bash
+      run: |
+        npm ci --no-audit --no-fund
+        npm install --no-save --no-audit --no-fund pdfjs-dist@4.10.38 @napi-rs/canvas playwright-core
+    - name: Python CAS tests
+      shell: bash
+      run: python -m unittest discover -s cas-service/tests -v
+    - name: Node regression tests
+      shell: bash
+      env:
+        TEST_TIER: ${{ inputs.tier }}
+        PYTHON: python
+        CHROME_BIN: /usr/bin/google-chrome
+        CHROMIUM_BIN: /usr/bin/google-chrome
+        ESTAMPES_E2E_SHOTS: ${{ runner.temp }}/workbench-shots
+      run: |
+        test -x "$CHROME_BIN"
+        node scripts/run-ci-tests.mjs "$TEST_TIER"
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: workbench-screenshots
+        path: ${{ runner.temp }}/workbench-shots
+        if-no-files-found: ignore
+        retention-days: 3

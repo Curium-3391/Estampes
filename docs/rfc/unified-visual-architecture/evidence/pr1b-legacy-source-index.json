@@ -25,7 +25,11 @@
     "src/scene/canvas-render.js",
     "src/scene/compose.js",
     "src/image/engines.js",
-    "src/image/view.js"
+    "src/image/view.js",
+    "src/scene/objects.js",
+    "src/scene/scene-ops.js",
+    "src/image/register.js",
+    "src/interaction-protocol.js"
   ],
   "files": [
     {
@@ -134,7 +138,7 @@
     },
     {
       "path": "src/mark-render.js",
-      "sha256": "3b49db4fd58e849f01fd1cd9f2088218e9115a37287533149aa134fc33273ef8"
+      "sha256": "267e9666dc3db8d7948b66d50cd2b5d6e2f81d0d63649848b7ba99c2d34fb902"
     },
     {
       "path": "src/marks-file.js",
@@ -238,7 +242,7 @@
     },
     {
       "path": "src/scene/canvas-render.js",
-      "sha256": "54aac87462fc16484711150d54800c151a22d7bb28527e4572a8d3ce57b7513b"
+      "sha256": "b5d39c3d0719706b1c90e0895db586b5f3ff9efdb0a191a62e4b533fe8ab9602"
     },
     {
       "path": "src/scene/compose.js",
@@ -270,7 +274,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "f6163a0c4d534063a7a86ce25738bdbae4b80f73a206989b16bae9b6b5649701"
+      "sha256": "1e17b2ad58b6eeae4959797bb3263f1530d5ae0dd55df05b2de7095d6a1c2827"
     },
     {
       "path": "src/surface/bundle-extras.js",
@@ -407,6 +411,18 @@
     {
       "path": "compose.yaml",
       "sha256": "bc6fb29a441576b4b8cb52966872c3c42cc319641a49e7343dcd8bbb40eea714"
+    }
+  ],
+  "amendments": [
+    {
+      "date": "2026-11-13",
+      "authorizedBy": "User explicitly requested full issue #82 including standalone text objects",
+      "reason": "Reuse existing shape/text records for multiline rendering and widget editing; keep other legacy source fingerprints intact; preserve user annotation notes through submission events and chat under the same issue #82 authorization",
+      "files": [
+        "src/scene/objects.js",
+        "src/scene/scene-ops.js",
+        "src/interaction-protocol.js"
+      ]
     }
   ]
 }

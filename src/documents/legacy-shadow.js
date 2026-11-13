@@ -20,7 +20,7 @@ export const LegacyShadowContextSchema = bounded(z.object({ documentId: Document
     issue(refinement, "INTEGRITY_ERROR", "Identity mapping belongs to another source namespace");
   }
 }));
-const rootFields = new Set(["version","imageId","width","height","marks","layers","links","savedAt","setId","derivedFrom","baseAsObject","userEdits","rejections","gestureDecisions","objects","sceneRevision","objectSeq","deletedObjectBatches","layerHistory"]);
+const rootFields = new Set(["version","imageId","width","height","marks","layers","links","savedAt","setId","derivedFrom","baseAsObject","userEdits","rejections","gestureDecisions","objects","sceneRevision","objectSeq","deletedObjectBatches","layerHistory","textHistory"]);
 const markFields = new Set(["id","author","grounding","type","x","y","x2","y2","points","smooth","closed","layer","label","color","size","pen","note","status","confidence","evidence","ambiguities","review","reviewReason","previouslyRejected","findingUpdatedAt","strokeOrder","relativeStartMs","relativeEndMs","pointerType","role","edited","object","derivedFrom"]);
 const objectFields = new Set(["id","type","props","layer","visibility","label","provenance","evidence","revision"]);
 const layerFields = new Set(["id","author","name","module","opacity","visible","locked"]);
@@ -204,7 +204,7 @@ export function mapLegacyCanvas(input, contextInput) {
       }
       gestureDecisions.push({ id, memberRefs: g.memberIds.map(id => ({ documentId: ctx.documentId, sceneId: ctx.sceneId, kind: "annotation", id })), verdict: g.verdict, original: cloneJson(g) });
     }
-    for (const key of ["layerHistory","userEdits","deletedObjectBatches","derivedFrom","sceneRevision","objectSeq"]) if (source[key] !== undefined) archive([key]);
+    for (const key of ["textHistory","layerHistory","userEdits","deletedObjectBatches","derivedFrom","sceneRevision","objectSeq"]) if (source[key] !== undefined) archive([key]);
     const document = { schema: "estampes.document/1", id: ctx.documentId, kind: "image", title: ctx.title, revision: 1, state: "active", persistence: "memory",
       createdAt: ctx.projectedAt, updatedAt: ctx.projectedAt, defaultSceneId: ctx.sceneId, annotationSupport: "shared-v1",
       provenance: { createdBy: ctx.sourceTrust === "imported-unverified" ? "import" : "migration", legacySetKey: setKey }, bindings,

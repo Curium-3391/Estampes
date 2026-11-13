@@ -56,7 +56,7 @@ It does not run your commands (a few walk-throughs have their own verification: 
 
 Two places run `npm run docs:check`, so drift is caught from either side:
 
-- `.github/workflows/docs.yml` runs it on pushes and pull requests that touch Markdown, `docs/`, `examples/` or the checker. The main workflow ignores documentation-only changes, so a docs-only pull request neither builds Docker nor starts the CAS container; this light job (no install step, well under a minute) is the only check it triggers.
-- The `node-tests` job in `.github/workflows/m0.yml` runs it as one more step, so a code change that adds a tool or a setting without documenting it fails there.
+- The `baseline` job in `.github/workflows/pr-baseline.yml` runs it on every PR to `main` and on merge-queue entries. For docs-only PRs it needs no dependency install.
+- Weekly, manual and release validation also run the checker through `.github/workflows/m0.yml`.
 
 If Actions minutes ever become a problem, delete the docs workflow and keep running the command locally; the `node-tests` step costs a second.
