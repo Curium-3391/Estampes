@@ -57,7 +57,7 @@ const serial = (job) => { const next = chain.then(job, job); chain = next.catch(
 function makeFork(base, setId, data) {
   const fork = Object.create(base);
   Object.assign(fork, {
-    baseAsObject:false, layerHistory:{past:[],future:[]}, deletedObjectBatches:[], setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
+    baseAsObject:false, markHistory:{past:[],future:[]}, textHistory:{past:[],future:[]}, layerHistory:{past:[],future:[]}, deletedObjectBatches:[], setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
     pairLinks: new Map(), gestureDecisions: [], objects: undefined, lastViews: undefined, lastCheck: undefined, derivedFrom: undefined,
   });
   if (data) restoreCanvas(fork, data);

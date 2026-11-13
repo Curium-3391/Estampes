@@ -15,6 +15,8 @@ button.primary{background:#356BD6;color:white;border-color:transparent}
 button:disabled{opacity:.45;cursor:not-allowed}
 .view-tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px}
 #focus-choice{font:inherit;font-size:.84rem;border:1px solid #8887;color:CanvasText;background:Canvas;border-radius:8px;padding:7px}
+#text-editor[hidden]{display:none}
+#text-editor{border:1px solid #8aa4c8;border-radius:8px;padding:10px;margin:8px 0}#text-editor textarea{display:block;width:95%;white-space:pre-wrap}#text-editor input[type=number]{width:5em}#selection label{display:flex;flex-direction:column;flex:1 1 12em}#selection textarea{white-space:pre-wrap}
 #edit-tools[hidden],#focus-choice[hidden],#zoom-tools[hidden]{display:none}
 #zoom-level{min-width:3.5em;text-align:center;font-variant-numeric:tabular-nums}#zoom-tools .hint{font-size:.78rem;color:GrayText}
 body.fullscreen #surface{max-height:calc(100vh - 280px)}
@@ -175,6 +177,7 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 <div class="toolbar" id="edit-tools" role="group" aria-label="標註工具">
 <button data-mode="select" aria-pressed="false" title="點一個標記選取它；拖曳移動你自己的標記，Delete 刪除，方向鍵微調">選取</button>
 <button data-mode="point" aria-pressed="true">點選</button>
+<button data-mode="text" aria-pressed="false">文字</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
 <button data-mode="arrow" aria-pressed="false">箭頭</button>
 <button data-mode="polyline" aria-pressed="false" title="按住拖曳自由畫；滑鼠、繪圖板、Apple Pencil、S Pen 都可以">手繪</button>
@@ -212,6 +215,15 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 </svg>
 <figure id="check-view" hidden><img id="check-img" alt="AI 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
 <p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
+<section id="text-editor" hidden aria-label="文字物件編輯器">
+<strong id="text-subject">文字</strong>
+<label>文字（最多 80 字元）<textarea id="text-content" maxlength="80" rows="3" aria-label="文字內容"></textarea></label>
+<label>字級<input id="text-size" type="number" min="6" max="64" value="20" aria-label="文字字級"></label>
+<label>顏色<input id="text-color" type="color" value="#579df6" aria-label="文字顏色"></label>
+<button id="text-save">儲存文字</button><button id="text-delete">刪除文字</button>
+<button id="text-undo">復原文字</button><button id="text-redo">重做文字</button><button id="text-refresh">重新讀取</button><button id="text-close">關閉</button>
+<p>點選或拖曳文字可編輯及移動；換行會保留。Ctrl／⌘ + Enter 儲存。</p>
+</section>
 <div id="selection" hidden role="group" aria-label="選取的標記"></div>
 <div id="layers" hidden role="group" aria-label="圖層：顯示、改名、排序、透明度、鎖定"></div>
 <div id="objects" hidden role="group" aria-label="模組建立的物件：可直接修改"></div>
@@ -496,6 +508,7 @@ let layerRows=new Map(),layersExpanded=false;
 function renderLayers(){
  const counts=new Map();
  for(const m of [...assistantMarks,...priorUserMarks,...userMarks,...objects,...(ws?.items??[]).flatMap(it=>(it.objects??[]).map(o=>({...o,layer:layerPrefix(it.id)+o.layer})))])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
+ for(const o of pair?.objects??[])if(o.layer)counts.set("R"+o.layer,(counts.get("R"+o.layer)??0)+1);
  const list=layers.filter(l=>counts.has(l.id));
  layerRows=new Map();
  layersEl.hidden=!imageId||!list.length;
@@ -1066,7 +1079,7 @@ const cleanObjects=list=>(Array.isArray(list)?list:[]).filter(o=>o&&/^o\d{1,6}$/
      rows:o.card.rows.slice(0,24).filter(r=>r&&typeof r==="object").map(r=>({label:String(r.label??"").slice(0,40),value:String(r.value??"").slice(0,240),
        href:/^https:\/\//.test(String(r.href??""))?String(r.href).slice(0,300):""}))}:null,
    primitives:o.primitives.slice(0,4000)}));
-function setObjects(list){objects=pair?[]:cleanObjects(list);fullLayers(objects,imageId,null);}
+function setObjects(list){objects=cleanObjects(list);fullLayers(objects,imageId,null);}
 // Image layers arrive as small previews (full:false, ref) so a result stays
 // under the host cap; the full PNG follows from load_visual_pixels {object}.
 const layerPixels=new Map(),layerLoading=new Set();
@@ -1091,11 +1104,11 @@ function fullLayers(list,id,setId){
 function renderObjects(){
  objectsEl.replaceChildren();
  if(!imageId)return;
- const draw=(list,W,H,parent,prefix="",transform="")=>{
+ const draw=(list,W,H,parent,prefix="",transform="",side="left")=>{
  const X=x=>x*W,Y=y=>y*H,u=W/1000;
  for(const o of list){
    if(o.layer&&(hiddenLayers.has(prefix+o.layer)||layerOf(prefix+o.layer)?.visible===false))continue;
-   const g=node("g",{"data-layer":prefix+(o.layer??""),"data-object":o.id,transform,opacity:layerOf(prefix+o.layer)?.opacity??1},parent);
+   const g=node("g",{"data-layer":prefix+(o.layer??""),"data-object":o.id,"data-side":side,transform,opacity:layerOf(prefix+o.layer)?.opacity??1},parent);
    for(const p of o.primitives){
      if(p?.k==="image"&&/^data:image\/(png;base64,iVBORw0KGgo|webp;base64,UklGR)[A-Za-z0-9+/=]+$/.test(p.href)){
        node("image",{href:p.href,x:X(p.x),y:Y(p.y),width:X(p.x2-p.x),height:Y(p.y2-p.y),preserveAspectRatio:"none"},g);
@@ -1115,9 +1128,9 @@ function renderObjects(){
    }
  }
  };
- if(ws){for(const it of ws.items){const f=frames[it.id];if(!f)continue;
+ if(ws||pair){for(const it of ws?ws.items:[{id:"left",objects:objects.filter(o=>o.type==="shape"&&o.editable?.kind==="text")},{id:"right",objects:pair.objects??[]}]){const f=frames[it.id];if(!f)continue;
  const turn=f.rot===90?"translate("+(f.x0+f.h)+" "+f.y0+") rotate(90)":f.rot===180?"translate("+(f.x0+f.w)+" "+(f.y0+f.h)+") rotate(180)":f.rot===270?"translate("+f.x0+" "+(f.y0+f.w)+") rotate(270)":"translate("+f.x0+" "+f.y0+")";
- draw(it.objects??[],f.w,f.h,objectsEl,layerPrefix(it.id),turn);}}
+ draw(it.objects??[],f.w,f.h,objectsEl,layerPrefix(it.id),turn,it.id);}}
  else draw(objects,VW,VH,objectsEl);
 }
 function restackLayers(){
@@ -1187,7 +1200,7 @@ function renderCards(){
  }
 }
 function renderObjectsPanel(){
- const editable=objects.filter(o=>o.editable);
+ const editable=objects.filter(o=>o.editable&&o.type!=="shape");
  objectsPanel.hidden=!imageId||!!pair||!!ws;objectsPanel.replaceChildren();
  if(objectsPanel.hidden)return;
  objectsPanel.append(el("div",{className:"kind",textContent:"模組物件（可直接修改，AI 下一輪會看到）"}));
@@ -1256,6 +1269,7 @@ async function editObject(id,args){
  finally{editingObject=null;render();}
 }
 function render(){
+ document.querySelector('[data-mode="text"]').disabled=!ready||!imageId;
  wbSync();
  hit.setAttribute("width",VW);hit.setAttribute("height",VH);
  if(imageId&&frames){
@@ -1294,7 +1308,7 @@ function render(){
  undoBtn.disabled=!past.length&&!canServerStep("undo");redoBtn.disabled=!future.length&&!canServerStep("redo");
  exportImageBtn.hidden=!!frames||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!frames||!(imageId&&exportLinks?.marks);
  renderLayers();renderObjectsPanel();renderLinks();renderFindings();renderGestures();renderEvidenceBox();
- refreshFocus();renderView();
+ refreshFocus();renderView();if(textSession)textButtons();
 }
 tabNav.addEventListener("click",e=>{const tab=e.target.closest("[data-view]");if(tab&&!tab.disabled){viewMode=tab.dataset.view;render()}});
 function renderViewTabs(){
@@ -1310,7 +1324,7 @@ focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;ren
 // new data may reset the view and the user's unsent marks.
 let appliedKey=null;
 const cleanItems=list=>(Array.isArray(list)?list:[]).filter(it=>it&&/^wi-\d{1,4}$/.test(it.id)&&IMAGE_ID.test(it.imageId)).slice(0,24)
- .map(it=>({id:it.id,imageId:it.imageId,width:Number(it.width),height:Number(it.height),placement:it.placement??{},label:String(it.label??"").slice(0,40)}));
+ .map(it=>({id:it.id,imageId:it.imageId,width:Number(it.width),height:Number(it.height),placement:it.placement??{},label:String(it.label??"").slice(0,40),set:typeof it.set==="string"&&it.set.split("#")[0]===it.imageId?it.set:it.copy?null:it.imageId}));
 function applyInput(args){
  if(!args)return;
  // A workspace call's input has no layout yet; wait for its result.
@@ -1344,6 +1358,7 @@ function applyInput(args){
  }else if(Object.hasOwn(SCENES,args.scene)){
    selectedScene=args.scene;imageId=null;photo=null;views=[];renderViewTabs();VW=640;VH=360;
  }else return;
+ if(textSession&&textSession.context!==textContext()){textOpening++;textSession=null;textEditor.hidden=true;}
  const incoming=fromServerList(args.annotations);
  assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,ws?200:60);
  priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,ws?200:60);
@@ -1421,7 +1436,7 @@ function applyResult(result){
  if(Array.isArray(meta["estampes/objects"]))setObjects(meta["estampes/objects"]);
  if(typeof meta["estampes/baseAsObject"]==="boolean")baseAsObject=meta["estampes/baseAsObject"];
  if(typeof meta["estampes/canRestoreObjects"]==="boolean")canRestoreObjects=meta["estampes/canRestoreObjects"];
- if(pair){links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;upgradePair(meta["estampes/pairImage"]);}
+ if(pair){refreshPairText();links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;upgradePair(meta["estampes/pairImage"]);}
  if(ws){
    for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=dataUrl(px)??it.photo;it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;upgradeItem(it,px);}}
    links=viewLinks(meta["estampes/links"]??r.links);
@@ -1564,7 +1579,9 @@ function nextLabel(){
 }
 function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:nextLabel(),...styleFields()};}
 function pickMode(next){mode=next;for(const b of document.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));
- if(mode!=="select"&&selected){selected=null;}render();}
+ if(mode!=="select"&&selected){selected=null;}
+ if(mode!=="text"&&mode!=="select"){textOpening++;textSession=null;textEditor.hidden=true;cancelTextDrag();}
+ render();}
 for(const b of document.querySelectorAll("[data-mode]"))b.addEventListener("click",()=>pickMode(b.dataset.mode));
 let stroke=[];
 // ---- Zoom and pan --------------------------------------------------------
@@ -1614,7 +1631,7 @@ svg.addEventListener("gesturechange",e=>{e.preventDefault();if(!zoomable())retur
 const pointers=new Map();
 let pinch=null,panning=null,gestureLock=false,spaceDown=false;
 const pinchState=()=>{const [a,b]=[...pointers.values()];return {d:Math.hypot(a.x-b.x,a.y-b.y)||1,m:{clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2}};};
-function cancelStroke(){start=null;stroke=[];previewEl.replaceChildren();}
+function cancelStroke(){cancelTextDrag();start=null;stroke=[];previewEl.replaceChildren();}
 svg.addEventListener("pointerdown",e=>{
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(!zoomable())return;
@@ -1734,15 +1751,15 @@ function editFields(m){
  if(frames)out.side=sideKey(s.side);
  if(s.x2!==undefined){out.x2=s.x2;out.y2=s.y2;}
  if(s.points){out.points=s.points;if(s.smooth!==undefined)out.smooth=s.smooth;if(s.closed!==undefined)out.closed=s.closed;}
- for(const k of ["label","color","size","pen"])if(s[k]!==undefined)out[k]=s[k];
+ for(const k of ["label","note","color","size","pen"])if(s[k]!==undefined)out[k]=s[k];
  return out;
 }
-async function updateMark(before,after,done){
+async function updateMark(before,after,done,textOnly=false){
  if(isFresh(before)){
    replaceLocal(before);commitMarks(userMarks.map(m=>m.id===after.id?after:m));status.textContent=done;render();return;
  }
  replaceLocal(after);render();
- try{await editOnServer({marks:[editFields(after)]});status.textContent=done+" AI 下次回覆時會知道。";}
+ try{await editOnServer({marks:[textOnly?{id:rawOf(after),...(frames?{side:sideKey(after.side)}:{}),label:after.label??"",note:after.note??""}:editFields(after)]});status.textContent=done+" AI 下次回覆時會知道。";}
  catch(err){replaceLocal(before);status.textContent="修改失敗："+String(err.message||err);}
  render();
 }
@@ -1779,17 +1796,27 @@ function renderSelection(){
  }
  node("rect",{x:b.x-pad,y:b.y-pad,width:b.x2-b.x+2*pad,height:b.y2-b.y+2*pad,fill:"none",stroke:"#356BD6","stroke-width":2*U(),"stroke-dasharray":(6*U())+" "+(4*U()),rx:4*U()},outlineEl);
  // Keep the label field alive while the user is typing in it.
- if(selectionEl.contains(document.activeElement)&&selectionEl.dataset.mark===m.id)return;
+ if(selectionEl.contains(document.activeElement)&&selectionEl.dataset.mark===m.id&&selectionEl.dataset.locked===String(isLocked(m)))return;
+ selectionEl.dataset.locked=String(isLocked(m));
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
  const mine=isUser(m),layer=layerOf(m.layer);
  selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"AI"))}),
    el("span",{className:"meta",textContent:(mine?"你的標記":"AI 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
- if(canEdit(m)){
-   const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤"});
-   input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const label=input.value.trim();input.blur();
-     if(label!==(m.label??""))updateMark(m,{...m,label:label||m.label},"已改標籤。");}});
-   selectionEl.append(input,el("span",{className:"meta",textContent:"拖曳移動 · 方向鍵微調 · 畫筆按鈕改樣式"}));
- }
+ const permitted=canEdit(m);
+ const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤",readOnly:!permitted});
+ const note=el("textarea",{value:m.note??"",maxLength:200,rows:3,placeholder:"這個標記的備註","aria-label":"標記備註",readOnly:!permitted});
+ selectionEl.append(el("label",{},"標籤（最多 64 字元）",input),el("label",{},"備註（最多 200 字元）",note));
+ if(permitted){
+   const save=()=>{const current=findMark(m.id);if(!canEdit(current))return;
+     const label=input.value.trim(),text=note.value;
+     input.blur();note.blur();
+     if(label!==(current.label??"")||text!==(current.note??""))updateMark(current,{...current,label,note:text},"已儲存標籤與備註。",true);
+   };
+   const apply=el("button",{textContent:"儲存標籤與備註"});apply.addEventListener("click",save);
+   input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing&&e.keyCode!==229){e.preventDefault();save();}});
+   note.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)&&!e.isComposing){e.preventDefault();save();}});
+   selectionEl.append(apply,el("span",{className:"meta",textContent:"拖曳移動 · 方向鍵微調 · 畫筆按鈕改樣式"}));
+ }else selectionEl.append(el("span",{className:"meta",textContent:isLocked(m)?"此圖層已鎖定；請先解鎖才能編輯。":"這是 AI 的標記，標籤與備註為唯讀。"}));
  if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 AI 的標記",dataset:{act:"delete"}}));
  if(mine){
    const inGroup=liveGestures().find(g=>g.memberIds.includes(m.id)&&g.confirmation==="user-confirmed");
@@ -1819,6 +1846,123 @@ document.addEventListener("keydown",e=>{
  const step=(e.shiftKey?10:1)*U()/VW,arrows={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step*VW/VH],ArrowDown:[0,step*VW/VH]};
  if(arrows[e.key]){e.preventDefault();nudgeSelected(...arrows[e.key]);}
 });
+// Standalone text shares scene objects, source coordinates and layer state.
+const textEditor=document.querySelector("#text-editor"),textInput=document.querySelector("#text-content"),textSize=document.querySelector("#text-size"),textColor=document.querySelector("#text-color");
+let textSession=null,textDrag=null,textOpening=0,textBusy=false;
+const textContext=()=>JSON.stringify([imageId,pair?.imageId,ws?.id,ws?.items.map(it=>[it.id,it.set])]);
+function textTarget(side){
+ if(ws){const it=ws.items.find(it=>it.id===side);if(!it||!it.set)throw Error("找不到工作區的文字畫布，請重新開啟。");return {imageId:it.imageId,...(itemSet(it)?{setId:itemSet(it)}:{})};}
+ return {imageId:pair&&side==="right"?pair.imageId:imageId};
+}
+const textObjects=side=>ws?ws.items.find(it=>it.id===side)?.objects??[]:pair&&side==="right"?pair.objects??[]:objects;
+async function callText(target,args){
+ const result=await request("tools/call",{name:"edit_canvas_text",arguments:{...target,...args}});
+ if(result?.isError)throw Error(result.content?.[0]?.text||"文字修改失敗");
+ const r=result?.structuredContent;if(r?.kind!=="estampes.canvas_text")throw Error("文字回應格式不符");return r;
+}
+function applyTextState(side,r){
+ const all=cleanObjects(r.objects),list=pair?all.filter(o=>o.type==="shape"&&o.editable?.kind==="text"):all,target=textTarget(side);fullLayers(list,target.imageId,target.setId??null);
+ if(ws){const it=ws.items.find(it=>it.id===side);if(it)it.objects=list;}
+ else if(pair&&side==="right")pair.objects=list;else objects=list;
+ const prefix=frames?layerPrefix(side):"";
+ const next=cleanLayers((r.layers??[]).map(l=>({...l,id:prefix+l.id})));
+ const sides=ws?ws.items.map(it=>it.id):pair?["left","right"]:["left"];
+ layers=sides.flatMap(key=>key===side?next:layers.filter(l=>serverLayer(l.id).side===key));
+}
+async function refreshPairText(){
+ const context=textContext();
+ for(const side of ["left","right"])try{
+   const r=await callText(textTarget(side),{action:"read"});if(context!==textContext())return;applyTextState(side,r);render();
+ }catch{}
+}
+function fillTextEditor(){
+ if(!textSession)return;const p=textSession.props;
+ textEditor.hidden=false;document.querySelector("#text-subject").textContent=(frames?sideTitle(textSession.side)+" · ":"")+(textSession.id?"編輯文字":"新增文字");textInput.value=p.text??"";textSize.value=String(p.size??15);textColor.value=textSession.displayColor??(HEX.test(p.fill)?p.fill:COLORS[p.fill]??(HEX.test(p.style?.color)?p.style.color:COLORS[p.style?.color])??"#579DF6");
+ textButtons();
+}
+function textButtons(){
+ if(!textSession)return;
+ for(const id of ["text-save","text-delete"])document.querySelector("#"+id).disabled=textBusy||textSession.locked||id==="text-delete"&&!textSession.id;
+ textInput.readOnly=textSession.locked||textBusy;textSize.disabled=textColor.disabled=textSession.locked||textBusy;
+ document.querySelector("#text-undo").disabled=textBusy||!textSession.history.canUndo;
+ document.querySelector("#text-redo").disabled=textBusy||!textSession.history.canRedo;
+ undoBtn.disabled=textBusy||!textSession.history.canUndo;redoBtn.disabled=textBusy||!textSession.history.canRedo;
+}
+async function openText(side,point,id=null,focus=true){
+ const opening=++textOpening,context=textContext();
+ textSession=null;textEditor.hidden=true;selected=null;status.textContent="正在讀取文字…";
+ try{
+   const target=textTarget(side);
+   const r=await callText(target,{action:"read"});if(opening!==textOpening||context!==textContext())return null;
+   applyTextState(side,r);const obj=id?r.objects.find(o=>o.id===id):null;
+   if(id&&!obj?.editable?.text)throw Error("這個文字已變更或刪除，請重新選取。");
+   textSession={side,target,id,revision:r.revision,history:r.history,context,locked:!!obj?.locked,displayColor:obj?.primitives.find(p=>p.k==="text")?.fill,props:obj?.editable??{x:point.x,y:point.y,text:"",size:20,fill:COLORS[penStyle.color]??"#579DF6"}};
+   selected=null;fillTextEditor();render();
+   status.textContent=textSession.locked?"此文字所在圖層已鎖定；可先解鎖再編輯。":id?"可編輯文字，或拖曳文字移動位置。":"輸入文字後按儲存，也可用 Ctrl／⌘ + Enter。";
+   if(focus)textInput.focus();return textSession;
+ }catch(err){status.textContent=err.message;return null;}
+}
+async function textAction(action,props){
+ const session=textSession;if(!session||textBusy||session.context!==textContext())return;
+ textBusy=true;textButtons();
+ try{
+   const r=await callText(session.target,{action,expectedRevision:session.revision,...(["update","delete"].includes(action)?{id:session.id}:{}),...(props?{props}:{})});
+   if(session.context!==textContext())return;applyTextState(session.side,r);
+   const id=r.selectedId??session.id,obj=r.objects.find(o=>o.id===id);
+   if(textSession===session){Object.assign(session,{id:obj?id:null,revision:r.revision,history:r.history,props:obj?.editable??session.props,displayColor:obj?.primitives.find(p=>p.k==="text")?.fill,locked:!!obj?.locked});fillTextEditor();}
+   status.textContent="已儲存文字變更；AI 下次讀取畫布時會看到。";render();
+ }catch(err){status.textContent="文字未套用："+err.message+"（可按重新讀取後確認）";}
+ finally{textBusy=false;textButtons();}
+}
+document.querySelector("#text-save").addEventListener("click",()=>{
+ if(!textSession||!textInput.value.trim()){status.textContent="請輸入文字。";return;}
+ const props={x:textSession.props.x,y:textSession.props.y,text:textInput.value,size:Number(textSize.value),fill:textColor.value};
+ textAction(textSession.id?"update":"create",props);
+});
+textInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)&&!e.isComposing){e.preventDefault();document.querySelector("#text-save").click();}});
+for(const action of ["delete","undo","redo"])document.querySelector("#text-"+action).addEventListener("click",()=>textAction(action));
+document.querySelector("#text-refresh").addEventListener("click",()=>{if(textSession)openText(textSession.side,textSession.props,textSession.id);});
+document.querySelector("#text-close").addEventListener("click",()=>{textOpening++;textSession=null;textEditor.hidden=true;cancelTextDrag();render();});
+function cancelTextDrag(){if(textDrag){textDrag=null;render();}}
+function pickText(e){
+ const nodes=[...document.querySelectorAll('#unified-layers g[data-object]')].reverse();
+ return nodes.find(g=>{
+   const obj=textObjects(g.dataset.side).find(o=>o.id===g.dataset.object);
+   if(obj?.type!=="shape"||obj.editable?.kind!=="text")return false;
+   const b=g.getBoundingClientRect();return b.width&&b.height&&e.clientX>=b.left-6&&e.clientX<=b.right+6&&e.clientY>=b.top-6&&e.clientY<=b.bottom+6;
+ });
+}
+hit.addEventListener("pointerdown",e=>{
+ if(!ready||!imageId||viewMode!=="annotated"||!["text","select"].includes(mode))return;
+ const p=fromPointer(e);if(!p)return;let node=pickText(e);
+ if(node&&mode==="select"){
+   const mark=pickMark(p),rank=id=>layers.findIndex(l=>l.id===id);
+   if(mark&&(isFresh(mark)||rank(mark.layer)>=rank(node.dataset.layer)))node=null;
+ }
+ const side=node?.dataset.side??sideAt(p),local=toSide({...p,side});
+ if(!node&&mode!=="text"){textOpening++;textSession=null;textEditor.hidden=true;return;}
+ e.preventDefault();e.stopImmediatePropagation();
+ const id=node?.dataset.object??null,obj=id?textObjects(side).find(o=>o.id===id):null;
+ const pending=openText(side,local,id,!node);
+ if(node&&!obj.locked){textDrag={node,side,id,start:local,props:{...obj.editable},pending,transform:node.getAttribute("transform")??"",moved:false};hit.setPointerCapture(e.pointerId);}
+});
+hit.addEventListener("pointermove",e=>{
+ if(!textDrag)return;const p=fromPointer(e);if(!p)return;const d=textDrag,q=toSide({...p,side:d.side}),dx=q.x-d.start.x,dy=q.y-d.start.y;
+ const f=frames?.[d.side],w=f?.w??VW,h=f?.h??VH;
+ if(!d.moved&&Math.hypot(dx*w,dy*h)<3*U())return;
+ d.moved=true;d.next={x:clamp(d.props.x+dx,0,1),y:clamp(d.props.y+dy,0,1)};
+ // A read may have redrawn the group; find the live group rather than moving a detached node.
+ const node=[...document.querySelectorAll('#unified-layers g[data-object]')].find(n=>n.dataset.object===d.id&&n.dataset.side===d.side);
+ node?.setAttribute("transform",d.transform+" translate("+((d.next.x-d.props.x)*w)+" "+((d.next.y-d.props.y)*h)+")");
+});
+hit.addEventListener("pointerup",async()=>{
+ if(!textDrag)return;const d=textDrag;textDrag=null;const session=await d.pending;
+ if(!d.moved||!session)return;
+ if(session!==textSession||session.props.x!==d.props.x||session.props.y!==d.props.y){status.textContent="文字位置已更新，請確認後重新拖曳。";render();return;}
+ await textAction("update",d.next);
+});
+hit.addEventListener("pointercancel",cancelTextDrag);
+
 hit.addEventListener("pointerdown",e=>{
  if(mode!=="select"||!ready&&imageId)return;
  const p=fromPointer(e);if(!p)return;
@@ -1852,9 +1996,9 @@ function strokeFacts(){
  return {strokeOrder:++strokeCount,relativeStartMs:ms(strokeStart),relativeEndMs:ms(now),
    ...(["mouse","pen","touch"].includes(strokePointer)?{pointerType:strokePointer}:{})};
 }
-hit.addEventListener("pointerdown",e=>{if(mode==="select"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];
+hit.addEventListener("pointerdown",e=>{if(mode==="select"||mode==="text"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];
  strokeStart=performance.now();batchStart??=strokeStart;strokePointer=e.pointerType;hit.setPointerCapture(e.pointerId);});
-hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select")return;const p=fromPointer(e);if(!p)return;
+hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select"||mode==="text")return;const p=fromPointer(e);if(!p)return;
  if(mode==="polyline"){
    // Pens and tablets report more samples than pointermove fires; use them all.
    for(const ev of e.getCoalescedEvents?.()??[e]){
@@ -1865,7 +2009,7 @@ hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select
    return;
  }
  renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");});
-hit.addEventListener("pointerup",e=>{if(!start||mode==="select")return;const p=fromPointer(e);if(p){
+hit.addEventListener("pointerup",e=>{if(!start||mode==="select"||mode==="text")return;const p=fromPointer(e);if(p){
  if(mode==="polyline")stroke.push(p);
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
@@ -1873,7 +2017,7 @@ hit.addEventListener("pointerup",e=>{if(!start||mode==="select")return;const p=f
  Object.assign(mark,strokeFacts());
  // Paired view: a mark belongs to the image it was started on and stays inside it.
  if(frames)mark=toView(toSide({...mark,side:sideAt(start)}));
- if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；可放大檢視，或直接傳給 AI。";}
+ if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；用「選取」可編輯標籤與備註，或直接傳給 AI。";}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
@@ -1882,7 +2026,7 @@ let past=[],future=[];
 function commitMarks(next){past.push(userMarks);if(past.length>60)past.shift();future=[];userMarks=next;}
 function undo(){if(!past.length){serverStep("undo");return;}future.push(userMarks);userMarks=past.pop();selectedFocusId=null;render();}
 function redo(){if(!future.length){serverStep("redo");return;}past.push(userMarks);userMarks=future.pop();selectedFocusId=null;render();}
-undoBtn.addEventListener("click",undo);redoBtn.addEventListener("click",redo);
+undoBtn.addEventListener("click",()=>textSession?textAction("undo"):undo());redoBtn.addEventListener("click",()=>textSession?textAction("redo"):redo());
 // Downloads open in the browser (sandboxed widgets cannot save files).
 function openLink(href){
  if(!/^https:\/\//.test(href??""))return;
@@ -1963,7 +2107,7 @@ document.querySelector("#clear").addEventListener("click",()=>{if(userMarks.leng
 document.addEventListener("keydown",e=>{
  if(!(e.ctrlKey||e.metaKey)||e.target.closest?.("input,textarea,select"))return;
  const k=e.key.toLowerCase();
- if(k==="z"){e.preventDefault();e.shiftKey?redo():undo();}else if(k==="y"){e.preventDefault();redo();}
+ if(k==="z"){e.preventDefault();textSession?textAction(e.shiftKey?"redo":"undo"):e.shiftKey?redo():undo();}else if(k==="y"){e.preventDefault();textSession?textAction("redo"):redo();}
 });
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
 // Hosts such as ChatGPT can hand the widget its tool result (window.openai)

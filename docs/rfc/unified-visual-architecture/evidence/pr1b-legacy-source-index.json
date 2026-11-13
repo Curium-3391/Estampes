@@ -25,7 +25,9 @@
     "src/scene/canvas-render.js",
     "src/scene/compose.js",
     "src/image/engines.js",
-    "src/image/view.js"
+    "src/image/view.js",
+    "src/scene/objects.js",
+    "src/scene/scene-ops.js"
   ],
   "files": [
     {
@@ -407,6 +409,17 @@
     {
       "path": "compose.yaml",
       "sha256": "d9c002c14877e4ea1675d4544cbfd4d9d4e5962436744d1a6ea01f3e173ae486"
+    }
+  ],
+  "amendments": [
+    {
+      "date": "2026-11-13",
+      "authorizedBy": "User explicitly requested full issue #82 including standalone text objects",
+      "reason": "Reuse existing shape/text records for multiline rendering and widget editing; keep other legacy source fingerprints intact",
+      "files": [
+        "src/scene/objects.js",
+        "src/scene/scene-ops.js"
+      ]
     }
   ]
 }

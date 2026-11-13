@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Canvas text entry (#82): select a user annotation to edit/clear its label and
+  multiline note, or choose Text to place an editable standalone vector object.
+  Text supports dragging, size/color, locked layers, revision checks and its own
+  persistent undo/redo, including rotated workspace copies. Changed notes drop
+  old evidence/review; source geometry and creator provenance are preserved.
+
 - Keep a locally uploaded photo visible when the host replays the original
   waiting-for-upload result through notifications or ChatGPT globals (#66).
   Changed host output or metadata still updates the canvas. Browser tests
