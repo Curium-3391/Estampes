@@ -146,6 +146,9 @@ test("paired canvas edits right-side text without touching the left image",{skip
     const left=await image("#eee"),right=await image("#ddd");
     const read=await ok("edit_canvas_text",{imageId:right});
     const made=await ok("edit_canvas_text",{imageId:right,action:"create",expectedRevision:read.revision,props:{text:"右側文字",x:.3,y:.4}});
+    const second=await ok("edit_canvas_text",{imageId:right,action:"create",expectedRevision:made.revision,props:{text:"右側上層文字",x:.3,y:.65}});
+    const firstLayer=made.objects.find(o=>o.id===made.selectedId).layer,secondLayer=second.objects.find(o=>o.id===second.selectedId).layer;
+    const leftLayers=(await ok("get_visual_state",{imageId:left})).layers;
     const ui=await s.open({imageId:left,result:()=>s.call("present_visual",{imageId:left,pairImageId:right})});
     await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
     const rendered=ui.frame.locator('#unified-layers g[data-side="right"][data-object="'+made.selectedId+'"] text');
@@ -161,6 +164,16 @@ test("paired canvas edits right-side text without touching the left image",{skip
     await ui.frame.locator("#text-content").fill("修改右側🙂");await ui.frame.locator("#text-save").click();await ui.page.waitForTimeout(300);
     assert.equal((await ok("get_visual_state",{imageId:right})).objects[0].props.text,"修改右側🙂");
     assert.equal((await ok("get_visual_state",{imageId:left})).objects?.length??0,0);
+    await ui.frame.locator("#layer-manager summary").click();
+    const down=ui.frame.locator('#layers button[data-layer="R'+secondLayer+'"][data-act="down"]');
+    assert.equal(await down.isDisabled(),false);await down.click();
+    await ui.frame.locator("#status").filter({hasText:"已調整圖層順序"}).waitFor();
+    const reordered=(await ok("get_visual_state",{imageId:right})).layers.map(l=>l.id);
+    assert.ok(reordered.indexOf(secondLayer)<reordered.indexOf(firstLayer),"right text-only layers reorder on the server");
+    assert.deepEqual((await ok("get_visual_state",{imageId:left})).layers,leftLayers,"left layer order is untouched");
+    await ui.reload();await ui.frame.locator("#layer-manager summary").click();
+    await ui.frame.locator('#layers button[data-layer="R'+secondLayer+'"][data-act="up"]').waitFor();
+    assert.equal(await ui.frame.locator('#layers button[data-layer="R'+secondLayer+'"][data-act="down"]').isDisabled(),true,"right order survives reload");
     assert.deepEqual(ui.errors,[]);
   }finally{await s.close();}
 });

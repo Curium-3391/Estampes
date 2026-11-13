@@ -505,10 +505,14 @@ function setLayers(list){
 }
 const el=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="dataset")Object.assign(e.dataset,v);else if(k in e)e[k]=v;else e.setAttribute(k,v);}e.append(...kids);return e;};
 let layerRows=new Map(),layersExpanded=false;
+function layerMembers(){
+ return [...assistantMarks,...priorUserMarks,...userMarks,...objects,
+   ...(pair?.objects??[]).map(o=>({...o,layer:layerPrefix("right")+o.layer})),
+   ...(ws?.items??[]).flatMap(it=>(it.objects??[]).map(o=>({...o,layer:layerPrefix(it.id)+o.layer})))];
+}
 function renderLayers(){
  const counts=new Map();
- for(const m of [...assistantMarks,...priorUserMarks,...userMarks,...objects,...(ws?.items??[]).flatMap(it=>(it.objects??[]).map(o=>({...o,layer:layerPrefix(it.id)+o.layer})))])if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
- for(const o of pair?.objects??[])if(o.layer)counts.set("R"+o.layer,(counts.get("R"+o.layer)??0)+1);
+ for(const m of layerMembers())if(m.layer)counts.set(m.layer,(counts.get(m.layer)??0)+1);
  const list=layers.filter(l=>counts.has(l.id));
  layerRows=new Map();
  layersEl.hidden=!imageId||!list.length;
@@ -591,7 +595,7 @@ async function layerEdit(args,done){
 }
 function reorder(id,dir){
  const side=serverLayer(id).side;
- const used=new Set([...assistantMarks,...priorUserMarks,...userMarks,...objects].map(m=>m.layer));
+ const used=new Set(layerMembers().map(m=>m.layer));
  const ids=layers.filter(l=>serverLayer(l.id).side===side&&used.has(l.id)).map(l=>l.id);
  const i=ids.indexOf(id),j=i+dir;if(i<0||j<0||j>=ids.length)return;
  [ids[i],ids[j]]=[ids[j],ids[i]];
