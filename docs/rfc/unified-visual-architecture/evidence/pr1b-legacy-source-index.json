@@ -54,7 +54,7 @@
     },
     {
       "path": "src/bundle.js",
-      "sha256": "a89aa94c0734ae1f07504aab266dde714defca230696b445f7839d5a09a800f9"
+      "sha256": "557dd1e58f0c69596d7c2f77e562de89e3ac9fa423d308f43bacc2817a022cd9"
     },
     {
       "path": "src/canvas-state.js",

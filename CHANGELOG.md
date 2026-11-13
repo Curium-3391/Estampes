@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Bundle import: a canvas is reused only when it holds the same marks, layers,
+  claims, scene objects (Graph axes, plots, shapes) and link content as the
+  bundle; before, a changed Graph was reused and reported `verified: true`
+  while it still showed the local scene (architecture review A05). A canvas
+  holding only scene objects no longer counts as empty, so a restore never
+  replaces it; `verified` now also checks every imported set's scene objects
+  (`mismatch` lists `objects` otherwise), and a layer's owning module is kept
+  through export/import. Comparison ignores key order, so identical canvases
+  are now reused instead of copied.
+
 - Module registry: an enable/disable whose `registry.json` write fails no
   longer leaves the module in the new state in memory, and one failed write no
   longer makes every later save fail until a restart (architecture review A06).

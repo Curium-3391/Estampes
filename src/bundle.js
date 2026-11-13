@@ -23,6 +23,7 @@ import { canvasMarks, canvasLayers, setKeyOf } from "./canvas-state.js";
 import { MARK_TYPES, MAX_POLYLINE_POINTS, MARK_STATUSES, MARK_COLORS, MARK_SIZES, MARK_PENS } from "./scene-catalog.js";
 import { entrySharp } from "./image-store.js";
 import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, restoreCanvas } from "./storage.js";
+import { MODULE_ID } from "./modules/manifest.js";
 import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
 
 export const BUNDLE_FORMAT = "estampes.bundle/1";
@@ -142,7 +143,10 @@ function cleanSet(raw, where, warnings) {
   const layers = (Array.isArray(raw.layers) ? raw.layers : []).filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author)).slice(0, MAX_LAYERS)
     .map((l) => defined({ id: l.id, author: l.author, name: text(l.name, 40) || l.id, locked: l.locked === true ? true : undefined,
       visible: l.visible === false ? false : undefined,
-      opacity: typeof l.opacity === "number" && l.opacity >= 0 && l.opacity <= 1 ? l.opacity : undefined }));
+      opacity: typeof l.opacity === "number" && l.opacity >= 0 && l.opacity <= 1 ? l.opacity : undefined,
+      // The module a layer belongs to (scene objects a module made live in
+      // it). Kept so an imported Graph is the same as the exported one.
+      module: typeof l.module === "string" && MODULE_ID.test(l.module) ? l.module : undefined }));
   let links = 0;
   const linkMap = {};
   for (const [k, list] of Object.entries(raw.links && typeof raw.links === "object" ? raw.links : {})) {
@@ -164,13 +168,27 @@ function cleanSet(raw, where, warnings) {
   };
 }
 
-const byId = (list) => JSON.stringify([...list].sort((x, y) => x.id < y.id ? -1 : 1));
-// The same annotation state: marks, layer settings, claims and decisions, and the number of links.
-const sameState = (entry, def) => byId(canvasMarks(entry)) === byId(def.marks)
-  && byId(entry.layers ?? []) === byId(def.layers)
+// Key order inside an object does not change its meaning, so scene objects
+// and links compare in canonical form (sorted keys, ids in order).
+const canonical = (value) => Array.isArray(value) ? value.map(canonical)
+  : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonical(value[k])])) : value;
+const canonicalById = (list) => JSON.stringify(canonical([...(list ?? [])].sort((x, y) => String(x?.id) < String(y?.id) ? -1 : 1)));
+// Scene objects (Graph axes, plots, shapes) as they would be exported.
+const objectsOf = (entry) => canonicalById(serializeCanvas(entry).objects ?? []);
+const bundleObjects = (def) => canonicalById(def.objects ?? []);
+// Links compare by what they say (which marks they join and how), not by
+// the other set's key, which an import may rename.
+const LINK_FIELDS = ["id", "left", "right", "label", "note", "confidence", "review", "reviewReason", "author"];
+const linkSig = (l) => JSON.stringify(LINK_FIELDS.map((f) => l?.[f] ?? null));
+const linkSigs = (lists) => JSON.stringify(lists.flatMap((list) => [...list].map(linkSig)).sort());
+// The same persisted state: marks, layer settings, claims and decisions,
+// scene objects, and the links' content.
+const sameState = (entry, def) => canonicalById(canvasMarks(entry)) === canonicalById(def.marks)
+  && canonicalById(entry.layers ?? []) === canonicalById(def.layers)
   && JSON.stringify(entry.rejections ?? []) === JSON.stringify(def.rejections)
   && JSON.stringify(entry.gestureDecisions ?? []) === JSON.stringify(def.gestureDecisions)
-  && [...(entry.pairLinks ?? []).values()].reduce((n, m) => n + m.size, 0) === def.linkCount;
+  && objectsOf(entry) === bundleObjects(def)
+  && linkSigs([...(entry.pairLinks ?? new Map()).values()].map((m) => [...m.values()])) === linkSigs(Object.values(def.links));
 
 export async function importBundle(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
   if (!["reuse", "copy"].includes(collision)) throw new Error("collision must be reuse or copy");
@@ -233,7 +251,9 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
   // Sets: restore an image's own canvas when it is empty here, reuse it when
   // identical, otherwise make an independent copy. Copies stay copies.
   const keyMap = new Map(), touched = [], summary = [];
-  const fresh = (entry) => !canvasMarks(entry).length && !(entry.layers ?? []).length;
+  // Empty means no marks, no layers and no scene objects: a canvas holding
+  // only a Graph is not empty and is never overwritten by a restore.
+  const fresh = (entry) => !canvasMarks(entry).length && !(entry.layers ?? []).length && !(serializeCanvas(entry).objects ?? []).length;
   for (const key of used) {
     const def = setDefs.get(key), image = idMap.get(def.imageId ?? key.split("#")[0]);
     if (!image) throw new Error("Bundle set " + key + " refers to an image that is not in the bundle");
@@ -273,6 +293,9 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
   const mismatch = ["items", "marks", "userMarks", "layerInstances", "links"].filter((k) => typeof expected[k] === "number" && expected[k] !== t[k]
     && !(k === "links" && summary.some((s) => s.how === "reused")));
   const unsupported = touched.flatMap((x) => x.def.unsupported);
+  // Round trip of the scene: every set the workspace now points at must hold
+  // the bundle's scene objects, whether it was restored, copied or reused.
+  if (touched.some((x) => objectsOf(x.target) !== bundleObjects(x.def))) mismatch.push("objects");
   const verified = adopted.check.ok && !mismatch.length && !unsupported.length;
   // Surface and notebooks ride along as untrusted data; the server installs
   // them (see installBundleExtras) once the workspace exists.
