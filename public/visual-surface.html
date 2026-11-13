@@ -1957,7 +1957,7 @@ hit.addEventListener("pointermove",e=>{
 });
 hit.addEventListener("pointerup",async()=>{
  if(!textDrag)return;const d=textDrag;textDrag=null;const session=await d.pending;
- if(!d.moved||!session)return;
+ if(!d.moved||!session){render();return;}
  if(session!==textSession||session.props.x!==d.props.x||session.props.y!==d.props.y){status.textContent="文字位置已更新，請確認後重新拖曳。";render();return;}
  await textAction("update",d.next);
 });

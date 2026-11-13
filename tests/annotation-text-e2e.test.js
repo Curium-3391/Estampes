@@ -203,7 +203,7 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
     await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
     const rendered=ui.frame.locator('#unified-layers g[data-object="'+made.selectedId+'"] text');
     await rendered.waitFor();await ui.frame.locator('[data-mode="select"]').click();
-    await ui.page.evaluate(()=>{const original=window.hostCall;window.rejectTextCode="";window.hostCall=p=>p.name==="edit_canvas_text"&&p.arguments.action==="update"&&window.rejectTextCode?{isError:true,content:[{type:"text",text:window.rejectTextCode}],structuredContent:{code:window.rejectTextCode}}:original(p);});
+    await ui.page.evaluate(()=>{const original=window.hostCall;window.rejectTextCode="";window.hostCall=p=>p.name==="edit_canvas_text"&&p.arguments.action===(window.rejectTextAction??"update")&&window.rejectTextCode?{isError:true,content:[{type:"text",text:window.rejectTextCode}],structuredContent:{code:window.rejectTextCode}}:original(p);});
     for(const code of ["SAVE_FAILED","STALE_CANVAS"]){
       await ui.page.evaluate(code=>{window.rejectTextCode=code;},code);
       await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
@@ -213,6 +213,13 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
       const after=await rendered.boundingBox();assert.ok(Math.abs(after.x-before.x)<1&&Math.abs(after.y-before.y)<1,"failed drag restores the saved position: "+code);
       const saved=(await s.call("get_visual_state",{imageId})).structuredContent.objects[0];assert.equal(saved.props.x,.3);assert.equal(saved.props.y,.4);
     }
+    await ui.frame.locator("#text-close").click();
+    await ui.page.evaluate(()=>{window.rejectTextAction="read";window.rejectTextCode="READ_FAILED";});
+    await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
+    await ui.page.mouse.move(from.x,from.y);await ui.page.mouse.down();
+    await ui.frame.locator("#status").filter({hasText:"READ_FAILED"}).waitFor();
+    await ui.page.mouse.move(from.x+40,from.y+30,{steps:4});await ui.page.mouse.up();
+    const after=await rendered.boundingBox();assert.ok(Math.abs(after.x-before.x)<1&&Math.abs(after.y-before.y)<1,"failed initial read also restores the saved position");
     assert.deepEqual(ui.errors,[]);
   }finally{await s.close();}
 });
