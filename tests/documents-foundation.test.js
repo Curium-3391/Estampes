@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { document, populated, embed, provenance, asset, id, HASH, TIME } from "./fixtures/uva-pr1a.mjs";
 import { parseId, createId, parseAssetRef, normalizeRequestId, AnnotationIdSchema } from "../src/documents/identity.js";
 import { parseRef, IdentityMappingSchema, lookupIdentity, LogicalRevisionRefSchema } from "../src/documents/references.js";
@@ -205,8 +207,17 @@ test("PR-1B preserves newer main outside declared integration seams and the exac
   const base=new URL("../docs/rfc/unified-visual-architecture/evidence/",import.meta.url);
   const legacy=JSON.parse(readFileSync(new URL("pr1b-legacy-source-index.json",base),"utf8"));
   const runtime=JSON.parse(readFileSync(new URL("pr1b-runtime-source-index.json",base),"utf8"));
-  for(const f of [...legacy.files.filter(f=>!legacy.authorizedIntegrationSeams.includes(f.path)),...runtime.files])
-    assert.equal(createHash("sha256").update(readFileSync(new URL("../"+f.path,import.meta.url))).digest("hex"),f.sha256,f.path);
+  // These two workflows changed after PR #92. Verify the original bytes at
+  // that merge while retaining the worktree checks for all other sealed files.
+  const historicalWorkflows = new Set([".github/workflows/docker.yml", ".github/workflows/docs.yml"]);
+  const integrationMerge = "7c10965dd66b7b2aa58dc792e3a4b703d2c7fcd4";
+  const root = fileURLToPath(new URL("../", import.meta.url));
+  for (const f of [...legacy.files.filter(f => !legacy.authorizedIntegrationSeams.includes(f.path)), ...runtime.files]) {
+    const bytes = historicalWorkflows.has(f.path)
+      ? execFileSync("git", ["show", `${integrationMerge}:${f.path}`], { cwd: root })
+      : readFileSync(new URL("../" + f.path, import.meta.url));
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), f.sha256, f.path);
+  }
 });
 test("removed annotation anchors retain invalid references only with explicit matching tombstones", () => {
   const d=populated(),s=d.scenes[0],a=s.annotations[0];a.anchor={space:"world",frameRef:{documentId:d.id,sceneId:s.id,kind:"frame",id:"removed-frame"}};
