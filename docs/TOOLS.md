@@ -51,7 +51,8 @@ These are hidden from the model (`visibility: ["app"]`).
 | `load_visual_region` | Returns a higher-resolution tile while you zoom. |
 | `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
 | `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
-| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, restyle, delete), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
+| `edit_canvas_text` | Read/create/edit/delete standalone vector text, or undo/redo text changes. App-only; uses existing `shape` / `kind: "text"`, normalized coordinates, a required canvas revision for edits and `setId` for workspace copies. Refuses locked layers and stale revisions. |
+| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, restyle, label/note text, delete), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
@@ -125,3 +126,33 @@ from the item's `set` key or `canvasReads`; omit it for the image's own canvas.
 
 Blend modes are unsupported. Brightness and contrast are separate image
 processing operations, not layer properties.
+
+## Typing on the canvas
+
+Select your own annotation to edit its label (64 characters) and multiline note
+(200 characters), then press **儲存標籤與備註**. Empty fields clear the text.
+Enter saves a label after IME composition; Ctrl/Command+Enter saves a note.
+Assistant annotations and locked annotations show read-only fields. A changed
+note is a new claim and discards the previous evidence/review; it does not
+automatically become confirmed. Undo restores the original note and claim data.
+Saving text sends only the text fields, preserving current geometry and styling.
+Draft notes are retained when sending a new annotation, in both the stored mark
+and the submission event/chat message. Rejected text drags redraw the last
+accepted coordinates.
+
+Choose **文字**, tap a location, enter up to 80 characters (including newlines),
+choose size (6–64) and color, then save. Use **選取** to click or drag existing
+text. The same vector `shape/text` records are visible to assistant reads and
+render/export without flattening. Use a `.estampes` bundle for an editable
+standalone-text export/import round trip; SVG exports the vector drawing but
+its marks-only importer does not reconstruct scene objects. Existing assistant text retains its creator
+when the user edits it. Frame-space module text is not edited by this control.
+
+The text editor has its own per-canvas undo/redo; toolbar undo/redo targets it
+while it is open. The last 50 text operations persist across server restart.
+A changed target refuses an inverse with `HISTORY_CONFLICT`; locked layers
+refuse with `LAYER_LOCKED`. Edits use a read revision and refuse concurrent
+changes with `STALE_CANVAS`; use **重新讀取** and review before retrying.
+Images, pairs and workspace items use their own normalized source coordinates;
+rotating/zooming a view does not change the stored text position. Workspace
+copies have independent text history; bundle import starts a fresh history.

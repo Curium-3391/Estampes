@@ -126,6 +126,7 @@ export function serializeCanvas(entry) {
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     ...(entry.setId ? { setId: entry.setId, ...(entry.derivedFrom ? { derivedFrom: entry.derivedFrom } : {}) } : {}),
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
+    ...(entry.textHistory?.past.length || entry.textHistory?.future.length ? { textHistory: entry.textHistory } : {}),
     ...(entry.layerHistory?.past.length || entry.layerHistory?.future.length ? { layerHistory: entry.layerHistory } : {}),
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
     ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
@@ -140,6 +141,7 @@ export function restoreCanvas(entry, data) {
   if (!data || data.imageId !== entry.imageId) return entry;
   entry.marks = new Map((data.marks ?? []).filter((m) => m && typeof m.id === "string").map((m) => [m.id, m]));
   entry.layers = Array.isArray(data.layers) ? data.layers : [];
+  entry.textHistory = data.textHistory ?? { past: [], future: [] };
   entry.layerHistory = data.layerHistory ?? { past: [], future: [] };
   entry.userEdits = Array.isArray(data.userEdits) ? data.userEdits : [];
   entry.rejections = Array.isArray(data.rejections) ? data.rejections.filter((r) => r && typeof r.kind === "string" && r.from) : [];
