@@ -58,7 +58,7 @@
     },
     {
       "path": "src/bundle.js",
-      "sha256": "557dd1e58f0c69596d7c2f77e562de89e3ac9fa423d308f43bacc2817a022cd9"
+      "sha256": "42c26061e3d1e60086185a2c5fce4dedc2371e650e85b0d3548e5b9bfeb5b73c"
     },
     {
       "path": "src/canvas-state.js",
@@ -274,7 +274,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "1e17b2ad58b6eeae4959797bb3263f1530d5ae0dd55df05b2de7095d6a1c2827"
+      "sha256": "463325fc5490de477717084f27ecbd8656931233e28cde7163c48205a28eaa88"
     },
     {
       "path": "src/surface/bundle-extras.js",

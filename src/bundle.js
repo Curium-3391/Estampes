@@ -254,17 +254,35 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
   // Empty means no marks, no layers and no scene objects: a canvas holding
   // only a Graph is not empty and is never overwritten by a restore.
   const fresh = (entry) => !canvasMarks(entry).length && !(entry.layers ?? []).length && !(serializeCanvas(entry).objects ?? []).length;
+  // Decide first, act after: a set can be reused only if every set its
+  // links point at is reused too. A reused set keeps its own links, which
+  // name the local peers; when a peer becomes a copy, those links would not
+  // reach the imported peer, so the set is copied as well (repeated until
+  // nothing changes, since a copy can force its own peers).
+  const plan = new Map();
   for (const key of used) {
     const def = setDefs.get(key), image = idMap.get(def.imageId ?? key.split("#")[0]);
     if (!image) throw new Error("Bundle set " + key + " refers to an image that is not in the bundle");
     const base = await ensureImage(image);
+    const own = !key.includes("#");
+    const how = own && fresh(base) ? "restored" : own && collision === "reuse" && sameState(base, def) ? "reused" : "copied";
+    plan.set(key, { def, image, base, own, how });
+  }
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const p of plan.values()) {
+      if (p.how !== "reused") continue;
+      const peers = Object.entries(p.def.links).filter(([, list]) => list.length).map(([k]) => plan.get(k));
+      if (peers.some((q) => q && q.how !== "reused")) { p.how = "copied"; changed = true; }
+    }
+  }
+  for (const [key, { def, image, base, own, how }] of plan) {
     const data = { imageId: image, marks: def.marks, layers: def.layers, rejections: def.rejections, gestureDecisions: def.gestureDecisions,
       ...(def.objects !== undefined ? { objects: def.objects, sceneRevision: def.sceneRevision, objectSeq: def.objectSeq } : {}), links: {}, derivedFrom: def.derivedFrom };
-    const own = !key.includes("#");
-    let target, how;
-    if (own && fresh(base)) { restoreCanvas(base, data); target = base; how = "restored"; }
-    else if (own && collision === "reuse" && sameState(base, def)) { target = base; how = "reused"; }
-    else { target = forkFromData(base, { ...data, derivedFrom: def.derivedFrom ?? (own ? { set: image, at: new Date().toISOString() } : undefined) }); how = "copied"; }
+    let target;
+    if (how === "restored") { restoreCanvas(base, data); target = base; }
+    else if (how === "reused") target = base;
+    else target = forkFromData(base, { ...data, derivedFrom: def.derivedFrom ?? (own ? { set: image, at: new Date().toISOString() } : undefined) });
     keyMap.set(key, setKeyOf(target));
     touched.push({ target, def, how });
     summary.push({ key, becomes: setKeyOf(target), how, marks: def.marks.length });

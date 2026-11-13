@@ -263,17 +263,21 @@ function saveState(entry) {
   if (!state) saveStates.set(entry, state = { issued: 0, latest: null, durable: null, durableSeq: 0 });
   return state;
 }
-async function rollbackCanvas(entry, key, state) {
+// Returns false when a newer save of the canvas was issued meanwhile: that
+// save carries this change and the newer edits, so nothing is restored.
+async function rollbackCanvas(entry, key, state, seq) {
   let record = null;
   try { record = await canvases.read(key); }
   catch (error) { log("error", "[storage] the stored canvas could not be read back after a failed save", { set: key, error: String(error?.message || error) }); }
+  if (state.issued !== seq) return false;
   // The store's record first; else the last state this process saw
   // acknowledged. Without either, nothing is known to be durable, and the
   // canvas is left as it is rather than emptied.
   const stored = record?.canvas?.imageId === entry.imageId ? record.canvas : state.durable;
-  if (!stored) { log("error", "[storage] save failed and no durable state is known; memory keeps the unsaved change", { set: key }); return; }
+  if (!stored) { log("error", "[storage] save failed and no durable state is known; memory keeps the unsaved change", { set: key }); return true; }
   restoreCanvas(entry, structuredClone(stored));
   log("info", "[storage] save failed; canvas restored to its last durable state", { set: key });
+  return true;
 }
 
 // After a change: rewrite canvas.json and marks.svg, append one history line.
@@ -293,7 +297,8 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
       // A later save of this canvas serialized it after this change, so this
       // change is durable exactly when that save is: answer with its outcome.
       if (state.issued !== seq) return state.latest;
-      await rollbackCanvas(entry, key, state);
+      // The read below waits; a save issued during it supersedes this one.
+      if (!(await rollbackCanvas(entry, key, state, seq))) return state.latest;
       throw error;
     });
     state.latest = acked;

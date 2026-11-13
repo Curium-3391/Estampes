@@ -88,3 +88,20 @@ test("links compare by content: a relabelled link with the same count is not reu
   const changed = await importBundle(buffer, { collision: "reuse", name: "again" });
   assert.equal(changed.summary.find((s) => s.key === left.imageId).how, "copied");
 });
+
+test("a reused canvas whose linked peer is copied is copied too, so the imported links survive", async () => {
+  const { applyPairChanges } = await import("../src/canvas-state.js");
+  const img = async (c) => registerImage(await sharp({ create: { width: 200, height: 200, channels: 3, background: c } }).png().toBuffer(), { source: "test" });
+  const left = await img("#fafafa"), right = await img("#246");
+  const box = (id, side, x = 0.1) => ({ id, side, type: "rect", x, y: 0.1, x2: x + 0.1, y2: 0.2 });
+  applyPairChanges(left, right, { annotations: [box("a", "left"), box("b", "right")], links: [{ id: "k1", left: "a", right: "b", label: "C1" }], layer: "pairs", resolve });
+  for (const e of [left, right]) applySceneOps(e, [{ op: "object.create", type: "axes-2d", props: { xRange: [-10, 10], yRange: [-1, 1] } }], mod);
+  const { buffer, manifest } = await exportBundle(left.imageId + "+" + right.imageId);
+  // Only the right canvas's Graph changes; the left one is identical to the bundle.
+  applySceneOps(right, [{ op: "object.update", id: "o1", props: { xRange: [-77, 77] } }], mod);
+  const r = await importBundle(buffer, { collision: "reuse" });
+  assert.deepEqual(r.summary.map((s) => s.how), ["copied", "copied"]);
+  assert.equal(r.verified, true, JSON.stringify({ m: r.mismatch, u: r.unsupported }));
+  assert.equal(r.check.totals.links, manifest.workspace.links, "the link between the imported sets is kept");
+  assert.equal(r.check.totals.links, 1);
+});
