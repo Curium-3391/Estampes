@@ -134,7 +134,7 @@
     },
     {
       "path": "src/mark-render.js",
-      "sha256": "3b49db4fd58e849f01fd1cd9f2088218e9115a37287533149aa134fc33273ef8"
+      "sha256": "267e9666dc3db8d7948b66d50cd2b5d6e2f81d0d63649848b7ba99c2d34fb902"
     },
     {
       "path": "src/marks-file.js",
@@ -238,7 +238,7 @@
     },
     {
       "path": "src/scene/canvas-render.js",
-      "sha256": "54aac87462fc16484711150d54800c151a22d7bb28527e4572a8d3ce57b7513b"
+      "sha256": "b5d39c3d0719706b1c90e0895db586b5f3ff9efdb0a191a62e4b533fe8ab9602"
     },
     {
       "path": "src/scene/compose.js",
