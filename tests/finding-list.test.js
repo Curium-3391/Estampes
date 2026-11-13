@@ -116,7 +116,7 @@ try{
 })();
 `;
     const page = join(dir, "probe.html");
-    writeFileSync(page, html.replace("<head>","<head><script>window.addEventListener('error',e=>document.body.dataset.findingTest='error: '+e.message)</script>").replace("</script></body>", probe + "\n</script></body>"));
+    writeFileSync(page, html.replace("<head>","<head><script>window.addEventListener('error',e=>document.body.dataset.findingTest='error: '+e.message)</script>").replace("// __ESTAMPES_VIEWER_END__", () => probe));
     const server=createServer((req,res)=>{res.setHeader("content-type","text/html; charset=utf-8");res.end(readFileSync(page));});
     await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
     const child = spawn(browser, ["--headless", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir="+join(dir,"profile"), "about:blank"], { detached: process.platform !== "win32", stdio: ["ignore","ignore","pipe"] });
