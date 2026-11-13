@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- `register_images` (#68): automatic registration now aligns oblique, defocused,
+  unevenly lit views turned by any angle, where it gave up before. It keeps five
+  feature scales, votes on the common rotation, and then matches again near the
+  rough transform (guided matching), so repeated structure such as rows of pins
+  no longer drops out at the ratio test. On a synthetic board with known
+  transforms (rotation 10-290 degrees, scale 0.7-1.25, strong perspective,
+  gamma, vignetting, blur, noise, JPEG, glare) the old matcher aligned 11 of 21
+  to within 6 px and reported the other 10 as failed or, for two, as ok at
+  6-6.5 px; the new one aligned 21, 19 and 20 of 21 on three random boards, every
+  accepted one within 6.5 px, and accepted none of 40 unrelated boards. One
+  strongly tilted, shrunk case still fails (it reports failed, not a wrong fit).
+  Acceptance now compares the supporters with what shifted copies of the
+  transform reach by chance (`quality.chanceInliers`), and a fit that mirrors the
+  image is refused with a hint. The inlier ratio is now the share of A's features
+  inside B that found a partner, not inliers over putative matches, so it is
+  lower than before for good fits (0.1-0.35 on hard pairs, `minInlierRatio` is
+  optional and no longer defaults to 0.25).
+- `register_images` result: `quality.heldOut` (error at points the fit did not use:
+  leave-one-out for landmarks, split-half for auto) and `alignmentConfidence`
+  (`high`/`medium`/`low`/`unverified`/`none`) with `confidenceReasons`, separate
+  from `status`. Four landmarks always fit a homography exactly and now rate
+  `unverified`; landmarks in one corner, a landmark that does not fit, or a
+  held-out error above the threshold lower it. `REGISTER_VERSION` is "2", so
+  registration ids change. Only a synthetic board was tested; the PCB photographs
+  of #68 are not in the repository.
 - Keep a locally uploaded photo visible when the host replays the original
   waiting-for-upload result through notifications or ChatGPT globals (#66).
   Changed host output or metadata still updates the canvas. Browser tests
