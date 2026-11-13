@@ -53,7 +53,8 @@ export function itemSvg(item, map, toPx) {
 export function planSvg(plan, { width, height, toPx = width / 1000, objectsSvg = () => "", labels = {} } = {}) {
   if (plan.version !== RENDER_PLAN_VERSION) throw new Error("Unsupported render plan version " + plan.version);
   const map = (x, y) => [x * width, y * height];
-  const body = (item) => itemSvg(item, map, toPx) + (labels[item.id] ? `<text x="${num(item.at.x) * width + 6}" y="${num(item.at.y) * height - 8}" font-size="${15 * width / 640}" fill="#17212A">${xml(labels[item.id])}</text>` : "");
+  const own = (item) => Object.hasOwn(labels, item.id) && labels[item.id] ? labels[item.id] : null;
+  const body = (item) => itemSvg(item, map, toPx) + (own(item) ? `<text x="${num(item.at.x) * width + 6}" y="${num(item.at.y) * height - 8}" font-size="${15 * width / 640}" fill="#17212A">${xml(own(item))}</text>` : "");
   return plan.layers.map((l) => `<g opacity="${l.opacity}">${objectsSvg(l.layer)}` + l.assistant.map(body).join("") +
     `<g opacity="${plan.userOpacity ?? USER_OPACITY}">${l.user.map(body).join("")}</g></g>`).join("");
 }

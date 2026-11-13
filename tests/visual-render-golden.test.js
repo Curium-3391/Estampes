@@ -53,3 +53,11 @@ test("the canvas body (layers, opacity, user group, labels, hidden layer) equals
   assert.equal(body([], "all"), golden.canvas.labels);
   assert.equal(body([second.id], "none"), golden.canvas.hidden);
 });
+
+test("a mark id like constructor or __proto__ draws no label text unless one is given", () => {
+  const marks = ["constructor", "toString", "__proto__", "hasOwnProperty"].map((id, i) => ({ id, type: "point", x: 0.1 * (i + 1), y: 0.5, author: "assistant" }));
+  const plan = buildRenderPlan({ marks, layers: [] });
+  assert.ok(!planSvg(plan, { width: 640, height: 360 }).includes("<text"));
+  assert.ok(!planSvg(plan, { width: 640, height: 360, labels: {} }).includes("<text"));
+  assert.ok(planSvg(plan, { width: 640, height: 360, labels: Object.fromEntries([["constructor", "A<b>"]]) }).includes("A&lt;b&gt;"));
+});
