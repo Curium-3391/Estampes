@@ -46,7 +46,13 @@ node --test --test-name-pattern "workspace" tests/*.test.js   # by name
 | Browser | `workbench-e2e`, `layers-e2e`, `surface-open`, `surface-refresh`, `cards-e2e`, `finding-list`, … via `tests/helpers/widget-host.js` | `playwright-core`, Chrome; calculator ones also SymPy | The real server and the real widget in a browser, with a **fake ChatGPT host** that plays the MCP Apps bridge |
 | Compose smoke test | `.github/workflows/docker.yml` | Docker | Runs on `v*` tags only |
 
-Without any optional piece, `npm test` on the reference run (263 tests) gave 246 passed, 0 failed, 17 skipped (the calculator, browser and PDF tests) in about 21 seconds. With SymPy, `playwright-core` and Chromium, the calculator and browser files (`node --test tests/cas-module.test.js tests/surface.test.js tests/bundle-extras.test.js tests/workbench-e2e.test.js tests/layers-e2e.test.js tests/surface-open.test.js tests/surface-refresh.test.js`) ran 23 tests, all passing, with none skipped. CI runs the same split: `node-tests` and `cas-tests` in `.github/workflows/m0.yml`, skipped for documentation-only changes.
+The `baseline` job runs syntax and documentation checks on every PR to `main` and on merge-queue entries. It selects the test tier from the complete PR diff.
+
+- Documentation-only PRs finish after those checks. UVA evidence fixtures under `docs/rfc/unified-visual-architecture/evidence/` select full validation.
+- Changes limited to widget assets, example modules, CAS and module code, selected image operations, or ordinary test files run the fast suite. It includes Python CAS, PDF, fake-host browser, and the ordinary UVA and storage regressions. The explicitly listed long persistence and crash-recovery suites run in the full tier.
+- UVA, persistence, shared runtime code such as `server.js`, deployment, dependencies, CI, and unclassified paths select full validation. The full tier runs all Node and Python tests and the legacy-store regressions. Merge-queue entries and unclassifiable diffs also select full validation.
+
+Run the tiers locally with `node scripts/run-ci-tests.mjs fast` or `node scripts/run-ci-tests.mjs full` after installing the test dependencies above. Use Linux for the persistence suites, which use the OS writer lease and exercise the native durable profile on supported ext4/XFS mounts.
 
 **Unset `ESTAMPES_*` variables before running tests.** Some tests assert the defaults (for example "storage is off") and fail if your shell exports `ESTAMPES_STORAGE_DIR`. This was observed: an exported storage folder made `mcp-http.test.js` fail.
 
