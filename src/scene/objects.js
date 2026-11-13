@@ -357,7 +357,7 @@ function renderShape(obj, axes, aspect) {
     }
     case "point": return [{ k: "circle", x: r5(at[0]), y: r5(at[1]), r: 5, fill: fill ?? stroke.stroke, stroke: "#FFFFFF", width: 1.5 }];
     case "dots": return p.points.map((q) => { const [x, y] = map(q); return { k: "circle", x: r5(x), y: r5(y), r: 4, fill: fill ?? stroke.stroke, stroke: "#FFFFFF", width: 1 }; });
-    case "text": return [{ k: "text", x: r5(at[0]), y: r5(at[1]), text: p.text, size: p.size ?? 15, anchor: "start", baseline: "middle", fill: fill ?? stroke.stroke }];
+    case "text": return p.text.split(/\r?\n/).map((text, i) => ({ k: "text", x: r5(at[0]), y: r5(at[1] + i * (p.size ?? 15) * 1.25 / 1000 / aspect), text, size: p.size ?? 15, anchor: "start", baseline: "middle", fill: fill ?? stroke.stroke }));
   }
   return [];
 }

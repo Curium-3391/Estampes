@@ -119,3 +119,13 @@ test("without a note the message asks for several readings instead of assuming o
   assert.match(message,/列出可能的解讀/);
   assert.match(message,/只問一次/);
 });
+
+test("per-mark notes survive both point and polyline submission events and chat",()=>{
+  const note="中文備註\n第二行🙂 <img>";
+  const event=buildAnnotationEvent({scene:"landscape",annotations:[
+    {id:"note-point",type:"point",x:.2,y:.3,note},
+    {id:"note-line",type:"polyline",points:[{x:.1,y:.2},{x:.3,y:.4}],note},
+  ]});
+  for(const mark of event.annotations){assert.equal(mark.note,note);assert.equal(mark.author,"user");assert.equal(mark.grounding,"user-pointer");}
+  const chat=formatAnnotationChatMessage(event);assert.ok(chat.includes(note));assert.ok(chat.includes(JSON.stringify(note)));
+});

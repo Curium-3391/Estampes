@@ -15,7 +15,7 @@ export const ANNOTATION_FIELDS = Object.freeze({
   identity: Object.freeze(["id", "type", "label", "targetId"]),
   geometry: Object.freeze(["x", "y", "x2", "y2", "points", "smooth", "closed"]),
   style: Object.freeze(["color", "size", "pen"]),
-  // What the assistant concluded, and the user's verdict on it.
+  // A shared note, its evidence and the user's verdict on it.
   claim: Object.freeze(["note", "status", "confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected", "findingUpdatedAt"]),
   // Who made it and how it was placed.
   provenance: Object.freeze(["author", "grounding", "edited"]),

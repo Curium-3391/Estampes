@@ -230,6 +230,7 @@ export function compactObject(r) {
 // the model's working notes; they are not shown or exported until published.
 const EDITABLE = {
   image: p => ({ region: p.region }),
+  shape: p => p.kind === "text" && (p.space ?? "canvas") === "canvas" ? { ...p } : null,
   "function-plot": (p) => ({ expression: p.expression, domain: p.domain ?? null, labelMode: p.labelMode ?? (p.label === undefined ? "auto" : "custom"), label: p.label ?? "" }),
   "axes-2d": (p) => ({ xRange: p.xRange, yRange: p.yRange, title: p.title ?? "" }),
 };

@@ -85,6 +85,8 @@ export function buildAnnotationEvent({scene,image,pairImage,workspace,annotation
     const id=textValue(raw.id,64);
     if(!id||ids.has(id))throw new Error("Missing or duplicate annotation ID");
     ids.add(id);
+    const note=typeof raw.note==="string"?raw.note.slice(0,200):"";
+    const details=note?{note}:{};
     // focus = what this submission is about; context = earlier marks kept
     // only as background. Missing role means focus.
     const role=raw.role==="context"?"context":"focus";
@@ -92,7 +94,7 @@ export function buildAnnotationEvent({scene,image,pairImage,workspace,annotation
       :pairImage?{side:raw.side==="right"?"right":"left"}:{};
     if(raw.type==="polyline") {
       return {id,author:"user",type:"polyline",role,...side,...markStyle(raw),geometry:polylineWithBounds(raw.points,raw),
-        ...strokeFacts(raw),label:textValue(raw.label,64),grounding:"user-pointer"};
+        ...strokeFacts(raw),...details,label:textValue(raw.label,64),grounding:"user-pointer"};
     }
     if(!in01(raw.x)||!in01(raw.y))throw new Error("Invalid normalized point");
     if(raw.type!=="point"&&(!in01(raw.x2)||!in01(raw.y2))) {
@@ -105,7 +107,7 @@ export function buildAnnotationEvent({scene,image,pairImage,workspace,annotation
       geometry,
       ...(raw.type==="arrow"?{arrowhead:"end",semanticHint:arrowHintFor(intent),
         direction:arrowDirection(geometry,dims.width,dims.height)}:{}),
-      ...strokeFacts(raw),
+      ...strokeFacts(raw),...details,
       label:textValue(raw.label,64),
       grounding:"user-pointer",
     };
@@ -198,6 +200,7 @@ export function formatAnnotationChatMessage(event) {
   const focus=event.annotations.filter(m=>m.role!=="context"),context=event.annotations.filter(m=>m.role==="context");
   lines.push("這次我問的是："+focus.map(name).join("、")+"（role=focus）。"+
     (context.length?"其他標記（"+context.map(name).join("、")+"，role=context）是之前畫的，只當背景，除非我提到否則不用分析。":""));
+  for(const m of focus)if(m.note)lines.push(name(m)+" 的備註（使用者親自輸入）："+m.note);
   if(interaction.userNote)lines.push("我的補充說明（使用者親自輸入）："+interaction.userNote);
   if(interaction.replyTo?.quote) {
     lines.push("我提供的前文引述（使用者自行填寫，非外掛讀取的聊天紀錄）："+interaction.replyTo.quote);

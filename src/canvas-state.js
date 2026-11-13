@@ -105,7 +105,8 @@ export function storeUserMarks(entry, marks) {
 // replaced, never mutated, so a shallow copy is a full snapshot.
 export function snapshotCanvas(entry) {
   const marks = new Map(marksOf(entry)), layers = [...layersOf(entry)];
-  return () => { entry.marks = marks; entry.layers = layers; };
+  const history = entry.markHistory ? { past: [...entry.markHistory.past], future: [...entry.markHistory.future] } : undefined;
+  return () => { entry.marks = marks; entry.layers = layers; entry.markHistory = history; };
 }
 
 // ---- Claims on marks ---------------------------------------------------------
@@ -273,10 +274,18 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
       const moved = geometryChanged(old, next);
-      const stored = { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) };
+      let stored = { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) };
+      if (edit.note !== undefined && (next.note ?? "") !== (old.note ?? "")) {
+        stored = withoutClaim(stored);
+        if (!next.note) delete stored.note;
+        else stored.note = next.note;
+        stored.findingUpdatedAt = Math.max(Date.now(), ...[...state.values()].map(m => (m.findingUpdatedAt ?? 0) + 1));
+        if (!stored.note && !stored.status) delete stored.findingUpdatedAt;
+      }
+      if (edit.note !== undefined && !next.note) delete stored.note;
       state.set(edit.id, stored);
       changes.push({ before: old, after: stored });
-      edits.push({ kind: moved ? "move-mark" : "restyle-mark", id: edit.id, ...(next.label ? { label: next.label } : {}) });
+      edits.push({ kind: moved ? "move-mark" : edit.note !== undefined && (stored.note ?? "") !== (old.note ?? "") ? "edit-note" : "restyle-mark", id: edit.id, ...(next.label ? { label: next.label } : {}) });
     });
     for (const change of changes) recordChange(entry, change);
     (entry.userEdits ??= []).push(...edits);

@@ -19,7 +19,7 @@
     },
     {
       "path": "src/documents/legacy-shadow.js",
-      "sha256": "953493b67fc5b7b08ca4029a8ecda4645668cdc37ae975515a641216ed00e505"
+      "sha256": "d3a60fee98b30cc528109c1d998dc1887322136d1242861244e78869acfc2ee5"
     },
     {
       "path": "src/documents/provenance.js",
@@ -368,6 +368,18 @@
           "path": "src/documents/legacy-shadow.js",
           "from": "f4b13f9fef6c30bf366c591d8e8c982e1be471f413b79f05102614d65e2b5870",
           "to": "953493b67fc5b7b08ca4029a8ecda4645668cdc37ae975515a641216ed00e505"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-13",
+      "authorizedBy": "User explicitly requested full issue #82 including standalone text objects",
+      "reason": "Archive the private text undo/redo metadata during canvas projection; no change to document schemas or the authoritative persistence engine",
+      "files": [
+        {
+          "path": "src/documents/legacy-shadow.js",
+          "from": "953493b67fc5b7b08ca4029a8ecda4645668cdc37ae975515a641216ed00e505",
+          "to": "d3a60fee98b30cc528109c1d998dc1887322136d1242861244e78869acfc2ee5"
         }
       ]
     }

@@ -17,7 +17,7 @@ for (const name of ["playwright", "playwright-core"]) { try { ({ chromium } = re
 export const noBrowser = chromium ? false : "playwright is not installed";
 export const shotsDir = process.env.ESTAMPES_E2E_SHOTS;
 
-const HARNESS = `<!doctype html><body style="margin:0"><iframe id="w" style="width:100vw;height:100vh;border:0"></iframe><script>
+const HARNESS = `<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><body style="margin:0"><iframe id="w" style="width:100vw;height:100vh;border:0"></iframe><script>
 const f=document.getElementById("w");
 window.hostLog=[];let initialized=false;
 addEventListener("message",async e=>{
@@ -68,10 +68,10 @@ export async function startStack({ cas = true, env = {} } = {}) {
     },
     // Opens the widget on `imageId` the way present_visual would deliver it.
     // globals: deliver the result the way ChatGPT does (window.openai first).
-    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false }) {
+    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false }) {
       const widget = await this.widgetHtml();
       browser ??= await chromium.launch(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : { args: ["--no-sandbox"] });
-      const page = await browser.newPage({ viewport });
+      const page = await browser.newPage({ viewport, hasTouch: touch, isMobile: touch });
       const errors = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
