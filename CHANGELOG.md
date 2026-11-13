@@ -8,6 +8,7 @@
   persistent undo/redo, including rotated workspace copies. Changed notes drop
   old evidence/review; source geometry and creator provenance are preserved.
 
+- Surface widget (UVA Phase 3, PR-3A-1): the viewer is now a factory (`createViewer`) over one `HostBridge` that owns the host conversation (requests, handshake, `window.openai` globals); the viewer markup lives in a `<template>`, keyboard handling is routed to the focused viewer only. Behaviour is unchanged for the single viewer (all browser E2E pass untouched); this is the groundwork for several viewers in one widget.
 - `register_images` (#68): automatic registration now aligns oblique, defocused,
   unevenly lit views turned by any angle, where it gave up before. It keeps five
   feature scales, votes on the common rotation, and then matches again near the
