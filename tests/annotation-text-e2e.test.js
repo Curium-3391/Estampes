@@ -147,8 +147,13 @@ test("paired canvas edits right-side text without touching the left image",{skip
     const read=await ok("edit_canvas_text",{imageId:right});
     const made=await ok("edit_canvas_text",{imageId:right,action:"create",expectedRevision:read.revision,props:{text:"右側文字",x:.3,y:.4}});
     const ui=await s.open({imageId:left,result:()=>s.call("present_visual",{imageId:left,pairImageId:right})});
+    await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
     const rendered=ui.frame.locator('#unified-layers g[data-side="right"][data-object="'+made.selectedId+'"] text');
     await rendered.waitFor();await ui.frame.locator('[data-mode="select"]').click();
+    // Measuring a visible SVG node alone does not wait for the workbench's
+    // opening layout/scroll to settle. Keep the native pointer click, but wait
+    // for Playwright's stable, in-view geometry before taking its coordinates.
+    await rendered.scrollIntoViewIfNeeded();
     const b=await rendered.boundingBox();await ui.page.mouse.click(b.x+b.width/2,b.y+b.height/2);
     await ui.frame.locator("#text-editor").waitFor();
     assert.equal(await ui.frame.locator("#text-size").inputValue(),"15");
