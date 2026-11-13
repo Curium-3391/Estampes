@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # The PR-1B evidence test reads the original workflow blobs.
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:

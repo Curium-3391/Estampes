@@ -52,7 +52,7 @@ The `baseline` job runs syntax and documentation checks on every PR to `main` an
 - Changes limited to widget assets, example modules, CAS and module code, selected image operations, or ordinary test files run the fast suite. It includes Python CAS, PDF, fake-host browser, and the ordinary UVA and storage regressions. The explicitly listed long persistence and crash-recovery suites run in the full tier.
 - UVA, persistence, shared runtime code such as `server.js`, deployment, dependencies, CI, and unclassified paths select full validation. The full tier runs all Node and Python tests and the legacy-store regressions. Merge-queue entries and unclassifiable diffs also select full validation.
 
-Run the tiers locally with `node scripts/run-ci-tests.mjs fast` or `node scripts/run-ci-tests.mjs full` after installing the test dependencies above. Use Linux for the persistence suites, which use the OS writer lease and exercise the native durable profile on supported ext4/XFS mounts.
+Run the tiers locally with `node scripts/run-ci-tests.mjs fast` or `node scripts/run-ci-tests.mjs full` after installing the test dependencies above. Use a full Git checkout for the PR-1B historical evidence test. Use Linux for the persistence suites, which use the OS writer lease and exercise the native durable profile on supported ext4/XFS mounts.
 
 **Unset `ESTAMPES_*` variables before running tests.** Some tests assert the defaults (for example "storage is off") and fail if your shell exports `ESTAMPES_STORAGE_DIR`. This was observed: an exported storage folder made `mcp-http.test.js` fail.
 
