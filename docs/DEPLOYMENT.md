@@ -169,9 +169,12 @@ Invalid values fall back to the default and are reported in the log at startup.
 
 With `ESTAMPES_STORAGE_DIR` set, canvases, workspaces, panel layouts and
 calculator notebooks are committed to the UVA store and restored from it
-(`ESTAMPES_CANVAS_STORE=uva`, the default). Existing data move in on first open;
-the legacy files keep being written, so `ESTAMPES_CANVAS_STORE=legacy` switches
-back without losing an edit. Servers without storage keep everything in memory.
+(`ESTAMPES_CANVAS_STORE=uva`, the default). Existing data move in on first open,
+and from then on **no legacy file is written**: the store and the storage folder
+together hold your work, so a backup needs both ([Backup](BACKUP-RESTORE.md)).
+To go back to `ESTAMPES_CANVAS_STORE=legacy`, stop the server and write the
+files back out first with `scripts/uva-to-legacy.mjs`. Servers without storage
+keep everything in memory.
 
 - `ESTAMPES_UVA_DIR`: the store's own private folder, never inside or above
   `ESTAMPES_STORAGE_DIR`. Docker uses `/uva-beta` (volume `uva-beta` in

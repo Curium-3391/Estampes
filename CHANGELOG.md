@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Backup and restore cover both data roots (architecture review A01). With the
+  default UVA store, images, canvases, workspaces, surfaces and notebooks live
+  in the store (`/uva-beta`), not in `/data`, and pending records are deleted
+  once committed, so the documented `/data`-only backup lost committed work.
+  `docs/BACKUP-RESTORE.md` now archives and restores both volumes (with the
+  ownership and mode the store needs) and explains rolling back to a release
+  that cannot read the store. `scripts/verify-backup-restore.mjs` checks both
+  roots, with changes still pending and after they were committed, and that a
+  `/data`-only archive is not enough; `npm test` runs it.
+  `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md` and `compose.yaml` no longer say
+  legacy files are kept up to date in UVA mode.
+
 - Calculator: a result is published as fresh only if the notebook's
   definitions, assumptions, angle and precision are still the ones it was
   computed with; a definition changed during the calculation leaves the result
