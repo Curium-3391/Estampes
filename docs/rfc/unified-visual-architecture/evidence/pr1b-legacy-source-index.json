@@ -46,7 +46,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "4bc284989c29c791e5abd1a68fd31e2c36001fe367fa0f888c84ac8320f4639a"
+      "sha256": "eb39000e05f127f488df8251a6a5dfdc2a5060c0e7bee5ef810345345f4a8166"
     },
     {
       "path": "src/builtin-modules/graph/index.js",

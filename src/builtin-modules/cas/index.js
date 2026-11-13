@@ -58,45 +58,87 @@ const inputOf = (p) => (p.latex !== undefined ? { latex: p.latex } : p.text !== 
 const paramsOf = (p) => { const o = {}; for (const k of ["variable", "variables", "order", "lower", "upper", "point", "direction", "n", "guess", "domain", "mode", "other", "subs"]) if (p[k] !== undefined) o[k] = p[k]; return o; };
 const staleLinks = (cell) => { for (const l of cell.links ?? []) if (l.status === "fresh") l.status = "stale"; };
 
-function writeCell(nb, cell, p, outcome, resultId, author) {
+// What a result depends on besides its own input: the notebook's
+// definitions and assumptions, and its default angle and precision.
+// Compared in canonical form (sorted keys).
+const canonical = (v) => Array.isArray(v) ? v.map(canonical)
+  : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v;
+const envKeyOf = (nb) => JSON.stringify(canonical({ env: envOf(nb), angle: nb.angle ?? null, precision: nb.precision ?? null }));
+
+// `envKey` is the environment the result was computed in. A result is
+// published as fresh only when the notebook still has that environment;
+// if a definition changed while SymPy was working, the result is kept but
+// marked stale, so it cannot be plotted until it is recomputed.
+function writeCell(nb, cell, p, outcome, resultId, author, envKey) {
+  const changed = envKey !== undefined && envKey !== envKeyOf(nb);
   cell.operation = p.operation; cell.input = inputOf(p); cell.params = paramsOf(p);
   cell.angle = p.angle ?? nb.angle; cell.precision = p.precision ?? nb.precision;
   cell.revision = (cell.revision ?? 0) + 1;
   if (outcome.result) {
     cell.result = { ...outcome.result, resultId, computedAt: new Date().toISOString(), author };
-    delete cell.error; cell.stale = false; delete cell.staleReason;
+    delete cell.error;
+    if (changed) { cell.stale = true; cell.staleReason = "the notebook's definitions or settings changed while this was being computed"; }
+    else { cell.stale = false; delete cell.staleReason; }
   } else {
     cell.error = outcome.error; // the input stays, so it can be fixed and retried
   }
   staleLinks(cell);
 }
 
+// Calculations under way, by notebook and idempotency key: a second call
+// with the same key waits for the first instead of adding another cell.
+const inflight = new Map();
+
 async function calculate(p) {
+  // Keys are scoped to a notebook; a call that creates a new notebook has
+  // nothing to collide with.
+  if (!p.idempotencyKey || !p.notebook) return calculateOnce(p);
+  const key = p.notebook + "\u0000" + p.idempotencyKey;
+  const running = inflight.get(key);
+  if (running) {
+    const first = await running.catch(() => null);
+    // The first call failed or was cancelled: this one runs on its own.
+    if (!first) return calculate(p);
+    const nb = await deps.notebooks.get(first.data.notebookId);
+    const cell = nb.cells.find((c) => c.id === first.data.cell.cellId);
+    return cell ? reply(nb, cell, true) : first;
+  }
+  const run = calculateOnce(p);
+  inflight.set(key, run);
+  try { return await run; } finally { if (inflight.get(key) === run) inflight.delete(key); }
+}
+
+async function calculateOnce(p) {
   needBackend();
   const { notebooks } = deps;
   const by = p.by ?? "model";
   let nb = p.notebook ? await notebooks.get(p.notebook) : await notebooks.create({ angle: p.angle, precision: p.precision });
-  if (p.idempotencyKey && nb.idem?.[p.idempotencyKey]) {
-    const done = nb.idem[p.idempotencyKey];
-    const cell = nb.cells.find((c) => c.id === done);
-    if (cell) return reply(nb, cell, true);
-  }
+  const replayOf = (book) => {
+    const done = p.idempotencyKey && book.idem?.[p.idempotencyKey];
+    return done ? book.cells.find((c) => c.id === done) : null;
+  };
+  const known = replayOf(nb);
+  if (known) return reply(nb, known, true);
   if (p.cell && !nb.cells.some((c) => c.id === p.cell)) throw new Error("no cell " + p.cell + " in " + nb.id);
+  const envKey = envKeyOf(nb);
   const outcome = await compute(nb, p);
   const resultId = notebooks.newResultId();
-  let cellId;
+  let cellId, replayed = false;
   nb = await notebooks.mutate(nb.id, { expectedRevision: p.expectedRevision }, (draft) => {
+    // The same key finished meanwhile (another process or a retry): reuse it.
+    const done = replayOf(draft);
+    if (done) { cellId = done.id; replayed = true; return draft; }
     let cell = p.cell && draft.cells.find((c) => c.id === p.cell);
     if (!cell) {
       if (draft.cells.length >= 200) throw new Error("this notebook has 200 cells; start a new notebook or delete some");
       cell = { id: notebooks.newCellId(), links: [] }; draft.cells.push(cell);
     }
-    writeCell(draft, cell, p, outcome, resultId, by);
+    writeCell(draft, cell, p, outcome, resultId, by, envKey);
     cellId = cell.id;
     if (p.idempotencyKey) { draft.idem = { ...(draft.idem ?? {}), [p.idempotencyKey]: cell.id }; const keys = Object.keys(draft.idem); for (const k of keys.slice(0, Math.max(0, keys.length - 50))) delete draft.idem[k]; }
     return draft;
   });
-  return reply(nb, nb.cells.find((c) => c.id === cellId), false);
+  return reply(nb, nb.cells.find((c) => c.id === cellId), replayed);
 }
 
 function reply(nb, cell, replayed) {
@@ -155,12 +197,13 @@ async function recompute(p) {
     const params = { operation: c.operation, ...c.input, ...c.params, angle: c.angle, precision: c.precision };
     if (params.subs && !Array.isArray(params.subs)) params.subs = Object.entries(params.subs).map(([name, value]) => ({ name, value }));
     const current = await notebooks.get(nb.id);
+    const envKey = envKeyOf(current);
     const outcome = await compute(current, { ...params, ...(p.job ? { job: p.job } : {}) });
     const resultId = notebooks.newResultId();
     await notebooks.mutate(nb.id, { expectedRevision: p.expectedRevision !== undefined && !done.length ? p.expectedRevision : undefined }, (d) => {
       const cell = d.cells.find((x) => x.id === c.id);
       if (!cell) return d;
-      writeCell(d, cell, params, outcome, resultId, "model");
+      writeCell(d, cell, params, outcome, resultId, "model", envKey);
       return d;
     });
     done.push(c.id);

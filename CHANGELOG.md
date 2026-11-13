@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Calculator: a result is published as fresh only if the notebook's
+  definitions, assumptions, angle and precision are still the ones it was
+  computed with; a definition changed during the calculation leaves the result
+  stale (so it cannot be plotted until recomputed), also for `recompute`
+  (architecture review A02). Overlapping `calculate` calls with the same
+  `idempotencyKey` on one notebook now compute once and add one cell; the
+  others are replays.
+
 - A canvas save that fails (UVA store) no longer leaves the failed change in
   memory (architecture review A03). Before, a refused `present_visual`,
   `execute_module` or object edit stayed visible to later reads, with the
