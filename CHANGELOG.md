@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Workspaces: a merge, split or move (and its undo) changes two workspaces as
+  one unit. It is written first as one durable intent and rolled forward on the
+  next start or by the retry timer, so a crash or a failed write no longer
+  leaves one workspace changed and the other not (architecture review A04).
+  Reads of a workspace with an unfinished intent return the intent's value.
 - Workbench: a layout or panel change that hit a revision conflict retried
   behind itself in the change queue, so it never finished and every later
   move, resize, open or close in that widget waited forever (architecture

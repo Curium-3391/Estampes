@@ -274,7 +274,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "463325fc5490de477717084f27ecbd8656931233e28cde7163c48205a28eaa88"
+      "sha256": "a788a68aad9b857f5af440975e22fdea118fe65aad6d10ae0f1f1914954fe8a8"
     },
     {
       "path": "src/surface/bundle-extras.js",
@@ -318,7 +318,7 @@
     },
     {
       "path": "src/workspace.js",
-      "sha256": "0415a05c73307506cf4336ebddee56701b0f7d17572a6f8d121b45b79213ae28"
+      "sha256": "ef67c9153159eb4acd9be0eff776b1593062422a541bbd94a44d71bbfec23fb4"
     },
     {
       "path": "src/zip.js",
