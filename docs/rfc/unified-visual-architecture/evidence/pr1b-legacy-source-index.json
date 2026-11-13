@@ -27,7 +27,8 @@
     "src/image/engines.js",
     "src/image/view.js",
     "src/scene/objects.js",
-    "src/scene/scene-ops.js"
+    "src/scene/scene-ops.js",
+    "src/image/register.js"
   ],
   "files": [
     {

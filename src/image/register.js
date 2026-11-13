@@ -1,9 +1,17 @@
 // Two-image registration (RFC PRE-05, D05-D08, D15): a transform from image
 // A to image B from landmarks the model or user names, or from automatic
-// feature matching (Harris corners, oriented BRIEF descriptors, ratio and
-// mutual tests, RANSAC). Every result reports its quality (inliers, ratio,
-// median and P95 reprojection error, conditioning, coverage, residuals per
-// area) and says "failed" with reasons instead of forcing an alignment.
+// feature matching. Automatic matching: Harris corners at five scales,
+// oriented BRIEF descriptors, putative matches (ratio and mutual tests,
+// plus a looser set kept around the most voted rotation), RANSAC for a
+// rough transform, then guided matching: every feature looks for its
+// partner near where the transform puts it, the transform is refitted, and
+// the search tightens. The supporters that remain are compared with what
+// the same search finds for shifted copies of the transform, the level
+// chance reaches on that pair. Every result reports its quality (inliers,
+// ratio, median and P95 reprojection error, held-out error, conditioning,
+// coverage, residuals per area), says "failed" with reasons instead of
+// forcing an alignment, and rates separately how far a fit that passed can
+// be trusted across the whole image.
 // A homography is only right for flat subjects; the result says so.
 import { createHash } from "node:crypto";
 import sharp from "sharp";
@@ -14,7 +22,7 @@ import {
 } from "./transform.js";
 import { warp } from "./geometry.js";
 
-export const REGISTER_VERSION = "1";
+export const REGISTER_VERSION = "2";
 export const MODELS = Object.freeze(["similarity", "affine", "homography"]);
 const MIN_POINTS = { similarity: 2, affine: 3, homography: 4 };
 const MATCH_SIDE = 1024;
@@ -101,36 +109,173 @@ function describe(smooth, pts) {
 const popcount = (v) => { v -= (v >>> 1) & 0x55555555; v = (v & 0x33333333) + ((v >>> 2) & 0x33333333); return (((v + (v >>> 4)) & 0xf0f0f0f) * 0x1010101) >>> 24; };
 const hamming = (a, b) => { let d = 0; for (let i = 0; i < 8; i++) d += popcount(a[i] ^ b[i]); return d; };
 
-// Features at four scales, in level-0 (matching image) pixel coordinates.
+// Features at five scales, in level-0 (matching image) pixel coordinates.
+const LEVELS = [1, 0.7071, 0.5, 0.3536, 0.25];
+const PER_LEVEL = 1200;
 async function features(gray) {
   const out = [];
-  for (const f of [1, 0.7071, 0.5, 0.3536]) {
+  for (const f of LEVELS) {
     const w = Math.round(gray.width * f), h = Math.round(gray.height * f);
     if (Math.min(w, h) < 64) break;
     const level = f === 1 ? gray : await rawImage(sameBands(gray, fromRaw(gray).resize({ width: w, height: h })));
-    const smooth = await rawImage(sameBands(level, fromRaw(level).blur(1.6)));
-    for (const d of describe(smooth, harris(level, { max: Math.round(500 * f) }))) out.push({ ...d, x: (d.x + 0.5) / (w / gray.width), y: (d.y + 0.5) / (h / gray.height), level: f });
+    const smooth = await rawImage(sameBands(level, fromRaw(level).blur(DESCRIPTOR_BLUR)));
+    for (const d of describe(smooth, harris(level, { max: Math.round(PER_LEVEL * f) }))) out.push({ ...d, x: (d.x + 0.5) / (w / gray.width), y: (d.y + 0.5) / (h / gray.height), level: f });
+  }
+  return out;
+}
+const DESCRIPTOR_BLUR = 2;
+
+// Nearest and second-nearest descriptor for every feature of A in B (and
+// nearest in A for every feature of B), in one pass over all pairs.
+function nearest(fa, fb) {
+  const na = fa.length, nb = fb.length;
+  const A = new Uint32Array(na * 8), B = new Uint32Array(nb * 8);
+  fa.forEach((f, i) => A.set(f.bits, i * 8)); fb.forEach((f, j) => B.set(f.bits, j * 8));
+  const a1 = new Uint16Array(na).fill(999), a2 = new Uint16Array(na).fill(999), aj = new Int32Array(na).fill(-1);
+  const b1 = new Uint16Array(nb).fill(999), bi = new Int32Array(nb).fill(-1);
+  for (let i = 0; i < na; i++) {
+    const o = i * 8;
+    for (let j = 0; j < nb; j++) {
+      const q = j * 8;
+      const d = popcount(A[o] ^ B[q]) + popcount(A[o + 1] ^ B[q + 1]) + popcount(A[o + 2] ^ B[q + 2]) + popcount(A[o + 3] ^ B[q + 3]) +
+        popcount(A[o + 4] ^ B[q + 4]) + popcount(A[o + 5] ^ B[q + 5]) + popcount(A[o + 6] ^ B[q + 6]) + popcount(A[o + 7] ^ B[q + 7]);
+      if (d < a1[i]) { a2[i] = a1[i]; a1[i] = d; aj[i] = j; } else if (d < a2[i]) a2[i] = d;
+      if (d < b1[j]) { b1[j] = d; bi[j] = i; }
+    }
+  }
+  return { a1, a2, aj, bi };
+}
+
+// Putative matches: mutual nearest neighbours that pass the ratio test.
+function match(fa, fb, { ratio = 0.8, maxDistance = 70, table = null } = {}) {
+  const { a1, a2, aj, bi } = table ?? nearest(fa, fb);
+  const out = [];
+  for (let i = 0; i < fa.length; i++) {
+    const j = aj[i];
+    if (j < 0 || a1[i] > maxDistance || a1[i] >= ratio * a2[i] || bi[j] !== i) continue;
+    out.push({ i, j, a: { x: fa[i].x, y: fa[i].y }, b: { x: fb[j].x, y: fb[j].y }, distance: a1[i] });
   }
   return out;
 }
 
-function match(fa, fb, { ratio = 0.8, maxDistance = 70 } = {}) {
-  const best = (f, pool) => {
-    let d1 = 999, d2 = 999, j1 = -1;
-    for (let j = 0; j < pool.length; j++) {
-      const d = hamming(f.bits, pool[j].bits);
-      if (d < d1) { d2 = d1; d1 = d; j1 = j; } else if (d < d2) d2 = d;
+const wrapPi = (v) => { while (v > Math.PI) v -= 2 * Math.PI; while (v <= -Math.PI) v += 2 * Math.PI; return v; };
+
+// Matches of one flat subject turn by about the same angle. Keep the
+// matches around the most voted rotation (15 degree bins, +-30 degrees), so
+// a looser ratio test can be afforded without drowning RANSAC in outliers.
+function rotationConsensus(pairs, fa, fb) {
+  const bins = 24, hist = new Float32Array(bins);
+  const turn = pairs.map((p) => wrapPi(fb[p.j].angle - fa[p.i].angle));
+  for (const t of turn) hist[Math.floor(((t + Math.PI) / (2 * Math.PI)) * bins) % bins]++;
+  let best = 0, bestV = -1;
+  for (let k = 0; k < bins; k++) { const v = hist[(k + bins - 1) % bins] + hist[k] + hist[(k + 1) % bins]; if (v > bestV) { bestV = v; best = k; } }
+  const centre = ((best + 0.5) / bins) * 2 * Math.PI - Math.PI;
+  return pairs.filter((_, k) => Math.abs(wrapPi(turn[k] - centre)) <= Math.PI / 6);
+}
+
+// B features in a coarse grid, for searching around a predicted position.
+function gridIndex(fb, width, height, cell = 32) {
+  const cols = Math.ceil(width / cell), rows = Math.ceil(height / cell), cells = Array.from({ length: cols * rows }, () => []);
+  fb.forEach((f, j) => { const c = Math.min(cols - 1, Math.max(0, Math.floor(f.x / cell))), r = Math.min(rows - 1, Math.max(0, Math.floor(f.y / cell))); cells[r * cols + c].push(j); });
+  return { cells, cols, rows, cell, width, height };
+}
+
+// Guided matching: with a transform in hand, every feature of A looks for
+// its partner only near where the transform puts it, among B features whose
+// orientation agrees with the transform's local rotation. No ratio test is
+// needed there, so repeated structures (pins, pads) can match. Each B
+// feature is used once. Returns the pairs and how many A features fell
+// inside B at all.
+function guided(H, fa, fb, index, { radius, maxDistance = GUIDED_DISTANCE, maxTurn = Math.PI / 6 }) {
+  const taken = new Map();
+  let inside = 0;
+  for (let i = 0; i < fa.length; i++) {
+    const f = fa[i], p = apply(H, f.x, f.y);
+    if (!(p.w > 0) || p.x < 0 || p.y < 0 || p.x >= index.width || p.y >= index.height) continue;
+    inside++;
+    const q = apply(H, f.x + 6 * Math.cos(f.angle), f.y + 6 * Math.sin(f.angle));
+    const expected = Math.atan2(q.y - p.y, q.x - p.x);
+    const c0 = Math.max(0, Math.floor((p.x - radius) / index.cell)), c1 = Math.min(index.cols - 1, Math.floor((p.x + radius) / index.cell));
+    const r0 = Math.max(0, Math.floor((p.y - radius) / index.cell)), r1 = Math.min(index.rows - 1, Math.floor((p.y + radius) / index.cell));
+    let best = -1, bestD = maxDistance + 1, bestE = 0;
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) for (const j of index.cells[r * index.cols + c]) {
+      const g = fb[j], e = Math.hypot(g.x - p.x, g.y - p.y);
+      if (e > radius || Math.abs(wrapPi(g.angle - expected)) > maxTurn) continue;
+      const d = hamming(f.bits, g.bits);
+      if (d < bestD || (d === bestD && e < bestE)) { bestD = d; best = j; bestE = e; }
     }
-    return { j: j1, d1, d2 };
-  };
-  const ab = fa.map((f) => best(f, fb));
-  const ba = fb.map((f) => best(f, fa));
-  const out = [];
-  ab.forEach((m, i) => {
-    if (m.j < 0 || m.d1 > maxDistance || m.d1 >= ratio * m.d2 || ba[m.j].j !== i) return;
-    out.push({ a: { x: fa[i].x, y: fa[i].y }, b: { x: fb[m.j].x, y: fb[m.j].y }, distance: m.d1 });
-  });
-  return out;
+    if (best < 0) continue;
+    const prev = taken.get(best);
+    if (!prev || bestD < prev.distance || (bestD === prev.distance && bestE < prev.error)) taken.set(best, { i, j: best, a: { x: f.x, y: f.y }, b: { x: fb[best].x, y: fb[best].y }, distance: bestD, error: bestE });
+  }
+  return { pairs: [...taken.values()].sort((u, v) => u.i - v.i), inside };
+}
+const GUIDED_DISTANCE = 72;
+// Support must exceed CHANCE_FACTOR x the chance level + CHANCE_MARGIN.
+const CHANCE_FACTOR = 5, CHANCE_MARGIN = 10;
+// ... and at least this share of A's features inside B must find a partner.
+// Unrelated boards reach about 0.02 through the search for the best fit.
+const MIN_REPEATABILITY = 0.04;
+
+// Sign of the Jacobian of a projective map at (x, y): negative when the map
+// reverses orientation there.
+function orientationReversing(H, x, y) {
+  const w = H[6] * x + H[7] * y + H[8], u = H[0] * x + H[1] * y + H[2], v = H[3] * x + H[4] * y + H[5];
+  const a = (H[0] * w - u * H[6]), b = (H[1] * w - u * H[7]), c = (H[3] * w - v * H[6]), d = (H[4] * w - v * H[7]);
+  return a * d - b * c < 0;
+}
+
+// From a rough transform to a refined one: search around it, refit, search
+// again closer. Returns null when the support melts away.
+function refine(H0, fa, fb, index, model, thr) {
+  let H = H0;
+  for (const [radius, tol] of [[28, 14], [16, 8], [10, thr], [8, thr]]) {
+    const { pairs } = guided(H, fa, fb, index, { radius });
+    if (pairs.length < MIN_POINTS[model] + 2) return null;
+    const fit = ransac(pairs, model, { threshold: tol, iterations: 400, seed: 11 });
+    if (!fit) return null;
+    H = fit.H;
+  }
+  return H;
+}
+
+// How many A features find a partner within `thr` of where H puts them.
+const supportOf = (H, fa, fb, index, thr) => { const g = guided(H, fa, fb, index, { radius: thr }); return { pairs: g.pairs, inside: g.inside }; };
+
+// Automatic matching in match-image pixels. Several rough transforms are
+// proposed (from strict and from loose putative matches, as affine and as
+// the requested model), each is refined by guided matching, and the one
+// that ends with the most support wins. Its support is then compared with
+// what the same search finds for shifted copies of the transform, which is
+// the level chance alone reaches on this pair of images.
+function autoMatch(fa, fb, sizeA, sizeB, model, thr) {
+  const table = nearest(fa, fb);
+  const strict = match(fa, fb, { table });
+  const loose = rotationConsensus(match(fa, fb, { ratio: 0.92, maxDistance: 80, table }), fa, fb);
+  const index = gridIndex(fb, sizeB.width, sizeB.height);
+  const rough = [];
+  for (const [set, seed] of [[strict, 7], [loose, 8]]) {
+    if (set.length >= MIN_POINTS[model]) { const f = ransac(set, model, { threshold: thr, seed }); if (f) rough.push(f.H); }
+    // An affine guess needs one point fewer and tolerates a low inlier
+    // share better; perspective is then recovered by the refinement.
+    if (model === "homography" && set.length >= 3) { const f = ransac(set, "affine", { threshold: 4 * thr, seed: seed + 10 }); if (f) rough.push(f.H); }
+  }
+  let best = null;
+  for (const H0 of rough) {
+    const H = refine(H0, fa, fb, index, model, thr);
+    if (!H) continue;
+    const s = supportOf(H, fa, fb, index, thr);
+    if (!best || s.pairs.length > best.pairs.length) best = { H, ...s };
+  }
+  const putative = { strict: strict.length, loose: loose.length };
+  if (!best) return { putative, pairs: strict, H: null };
+  // Chance level: the same count for the transform shifted off target.
+  let chance = 0;
+  for (const [dx, dy] of [[0.17, 0.11], [-0.17, 0.11], [0.17, -0.11], [-0.17, -0.11], [0.31, 0], [0, 0.31]]) {
+    const decoy = chain([1, 0, dx * sizeA.width, 0, 1, dy * sizeA.height, 0, 0, 1], best.H);
+    chance = Math.max(chance, supportOf(decoy, fa, fb, index, thr).pairs.length);
+  }
+  return { putative, H: best.H, pairs: best.pairs, inside: best.inside, chance };
 }
 
 // RANSAC over correspondences in pixel space; threshold in A pixels after
@@ -189,14 +334,63 @@ function residualGrid(points, errors, width, height, cells = 4) {
 
 const flipX = (w) => [-1, 0, w, 0, 1, 0, 0, 0, 1];
 
+// Accuracy on points the fit did not see. Landmarks: each one is predicted
+// from all the others (leave-one-out). Auto: the supporters are split in
+// two halves and each half is predicted from the other. Null when there are
+// too few points to hold any out.
+function heldOutErrors(pts, model, method) {
+  const need = MIN_POINTS[model], errs = [];
+  if (method === "landmarks") {
+    if (pts.length <= need) return null;
+    for (let i = 0; i < pts.length; i++) {
+      const rest = pts.filter((_, k) => k !== i);
+      const H = fitTransform(rest.map((p) => p.a), rest.map((p) => p.b), model);
+      if (!H) return null;
+      errs.push(reprojectionErrors(H, [pts[i].a], [pts[i].b])[0]);
+    }
+    return { scheme: "leave-one-out", errs };
+  }
+  if (pts.length < 2 * (need + 2)) return null;
+  for (const parity of [0, 1]) {
+    const fitSet = pts.filter((_, k) => k % 2 === parity), test = pts.filter((_, k) => k % 2 !== parity);
+    const H = fitTransform(fitSet.map((p) => p.a), fitSet.map((p) => p.b), model);
+    if (!H) return null;
+    errs.push(...reprojectionErrors(H, test.map((p) => p.a), test.map((p) => p.b)));
+  }
+  return { scheme: "split-half", errs };
+}
+
+// How far a fitted transform can be trusted as an alignment of the whole
+// image. A fit that passed its checks ("ok") is not yet that: four
+// landmarks always fit a homography exactly, and points in one corner say
+// nothing about the opposite one.
+function alignmentConfidence({ method, model, inliers, rejected, worstRejectedPx, coverage, held, thr }) {
+  const order = ["high", "medium", "low", "unverified"], why = [];
+  let level = 0;
+  const lower = (to, text) => { level = Math.max(level, order.indexOf(to)); why.push(text); };
+  if (method === "landmarks") {
+    if (inliers <= MIN_POINTS[model]) lower("unverified", "a " + model + " passes exactly through " + MIN_POINTS[model] + " points, so zero residuals here are by construction and say nothing about accuracy; add landmarks to check it");
+    else if (inliers < 8) lower("medium", "only " + inliers + " landmarks support the fit");
+    if (rejected) lower(rejected * 4 >= inliers ? "low" : "medium", rejected + " landmark" + (rejected === 1 ? " does" : "s do") + " not fit (up to " + worstRejectedPx.toFixed(0) + " px off): a misplaced landmark, or a subject that is not flat");
+  }
+  if (held) {
+    const med = percentile(held.errs, 50), p95 = percentile(held.errs, 95);
+    if (med > thr) lower("low", "held-out points miss by a median of " + med.toFixed(1) + " px");
+    else if (p95 > 2 * thr) lower("medium", "some held-out points miss by " + p95.toFixed(1) + " px");
+  }
+  if (coverage < 0.1) lower("low", "the supporting points span only " + Math.round(coverage * 100) + "% of image A; elsewhere the alignment is extrapolated, not measured");
+  else if (coverage < 0.25) lower("medium", "the supporting points span " + Math.round(coverage * 100) + "% of image A; elsewhere the alignment is extrapolated");
+  return { level: order[level], why };
+}
+
 // Register B onto A. Points come as normalized coordinates of each image.
 // Returns matrices in normalized and in working pixel coordinates.
-export async function registerPair(a, b, { method = "auto", landmarks = [], model = "homography", mirror = false, threshold, minInliers, minInlierRatio = 0.25 } = {}) {
+export async function registerPair(a, b, { method = "auto", landmarks = [], model = "homography", mirror = false, threshold, minInliers, minInlierRatio } = {}) {
   const reasons = [], notes = [];
   const Wa = a.width, Ha = a.height, Wb = b.width, Hb = b.height;
   // Work in working pixels of each image; B optionally mirrored first.
   const pre = mirror ? flipX(Wb) : [1, 0, 0, 0, 1, 0, 0, 0, 1];
-  let pairs, matchScaleA = 1, featureCounts = null;
+  let pairs, matchScaleA = 1, featureCounts = null, auto = null;
   if (method === "landmarks") {
     pairs = landmarks.map((l) => ({ a: { x: l.a.x * Wa, y: l.a.y * Ha }, b: apply(pre, l.b.x * Wb, l.b.y * Hb) }));
     if (pairs.length < MIN_POINTS[model]) reasons.push(model + " needs at least " + MIN_POINTS[model] + " landmark pairs, got " + pairs.length);
@@ -205,15 +399,17 @@ export async function registerPair(a, b, { method = "auto", landmarks = [], mode
     const gb = mirror ? await rawImage(sameBands(gb0, fromRaw(gb0).flop())) : gb0;
     const fa = await features(ga), fb = await features(gb);
     featureCounts = { a: fa.length, b: fb.length };
-    const m = match(fa, fb);
     matchScaleA = ga.k;
+    auto = autoMatch(fa, fb, ga, gb, model, threshold ? threshold * ga.k : 3);
     // Back to working pixels (B: still mirrored, matching `pre`).
-    pairs = m.map((p) => ({ a: { x: p.a.x / ga.k, y: p.a.y / ga.k }, b: { x: p.b.x / gb0.k, y: p.b.y / gb0.k }, distance: p.distance }));
+    pairs = auto.pairs.map((p) => ({ a: { x: p.a.x / ga.k, y: p.a.y / ga.k }, b: { x: p.b.x / gb0.k, y: p.b.y / gb0.k }, distance: p.distance }));
+    if (auto.H) auto.H = chain(scale(ga.k), auto.H, scale(1 / gb0.k));
     if (fa.length < 30 || fb.length < 30) reasons.push("too few distinctive corners (" + fa.length + " / " + fb.length + "); glare, blur or a plain surface");
-    if (pairs.length < 8) reasons.push("only " + pairs.length + " descriptor matches survived the ratio and mutual tests");
+    if (!auto.H && auto.putative.strict < 8) reasons.push("only " + auto.putative.strict + " descriptor matches survived the ratio and mutual tests");
   }
   const thr = threshold ?? (method === "landmarks" ? Math.max(Wa, Ha) * 0.02 : 3 / matchScaleA);
-  const fit = reasons.length ? null : ransac(pairs, model, { threshold: thr });
+  // Auto: the guided search already chose the transform and its supporters.
+  const fit = reasons.length ? null : auto ? (auto.H ? { H: auto.H, inliers: pairs.map((_, i) => i) } : null) : ransac(pairs, model, { threshold: thr });
   if (!fit && !reasons.length) reasons.push("no consistent " + model + " found");
   let result = { status: "failed" };
   if (fit) {
@@ -223,32 +419,50 @@ export async function registerPair(a, b, { method = "auto", landmarks = [], mode
     const errs = reprojectionErrors(AtoBm, inl.map((i) => pairs[i].a), inl.map((i) => pairs[i].b));
     const inlierPts = inl.map((i) => pairs[i].a);
     const need = minInliers ?? (method === "landmarks" ? MIN_POINTS[model] : 12);
-    const ratio = inl.length / pairs.length;
+    // Auto: the share of A's features inside B that found their partner.
+    const ratio = auto ? inl.length / Math.max(1, auto.inside) : inl.length / pairs.length;
     const cond = condition(AtoB);
     const coverage = hullArea(inlierPts) / (Wa * Ha);
     if (inl.length < need) reasons.push(inl.length + " inliers, fewer than " + need);
-    if (method !== "landmarks" && ratio < minInlierRatio) reasons.push("inlier ratio " + ratio.toFixed(2) + " below " + minInlierRatio);
+    if (auto && inl.length < CHANCE_FACTOR * auto.chance + CHANCE_MARGIN) reasons.push(inl.length + " supporting matches is not clearly above the " + auto.chance + " that a shifted transform reaches by chance on this pair");
+    const floor = minInlierRatio ?? (auto ? MIN_REPEATABILITY : undefined);
+    if (method !== "landmarks" && floor !== undefined && ratio < floor) reasons.push("inlier ratio " + ratio.toFixed(3) + " below " + floor);
+    // A transform that turns the image over is a mirror image, not a view of
+    // the same side; only symmetric details can support it.
+    if (auto && orientationReversing(AtoBm, Wa / 2, Ha / 2)) reasons.push("the best fit is a mirror image of B; pass mirror: true if B is flipped (the back of a board, a mirrored scan)");
     if (!Number.isFinite(cond) || cond > 1e8) reasons.push("transform is ill-conditioned");
     if (method !== "landmarks" && coverage < 0.05) notes.push("inliers cover only " + Math.round(coverage * 100) + "% of image A; the fit is unverified elsewhere");
     if (model === "homography") notes.push("a homography is exact only for flat subjects (a board, a page); parallax or bent parts will not line up");
+    const held = heldOutErrors(inl.map((i) => pairs[i]), model, method);
+    const allErrs = reprojectionErrors(AtoBm, pairs.map((p) => p.a), pairs.map((p) => p.b));
+    const rejectedErrs = allErrs.filter((_, i) => !inl.includes(i));
+    const confidence = alignmentConfidence({ method, model, inliers: inl.length, rejected: method === "landmarks" ? rejectedErrs.length : 0, worstRejectedPx: Math.max(0, ...rejectedErrs), coverage, held, thr });
     const toNorm = (W, H) => scale(1 / W, 1 / H), fromNorm = (W, H) => scale(W, H);
     const nA2B = chain(fromNorm(Wa, Ha), AtoB, toNorm(Wb, Hb));
     const nB2A = invert(nA2B);
     result = {
       status: reasons.length ? "failed" : "ok",
+      // "ok" says a transform was fitted and passed its checks; this says
+      // how far to trust it across the whole image.
+      alignmentConfidence: reasons.length ? "none" : confidence.level,
+      ...(reasons.length || !confidence.why.length ? {} : { confidenceReasons: confidence.why }),
       model, mirror,
       normalizedAtoB: roundMatrix(nA2B), normalizedBtoA: nB2A ? roundMatrix(nB2A) : null,
       pixelAtoB: roundMatrix(AtoB),
       quality: {
-        correspondences: pairs.length, inliers: inl.length, inlierRatio: Number(ratio.toFixed(3)),
+        correspondences: auto ? auto.inside : pairs.length, inliers: inl.length, inlierRatio: Number(ratio.toFixed(3)),
+        ...(auto ? { putativeMatches: auto.putative.strict, chanceInliers: auto.chance } : {}),
         medianErrorPx: Number((percentile(errs, 50) ?? 0).toFixed(3)), p95ErrorPx: Number((percentile(errs, 95) ?? 0).toFixed(3)),
         thresholdPx: Number(thr.toFixed(2)), condition: Number(cond.toPrecision(4)), coverage: Number(coverage.toFixed(3)),
+        // Errors at points the fit did not use; the residuals above are
+        // at the points it was fitted to and flatter it.
+        heldOut: held ? { scheme: held.scheme, points: held.errs.length, medianErrorPx: Number(percentile(held.errs, 50).toFixed(3)), p95ErrorPx: Number(percentile(held.errs, 95).toFixed(3)), maxErrorPx: Number(Math.max(...held.errs).toFixed(3)) } : null,
         residualsByCell: residualGrid(inlierPts, errs, Wa, Ha),
         ...(featureCounts ? { features: featureCounts } : {}),
         errorUnits: "working pixels of image B",
       },
-      ...(method === "landmarks" ? { landmarkResiduals: reprojectionErrors(AtoBm, pairs.map((p) => p.a), pairs.map((p) => p.b)).map((e, i) => ({ index: i, errorPx: Number(e.toFixed(2)), inlier: inl.includes(i) })) } : {}),
-      inlierPairs: inl.slice(0, 60).map((i) => ({ a: { x: pairs[i].a.x / Wa, y: pairs[i].a.y / Ha }, b: (() => { const q = apply(invert(pre), pairs[i].b.x, pairs[i].b.y); return { x: q.x / Wb, y: q.y / Hb }; })() })),
+      ...(method === "landmarks" ? { landmarkResiduals: allErrs.map((e, i) => ({ index: i, errorPx: Number(e.toFixed(2)), inlier: inl.includes(i) })) } : {}),
+      inlierPairs: inl.filter((_, k) => k % Math.max(1, Math.ceil(inl.length / 60)) === 0).slice(0, 60).map((i) => ({ a: { x: pairs[i].a.x / Wa, y: pairs[i].a.y / Ha }, b: (() => { const q = apply(invert(pre), pairs[i].b.x, pairs[i].b.y); return { x: q.x / Wb, y: q.y / Hb }; })() })),
     };
   }
   const id = "reg:" + createHash("sha256").update([a.imageId, b.imageId, method, model, mirror, JSON.stringify(landmarks), REGISTER_VERSION].join("|")).digest("hex").slice(0, 16);
