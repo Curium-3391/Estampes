@@ -1,0 +1,35 @@
+version: 2
+updates:
+  # Keep PR traffic manageable for a solo maintainer; review updates before merging.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 2
+    groups:
+      npm-nonmajor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 2
+    groups:
+      actions-nonmajor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  # CAS versions are pinned in cas-service/requirements.lock.
+  # Audit these manually until a Dependabot-recognized Python manifest exists.
