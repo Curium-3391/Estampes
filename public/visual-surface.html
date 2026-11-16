@@ -2359,7 +2359,7 @@ function shadowCss(){
  if(shadowCssText!==null)return shadowCssText;
  const sheet=new CSSStyleSheet();sheet.replaceSync(document.querySelector("#page-css").textContent);
  const skip=/#wb\b|\.wb-|\.calc|\.cell/;
- const fix=sel=>sel.split(",").map(x=>x.trim().replace(/(^|\s)body\.([\w-]+)/g,"$1:host(.$2)").replace(/(^|\s)(:root|body)(?![\w-(.])/g,"$1:host")).join(",");
+ const fix=sel=>sel.split(",").map(x=>x.trim().replace(/^\.(awaiting-upload|fullscreen)(?![\w-])/,":host(.$1)").replace(/(^|\s)body\.([\w-]+)/g,"$1:host(.$2)").replace(/(^|\s)(:root|body)(?![\w-(.])/g,"$1:host")).join(",");
  const out=[];
  for(const r of sheet.cssRules){
   if(r.type===CSSRule.STYLE_RULE){if(!skip.test(r.selectorText))out.push(fix(r.selectorText)+"{"+r.style.cssText+"}")}

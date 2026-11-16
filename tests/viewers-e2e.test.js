@@ -127,3 +127,16 @@ test("a resize cancels a stroke in progress; a disposed viewer ignores late work
     assert.deepEqual(t.ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("an extra viewer on an upload canvas shows the upload prompt, not the demo canvas", { skip: noPython || noBrowser, timeout: 150000 }, async () => {
+  const s = await startStack();
+  try {
+    const t = await setup(s);
+    const res = asResult(await s.call("present_visual", { upload: true }));
+    await t.inner.evaluate((r) => { window.__extra = window.estampesSurface.mountViewer(document.querySelector("#wb-area")); window.__extra.feed(r); }, res);
+    const empty = t.host.locator("#upload-empty");
+    await empty.waitFor({ state: "visible", timeout: 20000 });
+    assert.equal(await t.host.locator("#surface").isVisible(), false, "no demo picture behind an upload canvas");
+    assert.deepEqual(t.ui.errors, []);
+  } finally { await s.close(); }
+});
