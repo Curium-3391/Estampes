@@ -31,6 +31,7 @@ import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
+import { SERVER_INSTRUCTIONS, withErrorProvenance } from "./src/tool-guidance.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
@@ -714,11 +715,16 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
 }
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: VERSION });
-  // Every tool result goes through the host size cap (src/result-budget.js).
+  const server = new McpServer({ name: "estampes", version: VERSION }, { instructions: SERVER_INSTRUCTIONS });
+  // Every tool result goes through the host size cap (src/result-budget.js);
+  // errors also say which tool replied (src/tool-guidance.js, #87).
   const register = server.registerTool.bind(server);
-  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) =>
-    fitResult(await budgetObjectPixels(await handler(...args)), config.maxResultChars));
+  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => {
+    let result;
+    // A thrown error becomes the same error result the SDK would make, plus the note.
+    try { result = await handler(...args); } catch (error) { if (error?.name === "ProtocolError") throw error; return withErrorProvenance(name, { isError: true, content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }] }); }
+    return withErrorProvenance(name, await fitResult(await budgetObjectPixels(result), config.maxResultChars));
+  });
 
   registerAppResource(
     server,
