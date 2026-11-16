@@ -120,7 +120,9 @@ A package whose memory maximum is missing or above `limits.memoryMb`, or that im
 
 ### HTTP path
 
-`examples/modules/ocr-http/module.json` shows a capability with a `request` (fixed path; query and body filled from `{"$param": …}`) and a `response` mapped back to scene operations. The manifest must list hosts in `network.allow` and say in `network.dataFlow` what leaves the server; the Store shows both. `module test` never touches the network: it checks the manifest and that the request each example produces is allowed (host, path, headers, secrets declared), without sending it. The response mapping is not exercised by it. A real call needs the permission `network.request.approved`, the administrator's approval and, if declared, the secret. See [Talking to external services](../MODULES.md#talking-to-external-services-http-modules).
+`node scripts/estampes-module.js init mymodule org.example.mymodule --runtime http` writes a manifest that passes `test` as it is: one capability with a `request` (fixed path; query and body filled from `{"$param": …}`), a `response` mapped back to scene operations with `{"$response": "a.b"}`, and two examples with a `mockResponse` (a reply and a failure). `examples/modules/ocr-http/module.json` is a fuller one. The manifest must list hosts in `network.allow` and say in `network.dataFlow` what leaves the server; the Store shows both.
+
+`module test` never touches the network. It checks that the request each example produces is allowed (host, path, headers, secrets declared) without sending it and, for each example with a `mockResponse`, runs that reply through the same response mapping a real call uses, so a typo in a `$response` path or a reply your templates cannot turn into valid operations fails here, offline. Paste a real reply of your service (trimmed to 64 KB) into `mockResponse` and pin what you expect with `expect`; see [HTTP specifics](TESTING.md#http-specifics). A real call needs the permission `network.request.approved`, the administrator's approval and, if declared, the secret. See [Talking to external services](../MODULES.md#talking-to-external-services-http-modules).
 
 ## Where next
 

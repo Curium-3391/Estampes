@@ -28,7 +28,7 @@ Estampes's own format (not an MCP standard). Validated strictly: unknown fields,
 | `version`, `coreCompatibility` | Module version; range of Estampes versions it works with (for example `>=0.10.0 <1.0.0`). |
 | `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), `wasm` (a WebAssembly file inside a signed package), `http` (a described request to an approved external service). |
 | `permissions` | What it may do, granted when enabled (below). |
-| `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, examples. |
+| `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, `examples` (`description`, `params`, and for tests `expect` and, http only, `mockResponse`; see [Testing modules](modules/TESTING.md#http-specifics)). |
 | `network`, `secrets` | Reserved for adapters: hosts it may call with a description of what data leaves, and named secrets the administrator provides. |
 
 ## Capability profile
@@ -126,7 +126,7 @@ Declarative modules (code-free): each capability lists scene operations with `{"
 A guided walkthrough is in the [module quick start](modules/QUICKSTART.md); [Testing modules](modules/TESTING.md) covers scene operations, permissions, revisions and failure cases. The commands in short:
 
 ```
-node scripts/estampes-module.js init mymodule org.example.mymodule            # or --runtime wasm
+node scripts/estampes-module.js init mymodule org.example.mymodule            # or --runtime wasm / http
 node scripts/estampes-module.js test mymodule/module.json                     # manifest + examples, like an install
 node scripts/estampes-module.js keygen mykey                                  # once
 node scripts/estampes-module.js pack mymodule/module.json --out org.example.mymodule.estpkg.json --key mykey.private.pem --key-id mykey [--file module.wasm=mymodule/module.wasm]
@@ -156,7 +156,7 @@ Every request goes out through one place, `src/modules/egress.js`, which enforce
 - API keys are added by the server from `<storage>/modules/secrets.json` (mode 600) or an environment variable (name shown by `secret set` and `secret status`; for example `ESTAMPES_MODULE_SECRET_ORG_DEXAMPLE_DOCR_SAPI_KEY` for `org.example.ocr` / `api_key`, where `_D` stands for a dot, `_M` for a hyphen and `_S` separates the id from the name, so two ids can never share a variable), only for secrets the module declared and only when it holds `module.secrets`. Set one with `echo "$KEY" | node scripts/estampes-module.js secret set <moduleId> <name>`; `secret status <moduleId>` lists which declared secrets are set (names only). Module code never sees them, and they are kept out of the audit log.
 - every request is audited (host, status, sizes, time), never its content.
 
-Installing never sends anything: the self-test only checks the requests the examples would make.
+Installing never sends anything: the self-test checks the requests the examples would make and runs each example's `mockResponse` (a recorded reply) through the response mapping, so the conversion from reply to scene operations is tested offline (see [HTTP specifics](modules/TESTING.md#http-specifics)).
 
 Besides JSON, a request can carry a URL-encoded `form` or a `multipart` body with a file part (the image's bytes; needs `asset.read.selected`), and any string in a body may contain `${secret:name}` for a declared secret, which the server fills in. The built-in module below uses these; declarative `http` modules do not send image pixels yet.
 

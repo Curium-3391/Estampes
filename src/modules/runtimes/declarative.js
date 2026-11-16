@@ -17,12 +17,15 @@ export function readPath(data, path) {
 }
 
 // `response` (http modules only): {"$response": "path"} reads the JSON reply.
-export function fillTemplate(value, params, depth = 0, response = undefined) {
+// `missing`, when given, collects $response paths that the reply lacks and
+// that have no default (self-tests use it to catch typos in a mapping).
+export function fillTemplate(value, params, depth = 0, response = undefined, missing = undefined) {
   if (depth > MAX_DEPTH) throw new Error("template nested too deeply");
-  if (Array.isArray(value)) return value.map((v) => fillTemplate(v, params, depth + 1, response));
+  if (Array.isArray(value)) return value.map((v) => fillTemplate(v, params, depth + 1, response, missing));
   if (value && typeof value === "object") {
     if (typeof value.$response === "string" && Object.keys(value).every((k) => k === "$response" || k === "default")) {
       const found = response === undefined ? undefined : readPath(response, value.$response);
+      if (found === undefined && !Object.hasOwn(value, "default")) missing?.push(value.$response);
       return found !== undefined ? found : value.default;
     }
     if (typeof value.$param === "string" && Object.keys(value).every((k) => k === "$param" || k === "default")) {
@@ -32,7 +35,7 @@ export function fillTemplate(value, params, depth = 0, response = undefined) {
     }
     const out = {};
     for (const [k, v] of Object.entries(value)) {
-      const filled = fillTemplate(v, params, depth + 1, response);
+      const filled = fillTemplate(v, params, depth + 1, response, missing);
       if (filled !== undefined) out[k] = filled;
     }
     return out;

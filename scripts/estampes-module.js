@@ -13,8 +13,9 @@
 //   approve <planId>                  approve a plan that needs administrator approval
 //   secret set <moduleId> <name>     store an API key for a module (the value is read from standard input)
 //   secret status <moduleId>          which declared secrets are set (names only)
-//   init <dir> <id> [--runtime declarative|wasm]   start a new module (manifest, example, README)
+//   init <dir> <id> [--runtime declarative|wasm|http]   start a new module (manifest, example, README)
 //   test <module.json>                check a manifest and run its examples the way an install would
+//                                     (http examples with a mockResponse also run the response mapping, offline)
 import { readFile, writeFile, mkdir, copyFile, readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createPackages, generateSigningKey, signBundle, verifyBundle, digestOf, ensureDirs, selfTest } from "../src/modules/packages.js";
@@ -36,6 +37,56 @@ const version = JSON.parse(await readFile(new URL("../package.json", import.meta
 
 async function trustedKeys() {
   try { return new Map(JSON.parse(await readFile(join(dir, "trusted-keys.json"), "utf8")).map((k) => [k.keyId, k])); } catch { return new Map(); }
+}
+
+// What `init` writes: one capability that passes `test` as it is.
+function starterManifest(id, kind, coreVersion) {
+  const label = { kind: "text", x: { $param: "x" }, y: { $param: "y" }, text: { $param: "text" } };
+  const point = { x: { type: "number", minimum: 0, maximum: 1 }, y: { type: "number", minimum: 0, maximum: 1 } };
+  const base = {
+    schema: "estampes.module/1", id, name: id.split(".").at(-1), description: "What this module does, in one sentence.", version: "0.1.0",
+    publisher: { name: "Your name" }, license: "MPL-2.0", category: "other", coreCompatibility: ">=" + coreVersion + " <1.0.0",
+  };
+  if (kind === "http") {
+    return {
+      ...base,
+      runtime: { kind: "http", entry: "request" },
+      permissions: ["canvas.write", "network.request.approved"],
+      network: { allow: ["api.example.org"], dataFlow: "Sends the text you give it to api.example.org. Nothing else leaves the server." },
+      limits: { timeMs: 8000, outputKb: 64 },
+      capabilities: [{
+        id: "analyze_text", title: "Analyze text", description: "Send a short text to the service and write its answer on the canvas at (x, y), normalized 0..1 from the top left.", target: "canvas",
+        inputSchema: { type: "object", additionalProperties: false, required: ["text"], properties: { text: { type: "string", maxLength: 200 }, ...point } },
+        examples: [
+          { description: "The service answers", params: { text: "hello", x: 0.1, y: 0.1 },
+            mockResponse: { status: 200, json: { result: { label: "greeting", score: 0.97 } } },
+            expect: { operations: 1, data: { label: "greeting" } } },
+          { description: "The service fails", params: { text: "hello" }, mockResponse: { status: 503, json: { error: "busy" } }, expect: { error: "answered 503" } },
+        ],
+        request: { method: "POST", path: "/v1/analyze", body: { text: { $param: "text" } } },
+        response: { data: "result", operations: [{ op: "object.create", type: "shape", props: { kind: "text", x: { $param: "x", default: 0.1 }, y: { $param: "y", default: 0.1 }, text: { $response: "result.label" } } }] },
+        profile: {
+          whenToUse: "Short text you want the service to classify.",
+          cost: { latency: "seconds" },
+          dataFlow: { leavesServer: true, sends: "The text you give it goes to api.example.org." },
+          reliability: { kind: "external", note: "The answer is whatever the service returns." },
+          fallbacks: [{ when: "the service is unreachable", then: "Say so; do not invent an answer." }],
+        },
+      }],
+    };
+  }
+  const wasm = kind === "wasm";
+  return {
+    ...base,
+    runtime: wasm ? { kind: "wasm", entry: "module.wasm", abi: WASM_ABI } : { kind: "declarative", entry: "operations" },
+    permissions: ["canvas.write"], ...(wasm ? { limits: { timeMs: 500, memoryMb: 16, outputKb: 64 } } : {}),
+    capabilities: [{
+      id: "add_label", title: "Add a label", description: "Put a text label on the canvas at (x, y), normalized 0..1 from the top left.", target: "canvas",
+      inputSchema: { type: "object", additionalProperties: false, required: ["x", "y", "text"], properties: { ...point, text: { type: "string", maxLength: 60 } } },
+      examples: [{ description: "A label near the top left", params: { x: 0.1, y: 0.1, text: "hello" } }],
+      ...(wasm ? {} : { operations: [{ op: "object.create", type: "shape", props: label }] }),
+    }],
+  };
 }
 
 try {
@@ -111,29 +162,20 @@ try {
     } else die("secret <set|status> <moduleId> [name]");
   } else if (cmd === "init") {
     const [target, id] = rest, kind = flag("runtime") ?? "declarative";
-    if (!target || !MODULE_ID.test(id ?? "") || !["declarative", "wasm"].includes(kind)) die("init <dir> <id> [--runtime declarative|wasm]; id is reverse-DNS such as org.example.mymodule");
-    const wasm = kind === "wasm";
-    const manifest = {
-      schema: "estampes.module/1", id, name: id.split(".").at(-1), description: "What this module does, in one sentence.", version: "0.1.0",
-      publisher: { name: "Your name" }, license: "MPL-2.0", category: "other", coreCompatibility: ">=" + version + " <1.0.0",
-      runtime: wasm ? { kind: "wasm", entry: "module.wasm", abi: WASM_ABI } : { kind: "declarative", entry: "operations" },
-      permissions: ["canvas.write"], ...(wasm ? { limits: { timeMs: 500, memoryMb: 16, outputKb: 64 } } : {}),
-      capabilities: [{
-        id: "add_label", title: "Add a label", description: "Put a text label on the canvas at (x, y), normalized 0..1 from the top left.", target: "canvas",
-        inputSchema: { type: "object", additionalProperties: false, required: ["x", "y", "text"], properties: { x: { type: "number", minimum: 0, maximum: 1 }, y: { type: "number", minimum: 0, maximum: 1 }, text: { type: "string", maxLength: 60 } } },
-        examples: [{ description: "A label near the top left", params: { x: 0.1, y: 0.1, text: "hello" } }],
-        ...(wasm ? {} : { operations: [{ op: "object.create", type: "shape", props: { kind: "text", x: { $param: "x" }, y: { $param: "y" }, text: { $param: "text" } } }] }),
-      }],
-    };
+    if (!target || !MODULE_ID.test(id ?? "") || !["declarative", "wasm", "http"].includes(kind)) die("init <dir> <id> [--runtime declarative|wasm|http]; id is reverse-DNS such as org.example.mymodule");
+    const manifest = starterManifest(id, kind, version);
     await mkdir(target, { recursive: true });
     for (const name of ["module.json", "README.md"]) {
       if (await readFile(join(target, name)).then(() => true, () => false)) die(join(target, name) + " already exists; init does not overwrite your files");
     }
     await writeFile(join(target, "module.json"), JSON.stringify(manifest, null, 2) + "\n");
-    await writeFile(join(target, "README.md"), "# " + id + "\n\n" + (wasm
-      ? "Write `module.c` (or Rust/any language that targets wasm32 with no imports) following the ABI " + WASM_ABI + " in docs/MODULES.md, build `module.wasm`, then:\n\n"
-      : "Edit `module.json`: each capability lists scene operations with `{\"$param\": \"name\"}` placeholders.\n\n")
-      + "```\nnode scripts/estampes-module.js test " + join(target, "module.json") + "\nnode scripts/estampes-module.js keygen mykey\nnode scripts/estampes-module.js pack " + join(target, "module.json") + " --out " + id + ".estpkg.json --key mykey.private.pem --key-id mykey" + (wasm ? " --file module.wasm=" + join(target, "module.wasm") : "") + "\n```\n");
+    const intro = {
+      declarative: "Edit `module.json`: each capability lists scene operations with `{\"$param\": \"name\"}` placeholders.\n\n",
+      wasm: "Write `module.c` (or Rust/any language that targets wasm32 with no imports) following the ABI " + WASM_ABI + " in docs/MODULES.md, build `module.wasm`, then:\n\n",
+      http: "Edit `module.json`: replace `api.example.org` (in `network.allow`, `network.dataFlow` and the profile) with your service, describe the `request`, map the reply with `{\"$response\": \"a.b\"}` in `response`, and paste a real reply of your service into the example's `mockResponse` so `test` checks the mapping offline. Then:\n\n",
+    }[kind];
+    await writeFile(join(target, "README.md"), "# " + id + "\n\n" + intro
+      + "```\nnode scripts/estampes-module.js test " + join(target, "module.json") + "\nnode scripts/estampes-module.js keygen mykey\nnode scripts/estampes-module.js pack " + join(target, "module.json") + " --out " + id + ".estpkg.json --key mykey.private.pem --key-id mykey" + (kind === "wasm" ? " --file module.wasm=" + join(target, "module.wasm") : "") + "\n```\n");
     console.log("Created " + join(target, "module.json") + ". Next: node scripts/estampes-module.js test " + join(target, "module.json"));
   } else if (cmd === "test") {
     const path = rest[0] ?? die("test <module.json>");
@@ -146,9 +188,10 @@ try {
       checkWasmPackage(manifest, files); // the same checks an install makes, even if no example runs
       runtime = { kind: "wasm", wasm: wasmFileOf(manifest, files) };
     }
-    await selfTest(manifest, runtime, { runtimes: { declarative: declarativeRuntime, wasm: wasmRuntime, http: createHttpRuntime({ egress: createEgress({ secrets: createSecrets({}) }) }) } });
-    const count = manifest.capabilities.reduce((n, c) => n + (c.examples?.length ?? 0), 0);
-    console.log("OK " + manifest.id + " " + manifest.version + ": manifest valid, " + count + " example(s) passed" + (count ? "" : " (no examples: add `examples` to each capability)"));
+    const report = await selfTest(manifest, runtime, { runtimes: { declarative: declarativeRuntime, wasm: wasmRuntime, http: createHttpRuntime({ egress: createEgress({ secrets: createSecrets({}) }) }) } });
+    const count = report.examples;
+    console.log("OK " + manifest.id + " " + manifest.version + ": manifest valid, " + count + " example(s) passed" + (report.mocked ? " (" + report.mocked + " with a mock response)" : "") + (count ? "" : " (no examples: add `examples` to each capability)"));
+    for (const line of report.untested) console.log("warning: " + line);
   } else if (cmd === "copy") {
     const [src] = rest; await ensureDirs(dir); await copyFile(src, join(dir, "inbox", basename(src)));
     console.log("Copied into the inbox.");

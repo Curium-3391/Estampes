@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Module tests for http modules: an example can carry a `mockResponse` (a
+  recorded reply: status and JSON or raw text), which `module test` and the
+  install self-test run through the same response mapping a real call uses, so
+  OCR/AI/API modules are tested end to end offline. A `$response` path missing
+  from the mock reply is an error. Any example can state `expect` (operation
+  count, a `data` pattern with float tolerance, `summary`, or the `error` it must
+  fail with). `init --runtime http` writes a starter that passes as it is. Real
+  calls are unchanged; fixtures are not shown to the model.
 - Canvas text entry (#82): select a user annotation to edit/clear its label and
   multiline note, or choose Text to place an editable standalone vector object.
   Text supports dragging, size/color, locked layers, revision checks and its own
