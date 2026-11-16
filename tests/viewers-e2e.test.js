@@ -140,3 +140,28 @@ test("an extra viewer on an upload canvas shows the upload prompt, not the demo 
     assert.deepEqual(t.ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("using an extra viewer's canvas gives it keyboard focus, so keys do not go to the page viewer", { skip: noPython || noBrowser, timeout: 150000 }, async () => {
+  const s = await startStack();
+  try {
+    const t = await setup(s);
+    await t.second(t.b);
+    await t.host.locator("#surface").waitFor({ timeout: 20000 });
+    await wait(1500);
+    await t.inner.evaluate(() => {
+      window.__keyOwners = [];
+      document.addEventListener("keydown", (e) => window.__keyOwners.push(e.composedPath().some((n) => n?.hasAttribute?.("data-viewer-host")) ? "extra" : "page"), true);
+    });
+    const hit = t.host.locator("#hit");
+    const box = await hit.boundingBox();
+    await t.ui.page.mouse.click(box.x + 40, box.y + 40);
+    await t.ui.page.keyboard.press("Shift");
+    assert.equal(await t.inner.evaluate(() => window.__keyOwners.at(-1)), "extra", "the key was typed inside the extra viewer");
+    // And clicking the page viewer's canvas moves focus back.
+    const pbox = await t.inner.evaluate(() => { const r = document.querySelector("#hit").getBoundingClientRect(); return { x: r.x, y: r.y }; });
+    await t.ui.frame.locator("#panel-canvas #hit").first().click({ position: { x: 40, y: 40 } });
+    await t.ui.page.keyboard.press("Shift");
+    assert.equal(await t.inner.evaluate(() => window.__keyOwners.at(-1)), "page", "back in the page viewer");
+    assert.deepEqual(t.ui.errors, []);
+  } finally { await s.close(); }
+});
