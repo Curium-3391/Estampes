@@ -13,6 +13,7 @@ export const workbenchSource = () => [
     readFileSync(join(ROOT, "src", "surface", "geometry.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn { clampRect, snapRect, applyOp, reconcile, profileFor };\n})();",
   readFileSync(join(ROOT, "public", "workbench.js"), "utf8"),
+  readFileSync(join(ROOT, "public", "calculator.js"), "utf8"),
 ].join("\n");
 
 export const inlineWorkbench = (html) => html.replace("__ESTAMPES_WORKBENCH__", () => workbenchSource());

@@ -238,6 +238,8 @@ test("a move where only one of the two workspaces could be saved leaves neither 
   const held = new Map(); let failFor = null;
   useRecords({
     write: async (kind, id, doc) => { if (id === failFor) throw new Error("store unavailable"); held.set(id, structuredClone(doc)); return 1; },
+    // As the UVA record store: a change over several workspaces is kept whole or not at all.
+    writeMany: async (list) => { if (list.some((r) => r.id === failFor)) throw new Error("store unavailable"); for (const r of list) held.set(r.id, structuredClone(r.value)); },
     read: async (kind, id) => held.get(id) ?? null, list: async () => [...held.keys()], log: async () => [],
   });
   try {
@@ -252,6 +254,17 @@ test("a move where only one of the two workspaces could be saved leaves neither 
     const done = await commitTransfer({ source: merged.workspaceId, target: other.workspace.id, items: ["wi-3"], removeFromSource: true, key: "k-move" });
     assert.notEqual(done.repeated, true);
     assert.equal(held.get(other.workspace.id).items.length, 1);
+    // An undo that cannot be saved changes neither workspace, in memory either.
+    failFor = merged.workspaceId;
+    await assert.rejects(undoChange(other.workspace.id, done.undoToken), /store unavailable/);
+    assert.equal((await getWorkspace(merged.workspaceId)).items.length, 2);
+    assert.equal((await getWorkspace(other.workspace.id)).items.length, 1);
+    assert.equal(held.get(merged.workspaceId).items.length, 2);
+    failFor = null;
+    await undoChange(other.workspace.id, done.undoToken);
+    assert.equal((await getWorkspace(merged.workspaceId)).items.length, 3);
+    assert.equal((await getWorkspace(other.workspace.id)).items.length, 0);
+    assert.equal(held.get(merged.workspaceId).items.length, 3);
   } finally { useRecords(null); }
 });
 

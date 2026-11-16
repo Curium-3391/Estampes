@@ -251,13 +251,58 @@ async function ensureFromFiles(imageId) {
   return entry;
 }
 
+// A canvas whose save failed must not keep the failed change in memory:
+// later reads would show it and the next successful save would persist it
+// (architecture review A03). The in-memory canvas goes back to what the
+// store holds for it, the last acknowledged (durable) state, or to an empty
+// canvas when nothing was ever stored. Only the latest save of a canvas
+// rolls back; see saveCanvas.
+const saveStates = new WeakMap();
+function saveState(entry) {
+  let state = saveStates.get(entry);
+  if (!state) saveStates.set(entry, state = { issued: 0, latest: null, durable: null, durableSeq: 0 });
+  return state;
+}
+// Returns false when a newer save of the canvas was issued meanwhile: that
+// save carries this change and the newer edits, so nothing is restored.
+async function rollbackCanvas(entry, key, state, seq) {
+  let record = null;
+  try { record = await canvases.read(key); }
+  catch (error) { log("error", "[storage] the stored canvas could not be read back after a failed save", { set: key, error: String(error?.message || error) }); }
+  if (state.issued !== seq) return false;
+  // The store's record first; else the last state this process saw
+  // acknowledged. Without either, nothing is known to be durable, and the
+  // canvas is left as it is rather than emptied.
+  const stored = record?.canvas?.imageId === entry.imageId ? record.canvas : state.durable;
+  if (!stored) { log("error", "[storage] save failed and no durable state is known; memory keeps the unsaved change", { set: key }); return true; }
+  restoreCanvas(entry, structuredClone(stored));
+  log("info", "[storage] save failed; canvas restored to its last durable state", { set: key });
+  return true;
+}
+
 // After a change: rewrite canvas.json and marks.svg, append one history line.
 export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note } = {}) {
   if (canvases) {
     // Acknowledged only once durable in the store: a failure rejects.
     const canvas = serializeCanvas(entry);
     const line = { at: canvas.savedAt, tool, author, changed, ...(removed.length ? { removed } : {}), ...(note ? { note } : {}), marks: canvas.marks.length };
-    return canvases.write(setKeyOf(entry), { canvas, line }).then(() => undefined);
+    const key = setKeyOf(entry), state = saveState(entry), seq = ++state.issued;
+    // Marks are shared objects that later edits change in place, so the
+    // durable copy kept for a rollback is taken now.
+    const snapshot = structuredClone(canvas);
+    const write = canvases.write(key, { canvas, line }).then(() => {
+      if (seq > state.durableSeq) { state.durable = snapshot; state.durableSeq = seq; }
+    });
+    const acked = write.catch(async (error) => {
+      // A later save of this canvas serialized it after this change, so this
+      // change is durable exactly when that save is: answer with its outcome.
+      if (state.issued !== seq) return state.latest;
+      // The read below waits; a save issued during it supersedes this one.
+      if (!(await rollbackCanvas(entry, key, state, seq))) return state.latest;
+      throw error;
+    });
+    state.latest = acked;
+    return acked;
   }
   if (!root) return Promise.resolve();
   const path = canvasPath(entry), dir = dirname(path), base = entry.setId ? entry.setId + "." : "";
@@ -329,6 +374,13 @@ export function saveWorkspaceFile(doc, line) {
     await atomicWrite(wsPath(hex), JSON.stringify(doc));
     if (line) await appendFile(join(root, "workspaces", hex + ".history.jsonl"), JSON.stringify(line) + "\n");
   }).catch((error) => log("error", "[storage] workspace save failed", { workspace: doc.id, error: String(error?.message || error) }));
+}
+// Several workspaces changed by one operation (a merge, split, move or undo).
+// In the UVA store they are kept together: once this resolves all are saved,
+// a crash included, and when it rejects none is. list: [{ doc, line }].
+export function saveWorkspaceFiles(list) {
+  if (records && list.length > 1) return records.writeMany(list.map(({ doc, line }) => ({ kind: "workspace", id: doc.id, value: doc, line }))).then(() => undefined);
+  return Promise.all(list.map(({ doc, line }) => saveWorkspaceFile(doc, line))).then(() => undefined);
 }
 export async function readWorkspaceFile(id) {
   if (records) { const doc = await records.read("workspace", String(id)); return doc?.id === id ? doc : null; }

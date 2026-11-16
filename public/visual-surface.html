@@ -5,6 +5,7 @@
 :root{color-scheme:light dark;font-family:system-ui,-apple-system,sans-serif}
 *{box-sizing:border-box}body{margin:0;padding:12px;background:Canvas;color:CanvasText}
 main{max-width:820px;margin:auto;border:1px solid #8885;border-radius:14px;padding:16px}
+main:focus{outline:none}
 header{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
 h2{font-size:1rem;margin:0}small,.help,#status{color:GrayText}
 small{font-size:.75rem}.help{font-size:.84rem;margin:9px 0}
@@ -298,7 +299,14 @@ const host=createHost();
 // takes the state classes (awaiting-upload, fullscreen). Everything a viewer
 // owns is created here, so two viewers share nothing but the host.
 function createViewer(scope,rootEl,{host,receivesHost=false,workbench=false}={}){
-let request=host.request;
+let disposed=false;
+const timerIds=new Set(),frameIds=new Set();
+// Timers and frames of a viewer die with it; a late callback never runs.
+const later=(fn,ms)=>{const id=setTimeout(()=>{timerIds.delete(id);if(!disposed)fn()},ms);timerIds.add(id);return id};
+const frame=fn=>{const id=requestAnimationFrame(t=>{frameIds.delete(id);if(!disposed)fn(t)});frameIds.add(id);return id};
+const forever=()=>new Promise(()=>{});
+// Answers that arrive after dispose() are dropped, never delivered.
+let request=(method,params)=>disposed?forever():host.request(method,params).then(r=>disposed?forever():r,e=>disposed?forever():Promise.reject(e));
 const disposers=[];
 const own=off=>{if(typeof off==="function")disposers.push(off);return off};
 // Keys go only to the viewer they happened in; a key typed inside another
@@ -306,6 +314,16 @@ const own=off=>{if(typeof off==="function")disposers.push(off);return off};
 const ownsKey=e=>scope!==document||!e.composedPath().some(n=>n?.hasAttribute?.("data-viewer-host"));
 const onKey=(type,fn)=>{const h=e=>{if(ownsKey(e))fn(e)};scope.addEventListener(type,h);disposers.push(()=>scope.removeEventListener(type,h))};
 let workbenchApi=null;
+// A viewer in a shadow root takes keyboard focus when its canvas is used, so
+// the key router sends later keys to it and not to the page viewer.
+if(scope!==document){
+ const focusTarget=scope.querySelector("main");
+ if(focusTarget){
+  focusTarget.tabIndex=-1;
+  const grab=e=>{if(!e.target.closest?.("input,textarea,select,button,a,[contenteditable]"))focusTarget.focus({preventScroll:true})};
+  scope.addEventListener("pointerdown",grab,true);disposers.push(()=>scope.removeEventListener("pointerdown",grab,true));
+ }
+}
 const NS="http://www.w3.org/2000/svg";
 const svg=scope.querySelector("#surface"),sceneEl=scope.querySelector("#scene"),processedEl=scope.querySelector("#processed");
 const tabNav=scope.querySelector(".view-tabs");
@@ -573,7 +591,7 @@ function renderLayers(){
    const name=el("span",{className:"name"});
    if(renamingLayer===l.id){
      const input=el("input",{value:l.name,maxLength:40,"aria-label":"圖層名稱",dataset:{layer:l.id,act:"name"}});
-     name.append(input);requestAnimationFrame(()=>{input.focus();input.select();});
+     name.append(input);frame(()=>{input.focus();input.select();});
    }else name.append(el("button",{type:"button",className:"layer-evidence-button",textContent:(findingGroupsOpen.has(l.id)?"▾ ":"▸ ")+sideName(l.id)+l.name,"aria-expanded":String(findingGroupsOpen.has(l.id)),dataset:{layer:l.id,act:"evidence"}}));
    const op=Math.round((l.opacity??1)*100);
    const same=shownOrder.filter(o=>serverLayer(o.id).side===serverLayer(l.id).side),pos=same.indexOf(l);
@@ -679,7 +697,7 @@ layersEl.addEventListener("click",e=>{
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
  const {side,id:raw}=serverLayer(id);
  if(b.dataset.act==="rename"){renamingLayer=id;render();}
- if(b.dataset.act==="copyid"){const text=side&&frames?side+" "+raw:raw;try{navigator.clipboard.writeText(text).then(()=>{b.textContent="已複製";setTimeout(()=>{b.textContent=raw;},900);},()=>{});}catch{}return;}
+ if(b.dataset.act==="copyid"){const text=side&&frames?side+" "+raw:raw;try{navigator.clipboard.writeText(text).then(()=>{b.textContent="已複製";later(()=>{b.textContent=raw;},900);},()=>{});}catch{}return;}
  if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 AI 都不能再改這層的標記。");
  if(b.dataset.act==="up")reorder(id,1);
  if(b.dataset.act==="down")reorder(id,-1);
@@ -884,7 +902,7 @@ function focusFinding(item,{details=false,locate=true}={}){
 function revealFinding(m){
  const item=markOptions().find(o=>o.mark.id===m?.id&&hasFinding(o.mark));if(!item)return;
  focusFinding(item,{details:true,locate:false});
- requestAnimationFrame(()=>findingRowFor(findingKey(item))?.scrollIntoView({block:"nearest",behavior:"smooth"}));
+ frame(()=>findingRowFor(findingKey(item))?.scrollIntoView({block:"nearest",behavior:"smooth"}));
 }
 function renderFindings(){
  // Preserve focus and partially typed rejection reasons across canvas redraws.
@@ -1414,7 +1432,7 @@ function applyInput(args){
  priorUserMarks=incoming.filter(a=>a.author==="user").slice(0,ws?200:60);
  userMarks=[];past=[];future=[];serverHistory={};lastEditKey=null;selectedFocusId=null;viewMode="annotated";previewEl.replaceChildren();render();
  // The result normally brings the pixels; if it never does, fetch them.
- if(imageId)setTimeout(()=>{if(imageId&&!allPhotos())syncCanvas()},6000);
+ if(imageId)later(()=>{if(imageId&&!allPhotos())syncCanvas()},6000);
 }
 const allPhotos=()=>ws?ws.items.every(it=>it.photo):!!photo&&(!pair||!!pair.photo);
 const inRegion=r=>r&&[r.x,r.y,r.x2,r.y2].every(v=>typeof v==="number"&&v>=0&&v<=1)&&r.x2>r.x&&r.y2>r.y;
@@ -1642,7 +1660,7 @@ let stroke=[];
 const zoomable=()=>viewMode==="annotated"||viewMode==="original";
 function applyViewBox(){if(zoomable())svg.setAttribute("viewBox",cam?[cam.x,cam.y,cam.w,cam.h].join(" "):"0 0 "+VW+" "+VH);}
 let raf=0;
-function scheduleRender(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render();});}
+function scheduleRender(){if(!raf)raf=frame(()=>{raf=0;render();});}
 // Zooming and panning only move the viewBox (cheap, no re-decoding of the
 // photo). The full render (marks, panels, layer lists) is what costs time, and
 // only the screen-size of marks depends on the zoom, so it is rerun at most
@@ -1651,7 +1669,7 @@ let camRenderAt=0,camRenderTimer=0;
 function renderSoon(){
  const wait=camRenderAt+140-performance.now();
  if(wait<=0){clearTimeout(camRenderTimer);camRenderTimer=0;camRenderAt=performance.now();scheduleRender();return;}
- if(!camRenderTimer)camRenderTimer=setTimeout(()=>{camRenderTimer=0;camRenderAt=performance.now();scheduleRender();},wait);
+ if(!camRenderTimer)camRenderTimer=later(()=>{camRenderTimer=0;camRenderAt=performance.now();scheduleRender();},wait);
 }
 const cameraMoved=()=>{zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?" · 原始解析度":"");renderSoon();};
 function setCam(next){
@@ -1720,7 +1738,7 @@ let detailTimer=0,detailSeq=0;
 function scheduleDetail(){
  clearTimeout(detailTimer);
  if(!imageId||!photo||frames||!cam||Z()<1.5)return;
- detailTimer=setTimeout(loadDetail,250);
+ detailTimer=later(loadDetail,250);
 }
 async function loadDetail(){
  if(!ready||!cam||!imageId)return;
@@ -1887,7 +1905,7 @@ function nudgeSelected(dx,dy){
  nudge??={before:m};
  replaceLocal(shifted(m,dx,dy));render();
  clearTimeout(nudge.timer);
- nudge.timer=setTimeout(()=>{const {before}=nudge;nudge=null;const after=findMark(before.id);if(after)updateMark(before,after,"已微調位置。");},500);
+ nudge.timer=later(()=>{const {before}=nudge;nudge=null;const after=findMark(before.id);if(after)updateMark(before,after,"已微調位置。");},500);
 }
 onKey("keydown",e=>{
  if(!selected||e.target.closest?.("input,textarea,select,button,summary")||viewMode!=="annotated")return;
@@ -2321,11 +2339,60 @@ workbenchApi=setupWorkbench();
 }
 // Browser tests inject their probes at the marker below, inside the viewer's scope.
 // @viewer-scope-end
-return {scope,rootEl,dispose(){for(const off of disposers.splice(0))try{off()}catch{}}};
+function cancelGestures(){
+ pointers.clear();pinch=null;panning=null;gestureLock=false;spaceDown=false;
+ cancelStroke();findingPointer=null;
+ if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}
+}
+// A resize changes the coordinate frame under a pointer; end the gesture.
+if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new ResizeObserver(entries=>{const r=entries[entries.length-1]?.contentRect;if(!r||disposed)return;const w=Math.round(r.width),h=Math.round(r.height);const changed=lastW>=0&&(w!==lastW||h!==lastH);lastW=w;lastH=h;if(changed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
+return {scope,rootEl,feed:applyHostResult,cancelGestures,get disposed(){return disposed},dispose(){
+ if(disposed)return;
+ try{cancelGestures()}catch{}
+ disposed=true;
+ for(const id of timerIds)clearTimeout(id);timerIds.clear();
+ for(const id of frameIds)cancelAnimationFrame(id);frameIds.clear();
+ if(nudge?.timer)clearTimeout(nudge.timer);
+ for(const off of disposers.splice(0))try{off()}catch{}
+}};
 }
 
 // ===== Page: the primary viewer sits where the workbench expects its canvas =====
 document.querySelector("#wb-area").append(document.querySelector("#viewer-tpl").content.cloneNode(true));
 const primary=createViewer(document,document.body,{host,receivesHost:true,workbench:true});
 host.start();
+
+// Extra viewers live in an open shadow root: ids stay scoped, the viewer CSS is
+// derived from the page CSS (page-level rules move to :host, workbench and
+// calculator rules are left out).
+let shadowCssText=null;
+function shadowCss(){
+ if(shadowCssText!==null)return shadowCssText;
+ const sheet=new CSSStyleSheet();sheet.replaceSync(document.querySelector("#page-css").textContent);
+ const skip=/#wb\b|\.wb-|\.calc|\.cell/;
+ const fix=sel=>sel.split(",").map(x=>x.trim().replace(/^\.(awaiting-upload|fullscreen)(?![\w-])/,":host(.$1)").replace(/(^|\s)body\.([\w-]+)/g,"$1:host(.$2)").replace(/(^|\s)(:root|body)(?![\w-(.])/g,"$1:host")).join(",");
+ const out=[];
+ for(const r of sheet.cssRules){
+  if(r.type===CSSRule.STYLE_RULE){if(!skip.test(r.selectorText))out.push(fix(r.selectorText)+"{"+r.style.cssText+"}")}
+  else if(r.type===CSSRule.MEDIA_RULE){
+   const inner=[...r.cssRules].filter(x=>x.type===CSSRule.STYLE_RULE&&!skip.test(x.selectorText)).map(x=>fix(x.selectorText)+"{"+x.style.cssText+"}");
+   if(inner.length)out.push("@media "+r.conditionText+"{"+inner.join("")+"}");
+  }else if(r.type===CSSRule.KEYFRAMES_RULE||r.type===CSSRule.FONT_FACE_RULE)out.push(r.cssText);
+ }
+ return shadowCssText=":host{display:block}\n"+out.join("\n");
+}
+const viewers=new Set([primary]);
+function mountViewer(container,{receivesHost=false}={}){
+ const holder=document.createElement("div");holder.setAttribute("data-viewer-host","");
+ const root=holder.attachShadow({mode:"open"});
+ const style=document.createElement("style");style.textContent=shadowCss();
+ root.append(style,document.querySelector("#viewer-tpl").content.cloneNode(true));
+ container.append(holder);
+ const v=createViewer(root,holder,{host,receivesHost});
+ const dispose=v.dispose;
+ v.dispose=()=>{dispose();viewers.delete(v);holder.remove()};
+ v.holder=holder;viewers.add(v);
+ return v;
+}
+window.estampesSurface={mountViewer,viewers:()=>[...viewers]};
 </script></body></html>

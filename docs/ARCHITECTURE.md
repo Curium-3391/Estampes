@@ -57,7 +57,13 @@ An image's id is derived from its content hash, so the same file attached in ano
 
 ### State and persistence
 
-Memory is the working copy: decoded images and canvases are cached (`ESTAMPES_CACHE_*`, about an hour by default). With `ESTAMPES_STORAGE_DIR` set, every change is also written to `images/<hash>/` (source, `canvas.json`, `marks.svg`, `history.jsonl`), and an evicted or restarted image is reloaded from there on demand. Two processes must not share one storage folder.
+Memory is the working copy: decoded images and canvases are cached (`ESTAMPES_CACHE_*`, about an hour by default). With `ESTAMPES_STORAGE_DIR` set, the default UVA store (`src/uva/`) is the durable authority for images, canvases, workspaces, surfaces and notebooks:
+
+1. A change is acknowledged once a pending record for it is durable (file and directory fsync) in `<storage>/uva-pending/`. If that write fails, the call fails and the in-memory canvas goes back to its last durable state.
+2. In the background, pending records are coalesced and committed into the UVA store (`ESTAMPES_UVA_DIR`, `/uva-beta` in Docker) by a leased writer; a committed record's pending file is then removed.
+3. On start, pending and committed state are compared by per-record sequence number, and the higher one wins.
+
+No `images/<hash>/canvas.json` or other legacy file is written in this mode, so the storage folder alone is not a complete copy of your work: back up both roots ([Backup](BACKUP-RESTORE.md)). The storage folder still holds module state, keys, PDFs and the pending records. Each record (one canvas, one workspace, one notebook) is durable on its own. A workspace change that touches several workspaces (a merge, split, move or its undo) is first written as one durable intent in `<storage>/uva-pending/intents/` and rolled forward after a crash, so no workspace keeps half of it ([Workspaces](WORKSPACES.md#crash-safety)). Copied canvases a change creates are saved before that intent; a crash in between leaves them unreferenced, never half-linked. `ESTAMPES_CANVAS_STORE=legacy` keeps everything in `images/<hash>/` files as before ([UVA](UVA-BETA.md)). Two processes must not share one storage folder or one UVA store.
 
 ### Security model
 
