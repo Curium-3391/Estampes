@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,6 +60,79 @@ test("CI selects a tier from the complete PR diff and defaults to full", t => {
   renameSync(join(cwd, "src/persistence/old.js"), join(cwd, "docs/old.md"));
   assert.equal(tier(git("rev-parse", "HEAD"), commit()), "full");
 
-  file("docs/rfc/unified-visual-architecture/evidence/fixture.json");
-  assert.equal(tier(git("rev-parse", "HEAD"), commit()), "full");
+  const cases = [
+    ["docs/rfc/unified-visual-architecture/evidence/fixture.md", "full"],
+    ["docs/fixture.json", "full"],
+    ["server.js", "full"],
+    ["tests/helpers/widget-host.js", "full"],
+    ["tests/uva-powerloss.test.js", "full"],
+    ["tests/document-revisions.test.js", "full"],
+    ["tests/canvas-save-rollback.test.js", "full"],
+    ["public/visual-surface.html", "full"],
+    ["public/workbench.js", "full"],
+    ["src/surface/widget-source.js", "full"],
+    ["src/uva/README.md", "full"],
+    [".github/workflows/pr-baseline.yml", "full"],
+    ["public/calculator.js", "fast"],
+    ["tests/upload-e2e.test.js", "fast"],
+  ];
+  for (const [path, expected] of cases) {
+    const previous = git("rev-parse", "HEAD");
+    file(path);
+    assert.equal(tier(previous, commit()), expected, path);
+  }
+});
+
+test("the required baseline checks successful quick and full results for the selected tier", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/pr-baseline.yml", import.meta.url), "utf8");
+  const baseline = workflow.slice(workflow.indexOf("\n  baseline:\n"));
+  assert.match(baseline, /\n    name: baseline\n    needs: \[quick, full\]\n    if: always\(\)/);
+  const run = baseline.split("        run: |\n")[1];
+  assert.ok(run);
+
+  const passing = new Set(["docs:success:skipped", "fast:success:skipped", "full:success:success"]);
+  const results = ["success", "failure", "skipped", "cancelled", ""];
+  for (const tier of ["docs", "fast", "full", "", "unknown"]) {
+    for (const quick of results) {
+      for (const full of results) {
+        const key = `${tier}:${quick}:${full}`;
+        const result = spawnSync("bash", ["-c", run], {
+          encoding: "utf8",
+          env: { ...process.env, TIER: tier, QUICK_RESULT: quick, FULL_RESULT: full },
+        });
+        assert.equal(result.status, passing.has(key) ? 0 : 1, result.error?.message ?? key);
+      }
+    }
+  }
+});
+
+test("the full matrix covers each discovered Node test once and includes Legacy Store", t => {
+  const workflow = readFileSync(new URL("../.github/workflows/pr-baseline.yml", import.meta.url), "utf8");
+  const full = workflow.slice(workflow.indexOf("\n  full:\n"), workflow.indexOf("\n  baseline:\n"));
+  assert.match(full, /\n    needs: quick\n    if: needs\.quick\.outputs\.tier == 'full'/);
+  assert.match(full, /\n      fail-fast: false\n/);
+  assert.match(full, /\n          suite: \$\{\{ matrix\.suite \}\}/);
+  const suites = full.match(/\n        suite: \[(.+)\]/)[1].split(", ").map(value => value.replaceAll("'", ""));
+  const shards = suites.filter(suite => suite !== "legacy");
+  assert.deepEqual(suites.filter(suite => suite === "legacy"), ["legacy"]);
+  assert.ok(shards.length > 1);
+  assert.deepEqual(shards, shards.map((_, index) => `${index + 1}/${shards.length}`));
+
+  const runner = fileURLToPath(new URL("../scripts/run-ci-tests.mjs", import.meta.url));
+  const cwd = mkdtempSync(join(tmpdir(), "estampes-shards-"));
+  t.after(() => rmSync(cwd, { recursive: true, force: true }));
+  mkdirSync(join(cwd, "nested", "test"), { recursive: true });
+  const expected = Array.from({ length: shards.length * 2 }, (_, index) => `ci-discovery-${index}`);
+  for (const name of expected) {
+    writeFileSync(join(cwd, "nested", "test", `${name}.cjs`), `require("node:test")("${name}", () => {});\n`);
+  }
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  const actual = shards.flatMap(shard => {
+    const output = execFileSync(process.execPath, [runner, "full", shard], {
+      cwd, encoding: "utf8", env,
+    });
+    return output.match(/ci-discovery-\d+/g) ?? [];
+  });
+  assert.deepEqual(actual.sort(), expected.sort());
 });
