@@ -89,15 +89,17 @@ Run it in the same terminal environment (same `ESTAMPES_STORAGE_DIR`), then pres
 
 `add_label` targets an **existing canvas** (the template's `target` is `canvas`). Ask ChatGPT to plot a function with Graph first, then: *"Add the label 'hello' near the top left."* Expected: a text object appears on the canvas, in its own layer named after your module.
 
-Without ChatGPT, `tests/module-authoring.test.js` drives exactly this sequence over MCP (prepare, approve, commit, enable, `execute_module`); copy from it to script your own checks.
+Without ChatGPT, `tests/module-authoring.test.js` drives exactly this sequence over MCP (prepare, approve, commit, enable, `execute_module`), and `tests/module-acceptance.test.js` does it for a declarative, a WebAssembly and an http module, from a signed source to a result on the canvas; copy from them to script your own checks.
 
 ## Choosing a runtime
 
 | Runtime | Use when | Needs | Try it |
 | --- | --- | --- | --- |
-| `declarative` | Fixed templates: symbols, callouts, stamps | nothing | this page; `examples/modules/callout` |
-| `wasm` | Real computation, offline, sandboxed: no imports, no clock, no files, no network, killed after the call | a C/Rust/… toolchain that targets `wasm32` | `examples/modules/wasm-hello` |
-| `http` | A call to an external service the administrator approves | the service's host named in `network.allow`, secrets set with `secret set` | `examples/modules/ocr-http` |
+| `declarative` | Fixed templates: symbols, callouts, stamps, one object per input item (`$each`) | nothing | this page; `examples/modules/callout`, `examples/modules/markers` |
+| `wasm` | Real computation, offline, sandboxed: no imports, no clock, no files, no network, killed after the call | a C/Rust/… toolchain that targets `wasm32` | `examples/modules/wasm-hello`, `examples/modules/linefit` (least squares) |
+| `http` | A call to an external service the administrator approves | the service's host named in `network.allow`, secrets set with `secret set` | `examples/modules/ocr-http`, `examples/modules/keywords` |
+
+The template placeholders (`$param`, `$response`, `$each`, `$item`, `$index`, `as`) and every object property are listed in [Modules](../MODULES.md#templates).
 
 ### WebAssembly path
 
@@ -129,4 +131,5 @@ A package whose memory maximum is missing or above `limits.memoryMb`, or that im
 ## Where next
 
 - [Testing modules](TESTING.md): scene operations, permissions, revisions and transaction failures.
+- [External-developer acceptance](ACCEPTANCE.md): three complete reference modules (declarative, WebAssembly, http) and the protocol for checking these guides with someone new.
 - Publish: send the `.estpkg.json` and your public key to the administrator, or publish a package source ([Distributing modules](DISTRIBUTION.md)).

@@ -109,3 +109,21 @@ test("module test reports mocks and warns about untested mappings", async () => 
     assert.match(r.stdout, /warning: analyze_text \(The service answers\): response mapping not tested; add a mockResponse/);
   } finally { await rm(work, { recursive: true, force: true }); }
 });
+
+test("templates: $each, $item, $index and as: string", async () => {
+  const { fillTemplate } = await import("../src/modules/runtimes/declarative.js");
+  const reply = { rows: [{ k: "a", v: 1 }, { k: "b", v: 2.5 }, { k: "c", v: true }] };
+  const tpl = [{ title: "t" }, { $each: { $response: "rows" }, max: 2, do: { n: { $index: 1, as: "string" }, label: { $item: "k" }, value: { $item: "v", as: "string" } } }];
+  assert.deepEqual(fillTemplate(tpl, {}, 0, reply), [{ title: "t" }, { n: "1", label: "a", value: "1" }, { n: "2", label: "b", value: "2.5" }]);
+  // nesting reads the innermost item; "." is the whole item
+  assert.deepEqual(fillTemplate([{ $each: { $param: "g" }, do: { items: [{ $each: { $item: "xs" }, do: { $item: "." } }] } }], { g: [{ xs: [1, 2] }, { xs: [] }] }), [{ items: [1, 2] }, { items: [] }]);
+  // a missing list gives nothing; a missing item field is reported in self-tests
+  const missing = [];
+  assert.deepEqual(fillTemplate([{ $each: { $response: "nope" }, do: 1 }], {}, 0, reply, missing), []);
+  fillTemplate([{ $each: { $response: "rows" }, do: { $item: "zz" } }], {}, 0, reply, missing);
+  assert.deepEqual([...new Set(missing)], ["nope", "$item zz"]);
+  assert.throws(() => fillTemplate({ $item: "x" }, {}), /only allowed inside \$each/);
+  assert.throws(() => fillTemplate([{ $each: { $param: "s" }, do: 1 }], { s: "abc" }), /needs a list/);
+  assert.throws(() => fillTemplate([{ $each: { $param: "s" }, do: 1, max: 500 }], { s: [] }), /max must be/);
+  assert.throws(() => fillTemplate([{ $each: { $param: "s" } }], { s: [] }), /\$each takes/);
+});

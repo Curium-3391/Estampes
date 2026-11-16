@@ -62,9 +62,21 @@ The grant is stored when you approve enabling. The router checks it on every cal
 
 `object.create` (type, props, optional `ref` that later operations in the same batch can use as `$ref`, `visibility` `public` or `scratch`), `object.update`, `object.delete` (`cascade` for dependants), `object.publish` (scratch to public). Rules enforced by the core: at most 64 operations and 200 objects per canvas, props validated per object type, `expectedRevision` for optimistic concurrency, no changes in a locked layer, a module may change only objects it created, and the user may change anything.
 
-Object types: `axes-2d` (ranges, grid, `π` ticks, labels), `function-plot` (`expression`, `domain`, `frame` = an axes object) and `shape` (polyline, polygon, dots, circle, rect, arrow, point, text, in canvas or frame space). `info-card` is a fact sheet, not a drawing: a title and up to 24 rows of label, value and an optional https link, listed beside the canvas (see [Info cards](#info-cards)). Coordinates of canvas objects are normalized to the canvas (top left origin) like marks; frame space uses the axes' numeric range with y up.
+Object types (full property lists below): `axes-2d` (ranges, grid, `π` ticks, labels), `function-plot` (`expression`, `domain`, `frame` = an axes object) and `shape` (polyline, polygon, dots, circle, rect, arrow, point, text, in canvas or frame space). `info-card` is a fact sheet, not a drawing: a title and up to 24 rows of label, value and an optional https link, listed beside the canvas (see [Info cards](#info-cards)). Coordinates of canvas objects are normalized to the canvas (top left origin) like marks; frame space uses the axes' numeric range with y up.
 
 Function plots support `props.labelMode`: `auto` renders `y = ` followed by the current expression; `custom` preserves `props.label` (an empty or omitted label hides it). With no mode, an existing label—including an empty or formula-looking label—is treated as custom; without a label the mode is auto. Setting `label` on an update selects custom unless `labelMode` is also supplied. Switching to auto discards the stored label. Core applies these rules to module operations and direct Canvas edits, even when Graph is disabled. Modes persist with the objects. Graph's `plot_function` and `update_plot` accept `labelMode`; to migrate an old plot explicitly, call `update_plot` with `{ "object": "o2", "labelMode": "auto" }`.
+
+Properties, as validated by the core (`src/scene/objects.js`); unknown properties are refused:
+
+| Type | Properties |
+| --- | --- |
+| `shape` | `kind` (`polyline`, `polygon`, `dots`, `circle`, `rect`, `arrow`, `point`, `text`); `space` (`canvas`, default, or `frame` with `frame` = an axes id); `points` (`[[x, y], …]`, at most 2000; polyline and polygon need 2, dots 1); `x`, `y` (circle, point, text); `x2`, `y2` (rect and arrow, with `x`, `y`); `r` (circle radius in x units of its space); `text` (at most 80 characters); `size` (text size 6–64); `fill` (a colour); `smooth`; `style` |
+| `axes-2d` | `xRange`, `yRange` (`[min, max]`); `region` (`{x, y, x2, y2}` part of the canvas, at least 0.05 each way); `grid`; `xTicks` (`auto`, `pi`); `xLabel`, `yLabel`, `title`; `style` |
+| `function-plot` | `expression`; `frame`; `domain`; `label`, `labelMode`; `style` |
+| `info-card` | `title`; `rows` (1–24 of `label` ≤ 40, `value` ≤ 240 characters, both text, optional https `href`); `shown` |
+| `image` | for built-in modules (a PNG layer) |
+
+`style` is `{color, width (0.2–12), dash (solid, dashed, dotted), opacity (0.1–1)}`. Colours are `#RRGGBB` or one of `gold`, `blue`, `red`, `green`, `yellow`, `magenta`, `cyan`, `white`, `black`, `gray`, `ink`.
 
 **Scratch objects** are the model's working notes: they are in the model's preview image but not drawn for the user or exported until published. This is not secrecy: scratch objects are still readable by the module that made them and by the model.
 
@@ -121,7 +133,31 @@ registry.json, audit.jsonl              state, grants, audit log
 
 Rollback restores a kept version byte for byte and checks it against `lock.json`; if a stored file was changed on disk, the module is marked failed at startup instead of running. Uninstall leaves canvas objects in place and keeps stored versions; purge deletes the stored versions.
 
-Declarative modules (code-free): each capability lists scene operations with `{"$param": "name"}` placeholders (optionally `"default"`), filled from the validated input. See `examples/modules/callout`.
+Declarative modules (code-free): each capability lists scene operations with placeholders, filled from the validated input. See `examples/modules/callout` and `examples/modules/markers`.
+
+### Templates
+
+Declarative `operations`, and an http capability's `request` and `response.operations`, are JSON templates. A placeholder is an object with exactly these keys:
+
+| Placeholder | Gives |
+| --- | --- |
+| `{"$param": "name"}` | the validated input value `name`; left out if absent |
+| `{"$response": "a.b.0.c"}` | (http `response` only) that path of the JSON reply |
+| `{"$item": "a.b"}`, `{"$item": "."}` | inside `$each`: a field of the current item, or the whole item |
+| `{"$index": 1}` | inside `$each`: the item's position plus the number given (`1` numbers from 1) |
+
+Any of them may add `"default": value` (used when the value is absent) and `"as": "string"` (turns a number or boolean into text, for example for an info-card `value` or a text label).
+
+**Lists.** An element of a template array of the form `{"$each": <placeholder>, "do": <template>, "max": 20}` is replaced by one copy of `do` per item of the list the placeholder gives (`max` defaults to 64, at most 200). It works for operations (one object per detected thing) and inside props (one info-card row per keyword). Example, one ring per input point:
+
+```json
+{ "$each": { "$param": "markers" }, "do": { "op": "object.create", "type": "shape",
+  "props": { "kind": "circle", "x": { "$item": "x" }, "y": { "$item": "y" }, "r": 0.02 } } }
+```
+
+Templates do not calculate: there is no arithmetic, so a label cannot be offset from its marker by the template; take both positions as input, or use a WebAssembly module.
+
+**Referring to an object from the same batch.** Give the creating operation `"ref": "ax"` and use `"$ax"` (a dollar sign and the ref) where an object id is expected, for example a shape's `frame`. See `examples/modules/linefit`.
 
 ## Writing a module
 
@@ -144,7 +180,9 @@ A module that needs real code ships one `.wasm` file in its signed package (`run
 - `memoryMb` (default 16): the module's binary must declare a memory maximum no larger than this (and tables of at most 10,000 entries with a declared maximum); a package that declares more, none or shared memory is refused at verification, before anything runs.
 - `outputKb` (default 256): a longer reply is refused.
 
-ABI: export `memory`, `alloc(len) -> ptr` and `handle(ptr, len) -> ptr`. The host writes a JSON request `{capability, params, module, canvas}` at the pointer `alloc` returned; `handle` returns a pointer to a 4-byte little-endian length followed by a JSON reply `{operations, summary, data, method}`. The reply goes through the same scene-operation checks as any other module. A capability whose input has required fields and no `examples` is skipped by the install self-test. Example with a C source and build line: `examples/modules/wasm-hello`.
+ABI: export `memory`, `alloc(len) -> ptr` and `handle(ptr, len) -> ptr`. The host writes a JSON request `{capability, params, module, canvas}` at the pointer `alloc` returned; `handle` returns a pointer to a 4-byte little-endian length followed by a JSON reply `{operations, summary, data, method}`. The reply goes through the same scene-operation checks as any other module. To refuse a call with a message the user and model can read (bad input your schema cannot express, a computation that has no answer), reply `{"error": "what went wrong"}`; the call then fails with that text (at most 300 characters).
+
+The request: `capability` (the id), `params` (the input after schema validation), `module` (`{id, version}`) and `canvas`: `null` without a target, else `{imageId, width, height, revision}`, plus `objects` and `marks` when the module holds `canvas.read`. `alloc` receives the request's byte length, which with `canvas.read` can be large (up to 200 objects); size the buffer it hands out from `limits.memoryMb`, not from your own test inputs. There is no JSON library: `examples/modules/linefit/linefit.c` has a small number-list reader and a number writer in freestanding C that you can copy. A capability whose input has required fields and no `examples` is skipped by the install self-test. Example with a C source and build line: `examples/modules/wasm-hello`.
 
 ## Talking to external services (http modules)
 

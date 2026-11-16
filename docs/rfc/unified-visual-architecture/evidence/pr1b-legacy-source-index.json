@@ -34,7 +34,8 @@
     "src/modules/packages.js",
     "src/modules/mcp-tools.js",
     "src/modules/runtimes/http.js",
-    "src/modules/runtimes/declarative.js"
+    "src/modules/runtimes/declarative.js",
+    "src/modules/runtimes/wasm.js"
   ],
   "files": [
     {
@@ -439,6 +440,14 @@
         "src/modules/mcp-tools.js",
         "src/modules/runtimes/http.js",
         "src/modules/runtimes/declarative.js"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "authorizedBy": "User explicitly authorized (2026-11-16 thread 補強第三方模組測試與發行) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
+      "reason": "WebAssembly modules can refuse a call with a readable {\"error\": message} reply, found by the external-developer acceptance; other legacy source fingerprints stay intact",
+      "files": [
+        "src/modules/runtimes/wasm.js"
       ]
     }
   ]

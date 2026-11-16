@@ -19,6 +19,15 @@
   public addresses, with checked redirects and size limits, and run only in
   the administrator CLI; installing still needs the user's and the
   administrator's approval. See docs/modules/DISTRIBUTION.md.
+- Module templates: `{"$each": …, "do": …}` makes one object (or row) per item
+  of an input or reply list, with `$item`, `$index` and `"as": "string"`. A
+  WebAssembly module can refuse a call with `{"error": "…"}`. Docs now list
+  every object property and the WebAssembly request contents.
+- External-developer acceptance (docs/modules/ACCEPTANCE.md): three reference
+  modules (`markers` declarative, `linefit` WebAssembly least squares,
+  `keywords` http analysis service) run from a clean folder through test, sign,
+  source, install, enable and run in CI. The recorded run was an internal
+  clean-room run; an outside developer's run is still open.
 - Canvas text entry (#82): select a user annotation to edit/clear its label and
   multiline note, or choose Text to place an editable standalone vector object.
   Text supports dragging, size/color, locked layers, revision checks and its own
