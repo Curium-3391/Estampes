@@ -268,13 +268,14 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 // subscribe to events (tool-input, tool-result, globals) and send requests
 // through it; nothing in a viewer touches window.parent directly.
 function createHost(){
- const subs={"tool-input":new Set(),"tool-result":new Set(),globals:new Set(),failed:new Set()};
+ const subs={"tool-input":new Set(),"tool-result":new Set(),globals:new Set(),failed:new Set(),settled:new Set()};
  const pending=new Map(),waiters=[];let rpcId=0,ready=false,hostName="";
  const on=(type,fn)=>{subs[type].add(fn);return()=>subs[type].delete(fn)};
  const emit=(type,arg)=>{for(const fn of [...subs[type]]){try{fn(arg)}catch(err){console.error(err)}}};
  const whenReady=()=>ready?Promise.resolve():new Promise(resolve=>waiters.push(resolve));
  const notify=(method,params)=>window.parent.postMessage({jsonrpc:"2.0",method,params},"*");
- const rawRequest=(method,params)=>new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});
+ // A finished tool call (a save, an edit) is the moment to ask the server what changed; the poll itself is excluded.
+ const rawRequest=(method,params)=>new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject,settles:method==="tools/call"&&params?.name!=="documents_get_changes"});
   window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
   setTimeout(()=>{if(pending.has(id)){pending.delete(id);reject(Error("Host timeout: "+method))}},12000);
  });
@@ -283,7 +284,7 @@ function createHost(){
  // until it has answered, or the host can drop the view as timed out.
  const request=async(method,params)=>{if(method!=="ui/initialize")await whenReady();return rawRequest(method,params)};
  window.addEventListener("message",event=>{if(event.source!==window.parent)return;const msg=event.data;if(msg?.jsonrpc!=="2.0")return;
-  if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);return;}
+  if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);if(p.settles)emit("settled");return;}
   if(msg.method==="ui/notifications/tool-input")emit("tool-input",msg.params);
   if(msg.method==="ui/notifications/tool-result")emit("tool-result",msg.params);
  });
@@ -656,6 +657,7 @@ function applyServerCanvas(annotations,layerList,linkList){
  priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,cap);
  if(frames&&Array.isArray(linkList))links=viewLinks(linkList);
  if(selected&&!allMarks().some(m=>m.id===selected))selected=null;
+ return byId;
 }
 async function layerEdit(args,done){
  try{await editOnServer(args);status.textContent=done;}
@@ -1061,6 +1063,8 @@ async function decideGesture(memberIds,verdict){
    try{
      const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict,...(ws?{workspaceId:ws.id,item:findMark(ids[0])?.side??firstSide()}:{})}});
      if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+     // The server holds this verdict now; keeping the override would hide a later verdict from another viewer.
+     gestureDecisions=gestureDecisions.filter(d=>!(gkey(d.memberIds)===key&&d.verdict===verdict));
    }catch(err){status.textContent="已記在畫布上，但存到伺服器失敗："+String(err.message||err)}
  }
  render();
@@ -2468,7 +2472,53 @@ function cancelGestures(){
 }
 // A resize changes the coordinate frame under a pointer; end the gesture.
 if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new ResizeObserver(entries=>{const r=entries[entries.length-1]?.contentRect;if(!r||disposed)return;const w=Math.round(r.width),h=Math.round(r.height);const changed=lastW>=0&&(w!==lastW||h!==lastH);lastW=w;lastH=h;if(changed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
-return {scope,rootEl,feed:applyHostResult,cancelGestures,get disposed(){return disposed},dispose(){
+// The document this viewer shows, and how a polled snapshot lands in it. Unsent marks (userMarks),
+// the camera, the tool and the selection are never touched: a poll only replaces what the server
+// owns (other authors' marks, layers, objects, gesture verdicts, links).
+// A paired view shows two images; one document's snapshot cannot stand for it, so it is not polled yet.
+const documentRef=()=>ws?ws.id:pair?null:imageId;
+// Server-owned state as one string: a poll that changes nothing must not rebuild the DOM (a click or drag
+// in progress would lose its element).
+const polledSig=()=>JSON.stringify([layers,gestures,objects,baseAsObject,assistantMarks,priorUserMarks,userMarks.filter(m=>sentIds.has(m.id)),past.length,future.length,ws?[ws.revision,links,ws.items.map(i=>[i.id,i.objects,i.baseAsObject])]:null]);
+// Returns false when the user is in the middle of something; the caller tries again later.
+const interacting=()=>pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
+// Saved marks inside the undo/redo stacks follow the server too, so undoing a draft cannot bring back
+// an old version of a mark another viewer moved or deleted. Unsent marks in the stacks stay as they are.
+function reconcileHistory(byId){
+ const fix=list=>list.map(marks=>marks.filter(m=>!sentIds.has(m.id)||byId.has(m.id)).map(m=>sentIds.has(m.id)?{...byId.get(m.id)}:m));
+ past=fix(past);future=fix(future);
+}
+function applyPolled(s,id){
+ if(!s||disposed)return true;
+ if(id!==documentRef())return true; // the viewer moved to another document while this answer was on its way
+ if(interacting())return false;
+ if(ws){
+  // Another client added, removed or rearranged items: reload the workspace the way a fresh result does.
+  const sameItems=Array.isArray(s.workspace?.items)&&s.workspace.items.length===ws.items.length&&s.workspace.items.every((px,i)=>px?.id===ws.items[i].id&&px?.imageId===ws.items[i].imageId&&(px?.set??null)===(ws.items[i].set??null));
+  if(s.workspace?.id!==ws.id)return true;
+  if(!sameItems){syncCanvas(true);return true;}
+ }
+ const before=polledSig();
+ if(ws){
+  for(const px of s.workspace.items){const it=ws.items.find(i=>i.id===px.id);if(it){it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;}}
+  ws.revision=Number(s.workspace.revision)||ws.revision;
+  reconcileHistory(applyServerCanvas(s.annotations,s.layers,s.links));
+ }else{
+  if(Array.isArray(s.gestureGroups)){
+   // A group with an unsent stroke exists only here until the send; the server cannot list it yet.
+   const draft=gestures.filter(g=>g.memberIds.some(id=>!sentIds.has(id)&&userMarks.some(m=>m.id===id)));
+   setGestures(s.gestureGroups);
+   const have=new Set(gestures.map(g=>g.key));
+   gestures=[...gestures,...draft.filter(g=>!have.has(g.key))];
+  }
+  if(Array.isArray(s.objects))setObjects(s.objects);
+  if(typeof s.baseAsObject==="boolean")baseAsObject=s.baseAsObject;
+  reconcileHistory(applyServerCanvas(Array.isArray(s.annotations)?s.annotations.filter(valid):[],s.layers));
+ }
+ if(polledSig()!==before)render();
+ return true;
+}
+return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
  try{cancelGestures()}catch{}
  disposed=true;
@@ -2516,5 +2566,58 @@ function mountViewer(container,{receivesHost=false}={}){
  v.holder=holder;viewers.add(v);
  return v;
 }
-window.estampesSurface={mountViewer,viewers:()=>[...viewers]};
+
+// ===== Poll and reconcile (UVA Phase 3, OD-04 option A) =====
+// One DocumentStore for the widget; every viewer on a document shares its entry. The app-only
+// documents_get_changes call runs about every POLL_MS while the widget is visible, and at once on
+// focus, on becoming visible, and after any finished tool call (a save or edit).
+__ESTAMPES_DOCSTORE__
+const POLL_MS=2000;
+const docs=createDocumentStore({fetchChanges:async list=>{
+ const r=await host.request("tools/call",{name:"documents_get_changes",arguments:{documents:list}});
+ if(r?.isError)throw Error(r.content?.[0]?.text||"tool error");
+ const sc=r?.structuredContent;if(sc?.kind!=="estampes.documents_changes")throw Error("Unexpected response");
+ return sc;
+}});
+const bindings=new Map(); // viewer -> {id, off, applied, pending}
+// A snapshot waits while its viewer is busy with the user, and lands on a later tick.
+function flushBinding(v,b){
+ if(!b.pending)return;
+ if(v.documentRef()!==b.id){b.pending=null;return}
+ if(v.applyPolled(b.pending.snapshot,b.id)!==false){b.applied=b.pending.key;b.pending=null}
+}
+function bindViewers(){
+ for(const [v,b] of [...bindings])if(v.disposed||!viewers.has(v)||v.documentRef()!==b.id){b.off();bindings.delete(v);}
+ for(const v of viewers){
+  if(v.disposed||bindings.has(v))continue;
+  const id=v.documentRef();if(!id)continue;
+  const b={id,applied:null,pending:null};
+  const take=st=>{
+   if(!st?.snapshot||!st.revision)return;
+   const key=st.revision.epoch+":"+st.revision.counter+":"+st.revision.hash;
+   if(key===b.applied)return;
+   b.pending={key,snapshot:st.snapshot};flushBinding(v,b);
+  };
+  b.off=docs.subscribe(id,take);
+  take(docs.get(id)); // a viewer joining a document the store already knows catches up at once
+  bindings.set(v,b);
+ }
+}
+let polling=false,pollAgain=false,pollTimer=null;
+async function pollNow(){
+ if(!host.ready)return null;
+ if(polling){pollAgain=true;return null}
+ polling=true;
+ try{bindViewers();for(const [v,b] of bindings)flushBinding(v,b);return await docs.reconcile();}
+ finally{polling=false;if(pollAgain){pollAgain=false;queueMicrotask(()=>{pollNow()})}}
+}
+const schedulePoll=()=>{clearTimeout(pollTimer);if(document.hidden)return;pollTimer=setTimeout(async()=>{try{await pollNow()}catch{}schedulePoll()},POLL_MS)};
+let settleTimer=null;
+host.on("settled",()=>{clearTimeout(settleTimer);settleTimer=setTimeout(()=>{pollNow().catch(()=>{})},250)});
+const wake=()=>{if(!document.hidden){pollNow().catch(()=>{});schedulePoll()}else clearTimeout(pollTimer)};
+document.addEventListener("visibilitychange",wake);
+window.addEventListener("focus",wake);
+host.whenReady().then(()=>schedulePoll());
+
+window.estampesSurface={mountViewer,viewers:()=>[...viewers],pollNow,documents:docs};
 </script></body></html>

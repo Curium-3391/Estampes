@@ -13,7 +13,8 @@ test("info cards in a browser: per-module groups, fold, hide and bring back", { 
     const imageId = (JSON.stringify(made.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const card = (id, module, title, shown) => ({ id, type: "info-card", layer: null, module, primitives: [],
       card: { title, ...(shown === undefined ? {} : { shown }), rows: [{ label: "中心", value: "(1, 2)" }, { label: "連結", value: "開啟", href: "https://example.org/a" }, { label: "壞連結", value: "x", href: "javascript:alert(1)" }] } });
-    const ui = await s.open({ imageId, result: async () => {
+    // The cards are added to the host result by hand (the server does not have them), so the poll must not replace them.
+    const ui = await s.open({ imageId, quietPoll: true, result: async () => {
       const r = await s.call("present_visual", { imageId });
       r._meta["estampes/objects"] = [...(r._meta["estampes/objects"] ?? []), card("o901", "org.example.astro", "解算結果"), card("o902", "org.example.astro", "進階資料", false), card("o903", "org.example.ocr", "文字辨識")];
       return r;

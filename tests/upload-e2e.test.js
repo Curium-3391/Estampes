@@ -58,7 +58,8 @@ for (const profile of [
   const stack = await startStack({ cas: false });
   try {
     const initial = await stack.call("present_visual", { upload: true });
-    const ui = await stack.open({ result: async () => initial, globals: profile.globals, viewport: profile.viewport });
+    // The host marks this test sends (host-point) are not on the server, so the poll must not replace them.
+    const ui = await stack.open({ result: async () => initial, globals: profile.globals, viewport: profile.viewport, quietPoll: true });
     await ui.frame.locator("#upload-big").waitFor();
     await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
     await ui.page.evaluate(() => {
