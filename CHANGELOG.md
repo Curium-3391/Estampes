@@ -4,6 +4,13 @@
 
 ## 0.20.1 — Surface viewers, workspace and module fixes
 
+- Module gaps from the acceptance run: `{"$calc": …, "with": …}` arithmetic in
+  templates (Estampes's own expression parser, never JavaScript); declarative
+  http modules can upload the target canvas's original image with
+  `request.multipart.file` (`source: "canvas-image"`, needs
+  `asset.read.selected`), with reference module `examples/modules/regions`;
+  `estampes-module try` runs one capability offline on a scratch canvas or
+  your own picture and writes a PNG of the result.
 - Module tests for http modules: an example can carry a `mockResponse` (a
   recorded reply: status and JSON or raw text), which `module test` and the
   install self-test run through the same response mapping a real call uses, so
