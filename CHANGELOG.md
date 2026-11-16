@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Surface widget (UVA Phase 3, PR-3B-1): new app-only `documents_get_changes` poll tool (up to 12 documents, answers unchanged / snapshot / gap / missing) with ordered `{epoch, counter, hash}` revisions next to the canvas content hash, and a shared widget `DocumentStore` (get / subscribe / hydrate / reconcile / release) whose rules ignore older or duplicate revisions, treat a same-revision different-hash answer as an integrity error, and keep the last snapshot marked stale when offline. Nothing polls yet; the scheduler, host de-duplication and restore are PR-3B-2.
+## 0.20.1 — Surface viewers, workspace and module fixes
+
 - Module gaps from the acceptance run: `{"$calc": …, "with": …}` arithmetic in
   templates (Estampes's own expression parser, never JavaScript); declarative
   http modules can upload the target canvas's original image with
