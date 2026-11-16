@@ -2384,9 +2384,17 @@ if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new Resize
 // The document this viewer shows, and how a polled snapshot lands in it. Unsent marks (userMarks),
 // the camera, the tool and the selection are never touched: a poll only replaces what the server
 // owns (other authors' marks, layers, objects, gesture verdicts, links).
-const documentRef=()=>ws?ws.id:imageId;
+// A paired view shows two images; one document's snapshot cannot stand for it, so it is not polled yet.
+const documentRef=()=>ws?ws.id:pair?null:imageId;
+// Server-owned state as one string: a poll that changes nothing must not rebuild the DOM (a click or drag
+// in progress would lose its element).
+const polledSig=()=>JSON.stringify([layers,gestures,objects,baseAsObject,assistantMarks,priorUserMarks,ws?[ws.revision,links,ws.items.map(i=>[i.id,i.objects,i.baseAsObject])]:null]);
+// Returns false when the user is in the middle of something; the caller tries again later.
+const interacting=()=>pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
 function applyPolled(s){
- if(!s||disposed)return;
+ if(!s||disposed)return true;
+ if(interacting())return false;
+ const before=polledSig();
  if(ws){
   if(s.workspace?.id!==ws.id)return;
   for(const px of Array.isArray(s.workspace.items)?s.workspace.items:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;}}
@@ -2406,7 +2414,8 @@ function applyPolled(s){
   assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
   priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,60);
  }
- render();
+ if(polledSig()!==before)render();
+ return true;
 }
 return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
@@ -2469,18 +2478,20 @@ const docs=createDocumentStore({fetchChanges:async list=>{
  const sc=r?.structuredContent;if(sc?.kind!=="estampes.documents_changes")throw Error("Unexpected response");
  return sc;
 }});
-const bindings=new Map(); // viewer -> {id, off, applied}
+const bindings=new Map(); // viewer -> {id, off, applied, pending}
+// A snapshot waits while its viewer is busy with the user, and lands on a later tick.
+function flushBinding(v,b){if(b.pending&&v.applyPolled(b.pending.snapshot)!==false){b.applied=b.pending.key;b.pending=null}}
 function bindViewers(){
  for(const [v,b] of [...bindings])if(v.disposed||!viewers.has(v)||v.documentRef()!==b.id){b.off();bindings.delete(v);}
  for(const v of viewers){
   if(v.disposed||bindings.has(v))continue;
   const id=v.documentRef();if(!id)continue;
-  const b={id,applied:null};
+  const b={id,applied:null,pending:null};
   b.off=docs.subscribe(id,st=>{
    if(!st.snapshot||!st.revision)return;
    const key=st.revision.epoch+":"+st.revision.counter+":"+st.revision.hash;
    if(key===b.applied)return;
-   b.applied=key;v.applyPolled(st.snapshot);
+   b.pending={key,snapshot:st.snapshot};flushBinding(v,b);
   });
   bindings.set(v,b);
  }
@@ -2490,7 +2501,7 @@ async function pollNow(){
  if(!host.ready)return null;
  if(polling){pollAgain=true;return null}
  polling=true;
- try{bindViewers();return await docs.reconcile();}
+ try{bindViewers();for(const [v,b] of bindings)flushBinding(v,b);return await docs.reconcile();}
  finally{polling=false;if(pollAgain){pollAgain=false;queueMicrotask(()=>{pollNow()})}}
 }
 const schedulePoll=()=>{clearTimeout(pollTimer);if(document.hidden)return;pollTimer=setTimeout(async()=>{try{await pollNow()}catch{}schedulePoll()},POLL_MS)};
