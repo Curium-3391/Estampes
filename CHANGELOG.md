@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.1 — Surface viewers, workspace and module fixes
+
 - Module gaps from the acceptance run: `{"$calc": …, "with": …}` arithmetic in
   templates (Estampes's own expression parser, never JavaScript); declarative
   http modules can upload the target canvas's original image with
