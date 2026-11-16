@@ -8,7 +8,7 @@ import { markFindings, MARK_STATUSES } from "./scene-catalog.js";
 import {
   assessmentInput, markRegion, findRejection, bringsNewEvidence, rejectionOf, addRejection, dropRejections,
 } from "./assessment.js";
-import { claimOf, withoutClaim, geometryChanged } from "./visual/annotation-contract.js";
+import { claimOf, withoutClaim, geometryChanged, geometryChange, geometryOf } from "./visual/annotation-contract.js";
 import { recordChange, undoChange, redoChange, historyState } from "./visual/annotation-history.js";
 import {
   LAYER_NAME_MAX, AUTHOR_NAME, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
@@ -269,23 +269,37 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
     marks.forEach((edit, i) => {
       const old = state.get(edit.id);
       if (!old) throw fail("marks", i, edit.id, "no such mark");
-      if (old.author !== "user") throw fail("marks", i, edit.id, "only your own marks can be moved or restyled; the AI's marks can be deleted");
+      // The AI's marks are shared too (#69): the user can move or reshape
+      // them; author, label, note and style stay the AI's (they are its claim).
+      if (old.author !== "user") {
+        const changed = ["label", "note", "color", "size", "pen", "smooth", "closed"].filter((k) => edit[k] !== undefined && edit[k] !== old[k]);
+        if (changed.length) throw fail("marks", i, edit.id, "the AI's marks can be moved, resized or reshaped, but its " + changed.join(", ") + " stay as the AI wrote them");
+      }
       if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
       let next;
       try { next = resolveUser({ ...old, ...edit, author: "user" }); } catch (error) { throw fail("marks", i, edit.id, error?.message || error); }
       const moved = geometryChanged(old, next);
-      let stored = { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) };
-      if (edit.note !== undefined && (next.note ?? "") !== (old.note ?? "")) {
+      let stored = old.author === "user"
+        ? { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) }
+        : { ...old, ...(Array.isArray(next.points) ? { points: next.points } : {}), x: next.x, y: next.y,
+          ...(next.x2 !== undefined ? { x2: next.x2, y2: next.y2 } : {}), ...(moved ? { edited: true } : {}) };
+      if (old.author === "user" && edit.note !== undefined && (next.note ?? "") !== (old.note ?? "")) {
         stored = withoutClaim(stored);
         if (!next.note) delete stored.note;
         else stored.note = next.note;
         stored.findingUpdatedAt = Math.max(Date.now(), ...[...state.values()].map(m => (m.findingUpdatedAt ?? 0) + 1));
         if (!stored.note && !stored.status) delete stored.findingUpdatedAt;
       }
-      if (edit.note !== undefined && !next.note) delete stored.note;
+      if (old.author === "user" && edit.note !== undefined && !next.note) delete stored.note;
       state.set(edit.id, stored);
       changes.push({ before: old, after: stored });
-      edits.push({ kind: moved ? "move-mark" : edit.note !== undefined && (stored.note ?? "") !== (old.note ?? "") ? "edit-note" : "restyle-mark", id: edit.id, ...(next.label ? { label: next.label } : {}) });
+      const change = geometryChange(old, stored);
+      edits.push({
+        kind: moved ? "move-mark" : edit.note !== undefined && (stored.note ?? "") !== (old.note ?? "") ? "edit-note" : "restyle-mark", id: edit.id,
+        ...(stored.label ? { label: stored.label } : {}),
+        // Structured geometry change: what happened, to whose mark, before and after.
+        ...(change ? { change, author: old.author, before: geometryOf(old), after: geometryOf(stored) } : {}),
+      });
     });
     for (const change of changes) recordChange(entry, change);
     (entry.userEdits ??= []).push(...edits);

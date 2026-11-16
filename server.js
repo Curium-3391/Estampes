@@ -419,12 +419,16 @@ const linkTable = (links, marksById) => links.map((l) => {
 const layerText = (layers) => layers.map((l) => (l.side ? l.side + ":" : "") + l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count +
   (l.locked ? ", LOCKED by the user: do not edit or remove its marks" : "") + ")").join("; ");
 // Changes the user made by hand in the canvas since GPT's last call.
+const roundGeometry = ({ type: _t, ...g }) => JSON.parse(JSON.stringify(g, (k, v) => (typeof v === "number" ? Math.round(v * 1e4) / 1e4 : v)));
 const EDIT_TEXT = {
   "rename-layer": (e) => "renamed layer " + e.layer + " " + JSON.stringify(e.from) + " to " + JSON.stringify(e.to),
   "lock-layer": (e) => "locked layer " + e.layer, "unlock-layer": (e) => "unlocked layer " + e.layer,
   "reorder-layers": (e) => "reordered layers (bottom to top) " + e.order.join(", "),
   "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
-  "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
+  "move-mark": (e) => (e.change === "resize" ? "resized " : e.change === "reshape" ? "reshaped " : e.change === "move" ? "moved " : "moved/reshaped ") +
+    (e.author === "assistant" ? "YOUR" : "their") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") +
+    (e.before && e.after ? " from " + JSON.stringify(roundGeometry(e.before)) + " to " + JSON.stringify(roundGeometry(e.after)) : "") +
+    (e.author === "assistant" ? " (the user corrected where it is; your note on it stays, check it still fits)" : " (your earlier notes on it may no longer fit)"),
   "edit-note": (e) => "edited the note on their mark " + e.id,
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
