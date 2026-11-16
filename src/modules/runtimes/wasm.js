@@ -134,6 +134,8 @@ export const wasmRuntime = {
     let parsed;
     try { parsed = JSON.parse(out); } catch { throw new WasmError("the module did not return valid JSON"); }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new WasmError("the module result must be a JSON object");
+    // A module refuses a call by replying {"error": "message"}.
+    if (typeof parsed.error === "string") throw new WasmError(manifest.id + ": " + parsed.error.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 300));
     return { method: "WebAssembly module", ...parsed };
   },
 };

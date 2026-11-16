@@ -8,7 +8,8 @@ Reference: [Module quick start](QUICKSTART.md), [Modules](../MODULES.md), [Devel
 
 | Level | Question it answers | Tool | Needs a server? |
 | --- | --- | --- | --- |
-| 1. Manifest and examples | Is the manifest valid for this core, and do my examples produce operations the core accepts? | `node scripts/estampes-module.js test module.json` | no |
+| 0. One run | What does this call draw? | `node scripts/estampes-module.js try module.json <capability> --example 1 --out result.png` | no |
+| 1. Manifest and examples | Is the manifest valid for this core, do my examples produce operations the core accepts, and (http) does my response mapping work on a recorded reply? | `node scripts/estampes-module.js test module.json` | no |
 | 2. Package | Is the package intact, signed and trusted for this id? | `pack`, `verify`, `trust`, `inbox` | no |
 | 3. Scene operations | Does the core accept my batches, and does a refused batch change nothing? | unit tests on `applySceneOps` (`tests/scene-ops.test.js`) | no |
 | 4. Install and run | Does the whole flow work: plan, consent, administrator approval, enable, run, refusal? | MCP client against a real `server.js` (`tests/module-authoring.test.js`, `tests/packages.test.js`) | yes (started by the test) |
@@ -46,7 +47,7 @@ A module never draws. It returns `estampes.scene-ops/1` operations and the core 
 | **Locked layers.** No changes to objects in a locked layer. | `locked` |
 | **Limits.** At most 64 operations per batch and 200 objects per canvas; props are validated per object type. | an error naming the field |
 
-For a declarative module most of this is checked by `test`; for `wasm` and `http` modules, where the reply is data your code produced, add examples that exercise every operation you can emit, because a bad operation in a real call is refused after the work is done.
+For a declarative module most of this is checked by `test`; for `wasm` and `http` modules, where the reply is data your code (or the service) produced, add examples that exercise every operation you can emit (for http: one `mockResponse` per reply shape), and pin the numbers with `expect`, because a bad operation in a real call is refused after the work is done.
 
 ### Testing a transaction failure
 
@@ -89,7 +90,29 @@ Limits are enforced by killing the worker. `tests/packages.test.js` has the case
 
 ## HTTP specifics
 
-`test` (and the install self-test) never calls the network: for each example it builds the request and checks it against the egress rules (host, path, headers, declared secrets), without sending it and without reading secret values. **The `response` mapping is not exercised**, so test it with a small unit test that feeds a representative JSON reply through the same template filling (`fillTemplate` with the reply as `response`, see `src/modules/runtimes/declarative.js`) and applies the result with `applySceneOps`. The egress rules (https, port 443, exact hosts, no redirects, secrets added by the server, size and time limits) are tested in "egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions". Real calls are only made when the module is enabled and approved.
+`test` (and the install self-test) never calls the network. For each example it builds the request and checks it against the egress rules (host, path, headers, declared secrets) without sending it and without reading secret values. To test the **response mapping** as well, give the example a `mockResponse`: the reply your service would send. It then goes through exactly the code a real call uses (`mapResponse` in `src/modules/runtimes/http.js`): status check, JSON parsing, `response.data`, the `{"$response": …}` templates, and the scene-operation checks on the result.
+
+```json
+"examples": [
+  { "description": "The service answers",
+    "params": { "text": "hello", "x": 0.2, "y": 0.3 },
+    "mockResponse": { "status": 200, "json": { "result": { "text": "hello", "confidence": 0.98 } } },
+    "expect": { "operations": 1, "data": { "text": "hello" } } },
+  { "description": "The service is down",
+    "params": { "text": "hello" },
+    "mockResponse": { "status": 503, "json": { "error": "unavailable" } },
+    "expect": { "error": "answered 503" } }
+]
+```
+
+- `mockResponse`: `status` (default 200) and either `json` (the parsed reply) or `text` (a raw body, to test what happens when the service does not answer JSON). A 3xx status fails like a real redirect (never followed); 4xx and 5xx fail with `the host answered <status>`. At most 64 KB per example, so paste a trimmed real reply.
+- A `{"$response": "a.b"}` path, or `response.data`, that is not in the mock reply and has no `default` is an error (`response mapping: "a.b" not found in the reply`). Real calls stay lenient (a missing field is left out), so this is how you catch typos.
+- `expect` (any runtime): `operations` (how many scene operations), `data` (a pattern: every key you list must match, extra keys are fine, arrays must have the same length, numbers may differ by 1e-9 relative), `summary`, or `error` (a substring of the message the call must fail with, including input refused by the schema). An http example can only check a result against a `mockResponse`.
+- An http example without a `mockResponse` still passes, with a warning: `response mapping not tested; add a mockResponse`.
+
+The fixtures are part of the manifest, so the install self-test on the administrator's server runs them again and a package whose mapping no longer matches its own fixtures is never activated. They are not sent to the model: `get_module_capabilities` lists only each example's description and parameters.
+
+What a mock cannot tell you: whether the real service still answers in that shape, its latency, and the egress rules that only apply at connection time (DNS must resolve to public addresses, TLS, size and time limits). Those are covered by "egress refuses other hosts, paths, headers, undeclared secrets, redirects, errors and missing permissions" in the repository's tests and by one real call after the administrator enabled the module.
 
 ## Before you share it
 

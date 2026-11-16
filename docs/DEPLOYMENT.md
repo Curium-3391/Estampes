@@ -39,8 +39,23 @@ The second command prints the ChatGPT connector URL, e.g. `https://calm-words-he
 - Stop: `docker compose down`. **`docker compose down -v` deletes all stored images and marks.**
 - Backup and restore: the volume `estampes_estampes-data` holds everything, including your keys. Stop the server, archive the volume, and restore into a new volume; the full procedure, what a backup contains, upgrade and rollback rules and what to do when a key leaks are in [Backup and restore](BACKUP-RESTORE.md). Problems: [Troubleshooting](TROUBLESHOOTING.md).
 - The container runs as the unprivileged `node` user (uid 1000) with a read-only filesystem except `/data` and a 64 MB `/tmp`, no Linux capabilities, `no-new-privileges` and at most 256 processes, and restarts on failure (`restart: unless-stopped`).
-- Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` only when a `vX.Y.Z` tag is pushed: `X.Y.Z`, `latest` (the newest stable release) and `sha-<short>`; nothing is published for `main` or pull requests. To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z` (pin a version; `latest` moves). A GHCR package is private until its owner makes it public in the package settings, so an anonymous pull can fail; building locally always works. See [Releasing](RELEASE.md).
+- GitHub Actions publishes stable multi-arch images to `ghcr.io/curium-3391/estampes`. To deploy a pinned stable release, replace `build: .` and `image: estampes:local` under the `estampes` service in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z`. See [Releasing](RELEASE.md) for tag and registry access details.
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
+
+### Deploy the Edge test instance
+
+Use Docker Compose 2.24.4 or later and a checkout of `main` containing `compose.edge.yaml`. The Edge overlay pulls the Estampes image from GHCR and builds the calculator from the checkout. If GHCR requires authentication, sign in with `docker login ghcr.io` using an account that can read the package.
+
+```sh
+docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml pull estampes
+docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml up -d --build
+curl -fsS http://127.0.0.1:8788/healthz
+docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml exec estampes cat /data/access-key
+```
+
+Run the health check once the instance has started. Edge listens on `127.0.0.1:8788` by default. Set `ESTAMPES_EDGE_PORT` if that port is in use. The project has separate volumes for application data, UVA and the calculator socket. It generates its own access and administrator keys. Use synthetic fixtures and keep production backups, data volumes, and connector credentials with the production instance.
+
+Repeat the pull and up commands to update. For a reproducible test, set `ESTAMPES_EDGE_TAG=sha-<full-commit-sha>` in your shell before both commands and record the tag with your feedback. An image digest identifies the exact image if a commit is rebuilt. Check out the corresponding commit before building the local calculator when testing an older image. To stop the test instance while retaining its data, use `docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml down`. Use the same project and files for every command.
 
 ### Calculator container and optional PDF support
 
@@ -61,6 +76,34 @@ With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`) and the default UVA store
 | `history.jsonl` | one line per change: time, tool, author (user or assistant), changed ids |
 
 Memory stays the working copy (`ESTAMPES_CACHE_*`). When the cache drops an image or the server restarts, the next call that names its `imageId` reloads it and its canvas from disk; attaching the same file again in a new chat also brings its canvas back. `ESTAMPES_STORAGE_RETENTION_DAYS` removes folders that have not changed for that many days (0 = keep forever). Without a storage dir nothing is written to disk.
+
+### Connect LibreChat v0.8.9-rc1 on the same Docker machine
+
+Put the LibreChat server and Estampes containers on a shared Docker network and use the service name and container port. For default project and container names, an existing LibreChat container can join with `docker network connect estampes_default LibreChat`. Substitute your actual network and container names. For a persistent configuration, declare the shared network in both Compose projects. Compose's default loopback binding controls the **published host port**. The shared network uses port `8787` inside the Estampes container without opening that port to the LAN.
+
+In the following local example, open LibreChat at `http://localhost:3080` in the browser. Its sandbox must use a distinct, browser-reachable origin. Use dedicated HTTPS origins for both when serving remote users.
+
+```yaml
+mcpSettings:
+  apps: true
+  allowedAddresses:
+    - "estampes:8787"
+mcpAppSandbox:
+  url: http://127.0.0.1:3080/api/mcp/sandbox
+mcpServers:
+  estampes:
+    type: streamable-http
+    url: http://estampes:8787/mcp
+    requiresOAuth: false
+    headers:
+      Authorization: 'Bearer ${LIBRECHAT_ESTAMPES_KEY}'
+```
+
+Set `LIBRECHAT_ESTAMPES_KEY` in LibreChat's environment to the Estampes access key. Keep it out of committed YAML, the tool URL and the sandbox. Use the explicit OAuth override with this static Bearer setup because the unauthenticated Estampes challenge advertises OAuth resource metadata. If `mcpSettings.allowedDomains` is configured, use that allowlist for the Estampes service instead of `allowedAddresses`.
+
+For this example set `MCP_SANDBOX_FRAME_ANCESTORS=http://localhost:3080` in LibreChat's environment. Use your actual chat origin when deploying elsewhere. Check both the sandbox URL and its frame-ancestors policy if the iframe is blank. An MCP log entry `GET status=405` alone can be the optional Streamable HTTP SSE stream being declined while POST tool calls succeed.
+
+See [Compatibility](COMPATIBILITY.md#librechat-v089-rc1) for the live report, the image upload limitation and upstream behavior.
 
 ## Heroku
 

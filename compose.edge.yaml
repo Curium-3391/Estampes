@@ -1,0 +1,33 @@
+# Use with compose.yaml and the dedicated estampes-edge project.
+name: estampes-edge
+
+services:
+  estampes:
+    build: !reset null
+    image: ghcr.io/curium-3391/estampes:${ESTAMPES_EDGE_TAG:-edge}
+    container_name: !reset null
+    env_file: !reset []
+    environment:
+      ESTAMPES_UVA_DIR: /uva-beta
+    ports: !override
+      - "127.0.0.1:${ESTAMPES_EDGE_PORT:-8788}:8787"
+    volumes:
+      - edge-data:/data
+      - edge-uva:/uva-beta
+      - edge-cas-run:/run/estampes-cas
+
+  cas:
+    # Build the calculator from this checkout with its own local image tag.
+    image: estampes-cas:edge-local
+    container_name: !reset null
+    env_file: !reset []
+    volumes:
+      - edge-cas-run:/run/estampes-cas
+
+volumes:
+  estampes-data: !reset null
+  uva-beta: !reset null
+  cas-run: !reset null
+  edge-data:
+  edge-uva:
+  edge-cas-run:

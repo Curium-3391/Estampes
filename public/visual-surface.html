@@ -266,7 +266,7 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 // through it; nothing in a viewer touches window.parent directly.
 function createHost(){
  const subs={"tool-input":new Set(),"tool-result":new Set(),globals:new Set(),failed:new Set()};
- const pending=new Map(),waiters=[];let rpcId=0,ready=false;
+ const pending=new Map(),waiters=[];let rpcId=0,ready=false,hostName="";
  const on=(type,fn)=>{subs[type].add(fn);return()=>subs[type].delete(fn)};
  const emit=(type,arg)=>{for(const fn of [...subs[type]]){try{fn(arg)}catch(err){console.error(err)}}};
  const whenReady=()=>ready?Promise.resolve():new Promise(resolve=>waiters.push(resolve));
@@ -286,11 +286,12 @@ function createHost(){
  });
  window.addEventListener("openai:set_globals",()=>emit("globals"));
  async function start(){
-  try{await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen","pip"]},protocolVersion:"2026-01-26"});
+  try{const init=await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen","pip"]},protocolVersion:"2026-01-26"});
+   hostName=init?.hostInfo?.name??"";
    notify("ui/notifications/initialized",{});ready=true;waiters.splice(0).forEach(f=>f());}
   catch(err){emit("failed",err)}
  }
- return {on,whenReady,request,notify,start,get ready(){return ready}};
+ return {on,whenReady,request,notify,start,get ready(){return ready},get name(){return hostName}};
 }
 const host=createHost();
 
@@ -1492,7 +1493,7 @@ function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
  gotResult=true;
  // An empty canvas waiting for the user's own picture.
- if(r.awaitingUpload&&!r.imageId){rootEl.classList.add("awaiting-upload");status.textContent="按「選擇圖片／拍照」放一張圖片到畫布。";return;}
+ if(r.awaitingUpload&&!r.imageId){rootEl.classList.add("awaiting-upload");status.textContent=isLibreChat()?"":"按「選擇圖片／拍照」放一張圖片到畫布。";return;}
  rootEl.classList.remove("awaiting-upload");
  // Pixels and full mark geometry travel in widget-only _meta; the model
  // only gets a compact list. ChatGPT also exposes _meta on window.openai.
@@ -2108,10 +2109,23 @@ exportMarksBtn.addEventListener("click",()=>{openLink(exportLinks?.marks);status
 // through the app-only upload_visual_image tool, then shows its canvas and
 // tells the model the new imageId.
 const uploadBtn=scope.querySelector("#upload"),uploadFile=scope.querySelector("#upload-file");
-uploadBtn.addEventListener("click",()=>uploadFile.click());
-scope.querySelector("#upload-big").addEventListener("click",()=>uploadFile.click());
+const uploadBig=scope.querySelector("#upload-big");
+const libreChatUploadHelp="LibreChat 需要逐段批准，且限制每次呼叫的大小，目前無法在畫布上傳本機圖片。可用既有的 Estampes imageId 開圖。請勿把私密圖片公開。";
+const isLibreChat=()=>host.name==="LibreChat";
+function pickUpload(){
+ if(isLibreChat()){status.textContent=libreChatUploadHelp;return}
+ uploadFile.click();
+}
+uploadBtn.addEventListener("click",pickUpload);
+uploadBig.addEventListener("click",pickUpload);
 uploadFile.addEventListener("change",()=>{const f=uploadFile.files?.[0];uploadFile.value="";if(f)uploadImage(f)});
 const UPLOAD_MAX_SIDE=4096;
+const MIN_UPLOAD_SLICE=30000;
+// Only a clear request-size rejection is safe to retry. An empty tool error,
+// refusal or transport failure may have the same shape or have reached the server.
+function isUploadSizeRejection(message){
+ return /^(?:(?:HTTP )?413(?:[: ]+(?:payload|request (?:body|entity)) too large)?|(?:payload|request (?:body|entity)|tool (?:call )?arguments) too large)[.!]?$/i.test(message.trim());
+}
 // Phone photos are large: above 6 MB or 4096 px the browser re-encodes a
 // JPEG at 4096 px (orientation applied), the working size Estampes uses.
 async function uploadBytes(file){
@@ -2128,6 +2142,7 @@ function toBase64(bytes){let s="";for(let i=0;i<bytes.length;i+=0x8000)s+=String
 let uploading=false;
 async function uploadImage(file){
  if(uploading)return;
+ if(isLibreChat()){status.textContent=libreChatUploadHelp;return}
  if(!ready){status.textContent="還在連接對話，請稍候再選圖片。";return}
  if(!/^image\//.test(file.type||"image/")){status.textContent="請選擇圖片檔。";return}
  uploading=true;uploadBtn.disabled=true;
@@ -2140,10 +2155,21 @@ async function uploadImage(file){
      const part=data.slice(offset,offset+size);
      try{
        result=await request("tools/call",{name:"upload_visual_image",arguments:{...(uploadId?{uploadId}:{}),fileName:String(name||"image").slice(0,120),total:data.length,offset,data:part}});
-     }catch(err){if(size>30000){size=Math.floor(size/2);continue}throw err}
-     if(result?.isError)throw Error(result.content?.[0]?.text||"上傳失敗");
+       if(result?.isError){
+         const message=result.content?.find(item=>item.type==="text"&&item.text?.trim())?.text;
+         throw Error(message||"對話程式未完成上傳呼叫。可能是未批准、超過呼叫大小限制，或工具執行失敗。");
+       }
+     }catch(err){
+       if(part.length<=MIN_UPLOAD_SLICE||!isUploadSizeRejection(String(err.message||err)))throw err;
+       size=Math.max(MIN_UPLOAD_SLICE,Math.floor(part.length/2));
+       continue;
+     }
      const r=result?.structuredContent;
-     uploadId=r?.uploadId??uploadId;offset+=part.length;
+     offset+=part.length;
+     if(offset<data.length){
+       if(r?.kind!=="estampes.upload_progress"||!r.uploadId||r.received!==offset||r.total!==data.length)throw Error("伺服器沒有確認收到這個分段");
+       uploadId=r.uploadId;
+     }
      status.textContent="上傳中… "+Math.min(100,Math.round(offset*100/data.length))+"%";
    }
    const r=result?.structuredContent;
@@ -2201,7 +2227,15 @@ if(receivesHost){
  // before ui/initialize and left the host to report the view as timed out.
  queueMicrotask(fromGlobals);
 }
-host.whenReady().then(()=>{ready=true;readyWaiters.splice(0).forEach(f=>f());render();status.textContent="已連線，可以任意點選或拖曳標註。";
+host.whenReady().then(()=>{
+ if(isLibreChat()){
+   scope.querySelector("#upload-empty p").textContent=libreChatUploadHelp;
+   uploadBig.hidden=true;
+   uploadBtn.textContent="圖片上傳說明";
+   uploadBtn.title="查看 LibreChat 的圖片上傳限制";
+ }
+ ready=true;readyWaiters.splice(0).forEach(f=>f());render();if(!rootEl.classList.contains("awaiting-upload"))status.textContent="已連線，可以任意點選或拖曳標註。";
+ else if(isLibreChat())status.textContent="";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;});
 own(host.on("failed",err=>{status.textContent="和對話程式連線失敗："+String(err.message||err)}));
 // The MCP server builds the canonical v0.2-draft event. The widget does

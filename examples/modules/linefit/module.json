@@ -1,0 +1,39 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.acme.linefit",
+  "name": "Line fit",
+  "description": "Fits a straight line y = a + bx to measured points by least squares and plots points, line and the numbers.",
+  "version": "1.0.0",
+  "publisher": { "name": "Acme Labs" },
+  "license": "MPL-2.0",
+  "category": "analysis",
+  "coreCompatibility": ">=0.20.0 <1.0.0",
+  "runtime": { "kind": "wasm", "entry": "linefit.wasm", "abi": "estampes.wasm/1" },
+  "permissions": ["canvas.write", "workspace.write"],
+  "limits": { "timeMs": 1000, "memoryMb": 2, "outputKb": 128 },
+  "capabilities": [
+    {
+      "id": "fit_line",
+      "title": "Fit a line",
+      "description": "Least-squares fit of y = a + bx to the points; draws axes, the points, the fitted line and a card with slope, intercept and R squared. Makes a new canvas unless one is given.",
+      "target": "canvas-or-new",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["points"],
+        "properties": { "points": { "type": "array", "minItems": 2, "maxItems": 2000, "items": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } } } }
+      },
+      "examples": [
+        { "description": "Points exactly on y = 1 + 2x", "params": { "points": [[0, 1], [1, 3], [2, 5], [3, 7]] },
+          "expect": { "operations": 4, "data": { "slope": 2, "intercept": 1, "r2": 1, "n": 4 } } },
+        { "description": "Noisy measurements", "params": { "points": [[1, 2], [2, 3.9], [3, 6.2], [4, 7.8]] },
+          "expect": { "data": { "slope": 1.97, "intercept": 0.05, "r2": 0.995740860 } } },
+        { "description": "A vertical line cannot be fitted", "params": { "points": [[1, 2], [1, 3]] }, "expect": { "error": "all x values are equal" } }
+      ],
+      "profile": {
+        "whenToUse": "You have measured (x, y) pairs and want the best straight line through them and how well it fits.",
+        "whenNotToUse": "The relation is clearly curved; R squared will be low and the line misleading.",
+        "cost": { "latency": "instant" },
+        "reliability": { "kind": "exact", "note": "Ordinary least squares in double precision, printed to 9 decimals.", "verify": "Check R squared; refit without outliers if it is low." }
+      }
+    }
+  ]
+}

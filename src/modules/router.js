@@ -93,7 +93,9 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       if (builtin && granted.includes("network.request.approved") && egress) {
         ctx.http = (request) => egress.call({ manifest, granted, request, limits: ctx.limits, capability: capId });
       }
-      if (builtin && granted.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
+      // The original image of the target canvas, for built-in modules and for
+      // http modules that declare a multipart file (sent only through egress).
+      if ((builtin || mod.runtime.kind === "http") && granted.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
 
       // Runs the capability and lands its result on the canvas. A background
       // job calls it without a revision check: it was started on purpose and
