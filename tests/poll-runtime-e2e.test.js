@@ -35,13 +35,17 @@ test("offline keeps the last snapshot, says so, and recovers on its own", { skip
     await inner.evaluate(() => window.estampesSurface.pollNow());
     assert.equal(await rows(), 1, "the last snapshot stays on screen");
     assert.equal(await inner.evaluate(() => document.querySelector("#surface").closest("[data-offline]") !== null || document.querySelector("[data-offline]") !== null), true, "the viewer is marked offline");
-    const note = await inner.evaluate(() => document.querySelector("#status").textContent);
-    assert.match(note, /連不上伺服器/);
+    const visible = () => inner.evaluate(() => { const n = document.querySelector("#offline-note"); return !!n && !n.hidden && /連不上伺服器/.test(n.textContent); });
+    assert.equal(await visible(), true, "a visible offline note");
+    // Normal canvas use rewrites the status line; the offline note must stay.
+    await inner.evaluate(() => { document.querySelector("#status").textContent = "選取了 ai-1"; });
+    await inner.evaluate(() => window.estampesSurface.pollNow());
+    assert.equal(await visible(), true, "the note survives status messages");
 
     ui.net.offline = false;
     await inner.evaluate(() => window.estampesSurface.pollNow());
     assert.equal(await rows(), 2, "back online, the missed change arrives");
-    assert.equal(await inner.evaluate(() => document.querySelector("[data-offline]") === null), true);
+    assert.equal(await visible(), false, "the note goes away once back online");
   } finally { await s.close(); }
 });
 

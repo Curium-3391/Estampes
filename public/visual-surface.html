@@ -31,6 +31,8 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 .context-panel textarea{min-height:66px;resize:vertical}
 .context-panel .hint{font-size:.75rem;color:GrayText;margin:0}
 #surface{display:block;width:100%;height:auto;max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
+#offline-note{font-size:.83rem;margin:.2rem 0;padding:.3rem .5rem;border:1px solid #C26A00;border-radius:6px;color:CanvasText;background:color-mix(in srgb,#C26A00 14%,Canvas)}
+#offline-note[hidden]{display:none}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 #check-view{margin:0}#check-view img{display:block;max-width:100%;max-height:640px;margin:auto;border:1px solid #8886;border-radius:10px}
@@ -261,6 +263,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 <button id="export-marks" hidden title="每個圖層各自一組，可在繪圖軟體裡開關；之後上傳回對話可還原標記與圖層">下載標記 SVG</button>
 </div>
 <p id="status" role="status" aria-live="polite">正在連接對話…</p>
+<p id="offline-note" role="status" hidden>連不上伺服器：畫面是上次的內容，可能不是最新，新的標註也還沒存到伺服器。</p>
 </main></template></div></div>
 <script type="module">
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
@@ -2523,7 +2526,8 @@ let offlineShown=false;
 function setStale(on){
  on=!!on;if(on===offlineShown||disposed)return;offlineShown=on;
  rootEl.toggleAttribute("data-offline",on);
- status.textContent=on?"連不上伺服器：畫面是上次的內容，可能不是最新，新的標註也還沒存到伺服器。":"已重新連上伺服器。";
+ const note=scope.querySelector("#offline-note");if(note)note.hidden=!on;
+ if(!on)status.textContent="已重新連上伺服器。";
 }
 return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
