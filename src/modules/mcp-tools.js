@@ -16,6 +16,16 @@ const ModuleIdSchema = z.string().min(3).max(100).describe("Module id, e.g. org.
 const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/);
 const STATE_TEXT = { available: "not enabled", installed: "installed, not enabled", enabled: "ENABLED", disabled: "disabled", failed: "failed" };
 
+// A result the user does not need to see yet (#81): the widget shows a
+// one-line note with a button instead of reopening the canvas. The model's
+// content is unchanged apart from one sentence saying so.
+export const BACKGROUND = "background";
+export function inBackground(result) {
+  if (!result || result.isError) return result;
+  const note = { type: "text", text: "(Shown to the user only as a one-line background note; their canvas was not reopened. Call present_visual with this imageId to show the result.)" };
+  return { ...result, content: [...(result.content ?? []), note], _meta: { ...(result._meta ?? {}), "estampes/presentation": BACKGROUND } };
+}
+
 export function catalogEntry(mod, lang = "zh-TW") {
   const m = mod.manifest;
   return {
@@ -103,7 +113,8 @@ export function registerModuleTools(server, deps) {
       "`canvas` = an imageId to draw on (a photo or an earlier canvas); leave it out to start a new blank canvas when the capability allows (target canvas-or-new). " +
       "Results list object ids and the canvas's scene revision; pass expectedRevision to refuse the change if the canvas changed meanwhile. " +
       "visibility 'scratch' keeps objects as your own working notes, drawn only in the preview image you get, not in the user's canvas; publish them later with the module or leave them. " +
-      "The result includes a PREVIEW image of the canvas with all objects: check it before telling the user it is done.",
+      "The result includes a PREVIEW image of the canvas with all objects: check it before telling the user it is done. " +
+      "present false (for iterative tuning: several runs before you show anything) keeps the chat quiet: the canvas is not reopened for the user, only a one-line note with a 顯示畫布 button; you still get the preview. Show the final result with present_visual({imageId}).",
     inputSchema: z.object({
       module: ModuleIdSchema,
       capability: z.string().min(1).max(48),
@@ -117,20 +128,22 @@ export function registerModuleTools(server, deps) {
       visibility: z.enum(["public", "scratch"]).default("public"),
       layer: z.string().trim().min(1).max(40).optional().describe("Layer name for new objects; default the module's name"),
       preview: z.boolean().default(true),
+      present: z.boolean().default(true).describe("false: run in the background without reopening the user's canvas (#81); call present_visual when done"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { resourceUri: visualUri } },
-  }, async ({ module, capability, params, canvas, newCanvas, expectedRevision, visibility, layer, preview }) => {
+  }, async ({ module, capability, params, canvas, newCanvas, expectedRevision, visibility, layer, preview, present = true }) => {
+    const shown = (result) => (present ? result : inBackground(result));
     try {
       const run = await host.router.execute({ module, capability, params, canvas, newCanvas, expectedRevision, visibility, layer });
       const { entry, scene } = run;
       // A module can ask to be followed up (the calculator redraws its linked plots); a failure there never hides the run itself.
       const followUp = run.job || !deps.afterRun ? "" : await Promise.resolve(deps.afterRun({ module, capability, params, run })).then((n) => (n ? " " + n : ""), () => "");
       if (run.job) {
-        return { content: [{ type: "text", text: module + " " + capability + " is running in the background as " + run.job.id + (entry ? " on canvas " + entry.imageId : "") +
+        return shown({ content: [{ type: "text", text: module + " " + capability + " is running in the background as " + run.job.id + (entry ? " on canvas " + entry.imageId : "") +
           ". It can take minutes. Call get_module_job with this id (waitSeconds up to 25) until its status is done or failed; the result lands on the canvas when it is done. Tell the user it is running." }],
           structuredContent: entry ? { ...(await canvasPayload(entry)).structuredContent, kind: "estampes.module_job", job: run.job } : { kind: "estampes.module_job", job: run.job },
-          ...(entry ? { _meta: (await canvasPayload(entry))._meta } : {}) };
+          ...(entry ? { _meta: (await canvasPayload(entry))._meta } : {}) });
       }
       if (!entry) {
         const panels = host.registry.get(module)?.manifest.panels ?? [];
@@ -149,11 +162,11 @@ export function registerModuleTools(server, deps) {
         (scene.notes?.length ? "WARNINGS: " + scene.notes.map((n) => n.id + ": " + n.note).join("; ") + ". " : "") +
         "Scene revision " + scene.revision + ". Objects on the canvas: " + JSON.stringify(objects) + followUp +
         (shot ? ". The next image is a PREVIEW of the canvas" + (objects.some((o) => o.visibility === "scratch") ? " (scratch objects included, faded; the user does not see them)" : "") + "." : "");
-      return logSizes("execute_module", {
+      return logSizes("execute_module", shown({
         content: [{ type: "text", text }, ...(shot ? [{ type: "image", data: shot.data.toString("base64"), mimeType: shot.mimeType }] : [])],
         structuredContent: { ...payload.structuredContent, module: { id: module, capability, revision: scene.revision, created: scene.created, updated: scene.updated }, objects },
         _meta: payload._meta,
-      });
+      }));
     } catch (error) { return fail(error); }
   });
 
@@ -175,7 +188,9 @@ export function registerModuleTools(server, deps) {
       if (job.canvas) {
         const entry = await host.canvases.ensure(job.canvas);
         const payload = await canvasPayload(entry);
-        return { content: [{ type: "text", text }], structuredContent: { ...payload.structuredContent, kind: "estampes.module_job", job }, _meta: payload._meta };
+        const out = { content: [{ type: "text", text }], structuredContent: { ...payload.structuredContent, kind: "estampes.module_job", job }, _meta: payload._meta };
+        // Polling a running job is the AI checking, not something to show: only the finished result opens the canvas (#81).
+        return job.status === "running" ? inBackground(out) : out;
       }
       return { content: [{ type: "text", text }], structuredContent: { kind: "estampes.module_job", job } };
     } catch (error) { return fail(error); }
