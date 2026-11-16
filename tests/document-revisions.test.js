@@ -25,5 +25,14 @@ test("classifyChange: unchanged, next snapshot, gap, other epoch", () => {
 test("the tracker forgets the oldest documents past its limit", () => {
   const t = createRevisionTracker({ epoch: "e", limit: 2 });
   t.observe("a", "1"); t.observe("b", "1"); t.observe("c", "1");
-  assert.equal(t.observe("a", "1").counter, 1, "a was forgotten and starts again");
+  assert.ok(t.observe("a", "1").counter > 1, "a was forgotten but never restarts at a counter it had");
+});
+
+test("a forgotten document returns above every counter a client could hold", () => {
+  const t = createRevisionTracker({ epoch: "e", limit: 1 });
+  t.observe("A", "h1"); const held = t.observe("A", "h2");
+  t.observe("B", "h1");
+  const back = t.observe("A", "h3");
+  assert.ok(back.counter > held.counter);
+  assert.equal(classifyChange(held, back), "snapshot");
 });

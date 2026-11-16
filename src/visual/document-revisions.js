@@ -11,16 +11,23 @@ export const MAX_POLLED_DOCUMENTS = 12;
 
 export function createRevisionTracker({ epoch = randomBytes(6).toString("hex"), limit = 2000 } = {}) {
   const docs = new Map();
+  // The highest counter ever dropped. A forgotten document that returns starts above it, so its
+  // counter never goes back below what a client may still hold.
+  let floor = 0;
   return {
     epoch,
     // The ordered revision of a document whose current content hash is `hash`.
     observe(documentId, hash) {
       const known = docs.get(documentId);
       if (known && known.hash === hash) return { epoch, counter: known.counter, hash };
-      const next = { hash, counter: (known?.counter ?? 0) + 1 };
+      const next = { hash, counter: (known?.counter ?? floor) + 1 };
       docs.delete(documentId);
       docs.set(documentId, next);
-      if (docs.size > limit) docs.delete(docs.keys().next().value);
+      if (docs.size > limit) {
+        const oldest = docs.keys().next().value;
+        floor = Math.max(floor, docs.get(oldest).counter);
+        docs.delete(oldest);
+      }
       return { epoch, counter: next.counter, hash };
     },
   };

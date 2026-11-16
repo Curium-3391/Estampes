@@ -1292,7 +1292,7 @@ function makeServer() {
           if (documentId.startsWith("ws:")) {
             const { doc } = await resolveRef(documentId);
             const items = await workspaceItems(doc);
-            hash = "ws:" + createHash("sha256").update(JSON.stringify([doc.revision, items.map(({ id, entry }) => [id, canvasRevision(entry)])])).digest("hex").slice(0, 24);
+            hash = "ws:" + createHash("sha256").update(JSON.stringify([doc.revision, items.map(({ id, entry }) => [id, canvasRevision(entry)]), workspaceLinks(items)])).digest("hex").slice(0, 24);
             body = () => ({ workspace: { id: documentId, name: doc.name, revision: doc.revision, items: items.map(wsItemInfo) },
               annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) });
           } else {
