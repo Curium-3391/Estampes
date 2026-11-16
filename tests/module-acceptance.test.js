@@ -8,7 +8,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createModuleHost } from "../src/modules/index.js";
@@ -20,7 +20,7 @@ import { canvasObjects } from "../src/scene/scene-ops.js";
 const version = JSON.parse(spawnSync(process.execPath, ["-p", "JSON.stringify(require('./package.json').version)"], { encoding: "utf8" }).stdout);
 const canvases = { ensure: ensureImage, create: createBlankCanvas, save: async () => {} };
 
-async function publishAndInstall(example, id, { extraFiles = [], secret, transport } = {}) {
+async function publishAndInstall(example, id, { extraFiles = [], secret, transport, readSource } = {}) {
   const storage = await mkdtemp(join(tmpdir(), "estampes-acc-store-"));
   const work = await mkdtemp(join(tmpdir(), "estampes-acc-work-"));
   const cli = (...args) => {
@@ -31,17 +31,18 @@ async function publishAndInstall(example, id, { extraFiles = [], secret, transpo
   await cp(join("examples/modules", example), join(work, "mod"), { recursive: true });
   assert.match(ok(cli("test", "mod/module.json")), new RegExp("^OK " + id.replace(/\./g, "\\.") + " "));
   ok(cli("keygen", "acme"));
-  const pkgFile = id + "-1.0.0.estpkg.json";
+  const modVersion = JSON.parse(await readFile(join(work, "mod/module.json"), "utf8")).version;
+  const pkgFile = id + "-" + modVersion + ".estpkg.json";
   ok(cli("pack", "mod/module.json", "--out", pkgFile, "--key", "acme.private.pem", "--key-id", "acme", ...extraFiles.flatMap((f) => ["--file", f + "=mod/" + f])));
   const fp = /(sha256:[0-9a-f]{64})/.exec(ok(cli("index", "--out", "estampes-index.json", "--key", "acme.private.pem", "--key-id", "acme", "--publisher", "Acme Labs", "--scope", "org.acme", pkgFile)))[1];
   // The administrator: add the source, accept the fingerprint, sync.
   assert.match(cli("source", "add", "acme", join(work, "estampes-index.json")).stdout, new RegExp("Fingerprint: " + fp));
   ok(cli("source", "add", "acme", join(work, "estampes-index.json"), "--accept", fp));
-  assert.match(ok(cli("source", "sync")), new RegExp("ok   acme " + id.replace(/\./g, "\\.") + " 1\\.0\\.0"));
+  assert.match(ok(cli("source", "sync")), new RegExp("ok   acme " + id.replace(/\./g, "\\.") + " " + modVersion.replace(/\./g, "\\.")));
   if (secret) ok(cli("secret", "set", id, "api_key"));
 
   const { key: adminKey } = await resolveAdminKey({ storageDir: storage });
-  const h = await createModuleHost({ storageDir: storage, coreVersion: version, canvases, adminKey, ...(transport ? { transport } : {}) });
+  const h = await createModuleHost({ storageDir: storage, coreVersion: version, canvases, adminKey, ...(transport ? { transport } : {}), ...(readSource ? { readSource } : {}) });
   for (const action of ["install", "enable"]) {
     const plan = await h.lifecycle.prepare(action, id);
     if (plan.requiresAdmin) ok(cli("approve", plan.planId));
@@ -61,6 +62,8 @@ test("acceptance 1, declarative: numbered markers", { timeout: 60000 }, async ()
     assert.equal(objs.length, 9);
     assert.deepEqual(objs.filter((o) => o.props.kind === "circle").map((o) => [o.props.x, o.props.style.color]), [[0.2, "gold"], [0.6, "gold"], [0.8, "gold"]]);
     assert.deepEqual(objs.filter((o) => o.props.kind === "text").map((o) => o.props.text), ["1", "2", "3", "crack", "stain", "chip"]);
+    // labels sit beside their ring ($calc), numbers inside it
+    assert.deepEqual(objs.filter((o) => o.props.kind === "text").map((o) => Math.round(o.props.x * 100) / 100), [0.2, 0.6, 0.8, 0.23, 0.63, 0.83]);
   } finally { await cleanup(); }
 });
 
@@ -100,5 +103,29 @@ test("acceptance 3, http: external analysis service, result on the canvas", { ti
     assert.deepEqual(objs.find((o) => o.type === "info-card").props.rows, [{ label: "rust", value: "0.9" }, { label: "hinge", value: "0.7" }]);
     assert.equal(run.data.summary, "Rust on the left hinge");
     assert.ok(!JSON.stringify(await h.audit.read()).includes("KEY-acceptance-123"));
+  } finally { await cleanup(); }
+});
+
+test("acceptance 4, http with the canvas image: an external detector outlines regions", { timeout: 60000 }, async () => {
+  const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("fake-jpeg-bytes")]);
+  const seen = [];
+  const transport = async (req) => {
+    seen.push(req);
+    return { status: 200, headers: {}, body: Buffer.from(JSON.stringify({ regions: [{ label: "scratch", score: 0.9, box: [0.1, 0.2, 0.3, 0.4] }] })) };
+  };
+  const { h, cleanup } = await publishAndInstall("regions", "org.acme.regions", { secret: "KEY-vision-123456", transport, readSource: async () => JPEG });
+  try {
+    const entry = await createBlankCanvas({});
+    await h.router.execute({ module: "org.acme.regions", capability: "detect", canvas: entry.imageId, params: { prompt: "damage", minScore: 0.7 } });
+    const body = seen[0].body.toString("latin1");
+    assert.match(seen[0].headers["content-type"], /^multipart\/form-data; boundary=/);
+    assert.match(body, /name="image"; filename="image.jpeg"\r\nContent-Type: image\/jpeg\r\n\r\n\xff\xd8\xff\xe0fake-jpeg-bytes/);
+    assert.match(body, /name="prompt"\r\n\r\ndamage\r\n/);
+    assert.match(body, /name="min_score"\r\n\r\n0.7\r\n/);
+    const objs = canvasObjects(entry);
+    assert.deepEqual(objs.map((o) => o.props.kind), ["rect", "text"]);
+    assert.ok(Math.abs(objs[1].props.y - 0.18) < 1e-9);
+    // Without the image permission nothing is read or sent.
+    await assert.rejects(h.router.execute({ module: "org.acme.regions", capability: "detect", params: {} }), /needs a canvas/);
   } finally { await cleanup(); }
 });

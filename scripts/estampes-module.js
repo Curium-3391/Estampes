@@ -21,6 +21,9 @@
 //   secret set <moduleId> <name>     store an API key for a module (the value is read from standard input)
 //   secret status <moduleId>          which declared secrets are set (names only)
 //   init <dir> <id> [--runtime declarative|wasm|http]   start a new module (manifest, example, README)
+//   try <module.json> <capability> [--params '{json}' | --example <n>] [--image picture.jpg] [--out result.png]
+//                                     run one capability on a scratch canvas, offline, and show the result
+//                                     (http modules: --example picks an example whose mockResponse is used)
 //   test <module.json>                check a manifest and run its examples the way an install would
 //                                     (http examples with a mockResponse also run the response mapping, offline)
 import { readFile, writeFile, mkdir, copyFile, readdir } from "node:fs/promises";
@@ -245,11 +248,60 @@ try {
     const count = report.examples;
     console.log("OK " + manifest.id + " " + manifest.version + ": manifest valid, " + count + " example(s) passed" + (report.mocked ? " (" + report.mocked + " with a mock response)" : "") + (count ? "" : " (no examples: add `examples` to each capability)"));
     for (const line of report.untested) console.log("warning: " + line);
+  } else if (cmd === "try") {
+    const [path, capId] = positional();
+    if (!path || !capId) die("try <module.json> <capability> [--params '{json}' | --example <n>] [--image picture] [--out result.png]");
+    const manifest = validateManifest(JSON.parse(await readFile(path, "utf8")), { coreVersion: version });
+    const cap = manifest.capabilities.find((c) => c.id === capId) ?? die("no capability " + capId + " (has " + manifest.capabilities.map((c) => c.id).join(", ") + ")");
+    let example = null, params;
+    if (flag("example")) {
+      example = cap.examples?.[Number(flag("example")) - 1] ?? die("no example " + flag("example") + " (has " + (cap.examples?.length ?? 0) + ", numbered from 1)");
+      params = example.params;
+    } else params = JSON.parse(flag("params") ?? "{}");
+    if (manifest.runtime.kind === "http" && !example?.mockResponse) die("an http module is tried with an example that has a mockResponse (--example <n>); try never calls the network");
+    const { validateValue } = await import("../src/modules/json-schema.js");
+    const input = validateValue(cap.inputSchema, params, "params");
+    // The scratch canvas: the picture given, or a white 1600x1000 canvas.
+    const sharp = (await import("sharp")).default;
+    let width = 1600, height = 1000, pixels, channels = 3, imageBytes = null;
+    if (flag("image")) {
+      imageBytes = await readFile(flag("image"));
+      const { data, info } = await sharp(imageBytes).rotate().raw().toBuffer({ resolveWithObject: true });
+      ({ width, height, channels } = info); pixels = data;
+    } else pixels = Buffer.alloc(width * height * 3, 255);
+    const entry = { imageId: "img:0000000000000000", width, height, channels, pixels, source: imageBytes ? "image" : "blank", marks: new Map(), layers: [] };
+    let runtime = { kind: manifest.runtime.kind };
+    if (manifest.runtime.kind === "wasm") {
+      const bytes = await readFile(join(path, "..", manifest.runtime.entry)).catch(() => die("build " + manifest.runtime.entry + " first"));
+      const files = { [manifest.runtime.entry]: { encoding: "base64", content: bytes.toString("base64") } };
+      checkWasmPackage(manifest, files);
+      runtime = { kind: "wasm", wasm: wasmFileOf(manifest, files) };
+    }
+    const runtimes = { declarative: declarativeRuntime, wasm: wasmRuntime, http: createHttpRuntime({ egress: createEgress({ secrets: createSecrets({}), transport: () => { throw new Error("try never calls the network"); } }) }) };
+    const rt = runtimes[manifest.runtime.kind] ?? die("runtime " + manifest.runtime.kind + " cannot be tried");
+    const ctx = { module: { id: manifest.id, version: manifest.version }, capability: capId, permissions: manifest.permissions, limits: manifest.limits ?? {},
+      canvas: cap.target === "none" ? null : { imageId: entry.imageId, width, height, revision: 0, ...(manifest.permissions.includes("canvas.read") ? { objects: [], marks: [] } : {}) },
+      example, readSource: async () => imageBytes };
+    const out = manifest.runtime.kind === "http" ? await rt.selfTest({ manifest, runtime }, capId, input, ctx) : await rt.run({ manifest, runtime }, capId, input, ctx);
+    const { applySceneOps, canvasObjects } = await import("../src/scene/scene-ops.js");
+    if (out.operations?.length) {
+      if (cap.target === "none") die("the capability returned scene operations but targets no canvas");
+      applySceneOps(entry, out.operations, { author: "module", module: manifest.id, moduleVersion: manifest.version, capability: capId, method: out.method, layerName: manifest.name });
+    }
+    console.log("OK " + manifest.id + " " + capId + (example ? " (example " + flag("example") + ": " + example.description + (example.mockResponse ? ", mock reply" : "") + ")" : "") + ": " + (out.summary ?? ""));
+    if (out.data !== undefined) console.log("data: " + JSON.stringify(out.data));
+    for (const o of canvasObjects(entry)) console.log("  " + o.id + "  " + o.type + (o.props.kind ? ":" + o.props.kind : "") + "  " + JSON.stringify(o.props).slice(0, 160));
+    if (flag("out")) {
+      const { renderCanvas } = await import("../src/scene/canvas-render.js");
+      const png = await renderCanvas(entry, { maxSide: 1600 });
+      await writeFile(flag("out"), png.data);
+      console.log("Wrote " + flag("out") + " (" + png.width + "x" + png.height + "); info cards are listed above, they are shown beside the canvas, not drawn on it.");
+    }
   } else if (cmd === "copy") {
     const [src] = rest; await ensureDirs(dir); await copyFile(src, join(dir, "inbox", basename(src)));
     console.log("Copied into the inbox.");
   } else {
-    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|index|source|fetch|trust|inbox|copy|approve|secret|init|test> ...  (see the comment at the top of this file)");
+    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|index|source|fetch|trust|inbox|copy|approve|secret|init|test|try> ...  (see the comment at the top of this file)");
     process.exitCode = cmd ? 1 : 0;
   }
 } catch (error) { die(String(error?.message || error)); }

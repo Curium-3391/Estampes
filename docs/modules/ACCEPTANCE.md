@@ -19,7 +19,7 @@ Reference: [Module quick start](QUICKSTART.md), [Testing modules](TESTING.md), [
 | 2. Line fit | wasm | A least-squares line through measured points, with slope, intercept and R squared | the numbers match an independent computation; axes, points, line and a card are drawn; unfittable input fails with a readable message |
 | 3. Keywords | http | Send a text to an external analysis service and show its summary and keywords | `test` exercises the reply mapping offline (good reply, error status, changed reply format); a real call shows the summary on the canvas and the keywords in a card; the API key never appears in the audit log |
 
-Reference solutions: `examples/modules/markers`, `examples/modules/linefit` (C source and its build line), `examples/modules/keywords`. `tests/module-acceptance.test.js` runs all three from a clean folder through the whole sequence on every CI run; the http case there talks to a fake https service.
+Reference solutions: `examples/modules/markers`, `examples/modules/linefit` (C source and its build line), `examples/modules/keywords`, and `examples/modules/regions` (sends the canvas image). `tests/module-acceptance.test.js` runs all three from a clean folder through the whole sequence on every CI run; the http case there talks to a fake https service.
 
 ## Recording a run
 
@@ -58,9 +58,15 @@ Gaps found, and what was done:
 | 9 | What the WebAssembly request contains (`canvas`) and how large it can be was not stated, and there was no JSON help for freestanding C | documented; `linefit.c` has a reusable reader and writer |
 | 10 | Publishing meant sending files and keys by hand to each administrator | package sources and URL import ([Distributing modules](DISTRIBUTION.md)) |
 
-Open, not fixed here:
+Fixed after the run (same day, follow-up PR):
 
-- Templates cannot calculate, so a marker's label sits on its ring unless the caller passes a second position. A small arithmetic placeholder would fix it.
-- A declarative http module cannot send the canvas image (an OCR or image-analysis service on the picture itself needs a built-in module today).
-- Step 6 of the quick start needs ChatGPT or copying a test file; a CLI command that installs into a scratch server and runs one capability, printing the resulting objects, would make "run it" possible offline for an outsider.
-- A real call from a developer laptop to their own local service is impossible by design (egress only reaches public https hosts); authors must test against a deployed service or rely on `mockResponse`.
+| # | Gap | Fixed by |
+| --- | --- | --- |
+| 11 | Templates could not calculate, so a marker's label sat on its ring | `{"$calc": "x + 0.03", "with": {…}}` with Estampes's own expression parser ([Templates](../MODULES.md#templates)) |
+| 12 | A declarative http module could not send the canvas image, so image-analysis services needed a built-in module | `request.multipart.file` with `source: "canvas-image"` (needs `asset.read.selected`); reference module `examples/modules/regions` |
+| 13 | "Run it" needed ChatGPT or copying a test | `try <module.json> <capability>`: one offline run on a scratch canvas (or `--image`), prints the objects and writes a PNG |
+
+Still open:
+
+- A real call from a developer laptop to their own local service is impossible by design (egress only reaches public https hosts); authors test against a deployed service or rely on `mockResponse`.
+- An external developer's run of this protocol.

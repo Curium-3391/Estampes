@@ -1,0 +1,61 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.acme.regions",
+  "name": "Region detection",
+  "description": "Sends the canvas image to an external detection service and outlines the regions it finds, with labels and scores.",
+  "version": "1.0.0",
+  "publisher": { "name": "Acme Labs" },
+  "license": "MPL-2.0",
+  "category": "analysis",
+  "coreCompatibility": ">=0.20.0 <1.0.0",
+  "runtime": { "kind": "http", "entry": "request" },
+  "permissions": ["canvas.write", "asset.read.selected", "network.request.approved", "module.secrets"],
+  "network": { "allow": ["api.vision.example.org"], "dataFlow": "Uploads the canvas's original image to api.vision.example.org. Overlays and other canvases are not sent." },
+  "secrets": [{ "name": "api_key", "label": "Detection service API key" }],
+  "limits": { "timeMs": 15000, "outputKb": 128 },
+  "capabilities": [
+    {
+      "id": "detect",
+      "title": "Detect regions",
+      "description": "Upload the canvas image to the detection service and draw a box with a label for each region it reports (at most 30). Boxes are in normalized canvas coordinates.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "prompt": { "type": "string", "maxLength": 200 },
+          "minScore": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "request": {
+        "method": "POST", "path": "/v1/detect",
+        "secretHeaders": { "Authorization": { "secret": "api_key", "prefix": "Bearer " } },
+        "multipart": {
+          "fields": { "prompt": { "$param": "prompt", "default": "" }, "min_score": { "$param": "minScore", "default": 0.5, "as": "string" } },
+          "file": { "field": "image", "source": "canvas-image" }
+        }
+      },
+      "response": {
+        "data": "regions",
+        "operations": [
+          { "$each": { "$response": "regions" }, "max": 30, "do": { "op": "object.create", "type": "shape", "props": { "kind": "rect", "x": { "$item": "box.0" }, "y": { "$item": "box.1" }, "x2": { "$item": "box.2" }, "y2": { "$item": "box.3" }, "style": { "color": "cyan", "width": 2 } } } },
+          { "$each": { "$response": "regions" }, "max": 30, "do": { "op": "object.create", "type": "shape", "props": { "kind": "text", "x": { "$item": "box.0" }, "y": { "$calc": "max(y - 0.02, 0)", "with": { "y": { "$item": "box.1" } } }, "text": { "$item": "label" }, "size": 12 } } }
+        ]
+      },
+      "examples": [
+        { "description": "Two regions", "params": { "prompt": "damage" },
+          "mockResponse": { "json": { "regions": [ { "label": "scratch", "score": 0.91, "box": [0.1, 0.2, 0.3, 0.35] }, { "label": "dent", "score": 0.66, "box": [0.55, 0.01, 0.8, 0.3] } ] } },
+          "expect": { "operations": 4, "data": [ { "label": "scratch" }, { "label": "dent" } ] } },
+        { "description": "Nothing found", "params": {}, "mockResponse": { "json": { "regions": [] } }, "expect": { "operations": 0 } },
+        { "description": "Image too large for the service", "params": {}, "mockResponse": { "status": 413, "json": { "error": "too large" } }, "expect": { "error": "answered 413" } }
+      ],
+      "profile": {
+        "whenToUse": "Find and outline things in the picture with an external detector.",
+        "inputLimits": "The original image is sent as stored (JPEG, PNG or WebP, up to 25 MB).",
+        "cost": { "latency": "seconds", "resource": "One upload to the detection service.", "billable": true },
+        "dataFlow": { "leavesServer": true, "sends": "The canvas's original image and the prompt go to api.vision.example.org." },
+        "reliability": { "kind": "external", "note": "Boxes and labels come from the service.", "verify": "Look at each box before relying on it." },
+        "fallbacks": [ { "when": "the service fails or finds nothing", "then": "Say so; mark regions yourself with annotations if the user wants." } ]
+      }
+    }
+  ]
+}
