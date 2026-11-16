@@ -4,6 +4,9 @@ inputs:
   tier:
     description: Test tier (fast or full)
     required: true
+  suite:
+    description: Optional full Node shard (index/total) or legacy
+    default: ''
 runs:
   using: composite
   steps:
@@ -21,23 +24,29 @@ runs:
         npm ci --no-audit --no-fund
         npm install --no-save --no-audit --no-fund pdfjs-dist@4.10.38 @napi-rs/canvas playwright-core
     - name: Python CAS tests
+      if: inputs.suite == '' || startsWith(inputs.suite, '1/')
       shell: bash
       run: python -m unittest discover -s cas-service/tests -v
     - name: Node regression tests
       shell: bash
       env:
         TEST_TIER: ${{ inputs.tier }}
+        TEST_SUITE: ${{ inputs.suite }}
         PYTHON: python
         CHROME_BIN: /usr/bin/google-chrome
         CHROMIUM_BIN: /usr/bin/google-chrome
         ESTAMPES_E2E_SHOTS: ${{ runner.temp }}/workbench-shots
       run: |
         test -x "$CHROME_BIN"
-        node scripts/run-ci-tests.mjs "$TEST_TIER"
+        if [[ -n "$TEST_SUITE" ]]; then
+          node scripts/run-ci-tests.mjs "$TEST_TIER" "$TEST_SUITE"
+        else
+          node scripts/run-ci-tests.mjs "$TEST_TIER"
+        fi
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: workbench-screenshots
+        name: workbench-screenshots-${{ github.job }}-${{ strategy.job-index || 0 }}
         path: ${{ runner.temp }}/workbench-shots
         if-no-files-found: ignore
         retention-days: 3
