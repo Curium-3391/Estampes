@@ -32,7 +32,7 @@ Estampes exposes its tools at `/mcp`. Users never name them; the AI chooses. Thi
 | `overlay_grid` | Draw a labelled grid (rows A, B, C… × columns 1, 2, 3…, 2–12 each) over an image or region and return each cell's centre in source coordinates. |
 | `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
 | `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
-| `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. |
+| `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. `present: false` runs it in the background: the user's canvas is not reopened (only a one-line note with a 顯示畫布 button), for iterative tuning before `present_visual` shows the final result. |
 | `get_module_job` | Check a background job started by `execute_module` (for example plate solving): status, progress, result and created objects; can wait up to 25 s. See [Background jobs](MODULES.md#background-jobs). |
 | `get_surface_state`, `manage_surface_panels` | Read which panels are open on a canvas and their layouts; open, close or arrange panels. `manage_surface_panels` also shows the Visual Surface, so it is how the calculator opens beside a canvas. See [Surfaces](SURFACES.md). |
 | `add_image_layer` | Promote the base image into an editable layer, or copy another canvas (with its objects and marks) in as independent layers. PNG transparency is kept; the source is never modified. See [Canvas reads](CANVAS-READS.md). |
@@ -53,7 +53,7 @@ These are hidden from the model (`visibility: ["app"]`).
 | `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
 | `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
 | `edit_canvas_text` | Read/create/edit/delete standalone vector text, or undo/redo text changes. App-only; uses existing `shape` / `kind: "text"`, normalized coordinates, a required canvas revision for edits and `setId` for workspace copies. Refuses locked layers and stale revisions. |
-| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, restyle, label/note text, delete), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
+| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, resize, reshape, restyle, label/note text, delete; the AI's marks can be moved, resized and reshaped too, while their label, note and style stay the AI's), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
@@ -111,7 +111,18 @@ Read `get_visual_layers({imageId})`, then call `edit_visual_layers` with its
 `revision` as `expectedRevision`, for example
 `{imageId, expectedRevision, layers:[{id:"L2",opacity:0.4,visible:true}]}`.
 Render with `render_canvas` to assess the composite, then present the result
-with `present_visual`. Edits never change image pixels, annotation geometry or
+with `present_visual`.
+
+### Checking your work without reopening the user's canvas
+
+`render_canvas`, `process_image` and `inspect_image` are model-only: they never
+open the canvas in the chat. When tuning a module result over several runs,
+pass `execute_module({..., present: false})`; the run still returns its
+preview image and revision (and refuses a stale `expectedRevision`), but the
+chat shows only a one-line background note. Polling a running job with
+`get_module_job` is shown the same way; the finished job opens the canvas.
+Show the final result with `present_visual({imageId})`, which always opens
+the shared editable canvas. Edits never change image pixels, annotation geometry or
 authorship. The assistant cannot unlock layers or reorder across a locked layer.
 Refresh and review after `STALE_CANVAS`; do not automatically overwrite user edits.
 
@@ -140,6 +151,24 @@ Saving text sends only the text fields, preserving current geometry and styling.
 Draft notes are retained when sending a new annotation, in both the stored mark
 and the submission event/chat message. Rejected text drags redraw the last
 accepted coordinates.
+
+In **選取** mode, any unlocked mark — the AI's included — can be dragged to move
+it. A selected box shows corner and side handles to resize it; an arrow shows
+its two ends and a polyline its vertices to reshape it. The mark keeps its ID,
+author, layer, note and evidence; it is flagged `editedByUser`. The AI is told
+on its next call whether it was a move, resize or reshape, with the geometry
+before and after (`userEdits[].change`, `before`, `after`). Locked layers
+refuse all of it; undo/redo restores the exact previous geometry.
+
+**四邊形** draws a quadrilateral for objects seen tilted or in perspective
+(a label, a screen, a sign, a page): drag a box, then in **選取** drag each
+corner to the object's real corners, or drag the round handle to turn the
+whole shape. It is stored as a polyline with `closed: true` and its 4 corners
+in order, so every existing path (export/import, bundles, workspaces, image
+transforms) keeps the exact vertices; the AI sees `shape: "quadrilateral"`
+with its `corners`, and can draw one the same way. Plain **框選** boxes stay
+axis-aligned. Any closed shape can be turned; freehand strokes with more than
+32 vertices are only moved.
 
 Choose **文字**, tap a location, enter up to 80 characters (including newlines),
 choose size (6–64) and color, then save. Use **選取** to click or drag existing

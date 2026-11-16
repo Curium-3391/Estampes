@@ -31,6 +31,7 @@ import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
+import { SERVER_INSTRUCTIONS, withErrorProvenance } from "./src/tool-guidance.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
@@ -375,6 +376,8 @@ function compactMark(m) {
     id: m.id, type: m.type, author: m.author, ...(m.side ? { side: m.side } : {}), ...(m.layer ? { layer: m.layer } : {}), ...(m.label ? { label: m.label } : {}),
     box: m.type === "point" ? [r3(m.x), r3(m.y)] : [r3(m.x), r3(m.y), r3(m.x2), r3(m.y2)],
     ...(m.type === "polyline" ? { vertices: m.points.length } : {}),
+    // A quadrilateral (#70: a rotated or perspective box) shows its corners, not just its bounding box.
+    ...(m.type === "polyline" && m.closed && !m.smooth && m.points.length === 4 ? { shape: "quadrilateral", corners: m.points.map((p) => [r3(p.x), r3(p.y)]) } : {}),
     ...(m.note ? { note: m.note, claim: claimSummary(m) } : {}), ...(m.status ? { status: m.status } : {}), ...(m.edited ? { editedByUser: true } : {}),
     ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
   };
@@ -418,12 +421,16 @@ const linkTable = (links, marksById) => links.map((l) => {
 const layerText = (layers) => layers.map((l) => (l.side ? l.side + ":" : "") + l.id + " " + JSON.stringify(l.name) + " (" + l.author + ", " + l.count +
   (l.locked ? ", LOCKED by the user: do not edit or remove its marks" : "") + ")").join("; ");
 // Changes the user made by hand in the canvas since GPT's last call.
+const roundGeometry = ({ type: _t, ...g }) => JSON.parse(JSON.stringify(g, (k, v) => (typeof v === "number" ? Math.round(v * 1e4) / 1e4 : v)));
 const EDIT_TEXT = {
   "rename-layer": (e) => "renamed layer " + e.layer + " " + JSON.stringify(e.from) + " to " + JSON.stringify(e.to),
   "lock-layer": (e) => "locked layer " + e.layer, "unlock-layer": (e) => "unlocked layer " + e.layer,
   "reorder-layers": (e) => "reordered layers (bottom to top) " + e.order.join(", "),
   "remove-mark": (e) => "deleted " + (e.author === "user" ? "their" : "YOUR") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
-  "move-mark": (e) => "moved/reshaped their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") + " (your earlier notes on it may no longer fit)",
+  "move-mark": (e) => (e.change === "resize" ? "resized " : e.change === "reshape" ? "reshaped " : e.change === "move" ? "moved " : "moved/reshaped ") +
+    (e.author === "assistant" ? "YOUR" : "their") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") +
+    (e.before && e.after ? " from " + JSON.stringify(roundGeometry(e.before)) + " to " + JSON.stringify(roundGeometry(e.after)) : "") +
+    (e.author === "assistant" ? " (the user corrected where it is; your note on it stays, check it still fits)" : " (your earlier notes on it may no longer fit)"),
   "edit-note": (e) => "edited the note on their mark " + e.id,
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
@@ -714,11 +721,16 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
 }
 
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: VERSION });
-  // Every tool result goes through the host size cap (src/result-budget.js).
+  const server = new McpServer({ name: "estampes", version: VERSION }, { instructions: SERVER_INSTRUCTIONS });
+  // Every tool result goes through the host size cap (src/result-budget.js);
+  // errors also say which tool replied (src/tool-guidance.js, #87).
   const register = server.registerTool.bind(server);
-  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) =>
-    fitResult(await budgetObjectPixels(await handler(...args)), config.maxResultChars));
+  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => {
+    let result;
+    // A thrown error becomes the same error result the SDK would make, plus the note.
+    try { result = await handler(...args); } catch (error) { if (error?.name === "ProtocolError") throw error; return withErrorProvenance(name, { isError: true, content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }] }); }
+    return withErrorProvenance(name, await fitResult(await budgetObjectPixels(result), config.maxResultChars));
+  });
 
   registerAppResource(
     server,
@@ -864,7 +876,7 @@ function makeServer() {
         "The widget opens on the ORIGINAL image; your marks are GOLD and the user's marks BLUE, and the user can draw marks and send them back. " +
         "Choose color, size and pen YOURSELF; never ask the user. pen = precise points, outlines and paths; highlighter = translucent band to cover an area or follow a feature without hiding it. Sizes fine < thin < medium (default) < thick: a line must be narrower than the thing it follows (a fine trace, a pen stroke, a crack), thick only for large regions. " +
         "The result lists each changed mark's ink width in image pixels with warnings, and the verification image draws ink at its real width: if ink hides its target or is too faint, redraw the same id with another size or pen. " +
-        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as traces, wires, roads, outlines, handwriting strokes or loose circles; follow only what is visible in zoomed process_image output, and say where a path is hidden. " +
+        "Mark types: point, rect, arrow (head = target) and polyline (`points`, up to 128 ordered vertices; `smooth` for a freehand curve, `closed` to circle something) for paths such as traces, wires, roads, outlines, handwriting strokes or loose circles. A rotated or perspective box (a tilted label, a screen or sign seen at an angle) is a quadrilateral: a polyline with `closed: true` and its 4 corners in order (not a rect, which is always axis-aligned); follow only what is visible in zoomed process_image output, and say where a path is hidden. " +
         "`marksFile`: an Estampes marks SVG the user exported earlier and attached again; its marks are restored onto this image. The result has download links (`exports`) for the image and a layered marks SVG; give them when the user wants to save or export. " +
         "PAIRED VIEW: to compare two DIFFERENT images side by side (a schematic and a board photo, a map and an aerial photo, a drawing and the object), pass the second as `pairImage`/`pairImageUrl`/`pairImageId`: it shows on the RIGHT, the first image on the LEFT. The images are never overlaid. Each annotation takes `side` (left|right, default left) with coordinates normalized to that image; ids are unique across both. `links` records that a left mark and a right mark are the same thing (same part, net, pin, building...), with your `confidence`. Every result lists all links as a table: use it to remember and reason about earlier matches, and trust USER CONFIRMED / USER REJECTED over your own guess. " +
         "CLAIMS AND EVIDENCE: a note on a mark and a link are claims. Give `evidence` for them: each item says what you see (`says`), what kind of clue it is, and the `region` (full-image 0..1, `side` in a paired view) where the user can zoom in to check it; list what is unresolved in `ambiguities`. Your evidence is recorded as your own observation: a claim stays UNVERIFIED until the user confirms it in the canvas or a tool's evidence backs it, whatever your confidence, so call such claims candidates, not facts. A claim the user REJECTED is remembered for that place even if its marks are deleted; repeating it without new evidence is refused. " +

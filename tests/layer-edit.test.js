@@ -45,7 +45,7 @@ test("a locked layer stops GPT and the user changing its marks, but reset keeps 
   assert.deepEqual(entry.layers.map((l) => l.id), [keep]);
 });
 
-test("the user moves and restyles an earlier mark, deletes GPT's, and cannot move GPT's", async () => {
+test("the user moves and restyles an earlier mark, deletes GPT's, and cannot restyle GPT's", async () => {
   const entry = await photo();
   storeUserMarks(entry, [{ id: "user-1", type: "rect", x: 0.1, y: 0.1, x2: 0.2, y2: 0.2, label: "YOU 1" }]);
   applyCanvasChanges(entry, { annotations: [box("g", 0.5)], findings: [{ id: "user-1", note: "電阻" }], resolve });
@@ -57,10 +57,47 @@ test("the user moves and restyles an earlier mark, deletes GPT's, and cannot mov
   assert.equal(entry.userEdits.at(-1).kind, "restyle-mark");
   applyCanvasChanges(entry, { annotations: [box("g2", 0.6)], resolve });
   const before = snap(entry);
-  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", x: 0 }], resolveUser }), /only your own marks/);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", color: "red" }], resolveUser }), /its color stays as the AI wrote it/);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", x: 0.62, label: "mine now" }], resolveUser }), /its label stays as the AI wrote it/);
   assert.throws(() => editCanvas(entry, { layers: [{ id: "L1", name: "x" }], marks: [{ id: "nope" }], resolveUser }), /marks\[0\] \("nope"\): no such mark/);
   assert.throws(() => editCanvas(entry, { order: ["L1", "L1"], resolveUser }), /repeated/);
   assert.equal(snap(entry), before);
+});
+
+test("#69: the user moves, resizes and reshapes GPT's marks; author, claim and ID stay, edits carry before/after geometry", async () => {
+  const entry = await photo();
+  applyCanvasChanges(entry, { annotations: [box("g", 0.5), { id: "arr", type: "arrow", x: 0.1, y: 0.1, x2: 0.3, y2: 0.3 },
+    { id: "pl", type: "polyline", points: [{ x: 0.1, y: 0.6 }, { x: 0.2, y: 0.7 }, { x: 0.3, y: 0.6 }] }], layer: "AI", resolve });
+  applyCanvasChanges(entry, { findings: [{ id: "g", note: "晶片", status: "inspected" }], resolve });
+  takeUserEdits(entry);
+  // Move: same size.
+  let [e] = editCanvas(entry, { marks: [{ id: "g", x: 0.55, y: 0.25, x2: 0.65, y2: 0.45, label: undefined }], resolveUser });
+  assert.equal(e.kind, "move-mark"); assert.equal(e.change, "move"); assert.equal(e.author, "assistant");
+  assert.deepEqual(e.before, { type: "rect", x: 0.5, y: 0.2, x2: 0.6, y2: 0.4 });
+  assert.deepEqual(e.after, { type: "rect", x: 0.55, y: 0.25, x2: 0.65, y2: 0.45 });
+  // Resize: a corner handle.
+  [e] = editCanvas(entry, { marks: [{ id: "g", x: 0.55, y: 0.25, x2: 0.8, y2: 0.5 }], resolveUser });
+  assert.equal(e.change, "resize");
+  const g = canvasMarks(entry).find((m) => m.id === "g");
+  assert.deepEqual([g.author, g.note, g.status, g.layer, g.edited, g.x2, g.y2], ["assistant", "晶片", "inspected", canvasLayers(entry)[0].id, true, 0.8, 0.5]);
+  // Reshape: one arrow end; one polyline vertex (bounds follow).
+  [e] = editCanvas(entry, { marks: [{ id: "arr", x2: 0.4, y2: 0.2 }], resolveUser });
+  assert.equal(e.change, "reshape");
+  [e] = editCanvas(entry, { marks: [{ id: "pl", points: [{ x: 0.1, y: 0.6 }, { x: 0.2, y: 0.9 }, { x: 0.3, y: 0.6 }] }], resolveUser });
+  assert.equal(e.change, "reshape");
+  const pl = canvasMarks(entry).find((m) => m.id === "pl");
+  assert.deepEqual([pl.author, pl.y2, pl.points[1].y], ["assistant", 0.9, 0.9]);
+  // Undo returns the exact AI mark.
+  const { undoCanvasEdit } = await import("../src/canvas-state.js");
+  undoCanvasEdit(entry);
+  assert.equal(canvasMarks(entry).find((m) => m.id === "pl").y2, 0.7);
+  // A lock still blocks it.
+  editCanvas(entry, { layers: [{ id: canvasLayers(entry)[0].id, locked: true }], resolveUser });
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "g", x: 0.1, y: 0.1, x2: 0.2, y2: 0.2 }], resolveUser }), /LAYER_LOCKED/);
+  // When GPT redraws its mark somewhere else, the "edited" flag goes.
+  editCanvas(entry, { layers: [{ id: canvasLayers(entry)[0].id, locked: false }], resolveUser });
+  applyCanvasChanges(entry, { annotations: [box("g", 0.3)], resolve });
+  assert.equal(canvasMarks(entry).find((m) => m.id === "g").edited, undefined);
 });
 
 test("finding recency follows changed evidence without changing layer or ink order", async () => {

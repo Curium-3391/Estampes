@@ -33,7 +33,7 @@ test("user labels and notes clear and undo exactly; changed notes never inherit 
   editCanvas(e,{layers:[{id:before.layer,locked:true}]});
   assert.throws(()=>editCanvas(e,{marks:[{id:"user-1",note:"blocked"}],resolveUser:replayUserAnnotation}),/locked/);
   applyCanvasChanges(e,{annotations:[{id:"ai-1",type:"point",x:.7,y:.7}],resolve:resolveCoordinateAnnotation});
-  assert.throws(()=>editCanvas(e,{marks:[{id:"ai-1",note:"replace AI"}],resolveUser:replayUserAnnotation}),/only your own/);
+  assert.throws(()=>editCanvas(e,{marks:[{id:"ai-1",note:"replace AI"}],resolveUser:replayUserAnnotation}),/its note stays as the AI wrote it/);
 });
 
 test("standalone vector text supports multiline, stable identity, exact contents and persistent inverses", async () => {

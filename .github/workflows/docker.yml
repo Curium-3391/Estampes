@@ -168,3 +168,26 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Notify Discord of stable release
+        if: ${{ success() && !contains(github.ref_name, '-') }}
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            exit 0
+          fi
+
+          payload=$(jq -n --arg version "$GITHUB_REF_NAME" '{
+            content: ("📦 **Estampes " + $version + " 已發布**\n"
+              + "使用 GHCR `:latest`：`docker compose pull estampes && docker compose up -d`\n"
+              + "照 README 用原始碼安裝：`git pull --ff-only && docker compose up -d --build`"),
+            allowed_mentions: {parse: []}
+          }')
+
+          if ! curl --fail --silent --max-time 20 --output /dev/null \
+            --header 'Content-Type: application/json' --data-binary "$payload" \
+            --url "${DISCORD_WEBHOOK_URL}?wait=true"; then
+            echo '::warning::Discord release notification failed'
+            exit 1
+          fi

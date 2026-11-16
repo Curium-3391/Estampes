@@ -1,7 +1,6 @@
 name: PR baseline gate
 
-# Keep the baseline job name stable for branch rules. Select the tier inside
-# the job so a documentation-only PR still gets the required status.
+# Branch rules require the final baseline job on every PR and merge-group SHA.
 on:
   pull_request:
     branches: [main]
@@ -15,10 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  baseline:
-    name: baseline
+  quick:
+    name: Quick validation
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    outputs:
+      tier: ${{ steps.tier.outputs.tier }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +37,50 @@ jobs:
       - name: Documentation consistency
         run: npm run docs:check
       - uses: ./.github/actions/validation
-        if: steps.tier.outputs.tier != 'docs'
+        if: steps.tier.outputs.tier == 'fast'
         with:
           tier: ${{ steps.tier.outputs.tier }}
+
+  full:
+    name: Full validation (${{ matrix.suite }})
+    needs: quick
+    if: needs.quick.outputs.tier == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ['1/6', '2/6', '3/6', '4/6', '5/6', '6/6', legacy]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The PR-1B evidence test reads historical workflow blobs.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/validation
+        with:
+          tier: full
+          suite: ${{ matrix.suite }}
+
+  baseline:
+    name: baseline
+    needs: [quick, full]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the selected validation
+        env:
+          TIER: ${{ needs.quick.outputs.tier }}
+          QUICK_RESULT: ${{ needs.quick.result }}
+          FULL_RESULT: ${{ needs.full.result }}
+        run: |
+          echo "Tier: $TIER | quick: $QUICK_RESULT | full: $FULL_RESULT"
+          test "$QUICK_RESULT" = success || exit 1
+          case "$TIER:$FULL_RESULT" in
+            docs:skipped|fast:skipped|full:success) exit 0 ;;
+            *) exit 1 ;;
+          esac

@@ -1,14 +1,15 @@
 import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 
-const tier = process.argv[2];
-if (tier !== "fast" && tier !== "full") {
-  console.error("Usage: node scripts/run-ci-tests.mjs fast|full");
+const [tier, suite, ...extra] = process.argv.slice(2);
+const validSuite = suite === "legacy" || /^[1-9]\d*\/[1-9]\d*$/.test(suite ?? "");
+if (!["fast", "full"].includes(tier) || extra.length || (suite !== undefined && (tier !== "full" || !validSuite))) {
+  console.error("Usage: node scripts/run-ci-tests.mjs fast | full [index/total|legacy]");
   process.exit(2);
 }
 
-function test(files, env = process.env) {
-  const result = spawnSync(process.execPath, ["--test", ...files], { env, stdio: "inherit" });
+function test(args, env = process.env) {
+  const result = spawnSync(process.execPath, ["--test", ...args], { env, stdio: "inherit" });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
@@ -21,8 +22,10 @@ if (tier === "fast") {
     .filter(file => file.endsWith(".test.js") && !fullOnly.test(file))
     .map(file => `tests/${file}`);
   test(files);
+} else if (suite && suite !== "legacy") {
+  test([`--test-shard=${suite}`]);
 } else {
-  test([]);
+  if (!suite) test([]);
   test([
     "claims-mcp", "workspace-mcp", "gesture-mcp", "bundle-mcp",
     "geometry-tools", "derived-view", "upload-e2e", "cards-e2e", "surface",

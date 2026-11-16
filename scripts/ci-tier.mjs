@@ -5,12 +5,14 @@ import { appendFileSync, readFileSync } from "node:fs";
 function tierForPath(path) {
   // The UVA evidence directory includes fixtures consumed by the tests.
   if (path.startsWith("docs/rfc/unified-visual-architecture/evidence/")) return "full";
-  if (path.startsWith("docs/") || path.endsWith(".md")) return "docs";
+  if (/^(?:docs\/.*|[^/]+)\.md$/.test(path)) return "docs";
 
   // Only known paths can use the fast tier. Shared storage dependencies,
   // CI, lockfiles, test helpers/fixtures, and unknown paths require full.
-  if (/^tests\/(?:persistence-|uva-|documents-|pr1d-|storage\.|workspace|bundle|canvas-state|canvas-history|compose\.)/.test(path)) return "full";
+  if (/^tests\/(?:persistence-|uva-|documents?-|pr1d-|storage\.|workspace|bundle|backup-restore|canvas-(?:state|history|save)|compose\.)/.test(path)) return "full";
   if (/^tests\/[^/]+\.test\.js$/.test(path)) return "fast";
+  // These widget assets own document polling and persisted canvas edits.
+  if (/^public\/(?:visual-surface\.html|workbench\.js)$/.test(path)) return "full";
   if (/^(public\/|examples\/|cas-service\/|src\/(?:cas|builtin-modules|modules)\/)/.test(path)) return "fast";
   if (/^src\/image\/(?:engines|geometry|measure|ops-extra|pdf|quality|register|segment|view)\.js$/.test(path)) return "fast";
 
