@@ -2416,7 +2416,13 @@ function applyPolled(s,id){
   ws.revision=Number(s.workspace.revision)||ws.revision;
   reconcileHistory(applyServerCanvas(s.annotations,s.layers,s.links));
  }else{
-  if(Array.isArray(s.gestureGroups))setGestures(s.gestureGroups);
+  if(Array.isArray(s.gestureGroups)){
+   // A group with an unsent stroke exists only here until the send; the server cannot list it yet.
+   const draft=gestures.filter(g=>g.memberIds.some(id=>!sentIds.has(id)));
+   setGestures(s.gestureGroups);
+   const have=new Set(gestures.map(g=>g.key));
+   gestures=[...gestures,...draft.filter(g=>!have.has(g.key))];
+  }
   if(Array.isArray(s.objects))setObjects(s.objects);
   if(typeof s.baseAsObject==="boolean")baseAsObject=s.baseAsObject;
   reconcileHistory(applyServerCanvas(Array.isArray(s.annotations)?s.annotations.filter(valid):[],s.layers));
