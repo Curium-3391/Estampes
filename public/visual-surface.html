@@ -2345,7 +2345,7 @@ function cancelGestures(){
  if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}
 }
 // A resize changes the coordinate frame under a pointer; end the gesture.
-if(typeof ResizeObserver==="function"){const ro=new ResizeObserver(()=>{if(!disposed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
+if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new ResizeObserver(entries=>{const r=entries[entries.length-1]?.contentRect;if(!r||disposed)return;const w=Math.round(r.width),h=Math.round(r.height);const changed=lastW>=0&&(w!==lastW||h!==lastH);lastW=w;lastH=h;if(changed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
 return {scope,rootEl,feed:applyHostResult,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
  try{cancelGestures()}catch{}
