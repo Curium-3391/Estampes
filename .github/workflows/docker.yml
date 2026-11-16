@@ -139,7 +139,7 @@ jobs:
       - if: steps.publish.outputs.allowed == 'true'
         uses: docker/setup-qemu-action@v3
       - if: steps.publish.outputs.allowed == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - id: meta
         if: steps.publish.outputs.allowed == 'true'
         uses: docker/metadata-action@v6
