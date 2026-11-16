@@ -49,6 +49,7 @@ These are hidden from the model (`visibility: ["app"]`).
 | `validate_visual_annotations` | Validates the marks you send, adds your intent and note, and produces the chat message GPT receives. See [What your marks mean](#what-your-marks-mean). |
 | `load_visual_canvas` | Reloads a photo (or pair) into the widget, for example after the host dropped the pixels. |
 | `load_visual_region` | Returns a higher-resolution tile while you zoom. |
+| `documents_get_changes` | Poll for up to 12 canvas documents (`img:…`, `img:…#c…` or `ws:…`) with the revision the widget last saw. Each answer is `unchanged`, `snapshot` (the next revision), `gap` (more than one revision behind, or the server restarted) or `missing`. Revisions are `{epoch, counter, hash}`: the hash is the canvas content hash, the counter orders changes, the epoch changes when the server restarts. Snapshots carry marks, layers and objects, no pixels. |
 | `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
 | `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
 | `edit_canvas_text` | Read/create/edit/delete standalone vector text, or undo/redo text changes. App-only; uses existing `shape` / `kind: "text"`, normalized coordinates, a required canvas revision for edits and `setId` for workspace copies. Refuses locked layers and stale revisions. |

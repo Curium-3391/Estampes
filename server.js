@@ -72,7 +72,8 @@ import { createOAuth, readBody } from "./src/oauth.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
-import { renderCanvas, canvasReadRequest } from "./src/scene/canvas-render.js";
+import { renderCanvas, canvasReadRequest, canvasRevision } from "./src/scene/canvas-render.js";
+import { createRevisionTracker, classifyChange, MAX_POLLED_DOCUMENTS } from "./src/visual/document-revisions.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { createCasClient } from "./src/cas/client.js";
@@ -276,6 +277,7 @@ async function loadImageInput({ image, imageUrl }) {
 const RegionSchema = z.object({
   x: Point01, y: Point01, x2: Point01, y2: Point01,
 }).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
+const documentRevisions = createRevisionTracker();
 const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/).describe("imageId returned by load_image");
 const DerivedViewIdSchema = z.string().regex(/^dv:[0-9a-f]{16}$/).describe("derivedViewId returned by process_image");
 // A coordinateFrame naming a derived view becomes that view's exact
@@ -1259,6 +1261,58 @@ function makeServer() {
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
       }
+    }
+  );
+
+  // Private poll tool for the canvas widget (UVA Phase 3, OD-04 option A):
+  // one call asks about up to 12 documents and answers each with unchanged, a
+  // snapshot, or a gap (more than one revision behind, or the server restarted).
+  // Snapshots carry marks, layers and objects but no pixels; pixels stay on
+  // load_visual_canvas, which the widget calls only when it has none.
+  registerAppTool(
+    server,
+    "documents_get_changes",
+    {
+      title: "Poll canvas documents for changes",
+      description: "Ask which of up to 12 canvas documents changed since the revision the widget last saw.",
+      inputSchema: z.object({
+        documents: z.array(z.object({
+          documentId: z.string().regex(/^(img:[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
+          sinceRevision: z.object({ epoch: z.string().max(40), counter: z.number().int().min(0), hash: z.string().max(80) }).optional(),
+        })).min(1).max(MAX_POLLED_DOCUMENTS),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ documents }) => {
+      const results = [];
+      for (const { documentId, sinceRevision } of documents) {
+        try {
+          let hash, body;
+          if (documentId.startsWith("ws:")) {
+            const { doc } = await resolveRef(documentId);
+            const items = await workspaceItems(doc);
+            hash = "ws:" + createHash("sha256").update(JSON.stringify([doc.revision, items.map(({ id, entry }) => [id, canvasRevision(entry)]), workspaceLinks(items)])).digest("hex").slice(0, 24);
+            body = () => ({ workspace: { id: documentId, name: doc.name, revision: doc.revision, items: items.map((it) => ({ ...wsItemInfo(it), objects: widgetObjects(it.entry), baseAsObject: !!it.entry.baseAsObject })) },
+              annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) });
+          } else {
+            const entry = await ensureSet(documentId);
+            // The content hash does not cover the user's gesture verdicts, which the snapshot carries.
+            hash = canvasRevision(entry) + ":" + createHash("sha256").update(JSON.stringify(entry.gestureDecisions ?? null)).digest("hex").slice(0, 8);
+            body = () => ({ width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
+              gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions), objects: widgetObjects(entry), baseAsObject: !!entry.baseAsObject });
+          }
+          const revision = documentRevisions.observe(documentId, hash);
+          const status = classifyChange(sinceRevision, revision);
+          results.push({ documentId, status, revision, ...(status === "unchanged" ? {} : { snapshot: body() }) });
+        } catch (error) {
+          results.push({ documentId, status: "missing", error: String(error?.message || error).slice(0, 200) });
+        }
+      }
+      return logSizes("documents_get_changes", {
+        content: [{ type: "text", text: "Checked " + documents.length + " canvas document(s) for the widget." }],
+        structuredContent: { kind: "estampes.documents_changes", epoch: documentRevisions.epoch, documents: results },
+      }, { appOnly: true });
     }
   );
 
