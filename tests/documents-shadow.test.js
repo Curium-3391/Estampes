@@ -98,7 +98,7 @@ test("UVA-27 subset: actual legacy serialization and legacy AI editing restricti
   const original=legacy(),entry={imageId:original.imageId,width:1600,height:1000,marks:new Map(),objects:new Map(),layers:[]};restoreCanvas(entry,original);
   const first=serializeCanvas(entry);first.savedAt=TIME;const before=canonicalJson(first),r=mapLegacyCanvas(first,context());assert.equal(r.status,"mapped");
   const after=serializeCanvas(entry);after.savedAt=TIME;assert.equal(canonicalJson(after),before);
-  const ai=entry.marks.get("ai");assert.throws(()=>editCanvas(entry,{marks:[{id:"ai",color:"red"}],resolveUser:m=>m}),/only your own marks/);assert.deepEqual(entry.marks.get("ai"),ai);
+  const ai=entry.marks.get("ai");assert.throws(()=>editCanvas(entry,{marks:[{id:"ai",color:"red"}],resolveUser:m=>m}),/its color stays as the AI wrote it/);assert.deepEqual(entry.marks.get("ai"),ai);
   assert.ok(parseVisualDocument(r.document));
 });
 test("mapping contexts cannot accidentally resolve a local source in another store namespace", () => {

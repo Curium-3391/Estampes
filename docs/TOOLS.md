@@ -53,7 +53,7 @@ These are hidden from the model (`visibility: ["app"]`).
 | `load_visual_pixels` | Returns the canvas photo (or a processed view) as base64 in slices, when a result carried only a preview to stay under the host's size cap. |
 | `upload_visual_image` | Receives an image picked or photographed in the canvas, as base64 slices; the last slice loads it and returns its canvas. |
 | `edit_canvas_text` | Read/create/edit/delete standalone vector text, or undo/redo text changes. App-only; uses existing `shape` / `kind: "text"`, normalized coordinates, a required canvas revision for edits and `setId` for workspace copies. Refuses locked layers and stale revisions. |
-| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, restyle, label/note text, delete), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
+| `edit_visual_canvas` | Applies your own layer and mark edits (rename, order, lock, opacity, visibility, move, resize, reshape, restyle, label/note text, delete; the AI's marks can be moved, resized and reshaped too, while their label, note and style stay the AI's), or undoes / redoes your last mark edit with `history` (refused if the mark changed since or its layer is locked). |
 | `review_visual_link` | Records your confirm or reject verdict (with an optional reason), or withdraws it, on a link in a paired view. A rejection is remembered for that place. |
 | `review_visual_finding` | The same for GPT's note on one mark. |
 | `review_gesture_group` | Records whether some of your strokes are one gesture: confirm or reject a candidate, group marks by hand, or withdraw the verdict. The strokes are not changed. |
@@ -140,6 +140,24 @@ Saving text sends only the text fields, preserving current geometry and styling.
 Draft notes are retained when sending a new annotation, in both the stored mark
 and the submission event/chat message. Rejected text drags redraw the last
 accepted coordinates.
+
+In **選取** mode, any unlocked mark — the AI's included — can be dragged to move
+it. A selected box shows corner and side handles to resize it; an arrow shows
+its two ends and a polyline its vertices to reshape it. The mark keeps its ID,
+author, layer, note and evidence; it is flagged `editedByUser`. The AI is told
+on its next call whether it was a move, resize or reshape, with the geometry
+before and after (`userEdits[].change`, `before`, `after`). Locked layers
+refuse all of it; undo/redo restores the exact previous geometry.
+
+**四邊形** draws a quadrilateral for objects seen tilted or in perspective
+(a label, a screen, a sign, a page): drag a box, then in **選取** drag each
+corner to the object's real corners, or drag the round handle to turn the
+whole shape. It is stored as a polyline with `closed: true` and its 4 corners
+in order, so every existing path (export/import, bundles, workspaces, image
+transforms) keeps the exact vertices; the AI sees `shape: "quadrilateral"`
+with its `corners`, and can draw one the same way. Plain **框選** boxes stay
+axis-aligned. Any closed shape can be turned; freehand strokes with more than
+32 vertices are only moved.
 
 Choose **文字**, tap a location, enter up to 80 characters (including newlines),
 choose size (6–64) and color, then save. Use **選取** to click or drag existing

@@ -48,3 +48,25 @@ export function pickFields(mark, ...groups) {
   const keep = new Set(groups.flatMap((g) => ANNOTATION_FIELDS[g] ?? []));
   return Object.fromEntries(Object.entries(mark ?? {}).filter(([k]) => keep.has(k)));
 }
+
+// The geometry fields of a mark, for before/after reports (#69).
+export function geometryOf(mark) {
+  const g = { type: mark?.type };
+  if (Array.isArray(mark?.points)) g.points = mark.points.map((p) => ({ x: p.x, y: p.y }));
+  else for (const k of ["x", "y", "x2", "y2"]) if (mark?.[k] !== undefined) g[k] = mark[k];
+  return g;
+}
+
+// How the geometry changed (#69): "move" when every vertex shifted by the same
+// amount, "resize" when a box (rect) changed size, "reshape" otherwise (an
+// arrow end, a polyline or quadrilateral vertex). null when it did not change.
+export function geometryChange(before, after, eps = 1e-9) {
+  if (!geometryChanged(before, after)) return null;
+  const pts = (m) => Array.isArray(m.points) ? m.points : [{ x: m.x, y: m.y }, ...(m.x2 !== undefined ? [{ x: m.x2, y: m.y2 }] : [])];
+  const a = pts(before), b = pts(after);
+  if (a.length === b.length && a.length) {
+    const dx = b[0].x - a[0].x, dy = b[0].y - a[0].y;
+    if (a.every((p, i) => Math.abs(b[i].x - p.x - dx) <= eps && Math.abs(b[i].y - p.y - dy) <= eps)) return "move";
+  }
+  return before.type === "rect" && after.type === "rect" ? "resize" : "reshape";
+}
