@@ -12,6 +12,10 @@ export const workbenchSource = () => [
   "const { clampRect, snapRect, applyOp, reconcile, profileFor } = (() => {\n" +
     readFileSync(join(ROOT, "src", "surface", "geometry.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn { clampRect, snapRect, applyOp, reconcile, profileFor };\n})();",
+  // The shared document store (poll/reconcile rules); plain module, `export` stripped.
+  "const { createDocumentStore, POLL_BATCH } = (() => {\n" +
+    readFileSync(join(ROOT, "src", "surface", "document-store.js"), "utf8").replace(/^export\s+/gm, "") +
+    "\nreturn { createDocumentStore, POLL_BATCH };\n})();",
   readFileSync(join(ROOT, "public", "workbench.js"), "utf8"),
   readFileSync(join(ROOT, "public", "calculator.js"), "utf8"),
 ].join("\n");
