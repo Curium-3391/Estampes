@@ -126,13 +126,13 @@ test("the full matrix covers each discovered Node test once and includes Legacy 
   for (const name of expected) {
     writeFileSync(join(cwd, "nested", "test", `${name}.cjs`), `require("node:test")("${name}", () => {});\n`);
   }
-  const env = { ...process.env };
+  const env = { ...process.env, NODE_OPTIONS: "--test-reporter=tap" };
   delete env.NODE_TEST_CONTEXT;
   const actual = shards.flatMap(shard => {
     const output = execFileSync(process.execPath, [runner, "full", shard], {
       cwd, encoding: "utf8", env,
     });
-    return output.match(/ci-discovery-\d+/g) ?? [];
+    return Array.from(output.matchAll(/^ok \d+ - (ci-discovery-\d+)$/gm), match => match[1]);
   });
   assert.deepEqual(actual.sort(), expected.sort());
 });
