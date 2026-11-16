@@ -94,3 +94,57 @@ for (const touch of [false, true]) test("drag, resize and reshape the AI's marks
     assert.ok(near(m.geometry.x2, 0.6));
   } finally { await s.close(); }
 });
+
+// #70: a quadrilateral for tilted or perspective objects: drawn as a box,
+// then each corner moved on its own, or the whole shape turned.
+for (const touch of [false, true]) test("draw a quadrilateral, move one corner, rotate it and reopen: " + (touch ? "mobile touch" : "desktop"), { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const ok = async (name, args) => { const r = await s.call(name, args); assert.ok(!r.isError, JSON.stringify(r.content)); return r.structuredContent; };
+    const data = (await sharp({ create: { width: 800, height: 600, channels: 3, background: "#ddd" } }).png().toBuffer()).toString("base64");
+    const imageId = (await ok("upload_visual_image", { total: data.length, offset: 0, data })).imageId;
+    const ui = await s.open({ imageId, touch, viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 900 } });
+    await ui.page.waitForFunction(() => window.hostLog.includes("ui/notifications/initialized"));
+    await settled(ui);
+    await ui.frame.locator('[data-mode="quad"]').click();
+    await dragCanvas(ui, [0.3, 0.3], [0.6, 0.6], touch);
+    await ui.frame.locator("#status").filter({ hasText: "已新增標註" }).waitFor();
+    // Send it, so it is a stored mark like any other.
+    await ui.frame.locator("#send").click();
+    let quad;
+    for (let i = 0; i < 40 && !quad; i++) { quad = (await ok("get_visual_state", { imageId })).marks.find((m) => m.type === "polyline"); if (!quad) await ui.page.waitForTimeout(150); }
+    assert.ok(quad, "the quadrilateral reached the server");
+    assert.equal(quad.geometry.points.length, 4); assert.equal(quad.geometry.closed, true); assert.equal(quad.geometry.smooth, undefined);
+    await ui.frame.locator('[data-mode="select"]').click();
+    await tap(ui, await point(ui, 0.45, 0.3), touch);
+    await ui.frame.locator('#selection-outline [data-handle="rot"]').waitFor();
+    assert.equal(await ui.frame.locator("#selection-outline [data-handle]").count(), 5, "four corners and a turn handle");
+    // Perspective: pull one corner in.
+    const c = quad.geometry.points[2];
+    await dragCanvas(ui, [c.x, c.y], [c.x - 0.08, c.y + 0.05], touch);
+    await ui.frame.locator("#status").filter({ hasText: "已調整標記形狀" }).waitFor();
+    let q = (await ok("get_visual_state", { imageId })).marks.find((m) => m.id === quad.id);
+    assert.ok(near(q.geometry.points[2].x, c.x - 0.08) && near(q.geometry.points[2].y, c.y + 0.05), JSON.stringify(q.geometry.points));
+    for (const i of [0, 1, 3]) assert.deepEqual(q.geometry.points[i], quad.geometry.points[i], "the other corners stay");
+    // Rotate: drag the turn handle to the right.
+    const before = q.geometry.points;
+    const rot = await ui.frame.locator('#selection-outline [data-handle="rot"]').boundingBox();
+    const from = { x: rot.x + rot.width / 2, y: rot.y + rot.height / 2 };
+    await drag(ui, from, { x: from.x + 60, y: from.y + 20 }, touch);
+    await ui.frame.locator("#status").filter({ hasText: "已旋轉標記" }).waitFor();
+    q = (await ok("get_visual_state", { imageId })).marks.find((m) => m.id === quad.id);
+    assert.equal(q.geometry.points.length, 4);
+    assert.ok(q.geometry.points.some((p, i) => !near(p.x, before[i].x, 0.005)), "the corners turned");
+    // Side lengths in pixels are kept by a turn.
+    const side = (pts, i) => Math.hypot((pts[(i + 1) % 4].x - pts[i].x) * 800, (pts[(i + 1) % 4].y - pts[i].y) * 600);
+    for (let i = 0; i < 4; i++) assert.ok(Math.abs(side(q.geometry.points, i) - side(before, i)) < 2, "side " + i);
+    await ui.shot("annotation-quad-" + (touch ? "mobile" : "desktop"));
+    // The AI reads exact corners, not only a bounding box.
+    const r = await s.call("present_visual", { imageId });
+    const mark = r.structuredContent.marks.find((m) => m.id === quad.id);
+    assert.equal(mark.shape, "quadrilateral"); assert.equal(mark.corners.length, 4);
+    await ui.reload();
+    const again = (await ok("get_visual_state", { imageId })).marks.find((m) => m.id === quad.id);
+    assert.deepEqual(again.geometry.points, q.geometry.points);
+  } finally { await s.close(); }
+});

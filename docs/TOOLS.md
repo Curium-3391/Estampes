@@ -149,6 +149,16 @@ on its next call whether it was a move, resize or reshape, with the geometry
 before and after (`userEdits[].change`, `before`, `after`). Locked layers
 refuse all of it; undo/redo restores the exact previous geometry.
 
+**四邊形** draws a quadrilateral for objects seen tilted or in perspective
+(a label, a screen, a sign, a page): drag a box, then in **選取** drag each
+corner to the object's real corners, or drag the round handle to turn the
+whole shape. It is stored as a polyline with `closed: true` and its 4 corners
+in order, so every existing path (export/import, bundles, workspaces, image
+transforms) keeps the exact vertices; the AI sees `shape: "quadrilateral"`
+with its `corners`, and can draw one the same way. Plain **框選** boxes stay
+axis-aligned. Any closed shape can be turned; freehand strokes with more than
+32 vertices are only moved.
+
 Choose **文字**, tap a location, enter up to 80 characters (including newlines),
 choose size (6–64) and color, then save. Use **選取** to click or drag existing
 text. The same vector `shape/text` records are visible to assistant reads and

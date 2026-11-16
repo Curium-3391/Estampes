@@ -181,6 +181,7 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 <button data-mode="text" aria-pressed="false">文字</button>
 <button data-mode="rect" aria-pressed="false">框選</button>
 <button data-mode="arrow" aria-pressed="false">箭頭</button>
+<button data-mode="quad" aria-pressed="false" title="拖曳畫出四邊形；之後用「選取」拖曳四個角對齊傾斜或透視的物體，或拖曳圓形控制點旋轉">四邊形</button>
 <button data-mode="polyline" aria-pressed="false" title="按住拖曳自由畫；滑鼠、繪圖板、Apple Pencil、S Pen 都可以">手繪</button>
 <button id="undo" title="Ctrl+Z">上一步</button><button id="redo" title="Ctrl+Shift+Z / Ctrl+Y">下一步</button><button id="clear">清除我的標註</button>
 </div>
@@ -1646,7 +1647,11 @@ function nextLabel(){
  const used=[...priorUserMarks,...userMarks].map(m=>Number(/^YOU (\d+)$/.exec(m.label??"")?.[1]??0));
  return "YOU "+(Math.max(0,...used)+1);
 }
-function draft(a,b){return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:nextLabel(),...styleFields()};}
+// 四邊形 (#70): a closed four-vertex polyline. It starts as the dragged box;
+// its corners are then moved one by one (perspective) or rotated together.
+function quadFrom(a,b){return polylineMark([{x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y}],{closed:true});}
+function draft(a,b){if(mode==="quad")return {id:"preview",...quadFrom(a,b),label:nextLabel(),...styleFields()};
+ return {id:"preview",type:mode,x:a.x,y:a.y,...(mode==="point"?{}:{x2:b.x,y2:b.y}),label:nextLabel(),...styleFields()};}
 function pickMode(next){mode=next;for(const b of scope.querySelectorAll("[data-mode]"))b.setAttribute("aria-pressed",String(b.dataset.mode===mode));
  if(mode!=="select"&&selected){selected=null;}
  if(mode!=="text"&&mode!=="select"){textOpening++;textSession=null;textEditor.hidden=true;cancelTextDrag();}
@@ -1810,8 +1815,24 @@ function handlesOf(m){
  if(m.type==="rect"){const x1=Math.min(m.x,m.x2),x2=Math.max(m.x,m.x2),y1=Math.min(m.y,m.y2),y2=Math.max(m.y,m.y2),cx=(x1+x2)/2,cy=(y1+y2)/2;
    return [{k:"nw",x:x1,y:y1},{k:"n",x:cx,y:y1},{k:"ne",x:x2,y:y1},{k:"e",x:x2,y:cy},{k:"se",x:x2,y:y2},{k:"s",x:cx,y:y2},{k:"sw",x:x1,y:y2},{k:"w",x:x1,y:cy}];}
  if(m.type==="arrow")return [{k:"a",x:m.x,y:m.y},{k:"b",x:m.x2,y:m.y2}];
- if(m.type==="polyline")return m.points.map((q,i)=>({k:"v"+i,x:q.x,y:q.y}));
+ if(m.type==="polyline"){
+   const out=m.points.length<=MAX_VERTEX_HANDLES?m.points.map((q,i)=>({k:"v"+i,x:q.x,y:q.y})):[];
+   // A closed shape (a quadrilateral, a loop) can also be turned about its centre (#70).
+   if(m.closed&&m.points.length>=3){const b=bounds(m),from={x:(b.x+b.x2)/2/VW,y:b.y/VH};out.push({k:"rot",x:from.x,y:Math.max(0,from.y-26*U()/VH),from});}
+   return out;
+ }
  return [];
+}
+// Freehand strokes can have many vertices; past this many they are only moved.
+const MAX_VERTEX_HANDLES=32;
+// Turn a mark's vertices about the centre of its box, in canvas units so the
+// angle is the one seen on screen. Refused (unchanged) if a vertex would leave its image.
+function rotated(m,angle){
+ const b=bounds(m),cx=(b.x+b.x2)/2,cy=(b.y+b.y2)/2,c=Math.cos(angle),sn=Math.sin(angle);
+ const pts=m.points.map(q=>{const X=px(q.x)-cx,Y=py(q.y)-cy;return {x:(cx+X*c-Y*sn)/VW,y:(cy+X*sn+Y*c)/VH};});
+ const next={...m,...polylineMark(pts)},inside=frames?pts.every(q=>{const [u,v]=frameUV(frameOf(m),q.x*VW,q.y*VH);return u>=-1e-9&&u<=1+1e-9&&v>=-1e-9&&v<=1+1e-9;}):pts.every(q=>in01(q.x)&&in01(q.y));
+ if(!inside)return null;
+ return frames?toView(toSide(next)):mapMark(next,(x,y)=>[round(x),round(y)]);
 }
 // The handle of the selected mark under a canvas point, if any.
 function handleAt(p){
@@ -1821,7 +1842,9 @@ function handleAt(p){
  return best?{mark:m,handle:best}:null;
 }
 // The mark with one handle dragged to canvas point p, kept inside its image.
-function withHandle(m,k,p){
+function withHandle(m,k,p,start){
+ if(k==="rot"){const b=bounds(m),cx=(b.x+b.x2)/2,cy=(b.y+b.y2)/2,a0=Math.atan2(py(start.y)-cy,px(start.x)-cx),a1=Math.atan2(py(p.y)-cy,px(p.x)-cx);
+   return rotated(m,a1-a0)??m;}
  const q=frames?p:{x:clamp(p.x,0,1),y:clamp(p.y,0,1)};let next;
  if(m.type==="rect"){
    let x1=Math.min(m.x,m.x2),x2=Math.max(m.x,m.x2),y1=Math.min(m.y,m.y2),y2=Math.max(m.y,m.y2);
@@ -2075,7 +2098,7 @@ hit.addEventListener("pointerdown",e=>{
  if(mode!=="select"||!ready&&imageId)return;
  const p=fromPointer(e);if(!p)return;
  const grip=groupingFrom?null:handleAt(p);
- if(grip){dragHandle={before:grip.mark,k:grip.handle.k,moved:false};findingPointer=null;hit.setPointerCapture(e.pointerId);
+ if(grip){dragHandle={before:grip.mark,k:grip.handle.k,start:p,moved:false};findingPointer=null;hit.setPointerCapture(e.pointerId);
    status.textContent="拖曳控制點以調整「"+(grip.mark.label||grip.mark.id)+"」的大小或形狀。";render();return;}
  const m=pickMark(p);
  if(groupingFrom){finishGrouping(m);return;}
@@ -2086,7 +2109,7 @@ hit.addEventListener("pointerdown",e=>{
 });
 hit.addEventListener("pointermove",e=>{
  if(findingPointer){const p=fromPointer(e);if(p&&Math.hypot((p.x-findingPointer.start.x)*VW,(p.y-findingPointer.start.y)*VH)>3*U())findingPointer=null;}
- if(dragHandle){const p=fromPointer(e);if(!p)return;dragHandle.moved=true;replaceLocal(withHandle(dragHandle.before,dragHandle.k,p));scheduleRender();return;}
+ if(dragHandle){const p=fromPointer(e);if(!p)return;dragHandle.moved=true;replaceLocal(withHandle(dragHandle.before,dragHandle.k,p,dragHandle.start));scheduleRender();return;}
  if(!dragMove)return;const p=fromPointer(e);if(!p)return;
  const dx=p.x-dragMove.start.x,dy=p.y-dragMove.start.y;
  if(!dragMove.moved&&Math.hypot(dx*VW,dy*VH)<3*U())return;
@@ -2094,7 +2117,7 @@ hit.addEventListener("pointermove",e=>{
 });
 function endDrag(){
  if(dragHandle){const {before,moved,k}=dragHandle;dragHandle=null;const after=findMark(before.id);
-   if(moved&&after)updateMark(before,after,before.type==="rect"?"已調整標記大小。":"已調整標記形狀。");else render();return;}
+   if(moved&&after)updateMark(before,after,k==="rot"?"已旋轉標記。":before.type==="rect"?"已調整標記大小。":"已調整標記形狀。");else render();return;}
  const clicked=findingPointer;findingPointer=null;
  if(clicked)revealFinding(findMark(clicked.id));
  if(!dragMove)return;const {before,moved}=dragMove;dragMove=null;
