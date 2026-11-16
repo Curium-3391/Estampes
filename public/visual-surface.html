@@ -2176,7 +2176,8 @@ async function uploadImage(file){
    if(r?.kind!=="estampes.visual_surface"||!r.imageId)throw Error("伺服器沒有回傳畫布");
    gotResult=true;applyResult(result);
    const text="我在 Estampes 畫布上傳了一張圖片："+r.imageId+"（"+r.width+"×"+r.height+" px，檔名 "+JSON.stringify(name)+"）。"+
-     "它已經在畫布上；需要看內容時請用 inspect_image 或 present_visual（imageId="+r.imageId+"）。";
+     "它已經在畫布上，Estampes 工具已連線，不需要重新上傳。要看內容請呼叫 inspect_image({imageId:\""+r.imageId+"\"})；"+
+     "要在這張圖上畫標註請呼叫 present_visual({imageId:\""+r.imageId+"\", annotations:[…]})。";
    await tellModel(text);
    status.textContent="已上傳 "+r.imageId+"，AI 會在你下一則訊息看到它。";
  }catch(err){status.textContent="上傳失敗："+String(err.message||err)}

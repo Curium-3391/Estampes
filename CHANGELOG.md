@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tool-use reliability (#87): the server now sends MCP `instructions` naming the follow-up tools (uploaded image → `inspect_image` then `present_visual` on the same `imageId`; running job → `get_module_job`; own check → `render_canvas`) and asking the model to report "not attempted / failed with this error / running / done" instead of guessing that tools are unavailable. Every error result gets a second text block saying which Estampes tool replied (the first block, shown to users by widgets, is unchanged). The canvas upload message now says the tools are connected and no re-upload is needed.
 - Surface widget (UVA Phase 3, PR-3B-1): new app-only `documents_get_changes` poll tool (up to 12 documents, answers unchanged / snapshot / gap / missing) with ordered `{epoch, counter, hash}` revisions next to the canvas content hash, and a shared widget `DocumentStore` (get / subscribe / hydrate / reconcile / release) whose rules ignore older or duplicate revisions, treat a same-revision different-hash answer as an integrity error, and keep the last snapshot marked stale when offline. Nothing polls yet; the scheduler, host de-duplication and restore are PR-3B-2.
 
 ## 0.20.1 — Surface viewers, workspace and module fixes
