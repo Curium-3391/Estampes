@@ -163,10 +163,16 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 @media(max-width:599px){body{padding:6px}main{padding:10px}#wb.mobile #wb-area{min-height:60vh}}
 @media(prefers-reduced-motion:no-preference){.wb-panel{transition:box-shadow .15s}}
 #upload-empty{display:none}
+#load-state{display:none}
+.loading-image #load-state,.load-failed #load-state{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 16px;border:2px dashed #8aa4c8;border-radius:12px;text-align:center}
+.load-failed #load-state{border-color:#c0504d}
+#load-state-error{font-size:.85rem;color:GrayText;overflow-wrap:anywhere;margin:0}
 .background-run>*:not(.background-note){display:none!important}.background-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 12px;border:1px dashed #8aa4c8;border-radius:10px;font-size:.88rem;color:GrayText}
 body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!important}
 .awaiting-upload #upload-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 16px;border:2px dashed #8aa4c8;border-radius:12px;text-align:center}
 .awaiting-upload #upload,.awaiting-upload #surface,.awaiting-upload #caption,.awaiting-upload #edit-tools,.awaiting-upload #style-tools,.awaiting-upload #zoom-tools,.awaiting-upload .view-tabs,.awaiting-upload #context-details,.awaiting-upload .actions:not(#extra-actions){display:none}
+.loading-image #surface,.loading-image #caption,.loading-image #edit-tools,.loading-image #style-tools,.loading-image #zoom-tools,.loading-image .view-tabs,.loading-image #context-details,.loading-image .actions:not(#extra-actions){display:none}
+.load-failed #surface,.load-failed #caption,.load-failed #edit-tools,.load-failed #style-tools,.load-failed #zoom-tools,.load-failed .view-tabs,.load-failed #context-details,.load-failed .actions:not(#extra-actions){display:none}
 </style></head><body><div id="wb" class="solo"><div id="wb-bar"></div><p id="wb-help" hidden>拖曳標題列移動面板，拖曳右下角調整大小；鍵盤：在標題列按 Alt＋方向鍵移動，Alt＋Shift＋方向鍵調整大小。</p><div id="wb-area"><template id="viewer-tpl"><main id="panel-canvas">
 <header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
 <p class="help">同一張圖片，同一套座標。標籤<strong>金色＝AI</strong>、<strong>藍色＝你</strong>，線條顏色可自選；預設顯示原圖，可直接標記、放大，或切換到 AI 提供的處理後檢視。</p>
@@ -211,7 +217,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 <button data-mode="pan" aria-pressed="false" title="拖曳移動畫面；也可以按住空白鍵或用滑鼠中鍵拖曳">移動</button>
 <span class="hint">雙指捏合或 Ctrl＋滾輪縮放，放大後畫細線</span>
 </div>
-<div id="upload-empty"><p>把要討論的圖片放到這個畫布。可以選擇裝置上的檔案，手機也可以直接拍照。</p><button id="upload-big" class="primary">選擇圖片／拍照</button></div>
+<div id="upload-empty"><p>把要討論的圖片放到這個畫布。可以選擇裝置上的檔案，手機也可以直接拍照。</p><button id="upload-big" class="primary">選擇圖片／拍照</button></div><div id="load-state" role="status"><p id="load-state-text"></p><p id="load-state-error"></p></div>
 <svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
 
 <g id="scene"></g><g id="processed"></g><g id="scene-objects"></g><g id="stored-annotations"></g><g id="unified-layers"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="gesture-outline"></g><g id="selection-outline"></g><g id="preview"></g>
@@ -1397,6 +1403,13 @@ focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;ren
 let appliedKey=null;
 const cleanItems=list=>(Array.isArray(list)?list:[]).filter(it=>it&&/^wi-\d{1,4}$/.test(it.id)&&IMAGE_ID.test(it.imageId)).slice(0,24)
  .map(it=>({id:it.id,imageId:it.imageId,width:Number(it.width),height:Number(it.height),placement:it.placement??{},label:String(it.label??"").slice(0,40),set:typeof it.set==="string"&&it.set.split("#")[0]===it.imageId?it.set:it.copy?null:it.imageId}));
+function showLoadState(kind,error){
+ rootEl.classList.toggle("loading-image",kind==="loading");rootEl.classList.toggle("load-failed",kind==="failed");
+ if(!kind)return;
+ scope.querySelector("#load-state-text").textContent=kind==="loading"?"正在載入圖片…":"圖片沒有載入，所以畫布上沒有顯示任何圖片。請提供 https:// 開頭、直接連到圖檔的公開網址，或既有的 Estampes imageId。";
+ scope.querySelector("#load-state-error").textContent=kind==="failed"&&error?"錯誤："+String(error).slice(0,300):"";
+ status.textContent=kind==="loading"?"正在載入圖片…":"圖片沒有載入。";
+}
 function applyInput(args){
  if(!args)return;
  // A workspace call's input has no layout yet; wait for its result.
@@ -1429,7 +1442,8 @@ function applyInput(args){
    }
  }else if(Object.hasOwn(SCENES,args.scene)){
    selectedScene=args.scene;imageId=null;photo=null;views=[];renderViewTabs();VW=640;VH=360;
- }else return;
+ }else{if(args.imageUrl||args.image)showLoadState("loading");return;}
+ showLoadState(null);
  if(textSession&&textSession.context!==textContext()){textOpening++;textSession=null;textEditor.hidden=true;}
  const incoming=fromServerList(args.annotations);
  assistantMarks=incoming.filter(a=>a.author!=="user").slice(0,ws?200:60);
@@ -1486,6 +1500,9 @@ async function completeViews(list){
 // changed host output/metadata still refreshes the canvas.
 let hostResultKey=null;
 function applyHostResult(result){
+ // A failed call (an image URL that could not be loaded…) has no canvas: say so
+ // instead of leaving the bundled demo picture, which looks like a wrong image.
+ if(result?.isError&&!gotResult){showLoadState("failed",result.content?.find?.(c=>c?.type==="text")?.text);return;}
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
  const meta=result?._meta??window.openai?.toolResponseMetadata??{};
  const key=JSON.stringify([r,meta]);
@@ -1510,7 +1527,7 @@ function showBackground(result,key){
 }
 function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
- gotResult=true;
+ gotResult=true;showLoadState(null);
  // An empty canvas waiting for the user's own picture.
  if(r.awaitingUpload&&!r.imageId){rootEl.classList.add("awaiting-upload");status.textContent=isLibreChat()?"":"按「選擇圖片／拍照」放一張圖片到畫布。";return;}
  rootEl.classList.remove("awaiting-upload");
@@ -2321,7 +2338,7 @@ host.whenReady().then(()=>{
    uploadBtn.textContent="圖片上傳說明";
    uploadBtn.title="查看 LibreChat 的圖片上傳限制";
  }
- ready=true;readyWaiters.splice(0).forEach(f=>f());render();if(!rootEl.classList.contains("awaiting-upload"))status.textContent="已連線，可以任意點選或拖曳標註。";
+ ready=true;readyWaiters.splice(0).forEach(f=>f());render();if(!["awaiting-upload","load-failed","loading-image"].some(c=>rootEl.classList.contains(c)))status.textContent="已連線，可以任意點選或拖曳標註。";
  else if(isLibreChat())status.textContent="";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;});
 own(host.on("failed",err=>{status.textContent="和對話程式連線失敗："+String(err.message||err)}));
@@ -2492,7 +2509,7 @@ function shadowCss(){
  if(shadowCssText!==null)return shadowCssText;
  const sheet=new CSSStyleSheet();sheet.replaceSync(document.querySelector("#page-css").textContent);
  const skip=/#wb\b|\.wb-|\.calc|\.cell/;
- const fix=sel=>sel.split(",").map(x=>x.trim().replace(/^\.(awaiting-upload|fullscreen)(?![\w-])/,":host(.$1)").replace(/(^|\s)body\.([\w-]+)/g,"$1:host(.$2)").replace(/(^|\s)(:root|body)(?![\w-(.])/g,"$1:host")).join(",");
+ const fix=sel=>sel.split(",").map(x=>x.trim().replace(/^\.(awaiting-upload|loading-image|load-failed|fullscreen)(?![\w-])/,":host(.$1)").replace(/(^|\s)body\.([\w-]+)/g,"$1:host(.$2)").replace(/(^|\s)(:root|body)(?![\w-(.])/g,"$1:host")).join(",");
  const out=[];
  for(const r of sheet.cssRules){
   if(r.type===CSSRule.STYLE_RULE){if(!skip.test(r.selectorText))out.push(fix(r.selectorText)+"{"+r.style.cssText+"}")}

@@ -83,7 +83,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
       await page.evaluate(name => { window.hostName = name; }, hostName);
       const reload = async () => {
         const r = result ? await result() : await call("present_visual", { imageId });
-        await page.evaluate(([h, res, g]) => (g ? window.loadGlobals : window.load)(h, res), [widget, { structuredContent: r.structuredContent, _meta: r._meta, content: r.content }, globals]);
+        await page.evaluate(([h, res, g]) => (g ? window.loadGlobals : window.load)(h, res), [widget, { structuredContent: r.structuredContent, _meta: r._meta, content: r.content, ...(r.isError ? { isError: true } : {}) }, globals]);
       };
       await reload();
       const shot = async (name) => { if (shotsDir) { await mkdir(shotsDir, { recursive: true }); await page.screenshot({ path: join(shotsDir, name + ".png") }); } };

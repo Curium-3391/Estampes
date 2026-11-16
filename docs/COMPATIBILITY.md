@@ -25,6 +25,8 @@ The connector must be reachable from wherever the client runs. For ChatGPT this 
 
 Estampes now detects LibreChat from the MCP Apps handshake and shows an explanation where it would offer local upload. It sends no image data via the upload tool in this host. Use `present_visual(imageId: …)` for an image already in the same Estampes instance, or `imageUrl` for material that is already public. Keep sensitive images private. [Issue #149](https://github.com/Curium-3391/Estampes/issues/149) tracks a separate authenticated upload page with explicit file submission, CSRF protection and storage access controls.
 
+Because chat attachments do not reach the tools, a model can invent an image URL for an attachment. The [#149 retest](https://github.com/Curium-3391/Estampes/issues/149#issuecomment-6915730941) saw an `http://` link, a made-up `attachment.internal` host and a 404, after which the bundled demo scene was left in the canvas and looked like a wrong image. A failed `imageUrl` now tells the model not to guess a URL and to ask for a real https URL or an existing `imageId`. A failed call shows "圖片沒有載入" with the error in the canvas instead of the demo scene. Both were tested with a fake host, not live in LibreChat.
+
 ### Open WebUI
 
 [Open WebUI's 0.13.0 changelog](https://github.com/open-webui/open-webui/blob/v0.13.0/CHANGELOG.md) announces MCP Apps in a sandboxed iframe. Its [MCP documentation](https://docs.openwebui.com/features/extensibility/mcp/#mcp-apps) describes a 5 MB HTML resource limit, confirmation for each tool call from the app, and text-only app messages. The Open WebUI check in Issue #148 verified Streamable HTTP tools and reported no canvas. The Estampes canvas and image upload on 0.13.0 and later are **Not tested**.

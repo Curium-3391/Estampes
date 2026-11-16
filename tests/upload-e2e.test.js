@@ -227,3 +227,16 @@ test("LibreChat shows an upload explanation without sending the selected file", 
     assert.deepEqual(errors, []);
   } finally { await stack.close(); }
 });
+
+test("a failed image load shows why, not the bundled demo picture", { skip: noBrowser, timeout: 90000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { frame, errors } = await stack.open({
+      hostName: "LibreChat", result: () => stack.call("present_visual", { imageUrl: "http://example.com/photo.jpg" }),
+    });
+    await frame.locator("#load-state-text").filter({ hasText: "圖片沒有載入" }).waitFor({ timeout: 15000 });
+    assert.match(await frame.locator("#load-state-error").textContent(), /Only https image URLs are accepted/);
+    assert.equal(await frame.locator("#surface").isVisible(), false, "no demo picture behind a failed load");
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});

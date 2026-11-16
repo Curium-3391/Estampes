@@ -271,8 +271,29 @@ async function readMarksFile(entry, file) {
   return { marks, options: { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation } };
 }
 
+// Hosts that do not pass chat attachments to tools (LibreChat, Claude) leave
+// the model without a URL, and models then guess one ("attachment.internal",
+// an http:// link, a made-up path). A failed imageUrl says what to do instead,
+// so the next call is not another guess.
+const IMAGE_URL_HINT = "Use only a real public https image URL (one the user gave or you found); never guess or build a URL for a chat attachment. " +
+  "If the attachment does not reach Estampes, ask the user for such a URL or an existing imageId, or call present_visual with upload: true " +
+  "(on hosts that cannot upload, such as LibreChat, ask for a URL or imageId).";
+function imageUrlError(error, imageUrl) {
+  const code = error?.code ?? error?.cause?.code;
+  let host = "";
+  try { host = new URL(imageUrl).hostname; } catch {}
+  const what = code === "ENOTFOUND" || code === "EAI_AGAIN"
+    ? "Image URL host could not be found" + (host ? ": " + host : "")
+    : String(error?.message || error);
+  return new Error(what + ". " + IMAGE_URL_HINT);
+}
 async function loadImageInput({ image, imageUrl }) {
-  const bytes = await downloadImage(image ? image.download_url : imageUrl);
+  let bytes;
+  if (image) bytes = await downloadImage(image.download_url);
+  else {
+    try { bytes = await downloadImage(imageUrl); }
+    catch (error) { throw imageUrlError(error, imageUrl); }
+  }
   return intakeImage(bytes, { source: image ? "chat-file" : "url", fileName: image?.file_name ?? null });
 }
 const RegionSchema = z.object({
@@ -886,7 +907,7 @@ function makeServer() {
         "Do NOT also call present_visual_evidence for the same task.",
       inputSchema: z.object({
         image: ChatFileSchema.optional().describe("Image file from the conversation; loads and shows it in one call"),
-        imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
+        imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image file that the user gave or you found; never a guessed URL for a chat attachment"),
         imageId: ImageIdSchema.optional(),
         upload: z.boolean().optional().describe("Open an empty canvas where the user picks or photographs an image on their device. Use it when the user wants to show you a picture but no image file reaches this tool (no `image` parameter in this app, or the attachment is not passed to tools)."),
         scene: SceneSchema.optional().describe("Bundled demo scene; use only when there is no real image"),
@@ -2196,7 +2217,7 @@ function makeServer() {
         "Load a photo, scan or picture so Estampes can preprocess it (enhance, zoom, grid). To simply SHOW the user a photo with marks, call present_visual with the image directly instead; it loads it too. Pass `image` for a file the user attached or photographed in this conversation (hosts that pass attachments to tools), OR `imageUrl` for a public https image you found. If neither is possible (the host does not pass attachments), call present_visual with upload: true so the user picks or photographs the image in the canvas. Returns an imageId plus a preview image. Use the imageId with process_image (enhance, threshold, edges, zoom into a region) and overlay_grid (labelled grid for precise locating). Estampes never identifies content; you do, from the returned pixels.",
       inputSchema: z.object({
         image: ChatFileSchema.optional().describe("Image file from the conversation"),
-        imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
+        imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image file that the user gave or you found; never a guessed URL for a chat attachment"),
       }),
       outputSchema: z.object({
         kind: z.literal("estampes.image"),

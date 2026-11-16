@@ -41,6 +41,13 @@ test("image tools are discoverable with ChatGPT file params and fail safely",{ti
     const insecure=await client.callTool({name:"load_image",arguments:{imageUrl:"http://example.com/a.png"}});
     assert.equal(insecure.isError,true);
     assert.match(insecure.content[0].text,/https/);
+    // A failed URL tells the model not to guess one for a chat attachment.
+    assert.match(insecure.content[0].text,/never guess or build a URL for a chat attachment/);
+    assert.match(insecure.content[0].text,/upload: true/);
+    const unknown=await client.callTool({name:"present_visual",arguments:{imageUrl:"https://attachment.invalid/photo.jpg"}});
+    assert.equal(unknown.isError,true);
+    assert.match(unknown.content[0].text,/^Image URL host could not be found: attachment\.invalid\. /);
+    assert.match(unknown.content[0].text,/never guess/);
     const local=await client.callTool({name:"load_image",arguments:{imageUrl:"https://127.0.0.1/a.png"}});
     assert.match(local.content[0].text,/public/);
     const missing=await client.callTool({name:"process_image",arguments:{imageId:"img:0123456789abcdef"}});
