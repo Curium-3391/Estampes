@@ -2506,7 +2506,7 @@ function applyPolled(s,id){
  }else{
   if(Array.isArray(s.gestureGroups)){
    // A group with an unsent stroke exists only here until the send; the server cannot list it yet.
-   const draft=gestures.filter(g=>g.memberIds.some(id=>!sentIds.has(id)));
+   const draft=gestures.filter(g=>g.memberIds.some(id=>!sentIds.has(id)&&userMarks.some(m=>m.id===id)));
    setGestures(s.gestureGroups);
    const have=new Set(gestures.map(g=>g.key));
    gestures=[...gestures,...draft.filter(g=>!have.has(g.key))];
