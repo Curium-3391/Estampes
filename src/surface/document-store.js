@@ -30,7 +30,15 @@ export function createDocumentStore({ fetchChanges } = {}) {
         return "conflict";
       }
     }
-    if (!snapshot) return "ignored";
+    if (!snapshot) {
+      // "Unchanged" with a higher counter (the content went A, B, A): keep the snapshot, adopt the newer revision,
+      // so a late snapshot of the middle revision cannot overwrite it.
+      if (had && d.snapshot && revision.epoch === had.epoch && revision.hash === had.hash && revision.counter > had.counter) {
+        d.revision = revision; d.stale = false; d.missing = false; d.error = null;
+        return "ignored";
+      }
+      return "ignored";
+    }
     d.revision = revision; d.snapshot = snapshot; d.stale = false; d.missing = false; d.error = null;
     emit(id, d, gap ? { gap: true } : {});
     return "applied";

@@ -89,3 +89,13 @@ test("offline keeps the last snapshot, marks it stale, and recovers; missing is 
   assert.equal(store.get("gone").missing, true);
   assert.equal(r.missing, 1);
 });
+
+test("an unchanged answer with a newer counter keeps the snapshot and blocks a late middle revision", () => {
+  const store = createDocumentStore();
+  store.subscribe("d", () => {});
+  store.hydrate("d", rev(1, "A"), { n: "A" });
+  store.hydrate("d", rev(3, "A"), null); // content went A, B, A: "unchanged" at counter 3
+  assert.equal(store.get("d").revision.counter, 3);
+  assert.equal(store.hydrate("d", rev(2, "B"), { n: "B" }), "ignored", "the delayed snapshot of revision 2 is older");
+  assert.deepEqual(store.get("d").snapshot, { n: "A" });
+});
