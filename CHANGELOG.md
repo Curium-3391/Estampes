@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Workspaces: a merge, split or move (and its undo) changes two workspaces as
+  one unit. It is written first as one durable intent and rolled forward on the
+  next start or by the retry timer, so a crash or a failed write no longer
+  leaves one workspace changed and the other not (architecture review A04).
+  Reads of a workspace with an unfinished intent return the intent's value.
+- Workbench: a layout or panel change that hit a revision conflict retried
+  behind itself in the change queue, so it never finished and every later
+  move, resize, open or close in that widget waited forever (architecture
+  review A09). The retry now runs inside the same queued change.
+- Calculator plots: a canvas that cannot be read during a refresh (a storage
+  error) no longer marks the plot's link "removed" for good; the link stays
+  stale and is retried on the next refresh. Only a canvas that was read and
+  lacks the plot counts as deleted. Saving a new plot's link to its notebook
+  is retried on a passing error (architecture review A08).
+
 - Image, bundle, PDF and OAuth client-metadata downloads now check the address
   the connection actually uses, on every redirect hop, with the same address
   policy as module egress (architecture review A07). Before, a hostname was

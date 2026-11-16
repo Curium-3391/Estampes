@@ -50,7 +50,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "eb39000e05f127f488df8251a6a5dfdc2a5060c0e7bee5ef810345345f4a8166"
+      "sha256": "a9bca23fffdb421eeb0d0311ffb1c65858276f4a6b56be9e733efc4aa72dd2bd"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -274,7 +274,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "463325fc5490de477717084f27ecbd8656931233e28cde7163c48205a28eaa88"
+      "sha256": "a788a68aad9b857f5af440975e22fdea118fe65aad6d10ae0f1f1914954fe8a8"
     },
     {
       "path": "src/surface/bundle-extras.js",
@@ -294,7 +294,7 @@
     },
     {
       "path": "src/surface/refresh.js",
-      "sha256": "06f0f4eae468405016041709327f62d437be39c3fc7f811a16f6ed26e3b6572b"
+      "sha256": "f7f1290c4e8b59a690c439259767ebf9a536182c8ab42d781877be58137f9c11"
     },
     {
       "path": "src/surface/service.js",
@@ -318,7 +318,7 @@
     },
     {
       "path": "src/workspace.js",
-      "sha256": "0415a05c73307506cf4336ebddee56701b0f7d17572a6f8d121b45b79213ae28"
+      "sha256": "ef67c9153159eb4acd9be0eff776b1593062422a541bbd94a44d71bbfec23fb4"
     },
     {
       "path": "src/zip.js",
@@ -342,7 +342,7 @@
     },
     {
       "path": "public/workbench.js",
-      "sha256": "aa5eea69a0ea8c468c6c4d50f4514b38d47bd8e953c109717cb96804b041708c"
+      "sha256": "daa982b5d83552f5f653e9876852fb748aab5a0440ce79d21f10f2e40f293983"
     },
     {
       "path": "cas-service/estampes_cas/__init__.py",
