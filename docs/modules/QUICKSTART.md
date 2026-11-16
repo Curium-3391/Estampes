@@ -69,6 +69,8 @@ node scripts/estampes-module.js inbox
 
 The first `verify` exits with `signed by key mykey, which this server does not trust`. `trust` limits the key to ids beginning with `org.example`, so a key you were given for one prefix cannot publish another's modules. `inbox` lists `ok   org.example.labeler 0.1.0 signed by Example Author`.
 
+For publishing to many servers, put the package and a signed index on a GitHub Release instead; administrators then add your source once and `source sync` brings every update into the inbox. See [Distributing modules](DISTRIBUTION.md).
+
 ## 6. Install, enable, run
 
 Start a development server on the same storage folder (see the [development guide](../DEVELOPMENT.md#run-the-server)):
@@ -127,4 +129,4 @@ A package whose memory maximum is missing or above `limits.memoryMb`, or that im
 ## Where next
 
 - [Testing modules](TESTING.md): scene operations, permissions, revisions and transaction failures.
-- Publish: send the `.estpkg.json` and your public key to the administrator.
+- Publish: send the `.estpkg.json` and your public key to the administrator, or publish a package source ([Distributing modules](DISTRIBUTION.md)).

@@ -97,6 +97,8 @@ node scripts/estampes-module.js copy my.estpkg.json      # into <storage>/module
 node scripts/estampes-module.js verify my.estpkg.json
 ```
 
+Instead of copying files, the administrator can fetch a package from a URL such as a GitHub Release asset (`fetch <url> [--sha256 …]`) or add a publisher's signed index once and pull updates with `source sync`; both only fill the inbox with packages that pass these same checks. See [Distributing modules](modules/DISTRIBUTION.md).
+
 Then open the Store: the package appears under installable packages. Press install, confirm, and approve it on the server with `node scripts/estampes-module.js approve <planId>` (the Store shows the exact command). Installing does not enable: enabling is a second plan that shows the permissions.
 
 | Action | Needs |

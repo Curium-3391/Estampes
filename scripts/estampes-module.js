@@ -8,6 +8,13 @@
 //   pack <module.json> --out <file> [--key private.pem --key-id <id>]
 //                                     bundle a manifest (and --file name=path data files) into a package
 //   verify <package>                  check a package against this server's trusted keys
+//   index --out <file> --key private.pem --key-id <id> --publisher <name> --scope <prefix> <package>...
+//                                     signed index of your packages, to publish next to them (author)
+//   source add <name> <index-url> [--accept <fingerprint>] [--scope <prefix>]...
+//                                     pin a publisher's key from their index (shows the fingerprint first)
+//   source list | source remove <name> | source sync [name]
+//                                     fetch the newest verified packages of your sources into the inbox
+//   fetch <package-url> [--sha256 <hex>]   one package (e.g. a GitHub Release asset) into the inbox, verified
 //   trust <keyId> <public.pem> <publisher> <scope>...   trust a publisher key for module id prefixes
 //   inbox                             list packages waiting in the inbox
 //   approve <planId>                  approve a plan that needs administrator approval
@@ -26,12 +33,16 @@ import { createEgress, createSecrets, envName } from "../src/modules/egress.js";
 import { wasmRuntime, WASM_ABI, wasmFileOf, checkWasmPackage } from "../src/modules/runtimes/wasm.js";
 import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { createRegistry } from "../src/modules/registry.js";
+import { buildIndex, createSources } from "../src/modules/sources.js";
 import { createAudit } from "../src/modules/audit.js";
 
 const storage = process.env.ESTAMPES_STORAGE_DIR || "/data";
 const dir = join(storage, "modules");
 const [cmd, ...rest] = process.argv.slice(2);
 const flag = (name) => { const i = rest.indexOf("--" + name); return i >= 0 ? rest[i + 1] : undefined; };
+const flags = (name) => rest.flatMap((a, i) => (a === "--" + name && rest[i + 1] !== undefined ? [rest[i + 1]] : []));
+// Positional arguments: everything that is not a --flag or a flag's value.
+const positional = () => rest.filter((a, i) => !a.startsWith("--") && !(i > 0 && rest[i - 1].startsWith("--")));
 const die = (message) => { console.error("estampes-module: " + message); process.exit(1); };
 const version = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -120,6 +131,48 @@ try {
     const v = verifyBundle(bytes, { trusted: new Map([...trusted].map(([id, k]) => [id, { ...k, scopes: k.scopes ?? [] }])), allowUnsigned: process.env.ESTAMPES_MODULE_ALLOW_UNSIGNED === "1", coreVersion: version });
     console.log("OK " + v.manifest.id + " " + v.manifest.version + "  digest " + v.digest + (v.signer ? "  signed by " + v.signer.publisher + " (" + v.signer.keyId + ")" : "  UNSIGNED"));
     v.warnings.forEach((w) => console.log("warning: " + w));
+  } else if (cmd === "index") {
+    const out = flag("out"), key = flag("key"), keyId = flag("key-id"), publisher = flag("publisher"), scopes = flags("scope"), files = positional();
+    if (!out || !key || !keyId || !publisher || !scopes.length || !files.length) die("index --out estampes-index.json --key private.pem --key-id <id> --publisher <name> --scope <prefix> [--publisher-url https://...] <package>...");
+    const packages = [];
+    for (const f of files) packages.push({ bytes: await readFile(f), file: flag("url-base") ? flag("url-base").replace(/\/?$/, "/") + basename(f) : basename(f) });
+    const index = buildIndex({ publisher: { name: publisher, ...(flag("publisher-url") ? { url: flag("publisher-url") } : {}) }, keyId, privateKeyPem: await readFile(key, "utf8"), scopes, packages });
+    await writeFile(out, JSON.stringify(index, null, 2) + "\n");
+    const { fingerprintOf } = await import("../src/modules/sources.js");
+    console.log("Wrote " + out + " listing " + index.packages.map((p) => p.id + " " + p.version).join(", ") + ".\nPublish it next to the packages (same folder or release). Key fingerprint, for your README: " + fingerprintOf(index.publicKey));
+  } else if (cmd === "source" || cmd === "fetch") {
+    const sources = createSources({ dir, coreVersion: version, allowUnsigned: process.env.ESTAMPES_MODULE_ALLOW_UNSIGNED === "1" });
+    const [action, ...args] = cmd === "fetch" ? ["fetch", ...positional()] : positional();
+    if (action === "add") {
+      const [name, url] = args;
+      if (!name || !url) die("source add <name> <index-url> [--accept <fingerprint>] [--scope <prefix>]...");
+      try {
+        const added = await sources.add({ name, url, accept: flag("accept"), scopes: flags("scope") });
+        console.log("Added source " + added.name + ": " + added.publisher + " (key " + added.keyId + ", " + added.fingerprint + ") for " + added.scopes.join(", ") + ".\nNext: node scripts/estampes-module.js source sync " + added.name);
+      } catch (error) {
+        if (error.details) {
+          const d = error.details;
+          console.log("Publisher:   " + d.publisher.name + (d.publisher.url ? "  " + d.publisher.url : "") + "\nKey:         " + d.keyId + "\nFingerprint: " + d.fingerprint + "\nMay publish: " + d.scopes.join(", ") + "\nPackages:    " + (d.packages.join(", ") || "(none yet)"));
+        }
+        throw error;
+      }
+    } else if (action === "list") {
+      const list = await sources.list();
+      console.log(list.length ? list.map((s) => s.name + "  " + s.publisher + "  " + s.scopes.join(",") + "  " + s.fingerprint + "\n    " + s.url).join("\n") : "No sources. Add one with: source add <name> <index-url>");
+    } else if (action === "remove") {
+      const removed = await sources.remove(args[0] ?? die("source remove <name>"));
+      console.log("Removed source " + removed.name + " and the key it added. Installed modules and packages already in the inbox are not touched.");
+    } else if (action === "sync") {
+      const results = await sources.sync(args[0]);
+      for (const r of results) console.log(r.error ? "FAIL " + r.source + (r.id ? " " + r.id + " " + r.version : "") + ": " + r.error : "ok   " + r.source + " " + r.id + " " + r.version + "  -> inbox/" + r.file);
+      if (!results.length) console.log("No sources to sync.");
+      if (results.some((r) => !r.file)) process.exitCode = 1;
+      else if (results.length) console.log("Open the Estampes Store to install; installing still needs your approval (approve <planId>).");
+    } else if (action === "fetch") {
+      const got = await sources.fetchPackage(args[0] ?? die("fetch <package-url|path> [--sha256 <hex>]"), { sha256: flag("sha256") });
+      console.log("ok   " + got.id + " " + got.version + (got.signer ? " signed by " + got.signer.publisher + " (" + got.signer.keyId + ")" : " UNSIGNED") + "  -> inbox/" + got.file);
+      got.warnings.forEach((w) => console.log("warning: " + w));
+    } else die("source <add|list|remove|sync> ...");
   } else if (cmd === "trust") {
     const [keyId, pubPath, publisher, ...scopes] = rest;
     if (!keyId || !pubPath || !publisher || !scopes.length) die("trust <keyId> <public.pem> <publisher> <scope>...  (scope = module id prefix such as org.example)");
@@ -196,7 +249,7 @@ try {
     const [src] = rest; await ensureDirs(dir); await copyFile(src, join(dir, "inbox", basename(src)));
     console.log("Copied into the inbox.");
   } else {
-    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|trust|inbox|copy|approve|secret|init|test> ...  (see the comment at the top of this file)");
+    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|index|source|fetch|trust|inbox|copy|approve|secret|init|test> ...  (see the comment at the top of this file)");
     process.exitCode = cmd ? 1 : 0;
   }
 } catch (error) { die(String(error?.message || error)); }

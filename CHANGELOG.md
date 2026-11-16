@@ -10,6 +10,15 @@
   count, a `data` pattern with float tolerance, `summary`, or the `error` it must
   fail with). `init --runtime http` writes a starter that passes as it is. Real
   calls are unchanged; fixtures are not shown to the model.
+- Module distribution: publishers can host a signed index (`estampes.index/1`,
+  built with `index`) next to their packages on a GitHub Release.
+  Administrators `source add` it once, accept the key fingerprint explicitly
+  (the key is then pinned for the publisher's id prefixes), and `source sync`
+  brings the newest verified package of each module into the inbox. `fetch
+  <url> [--sha256]` imports one release asset. Fetches are https-only, to
+  public addresses, with checked redirects and size limits, and run only in
+  the administrator CLI; installing still needs the user's and the
+  administrator's approval. See docs/modules/DISTRIBUTION.md.
 - Canvas text entry (#82): select a user annotation to edit/clear its label and
   multiline note, or choose Text to place an editable standalone vector object.
   Text supports dragging, size/color, locked layers, revision checks and its own
