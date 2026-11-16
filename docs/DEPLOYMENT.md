@@ -62,6 +62,34 @@ With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`) and the default UVA store
 
 Memory stays the working copy (`ESTAMPES_CACHE_*`). When the cache drops an image or the server restarts, the next call that names its `imageId` reloads it and its canvas from disk; attaching the same file again in a new chat also brings its canvas back. `ESTAMPES_STORAGE_RETENTION_DAYS` removes folders that have not changed for that many days (0 = keep forever). Without a storage dir nothing is written to disk.
 
+### Connect LibreChat v0.8.9-rc1 on the same Docker machine
+
+Put the LibreChat server and Estampes containers on a shared Docker network and use the service name and container port. For default project and container names, an existing LibreChat container can join with `docker network connect estampes_default LibreChat`. Substitute your actual network and container names. For a persistent configuration, declare the shared network in both Compose projects. Compose's default loopback binding controls the **published host port**. The shared network uses port `8787` inside the Estampes container without opening that port to the LAN.
+
+In the following local example, open LibreChat at `http://localhost:3080` in the browser. Its sandbox must use a distinct, browser-reachable origin. Use dedicated HTTPS origins for both when serving remote users.
+
+```yaml
+mcpSettings:
+  apps: true
+  allowedAddresses:
+    - "estampes:8787"
+mcpAppSandbox:
+  url: http://127.0.0.1:3080/api/mcp/sandbox
+mcpServers:
+  estampes:
+    type: streamable-http
+    url: http://estampes:8787/mcp
+    requiresOAuth: false
+    headers:
+      Authorization: 'Bearer ${LIBRECHAT_ESTAMPES_KEY}'
+```
+
+Set `LIBRECHAT_ESTAMPES_KEY` in LibreChat's environment to the Estampes access key. Keep it out of committed YAML, the tool URL and the sandbox. Use the explicit OAuth override with this static Bearer setup because the unauthenticated Estampes challenge advertises OAuth resource metadata. If `mcpSettings.allowedDomains` is configured, use that allowlist for the Estampes service instead of `allowedAddresses`.
+
+For this example set `MCP_SANDBOX_FRAME_ANCESTORS=http://localhost:3080` in LibreChat's environment. Use your actual chat origin when deploying elsewhere. Check both the sandbox URL and its frame-ancestors policy if the iframe is blank. An MCP log entry `GET status=405` alone can be the optional Streamable HTTP SSE stream being declined while POST tool calls succeed.
+
+See [Compatibility](COMPATIBILITY.md#librechat-v089-rc1) for the live report, the image upload limitation and upstream behavior.
+
 ## Heroku
 
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/Curium-3391/Estampes)
