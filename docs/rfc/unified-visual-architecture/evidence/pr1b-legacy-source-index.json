@@ -50,7 +50,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "4bc284989c29c791e5abd1a68fd31e2c36001fe367fa0f888c84ac8320f4639a"
+      "sha256": "eb39000e05f127f488df8251a6a5dfdc2a5060c0e7bee5ef810345345f4a8166"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -58,7 +58,7 @@
     },
     {
       "path": "src/bundle.js",
-      "sha256": "a89aa94c0734ae1f07504aab266dde714defca230696b445f7839d5a09a800f9"
+      "sha256": "42c26061e3d1e60086185a2c5fce4dedc2371e650e85b0d3548e5b9bfeb5b73c"
     },
     {
       "path": "src/canvas-state.js",
@@ -130,7 +130,7 @@
     },
     {
       "path": "src/image-store.js",
-      "sha256": "772a058383f7516569749a8d67b97be7ea36dc39a2313f6f77e21c4075cd5cfa"
+      "sha256": "3a853c2b4b171a8124ad0c4577d3704451444262e0d2e124119238fdf534c69d"
     },
     {
       "path": "src/interaction-protocol.js",
@@ -190,7 +190,7 @@
     },
     {
       "path": "src/modules/registry.js",
-      "sha256": "3f784288098d07ebb42be0d7ed38d1634ecaee3bc10167bc3a205ba8e0aa3ff3"
+      "sha256": "2fb874493212bbc110bb6449f31c5c741c94899e40bae0359cad747ac6f23111"
     },
     {
       "path": "src/modules/router.js",
@@ -274,7 +274,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "21e42ee6ef3cb830fedbe2a882487dae734849c590d86e328f171b120667fb93"
+      "sha256": "463325fc5490de477717084f27ecbd8656931233e28cde7163c48205a28eaa88"
     },
     {
       "path": "src/surface/bundle-extras.js",
@@ -410,7 +410,7 @@
     },
     {
       "path": "compose.yaml",
-      "sha256": "d9c002c14877e4ea1675d4544cbfd4d9d4e5962436744d1a6ea01f3e173ae486"
+      "sha256": "bc6fb29a441576b4b8cb52966872c3c42cc319641a49e7343dcd8bbb40eea714"
     }
   ],
   "amendments": [
