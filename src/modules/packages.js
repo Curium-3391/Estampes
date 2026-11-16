@@ -119,25 +119,79 @@ async function atomicWrite(path, data, mode) {
 const readJson = async (path, fallback) => { try { return JSON.parse(await readFile(path, "utf8")); } catch { return fallback; } };
 
 // Runs a module's own examples through the same checks execute_module does,
-// against a throwaway canvas, so a broken package never becomes active.
+// against a throwaway canvas, so a broken package never becomes active. An
+// example's `expect` is checked too (see manifest.js), and an http example's
+// `mockResponse` is fed through the response mapping. Resolves to a report:
+// { examples, mocked, untested: ["capability: what was not exercised"] }.
 export function selfTest(manifest, runtime, { runtimes }) {
   const rt = runtimes[manifest.runtime.kind];
   if (!rt) throw new LifecycleError("runtime " + manifest.runtime.kind + " is not available on this server", "runtime");
   return (async () => {
+    const report = { examples: 0, mocked: 0, untested: [] };
     for (const cap of manifest.capabilities) {
       for (const ex of cap.examples ?? [{ description: "defaults", params: {} }]) {
-        let input;
+        const label = cap.id + " example " + JSON.stringify(ex.description);
+        let input, out, failure;
         try { input = validateValue(cap.inputSchema, ex.params ?? {}, cap.id + " example"); }
-        catch (error) { if (!cap.examples) continue; throw new LifecycleError("self-test: " + error.message, "selftest"); }
-        const out = await (rt.selfTest ?? rt.run).call(rt, { manifest, runtime }, cap.id, input, { canvas: { objects: [], marks: [] }, module: { id: manifest.id, version: manifest.version }, permissions: manifest.permissions, limits: manifest.limits ?? {} });
-        if (out?.operations?.length) {
-          const entry = { imageId: "img:0000000000000000", width: 1600, height: 1000, marks: new Map(), layers: [] };
-          try { applySceneOps(entry, out.operations, { author: "module", module: manifest.id, moduleVersion: manifest.version, capability: cap.id }); }
-          catch (error) { throw new LifecycleError("self-test of " + cap.id + ": " + error.message, "selftest"); }
+        catch (error) {
+          if (!cap.examples) break;
+          failure = new LifecycleError("self-test: " + error.message, "selftest");
+        }
+        if (!failure) {
+          try {
+            out = await (rt.selfTest ?? rt.run).call(rt, { manifest, runtime }, cap.id, input, { canvas: { objects: [], marks: [] }, module: { id: manifest.id, version: manifest.version }, permissions: manifest.permissions, limits: manifest.limits ?? {}, example: ex });
+            if (out?.operations?.length) {
+              const entry = { imageId: "img:0000000000000000", width: 1600, height: 1000, marks: new Map(), layers: [] };
+              try { applySceneOps(entry, out.operations, { author: "module", module: manifest.id, moduleVersion: manifest.version, capability: cap.id }); }
+              catch (error) { throw new LifecycleError("self-test of " + cap.id + ": " + error.message, "selftest"); }
+            }
+          } catch (error) { failure = error; }
+        }
+        if (cap.examples) report.examples++;
+        if (ex.mockResponse) report.mocked++;
+        if (out?.untested) report.untested.push(cap.id + " (" + ex.description + "): " + out.untested + " mapping not tested; add a mockResponse");
+        const want = ex.expect;
+        if (want?.error !== undefined) {
+          if (!failure) throw new LifecycleError("self-test of " + label + ": expected an error containing " + JSON.stringify(want.error) + ", but the call succeeded", "selftest");
+          const message = String(failure?.message || failure);
+          if (!message.includes(want.error)) throw new LifecycleError("self-test of " + label + ": failed with " + JSON.stringify(message) + ", expected an error containing " + JSON.stringify(want.error), "selftest");
+          continue;
+        }
+        if (failure) throw failure instanceof LifecycleError ? failure : new LifecycleError("self-test of " + label + ": " + String(failure?.message || failure), "selftest");
+        if (!want || out?.untested) continue;
+        const got = out ?? {};
+        if (want.operations !== undefined && (got.operations?.length ?? 0) !== want.operations) throw new LifecycleError("self-test of " + label + ": expected " + want.operations + " operation(s), got " + (got.operations?.length ?? 0), "selftest");
+        if (want.summary !== undefined && got.summary !== want.summary) throw new LifecycleError("self-test of " + label + ": expected summary " + JSON.stringify(want.summary) + ", got " + JSON.stringify(got.summary), "selftest");
+        if (want.data !== undefined) {
+          const diff = firstMismatch(want.data, got.data, "data");
+          if (diff) throw new LifecycleError("self-test of " + label + ": " + diff, "selftest");
         }
       }
     }
+    return report;
   })();
+}
+
+// `expect.data` is a pattern: objects match when every listed key matches
+// (extra keys in the result are fine), arrays need the same length, numbers
+// may differ by 1e-9 relative (floating point), everything else is ===.
+export function firstMismatch(want, got, at) {
+  const show = (v) => { const t = JSON.stringify(v); return t === undefined ? "nothing" : t.length > 80 ? t.slice(0, 77) + "..." : t; };
+  if (typeof want === "number" && typeof got === "number") {
+    return Math.abs(want - got) <= 1e-9 * Math.max(1, Math.abs(want), Math.abs(got)) ? null : at + ": expected " + want + ", got " + got;
+  }
+  if (Array.isArray(want)) {
+    if (!Array.isArray(got)) return at + ": expected an array, got " + show(got);
+    if (got.length !== want.length) return at + ": expected " + want.length + " item(s), got " + got.length;
+    for (let i = 0; i < want.length; i++) { const d = firstMismatch(want[i], got[i], at + "." + i); if (d) return d; }
+    return null;
+  }
+  if (want && typeof want === "object") {
+    if (!got || typeof got !== "object" || Array.isArray(got)) return at + ": expected an object, got " + show(got);
+    for (const k of Object.keys(want)) { const d = firstMismatch(want[k], got[k], at + "." + k); if (d) return d; }
+    return null;
+  }
+  return want === got ? null : at + ": expected " + show(want) + ", got " + show(got);
 }
 
 export function createPackages({ dir, registry, audit, runtimes, coreVersion, trustedKeys = [], allowUnsigned = false, reserved = new Set() }) {

@@ -88,7 +88,7 @@ export function registerModuleTools(server, deps) {
       const m = mod.manifest;
       const caps = m.capabilities.map((c) => ({ id: c.id, title: c.title, description: c.description, target: c.target,
         permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.async ? { async: true } : {}),
-        ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples } : {}) }));
+        ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples.map(({ description, params }) => ({ description, params })) } : {}) }));
       return {
         content: [{ type: "text", text: m.id + " " + m.version + " is " + STATE_TEXT[mod.record.state] + ". " + JSON.stringify(caps) }],
         structuredContent: { kind: "estampes.module_capabilities", module: m.id, version: m.version, state: mod.record.state, capabilities: caps },

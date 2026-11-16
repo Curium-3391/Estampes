@@ -22,7 +22,22 @@ const I18n = (max) => z.record(z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?
 const Https = z.string().max(300).url().refine((u) => u.startsWith("https://"), "must be an https URL");
 const Host = z.string().max(253).regex(/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "a lower-case public host name such as api.example.org");
 
-const Example = z.object({ description: Text(200), params: z.record(z.string(), z.unknown()) }).strict();
+// An example call. Examples are the module's own regression suite: `module
+// test` and every install run them. `mockResponse` (http runtime only) is the
+// reply the service would give, so the response mapping is tested offline;
+// `expect` states what the call must produce (or the error it must fail with).
+const MockResponse = z.object({
+  status: z.number().int().min(100).max(599).default(200),
+  json: z.unknown().optional(),
+  text: z.string().max(64 * 1024).optional(),
+}).strict().refine((r) => !(r.json !== undefined && r.text !== undefined), "give json or text, not both");
+const Expect = z.object({
+  operations: z.number().int().min(0).max(64).optional(),
+  data: z.unknown().optional(),
+  summary: Text(200).optional(),
+  error: Text(200).optional(),
+}).strict().refine((e) => !(e.error !== undefined && (e.operations !== undefined || e.data !== undefined || e.summary !== undefined)), "an example that expects an error cannot also expect a result");
+const Example = z.object({ description: Text(200), params: z.record(z.string(), z.unknown()), mockResponse: MockResponse.optional(), expect: Expect.optional() }).strict();
 // http runtime only: a request description, never a URL or code. `path` is
 // fixed; values from the input go in `query` and `body` as {"$param": name}.
 const HttpRequest = z.object({
@@ -173,6 +188,11 @@ export function validateManifest(raw, { coreVersion } = {}) {
       throw new ManifestError(where + (c.request ? ": request is only for the http runtime" : ": the http runtime needs a request"));
     }
     if (c.response && !c.request) throw new ManifestError(where + ": response is only for the http runtime");
+    (c.examples ?? []).forEach((ex, j) => {
+      if (ex.mockResponse && !c.request) throw new ManifestError(where + ".examples[" + j + "].mockResponse: only for the http runtime");
+      if (c.request && !ex.mockResponse && ex.expect && ex.expect.error === undefined) throw new ManifestError(where + ".examples[" + j + "].expect: an http example can only check a result against a mockResponse");
+      if (JSON.stringify(ex).length > 64 * 1024) throw new ManifestError(where + ".examples[" + j + "]: larger than 64 KB");
+    });
     if (c.request) {
       const hosts = m.network?.allow ?? [];
       if (!(c.permissions ?? m.permissions).includes("network.request.approved")) throw new ManifestError(where + ": a request needs network.request.approved");

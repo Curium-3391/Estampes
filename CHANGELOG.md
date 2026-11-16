@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- Module tests for http modules: an example can carry a `mockResponse` (a
+  recorded reply: status and JSON or raw text), which `module test` and the
+  install self-test run through the same response mapping a real call uses, so
+  OCR/AI/API modules are tested end to end offline. A `$response` path missing
+  from the mock reply is an error. Any example can state `expect` (operation
+  count, a `data` pattern with float tolerance, `summary`, or the `error` it must
+  fail with). `init --runtime http` writes a starter that passes as it is. Real
+  calls are unchanged; fixtures are not shown to the model.
+- Module distribution: publishers can host a signed index (`estampes.index/1`,
+  built with `index`) next to their packages on a GitHub Release.
+  Administrators `source add` it once, accept the key fingerprint explicitly
+  (the key is then pinned for the publisher's id prefixes), and `source sync`
+  brings the newest verified package of each module into the inbox. `fetch
+  <url> [--sha256]` imports one release asset. Fetches are https-only, to
+  public addresses, with checked redirects and size limits, and run only in
+  the administrator CLI; installing still needs the user's and the
+  administrator's approval. See docs/modules/DISTRIBUTION.md.
+- Module templates: `{"$each": …, "do": …}` makes one object (or row) per item
+  of an input or reply list, with `$item`, `$index` and `"as": "string"`. A
+  WebAssembly module can refuse a call with `{"error": "…"}`. Docs now list
+  every object property and the WebAssembly request contents.
+- External-developer acceptance (docs/modules/ACCEPTANCE.md): three reference
+  modules (`markers` declarative, `linefit` WebAssembly least squares,
+  `keywords` http analysis service) run from a clean folder through test, sign,
+  source, install, enable and run in CI. The recorded run was an internal
+  clean-room run; an outside developer's run is still open.
 - Surface widget (UVA Phase 3, PR-3A-2): extra viewers can be mounted next to the page viewer in an open shadow root (`window.estampesSurface.mountViewer`), each with its own camera, tool, selection, pointers and keys (a key goes only to the viewer it was typed in). `dispose()` cancels gestures, clears timers and frames, drops late host answers and removes listeners and its DOM; a resize ends a stroke in progress. The layout code (`public/workbench.js`) and the calculator panels (`public/calculator.js`) are now separate sources, inlined in the same order as before. New browser tests mount two viewers (different images and the same image twice). Real-host behaviour is not verified by the fake host.
 - Workspaces: a merge, split or move (and its undo) changes two workspaces as
   one unit. It is written first as one durable intent and rolled forward on the

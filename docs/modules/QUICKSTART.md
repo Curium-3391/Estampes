@@ -69,6 +69,8 @@ node scripts/estampes-module.js inbox
 
 The first `verify` exits with `signed by key mykey, which this server does not trust`. `trust` limits the key to ids beginning with `org.example`, so a key you were given for one prefix cannot publish another's modules. `inbox` lists `ok   org.example.labeler 0.1.0 signed by Example Author`.
 
+For publishing to many servers, put the package and a signed index on a GitHub Release instead; administrators then add your source once and `source sync` brings every update into the inbox. See [Distributing modules](DISTRIBUTION.md).
+
 ## 6. Install, enable, run
 
 Start a development server on the same storage folder (see the [development guide](../DEVELOPMENT.md#run-the-server)):
@@ -87,15 +89,17 @@ Run it in the same terminal environment (same `ESTAMPES_STORAGE_DIR`), then pres
 
 `add_label` targets an **existing canvas** (the template's `target` is `canvas`). Ask ChatGPT to plot a function with Graph first, then: *"Add the label 'hello' near the top left."* Expected: a text object appears on the canvas, in its own layer named after your module.
 
-Without ChatGPT, `tests/module-authoring.test.js` drives exactly this sequence over MCP (prepare, approve, commit, enable, `execute_module`); copy from it to script your own checks.
+Without ChatGPT, `tests/module-authoring.test.js` drives exactly this sequence over MCP (prepare, approve, commit, enable, `execute_module`), and `tests/module-acceptance.test.js` does it for a declarative, a WebAssembly and an http module, from a signed source to a result on the canvas; copy from them to script your own checks.
 
 ## Choosing a runtime
 
 | Runtime | Use when | Needs | Try it |
 | --- | --- | --- | --- |
-| `declarative` | Fixed templates: symbols, callouts, stamps | nothing | this page; `examples/modules/callout` |
-| `wasm` | Real computation, offline, sandboxed: no imports, no clock, no files, no network, killed after the call | a C/Rust/… toolchain that targets `wasm32` | `examples/modules/wasm-hello` |
-| `http` | A call to an external service the administrator approves | the service's host named in `network.allow`, secrets set with `secret set` | `examples/modules/ocr-http` |
+| `declarative` | Fixed templates: symbols, callouts, stamps, one object per input item (`$each`) | nothing | this page; `examples/modules/callout`, `examples/modules/markers` |
+| `wasm` | Real computation, offline, sandboxed: no imports, no clock, no files, no network, killed after the call | a C/Rust/… toolchain that targets `wasm32` | `examples/modules/wasm-hello`, `examples/modules/linefit` (least squares) |
+| `http` | A call to an external service the administrator approves | the service's host named in `network.allow`, secrets set with `secret set` | `examples/modules/ocr-http`, `examples/modules/keywords` |
+
+The template placeholders (`$param`, `$response`, `$each`, `$item`, `$index`, `as`) and every object property are listed in [Modules](../MODULES.md#templates).
 
 ### WebAssembly path
 
@@ -120,9 +124,12 @@ A package whose memory maximum is missing or above `limits.memoryMb`, or that im
 
 ### HTTP path
 
-`examples/modules/ocr-http/module.json` shows a capability with a `request` (fixed path; query and body filled from `{"$param": …}`) and a `response` mapped back to scene operations. The manifest must list hosts in `network.allow` and say in `network.dataFlow` what leaves the server; the Store shows both. `module test` never touches the network: it checks the manifest and that the request each example produces is allowed (host, path, headers, secrets declared), without sending it. The response mapping is not exercised by it. A real call needs the permission `network.request.approved`, the administrator's approval and, if declared, the secret. See [Talking to external services](../MODULES.md#talking-to-external-services-http-modules).
+`node scripts/estampes-module.js init mymodule org.example.mymodule --runtime http` writes a manifest that passes `test` as it is: one capability with a `request` (fixed path; query and body filled from `{"$param": …}`), a `response` mapped back to scene operations with `{"$response": "a.b"}`, and two examples with a `mockResponse` (a reply and a failure). `examples/modules/ocr-http/module.json` is a fuller one. The manifest must list hosts in `network.allow` and say in `network.dataFlow` what leaves the server; the Store shows both.
+
+`module test` never touches the network. It checks that the request each example produces is allowed (host, path, headers, secrets declared) without sending it and, for each example with a `mockResponse`, runs that reply through the same response mapping a real call uses, so a typo in a `$response` path or a reply your templates cannot turn into valid operations fails here, offline. Paste a real reply of your service (trimmed to 64 KB) into `mockResponse` and pin what you expect with `expect`; see [HTTP specifics](TESTING.md#http-specifics). A real call needs the permission `network.request.approved`, the administrator's approval and, if declared, the secret. See [Talking to external services](../MODULES.md#talking-to-external-services-http-modules).
 
 ## Where next
 
 - [Testing modules](TESTING.md): scene operations, permissions, revisions and transaction failures.
-- Publish: send the `.estpkg.json` and your public key to the administrator.
+- [External-developer acceptance](ACCEPTANCE.md): three complete reference modules (declarative, WebAssembly, http) and the protocol for checking these guides with someone new.
+- Publish: send the `.estpkg.json` and your public key to the administrator, or publish a package source ([Distributing modules](DISTRIBUTION.md)).

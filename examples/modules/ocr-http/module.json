@@ -73,7 +73,54 @@
           "description": "A short sentence",
           "params": {
             "text": "hello",
-            "lang": "en"
+            "lang": "en",
+            "x": 0.2,
+            "y": 0.3
+          },
+          "mockResponse": {
+            "status": 200,
+            "json": {
+              "result": {
+                "text": "hello",
+                "confidence": 0.98
+              }
+            }
+          },
+          "expect": {
+            "operations": 1,
+            "data": {
+              "text": "hello"
+            }
+          }
+        },
+        {
+          "description": "The service is down",
+          "params": {
+            "text": "hello"
+          },
+          "mockResponse": {
+            "status": 503,
+            "json": {
+              "error": "unavailable"
+            }
+          },
+          "expect": {
+            "error": "answered 503"
+          }
+        },
+        {
+          "description": "The service answers without text",
+          "params": {
+            "text": "hello"
+          },
+          "mockResponse": {
+            "status": 200,
+            "json": {
+              "result": {}
+            }
+          },
+          "expect": {
+            "error": "\"result.text\" not found in the reply"
           }
         }
       ],

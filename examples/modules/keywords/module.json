@@ -1,0 +1,61 @@
+{
+  "schema": "estampes.module/1",
+  "id": "org.acme.keywords",
+  "name": "Keyword analysis",
+  "description": "Sends a text to an external analysis service and shows its summary on the canvas and the weighted keywords in a card.",
+  "version": "1.0.0",
+  "publisher": { "name": "Acme Labs" },
+  "license": "MPL-2.0",
+  "category": "text",
+  "coreCompatibility": ">=0.20.0 <1.0.0",
+  "runtime": { "kind": "http", "entry": "request" },
+  "permissions": ["canvas.write", "network.request.approved", "module.secrets"],
+  "network": { "allow": ["api.analysis.example.org"], "dataFlow": "Sends the text you give it to api.analysis.example.org. Nothing else leaves the server." },
+  "secrets": [{ "name": "api_key", "label": "Analysis service API key" }],
+  "limits": { "timeMs": 8000, "outputKb": 64 },
+  "capabilities": [
+    {
+      "id": "analyze",
+      "title": "Analyze text",
+      "description": "Ask the service for a one-line summary and the main keywords of a text. The summary is written on the canvas at (x, y), normalized 0..1 from the top left; the keywords go in an info card.",
+      "target": "canvas",
+      "inputSchema": {
+        "type": "object", "additionalProperties": false, "required": ["text"],
+        "properties": {
+          "text": { "type": "string", "maxLength": 2000 },
+          "top": { "type": "integer", "minimum": 1, "maximum": 20 },
+          "x": { "type": "number", "minimum": 0, "maximum": 1 },
+          "y": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "request": {
+        "method": "POST", "path": "/v1/keywords",
+        "secretHeaders": { "Authorization": { "secret": "api_key", "prefix": "Bearer " } },
+        "body": { "text": { "$param": "text" }, "top": { "$param": "top", "default": 5 } }
+      },
+      "response": {
+        "data": "result",
+        "operations": [
+          { "op": "object.create", "type": "shape", "props": { "kind": "text", "x": { "$param": "x", "default": 0.05 }, "y": { "$param": "y", "default": 0.05 }, "text": { "$response": "result.summary" }, "size": 16 } },
+          { "op": "object.create", "type": "info-card", "props": { "title": "Keywords", "rows": [
+            { "$each": { "$response": "result.keywords" }, "max": 20, "do": { "label": { "$item": "term" }, "value": { "$item": "weight", "as": "string" } } }
+          ] } }
+        ]
+      },
+      "examples": [
+        { "description": "A typical answer", "params": { "text": "The inspection found a hairline crack near the weld and some surface rust.", "top": 3 },
+          "mockResponse": { "status": 200, "json": { "result": { "summary": "Crack near weld, light rust", "language": "en", "keywords": [ { "term": "crack", "weight": 0.81 }, { "term": "weld", "weight": 0.64 }, { "term": "rust", "weight": 0.42 } ] } } },
+          "expect": { "operations": 2, "data": { "summary": "Crack near weld, light rust", "keywords": [ { "term": "crack" }, { "term": "weld" }, { "term": "rust" } ] } } },
+        { "description": "Wrong API key", "params": { "text": "x" }, "mockResponse": { "status": 401, "json": { "error": "bad key" } }, "expect": { "error": "answered 401" } },
+        { "description": "The service changed its answer format", "params": { "text": "x" }, "mockResponse": { "status": 200, "json": { "summary": "no result wrapper" } }, "expect": { "error": "not found in the reply" } }
+      ],
+      "profile": {
+        "whenToUse": "A text whose gist and main terms should be shown next to a picture.",
+        "cost": { "latency": "seconds", "resource": "One request to the analysis service.", "billable": true },
+        "dataFlow": { "leavesServer": true, "sends": "The text you give it goes to api.analysis.example.org." },
+        "reliability": { "kind": "external", "note": "Summary and weights come from the service; check them against the text." },
+        "fallbacks": [ { "when": "the service is unreachable or the key is wrong", "then": "Say so and summarize the text yourself, marked as not from the service." } ]
+      }
+    }
+  ]
+}
