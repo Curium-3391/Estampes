@@ -57,8 +57,8 @@ test("the user moves and restyles an earlier mark, deletes GPT's, and cannot res
   assert.equal(entry.userEdits.at(-1).kind, "restyle-mark");
   applyCanvasChanges(entry, { annotations: [box("g2", 0.6)], resolve });
   const before = snap(entry);
-  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", color: "red" }], resolveUser }), /its color stay as the AI wrote them/);
-  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", x: 0.62, label: "mine now" }], resolveUser }), /its label stay as the AI wrote them/);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", color: "red" }], resolveUser }), /its color stays as the AI wrote it/);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "g2", x: 0.62, label: "mine now" }], resolveUser }), /its label stays as the AI wrote it/);
   assert.throws(() => editCanvas(entry, { layers: [{ id: "L1", name: "x" }], marks: [{ id: "nope" }], resolveUser }), /marks\[0\] \("nope"\): no such mark/);
   assert.throws(() => editCanvas(entry, { order: ["L1", "L1"], resolveUser }), /repeated/);
   assert.equal(snap(entry), before);

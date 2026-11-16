@@ -273,7 +273,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       // them; author, label, note and style stay the AI's (they are its claim).
       if (old.author !== "user") {
         const changed = ["label", "note", "color", "size", "pen", "smooth", "closed"].filter((k) => edit[k] !== undefined && edit[k] !== old[k]);
-        if (changed.length) throw fail("marks", i, edit.id, "the AI's marks can be moved, resized or reshaped, but its " + changed.join(", ") + " stay as the AI wrote them");
+        if (changed.length) throw fail("marks", i, edit.id, "the AI's marks can be moved, resized or reshaped, but its " + changed.join(", ") + (changed.length > 1 ? " stay as the AI wrote them" : " stays as the AI wrote it"));
       }
       if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
       let next;
