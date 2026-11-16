@@ -262,11 +262,20 @@ export async function after(capability, params, ctx, { output, scene, entry }) {
   const plots = new Set(canvasObjects(entry).filter((o) => o.type === "function-plot").map((o) => o.id));
   const objectId = params.object ?? scene.created.find((id) => plots.has(id));
   if (!objectId) return;
-  await deps.notebooks.mutate(d.notebookId, {}, (nb) => {
+  const link = (nb) => {
     const cell = nb.cells.find((c) => c.id === d.cellId);
     if (!cell) return nb;
     cell.links = (cell.links ?? []).filter((l) => !(l.canvas === entry.imageId && l.object === objectId));
     cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: d.domain, status: "fresh", at: new Date().toISOString() });
     return nb;
-  });
+  };
+  // The plot is already saved; a link lost to a passing storage error would
+  // leave a plot that never refreshes, so the write is tried a few times.
+  for (let attempt = 1; ; attempt++) {
+    try { await deps.notebooks.mutate(d.notebookId, {}, link); return; }
+    catch (error) {
+      if (attempt >= 3 || error?.code === "conflict") throw error;
+      await new Promise((r) => setTimeout(r, 50 * attempt));
+    }
+  }
 }

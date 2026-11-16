@@ -25,7 +25,7 @@
 import { randomBytes, createHash } from "node:crypto";
 import { canvasMarks, canvasLayers, setKeyOf, workspaceLinks, linksOf, pairLinks } from "./canvas-state.js";
 import {
-  ensureImage, saveCanvas, readSet, readMeta, restoreCanvas, saveWorkspaceFile, readWorkspaceFile, workspaceHistory, listWorkspaceFiles, SET_ID,
+  ensureImage, saveCanvas, readSet, readMeta, restoreCanvas, saveWorkspaceFiles, readWorkspaceFile, workspaceHistory, listWorkspaceFiles, SET_ID,
 } from "./storage.js";
 import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 import { protocolMark } from "./protocol.js";
@@ -237,11 +237,12 @@ async function commitDocs({ kind, before, after, sets = [], key, result }) {
     if (key) { doc.keys = [...(doc.keys ?? []), { key, token, result }].slice(-KEYS_KEEP); keyIndex.set(key, doc.id); }
     workspaces.set(doc.id, doc);
   }
-  const written = new Set();
   try {
+    // Copied sets first: a crash after them leaves only unreferenced copies.
+    // The workspaces are then saved as one change (saveWorkspaceFiles): all
+    // of them, or none.
     for (const entry of sets) await saveCanvas(entry, { tool: "workspace", changed: [], note: kind + " from " + entry.derivedFrom?.set });
-    await Promise.all(after.map((doc) => saveWorkspaceFile(doc, { at, kind, token, revision: doc.revision, items: doc.items.length })
-      .then(() => { written.add(doc.id); })));
+    await saveWorkspaceFiles(after.map((doc) => ({ doc, line: { at, kind, token, revision: doc.revision, items: doc.items.length } })));
   } catch (error) {
     // Not saved: forget the change and its idempotency key, so a retry
     // with the same key runs again instead of being acknowledged unsaved.
@@ -250,11 +251,6 @@ async function commitDocs({ kind, before, after, sets = [], key, result }) {
       if (r.held) workspaces.set(r.doc.id, r.prev); else workspaces.delete(r.doc.id);
       if (key) { if (r.indexed === undefined) keyIndex.delete(key); else keyIndex.set(key, r.indexed); }
     }
-    // A change over several workspaces may have reached some of them: put the
-    // previous document back there, so none keeps half of the change (or the
-    // idempotency key that would acknowledge a retry).
-    await Promise.all(saved.filter((r) => written.has(r.doc.id) && r.held && r.prev)
-      .map((r) => saveWorkspaceFile(r.prev, { kind: "rollback", token, revision: r.prev.revision }).catch(() => {})));
     throw error;
   }
   return { undoToken: token, revisions: Object.fromEntries(after.map((d) => [d.id, d.revision])) };
@@ -560,7 +556,7 @@ export function undoChange(workspaceId, token) {
       if (d.revision !== revision) throw new Error("Workspace " + id + " changed again after this (revision " + d.revision + "); undo the later change first");
       current.set(id, d);
     }
-    const after = [];
+    const after = [], snapshot = new Map([...current].map(([id, d]) => [id, clone(d)]));
     for (const { id, doc: was } of record.before) {
       const d = current.get(id);
       if (!d) continue;
@@ -574,7 +570,13 @@ export function undoChange(workspaceId, token) {
     }
     const at = now();
     for (const d of after) { d.revision += 1; d.updatedAt = at; workspaces.set(d.id, d); }
-    await Promise.all(after.map((d) => saveWorkspaceFile(d, { at, kind: "undo", token, revision: d.revision })));
+    try {
+      await saveWorkspaceFiles(after.map((d) => ({ doc: d, line: { at, kind: "undo", token, revision: d.revision } })));
+    } catch (error) {
+      // Not saved: none of the workspaces was written, so none is changed here either.
+      for (const [id, d] of current) { for (const k of Object.keys(d)) delete d[k]; Object.assign(d, snapshot.get(id)); }
+      throw error;
+    }
     return { undone: token, kind: record.kind, workspaces: after.map((d) => ({ id: d.id, revision: d.revision, ...(d.archived ? { archived: true } : {}) })) };
   });
 }

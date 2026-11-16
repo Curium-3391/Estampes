@@ -375,6 +375,13 @@ export function saveWorkspaceFile(doc, line) {
     if (line) await appendFile(join(root, "workspaces", hex + ".history.jsonl"), JSON.stringify(line) + "\n");
   }).catch((error) => log("error", "[storage] workspace save failed", { workspace: doc.id, error: String(error?.message || error) }));
 }
+// Several workspaces changed by one operation (a merge, split, move or undo).
+// In the UVA store they are kept together: once this resolves all are saved,
+// a crash included, and when it rejects none is. list: [{ doc, line }].
+export function saveWorkspaceFiles(list) {
+  if (records && list.length > 1) return records.writeMany(list.map(({ doc, line }) => ({ kind: "workspace", id: doc.id, value: doc, line }))).then(() => undefined);
+  return Promise.all(list.map(({ doc, line }) => saveWorkspaceFile(doc, line))).then(() => undefined);
+}
 export async function readWorkspaceFile(id) {
   if (records) { const doc = await records.read("workspace", String(id)); return doc?.id === id ? doc : null; }
   const hex = String(id).slice(3);

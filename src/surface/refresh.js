@@ -39,9 +39,16 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
       if (c.stale || c.error || !c.result) continue;
       for (const l of c.links ?? []) {
         if (l.canvas !== canvas || l.status === "fresh" || l.status === "removed") continue;
-        // A plot the user deleted is not recreated and not retried: the link is marked removed.
-        const alive = await host.canvases.ensure(canvas).then((e) => e.objects?.has(l.object), () => false);
-        if (!alive) {
+        // A plot the user deleted is not recreated and not retried: the link is
+        // marked removed. Only a canvas that was read and lacks the object
+        // counts as deleted; a canvas that could not be read (a storage
+        // error) leaves the link as it is, to be retried on the next refresh.
+        const state = await host.canvases.ensure(canvas).then((e) => (!e ? "unavailable" : e.objects?.has(l.object) ? "alive" : "missing"), () => "unavailable");
+        if (state === "unavailable") {
+          out.failed.push({ cell: c.id, object: l.object, canvas, reason: "the canvas " + canvas + " could not be read; the plot was left as it is and will be retried" });
+          continue;
+        }
+        if (state === "missing") {
           await notebooks.mutate(notebookId, {}, (d) => { const link = d.cells.find((x) => x.id === c.id)?.links?.find((x) => x.object === l.object && x.canvas === canvas); if (link) link.status = "removed"; return d; });
           out.failed.push({ cell: c.id, object: l.object, canvas, reason: "the plot " + l.object + " was removed from the canvas" });
           continue;

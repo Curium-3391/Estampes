@@ -3,6 +3,21 @@
 ## Unreleased
 
 - Surface widget (UVA Phase 3, PR-3A-2): extra viewers can be mounted next to the page viewer in an open shadow root (`window.estampesSurface.mountViewer`), each with its own camera, tool, selection, pointers and keys (a key goes only to the viewer it was typed in). `dispose()` cancels gestures, clears timers and frames, drops late host answers and removes listeners and its DOM; a resize ends a stroke in progress. The layout code (`public/workbench.js`) and the calculator panels (`public/calculator.js`) are now separate sources, inlined in the same order as before. New browser tests mount two viewers (different images and the same image twice). Real-host behaviour is not verified by the fake host.
+- Workspaces: a merge, split or move (and its undo) changes two workspaces as
+  one unit. It is written first as one durable intent and rolled forward on the
+  next start or by the retry timer, so a crash or a failed write no longer
+  leaves one workspace changed and the other not (architecture review A04).
+  Reads of a workspace with an unfinished intent return the intent's value.
+- Workbench: a layout or panel change that hit a revision conflict retried
+  behind itself in the change queue, so it never finished and every later
+  move, resize, open or close in that widget waited forever (architecture
+  review A09). The retry now runs inside the same queued change.
+- Calculator plots: a canvas that cannot be read during a refresh (a storage
+  error) no longer marks the plot's link "removed" for good; the link stays
+  stale and is retried on the next refresh. Only a canvas that was read and
+  lacks the plot counts as deleted. Saving a new plot's link to its notebook
+  is retried on a passing error (architecture review A08).
+
 - Image, bundle, PDF and OAuth client-metadata downloads now check the address
   the connection actually uses, on every redirect hop, with the same address
   policy as module egress (architecture review A07). Before, a hostname was

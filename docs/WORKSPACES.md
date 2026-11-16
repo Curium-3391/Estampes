@@ -61,6 +61,18 @@ After a commit the server reads the workspace back and compares its totals with 
 
 Each change returns an `undoToken`. The last 10 are kept per workspace. Undo is refused when a workspace changed again since; undo the later change first. Marks drawn with `present_visual` are not part of a workspace change and are not undone by it.
 
+## Crash safety
+
+A merge, split or move changes two workspaces, and undoing it changes them back. With the UVA store (the default with a storage folder), such a change is saved as one unit:
+
+1. Copied canvases (mode `copy`) are saved first. They are new, so a crash right after them only leaves copies that nothing shows.
+2. One **intent** is written durably to `<storage>/uva-pending/intents/<token>.json`. It holds every changed workspace with the change-log line and the sequence number each workspace had before. The change is acknowledged from this point.
+3. Each workspace is then written as usual, and the intent is removed once all are.
+
+If the server stops, or a workspace cannot be written, between steps 2 and 3, the intent stays. It is **rolled forward** on the next start and by the periodic retry: a workspace still at its earlier sequence number gets the new value, and one that already has it, or was changed again later, is left alone. Rolling forward twice changes nothing. Until then, reading such a workspace returns the intent's value, so the change never shows in one workspace and not the other. If the intent itself cannot be written, the change fails and neither workspace changes.
+
+The intents folder is part of the storage folder, so a backup of both roots ([Backup](BACKUP-RESTORE.md)) carries an unfinished intent along. `ESTAMPES_CANVAS_STORE=legacy` has no intents: there each workspace file is written on its own.
+
 ## Single and paired canvases
 
 `get_workspace_state`, `merge_workspaces` and `split_workspace` accept `img:<hex>` (a single canvas) and `img:<a>+img:<b>` (a paired view) wherever they accept a workspace. These are read as workspaces on the fly (`legacy: { imageId, pairImageId }`, items `wi-1` and `wi-2`) without converting or rewriting anything; left and right become placement only.
