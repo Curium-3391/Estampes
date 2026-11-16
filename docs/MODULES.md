@@ -148,6 +148,8 @@ Declarative `operations`, and an http capability's `request` and `response.opera
 
 Any of them may add `"default": value` (used when the value is absent) and `"as": "string"` (turns a number or boolean into text, for example for an info-card `value` or a text label).
 
+**Arithmetic.** `{"$calc": "x + 0.03", "with": {"x": {"$item": "x"}}}` evaluates an expression over named numbers (at most 8, lower-case names). It uses Estampes's own expression parser, the one function plots use (`+ - * / ^`, `min`, `max`, `abs`, `sqrt`, `round`, trigonometry, `pi` …), never JavaScript. A value that is not a number, or a result that is not finite, fails the call. `"as": "string"` works here too.
+
 **Lists.** An element of a template array of the form `{"$each": <placeholder>, "do": <template>, "max": 20}` is replaced by one copy of `do` per item of the list the placeholder gives (`max` defaults to 64, at most 200). It works for operations (one object per detected thing) and inside props (one info-card row per keyword). Example, one ring per input point:
 
 ```json
@@ -155,7 +157,7 @@ Any of them may add `"default": value` (used when the value is absent) and `"as"
   "props": { "kind": "circle", "x": { "$item": "x" }, "y": { "$item": "y" }, "r": 0.02 } } }
 ```
 
-Templates do not calculate: there is no arithmetic, so a label cannot be offset from its marker by the template; take both positions as input, or use a WebAssembly module.
+For example, `examples/modules/markers` puts each label beside its ring with `$calc`, and `examples/modules/regions` lifts a label above its box with `max(y - 0.02, 0)`.
 
 **Referring to an object from the same batch.** Give the creating operation `"ref": "ax"` and use `"$ax"` (a dollar sign and the ref) where an object id is expected, for example a shape's `frame`. See `examples/modules/linefit`.
 
@@ -166,6 +168,7 @@ A guided walkthrough is in the [module quick start](modules/QUICKSTART.md); [Tes
 ```
 node scripts/estampes-module.js init mymodule org.example.mymodule            # or --runtime wasm / http
 node scripts/estampes-module.js test mymodule/module.json                     # manifest + examples, like an install
+node scripts/estampes-module.js try mymodule/module.json <capability> --example 1 --out result.png   # one run, offline, with a picture of the result
 node scripts/estampes-module.js keygen mykey                                  # once
 node scripts/estampes-module.js pack mymodule/module.json --out org.example.mymodule.estpkg.json --key mykey.private.pem --key-id mykey [--file module.wasm=mymodule/module.wasm]
 ```
@@ -198,7 +201,15 @@ Every request goes out through one place, `src/modules/egress.js`, which enforce
 
 Installing never sends anything: the self-test checks the requests the examples would make and runs each example's `mockResponse` (a recorded reply) through the response mapping, so the conversion from reply to scene operations is tested offline (see [HTTP specifics](modules/TESTING.md#http-specifics)).
 
-Besides JSON, a request can carry a URL-encoded `form` or a `multipart` body with a file part (the image's bytes; needs `asset.read.selected`), and any string in a body may contain `${secret:name}` for a declared secret, which the server fills in. The built-in module below uses these; declarative `http` modules do not send image pixels yet.
+Besides JSON, a request can carry a URL-encoded `form` or a `multipart` body with a file part (the image's bytes; needs `asset.read.selected`), and any string in a body may contain `${secret:name}` for a declared secret, which the server fills in. The built-in module below uses these. A declarative `http` module can send the target canvas's **original image** (as stored: JPEG, PNG or WebP; never overlays or other canvases) with a multipart request:
+
+```json
+"request": { "method": "POST", "path": "/v1/detect",
+  "multipart": { "fields": { "prompt": { "$param": "prompt" } },
+                 "file": { "field": "image", "source": "canvas-image" } } }
+```
+
+It needs `asset.read.selected` (validated in the manifest), a target canvas, and, like every request, `network.request.approved` and the administrator's approval; `network.dataFlow` and the profile must say the image is uploaded. In `module test` and the install self-test a 1×1 placeholder PNG stands in for the image, so nothing real is read. Example: `examples/modules/regions` (an external detector whose boxes are drawn with `$each`).
 
 ## Background jobs
 

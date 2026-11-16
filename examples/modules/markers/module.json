@@ -3,13 +3,20 @@
   "id": "org.acme.markers",
   "name": "Numbered markers",
   "description": "Puts numbered markers with short labels on a canvas, for pointing at things in any picture.",
-  "version": "1.0.0",
-  "publisher": { "name": "Acme Labs" },
+  "version": "1.1.0",
+  "publisher": {
+    "name": "Acme Labs"
+  },
   "license": "MPL-2.0",
   "category": "diagram",
   "coreCompatibility": ">=0.20.0 <1.0.0",
-  "runtime": { "kind": "declarative", "entry": "operations" },
-  "permissions": ["canvas.write"],
+  "runtime": {
+    "kind": "declarative",
+    "entry": "operations"
+  },
+  "permissions": [
+    "canvas.write"
+  ],
   "capabilities": [
     {
       "id": "place_markers",
@@ -17,29 +24,193 @@
       "description": "Draw a numbered ring with a label for each point. Points are normalized 0..1 from the top left of the canvas.",
       "target": "canvas",
       "inputSchema": {
-        "type": "object", "additionalProperties": false, "required": ["markers"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "markers"
+        ],
         "properties": {
-          "markers": { "type": "array", "minItems": 1, "maxItems": 20, "items": {
-            "type": "object", "additionalProperties": false, "required": ["x", "y", "label"],
-            "properties": {
-              "x": { "type": "number", "minimum": 0, "maximum": 1 },
-              "y": { "type": "number", "minimum": 0, "maximum": 1 },
-              "label": { "type": "string", "maxLength": 40 }
-            } } },
-          "color": { "type": "string", "enum": ["red", "gold", "blue", "green", "magenta", "cyan"] }
+          "markers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y",
+                "label"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 40
+                }
+              }
+            }
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "red",
+              "gold",
+              "blue",
+              "green",
+              "magenta",
+              "cyan"
+            ]
+          }
         }
       },
       "examples": [
-        { "description": "Two markers", "params": { "markers": [ { "x": 0.2, "y": 0.3, "label": "crack" }, { "x": 0.7, "y": 0.6, "label": "stain" } ], "color": "red" },
-          "expect": { "operations": 6 } },
-        { "description": "Out of range", "params": { "markers": [ { "x": 1.5, "y": 0.3, "label": "x" } ] }, "expect": { "error": "must be <= 1" } }
+        {
+          "description": "Two markers",
+          "params": {
+            "markers": [
+              {
+                "x": 0.2,
+                "y": 0.3,
+                "label": "crack"
+              },
+              {
+                "x": 0.7,
+                "y": 0.6,
+                "label": "stain"
+              }
+            ],
+            "color": "red"
+          },
+          "expect": {
+            "operations": 6
+          }
+        },
+        {
+          "description": "Out of range",
+          "params": {
+            "markers": [
+              {
+                "x": 1.5,
+                "y": 0.3,
+                "label": "x"
+              }
+            ]
+          },
+          "expect": {
+            "error": "must be <= 1"
+          }
+        }
       ],
       "operations": [
-        { "$each": { "$param": "markers" }, "do": { "op": "object.create", "type": "shape", "props": { "kind": "circle", "x": { "$item": "x" }, "y": { "$item": "y" }, "r": 0.02, "style": { "color": { "$param": "color", "default": "red" }, "width": 3 } } } },
-        { "$each": { "$param": "markers" }, "do": { "op": "object.create", "type": "shape", "props": { "kind": "text", "x": { "$item": "x" }, "y": { "$item": "y" }, "text": { "$index": 1, "as": "string" }, "size": 14 } } },
-        { "$each": { "$param": "markers" }, "do": { "op": "object.create", "type": "shape", "props": { "kind": "text", "x": { "$item": "x" }, "y": { "$item": "y" }, "text": { "$item": "label" }, "size": 12 } } }
+        {
+          "$each": {
+            "$param": "markers"
+          },
+          "do": {
+            "op": "object.create",
+            "type": "shape",
+            "props": {
+              "kind": "circle",
+              "x": {
+                "$item": "x"
+              },
+              "y": {
+                "$item": "y"
+              },
+              "r": 0.02,
+              "style": {
+                "color": {
+                  "$param": "color",
+                  "default": "red"
+                },
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "$each": {
+            "$param": "markers"
+          },
+          "do": {
+            "op": "object.create",
+            "type": "shape",
+            "props": {
+              "kind": "text",
+              "x": {
+                "$item": "x"
+              },
+              "y": {
+                "$item": "y"
+              },
+              "text": {
+                "$index": 1,
+                "as": "string"
+              },
+              "size": 14,
+              "style": {
+                "color": {
+                  "$param": "color",
+                  "default": "red"
+                }
+              }
+            }
+          }
+        },
+        {
+          "$each": {
+            "$param": "markers"
+          },
+          "do": {
+            "op": "object.create",
+            "type": "shape",
+            "props": {
+              "kind": "text",
+              "x": {
+                "$calc": "x + 0.03",
+                "with": {
+                  "x": {
+                    "$item": "x"
+                  }
+                }
+              },
+              "y": {
+                "$item": "y"
+              },
+              "text": {
+                "$item": "label"
+              },
+              "size": 12,
+              "style": {
+                "color": {
+                  "$param": "color",
+                  "default": "red"
+                }
+              }
+            }
+          }
+        }
       ],
-      "profile": { "whenToUse": "Point at several places in a picture with numbers and short labels.", "cost": { "latency": "instant" }, "reliability": { "kind": "exact", "note": "Draws exactly the points given." } }
+      "profile": {
+        "whenToUse": "Point at several places in a picture with numbers and short labels.",
+        "cost": {
+          "latency": "instant"
+        },
+        "reliability": {
+          "kind": "exact",
+          "note": "Draws exactly the points given."
+        }
+      }
     }
   ]
 }

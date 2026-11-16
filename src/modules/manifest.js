@@ -48,7 +48,17 @@ const HttpRequest = z.object({
   headers: z.record(z.string(), z.string().max(200)).optional(),
   secretHeaders: z.record(z.string(), z.object({ secret: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/), prefix: z.string().max(40).optional() }).strict()).optional(),
   body: z.unknown().optional(),
-}).strict();
+  // A multipart/form-data body: text fields (templates) and, optionally, the
+  // target canvas's original image as a file part (needs asset.read.selected).
+  multipart: z.object({
+    fields: z.record(z.string().regex(/^[A-Za-z0-9_.-]{1,40}$/), z.unknown()).optional(),
+    file: z.object({
+      field: z.string().regex(/^[A-Za-z0-9_.-]{1,40}$/),
+      source: z.literal("canvas-image"),
+      filename: z.string().regex(/^[A-Za-z0-9_. -]{1,80}$/).optional(),
+    }).strict().optional(),
+  }).strict().optional(),
+}).strict().refine((r) => !(r.body !== undefined && r.multipart), "a request has one body: body or multipart").refine((r) => !((r.body !== undefined || r.multipart) && r.method === "GET"), "only POST may carry a body");
 const HttpResponse = z.object({
   // Scene operations; {"$response": "a.b.0.c"} reads the JSON reply, {"$param": name} the input.
   operations: z.array(z.record(z.string(), z.unknown())).max(64).optional(),
@@ -199,6 +209,10 @@ export function validateManifest(raw, { coreVersion } = {}) {
       if (c.request.host ? !hosts.includes(c.request.host) : hosts.length !== 1) throw new ManifestError(where + ".request.host: name one of network.allow" + (hosts.length === 1 ? "" : " (there is more than one)"));
       for (const ref of Object.values(c.request.secretHeaders ?? {})) {
         if (!m.secrets?.some((x) => x.name === ref.secret)) throw new ManifestError(where + ".request.secretHeaders: secret " + ref.secret + " is not declared in manifest.secrets");
+      }
+      if (c.request.multipart?.file) {
+        if (!(c.permissions ?? m.permissions).includes("asset.read.selected")) throw new ManifestError(where + ".request.multipart.file: sending the canvas image needs asset.read.selected");
+        if (c.target === "none") throw new ManifestError(where + ".request.multipart.file: sending the canvas image needs a target canvas");
       }
       if (JSON.stringify(c.request).length > 16 * 1024) throw new ManifestError(where + ".request: larger than 16 KB");
     }

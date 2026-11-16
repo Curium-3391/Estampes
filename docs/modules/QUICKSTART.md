@@ -44,6 +44,14 @@ Break it on purpose to see how errors read. Change an example to `"x": 2` and ru
 estampes-module: self-test: add_label example.x: must be <= 1
 ```
 
+To see what a call produces, run it once on a scratch canvas and get a picture, still offline and without a server:
+
+```sh
+node scripts/estampes-module.js try mymodule/module.json add_label --params '{"x":0.1,"y":0.1,"text":"hello"}' --out result.png
+```
+
+It prints the objects it created (and the `data`), writes `result.png`, and takes `--example <n>` instead of `--params` to run one of your examples, or `--image photo.jpg` to draw on your own picture. For an http module, `try` uses an example's `mockResponse` and never calls the network.
+
 Other messages you will meet: a capability that targets a canvas without `canvas.write` (`needs canvas.write`), a template with an invalid property (`operations[0]: props.kind: Invalid option …`), or an operation on something that does not exist (`operations[1]: no such object`). Fix the manifest and rerun until it prints `OK`.
 
 ## 4. Sign and pack it

@@ -127,3 +127,65 @@ test("templates: $each, $item, $index and as: string", async () => {
   assert.throws(() => fillTemplate([{ $each: { $param: "s" }, do: 1, max: 500 }], { s: [] }), /max must be/);
   assert.throws(() => fillTemplate([{ $each: { $param: "s" } }], { s: [] }), /\$each takes/);
 });
+
+test("http image upload: manifest rules and refusals", async () => {
+  const regions = async () => JSON.parse(await readFile("examples/modules/regions/module.json", "utf8"));
+  let m = await regions();
+  m.permissions = m.permissions.filter((p) => p !== "asset.read.selected");
+  assert.throws(() => validateManifest(m), /needs asset\.read\.selected/);
+  m = await regions();
+  m.capabilities[0].target = "none";
+  assert.throws(() => validateManifest(m), /needs a target canvas/);
+  m = await regions();
+  m.capabilities[0].request.method = "GET";
+  assert.throws(() => validateManifest(m), /only POST may carry a body/);
+  m = await regions();
+  m.capabilities[0].request.body = { a: 1 };
+  assert.throws(() => validateManifest(m), /one body/);
+  m = await regions();
+  m.capabilities[0].request.multipart.file.source = "/etc/passwd";
+  assert.throws(() => validateManifest(m), /canvas-image/);
+
+  // At run time: no readSource (permission not granted or no canvas) and a blank canvas are refused before anything is sent.
+  const sent = [];
+  const rt = createHttpRuntime({ egress: createEgress({ secrets: createSecrets({ env: { ESTAMPES_MODULE_SECRET_ORG_DACME_DREGIONS_SAPI_KEY: "k-123456789" } }), transport: async (r) => { sent.push(r); return { status: 200, body: Buffer.from("{}") }; } }) });
+  const mod = { manifest: validateManifest(await regions()) };
+  const granted = mod.manifest.permissions;
+  await assert.rejects(rt.run(mod, "detect", {}, { permissions: granted }), /needs asset\.read\.selected and a canvas/);
+  await assert.rejects(rt.run(mod, "detect", {}, { permissions: granted, readSource: async () => null }), /no image to send/);
+  await assert.rejects(rt.run(mod, "detect", {}, { permissions: granted, readSource: async () => Buffer.from("GIF89a...") }), /not JPEG, PNG or WebP/);
+  await assert.rejects(rt.run(mod, "detect", {}, { permissions: granted.filter((p) => p !== "asset.read.selected"), readSource: async () => Buffer.from([0xff, 0xd8, 0xff, 0]) }), /permission to read the image/);
+  assert.equal(sent.length, 0);
+});
+
+test("templates: $calc uses the safe expression parser", async () => {
+  const { fillTemplate } = await import("../src/modules/runtimes/declarative.js");
+  assert.equal(fillTemplate({ $calc: "x + 0.03", with: { x: { $param: "x" } } }, { x: 0.5 }), 0.53);
+  assert.equal(fillTemplate({ $calc: "2i+1", with: { i: { $param: "i" } }, as: "string" }, { i: 3 }), "7");
+  assert.throws(() => fillTemplate({ $calc: "x", with: { x: { $param: "x" } } }, { x: "1" }), /x is not a number/);
+  assert.throws(() => fillTemplate({ $calc: "1/x", with: { x: { $param: "x" } } }, { x: 0 }), /no finite value/);
+  assert.throws(() => fillTemplate({ $calc: "constructor", with: {} }, {}), /Unknown name/);
+  assert.throws(() => fillTemplate({ $calc: "x", with: { X: 1 } }, {}), /lower-case/);
+});
+
+test("module try runs one capability offline and renders the scratch canvas", async () => {
+  const work = await mkdtemp(join(tmpdir(), "estampes-try-"));
+  try {
+    let r = cli(work, "try", join(process.cwd(), "examples/modules/markers/module.json"), "place_markers", "--params", JSON.stringify({ markers: [{ x: 0.5, y: 0.5, label: "here" }] }), "--out", "out.png");
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /^OK org\.acme\.markers place_markers/);
+    assert.match(r.stdout, /shape:text {2}\{"kind":"text","x":0\.53/);
+    const png = await readFile(join(work, "out.png"));
+    assert.equal(png.subarray(1, 4).toString(), "PNG");
+    r = cli(work, "try", join(process.cwd(), "examples/modules/linefit/module.json"), "fit_line", "--example", "1");
+    assert.match(r.stdout, /data: \{"slope":2,"intercept":1,"r2":1,"n":4\}/);
+    r = cli(work, "try", join(process.cwd(), "examples/modules/keywords/module.json"), "analyze", "--example", "1");
+    assert.match(r.stdout, /mock reply/);
+    assert.match(r.stdout, /info-card/);
+    r = cli(work, "try", join(process.cwd(), "examples/modules/keywords/module.json"), "analyze", "--params", "{\"text\":\"x\"}");
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /never calls the network/);
+    r = cli(work, "try", join(process.cwd(), "examples/modules/markers/module.json"), "place_markers", "--params", "{\"markers\":[{\"x\":3,\"y\":0,\"label\":\"x\"}]}");
+    assert.match(r.stderr, /must be <= 1/);
+  } finally { await rm(work, { recursive: true, force: true }); }
+});

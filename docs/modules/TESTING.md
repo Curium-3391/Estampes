@@ -8,6 +8,7 @@ Reference: [Module quick start](QUICKSTART.md), [Modules](../MODULES.md), [Devel
 
 | Level | Question it answers | Tool | Needs a server? |
 | --- | --- | --- | --- |
+| 0. One run | What does this call draw? | `node scripts/estampes-module.js try module.json <capability> --example 1 --out result.png` | no |
 | 1. Manifest and examples | Is the manifest valid for this core, do my examples produce operations the core accepts, and (http) does my response mapping work on a recorded reply? | `node scripts/estampes-module.js test module.json` | no |
 | 2. Package | Is the package intact, signed and trusted for this id? | `pack`, `verify`, `trust`, `inbox` | no |
 | 3. Scene operations | Does the core accept my batches, and does a refused batch change nothing? | unit tests on `applySceneOps` (`tests/scene-ops.test.js`) | no |
