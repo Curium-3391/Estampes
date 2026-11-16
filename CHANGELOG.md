@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.1 — Surface viewers, workspace and module fixes
+
 - Module tests for http modules: an example can carry a `mockResponse` (a
   recorded reply: status and JSON or raw text), which `module test` and the
   install self-test run through the same response mapping a real call uses, so
