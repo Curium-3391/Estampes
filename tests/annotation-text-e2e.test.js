@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import sharp from "sharp";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
 
+// The workbench bar fills in after the canvas has drawn (its own
+// surface_get_state call) and pushes the canvas down. Coordinates taken
+// before that land on the wrong spot once the bar appears, so wait for it.
+const settled=ui=>ui.frame.locator("#wb-bar:not(:empty)").waitFor();
 async function point(ui,x,y) {
+  await settled(ui);
   return ui.frame.locator("#surface").evaluate((svg,[x,y])=>{const p=svg.createSVGPoint();p.x=x*Number(svg.getAttribute("viewBox").split(" ")[2]);p.y=y*Number(svg.getAttribute("viewBox").split(" ")[3]);const q=p.matrixTransform(svg.getScreenCTM());return {x:q.x,y:q.y};},[x,y]);
 }
 const tap=async(ui,p,touch)=>touch?ui.page.touchscreen.tap(p.x,p.y):ui.page.mouse.click(p.x,p.y);
@@ -37,7 +42,7 @@ for(const touch of [false,true])test("type, drag, undo and reopen vector text an
     await ui.frame.locator("#text-redo").click();
     await rendered.first().waitFor();
     await ui.frame.locator('[data-mode="select"]').click();
-    const box=await rendered.first().boundingBox(),from={x:box.x+box.width/2,y:box.y+box.height/2};
+    await settled(ui);const box=await rendered.first().boundingBox(),from={x:box.x+box.width/2,y:box.y+box.height/2};
     const to={x:from.x+35,y:from.y+25};
     if(touch){
       const cdp=await ui.page.context().newCDPSession(ui.page);
@@ -53,7 +58,7 @@ for(const touch of [false,true])test("type, drag, undo and reopen vector text an
     assert.equal(moved.props.text,wording);
     await ui.reload();await rendered.first().waitFor();
     await ui.frame.locator('[data-mode="select"]').click();
-    const box2=await rendered.first().boundingBox();await tap(ui,{x:box2.x+box2.width/2,y:box2.y+box2.height/2},touch);
+    await settled(ui);const box2=await rendered.first().boundingBox();await tap(ui,{x:box2.x+box2.width/2,y:box2.y+box2.height/2},touch);
     await ui.frame.locator("#text-editor").waitFor();
     assert.equal(await ui.frame.locator("#text-content").inputValue(),wording);
 
@@ -82,7 +87,7 @@ for(const touch of [false,true])test("type, drag, undo and reopen vector text an
     await ui.reload();await ui.frame.locator("#unified-layers circle").waitFor();
     await ui.frame.locator('[data-mode="select"]').click();await tap(ui,await point(ui,.82,.82),touch);
     assert.equal(await ui.frame.getByRole("textbox",{name:"標記備註",exact:true}).getAttribute("readonly"),"");
-    const lockedBox=await rendered.first().boundingBox();await tap(ui,{x:lockedBox.x+lockedBox.width/2,y:lockedBox.y+lockedBox.height/2},touch);
+    await settled(ui);const lockedBox=await rendered.first().boundingBox();await tap(ui,{x:lockedBox.x+lockedBox.width/2,y:lockedBox.y+lockedBox.height/2},touch);
     await ui.frame.locator("#text-editor").waitFor();assert.equal(await ui.frame.locator("#text-save").isDisabled(),true);
     // The user can change layer visibility even when its content is locked.
     await ok("edit_visual_canvas",{imageId,layers:[{id:obj.layer,visible:false}]});
@@ -112,7 +117,7 @@ test("text edits target a rotated, zoomed workspace copy and survive server rest
     await rendered.waitFor();
     await ui.frame.locator("#zoom-in").click();await ui.page.waitForTimeout(300);
     await ui.frame.locator('[data-mode="select"]').click();
-    const box=await rendered.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;
+    await settled(ui);const box=await rendered.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;
     await ui.page.mouse.move(x,y);await ui.page.mouse.down();await ui.page.waitForTimeout(150);
     await ui.page.mouse.move(x+25,y+15,{steps:5});await ui.page.mouse.up();await ui.page.waitForTimeout(400);
     read=await ok("edit_canvas_text",{imageId,setId});
@@ -157,7 +162,7 @@ test("paired canvas edits right-side text without touching the left image",{skip
     // opening layout/scroll to settle. Keep the native pointer click, but wait
     // for Playwright's stable, in-view geometry before taking its coordinates.
     await rendered.scrollIntoViewIfNeeded();
-    const b=await rendered.boundingBox();await ui.page.mouse.click(b.x+b.width/2,b.y+b.height/2);
+    await settled(ui);const b=await rendered.boundingBox();await ui.page.mouse.click(b.x+b.width/2,b.y+b.height/2);
     await ui.frame.locator("#text-editor").waitFor();
     assert.equal(await ui.frame.locator("#text-size").inputValue(),"15");
     assert.equal(await ui.frame.locator("#text-color").inputValue(),"#e4ae57");
@@ -219,7 +224,7 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
     await ui.page.evaluate(()=>{const original=window.hostCall;window.rejectTextCode="";window.hostCall=p=>p.name==="edit_canvas_text"&&p.arguments.action===(window.rejectTextAction??"update")&&window.rejectTextCode?{isError:true,content:[{type:"text",text:window.rejectTextCode}],structuredContent:{code:window.rejectTextCode}}:original(p);});
     for(const code of ["SAVE_FAILED","STALE_CANVAS"]){
       await ui.page.evaluate(code=>{window.rejectTextCode=code;},code);
-      await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
+      await settled(ui);await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
       await ui.page.mouse.move(from.x,from.y);await ui.page.mouse.down();await ui.frame.locator("#text-editor").waitFor();
       await ui.page.mouse.move(from.x+40,from.y+30,{steps:4});await ui.page.mouse.up();
       await ui.frame.locator("#status").filter({hasText:code}).waitFor();
@@ -228,7 +233,7 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
     }
     await ui.frame.locator("#text-close").click();
     await ui.page.evaluate(()=>{window.rejectTextAction="read";window.rejectTextCode="READ_FAILED";});
-    await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
+    await settled(ui);await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
     await ui.page.mouse.move(from.x,from.y);await ui.page.mouse.down();
     await ui.frame.locator("#status").filter({hasText:"READ_FAILED"}).waitFor();
     await ui.page.mouse.move(from.x+40,from.y+30,{steps:4});await ui.page.mouse.up();
