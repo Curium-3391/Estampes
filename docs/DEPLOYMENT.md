@@ -39,8 +39,23 @@ The second command prints the ChatGPT connector URL, e.g. `https://calm-words-he
 - Stop: `docker compose down`. **`docker compose down -v` deletes all stored images and marks.**
 - Backup and restore: the volume `estampes_estampes-data` holds everything, including your keys. Stop the server, archive the volume, and restore into a new volume; the full procedure, what a backup contains, upgrade and rollback rules and what to do when a key leaks are in [Backup and restore](BACKUP-RESTORE.md). Problems: [Troubleshooting](TROUBLESHOOTING.md).
 - The container runs as the unprivileged `node` user (uid 1000) with a read-only filesystem except `/data` and a 64 MB `/tmp`, no Linux capabilities, `no-new-privileges` and at most 256 processes, and restarts on failure (`restart: unless-stopped`).
-- Prebuilt multi-arch images are published by GitHub Actions to `ghcr.io/curium-3391/estampes` only when a `vX.Y.Z` tag is pushed: `X.Y.Z`, `latest` (the newest stable release) and `sha-<short>`; nothing is published for `main` or pull requests. To use one instead of building, replace `build: .` in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z` (pin a version; `latest` moves). A GHCR package is private until its owner makes it public in the package settings, so an anonymous pull can fail; building locally always works. See [Releasing](RELEASE.md).
+- GitHub Actions publishes stable multi-arch images to `ghcr.io/curium-3391/estampes`. To deploy a pinned stable release, replace `build: .` and `image: estampes:local` under the `estampes` service in `compose.yaml` with `image: ghcr.io/curium-3391/estampes:X.Y.Z`. See [Releasing](RELEASE.md) for tag and registry access details.
 - Docker Hub rate limits: build with `docker compose build --build-arg BASE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim`.
+
+### Deploy the Edge test instance
+
+Use Docker Compose 2.24.4 or later and a checkout of `main` containing `compose.edge.yaml`. The Edge overlay pulls the Estampes image from GHCR and builds the calculator from the checkout. If GHCR requires authentication, sign in with `docker login ghcr.io` using an account that can read the package.
+
+```sh
+docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml pull estampes
+docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml up -d --build
+curl -fsS http://127.0.0.1:8788/healthz
+docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml exec estampes cat /data/access-key
+```
+
+Run the health check once the instance has started. Edge listens on `127.0.0.1:8788` by default. Set `ESTAMPES_EDGE_PORT` if that port is in use. The project has separate volumes for application data, UVA and the calculator socket. It generates its own access and administrator keys. Use synthetic fixtures and keep production backups, data volumes, and connector credentials with the production instance.
+
+Repeat the pull and up commands to update. For a reproducible test, set `ESTAMPES_EDGE_TAG=sha-<full-commit-sha>` in your shell before both commands and record the tag with your feedback. An image digest identifies the exact image if a commit is rebuilt. Check out the corresponding commit before building the local calculator when testing an older image. To stop the test instance while retaining its data, use `docker compose -p estampes-edge -f compose.yaml -f compose.edge.yaml down`. Use the same project and files for every command.
 
 ### Calculator container and optional PDF support
 

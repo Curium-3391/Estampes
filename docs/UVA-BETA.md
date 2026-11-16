@@ -158,6 +158,8 @@ it the default store folder (as `ESTAMPES_UVA_BETA_DIR`, so an explicit
 `ESTAMPES_UVA_DIR` or `ESTAMPES_UVA_BETA_DIR` still wins). `compose.yaml` mounts the `uva-beta` volume there, so
 the canvas store is on with `docker compose up -d`.
 
+To test a GHCR Edge build, use the [isolated Edge Compose project](DEPLOYMENT.md#deploy-the-edge-test-instance). It mounts a separate UVA volume. Use synthetic fixtures for Edge tests and preserve any saved test exports before changing image versions.
+
 Do not use `docker compose down -v`: that deletes volumes.
 
 ## Assets and legacy copies

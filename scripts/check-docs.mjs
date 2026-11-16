@@ -152,7 +152,7 @@ for (const f of mdFiles.filter((x) => isCurrentDoc(x) && x !== "CHANGELOG.md")) 
 
 // ---------- environment variables ----------
 const envCodeFiles = [
-  "server.js", "Dockerfile", "compose.yaml", ".env.example", "render.yaml", "app.json", "Procfile",
+  "server.js", "Dockerfile", "compose.yaml", "compose.edge.yaml", ".env.example", "render.yaml", "app.json", "Procfile",
   ...walk("src", [], (x) => /\.(js|mjs)$/.test(x)),
   ...walk("scripts", [], (x) => /\.(js|mjs)$/.test(x) && !x.endsWith("check-docs.mjs")),
   ...walk("cas-service", [], (x) => /\.(py|txt|lock)$/.test(x) || x.endsWith("Dockerfile")),

@@ -2,31 +2,30 @@
 
 How a version of Estampes is released, which Docker image tags that produces, and how to check, repeat or undo a release. Only maintainers need this page; to run Estampes see [Deployment](DEPLOYMENT.md).
 
-Status of this page: the steps and the check script were run locally. A real tag push, the GitHub Actions run it starts and the GHCR package settings were **not** exercised while writing it; those parts follow the workflow file and GitHub's documented behaviour and are marked as such.
-
 ## What triggers what
 
 | Event | Workflow | What runs |
 | --- | --- | --- |
 | PR to `main` or merge queue | `pr-baseline.yml` | Stable `baseline` check with a docs, fast, or full tier |
 | Weekly on Monday at 03:23 UTC or manual dispatch | `m0.yml` | Full validation of the selected ref |
-| Push of a tag `v*` | `docker.yml` | `verify` → full validation and compose smoke test → multi-arch build and publish |
+| Push to `main` or manual dispatch on `main` | `docker.yml` | Full validation and Compose smoke test → build and publish Edge |
+| Push of a tag `v*` | `docker.yml` | Release metadata and main ancestry check → full validation and Compose smoke test → build and publish release |
 
-Branch pushes have no separate test workflow. A push to a branch with an open PR updates the PR check and cancels its previous run.
+The required PR `baseline` check gates merges. The Docker workflow runs the full suite and smoke test again on the exact commit it will build. Pull requests and manual dispatches on any other ref cannot publish.
 
 ## Image tags
 
-A tag `vX.Y.Z` publishes `ghcr.io/<owner>/estampes` for `linux/amd64` and `linux/arm64` with these tags:
+Images are built for `linux/amd64` and `linux/arm64` at `ghcr.io/curium-3391/estampes`.
 
-| Tag | Meaning | Published for |
-| --- | --- | --- |
-| `X.Y.Z` | That release | every `v*` tag |
-| `latest` | The newest stable release | tags without a `-` (so not `v1.0.0-rc.1`) |
-| `sha-<short>` | The commit the tag points to | every `v*` tag |
+| Tag | Published for |
+| --- | --- |
+| `edge` and `sha-<full-commit-sha>` | Successful Edge build from `main` |
+| `X.Y.Z` and `sha-<short>` | Validated `vX.Y.Z` tag push (prereleases include their suffix) |
+| `latest` | Validated stable `vX.Y.Z` tag push |
 
-There is no image for `main` and no `X.Y` or `X` tag. `latest` moves only when a stable version tag is pushed, so it is never ahead of a released version. For anything you need to reproduce, pin `X.Y.Z`.
+## Publish Edge manually
 
-(Before this page the workflow tried to tag `latest` only on the default branch, which a tag push never is, so `latest` was never produced. The workflow now enables it for stable version tags.)
+In **Actions → Docker image → Run workflow**, choose **main**. This runs the same tests and smoke check as an automatic Edge build. Before starting an Edge image build, the publish job checks that the validated commit is still the head of `main`. Dispatch again on `main` if the run skipped publication because the branch advanced. See [Deploy the Edge test instance](DEPLOYMENT.md#deploy-the-edge-test-instance) for tester commands.
 
 ## Release order
 
@@ -43,8 +42,6 @@ There is no image for `main` and no `X.Y` or `X` tag. `latest` moves only when a
    git push origin vX.Y.Z
    ```
 
-The repository has no tags yet; `package.json` history is the record of past versions.
-
 ## Check before you tag
 
 ```sh
@@ -58,8 +55,7 @@ docker compose config -q       # compose file parses (needs Docker)
 - `package.json` and `package-lock.json` disagree,
 - the newest `## X.Y.Z` heading in `CHANGELOG.md` is not the package version,
 - the previous release's URI tag is missing from `LEGACY_VISUAL_URIS` or `LEGACY_EVIDENCE_URIS`, or the current one is already listed,
-- a tag argument is given and is not `v<package version>`,
-- `docker.yml` could be triggered by anything other than a pushed `v*` tag, or still relies on `is_default_branch`.
+- a tag argument is given and does not match `v<package version>`.
 
 It prints the tags a push would publish. The same script runs as the first job of the release workflow, so a mismatched tag stops before the expensive build. It does not run the Docker build itself; the `smoke` job does that after the tag is pushed.
 
@@ -67,8 +63,8 @@ It prints the tags a push would publish. The same script runs as the first job o
 
 | Where it failed | What to do |
 | --- | --- |
-| `verify` | Nothing was built. Fix the cause on `main`, delete the remote tag (`git push origin :refs/tags/vX.Y.Z`; `git tag -d vX.Y.Z`) and tag the new merge commit. |
-| Full validation or `smoke` | No image was published. Read the failed job log, fix on `main` and validate before re-tagging. |
+| `verify` | Fix the cause on `main`. Release tags are protected against deletion and movement. If the fix needs a new commit, prepare a new version tag. |
+| Full validation or `smoke` | Read the failed job log. Retry transient failures. For code fixes, validate the fix on `main` and prepare a new version tag. |
 | `image` (build or push) | Re-run the failed job once in the Actions tab. If it fails again, treat it like `smoke`. |
 | Found after publishing | Never move a tag that already has an image. Fix on `main` and release the next patch version. |
 
@@ -76,7 +72,7 @@ It prints the tags a push would publish. The same script runs as the first job o
 
 A tag is not rolled back; users move to an earlier image.
 
-1. Back up the data volume first ([Deployment](DEPLOYMENT.md#details)).
+1. Back up the application data and UVA volumes first ([Deployment](DEPLOYMENT.md#details)).
 2. Point `compose.yaml` at the earlier version, for example `image: ghcr.io/<owner>/estampes:0.19.4`, and run `docker compose up -d`.
 3. Do **not** run `docker compose down -v`; that deletes the data volume.
 

@@ -16,7 +16,7 @@ RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
     npm ci --omit=dev --no-audit --no-fund \
  && if [ "$ESTAMPES_WITH_PDF" = "1" ]; then npm install --no-save --omit=dev --no-audit --no-fund pdfjs-dist@4.10.38 @napi-rs/canvas; fi \
- && node -e "require('sharp'); console.log('sharp', require('sharp/package.json').version, process.arch)"
+ && node -e "const sharp = require('sharp'); console.log('sharp', sharp.versions.sharp, process.arch)"
 
 FROM ${BASE_IMAGE}
 # Self-hosted servers are never open by accident: without
