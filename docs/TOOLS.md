@@ -32,7 +32,7 @@ Estampes exposes its tools at `/mcp`. Users never name them; the AI chooses. Thi
 | `overlay_grid` | Draw a labelled grid (rows A, B, C… × columns 1, 2, 3…, 2–12 each) over an image or region and return each cell's centre in source coordinates. |
 | `open_module_store` | Open the Estampes Store in the chat: modules, what each can do, the permissions it asks for, enable or disable. See [Modules](MODULES.md). |
 | `list_modules`, `get_module_capabilities` | List modules and their state; read one module's capabilities with exact input schemas and examples. |
-| `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. |
+| `execute_module` | Run a capability of an **enabled** module (for example Graph's `plot_function`) on a canvas, or on a new blank canvas. Returns object ids, the scene revision and a preview image. `present: false` runs it in the background: the user's canvas is not reopened (only a one-line note with a 顯示畫布 button), for iterative tuning before `present_visual` shows the final result. |
 | `get_module_job` | Check a background job started by `execute_module` (for example plate solving): status, progress, result and created objects; can wait up to 25 s. See [Background jobs](MODULES.md#background-jobs). |
 | `get_surface_state`, `manage_surface_panels` | Read which panels are open on a canvas and their layouts; open, close or arrange panels. `manage_surface_panels` also shows the Visual Surface, so it is how the calculator opens beside a canvas. See [Surfaces](SURFACES.md). |
 | `add_image_layer` | Promote the base image into an editable layer, or copy another canvas (with its objects and marks) in as independent layers. PNG transparency is kept; the source is never modified. See [Canvas reads](CANVAS-READS.md). |
@@ -111,7 +111,18 @@ Read `get_visual_layers({imageId})`, then call `edit_visual_layers` with its
 `revision` as `expectedRevision`, for example
 `{imageId, expectedRevision, layers:[{id:"L2",opacity:0.4,visible:true}]}`.
 Render with `render_canvas` to assess the composite, then present the result
-with `present_visual`. Edits never change image pixels, annotation geometry or
+with `present_visual`.
+
+### Checking your work without reopening the user's canvas
+
+`render_canvas`, `process_image` and `inspect_image` are model-only: they never
+open the canvas in the chat. When tuning a module result over several runs,
+pass `execute_module({..., present: false})`; the run still returns its
+preview image and revision (and refuses a stale `expectedRevision`), but the
+chat shows only a one-line background note. Polling a running job with
+`get_module_job` is shown the same way; the finished job opens the canvas.
+Show the final result with `present_visual({imageId})`, which always opens
+the shared editable canvas. Edits never change image pixels, annotation geometry or
 authorship. The assistant cannot unlock layers or reorder across a locked layer.
 Refresh and review after `STALE_CANVAS`; do not automatically overwrite user edits.
 

@@ -163,6 +163,8 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 @media(max-width:599px){body{padding:6px}main{padding:10px}#wb.mobile #wb-area{min-height:60vh}}
 @media(prefers-reduced-motion:no-preference){.wb-panel{transition:box-shadow .15s}}
 #upload-empty{display:none}
+.background-run>*:not(.background-note){display:none!important}.background-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 12px;border:1px dashed #8aa4c8;border-radius:10px;font-size:.88rem;color:GrayText}
+body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!important}
 .awaiting-upload #upload-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 16px;border:2px dashed #8aa4c8;border-radius:12px;text-align:center}
 .awaiting-upload #upload,.awaiting-upload #surface,.awaiting-upload #caption,.awaiting-upload #edit-tools,.awaiting-upload #style-tools,.awaiting-upload #zoom-tools,.awaiting-upload .view-tabs,.awaiting-upload #context-details,.awaiting-upload .actions:not(#extra-actions){display:none}
 </style></head><body><div id="wb" class="solo"><div id="wb-bar"></div><p id="wb-help" hidden>拖曳標題列移動面板，拖曳右下角調整大小；鍵盤：在標題列按 Alt＋方向鍵移動，Alt＋Shift＋方向鍵調整大小。</p><div id="wb-area"><template id="viewer-tpl"><main id="panel-canvas">
@@ -1488,7 +1490,23 @@ function applyHostResult(result){
  const meta=result?._meta??window.openai?.toolResponseMetadata??{};
  const key=JSON.stringify([r,meta]);
  if(key===hostResultKey)return;
+ // The AI working in the background (#81): a one-line note, not a reopened canvas.
+ if(meta["estampes/presentation"]==="background"&&!gotResult&&!backgroundShown){showBackground(result,key);return;}
  applyResult(result);hostResultKey=key;
+}
+let backgroundResult=null,backgroundShown=false;
+function showBackground(result,key){
+ backgroundResult={result,key};hostResultKey=key;
+ rootEl.classList.add("background-run");document.body.classList.add("estampes-background");
+ let note=rootEl.querySelector(":scope > .background-note");
+ if(!note){note=el("div",{className:"background-note",role:"status"});rootEl.prepend(note);}
+ const r=result.structuredContent,open=el("button",{textContent:"顯示畫布",dataset:{act:"show-background"}});
+ open.addEventListener("click",()=>{
+   const b=backgroundResult;backgroundResult=null;backgroundShown=true;note.remove();
+   rootEl.classList.remove("background-run");document.body.classList.remove("estampes-background");
+   if(b){applyResult(b.result);hostResultKey=b.key;if(ready&&imageId&&!photo)syncCanvas(false);}
+ });
+ note.replaceChildren(el("span",{textContent:"AI 正在背景更新或檢查畫布"+(r.imageId?"（"+r.imageId+"）":"")+"；你的畫布沒有被重新開啟，完成後 AI 會顯示結果。"}),open);
 }
 function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
