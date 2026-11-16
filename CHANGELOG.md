@@ -2,6 +2,58 @@
 
 ## Unreleased
 
+- Image, bundle, PDF and OAuth client-metadata downloads now check the address
+  the connection actually uses, on every redirect hop, with the same address
+  policy as module egress (architecture review A07). Before, a hostname was
+  resolved and checked, and `fetch()` then resolved it again for the
+  connection, so DNS rebinding could reach a private address. The early check
+  now also refuses the extra reserved ranges egress already refused
+  (documentation, NAT64, 6to4, Teredo).
+
+- Backup and restore cover both data roots (architecture review A01). With the
+  default UVA store, images, canvases, workspaces, surfaces and notebooks live
+  in the store (`/uva-beta`), not in `/data`, and pending records are deleted
+  once committed, so the documented `/data`-only backup lost committed work.
+  `docs/BACKUP-RESTORE.md` now archives and restores both volumes (with the
+  ownership and mode the store needs) and explains rolling back to a release
+  that cannot read the store. `scripts/verify-backup-restore.mjs` checks both
+  roots, with changes still pending and after they were committed, and that a
+  `/data`-only archive is not enough; `npm test` runs it.
+  `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md` and `compose.yaml` no longer say
+  legacy files are kept up to date in UVA mode.
+
+- Calculator: a result is published as fresh only if the notebook's
+  definitions, assumptions, angle and precision are still the ones it was
+  computed with; a definition changed during the calculation leaves the result
+  stale (so it cannot be plotted until recomputed), also for `recompute`
+  (architecture review A02). Overlapping `calculate` calls with the same
+  `idempotencyKey` on one notebook now compute once and add one cell; the
+  others are replays.
+
+- A canvas save that fails (UVA store) no longer leaves the failed change in
+  memory (architecture review A03). Before, a refused `present_visual`,
+  `execute_module` or object edit stayed visible to later reads, with the
+  scene revision already raised, and the next successful save persisted it.
+  The canvas now goes back to its last durable state before the error is
+  returned. When a later save of the same canvas was already under way, the
+  earlier call reports that save's outcome, since it carries the same change.
+
+- Bundle import: a canvas is reused only when it holds the same marks, layers,
+  claims, scene objects (Graph axes, plots, shapes) and link content as the
+  bundle; before, a changed Graph was reused and reported `verified: true`
+  while it still showed the local scene (architecture review A05). A canvas
+  holding only scene objects no longer counts as empty, so a restore never
+  replaces it; `verified` now also checks every imported set's scene objects
+  (`mismatch` lists `objects` otherwise), and a layer's owning module is kept
+  through export/import. Comparison ignores key order, so identical canvases
+  are now reused instead of copied.
+
+- Module registry: an enable/disable whose `registry.json` write fails no
+  longer leaves the module in the new state in memory, and one failed write no
+  longer makes every later save fail until a restart (architecture review A06).
+  A change is published only after its file is written; queued writes each
+  report their own outcome.
+
 - Canvas text entry (#82): select a user annotation to edit/clear its label and
   multiline note, or choose Text to place an editable standalone vector object.
   Text supports dragging, size/color, locked layers, revision checks and its own

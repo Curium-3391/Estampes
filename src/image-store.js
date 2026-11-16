@@ -7,9 +7,11 @@
 // canvas on disk so an image survives eviction and restarts.
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import sharp from "sharp";
 import { config } from "./config.js";
+import { isPublicAddress, safeLookup } from "./modules/egress.js";
 
 export const MAX_DOWNLOAD_BYTES = config.maxImageBytes;
 export const MAX_INPUT_PIXELS = config.maxInputPixels;
@@ -24,22 +26,15 @@ const CACHE_TTL_MS = config.cacheTtlMs;
 
 const cache = new Map();
 
-function isPrivateAddress(address) {
-  if (isIP(address) === 6) {
-    const a = address.toLowerCase();
-    if (a === "::1" || a === "::" || a.startsWith("fc") || a.startsWith("fd") || a.startsWith("fe80")) return true;
-    const mapped = a.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    return mapped ? isPrivateAddress(mapped[1]) : false;
-  }
-  const [a, b] = address.split(".").map(Number);
-  return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
-}
+// One address policy for every outbound request: the module egress list of
+// loopback, private, link-local (cloud metadata), carrier-grade NAT,
+// multicast and reserved ranges.
+const isPrivateAddress = (address) => !isPublicAddress(address);
 
-// Only public https hosts. This blocks the obvious SSRF targets (metadata
-// services, localhost, LAN); DNS rebinding between check and fetch is an
-// accepted residual risk for this experimental server.
+// Only public https hosts. This early check gives a clear error before any
+// connection; the guarantee comes from pinnedFetch below, which checks the
+// address the socket actually connects to (so DNS rebinding between this
+// check and the request cannot reach a private address).
 export async function assertPublicHttpsUrl(raw) {
   let url;
   try { url = new URL(raw); } catch { throw new Error("Image URL is not a valid absolute URL"); }
@@ -67,7 +62,29 @@ async function readLimited(response, limit = MAX_DOWNLOAD_BYTES) {
   return Buffer.concat(chunks);
 }
 
-export async function downloadImage(rawUrl, { fetchImpl = fetch, checkUrl = assertPublicHttpsUrl, maxBytes = MAX_DOWNLOAD_BYTES, accept = "image/*" } = {}) {
+// The default transport for downloads: an https request whose DNS lookup
+// refuses non-public addresses at connection time (the module egress
+// lookup), so the checked address is the one used, for every redirect hop.
+// It returns the small part of a fetch Response that downloadImage reads.
+// `request` and `lookup` are replaceable for tests only.
+export function pinnedFetch(url, { signal, headers } = {}, { request = httpsRequest, lookup: lookupFn = safeLookup } = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^\[|\]$/g, "");
+    const req = request({ protocol: u.protocol, host, port: u.port || undefined, path: u.pathname + u.search, method: "GET", headers,
+      lookup: lookupFn, ...(isIP(host) ? {} : { servername: host }), agent: false, signal }, (res) => {
+      resolve({
+        status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300,
+        headers: { get: (name) => { const v = res.headers[String(name).toLowerCase()]; return v === undefined ? null : Array.isArray(v) ? v.join(", ") : String(v); } },
+        body: res,
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+export async function downloadImage(rawUrl, { fetchImpl = pinnedFetch, checkUrl = assertPublicHttpsUrl, maxBytes = MAX_DOWNLOAD_BYTES, accept = "image/*" } = {}) {
   let current = rawUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const url = await checkUrl(current);
@@ -77,11 +94,13 @@ export async function downloadImage(rawUrl, { fetchImpl = fetch, checkUrl = asse
       headers: { accept },
     });
     if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
+      response.body?.destroy?.();
       current = new URL(response.headers.get("location"), url).toString();
       continue;
     }
-    if (!response.ok) throw new Error("Image download failed with HTTP " + response.status);
-    return readLimited(response, maxBytes);
+    if (!response.ok) { response.body?.destroy?.(); throw new Error("Image download failed with HTTP " + response.status); }
+    try { return await readLimited(response, maxBytes); }
+    finally { response.body?.destroy?.(); }
   }
   throw new Error("Too many redirects while downloading image");
 }

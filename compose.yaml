@@ -1,8 +1,8 @@
 # docker compose up -d                      (this machine only)
 # docker compose --profile tunnel up -d     (plus a temporary public https address)
-# Settings come from .env (copy .env.example). Data lives in the named
-# volume "estampes-data" and survives `docker compose down` and updates;
-# only `docker compose down -v` deletes it.
+# Settings come from .env (copy .env.example). Data lives in two named
+# volumes, "estampes-data" and "uva-beta"; both survive `docker compose down`
+# and updates, only `docker compose down -v` deletes them. Back up both.
 services:
   estampes:
     build: .
@@ -30,9 +30,11 @@ services:
       - "${ESTAMPES_BIND:-127.0.0.1}:${ESTAMPES_HOST_PORT:-8787}:8787"
     volumes:
       - estampes-data:/data
-      # Canvases, workspaces, surfaces and notebooks are committed to the UVA
-      # store in its own volume (the image's default folder; ESTAMPES_CANVAS_STORE=legacy
-      # in .env switches back, and the legacy files in /data stay up to date).
+      # Canvases, images, workspaces, surfaces and notebooks live only in the
+      # UVA store, in its own volume (the image's default folder). /data no
+      # longer holds them: back up BOTH volumes (docs/BACKUP-RESTORE.md).
+      # To switch to ESTAMPES_CANVAS_STORE=legacy, first write the files back
+      # out with scripts/uva-to-legacy.mjs.
       - uva-beta:/uva-beta
       - cas-run:/run/estampes-cas
     # Least privilege: nothing but /data (and a small /tmp) is writable, no
