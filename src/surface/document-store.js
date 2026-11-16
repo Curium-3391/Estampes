@@ -9,22 +9,27 @@
 //   same epoch and counter, different hash -> integrity error, never
 //       last-writer-wins: the store keeps what it has and tells subscribers
 //   same epoch, counter newer      -> applied
-//   other epoch (server restarted) -> the server is authoritative: applied
+//   other epoch (server restarted) -> the server is authoritative: applied; the replaced epoch is
+//       remembered, so a delayed answer from the old process is ignored
 export const POLL_BATCH = 12;
 
 export function createDocumentStore({ fetchChanges } = {}) {
   const docs = new Map(); // id -> {revision, snapshot, stale, missing, error, subs:Set}
-  const entryOf = (id) => { let d = docs.get(id); if (!d) docs.set(id, d = { revision: null, snapshot: null, stale: false, missing: false, error: null, subs: new Set() }); return d; };
+  const entryOf = (id) => { let d = docs.get(id); if (!d) docs.set(id, d = { revision: null, snapshot: null, stale: false, missing: false, error: null, subs: new Set(), oldEpochs: new Set() }); return d; };
   const view = (id, d, extra = {}) => ({ documentId: id, revision: d.revision, snapshot: d.snapshot, stale: d.stale, missing: d.missing, error: d.error, ...extra });
   const emit = (id, d, extra) => { const v = view(id, d, extra); for (const fn of [...d.subs]) { try { fn(v); } catch {} } };
+
+  // Offline or "missing" is transient: a confirmed answer clears it and tells subscribers.
+  const recover = (id, d) => { if (d.stale || d.missing) { d.stale = false; d.missing = false; d.error = null; emit(id, d); } };
 
   // Returns "applied" | "ignored" | "conflict".
   function accept(id, revision, snapshot, { gap = false } = {}) {
     const d = entryOf(id), had = d.revision;
+    if (d.oldEpochs.has(revision.epoch)) return "ignored"; // a delayed answer from a server process already replaced
     if (had && revision.epoch === had.epoch) {
       if (revision.counter < had.counter) return "ignored";
       if (revision.counter === had.counter) {
-        if (revision.hash === had.hash) { if (d.stale || d.missing) { d.stale = false; d.missing = false; emit(id, d); } return "ignored"; }
+        if (revision.hash === had.hash) { recover(id, d); return "ignored"; }
         d.error = "revision " + revision.counter + " has two different contents";
         emit(id, d, { conflict: true });
         return "conflict";
@@ -34,11 +39,11 @@ export function createDocumentStore({ fetchChanges } = {}) {
       // "Unchanged" with a higher counter (the content went A, B, A): keep the snapshot, adopt the newer revision,
       // so a late snapshot of the middle revision cannot overwrite it.
       if (had && d.snapshot && revision.epoch === had.epoch && revision.hash === had.hash && revision.counter > had.counter) {
-        d.revision = revision; d.stale = false; d.missing = false; d.error = null;
-        return "ignored";
+        d.revision = revision; recover(id, d);
       }
       return "ignored";
     }
+    if (had && revision.epoch !== had.epoch) d.oldEpochs.add(had.epoch);
     d.revision = revision; d.snapshot = snapshot; d.stale = false; d.missing = false; d.error = null;
     emit(id, d, gap ? { gap: true } : {});
     return "applied";

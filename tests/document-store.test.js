@@ -99,3 +99,30 @@ test("an unchanged answer with a newer counter keeps the snapshot and blocks a l
   assert.equal(store.hydrate("d", rev(2, "B"), { n: "B" }), "ignored", "the delayed snapshot of revision 2 is older");
   assert.deepEqual(store.get("d").snapshot, { n: "A" });
 });
+
+test("a delayed answer from a replaced epoch is ignored", () => {
+  const store = createDocumentStore();
+  store.subscribe("d", () => {});
+  store.hydrate("d", rev(9, "h9", "e1"), { n: "old" });
+  assert.equal(store.hydrate("d", rev(1, "x", "e2"), { n: "new" }), "applied");
+  assert.equal(store.hydrate("d", rev(10, "h10", "e1"), { n: "late-old" }), "ignored");
+  assert.deepEqual(store.get("d").snapshot, { n: "new" });
+});
+
+test("an unchanged answer after an outage clears stale and the error and tells subscribers", async () => {
+  let fail = true, counter = 1;
+  const store = createDocumentStore({ fetchChanges: async (list) => { if (fail) throw new Error("offline"); return { documents: list.map((q) => ({ documentId: q.documentId, status: "unchanged", revision: rev(counter, "h1") })) }; } });
+  const seen = [];
+  store.subscribe("d", (v) => seen.push(v));
+  store.hydrate("d", rev(1, "h1"), { n: 1 });
+  await store.reconcile();
+  assert.equal(store.get("d").stale, true);
+  fail = false;
+  await store.reconcile();
+  assert.equal(store.get("d").stale, false); assert.equal(store.get("d").error, null);
+  assert.equal(seen.at(-1).stale, false, "same counter: subscribers are told");
+  fail = true; await store.reconcile(); fail = false; counter = 3;
+  await store.reconcile();
+  assert.equal(seen.at(-1).stale, false, "higher same-hash counter: subscribers are told too");
+  assert.equal(store.get("d").revision.counter, 3);
+});
