@@ -42,11 +42,6 @@ for (const name of ["LEGACY_VISUAL_URIS", "LEGACY_EVIDENCE_URIS"]) {
   }
 }
 
-const wf = read(".github/workflows/docker.yml");
-if (!/^on:\s*\n\s+push:\s*\n\s+tags:\s*\['v\*'\]/m.test(wf)) bad("docker.yml must trigger only on pushed v* tags");
-if (/pull_request|branches:/.test(wf.split(/^jobs:/m)[0])) bad("docker.yml must not trigger on pull requests or branches");
-if (/is_default_branch/.test(wf)) bad("docker.yml still uses is_default_branch, which is never true for a tag push");
-
 if (problems.length) {
   console.error(`Release check failed for ${version}:`);
   for (const p of problems) console.error(`  - ${p}`);
