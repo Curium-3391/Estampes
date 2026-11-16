@@ -2518,7 +2518,14 @@ function applyPolled(s,id){
  if(polledSig()!==before)render();
  return true;
 }
-return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,cancelGestures,get disposed(){return disposed},dispose(){
+// The poll cannot reach the server: keep showing the last snapshot, say so, and never claim it is saved or current.
+let offlineShown=false;
+function setStale(on){
+ on=!!on;if(on===offlineShown||disposed)return;offlineShown=on;
+ rootEl.toggleAttribute("data-offline",on);
+ status.textContent=on?"連不上伺服器：畫面是上次的內容，可能不是最新，新的標註也還沒存到伺服器。":"已重新連上伺服器。";
+}
+return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
  try{cancelGestures()}catch{}
  disposed=true;
@@ -2593,6 +2600,7 @@ function bindViewers(){
   const id=v.documentRef();if(!id)continue;
   const b={id,applied:null,pending:null};
   const take=st=>{
+   v.setStale(!!st?.stale);
    if(!st?.snapshot||!st.revision)return;
    const key=st.revision.epoch+":"+st.revision.counter+":"+st.revision.hash;
    if(key===b.applied)return;
