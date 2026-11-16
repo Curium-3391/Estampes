@@ -654,6 +654,7 @@ function applyServerCanvas(annotations,layerList,linkList){
  priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,cap);
  if(frames&&Array.isArray(linkList))links=viewLinks(linkList);
  if(selected&&!allMarks().some(m=>m.id===selected))selected=null;
+ return byId;
 }
 async function layerEdit(args,done){
  try{await editOnServer(args);status.textContent=done;}
@@ -1059,6 +1060,8 @@ async function decideGesture(memberIds,verdict){
    try{
      const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict,...(ws?{workspaceId:ws.id,item:findMark(ids[0])?.side??firstSide()}:{})}});
      if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+     // The server holds this verdict now; keeping the override would hide a later verdict from another viewer.
+     gestureDecisions=gestureDecisions.filter(d=>!(gkey(d.memberIds)===key&&d.verdict===verdict));
    }catch(err){status.textContent="已記在畫布上，但存到伺服器失敗："+String(err.message||err)}
  }
  render();
@@ -2388,9 +2391,15 @@ if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new Resize
 const documentRef=()=>ws?ws.id:pair?null:imageId;
 // Server-owned state as one string: a poll that changes nothing must not rebuild the DOM (a click or drag
 // in progress would lose its element).
-const polledSig=()=>JSON.stringify([layers,gestures,objects,baseAsObject,assistantMarks,priorUserMarks,userMarks.filter(m=>sentIds.has(m.id)),ws?[ws.revision,links,ws.items.map(i=>[i.id,i.objects,i.baseAsObject])]:null]);
+const polledSig=()=>JSON.stringify([layers,gestures,objects,baseAsObject,assistantMarks,priorUserMarks,userMarks.filter(m=>sentIds.has(m.id)),past.length,future.length,ws?[ws.revision,links,ws.items.map(i=>[i.id,i.objects,i.baseAsObject])]:null]);
 // Returns false when the user is in the middle of something; the caller tries again later.
 const interacting=()=>pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
+// Saved marks inside the undo/redo stacks follow the server too, so undoing a draft cannot bring back
+// an old version of a mark another viewer moved or deleted. Unsent marks in the stacks stay as they are.
+function reconcileHistory(byId){
+ const fix=list=>list.map(marks=>marks.filter(m=>!sentIds.has(m.id)||byId.has(m.id)).map(m=>sentIds.has(m.id)?{...byId.get(m.id)}:m));
+ past=fix(past);future=fix(future);
+}
 function applyPolled(s,id){
  if(!s||disposed)return true;
  if(id!==documentRef())return true; // the viewer moved to another document while this answer was on its way
@@ -2405,12 +2414,12 @@ function applyPolled(s,id){
  if(ws){
   for(const px of s.workspace.items){const it=ws.items.find(i=>i.id===px.id);if(it){it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;}}
   ws.revision=Number(s.workspace.revision)||ws.revision;
-  applyServerCanvas(s.annotations,s.layers,s.links);
+  reconcileHistory(applyServerCanvas(s.annotations,s.layers,s.links));
  }else{
   if(Array.isArray(s.gestureGroups))setGestures(s.gestureGroups);
   if(Array.isArray(s.objects))setObjects(s.objects);
   if(typeof s.baseAsObject==="boolean")baseAsObject=s.baseAsObject;
-  applyServerCanvas(Array.isArray(s.annotations)?s.annotations.filter(valid):[],s.layers);
+  reconcileHistory(applyServerCanvas(Array.isArray(s.annotations)?s.annotations.filter(valid):[],s.layers));
  }
  if(polledSig()!==before)render();
  return true;
