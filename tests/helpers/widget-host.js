@@ -27,7 +27,7 @@ addEventListener("message",async e=>{
   if(m.id==null)return;
   const reply=(o)=>f.contentWindow.postMessage({jsonrpc:"2.0",id:m.id,...o},"*");
   try{
-    if(m.method==="ui/initialize")reply({result:{protocolVersion:"2026-01-26",hostInfo:{name:"fake-host",version:"0"},hostCapabilities:{}}});
+    if(m.method==="ui/initialize")reply({result:{protocolVersion:"2026-01-26",hostInfo:{name:window.hostName,version:"0"},hostCapabilities:{}}});
     // Strict hosts refuse anything before the handshake completes.
     else if(!initialized)reply({error:{message:"request before ui/notifications/initialized: "+m.method}});
     else if(m.method==="tools/call")reply({result:await window.hostCall(m.params)});
@@ -68,7 +68,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
     },
     // Opens the widget on `imageId` the way present_visual would deliver it.
     // globals: deliver the result the way ChatGPT does (window.openai first).
-    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false }) {
+    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false, hostName = "fake-host" }) {
       const widget = await this.widgetHtml();
       browser ??= await chromium.launch(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : { args: ["--no-sandbox"] });
       const page = await browser.newPage({ viewport, hasTouch: touch, isMobile: touch });
@@ -80,6 +80,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
         return { content: r.content, structuredContent: r.structuredContent, _meta: r._meta, isError: r.isError };
       });
       await page.setContent(HARNESS);
+      await page.evaluate(name => { window.hostName = name; }, hostName);
       const reload = async () => {
         const r = result ? await result() : await call("present_visual", { imageId });
         await page.evaluate(([h, res, g]) => (g ? window.loadGlobals : window.load)(h, res), [widget, { structuredContent: r.structuredContent, _meta: r._meta, content: r.content }, globals]);

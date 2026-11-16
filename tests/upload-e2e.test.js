@@ -133,3 +133,97 @@ for (const profile of [
     assert.deepEqual(ui.errors, []);
   } finally { await stack.close(); }
 });
+
+test("upload slices shrink only for explicit payload limits and stop at the floor", { skip: noBrowser, timeout: 90000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const photo = await noisyJpeg(1600, 1200);
+    for (const allowUpload of [true, false]) {
+      const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", { upload: true }) });
+      await frame.locator("#upload-big").waitFor();
+      await page.evaluate(allow => {
+        const original = window.hostCall;
+        window.uploadAttempts = [];
+        window.hostCall = async params => {
+          if (params.name !== "upload_visual_image") return original(params);
+          const { offset, data, uploadId } = params.arguments;
+          window.uploadAttempts.push({ offset, size: data.length, uploadId });
+          if (data.length > 120000) throw Error("HTTP 413: Payload Too Large");
+          if (!allow || data.length > 60000) return { isError: true, content: [{ type: "text", text: "Tool arguments too large" }] };
+          return original(params);
+        };
+      }, allowUpload);
+      await frame.locator("#upload-file").setInputFiles({ name: "board.jpg", mimeType: "image/jpeg", buffer: photo });
+      await frame.locator("#status").filter({ hasText: allowUpload ? "已上傳" : "Tool arguments too large" }).waitFor();
+      const attempts = await page.evaluate(() => window.uploadAttempts);
+      assert.deepEqual(attempts.slice(0, 3).map(({ offset, size }) => [offset, size]), [[0, 240000], [0, 120000], [0, 60000]]);
+      if (allowUpload) {
+        let expectedOffset = 60000;
+        for (const { offset, size, uploadId } of attempts.slice(3)) {
+          assert.equal(offset, expectedOffset);
+          assert.ok(size <= 60000);
+          assert.match(uploadId, /^up[0-9a-f]{16}$/);
+          expectedOffset += size;
+        }
+        assert.equal(expectedOffset, photo.toString("base64").length);
+        assert.ok(await frame.locator("#surface").isVisible());
+      } else {
+        assert.deepEqual(attempts.slice(3), [{ offset: 0, size: 30000, uploadId: undefined }]);
+        assert.equal(await frame.locator("#surface").isVisible(), false);
+      }
+      assert.deepEqual(errors, []);
+      await page.close();
+    }
+  } finally { await stack.close(); }
+});
+
+test("upload stops after an empty refusal, a tool error or a transport failure", { skip: noBrowser, timeout: 90000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const photo = await noisyJpeg(1600, 1200);
+    for (const [failure, message] of [
+      ["refusal", "可能是未批准"],
+      ["tool", "Estampes: Slice out of order"],
+      ["transport", "Connection closed"],
+      ["acknowledgement", "伺服器沒有確認收到這個分段"],
+    ]) {
+      const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", { upload: true }) });
+      await frame.locator("#upload-big").waitFor();
+      await page.evaluate(failure => {
+        const original = window.hostCall;
+        window.uploadOffsets = [];
+        window.hostCall = async params => {
+          if (params.name !== "upload_visual_image") return original(params);
+          const { offset } = params.arguments;
+          window.uploadOffsets.push(offset);
+          if (failure === "acknowledgement") return { content: [] };
+          if (offset === 0) return original(params);
+          if (failure === "transport") throw Error("Connection closed");
+          return { isError: true, content: failure === "refusal" ? [] : [{ type: "text", text: "Estampes: Slice out of order" }] };
+        };
+      }, failure);
+      await frame.locator("#upload-file").setInputFiles({ name: "board.jpg", mimeType: "image/jpeg", buffer: photo });
+      await frame.locator("#status").filter({ hasText: message }).waitFor();
+      assert.deepEqual(await page.evaluate(() => window.uploadOffsets), failure === "acknowledgement" ? [0] : [0, 240000]);
+      assert.equal(await frame.locator("#surface").isVisible(), false);
+      assert.equal(await page.evaluate(() => window.hostLog.includes("ui/update-model-context")), false);
+      assert.deepEqual(errors, []);
+      await page.close();
+    }
+  } finally { await stack.close(); }
+});
+
+test("LibreChat shows an upload explanation without sending the selected file", { skip: noBrowser, timeout: 90000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame, errors } = await stack.open({
+      hostName: "LibreChat", result: () => stack.call("present_visual", { upload: true }),
+    });
+    await frame.locator("#upload-empty p").filter({ hasText: "LibreChat 需要逐段批准" }).waitFor();
+    assert.equal(await frame.locator("#upload-big").isVisible(), false);
+    await frame.locator("#upload-file").setInputFiles({ name: "board.jpg", mimeType: "image/jpeg", buffer: await noisyJpeg(640, 480) });
+    await frame.locator("#status").filter({ hasText: "請勿把私密圖片公開" }).waitFor();
+    assert.equal(await page.evaluate(() => window.hostLog.includes("tools/call")), false);
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});
