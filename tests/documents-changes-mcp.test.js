@@ -78,3 +78,33 @@ test("documents_get_changes: unchanged, snapshot after an edit, gap after a rest
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("documents_get_changes: a gesture verdict alone changes the revision", { timeout: 30000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), "estampes-poll-g-"));
+  const { id } = await storedImage(dir, 800, 400);
+  const port = await freePort();
+  const handle = spawn(process.execPath, ["server.js"], { cwd: process.cwd(), env: { ...process.env, PORT: String(port), ESTAMPES_STORAGE_DIR: dir, ESTAMPES_UVA_MIRROR_IDLE_SEC: "3600" }, stdio: "ignore" });
+  const base = "http://127.0.0.1:" + port;
+  const client = new Client({ name: "poll-test-g", version: "0" }, { versionNegotiation: { mode: "auto" } });
+  const shaft = { id: "user-t-1", type: "polyline", label: "YOU 1", points: [{ x: 0.6, y: 0.5 }, { x: 0.5, y: 0.5 }, { x: 0.4, y: 0.5 }],
+    x: 0.4, y: 0.5, x2: 0.6, y2: 0.5, strokeOrder: 1, relativeStartMs: 0, relativeEndMs: 500, pointerType: "pen" };
+  const head = { id: "user-t-2", type: "polyline", label: "YOU 2", points: [{ x: 0.43, y: 0.44 }, { x: 0.4005, y: 0.5 }, { x: 0.43, y: 0.56 }],
+    x: 0.4005, y: 0.44, x2: 0.43, y2: 0.56, strokeOrder: 2, relativeStartMs: 700, relativeEndMs: 900, pointerType: "pen" };
+  const poll = async (since) => (await client.callTool({ name: "documents_get_changes", arguments: { documents: [{ documentId: id, ...(since ? { sinceRevision: since } : {}) }] } })).structuredContent.documents[0];
+  try {
+    for (let i = 0; i < 80; i++) { try { if ((await fetch(base + "/")).ok) break; } catch {} await sleep(100); }
+    await client.connect(new StreamableHTTPClientTransport(new URL(base + "/mcp")));
+    const v = await client.callTool({ name: "validate_visual_annotations", arguments: { imageId: id, annotations: [shaft, head], note: "x" } });
+    const [g] = v.structuredContent.event.gestureGroups;
+    const before = await poll();
+    assert.equal((await poll(before.revision)).status, "unchanged");
+    await client.callTool({ name: "review_gesture_group", arguments: { imageId: id, memberIds: g.memberIds, verdict: "user-rejected" } });
+    const after = await poll(before.revision);
+    assert.equal(after.status, "snapshot", "the verdict moves the revision although the strokes did not change");
+    assert.equal(after.snapshot.gestureGroups[0].confirmation, "user-rejected");
+  } finally {
+    await client.close().catch(() => {});
+    handle.kill();
+    await rm(dir, { recursive: true, force: true });
+  }
+});

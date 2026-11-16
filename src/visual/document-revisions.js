@@ -34,7 +34,7 @@ export function createRevisionTracker({ epoch = randomBytes(6).toString("hex"), 
 }
 
 // How a client's last-seen revision relates to the current one.
-//   unchanged: same content (hash) -> nothing to send
+//   unchanged: same epoch and same content (hash) -> nothing to send
 //   snapshot:  the next revision, or no prior knowledge -> send the full state
 //   gap:       the client is more than one revision behind, or from another
 //              epoch (server restarted) -> full state too, flagged so the
@@ -42,7 +42,8 @@ export function createRevisionTracker({ epoch = randomBytes(6).toString("hex"), 
 export function classifyChange(since, current) {
   if (!since) return "snapshot";
   if (since.hash === current.hash && since.epoch === current.epoch) return "unchanged";
-  if (since.epoch !== current.epoch) return since.hash === current.hash ? "unchanged" : "gap";
+  // After a restart the client must adopt the new epoch, so it gets the state again even if the content is the same.
+  if (since.epoch !== current.epoch) return "gap";
   if (current.counter === since.counter + 1) return "snapshot";
   return "gap";
 }

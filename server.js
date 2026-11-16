@@ -1297,7 +1297,8 @@ function makeServer() {
               annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) });
           } else {
             const entry = await ensureSet(documentId);
-            hash = canvasRevision(entry);
+            // The content hash does not cover the user's gesture verdicts, which the snapshot carries.
+            hash = canvasRevision(entry) + ":" + createHash("sha256").update(JSON.stringify(entry.gestureDecisions ?? null)).digest("hex").slice(0, 8);
             body = () => ({ width: entry.width, height: entry.height, annotations: canvasMarks(entry), layers: canvasLayers(entry),
               gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions), objects: widgetObjects(entry), baseAsObject: !!entry.baseAsObject });
           }

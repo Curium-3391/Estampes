@@ -19,7 +19,7 @@ test("classifyChange: unchanged, next snapshot, gap, other epoch", () => {
   assert.equal(classifyChange({ epoch: "e1", counter: 4, hash: "cv:4" }, cur), "snapshot");
   assert.equal(classifyChange({ epoch: "e1", counter: 2, hash: "cv:2" }, cur), "gap");
   assert.equal(classifyChange({ epoch: "e0", counter: 9, hash: "cv:x" }, cur), "gap", "server restarted");
-  assert.equal(classifyChange({ epoch: "e0", counter: 9, hash: "cv:5" }, cur), "unchanged", "same content after a restart");
+  assert.equal(classifyChange({ epoch: "e0", counter: 9, hash: "cv:5" }, cur), "gap", "same content after a restart still moves the client to the new epoch");
 });
 
 test("the tracker forgets the oldest documents past its limit", () => {
