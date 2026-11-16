@@ -12,12 +12,17 @@ export const workbenchSource = () => [
   "const { clampRect, snapRect, applyOp, reconcile, profileFor } = (() => {\n" +
     readFileSync(join(ROOT, "src", "surface", "geometry.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn { clampRect, snapRect, applyOp, reconcile, profileFor };\n})();",
-  // The shared document store (poll/reconcile rules); plain module, `export` stripped.
-  "const { createDocumentStore, POLL_BATCH } = (() => {\n" +
-    readFileSync(join(ROOT, "src", "surface", "document-store.js"), "utf8").replace(/^export\s+/gm, "") +
-    "\nreturn { createDocumentStore, POLL_BATCH };\n})();",
   readFileSync(join(ROOT, "public", "workbench.js"), "utf8"),
   readFileSync(join(ROOT, "public", "calculator.js"), "utf8"),
 ].join("\n");
 
-export const inlineWorkbench = (html) => html.replace("__ESTAMPES_WORKBENCH__", () => workbenchSource());
+// The shared document store (poll/reconcile rules) is page-level, outside every viewer: a plain
+// module with its `export` keywords stripped.
+export const documentStoreSource = () =>
+  "const { createDocumentStore, POLL_BATCH } = (() => {\n" +
+    readFileSync(join(ROOT, "src", "surface", "document-store.js"), "utf8").replace(/^export\s+/gm, "") +
+    "\nreturn { createDocumentStore, POLL_BATCH };\n})();";
+
+export const inlineWorkbench = (html) => html
+  .replace("__ESTAMPES_WORKBENCH__", () => workbenchSource())
+  .replace("__ESTAMPES_DOCSTORE__", () => documentStoreSource());

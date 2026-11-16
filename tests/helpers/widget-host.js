@@ -68,7 +68,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
     },
     // Opens the widget on `imageId` the way present_visual would deliver it.
     // globals: deliver the result the way ChatGPT does (window.openai first).
-    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false, hostName = "fake-host" }) {
+    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false, hostName = "fake-host", quietPoll = false }) {
       const widget = await this.widgetHtml();
       browser ??= await chromium.launch(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : { args: ["--no-sandbox"] });
       const page = await browser.newPage({ viewport, hasTouch: touch, isMobile: touch });
@@ -76,6 +76,9 @@ export async function startStack({ cas = true, env = {} } = {}) {
       page.on("pageerror", (e) => errors.push(String(e)));
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
       await page.exposeFunction("hostCall", async (params) => {
+        // quietPoll: for a test whose result carries things the server does not have (it edits the
+        // host result by hand), the widget's poll hears "no news" instead of the server's state.
+        if (quietPoll && params?.name === "documents_get_changes") return { content: [], structuredContent: { kind: "estampes.documents_changes", documents: [] } };
         const r = await client.callTool(params);
         return { content: r.content, structuredContent: r.structuredContent, _meta: r._meta, isError: r.isError };
       });

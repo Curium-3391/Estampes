@@ -265,13 +265,14 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 // subscribe to events (tool-input, tool-result, globals) and send requests
 // through it; nothing in a viewer touches window.parent directly.
 function createHost(){
- const subs={"tool-input":new Set(),"tool-result":new Set(),globals:new Set(),failed:new Set()};
+ const subs={"tool-input":new Set(),"tool-result":new Set(),globals:new Set(),failed:new Set(),settled:new Set()};
  const pending=new Map(),waiters=[];let rpcId=0,ready=false,hostName="";
  const on=(type,fn)=>{subs[type].add(fn);return()=>subs[type].delete(fn)};
  const emit=(type,arg)=>{for(const fn of [...subs[type]]){try{fn(arg)}catch(err){console.error(err)}}};
  const whenReady=()=>ready?Promise.resolve():new Promise(resolve=>waiters.push(resolve));
  const notify=(method,params)=>window.parent.postMessage({jsonrpc:"2.0",method,params},"*");
- const rawRequest=(method,params)=>new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});
+ // A finished tool call (a save, an edit) is the moment to ask the server what changed; the poll itself is excluded.
+ const rawRequest=(method,params)=>new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject,settles:method==="tools/call"&&params?.name!=="documents_get_changes"});
   window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
   setTimeout(()=>{if(pending.has(id)){pending.delete(id);reject(Error("Host timeout: "+method))}},12000);
  });
@@ -280,7 +281,7 @@ function createHost(){
  // until it has answered, or the host can drop the view as timed out.
  const request=async(method,params)=>{if(method!=="ui/initialize")await whenReady();return rawRequest(method,params)};
  window.addEventListener("message",event=>{if(event.source!==window.parent)return;const msg=event.data;if(msg?.jsonrpc!=="2.0")return;
-  if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);return;}
+  if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);if(p.settles)emit("settled");return;}
   if(msg.method==="ui/notifications/tool-input")emit("tool-input",msg.params);
   if(msg.method==="ui/notifications/tool-result")emit("tool-result",msg.params);
  });
@@ -2380,7 +2381,34 @@ function cancelGestures(){
 }
 // A resize changes the coordinate frame under a pointer; end the gesture.
 if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new ResizeObserver(entries=>{const r=entries[entries.length-1]?.contentRect;if(!r||disposed)return;const w=Math.round(r.width),h=Math.round(r.height);const changed=lastW>=0&&(w!==lastW||h!==lastH);lastW=w;lastH=h;if(changed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
-return {scope,rootEl,feed:applyHostResult,cancelGestures,get disposed(){return disposed},dispose(){
+// The document this viewer shows, and how a polled snapshot lands in it. Unsent marks (userMarks),
+// the camera, the tool and the selection are never touched: a poll only replaces what the server
+// owns (other authors' marks, layers, objects, gesture verdicts, links).
+const documentRef=()=>ws?ws.id:imageId;
+function applyPolled(s){
+ if(!s||disposed)return;
+ if(ws){
+  if(s.workspace?.id!==ws.id)return;
+  for(const px of Array.isArray(s.workspace.items)?s.workspace.items:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;}}
+  ws.revision=Number(s.workspace.revision)||ws.revision;
+  if(Array.isArray(s.layers)){layers=[];setLayers(s.layers);}
+  const marks=fromServerList(s.annotations),mine=new Set(userMarks.map(m=>m.id));
+  assistantMarks=marks.filter(a=>a.author!=="user").slice(0,200);
+  priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,200);
+  links=viewLinks(s.links);
+ }else{
+  if(Array.isArray(s.layers))setLayers(s.layers);
+  if(Array.isArray(s.gestureGroups))setGestures(s.gestureGroups);
+  if(Array.isArray(s.objects))setObjects(s.objects);
+  if(typeof s.baseAsObject==="boolean")baseAsObject=s.baseAsObject;
+  const marks=Array.isArray(s.annotations)?s.annotations.filter(valid).slice(0,120).map(fromServer):[];
+  const mine=new Set(userMarks.map(m=>m.id));
+  assistantMarks=marks.filter(a=>a.author!=="user").slice(0,60);
+  priorUserMarks=marks.filter(a=>a.author==="user"&&!mine.has(a.id)).slice(0,60);
+ }
+ render();
+}
+return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
  try{cancelGestures()}catch{}
  disposed=true;
@@ -2428,5 +2456,50 @@ function mountViewer(container,{receivesHost=false}={}){
  v.holder=holder;viewers.add(v);
  return v;
 }
-window.estampesSurface={mountViewer,viewers:()=>[...viewers]};
+
+// ===== Poll and reconcile (UVA Phase 3, OD-04 option A) =====
+// One DocumentStore for the widget; every viewer on a document shares its entry. The app-only
+// documents_get_changes call runs about every POLL_MS while the widget is visible, and at once on
+// focus, on becoming visible, and after any finished tool call (a save or edit).
+__ESTAMPES_DOCSTORE__
+const POLL_MS=2000;
+const docs=createDocumentStore({fetchChanges:async list=>{
+ const r=await host.request("tools/call",{name:"documents_get_changes",arguments:{documents:list}});
+ if(r?.isError)throw Error(r.content?.[0]?.text||"tool error");
+ const sc=r?.structuredContent;if(sc?.kind!=="estampes.documents_changes")throw Error("Unexpected response");
+ return sc;
+}});
+const bindings=new Map(); // viewer -> {id, off, applied}
+function bindViewers(){
+ for(const [v,b] of [...bindings])if(v.disposed||!viewers.has(v)||v.documentRef()!==b.id){b.off();bindings.delete(v);}
+ for(const v of viewers){
+  if(v.disposed||bindings.has(v))continue;
+  const id=v.documentRef();if(!id)continue;
+  const b={id,applied:null};
+  b.off=docs.subscribe(id,st=>{
+   if(!st.snapshot||!st.revision)return;
+   const key=st.revision.epoch+":"+st.revision.counter+":"+st.revision.hash;
+   if(key===b.applied)return;
+   b.applied=key;v.applyPolled(st.snapshot);
+  });
+  bindings.set(v,b);
+ }
+}
+let polling=false,pollAgain=false,pollTimer=null;
+async function pollNow(){
+ if(!host.ready)return null;
+ if(polling){pollAgain=true;return null}
+ polling=true;
+ try{bindViewers();return await docs.reconcile();}
+ finally{polling=false;if(pollAgain){pollAgain=false;queueMicrotask(()=>{pollNow()})}}
+}
+const schedulePoll=()=>{clearTimeout(pollTimer);if(document.hidden)return;pollTimer=setTimeout(async()=>{try{await pollNow()}catch{}schedulePoll()},POLL_MS)};
+let settleTimer=null;
+host.on("settled",()=>{clearTimeout(settleTimer);settleTimer=setTimeout(()=>{pollNow().catch(()=>{})},250)});
+const wake=()=>{if(!document.hidden){pollNow().catch(()=>{});schedulePoll()}else clearTimeout(pollTimer)};
+document.addEventListener("visibilitychange",wake);
+window.addEventListener("focus",wake);
+host.whenReady().then(()=>schedulePoll());
+
+window.estampesSurface={mountViewer,viewers:()=>[...viewers],pollNow,documents:docs};
 </script></body></html>
