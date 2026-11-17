@@ -641,7 +641,11 @@ async function editOnServer(args){
  for(const k of ["layers","marks","remove"])if(body[k]===undefined)delete body[k];
  // One id per user action, reused when the answer is lost: the server applies it once (UVA lost-ACK handling).
  const commandId=newCommandId();
- const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...body,commandId}});
+ // The target is fixed now: if the viewer shows another document while the answer is lost, the retry and
+ // the status lookup still name the document the user edited, and the answer is not applied to the new one.
+ const target={imageId,pairImageId:pair?pair.imageId:null,wsId:ws?ws.id:null};
+ const sameTarget=()=>imageId===target.imageId&&(pair?pair.imageId:null)===target.pairImageId&&(ws?ws.id:null)===target.wsId;
+ const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId:target.imageId,...(target.pairImageId?{pairImageId:target.pairImageId}:{}),...body,commandId}});
  let result;
  try{result=await send()}
  catch(first){
@@ -649,7 +653,7 @@ async function editOnServer(args){
   // the server answers a known id with the current canvas instead of applying it twice.
   let known=null;
   try{
-   const st=await request("tools/call",{name:"commands_get_status",arguments:{documentId:ws?ws.id:imageId,commandIds:[commandId]}});
+   const st=await request("tools/call",{name:"commands_get_status",arguments:{documentId:target.wsId||target.imageId,commandIds:[commandId]}});
    known=st?.structuredContent?.commands?.[0]?.status??null;
   }catch{}
   status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
@@ -658,7 +662,8 @@ async function editOnServer(args){
  }
  if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
  const r=result?.structuredContent;
- if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");
+ if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId)throw Error("Unexpected response");
+ if(!sameTarget())return r;
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
  if(r.history&&typeof r.history==="object")serverHistory=r.history;
