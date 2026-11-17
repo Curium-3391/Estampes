@@ -169,7 +169,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Notify Discord of stable release
-        if: ${{ success() && !contains(github.ref_name, '-') }}
+        # Only a stable v* tag that was actually published; a push to main
+        # (ref_name "main", no "-") must not announce a release.
+        if: ${{ success() && steps.publish.outputs.allowed == 'true' && github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
         continue-on-error: true
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

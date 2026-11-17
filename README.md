@@ -106,3 +106,5 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 ## License
 
 [Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.
+
+Third-party components keep their own licenses. The Docker image includes Node.js dependencies from `package-lock.json` (MIT, Apache-2.0, ISC, 0BSD) and the prebuilt libvips binaries that `sharp` loads dynamically (libvips and several bundled libraries are LGPL-3.0-or-later, others BSD/MIT-style; the per-library list is in `node_modules/@img/sharp-libvips-*/README.md` inside the image, and sources are at [lovell/sharp-libvips](https://github.com/lovell/sharp-libvips)). The calculator image includes SymPy and mpmath (BSD-3-Clause).

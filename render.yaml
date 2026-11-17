@@ -12,6 +12,7 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22"
-      # Optional: set in the Render dashboard to require ?key=... on /mcp.
+      # Set this (a long random string): onrender.com is public, and without
+      # a key anyone can use /mcp and read your images. See docs/DEPLOYMENT.md.
       - key: ESTAMPES_ACCESS_KEY
         sync: false

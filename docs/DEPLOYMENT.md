@@ -121,9 +121,9 @@ See [Compatibility](COMPATIBILITY.md#librechat-v089-rc1) for the live report, th
 
 1. Open [Render Dashboard](https://dashboard.render.com/) and sign in.
 2. Select **New → Blueprint**.
-3. Connect GitHub and grant Render access to `Curium-3391/Estampes`.
-4. Select the repository and the `main` branch, review `render.yaml` and approve creation. Check the plan before approving any cost.
-5. Render asks for `ESTAMPES_ACCESS_KEY`. Set a long random string to protect the endpoint (recommended), or leave it empty for an open test server.
+3. Fork `Curium-3391/Estampes` to your own GitHub account, connect GitHub in Render and grant it access to your fork.
+4. Select your fork and the `main` branch, review `render.yaml` and approve creation. Check the plan before approving any cost.
+5. Render asks for `ESTAMPES_ACCESS_KEY`. Set a long random string of letters, digits, `-` and `_` (for example the output of `openssl rand -hex 24`). The `onrender.com` address is public, so leaving it empty lets anyone on the internet use your server and see your images; do that only for a short-lived test.
 6. Wait for **Live**, then open `https://<service>.onrender.com/version` and confirm the expected `version` and `accessKeyRequired`.
 
 ## Connecting ChatGPT
