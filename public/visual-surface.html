@@ -634,11 +634,28 @@ async function serverStep(action){
 }
 // In a workspace an edit names its item where a paired view names its side.
 const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
+const newCommandId=()=>{try{if(crypto.randomUUID)return crypto.randomUUID()}catch{}return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,12)};
 async function editOnServer(args){
  if(!ready||!imageId)throw Error("尚未連線");
  const body=ws?{...args,layers:asItems(args.layers),marks:asItems(args.marks),remove:asItems(args.remove),workspaceId:ws.id}:args;
  for(const k of ["layers","marks","remove"])if(body[k]===undefined)delete body[k];
- const result=await request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...body}});
+ // One id per user action, reused when the answer is lost: the server applies it once (UVA lost-ACK handling).
+ const commandId=newCommandId();
+ const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...body,commandId}});
+ let result;
+ try{result=await send()}
+ catch(first){
+  // No answer: the edit may or may not have arrived. Ask the server by command id, then send the same id again;
+  // the server answers a known id with the current canvas instead of applying it twice.
+  let known=null;
+  try{
+   const st=await request("tools/call",{name:"commands_get_status",arguments:{documentId:ws?ws.id:imageId,commandIds:[commandId]}});
+   known=st?.structuredContent?.commands?.[0]?.status??null;
+  }catch{}
+  status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
+  try{result=await send()}
+  catch(second){throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
+ }
  if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
  const r=result?.structuredContent;
  if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");

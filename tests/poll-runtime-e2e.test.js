@@ -97,3 +97,23 @@ test("the same result delivered again keeps the camera and does not duplicate ma
     assert.ok(ui.net.last < 1500, `an unchanged poll must not carry the snapshot (${ui.net.last} characters)`);
   } finally { await s.close(); }
 });
+
+test("a lost answer to a layer edit: the widget asks by command id and sends the same id again; the server applies it once", { skip: noPython || noBrowser, timeout: 60000 }, async () => {
+  const s = await startStack();
+  try {
+    const { id, ui, inner } = await openPolled(s);
+    await s.call("present_visual", { ...mark("ai-1", 0.2), imageId: id });
+    await until(inner, () => !!document.querySelector('button[data-act="lock"]'), null, "the layer controls");
+    ui.net.dropReplyOnce = "edit_visual_canvas";
+    await inner.evaluate(() => document.querySelector('button[data-act="lock"]').click());
+    await wait(500);
+    assert.equal(ui.net.sent.length, 2, "sent twice");
+    assert.ok(ui.net.sent[0] && ui.net.sent[0] === ui.net.sent[1], "with the same command id");
+    const status = (await s.call("commands_get_status", { documentId: id, commandIds: [ui.net.sent[0]] })).structuredContent.commands[0];
+    assert.equal(status.status, "applied");
+    const history = (await s.call("get_visual_state", { imageId: id, history: 50 })).structuredContent.history ?? [];
+    assert.equal(history.filter((l) => l.commandId === ui.net.sent[0]).length, 1, "one change-log line for the command");
+    const layers = (await s.call("get_visual_layers", { imageId: id })).structuredContent;
+    assert.equal(JSON.stringify(layers).includes('"locked":true'), true, "the layer is locked");
+  } finally { await s.close(); }
+});
