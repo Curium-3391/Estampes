@@ -75,11 +75,14 @@ export async function startStack({ cas = true, env = {} } = {}) {
       const errors = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+      const net = { offline: false, polls: 0, bytes: 0, last: 0 };
       await page.exposeFunction("hostCall", async (params) => {
+        if (params?.name === "documents_get_changes") { net.polls++; if (net.offline) throw new Error("offline (test)"); }
         // quietPoll: for a test whose result carries things the server does not have (it edits the
         // host result by hand), the widget's poll hears "no news" instead of the server's state.
         if (quietPoll && params?.name === "documents_get_changes") return { content: [], structuredContent: { kind: "estampes.documents_changes", documents: [] } };
         const r = await client.callTool(params);
+        if (params?.name === "documents_get_changes") { net.last = JSON.stringify(r.structuredContent ?? {}).length + JSON.stringify(r.content ?? []).length; net.bytes += net.last; }
         return { content: r.content, structuredContent: r.structuredContent, _meta: r._meta, isError: r.isError };
       });
       await page.setContent(HARNESS);
@@ -90,7 +93,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
       };
       await reload();
       const shot = async (name) => { if (shotsDir) { await mkdir(shotsDir, { recursive: true }); await page.screenshot({ path: join(shotsDir, name + ".png") }); } };
-      return { page, frame: page.frameLocator("#w"), errors, reload, shot };
+      return { page, frame: page.frameLocator("#w"), errors, reload, shot, net };
     },
     async close() { await browser?.close(); await client.close().catch(() => {}); server.kill(); casProc?.kill(); },
   };
