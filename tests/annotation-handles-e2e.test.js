@@ -55,7 +55,7 @@ for (const touch of [false, true]) test("drag, resize and reshape the AI's marks
     // Move: grab the box's edge line and drag it.
     await tap(ui, await point(ui, 0.2, 0.3), touch);
     await ui.frame.locator("#selection-outline [data-handle]").first().waitFor();
-    assert.equal(await ui.frame.locator("#selection-outline [data-handle]").count(), 8, "a box has corner and side handles");
+    assert.equal(await ui.frame.locator("#selection-outline [data-handle]").count(), 9, "a box has corner and side handles and a turn handle");
     await dragCanvas(ui, [0.25, 0.2], [0.30, 0.25], touch);
     await ui.frame.locator("#status").filter({ hasText: "已移動標記" }).waitFor();
     let m = await box();
@@ -92,6 +92,28 @@ for (const touch of [false, true]) test("drag, resize and reshape the AI's marks
     await ui.reload();
     m = await box();
     assert.ok(near(m.geometry.x2, 0.6));
+
+    // Rotate (#70): the box's turn handle makes it a quadrilateral with the same
+    // id, author, label and note; side lengths in pixels are kept.
+    await ui.frame.locator('[data-mode="select"]').click();
+    await tap(ui, await point(ui, m.geometry.x, (m.geometry.y + m.geometry.y2) / 2), touch);
+    await ui.frame.locator('#selection-outline [data-handle="rot"]').waitFor();
+    await ui.page.waitForTimeout(300);
+    const rot = await ui.frame.locator('#selection-outline [data-handle="rot"]').boundingBox();
+    const from = { x: rot.x + rot.width / 2, y: rot.y + rot.height / 2 };
+    await drag(ui, from, { x: from.x + 50, y: from.y + 15 }, touch);
+    await ui.frame.locator("#status").filter({ hasText: "已旋轉標記" }).waitFor();
+    const turned = await box(), g2 = m.geometry;
+    assert.equal(turned.type, "polyline"); assert.equal(turned.geometry.closed, true); assert.equal(turned.geometry.points.length, 4);
+    assert.deepEqual([turned.id, turned.provenance.author, turned.label, turned.finding.note], ["box", "assistant", "晶片", "AI 的說明"]);
+    const side = (pts, i) => Math.hypot((pts[(i + 1) % 4].x - pts[i].x) * 800, (pts[(i + 1) % 4].y - pts[i].y) * 600);
+    const wPx = (g2.x2 - g2.x) * 800, hPx = (g2.y2 - g2.y) * 600;
+    for (const i of [0, 2]) assert.ok(Math.abs(side(turned.geometry.points, i) - wPx) < 2, "width kept");
+    for (const i of [1, 3]) assert.ok(Math.abs(side(turned.geometry.points, i) - hPx) < 2, "height kept");
+    assert.ok(Math.abs(turned.geometry.points[1].y - turned.geometry.points[0].y) > 0.01, "the top edge is no longer level");
+    const read = (await s.call("present_visual", { imageId })).structuredContent.marks.find((x) => x.id === "box");
+    assert.equal(read.shape, "quadrilateral");
+    assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
 
