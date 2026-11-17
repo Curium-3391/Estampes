@@ -169,3 +169,30 @@ test("without the UVA store the ids are kept in memory: retries in one run still
     assert.deepEqual(got.map((c) => c.status), ["applied", "unknown"]);
   } finally { await s.stop(); }
 });
+
+test("a command that edits several workspace items is applied once across items, and its status reads applied", { timeout: 60000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), "estampes-cmd-ws-"));
+  const ids = [];
+  for (const color of ["#fff", "#ccc"]) {
+    const bytes = await sharp({ create: { width: 400, height: 300, channels: 3, background: color } }).png().toBuffer();
+    const id = imageIdOf(bytes), folder = join(dir, "images", id.slice(4));
+    await mkdir(folder, { recursive: true });
+    await writeFile(join(folder, "source"), bytes);
+    await writeFile(join(folder, "meta.json"), JSON.stringify({ imageId: id, source: "test" }));
+    ids.push(id);
+  }
+  const s = await start(dir);
+  try {
+    const ok = (r) => { assert.notEqual(r.isError, true, r.content?.[0]?.text); return r; };
+    const ws = ok(await s.call("create_workspace", { canvases: ids })).structuredContent.workspaceId;
+    ok(await s.call("present_visual", { workspaceId: ws, verify: false, annotations: [{ id: "w1", type: "point", x: 0.2, y: 0.2, label: "a", item: "wi-1" }, { id: "w2", type: "point", x: 0.2, y: 0.2, label: "b", item: "wi-2" }] }));
+    const move = () => s.call("edit_visual_canvas", { imageId: ids[0], workspaceId: ws, commandId: "cmd-ws-move-1", marks: [{ id: "w1", x: 0.6, item: "wi-1" }, { id: "w2", x: 0.7, item: "wi-2" }] });
+    const first = ok(await move());
+    assert.equal(first.structuredContent.replayed, undefined);
+    const again = ok(await move());
+    assert.equal(again.structuredContent.replayed, true);
+    assert.deepEqual(again.structuredContent.edits, []);
+    const st = (await s.call("commands_get_status", { documentId: ws, commandIds: ["cmd-ws-move-1"] })).structuredContent.commands;
+    assert.equal(st[0].status, "applied");
+  } finally { await s.stop(); }
+});

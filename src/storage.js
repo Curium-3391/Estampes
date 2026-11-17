@@ -281,17 +281,17 @@ async function rollbackCanvas(entry, key, state, seq) {
 }
 
 // After a change: rewrite canvas.json and marks.svg, append one history line.
-export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note, commandId, argsHash } = {}) {
-  if (commandId && !canvases) rememberCommand(entry, { at: new Date().toISOString(), tool, author, changed, commandId, argsHash });
+export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note, commandId, argsHash, canvases: spread } = {}) {
+  if (commandId && !canvases) rememberCommand(entry, { at: new Date().toISOString(), tool, author, changed, commandId, argsHash, ...(spread > 1 ? { canvases: spread } : {}) });
   if (canvases) {
     // Acknowledged only once durable in the store: a failure rejects.
     const canvas = serializeCanvas(entry);
-    const line = { at: canvas.savedAt, tool, author, changed, ...(removed.length ? { removed } : {}), ...(note ? { note } : {}), ...(commandId ? { commandId, argsHash } : {}), marks: canvas.marks.length };
+    const line = { at: canvas.savedAt, tool, author, changed, ...(removed.length ? { removed } : {}), ...(note ? { note } : {}), ...(commandId ? { commandId, argsHash, ...(spread > 1 ? { canvases: spread } : {}) } : {}), marks: canvas.marks.length };
     const key = setKeyOf(entry), state = saveState(entry), seq = ++state.issued;
     // A command id is recorded in the same line as its edit. If this save fails but a later save of the canvas
     // carries the edit (see below), that later line must carry the record too, or the edit would be durable
     // without its deduplication record: so every save lists the commands whose own saves are not yet durable.
-    if (commandId) state.outstanding.set(commandId, { commandId, argsHash, tool, at: canvas.savedAt });
+    if (commandId) state.outstanding.set(commandId, { commandId, argsHash, tool, at: canvas.savedAt, ...(spread > 1 ? { canvases: spread } : {}) });
     const carried = [...state.outstanding.values()].filter((c) => c.commandId !== commandId);
     if (carried.length) line.carried = carried;
     const listed = [...(commandId ? [commandId] : []), ...carried.map((c) => c.commandId)];

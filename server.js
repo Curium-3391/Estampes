@@ -1354,8 +1354,11 @@ function makeServer() {
         const entries = documentId.startsWith("ws:") ? (await workspaceItems((await resolveRef(documentId)).doc)).map((it) => it.entry) : [await ensureSet(documentId)];
         const logs = await Promise.all(entries.map((entry) => readCommandLog(entry)));
         const results = commandIds.map((commandId) => {
-          const found = logs.flatMap(commandRecords).filter((l) => l?.commandId === commandId).at(-1);
-          return found ? { commandId, status: "applied", at: found.at, tool: found.tool } : { commandId, status: "unknown" };
+          const records = logs.flatMap((log) => commandRecords(log).filter((l) => l?.commandId === commandId));
+          const found = records.at(-1);
+          // A workspace command that saved several items is applied only when every one of them carries it.
+          const carrying = logs.filter((log) => commandRecords(log).some((l) => l?.commandId === commandId)).length;
+          return found && carrying >= (found.canvases ?? 1) ? { commandId, status: "applied", at: found.at, tool: found.tool } : { commandId, status: "unknown" };
         });
         return {
           content: [{ type: "text", text: "Looked up " + commandIds.length + " command(s) for the widget." }],
@@ -2025,7 +2028,9 @@ function makeServer() {
             }
           } catch (error) { undo.forEach((u) => u()); throw error; }
           if (skipped && !all.length) replayed = true;
-          for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind), ...cmd });
+          // The record says how many canvases the command saves, so a status lookup can tell a half-saved command.
+          const wsCmd = commandId ? { ...cmd, canvases: all.length + skipped } : cmd;
+          for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind), ...wsCmd });
           const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
           return {
             content: [{ type: "text", text: "Applied " + edits.length + " user edit(s) in workspace " + workspaceId + "." }],
