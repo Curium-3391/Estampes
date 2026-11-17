@@ -223,3 +223,29 @@ test("a replay is still recognised when the image cache evicts the pair's canvas
     assert.equal(st[0].status, "applied");
   } finally { await s.stop(); }
 });
+
+test("a workspace command retried after the items were reordered keeps its original target", { timeout: 60000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), "estampes-cmd-reorder-"));
+  const ids = [];
+  for (const color of ["#fff", "#ccc"]) {
+    const bytes = await sharp({ create: { width: 400, height: 300, channels: 3, background: color } }).png().toBuffer();
+    const id = imageIdOf(bytes), folder = join(dir, "images", id.slice(4));
+    await mkdir(folder, { recursive: true });
+    await writeFile(join(folder, "source"), bytes);
+    await writeFile(join(folder, "meta.json"), JSON.stringify({ imageId: id, source: "test" }));
+    ids.push(id);
+  }
+  const s = await start(dir);
+  try {
+    const ok = (r) => { assert.notEqual(r.isError, true, r.content?.[0]?.text); return r; };
+    const ws = ok(await s.call("create_workspace", { canvases: ids })).structuredContent.workspaceId;
+    ok(await s.call("present_visual", { workspaceId: ws, verify: false, annotations: [{ id: "w1", type: "point", x: 0.2, y: 0.2, label: "a", item: "wi-1" }, { id: "w2", type: "point", x: 0.2, y: 0.2, label: "b", item: "wi-2" }] }));
+    // No `item`: the edit goes to the first item (wi-1).
+    const args = { imageId: ids[0], workspaceId: ws, commandId: "cmd-ws-reorder", marks: [{ id: "w1", x: 0.6 }] };
+    ok(await s.call("edit_visual_canvas", args));
+    ok(await s.call("edit_workspace", { workspaceId: ws, order: ["wi-2", "wi-1"] }));
+    const again = ok(await s.call("edit_visual_canvas", args));
+    assert.equal(again.structuredContent.replayed, true);
+    assert.deepEqual(again.structuredContent.edits, [], "nothing is applied to the item that is first now");
+  } finally { await s.stop(); }
+});

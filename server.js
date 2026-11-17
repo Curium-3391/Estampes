@@ -1984,13 +1984,14 @@ function makeServer() {
         // A command id seen before with the same edits has been applied: answer with the current canvas and change nothing.
         const cmd = { ...(commandId ? { commandId, argsHash: commandHash({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step }) } : {}) };
         let replayed = false;
+        let doneGroup = null; // the canvases the command first chose, in saving order (kept in the record), so a retry after a reorder keeps its targets
         const done = new Set(); // keys of canvases whose change log already carries this command (not objects: the image cache can evict entries)
         if (commandId) {
           const scope = workspaceId ? (await workspaceItems((await resolveRef(workspaceId)).doc)).map((it) => it.entry) : [await ensureImage(imageId), ...(pairImageId ? [await ensureImage(pairImageId)] : [])];
           // Judge each canvas on its own: a save that touched several canvases may have reached only some of them.
           const verdicts = await Promise.all(scope.map(async (entry) => [entry, judgeCommand([await readCommandLog(entry)], commandId, cmd.argsHash)]));
           if (verdicts.some(([, v]) => v.state === "mismatch")) throw new Error("Command " + commandId + " was already used for different edits.");
-          for (const [entry, v] of verdicts) if (v.state === "applied") done.add(setKeyOf(entry));
+          for (const [entry, v] of verdicts) if (v.state === "applied") { done.add(setKeyOf(entry)); doneGroup ??= v.group ?? null; }
           // An undo/redo touches one canvas, so any record means it was applied. Edits are replayed per canvas below.
           if (step && done.size) { replayed = true; layers = []; order = undefined; marks = []; remove = []; step = undefined; }
         }
@@ -2017,17 +2018,19 @@ function makeServer() {
           }
           for (const x of [...layers, ...marks, ...remove]) if (x.item && !known.has(x.item)) throw new Error("No item " + x.item + " in " + workspaceId);
           for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
-          const first = items[0].id, of = (x) => x.item ?? first;
+          const first = (doneGroup && items.find((x) => setKeyOf(x.entry) === doneGroup[0])?.id) || items[0].id, of = (x) => x.item ?? first;
           const undo = [], all = [];
-          let skipped = 0; const skippedKeys = [];
+          let skipped = 0; const touchedKeys = [];
           try {
             for (const it of items) {
               const pick = {
                 layers: layers.filter((l) => of(l) === it.id).map(({ side: _s, item: _i, ...l }) => l), order: order?.[it.id],
                 marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
               };
+              if (doneGroup && !doneGroup.includes(setKeyOf(it.entry))) continue;
               if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
-              if (done.has(setKeyOf(it.entry))) { skipped++; skippedKeys.push(setKeyOf(it.entry)); continue; }
+              touchedKeys.push(setKeyOf(it.entry));
+              if (done.has(setKeyOf(it.entry))) { skipped++; continue; }
               const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
               undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
               all.push({ it, edits: editCanvas(it.entry, pick) });
@@ -2035,7 +2038,7 @@ function makeServer() {
           } catch (error) { undo.forEach((u) => u()); throw error; }
           if (skipped && !all.length) replayed = true;
           // The record names the canvases the command saves, so a status lookup can tell a half-saved command.
-          const wsCmd = commandId ? { ...cmd, group: [...skippedKeys, ...all.map(({ it }) => setKeyOf(it.entry))] } : cmd;
+          const wsCmd = commandId ? { ...cmd, group: doneGroup ?? touchedKeys } : cmd;
           for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind), ...wsCmd });
           const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
           return {

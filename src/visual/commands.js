@@ -27,7 +27,7 @@ export function judgeCommand(logs, commandId, hash) {
   for (const log of logs) for (const line of commandRecords(log)) {
     if (line?.commandId !== commandId) continue;
     if (line.argsHash !== hash) return { state: "mismatch" };
-    found = { state: "applied", at: line.at, tool: line.tool };
+    found = { state: "applied", at: line.at, tool: line.tool, ...(line.group ? { group: line.group } : {}) };
   }
   return found ?? { state: "none" };
 }
