@@ -721,6 +721,9 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
   });
 }
 
+// Every edit that carries a command id takes a turn here (user edits are few; this keeps check-then-apply
+// atomic). Module level on purpose: makeServer runs once per HTTP request, and the gate must be shared by all.
+const commandTurn = createCommandGate();
 function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION }, { instructions: SERVER_INSTRUCTIONS });
   // Every tool result goes through the host size cap (src/result-budget.js);
@@ -1931,8 +1934,6 @@ function makeServer() {
   // renamed, reordered, locked and faded; the user's marks from any earlier
   // turn can be moved, restyled or relabelled; any unlocked mark can be
   // deleted. GPT is told about these edits on its next present_visual call.
-  // Every edit that carries a command id takes a turn here (user edits are few; this keeps check-then-apply atomic).
-  const commandTurn = createCommandGate();
   const EditMarkSchema = z.object({
     id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
