@@ -96,10 +96,6 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 - Claude support (sign-in, canvas upload, result-size limits) is covered by automated tests; it has not yet been tried in a live Claude chat.
 - Self-hosting only; there is no hosted service.
 
-## License
-
-[Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.
-
 ### UVA store
 
 Images, canvases, workspaces, panel layouts and calculator notebooks are kept
@@ -108,3 +104,9 @@ data move in on first open; `scripts/uva-to-legacy.mjs` writes them back out bef
 `ESTAMPES_CANVAS_STORE=legacy` switches back. The default profile survives a
 killed process but is not qualified for power loss. See
 [setup, limitations, export and rollback](docs/UVA-BETA.md).
+
+## License
+
+[Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.
+
+Third-party components keep their own licenses. The Docker image includes Node.js dependencies from `package-lock.json` (MIT, Apache-2.0, ISC, 0BSD) and the prebuilt libvips binaries that `sharp` loads dynamically (libvips and several bundled libraries are LGPL-3.0-or-later, others BSD/MIT-style; the per-library list is in `node_modules/@img/sharp-libvips-*/README.md` inside the image, and sources are at [lovell/sharp-libvips](https://github.com/lovell/sharp-libvips)). The calculator image includes SymPy and mpmath (BSD-3-Clause).
