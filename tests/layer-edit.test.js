@@ -117,3 +117,20 @@ test("finding recency follows changed evidence without changing layer or ink ord
   restoreCanvas(copy, JSON.parse(JSON.stringify(serializeCanvas(entry))));
   assert.equal(canvasMarks(copy).find(m=>m.id==="a").findingUpdatedAt, after.find(m=>m.id==="a").findingUpdatedAt);
 });
+
+test("#70: rotating a box turns it into a quadrilateral; only rect -> closed 4-point polyline is allowed", async () => {
+  const entry = await photo();
+  storeUserMarks(entry, [{ id: "mine", type: "rect", x: 0.1, y: 0.1, x2: 0.3, y2: 0.2, label: "我的框" }]);
+  applyCanvasChanges(entry, { annotations: [{ ...box("ai", 0.5), label: "AI 框", color: "red" }, { id: "arr", type: "arrow", x: 0.1, y: 0.8, x2: 0.3, y2: 0.9 }], resolve });
+  const quad = (cx, cy) => [{ x: cx - 0.1, y: cy - 0.02 }, { x: cx + 0.08, y: cy - 0.08 }, { x: cx + 0.1, y: cy + 0.02 }, { x: cx - 0.08, y: cy + 0.08 }];
+  const before = snap(entry);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "arr", type: "polyline", closed: true, points: quad(0.2, 0.85) }], resolveUser }), /only a box \(rect\) can become a quadrilateral/);
+  assert.throws(() => editCanvas(entry, { marks: [{ id: "ai", type: "polyline", points: quad(0.55, 0.3) }], resolveUser }), /only a box/);
+  assert.equal(snap(entry), before);
+  const edits = editCanvas(entry, { marks: [{ id: "mine", type: "polyline", closed: true, points: quad(0.2, 0.15) }, { id: "ai", type: "polyline", closed: true, points: quad(0.55, 0.3) }], resolveUser });
+  assert.deepEqual(edits.map((e) => [e.kind, e.change]), [["move-mark", "reshape"], ["move-mark", "reshape"]]);
+  const byId = Object.fromEntries(canvasMarks(entry).map((m) => [m.id, m]));
+  for (const id of ["mine", "ai"]) { assert.equal(byId[id].type, "polyline"); assert.equal(byId[id].closed, true); assert.equal(byId[id].points.length, 4); }
+  assert.deepEqual([byId.ai.author, byId.ai.label, byId.ai.color, byId.ai.edited], ["assistant", "AI 框", "red", true]);
+  assert.deepEqual([byId.mine.author, byId.mine.label], ["user", "我的框"]);
+});

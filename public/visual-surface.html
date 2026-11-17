@@ -1853,7 +1853,10 @@ function labelDistance(m,p,tol){
 function handlesOf(m){
  if(!m)return [];
  if(m.type==="rect"){const x1=Math.min(m.x,m.x2),x2=Math.max(m.x,m.x2),y1=Math.min(m.y,m.y2),y2=Math.max(m.y,m.y2),cx=(x1+x2)/2,cy=(y1+y2)/2;
-   return [{k:"nw",x:x1,y:y1},{k:"n",x:cx,y:y1},{k:"ne",x:x2,y:y1},{k:"e",x:x2,y:cy},{k:"se",x:x2,y:y2},{k:"s",x:cx,y:y2},{k:"sw",x:x1,y:y2},{k:"w",x:x1,y:cy}];}
+   // The round handle turns a box (#70); once turned it is a quadrilateral.
+   const b=bounds(m),from={x:(b.x+b.x2)/2/VW,y:b.y/VH};
+   return [{k:"nw",x:x1,y:y1},{k:"n",x:cx,y:y1},{k:"ne",x:x2,y:y1},{k:"e",x:x2,y:cy},{k:"se",x:x2,y:y2},{k:"s",x:cx,y:y2},{k:"sw",x:x1,y:y2},{k:"w",x:x1,y:cy},
+     {k:"rot",x:from.x,y:Math.max(0,from.y-26*U()/VH),from}];}
  if(m.type==="arrow")return [{k:"a",x:m.x,y:m.y},{k:"b",x:m.x2,y:m.y2}];
  if(m.type==="polyline"){
    const out=m.points.length<=MAX_VERTEX_HANDLES?m.points.map((q,i)=>({k:"v"+i,x:q.x,y:q.y})):[];
@@ -1884,7 +1887,11 @@ function handleAt(p){
 // The mark with one handle dragged to canvas point p, kept inside its image.
 function withHandle(m,k,p,start){
  if(k==="rot"){const b=bounds(m),cx=(b.x+b.x2)/2,cy=(b.y+b.y2)/2,a0=Math.atan2(py(start.y)-cy,px(start.x)-cx),a1=Math.atan2(py(p.y)-cy,px(p.x)-cx);
-   return rotated(m,a1-a0)??m;}
+   // A turned box becomes a closed four-corner polyline (a quadrilateral, #70),
+   // keeping its id, label, note, style and layer.
+   const base=m.type==="rect"?{...m,...polylineMark([{x:Math.min(m.x,m.x2),y:Math.min(m.y,m.y2)},{x:Math.max(m.x,m.x2),y:Math.min(m.y,m.y2)},
+     {x:Math.max(m.x,m.x2),y:Math.max(m.y,m.y2)},{x:Math.min(m.x,m.x2),y:Math.max(m.y,m.y2)}],{closed:true})}:m;
+   return rotated(base,a1-a0)??m;}
  const q=frames?p:{x:clamp(p.x,0,1),y:clamp(p.y,0,1)};let next;
  if(m.type==="rect"){
    let x1=Math.min(m.x,m.x2),x2=Math.max(m.x,m.x2),y1=Math.min(m.y,m.y2),y2=Math.max(m.y,m.y2);
@@ -1917,7 +1924,7 @@ function editFields(m){
  const s=toSide(m),out={id:rawOf(s),x:s.x,y:s.y};
  if(frames)out.side=sideKey(s.side);
  if(s.x2!==undefined){out.x2=s.x2;out.y2=s.y2;}
- if(s.points){out.points=s.points;if(s.smooth!==undefined)out.smooth=s.smooth;if(s.closed!==undefined)out.closed=s.closed;}
+ if(s.points){out.points=s.points;if(s.smooth!==undefined)out.smooth=s.smooth;if(s.closed!==undefined)out.closed=s.closed;if(s.type==="polyline")out.type="polyline";}
  for(const k of ["label","note","color","size","pen"])if(s[k]!==undefined)out[k]=s[k];
  return out;
 }

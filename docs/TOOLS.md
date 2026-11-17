@@ -167,8 +167,10 @@ corner to the object's real corners, or drag the round handle to turn the
 whole shape. It is stored as a polyline with `closed: true` and its 4 corners
 in order, so every existing path (export/import, bundles, workspaces, image
 transforms) keeps the exact vertices; the AI sees `shape: "quadrilateral"`
-with its `corners`, and can draw one the same way. Plain **框選** boxes stay
-axis-aligned. Any closed shape can be turned; freehand strokes with more than
+with its `corners`, and can draw one the same way. Plain **框選** boxes are
+axis-aligned until the user turns one with its round handle; it then becomes a
+quadrilateral with the same id, label, note and style (`edit_visual_canvas`
+accepts `type: "polyline"` only for that change). Any closed shape can be turned; freehand strokes with more than
 32 vertices are only moved.
 
 Choose **文字**, tap a location, enter up to 80 characters (including newlines),

@@ -33,7 +33,7 @@ Below the tools you choose a colour, a line width (極細 is for fine lines when
 
 **選取** works on any mark in an unlocked layer, including marks from earlier turns and marks the AI drew:
 
-- **Drag** a mark to move it. Box corners and sides **resize** it; arrow ends, polyline vertices and quadrilateral corners **reshape** it; the round handle **rotates** any closed shape. Arrow keys nudge, Delete removes.
+- **Drag** a mark to move it. Box corners and sides **resize** it; arrow ends, polyline vertices and quadrilateral corners **reshape** it; the round handle **rotates** a box or any closed shape (a turned box becomes a quadrilateral with the same id, label, note and style). Arrow keys nudge, Delete removes.
 - **Edit the text** of any mark, the AI's included: its label and a note of several lines. Tapping the drawn label selects its mark too. A changed note drops the old evidence and review of that note. A tap to select never moves the mark; a drag only starts once the pointer travels a few pixels (more for a finger).
 - **The AI's marks keep their author and style.** You can move, resize, reshape and relabel them; the mark keeps its author, id, layer and style, and a moved mark is flagged as edited by you. The AI is told exactly what changed, for example that you resized its box and from where to where, or that you rewrote its label from "A" to "甲".
 - **上一步 / 下一步** (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y) undo and redo your drawing before you send, and also edits you already sent (move, resize, reshape, restyle, relabel, delete). A step is refused, with the reason, if the mark has changed since or its layer is now locked. The AI hears about it on its next call. Layer edits are not part of this history, which is kept in memory for up to 50 steps per image.
