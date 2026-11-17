@@ -638,16 +638,19 @@ const newCommandId=()=>{try{if(crypto.randomUUID)return crypto.randomUUID()}catc
 // Edits go one at a time: if one loses its answer and is retried, a newer edit must not be applied before it
 // (two opacity changes could otherwise end with the older value). A failed edit does not block the next one.
 let editTail=Promise.resolve();
-function editOnServer(args){const run=editTail.then(()=>editOnServerNow(args));editTail=run.catch(()=>{});return run}
-async function editOnServerNow(args){
- if(!ready||!imageId)throw Error("尚未連線");
+function editOnServer(args){
+ if(!ready||!imageId)return Promise.reject(Error("尚未連線"));
+ // The request and its target are fixed when the user acts, not when its turn comes: if the viewer shows another
+ // document while this edit waits, or while its answer is lost, it still goes to the document the user edited,
+ // and the answer is not applied to the new one.
  const body=ws?{...args,layers:asItems(args.layers),marks:asItems(args.marks),remove:asItems(args.remove),workspaceId:ws.id}:args;
  for(const k of ["layers","marks","remove"])if(body[k]===undefined)delete body[k];
+ const target={imageId,pairImageId:pair?pair.imageId:null,wsId:ws?ws.id:null};
  // One id per user action, reused when the answer is lost: the server applies it once (UVA lost-ACK handling).
  const commandId=newCommandId();
- // The target is fixed now: if the viewer shows another document while the answer is lost, the retry and
- // the status lookup still name the document the user edited, and the answer is not applied to the new one.
- const target={imageId,pairImageId:pair?pair.imageId:null,wsId:ws?ws.id:null};
+ const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});return run;
+}
+async function editOnServerNow(body,target,commandId){
  const sameTarget=()=>imageId===target.imageId&&(pair?pair.imageId:null)===target.pairImageId&&(ws?ws.id:null)===target.wsId;
  const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId:target.imageId,...(target.pairImageId?{pairImageId:target.pairImageId}:{}),...body,commandId}});
  let result;
