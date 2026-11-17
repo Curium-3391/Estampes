@@ -33,7 +33,31 @@ test("user labels and notes clear and undo exactly; changed notes never inherit 
   editCanvas(e,{layers:[{id:before.layer,locked:true}]});
   assert.throws(()=>editCanvas(e,{marks:[{id:"user-1",note:"blocked"}],resolveUser:replayUserAnnotation}),/locked/);
   applyCanvasChanges(e,{annotations:[{id:"ai-1",type:"point",x:.7,y:.7}],resolve:resolveCoordinateAnnotation});
-  assert.throws(()=>editCanvas(e,{marks:[{id:"ai-1",note:"replace AI"}],resolveUser:replayUserAnnotation}),/its note stays as the AI wrote it/);
+  assert.throws(()=>editCanvas(e,{marks:[{id:"ai-1",color:"red",note:"replace AI"}],resolveUser:replayUserAnnotation}),/its color stays as the AI wrote it/);
+});
+
+test("#82: the user rewrites the label and note of the AI's marks; author, style, geometry and ID stay, undo is exact", async () => {
+  const e=await photo();
+  applyCanvasChanges(e,{annotations:[{id:"t82-A",type:"rect",x:.1,y:.1,x2:.3,y2:.3,label:"A",note:"AI 的說明",color:"red",confidence:"high"},
+    {id:"t82-B",type:"point",x:.6,y:.6,label:"B"}],layer:"AI",resolve:resolveCoordinateAnnotation});
+  const before=structuredClone(canvasMarks(e).find(m=>m.id==="t82-A"));
+  assert.equal(before.confidence,"high");
+  const edits=editCanvas(e,{marks:[{id:"t82-A",label:"甲 Ω🙂",note:"使用者改寫\n第二行"}],resolveUser:replayUserAnnotation});
+  assert.deepEqual(edits.map(x=>x.kind),["edit-text"]);
+  assert.deepEqual([edits[0].author,edits[0].before,edits[0].after],["assistant",{label:"A",note:"AI 的說明"},{label:"甲 Ω🙂",note:"使用者改寫\n第二行"}]);
+  const after=canvasMarks(e).find(m=>m.id==="t82-A");
+  assert.deepEqual([after.author,after.label,after.note,after.color,after.layer,after.x,after.x2],["assistant","甲 Ω🙂","使用者改寫\n第二行","red",before.layer,.1,.3]);
+  assert.equal(after.confidence,undefined,"the AI's confidence does not carry over to the user's wording");
+  assert.equal(after.edited,undefined,"text edits are not geometry edits");
+  undoCanvasEdit(e);assert.deepEqual(canvasMarks(e).find(m=>m.id==="t82-A"),before);
+  redoCanvasEdit(e);assert.deepEqual(canvasMarks(e).find(m=>m.id==="t82-A"),after);
+  // Label only, and clearing it.
+  editCanvas(e,{marks:[{id:"t82-B",label:""}],resolveUser:replayUserAnnotation});
+  assert.equal(canvasMarks(e).find(m=>m.id==="t82-B").label,undefined);
+  assert.equal(e.userEdits.at(-1).kind,"edit-text");
+  // Locked layers still refuse it.
+  editCanvas(e,{layers:[{id:before.layer,locked:true}]});
+  assert.throws(()=>editCanvas(e,{marks:[{id:"t82-A",label:"blocked"}],resolveUser:replayUserAnnotation}),/locked/);
 });
 
 test("standalone vector text supports multiline, stable identity, exact contents and persistent inverses", async () => {

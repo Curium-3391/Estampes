@@ -1791,10 +1791,10 @@ async function loadDetail(){
 // ---- Selecting one mark ---------------------------------------------------
 // 選取 mode: tap a mark to select it (topmost first, small before large).
 // Any unlocked mark, the AI's included, can be dragged, nudged with the arrow
-// keys, resized or reshaped with its handles (#69). Your own marks can also
-// be restyled with the pen buttons and relabelled; the AI's label, note and
-// style stay its own. Any unlocked mark can be deleted; locked layers refuse
-// all of that.
+// keys, resized or reshaped with its handles (#69), and have its label and
+// note rewritten (#82). Your own marks can also be restyled with the pen
+// buttons; the AI's style stays its own. Any unlocked mark can be deleted;
+// locked layers refuse all of that.
 // Unsent marks change locally (with undo); sent ones go to the server.
 const selectionEl=scope.querySelector("#selection");
 let selected=null,dragMove=null,dragHandle=null,nudge=null,findingPointer=null;
@@ -1803,6 +1803,9 @@ const findMark=id=>allMarks().find(m=>m.id===id);
 const isFresh=m=>!!m&&userMarks.some(u=>u.id===m.id)&&!sentIds.has(m.id);
 const isUser=m=>!!m&&(m.author==="user"||userMarks.some(u=>u.id===m.id));
 const canEdit=m=>isUser(m)&&!isLocked(m);
+// Label and note are shared text (#82): the user can rewrite them on any
+// unlocked mark, the AI's too. Style stays its author's.
+const canEditText=m=>!!m&&!isLocked(m);
 const canMove=m=>!!m&&!isLocked(m);
 const canDelete=m=>!!m&&!isLocked(m);
 function distSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);}
@@ -1828,8 +1831,20 @@ function pickMark(p){
  const list=[...userMarks.filter(m=>!sentIds.has(m.id)).reverse(),
    ...allMarks().filter(m=>!isFresh(m)&&shown(m)).sort((a,b)=>(rank.get(b.layer)??-1)-(rank.get(a.layer)??-1))];
  let best=null,bestD=tol;
- for(const m of list){if(!valid(m))continue;const d=markDistance(m,p,tol);if(d<bestD){best=m;bestD=d;}}
+ for(const m of list){if(!valid(m))continue;const d=Math.min(markDistance(m,p,tol),labelDistance(m,p,tol));if(d<bestD){best=m;bestD=d;}}
  return best;
+}
+// The drawn label (renderMarks) is part of a mark too: tapping the words
+// "A" or "SYNC TEST" selects their mark so its text can be edited (#82).
+// Inside the label counts as near, but ink right under the finger still wins.
+function labelDistance(m,p,tol){
+ const lk=U(),text=String(m.label||"AI").slice(0,64)+"  ";
+ const lx=m.type==="polyline"?px(m.points[0].x):px(m.x),ly=m.type==="polyline"?py(m.points[0].y):py(m.y);
+ const x1=clamp(lx+9*lk,5*lk,VW-100*lk),y2=clamp(ly-12*lk,14*lk,VH-14*lk)+4*lk,y1=y2-19*lk;
+ let w=0;for(const ch of text)w+=(ch.codePointAt(0)>0x2E7F?15:9)*lk;
+ const P={x:px(p.x),y:py(p.y)},x2=x1+w;
+ const out=Math.hypot(Math.max(x1-P.x,0,P.x-x2),Math.max(y1-P.y,0,P.y-y2));
+ return out>0?out+tol*.25:tol*.5;
 }
 // ---- Geometry handles (#69) -------------------------------------------------
 // The points a selected mark can be resized or reshaped by, in canvas units
@@ -1958,12 +1973,12 @@ function renderSelection(){
  const mine=isUser(m),layer=layerOf(m.layer);
  selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"AI"))}),
    el("span",{className:"meta",textContent:(mine?"你的標記":"AI 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
- const permitted=canEdit(m);
+ const permitted=canEditText(m);
  const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤",readOnly:!permitted});
  const note=el("textarea",{value:m.note??"",maxLength:200,rows:3,placeholder:"這個標記的備註","aria-label":"標記備註",readOnly:!permitted});
  selectionEl.append(el("label",{},"標籤（最多 64 字元）",input),el("label",{},"備註（最多 200 字元）",note));
  if(permitted){
-   const save=()=>{const current=findMark(m.id);if(!canEdit(current))return;
+   const save=()=>{const current=findMark(m.id);if(!canEditText(current))return;
      const label=input.value.trim(),text=note.value;
      input.blur();note.blur();
      if(label!==(current.label??"")||text!==(current.note??""))updateMark(current,{...current,label,note:text},"已儲存標籤與備註。",true);
@@ -1971,8 +1986,9 @@ function renderSelection(){
    const apply=el("button",{textContent:"儲存標籤與備註"});apply.addEventListener("click",save);
    input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing&&e.keyCode!==229){e.preventDefault();save();}});
    note.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)&&!e.isComposing){e.preventDefault();save();}});
-   selectionEl.append(apply,el("span",{className:"meta",textContent:"拖曳移動 · 拖曳控制點改大小或形狀 · 方向鍵微調 · 畫筆按鈕改樣式"}));
- }else selectionEl.append(el("span",{className:"meta",textContent:isLocked(m)?"此圖層已鎖定；請先解鎖才能編輯。":"這是 AI 的標記：可拖曳移動、拖曳控制點改大小或形狀；標籤、備註與樣式為唯讀。"}));
+   selectionEl.append(apply,el("span",{className:"meta",textContent:mine?"拖曳移動 · 拖曳控制點改大小或形狀 · 方向鍵微調 · 畫筆按鈕改樣式":
+     "這是 AI 的標記：可改寫標籤與備註、拖曳移動、拖曳控制點改大小或形狀；樣式維持 AI 的設定。"}));
+ }else selectionEl.append(el("span",{className:"meta",textContent:"此圖層已鎖定；請先解鎖才能編輯。"}));
  if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 AI 的標記",dataset:{act:"delete"}}));
  if(mine){
    const inGroup=liveGestures().find(g=>g.memberIds.includes(m.id)&&g.confirmation==="user-confirmed");
@@ -2119,25 +2135,35 @@ hit.addEventListener("pointerup",async()=>{
 });
 hit.addEventListener("pointercancel",cancelTextDrag);
 
+// How far a press must travel before it counts as a drag. A finger jitters
+// more than a mouse; a plain tap to select must never nudge the mark.
+// Measured in real CSS pixels: on a phone the canvas is narrower than the
+// 640 px that U() assumes.
+const dragSlop=e=>{
+ const svg=scope.querySelector("#surface"),r=svg?.getBoundingClientRect(),vb=svg?.viewBox?.baseVal;
+ const perPx=r?.width>0&&vb?.width>0?vb.width/r.width:U();
+ return (e?.pointerType==="touch"||e?.pointerType==="pen"?10:4)*perPx;
+};
 hit.addEventListener("pointerdown",e=>{
  if(mode!=="select"||!ready&&imageId)return;
  const p=fromPointer(e);if(!p)return;
  const grip=groupingFrom?null:handleAt(p);
- if(grip){dragHandle={before:grip.mark,k:grip.handle.k,start:p,moved:false};findingPointer=null;hit.setPointerCapture(e.pointerId);
+ if(grip){dragHandle={before:grip.mark,k:grip.handle.k,start:p,moved:false,slop:dragSlop(e)};findingPointer=null;hit.setPointerCapture(e.pointerId);
    status.textContent="拖曳控制點以調整「"+(grip.mark.label||grip.mark.id)+"」的大小或形狀。";render();return;}
  const m=pickMark(p);
  if(groupingFrom){finishGrouping(m);return;}
  selected=m?.id??null;findingPointer=m?{id:m.id,start:p}:null;
- if(canMove(m)){dragMove={start:p,before:m,moved:false};hit.setPointerCapture(e.pointerId);}
+ if(canMove(m)){dragMove={start:p,before:m,moved:false,slop:dragSlop(e)};hit.setPointerCapture(e.pointerId);}
  status.textContent=m?"已選取「"+(m.label||m.id)+"」。":"這裡沒有標記；點在線條或框上就能選取。";
  render();
 });
 hit.addEventListener("pointermove",e=>{
  if(findingPointer){const p=fromPointer(e);if(p&&Math.hypot((p.x-findingPointer.start.x)*VW,(p.y-findingPointer.start.y)*VH)>3*U())findingPointer=null;}
- if(dragHandle){const p=fromPointer(e);if(!p)return;dragHandle.moved=true;replaceLocal(withHandle(dragHandle.before,dragHandle.k,p,dragHandle.start));scheduleRender();return;}
+ if(dragHandle){const p=fromPointer(e);if(!p)return;
+   if(!dragHandle.moved&&Math.hypot((p.x-dragHandle.start.x)*VW,(p.y-dragHandle.start.y)*VH)<dragHandle.slop)return;dragHandle.moved=true;replaceLocal(withHandle(dragHandle.before,dragHandle.k,p,dragHandle.start));scheduleRender();return;}
  if(!dragMove)return;const p=fromPointer(e);if(!p)return;
  const dx=p.x-dragMove.start.x,dy=p.y-dragMove.start.y;
- if(!dragMove.moved&&Math.hypot(dx*VW,dy*VH)<3*U())return;
+ if(!dragMove.moved&&Math.hypot(dx*VW,dy*VH)<dragMove.slop)return;
  dragMove.moved=true;replaceLocal(shifted(dragMove.before,dx,dy));scheduleRender();
 });
 function endDrag(){
@@ -2361,6 +2387,7 @@ const EDIT_ZH={
  "move-mark":e=>({move:"移動了",resize:"改了大小：",reshape:"改了形狀："}[e.change]??"移動或改了形狀：")+(e.author==="assistant"?"你的":"我的")+"標記 "+e.id+(e.label?"「"+e.label+"」":"")+
    (e.author==="assistant"?"（我修正了它的位置；你的說明保留，請確認是否仍適用）":"（你先前對它的說明可能不再適用）"),
  "restyle-mark":e=>"改了我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+" 的樣式或標籤",
+ "edit-text":e=>"改寫了你的標記 "+e.id+" 的文字"+(e.before&&e.after?"：標籤「"+e.before.label+"」→「"+e.after.label+"」"+(e.before.note!==e.after.note?"，備註「"+e.before.note+"」→「"+e.after.note+"」":""):"")+"（請以我改的文字為準）",
  "undo-edit":e=>"復原了標記 "+e.id+" 的上一個修改（"+(e.steps??[]).join("+")+"），它回到修改前的樣子",
  "redo-edit":e=>"重做了標記 "+e.id+" 的修改（"+(e.steps??[]).join("+")+"）",
 };

@@ -270,10 +270,11 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       const old = state.get(edit.id);
       if (!old) throw fail("marks", i, edit.id, "no such mark");
       // The AI's marks are shared too (#69): the user can move or reshape
-      // them; author, label, note and style stay the AI's (they are its claim).
+      // them, and rewrite their label and note (#82). Author and style stay
+      // the AI's.
       if (old.author !== "user") {
-        const changed = ["label", "note", "color", "size", "pen", "smooth", "closed"].filter((k) => edit[k] !== undefined && edit[k] !== old[k]);
-        if (changed.length) throw fail("marks", i, edit.id, "the AI's marks can be moved, resized or reshaped, but its " + changed.join(", ") + (changed.length > 1 ? " stay as the AI wrote them" : " stays as the AI wrote it"));
+        const changed = ["color", "size", "pen", "smooth", "closed"].filter((k) => edit[k] !== undefined && edit[k] !== old[k]);
+        if (changed.length) throw fail("marks", i, edit.id, "the AI's marks can be moved, resized, reshaped or relabelled, but its " + changed.join(", ") + (changed.length > 1 ? " stay as the AI wrote them" : " stays as the AI wrote it"));
       }
       if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
       let next;
@@ -283,20 +284,30 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
         ? { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) }
         : { ...old, ...(Array.isArray(next.points) ? { points: next.points } : {}), x: next.x, y: next.y,
           ...(next.x2 !== undefined ? { x2: next.x2, y2: next.y2 } : {}), ...(moved ? { edited: true } : {}) };
-      if (old.author === "user" && edit.note !== undefined && (next.note ?? "") !== (old.note ?? "")) {
+      if (old.author !== "user" && edit.label !== undefined) {
+        if (next.label) stored.label = next.label; else delete stored.label;
+      }
+      const noteChanged = edit.note !== undefined && (next.note ?? "") !== (old.note ?? "");
+      if (noteChanged) {
+        // A rewritten note is a new claim: the old confidence, evidence and
+        // review do not carry over to the user's wording.
         stored = withoutClaim(stored);
         if (!next.note) delete stored.note;
         else stored.note = next.note;
         stored.findingUpdatedAt = Math.max(Date.now(), ...[...state.values()].map(m => (m.findingUpdatedAt ?? 0) + 1));
         if (!stored.note && !stored.status) delete stored.findingUpdatedAt;
       }
-      if (old.author === "user" && edit.note !== undefined && !next.note) delete stored.note;
+      if (edit.note !== undefined && !next.note) delete stored.note;
+      const labelChanged = (stored.label ?? "") !== (old.label ?? "");
       state.set(edit.id, stored);
       changes.push({ before: old, after: stored });
       const change = geometryChange(old, stored);
       edits.push({
-        kind: moved ? "move-mark" : edit.note !== undefined && (stored.note ?? "") !== (old.note ?? "") ? "edit-note" : "restyle-mark", id: edit.id,
+        kind: moved ? "move-mark" : old.author !== "user" && (noteChanged || labelChanged) ? "edit-text" : noteChanged ? "edit-note" : "restyle-mark", id: edit.id,
         ...(stored.label ? { label: stored.label } : {}),
+        // The AI's own wording the user replaced (#82), so the AI knows what changed.
+        ...(!moved && old.author !== "user" && (noteChanged || labelChanged) ? { author: old.author,
+          before: { label: old.label ?? "", note: old.note ?? "" }, after: { label: stored.label ?? "", note: stored.note ?? "" } } : {}),
         // Structured geometry change: what happened, to whose mark, before and after.
         ...(change ? { change, author: old.author, before: geometryOf(old), after: geometryOf(stored) } : {}),
       });
