@@ -21,7 +21,7 @@ node scripts/make-sample-material.mjs        # writes ./sample-material/
 
 | File | Used by | Notes |
 | --- | --- | --- |
-| `sample-board.png` | [Annotate a photo](PCB-ANNOTATION.md) | Synthetic 1200×800 board-like picture with labelled parts (U1, R12, R13, C4, U2, D7 "cracked", TP1). Not a photograph; real photos behave less cleanly. |
+| `sample-board.png` | [Annotate a photo](PHOTO-ANNOTATION.md) | Synthetic 1200×800 board-like picture with labelled parts (U1, R12, R13, C4, U2, D7 "cracked", TP1). Not a photograph; real photos behave less cleanly. |
 | `sample-two-page.pdf` | [Analyse a PDF page](PDF-ANALYSIS.md) | Two Letter-size pages with a text layer. Needs the optional PDF support. |
 
 The PDF bytes are fixed by the script. The PNG is drawn by `sharp` from an SVG inside the script, so it is stable for one `sharp` version but not guaranteed byte-for-byte across versions; the tutorials do not depend on exact pixels. There is no sample sky photo: a plate-solving test needs a real star field, so [that tutorial](ASTROMETRY.md) uses your own photo, and its failure path uses the board image.
@@ -30,6 +30,6 @@ The PDF bytes are fixed by the script. The PNG is drawn by `sharp` from an SVG i
 
 The steps follow the implemented behaviour described in [Tools](../TOOLS.md), [Image pipeline](../IMAGE-PIPELINE.md) and [Modules](../MODULES.md), and the sample PDF was rendered through Estampes's own PDF code with the pinned `pdfjs-dist@4.10.38` while writing them. **They have not been run end to end in a live ChatGPT conversation.** GPT's wording and choices vary between runs, so the "expected" lines describe what Estampes does, not an exact chat transcript. See [Compatibility](../COMPATIBILITY.md).
 
-1. [Annotate a photo (circuit-board example)](PCB-ANNOTATION.md)
+1. [Annotate a photo (circuit-board example)](PHOTO-ANNOTATION.md)
 2. [Analyse a PDF page](PDF-ANALYSIS.md)
 3. [Plate-solve a night-sky photo](ASTROMETRY.md)

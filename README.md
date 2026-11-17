@@ -13,7 +13,8 @@ Named after Claude Debussy's *Estampes* (1903).
 Talking about a specific spot in a picture usually means screenshots, circling things in another editor, re-uploading and several rounds of "which one?". Estampes keeps that in the conversation:
 
 - **AI points for you:** boxes, arrows, polylines, freehand lines and labels over the original image, each with an optional note and status.
-- **You point back:** pens, highlighter, boxes and arrows on the same canvas, plus one sentence, then send.
+- **You point back:** pen, highlighter, boxes, arrows, tilted or perspective quadrilaterals and text on the same canvas, plus one sentence, then send.
+- **Edit together:** select any unlocked mark, including the AI's, and drag, resize, reshape or rotate it; the AI is told exactly what you changed. Undo and redo also cover edits you already sent, and an open canvas picks up changes the AI makes in the meantime.
 - **The source stays untouched:** marks live in layers you can show, hide, rename, reorder, fade and lock.
 - **See the details:** zoom and pan inside the canvas with native-resolution tiles; AI can enhance contrast, sharpen, denoise, threshold, find edges or overlay a coordinate grid on a region before reading it.
 - **Two images side by side:** compare two different pictures (a drawing and the real object, before and after); AI records which marks correspond and how sure it is, and you confirm or reject each link.
@@ -64,13 +65,16 @@ npm start          # http://localhost:8787/mcp
 | [Security policy](SECURITY.md) | Single-owner security model and how to report a vulnerability privately |
 | [Development guide](docs/DEVELOPMENT.md) | Set up, run every kind of test, code tour, public interfaces versus internals, first tasks |
 | [Module quick start](docs/modules/QUICKSTART.md) · [Testing modules](docs/modules/TESTING.md) | Build, test, sign and install a module; declarative, WebAssembly and http paths |
+| [Module distribution](docs/modules/DISTRIBUTION.md) · [Module acceptance](docs/modules/ACCEPTANCE.md) | Publish a signed package index, add it as a source on a server; the external-developer acceptance run |
 | [Releasing](docs/RELEASE.md) | For maintainers: version order, Docker image tags, pre-release check, rollback |
 | [Documentation maintenance](docs/DOCUMENTATION-MAINTENANCE.md) | For contributors: `npm run docs:check`, what it checks, which document to update with which change |
-| [Usage](docs/USAGE.md) | Using the canvas in ChatGPT: marking, layers, zoom, paired view, export |
+| [Usage](docs/USAGE.md) | Using the canvas in ChatGPT or Claude: drawing and editing marks, layers, zoom, paired view, export |
 | [Tools](docs/TOOLS.md) | The MCP tools and HTTP endpoints |
 | [Image pipeline](docs/IMAGE-PIPELINE.md) | Source files, derived views, exact coordinate transforms, PDF pages, analysis engines |
 | [Image capabilities](docs/IMAGE-CAPABILITIES.md) | What the image tools do and do not cover, and what needs a plugin or an external service |
 | [Canvas reads](docs/CANVAS-READS.md) | `render_canvas`: reading the saved canvas as pixels |
+| [UVA store](docs/UVA-BETA.md) | The default storage engine: setup, limits, export and rollback to legacy files |
+| [UVA power-loss simulation](docs/UVA-POWERLOSS.md) | How the store is tested against power cuts, and what is still unqualified |
 | [Workspaces](docs/WORKSPACES.md) | Several images in one place; merge, split, copy, link; `.estampes` bundles |
 | [Modules](docs/MODULES.md) | The module system, the Store, packages, WebAssembly and http modules, background jobs, plate solving |
 | [Scientific calculator](docs/CAS.md) | The SymPy calculator module and its isolated container |
@@ -83,13 +87,16 @@ npm start          # http://localhost:8787/mcp
 | [Changelog](CHANGELOG.md) | Changes per version |
 | [History](docs/history/README.md) | Early milestone notes and old protocol drafts |
 | [繁體中文說明](docs/zh-TW/README.md) | Overview and quick start in Traditional Chinese |
-| [Contributing](CONTRIBUTING.md) | Contributions that help most |
+| [Contributing](CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Support](SUPPORT.md) | Contributions that help most, how we behave, where to ask |
+| [Agent instructions](AGENTS.md) | Rules for AI coding assistants working in this repository |
+| [Pre-public checklist](docs/PRE-PUBLIC-CHECKLIST.md) | For maintainers: what to check before the repository goes public |
 
 ## Status and limits
 
 The current version is in [`package.json`](package.json) and at `/version` on your server.
 
-- Upload, canvas, marks, layers, zoom and the paired view have been tested live in ChatGPT on web and mobile. Newer parts (workbench, calculator, plate solving, workspaces) are covered by automated tests; each page says whether it has been tried in a live ChatGPT host.
+- Upload, canvas, marks, layers, zoom and the paired view have been tested live in ChatGPT on web and mobile. Newer parts (workbench, calculator, plate solving, workspaces, editing the AI's marks, quadrilaterals and text, live updates of an open canvas) are covered by automated and fake-host browser tests; each page says whether it has been tried in a live ChatGPT host.
+- Storage: with a storage folder (Docker sets one), images, canvases, workspaces, panel layouts and calculator notebooks are kept in the UVA store, in their own folder next to the storage folder (Docker: the `uva-beta` volume). Existing data move in on first open, and `scripts/uva-to-legacy.mjs` writes them back out before `ESTAMPES_CANVAS_STORE=legacy` switches back. The default profile survives a killed process but is not qualified for power loss; back up both folders ([Backup and restore](docs/BACKUP-RESTORE.md), [UVA store](docs/UVA-BETA.md)).
 - How well AI recognises what is in an image is not guaranteed; Estampes does not decide what something is.
 - Plugins cannot draw over images ChatGPT itself shows (such as image search results), so images are shown in the Estampes canvas instead.
 - The access key is one shared secret, not per-user accounts. ChatGPT carries it in the connector URL (do not share that URL); Claude signs in with it once on your server's own page and keeps a token.
@@ -99,12 +106,3 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 ## License
 
 [Mozilla Public License 2.0](LICENSE). You may use, modify and redistribute Estampes, including inside closed-source or commercial products; changes to Estampes's own files must be released under MPL 2.0 when you distribute them.
-
-### UVA store
-
-Images, canvases, workspaces, panel layouts and calculator notebooks are kept
-only in the UVA store by default (Docker: its own `uva-beta` volume). Existing
-data move in on first open; `scripts/uva-to-legacy.mjs` writes them back out before
-`ESTAMPES_CANVAS_STORE=legacy` switches back. The default profile survives a
-killed process but is not qualified for power loss. See
-[setup, limitations, export and rollback](docs/UVA-BETA.md).
