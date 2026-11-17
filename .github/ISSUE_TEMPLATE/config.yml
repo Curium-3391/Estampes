@@ -7,5 +7,5 @@ contact_links:
     url: "https://github.com/Curium-3391/Estampes/discussions/categories/ideas"
     about: "Discuss ideas before opening a fully scoped feature request."
   - name: "Report a security vulnerability privately"
-    url: "https://github.com/Curium-3391/Estampes/blob/main/SECURITY.md"
+    url: "https://github.com/Curium-3391/Estampes/security/advisories/new"
     about: "Do not disclose vulnerabilities or secrets in a public Issue."

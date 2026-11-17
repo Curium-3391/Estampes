@@ -4,9 +4,7 @@
 
 Please report security problems **privately**. Do not open a public issue or pull request with details.
 
-Send an email to **az95050731@gmail.com** with the subject "Estampes security report". Please do not include exploit details in a public place first.
-
-When the repository is public and GitHub's private vulnerability reporting is switched on, you can use that instead: open **Security → Report a vulnerability** on the repository page. Until then, email is the only private channel.
+Use GitHub's private vulnerability reporting: open the [**Security** tab](https://github.com/Curium-3391/Estampes/security) and choose **Report a vulnerability** (direct link: [new advisory](https://github.com/Curium-3391/Estampes/security/advisories/new)). Only you and the maintainer can see the report. Please do not put exploit details in a public issue, discussion or pull request first.
 
 Include the Estampes version (`/version`), how you run it (Docker, Node, Heroku, Render), what you did, what you expected and what happened. If you can, say whether the problem needs the access key or works without it.
 
