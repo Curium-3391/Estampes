@@ -22,7 +22,7 @@ Needs: a running server connected to ChatGPT ([Quick start](../QUICKSTART.md)). 
 **4. Check a claim.** Ask: *"Label the parts you can read and say how sure you are."*
 
 - Expected: each label is a **claim** with confidence and evidence. It stays 「待你確認」 until you press 確認 or 否決 on it. **User confirmation:** only your verdict changes its state. Press an evidence button to zoom to the spot GPT says it read, outlined in red.
-- Reject one with a reason. If GPT repeats the same claim at that place without new evidence, Estampes refuses it ([Usage](../USAGE.md#check-gpts-claims)).
+- Reject one with a reason. If GPT repeats the same claim at that place without new evidence, Estampes refuses it ([Usage](../USAGE.md#check-the-ais-claims)).
 
 **5. Zoom.** Zoom into U2.
 

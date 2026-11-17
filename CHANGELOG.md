@@ -1,8 +1,11 @@
 # Changelog
 
+The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
+
 ## Unreleased
 
 - Lost-ACK handling, server side (UVA Phase 3, PR-3B-2): `edit_visual_canvas` takes an optional `commandId`; the id and a hash of the edits are written into the canvas's change-log line in the same durable record as the edit, so a retry with the same id is applied once (the answer is the current canvas with `replayed: true`) and the same id with different edits is refused. New app-only `commands_get_status` says which ids were applied. Calls without an id behave as before. The widget does not send ids yet, and other tools are not covered yet.
+- Docs refresh for 0.20.x: README and the Chinese guide describe editing the AI's marks, quadrilaterals, text, undo of sent edits and live updates, and index every user-facing page (UVA store, power-loss simulation, module distribution and acceptance, AGENTS.md, community files); the stray "UVA store" section after the license moved into Status. USAGE covers every canvas tool by its on-screen name, selection and editing, live updates and background work, and says "the AI" instead of GPT so it reads for Claude too. ARCHITECTURE and DEVELOPMENT list `src/uva`, `src/persistence`, `src/visual`, `src/documents`, OAuth and the widget's HostBridge/DocumentStore, and no longer say there is no upload UI. The photo tutorial is now `docs/tutorials/PHOTO-ANNOTATION.md`. A second, never-released *Unreleased* heading in this changelog was folded into 0.20.1.
 - Surface widget (UVA Phase 3, PR-3B-2, first part): the widget now polls `documents_get_changes` about every 2 s while visible, at once on focus, on becoming visible and after any finished tool call, through one shared `DocumentStore`. A polled snapshot replaces only what the server owns (other authors' marks, layers, objects, gesture verdicts, links); unsent marks, camera, tool and selection are never touched, a snapshot that changes nothing does not rebuild the view, and one that arrives while the user is dragging, drawing or typing waits for a later tick. Paired views are not polled yet; a workspace whose items changed is reloaded instead of patched. Not yet done: lost-ACK lookup by command id, restore-after-recreate audit, de-duplication by result id.
 - Background canvas work (#81): `execute_module` takes `present: false` for iterative runs, and polling a still-running job with `get_module_job` is treated the same way: the widget shows a one-line note ("AI 正在背景更新或檢查畫布") with a 顯示畫布 button instead of reopening the canvas, while the model still gets its preview and revision checks. `present_visual` and finished jobs open the canvas as before; `render_canvas` stays model-only.
 - Perspective-aware annotation (#70): new **四邊形** tool. Drag a box, then move each corner on its own (perspective) or turn the whole shape with its round handle (rotated box); any closed shape can be turned. A quadrilateral is a closed four-vertex polyline, so no format changes: exports, bundles, workspaces and transforms keep its exact corners. The AI sees `shape: "quadrilateral"` and `corners` in canvas reads, and `present_visual` documents drawing one; `rect` stays axis-aligned and unchanged.
@@ -413,15 +416,10 @@
   the frame from the content, and the view capped its own height in `vh`, which
   shrank with the frame. The caps are now content-based (stage at least 480px).
 
+### Also in 0.20.1
 
-The version in `package.json` is the single source of truth. Earlier milestone details are in [docs/history/](docs/history/README.md).
+These entries sat under a second *Unreleased* heading that was never folded into a version. They were on `main` before 0.20.1 was released, so they shipped in 0.20.1 at the latest.
 
-
-## Unreleased
-
-- A server whose UVA store holds data but cannot open now exits with the reason
-  instead of running on legacy files that lack what was saved to the store. A
-  store that never held anything still falls back with a warning.
 - Docs: `npm run docs:check` (`scripts/check-docs.mjs`, no install, no Docker) checks local links and anchors, duplicate headings and index entries, tool names against the registered tools, `ESTAMPES_*` names against the code, versions and image tags, statements known to be stale, and shell examples. Runs in `node-tests` and in a new light docs-only workflow; `docs/DOCUMENTATION-MAINTENANCE.md` explains it. It found and fixed an undocumented `ESTAMPES_TUNNEL_METRICS`.
 - Docs: `docs/DEVELOPMENT.md` (setup, tests, code tour, public interfaces versus internals), `docs/modules/QUICKSTART.md` and `docs/modules/TESTING.md` (declarative, WebAssembly and http paths). New `tests/module-authoring.test.js` runs the author walkthrough for real (init, test, sign, trust, install with administrator approval, enable, run, refused input) and every bundled example module.
 - Docs: `SECURITY.md` (single-owner security model, private vulnerability reporting), `docs/BACKUP-RESTORE.md` (what is stored, backup, restore into a new volume, upgrade, rollback, key rotation and leak response) and `docs/TROUBLESHOOTING.md`. New `scripts/verify-backup-restore.mjs` packs a storage folder with `tar`, restores it into another and compares what two servers report (canvases, marks, links, workspaces, module state, calculator notebooks). The Docker commands themselves were not run.
