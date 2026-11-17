@@ -635,7 +635,11 @@ async function serverStep(action){
 // In a workspace an edit names its item where a paired view names its side.
 const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
 const newCommandId=()=>{try{if(crypto.randomUUID)return crypto.randomUUID()}catch{}return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,12)};
-async function editOnServer(args){
+// Edits go one at a time: if one loses its answer and is retried, a newer edit must not be applied before it
+// (two opacity changes could otherwise end with the older value). A failed edit does not block the next one.
+let editTail=Promise.resolve();
+function editOnServer(args){const run=editTail.then(()=>editOnServerNow(args));editTail=run.catch(()=>{});return run}
+async function editOnServerNow(args){
  if(!ready||!imageId)throw Error("尚未連線");
  const body=ws?{...args,layers:asItems(args.layers),marks:asItems(args.marks),remove:asItems(args.remove),workspaceId:ws.id}:args;
  for(const k of ["layers","marks","remove"])if(body[k]===undefined)delete body[k];

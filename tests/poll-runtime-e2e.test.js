@@ -117,3 +117,25 @@ test("a lost answer to a layer edit: the widget asks by command id and sends the
     assert.equal(JSON.stringify(layers).includes('"locked":true'), true, "the layer is locked");
   } finally { await s.close(); }
 });
+
+test("edits are sent one at a time: a newer edit waits while an older one is being retried", { skip: noPython || noBrowser, timeout: 60000 }, async () => {
+  const s = await startStack();
+  try {
+    const { id, ui, inner } = await openPolled(s);
+    await s.call("present_visual", { ...mark("ai-1", 0.2), imageId: id });
+    await until(inner, () => !!document.querySelector('button[data-act="lock"]'), null, "the layer controls");
+    // The first edit loses its answer; a second edit is started before its retry has finished.
+    ui.net.dropReplyOnce = "edit_visual_canvas";
+    await inner.evaluate(() => {
+      const first = document.querySelector('button[data-act="lock"]');
+      first.click();
+      const hide = document.querySelector('button[data-act="hide"], button[data-act="vis"]');
+      (hide ?? first).click();
+    });
+    await wait(1500);
+    const ids = ui.net.sent;
+    assert.ok(ids.length >= 3, "first sent twice, then the second one: " + JSON.stringify(ids));
+    assert.equal(ids[0], ids[1], "the retry reuses the id");
+    assert.notEqual(ids[2], ids[0], "the next edit comes after, with its own id");
+  } finally { await s.close(); }
+});
