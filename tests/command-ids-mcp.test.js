@@ -196,3 +196,27 @@ test("a command that edits several workspace items is applied once across items,
     assert.equal(st[0].status, "applied");
   } finally { await s.stop(); }
 });
+
+test("a replay is still recognised when the image cache evicts the pair's canvases between lookups", { timeout: 60000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), "estampes-cmd-evict-"));
+  const ids = [];
+  for (const color of ["#fff", "#ccc", "#aaa"]) {
+    const bytes = await sharp({ create: { width: 300, height: 200, channels: 3, background: color } }).png().toBuffer();
+    const id = imageIdOf(bytes), folder = join(dir, "images", id.slice(4));
+    await mkdir(folder, { recursive: true });
+    await writeFile(join(folder, "source"), bytes);
+    await writeFile(join(folder, "meta.json"), JSON.stringify({ imageId: id, source: "test" }));
+    ids.push(id);
+  }
+  const s = await start(dir, { ESTAMPES_CACHE_IMAGES: "1" });
+  try {
+    const ok = (r) => { assert.notEqual(r.isError, true, r.content?.[0]?.text); return r; };
+    ok(await s.call("present_visual", { imageId: ids[0], pairImageId: ids[1], annotations: [{ id: "p1", type: "point", x: 0.2, y: 0.2, label: "a", side: "left" }, { id: "p2", type: "point", x: 0.2, y: 0.2, label: "b", side: "right" }] }));
+    const args = { imageId: ids[0], pairImageId: ids[1], commandId: "cmd-pair-evict-1", marks: [{ id: "p1", x: 0.6, side: "left" }, { id: "p2", x: 0.7, side: "right" }] };
+    ok(await s.call("edit_visual_canvas", args));
+    ok(await s.call("get_visual_state", { imageId: ids[2] })); // another image pushes the pair out of a one-entry cache
+    const again = ok(await s.call("edit_visual_canvas", args));
+    assert.equal(again.structuredContent.replayed, true);
+    assert.deepEqual(again.structuredContent.edits, []);
+  } finally { await s.stop(); }
+});

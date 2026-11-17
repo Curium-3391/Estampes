@@ -21,7 +21,7 @@ import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks, shownLinks,
   applyPairChanges, pairLinks, reviewLink, reviewFinding, applyWorkspaceChanges, workspaceLinks, reviewWorkspaceLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
-  undoCanvasEdit, redoCanvasEdit, canvasHistory,
+  undoCanvasEdit, redoCanvasEdit, canvasHistory, setKeyOf,
 } from "./src/canvas-state.js";
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
@@ -1978,13 +1978,13 @@ function makeServer() {
         // A command id seen before with the same edits has been applied: answer with the current canvas and change nothing.
         const cmd = { ...(commandId ? { commandId, argsHash: commandHash({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step }) } : {}) };
         let replayed = false;
-        const done = new Set(); // canvases whose change log already carries this command
+        const done = new Set(); // keys of canvases whose change log already carries this command (not objects: the image cache can evict entries)
         if (commandId) {
           const scope = workspaceId ? (await workspaceItems((await resolveRef(workspaceId)).doc)).map((it) => it.entry) : [await ensureImage(imageId), ...(pairImageId ? [await ensureImage(pairImageId)] : [])];
           // Judge each canvas on its own: a save that touched several canvases may have reached only some of them.
           const verdicts = await Promise.all(scope.map(async (entry) => [entry, judgeCommand([await readCommandLog(entry)], commandId, cmd.argsHash)]));
           if (verdicts.some(([, v]) => v.state === "mismatch")) throw new Error("Command " + commandId + " was already used for different edits.");
-          for (const [entry, v] of verdicts) if (v.state === "applied") done.add(entry);
+          for (const [entry, v] of verdicts) if (v.state === "applied") done.add(setKeyOf(entry));
           // An undo/redo touches one canvas, so any record means it was applied. Edits are replayed per canvas below.
           if (step && done.size) { replayed = true; layers = []; order = undefined; marks = []; remove = []; step = undefined; }
         }
@@ -2021,7 +2021,7 @@ function makeServer() {
                 marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
               };
               if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
-              if (done.has(it.entry)) { skipped++; continue; }
+              if (done.has(setKeyOf(it.entry))) { skipped++; continue; }
               const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
               undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
               all.push({ it, edits: editCanvas(it.entry, pick) });
@@ -2053,7 +2053,7 @@ function makeServer() {
               history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]) },
           };
         }
-        const sideDone = (side) => (side === "right" ? !!right && done.has(right) : done.has(left));
+        const sideDone = (side) => (side === "right" ? !!right && done.has(setKeyOf(right)) : done.has(setKeyOf(left)));
         replayed = replayed || (done.size > 0 && sideDone("left") && (!right || sideDone("right")));
         const pick = (side) => sideDone(side) ? { layers: [], order: undefined, marks: [], remove: [], resolveUser } : ({
           layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
