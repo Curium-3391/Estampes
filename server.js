@@ -1975,11 +1975,15 @@ function makeServer() {
         // A command id seen before with the same edits has been applied: answer with the current canvas and change nothing.
         const cmd = { ...(commandId ? { commandId, argsHash: commandHash({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step }) } : {}) };
         let replayed = false;
+        const done = new Set(); // canvases whose change log already carries this command
         if (commandId) {
           const scope = workspaceId ? (await workspaceItems((await resolveRef(workspaceId)).doc)).map((it) => it.entry) : [await ensureImage(imageId), ...(pairImageId ? [await ensureImage(pairImageId)] : [])];
-          const verdict = judgeCommand(await Promise.all(scope.map((entry) => readCommandLog(entry))), commandId, cmd.argsHash);
-          if (verdict.state === "mismatch") throw new Error("Command " + commandId + " was already used for different edits.");
-          if (verdict.state === "applied") { replayed = true; layers = []; order = undefined; marks = []; remove = []; step = undefined; }
+          // Judge each canvas on its own: a save that touched several canvases may have reached only some of them.
+          const verdicts = await Promise.all(scope.map(async (entry) => [entry, judgeCommand([await readCommandLog(entry)], commandId, cmd.argsHash)]));
+          if (verdicts.some(([, v]) => v.state === "mismatch")) throw new Error("Command " + commandId + " was already used for different edits.");
+          for (const [entry, v] of verdicts) if (v.state === "applied") done.add(entry);
+          // An undo/redo touches one canvas, so any record means it was applied. Edits are replayed per canvas below.
+          if (step && done.size) { replayed = true; layers = []; order = undefined; marks = []; remove = []; step = undefined; }
         }
         const stepOf = (entry) => (step.action === "undo" ? undoCanvasEdit : redoCanvasEdit)(entry);
         const stateOf = (entries) => Object.fromEntries(entries.map(([key, entry]) => [key, canvasHistory(entry)]));
@@ -2006,6 +2010,7 @@ function makeServer() {
           for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
           const first = items[0].id, of = (x) => x.item ?? first;
           const undo = [], all = [];
+          let skipped = 0;
           try {
             for (const it of items) {
               const pick = {
@@ -2013,11 +2018,13 @@ function makeServer() {
                 marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
               };
               if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
+              if (done.has(it.entry)) { skipped++; continue; }
               const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
               undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
               all.push({ it, edits: editCanvas(it.entry, pick) });
             }
           } catch (error) { undo.forEach((u) => u()); throw error; }
+          if (skipped && !all.length) replayed = true;
           for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind), ...cmd });
           const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
           return {
@@ -2041,7 +2048,9 @@ function makeServer() {
               history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]) },
           };
         }
-        const pick = (side) => ({
+        const sideDone = (side) => (side === "right" ? !!right && done.has(right) : done.has(left));
+        replayed = replayed || (done.size > 0 && sideDone("left") && (!right || sideDone("right")));
+        const pick = (side) => sideDone(side) ? { layers: [], order: undefined, marks: [], remove: [], resolveUser } : ({
           layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
           order: order?.[side],
           marks: marks.filter((m) => (m.side ?? "left") === side),
@@ -2056,8 +2065,8 @@ function makeServer() {
           catch (error) { undoLeft(); left.userEdits = leftEdits; throw error; }
         }
         const history = { tool: "edit_visual_canvas", author: "user", ...cmd };
-        if (!replayed) await saveCanvas(left, { ...history, changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
-        if (right && !replayed) await saveCanvas(right, { ...history, changed: rightEdits.map((e) => e.id ?? e.layer ?? e.kind) });
+        if (!replayed && !sideDone("left")) await saveCanvas(left, { ...history, changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
+        if (right && !replayed && !sideDone("right")) await saveCanvas(right, { ...history, changed: rightEdits.map((e) => e.id ?? e.layer ?? e.kind) });
         const all = right ? pairMarks(left, right) : canvasMarks(left);
         return {
           content: [{ type: "text", text: "Applied " + (edits.length + rightEdits.length) + " user edit(s) to " + imageId + (right ? " + " + pairImageId : "") + "." }],
