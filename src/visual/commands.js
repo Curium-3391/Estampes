@@ -16,11 +16,15 @@ const stable = (value) => {
 };
 export const commandHash = (args) => createHash("sha256").update(JSON.stringify(stable(args))).digest("hex").slice(0, 24);
 
+// The command records of one change log: a line's own, and those it carries for earlier saves that failed
+// while a later save of the same canvas carried their edits (src/storage.js).
+export const commandRecords = (log) => (log ?? []).flatMap((line) => [...(line?.commandId ? [line] : []), ...(Array.isArray(line?.carried) ? line.carried : [])]);
+
 // logs: one change log (array of lines) per canvas the command could have touched.
 // -> { state: "none" | "applied" | "mismatch", at?, tool? }
 export function judgeCommand(logs, commandId, hash) {
   let found = null;
-  for (const log of logs) for (const line of log ?? []) {
+  for (const log of logs) for (const line of commandRecords(log)) {
     if (line?.commandId !== commandId) continue;
     if (line.argsHash !== hash) return { state: "mismatch" };
     found = { state: "applied", at: line.at, tool: line.tool };

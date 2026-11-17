@@ -260,7 +260,7 @@ async function ensureFromFiles(imageId) {
 const saveStates = new WeakMap();
 function saveState(entry) {
   let state = saveStates.get(entry);
-  if (!state) saveStates.set(entry, state = { issued: 0, latest: null, durable: null, durableSeq: 0 });
+  if (!state) saveStates.set(entry, state = { issued: 0, latest: null, durable: null, durableSeq: 0, outstanding: new Map() });
   return state;
 }
 // Returns false when a newer save of the canvas was issued meanwhile: that
@@ -288,11 +288,19 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
     const canvas = serializeCanvas(entry);
     const line = { at: canvas.savedAt, tool, author, changed, ...(removed.length ? { removed } : {}), ...(note ? { note } : {}), ...(commandId ? { commandId, argsHash } : {}), marks: canvas.marks.length };
     const key = setKeyOf(entry), state = saveState(entry), seq = ++state.issued;
+    // A command id is recorded in the same line as its edit. If this save fails but a later save of the canvas
+    // carries the edit (see below), that later line must carry the record too, or the edit would be durable
+    // without its deduplication record: so every save lists the commands whose own saves are not yet durable.
+    if (commandId) state.outstanding.set(commandId, { commandId, argsHash, tool, at: canvas.savedAt });
+    const carried = [...state.outstanding.values()].filter((c) => c.commandId !== commandId);
+    if (carried.length) line.carried = carried;
+    const listed = [...(commandId ? [commandId] : []), ...carried.map((c) => c.commandId)];
     // Marks are shared objects that later edits change in place, so the
     // durable copy kept for a rollback is taken now.
     const snapshot = structuredClone(canvas);
     const write = canvases.write(key, { canvas, line }).then(() => {
       if (seq > state.durableSeq) { state.durable = snapshot; state.durableSeq = seq; }
+      for (const id of listed) state.outstanding.delete(id);
     });
     const acked = write.catch(async (error) => {
       // A later save of this canvas serialized it after this change, so this
@@ -300,6 +308,8 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
       if (state.issued !== seq) return state.latest;
       // The read below waits; a save issued during it supersedes this one.
       if (!(await rollbackCanvas(entry, key, state, seq))) return state.latest;
+      // Restored to the last durable state: nothing outstanding was applied.
+      state.outstanding.clear();
       throw error;
     });
     state.latest = acked;

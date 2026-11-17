@@ -75,7 +75,7 @@ import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
 import { renderCanvas, canvasReadRequest, canvasRevision } from "./src/scene/canvas-render.js";
 import { createRevisionTracker, classifyChange, MAX_POLLED_DOCUMENTS } from "./src/visual/document-revisions.js";
-import { COMMAND_ID, commandHash, judgeCommand, createCommandGate } from "./src/visual/commands.js";
+import { COMMAND_ID, commandHash, judgeCommand, commandRecords, createCommandGate } from "./src/visual/commands.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { createCasClient } from "./src/cas/client.js";
@@ -1354,7 +1354,7 @@ function makeServer() {
         const entries = documentId.startsWith("ws:") ? (await workspaceItems((await resolveRef(documentId)).doc)).map((it) => it.entry) : [await ensureSet(documentId)];
         const logs = await Promise.all(entries.map((entry) => readCommandLog(entry)));
         const results = commandIds.map((commandId) => {
-          const found = logs.flat().filter((l) => l?.commandId === commandId).at(-1);
+          const found = logs.flatMap(commandRecords).filter((l) => l?.commandId === commandId).at(-1);
           return found ? { commandId, status: "applied", at: found.at, tool: found.tool } : { commandId, status: "unknown" };
         });
         return {
