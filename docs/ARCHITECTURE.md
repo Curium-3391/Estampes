@@ -1,17 +1,17 @@
 # Architecture
 
-Estampes is one Node 22 process. ChatGPT (or any MCP client) talks to it at `/mcp`; ChatGPT renders the canvas as an MCP Apps widget inside the conversation. This page describes what exists today. For the reasons behind the design, see [Vision](VISION.md); for older experiments, see [history](history/README.md).
+Estampes is one Node 22 process (plus an optional calculator container). ChatGPT, Claude or any MCP client talks to it at `/mcp`; hosts that support MCP Apps render the canvas as a widget inside the conversation. Below, "the AI" is whichever model the host runs. This page describes what exists today. For the reasons behind the design, see [Vision](VISION.md); for older experiments, see [history](history/README.md).
 
 ## Who does what
 
 | Part | Responsibility | Not its job |
 | --- | --- | --- |
-| **GPT** | Understand the request, look at pixels, decide what is where, choose marks, pens and layer names | Storing anything between turns |
+| **AI** | Understand the request, look at pixels, decide what is where, choose marks, pens and layer names | Storing anything between turns |
 | **Estampes server** | Load and normalize images, process pixels, keep marks, layers and links per image, validate geometry, render the verification crop, store and export | Recognizing what is in an image |
 | **Canvas widget** | Show the original image with marks, let the user draw, select, zoom, hide layers and review links, send marks back | Deciding what a mark means |
-| **User** | Point, confirm or reject GPT's links, lock layers | |
+| **User** | Point, edit marks (including the AI's geometry), confirm or reject the AI's claims and links, lock layers | |
 
-Estampes never claims to know what an object is. A mark records geometry, who made it, an optional note and a status (for example `inspected` only after GPT looked at those pixels).
+Estampes never claims to know what an object is. A mark records geometry, who made it, an optional note and a status (for example `inspected` only after the AI looked at those pixels).
 
 ## Data flow
 
@@ -26,7 +26,7 @@ GPT ◀── chat message with the user's marks ◀── widget ◀─┘
           (validate_visual_annotations, edit_visual_canvas, load_visual_region… app-only tools)
 ```
 
-The widget calls the server's app-only tools directly (they are hidden from the model) and sends a chat message so GPT sees the user's marks in the next turn. See [Tools](TOOLS.md).
+The widget calls the server's app-only tools directly (they are hidden from the model) and sends a chat message so the AI sees the user's marks in the next turn. See [Tools](TOOLS.md).
 
 ## Server
 
@@ -34,9 +34,13 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 
 | Module | Role |
 | --- | --- |
-| `image-store.js` | Image intake (ChatGPT file param or public https URL), EXIF orientation, size limits, content-hash identity, in-memory cache |
+| `image-store.js` | Image intake (host file param, public https URL or the canvas's own upload), EXIF orientation, size limits, content-hash identity, in-memory cache |
 | `image-ops.js` | Pixel operations for `process_image` and `overlay_grid` (CLAHE, sharpen, denoise, threshold, edges, crop and zoom, grid), zoom tiles |
 | `image/view.js`, `image/transform.js` | Derived views: analysis vs delivery resolution, native-resolution crops, recipes and ids, 3×3 coordinate transforms ([Image pipeline](IMAGE-PIPELINE.md)) |
+| `image/engines.js`, `image/segment.js`, `image/register.js`, `image/measure.js`, `image/quality.js`, `image/pdf.js` | Detection engines and region segmentation, image registration, calibrated measurement, quality assessment, PDF page rendering |
+| `assessment.js`, `gesture-groups.js` | Claims with confidence, evidence and verification state, rejection memory; candidate gesture groups of user strokes |
+| `visual/*` | Annotation and layer contracts, coordinates, hit testing, exact edit history (undo/redo of sent edits), shared layer appearance, standalone text, and the RenderPlan that both the server and the widget draw marks from |
+| `documents/*` | Versioned read models and ids for UVA documents |
 | `canvas-state.js` | Per-image marks, layers (order, lock, opacity), paired-view links, user edits |
 | `mark-render.js`, `pixel-font.js` | Verification crops drawn with the marks at real ink width |
 | `marks-file.js`, `protocol.js` | Layered SVG export and restore; the `estampes.visual/2` document ([Visual protocol 2](PROTOCOL-V2.md)) |
@@ -46,8 +50,11 @@ The widget calls the server's app-only tools directly (they are hidden from the 
 | `cas/*` | Client, notebooks and the Graph bridge for the calculator ([CAS](CAS.md)) |
 | `surface/*` | Panels and per-device layouts, refresh of plots from calculator cells ([Surfaces](SURFACES.md)) |
 | `bundle.js`, `zip.js` | `.estampes` workspace bundles |
-| `storage.js` | Optional disk storage ([Deployment](DEPLOYMENT.md#what-is-stored)) |
+| `storage.js` | Optional disk storage ([Deployment](DEPLOYMENT.md#what-is-stored)); with the default UVA store it reads and writes through `uva/*` |
+| `uva/*`, `persistence/*` | The UVA store: canvas and record stores, read-only `uva_store` tool, exports; the transactional storage engine underneath (journal, leases, GC, backup) ([UVA store](UVA-BETA.md)) |
 | `security.js`, `config.js` | Access key, signed export links, environment settings |
+| `oauth.js` | Built-in OAuth 2.1 sign-in page for hosts such as Claude's custom connectors ([Connecting Claude](DEPLOYMENT.md#connecting-claude)) |
+| `result-budget.js`, `tool-guidance.js` | Keep every tool result under the host's size cap; the server's MCP instructions and error provenance for the model |
 | `tunnel.js` | Reads the temporary Cloudflare tunnel address for the docker compose `tunnel` profile |
 | `visual-input.js`, `scene-catalog.js`, `interaction-protocol.js` | Bundled SVG demo scenes and the older v0.2 event format; kept for legacy tools and tests |
 
@@ -77,7 +84,7 @@ The scientific calculator runs SymPy in a **separate container** (`cas-service/`
 
 ## Widget
 
-`public/visual-surface.html` is a single self-contained page (no build step) served as an MCP Apps resource whose `ui://` URI contains the package version, so a release invalidates ChatGPT's cached copy. It draws the image and marks as SVG, supports zoom and pan with native-resolution tiles, drawing and selecting, undo/redo, layers, processed-image tabs and the paired view, and talks to the host through the MCP Apps bridge. Since 0.19 it is a workbench: the canvas and the calculator are panels you can move, resize, dock and minimise inside the same widget, with one layout per device profile ([Workbench](WORKBENCH.md), [Surfaces](SURFACES.md)). The Store is a separate widget. `number-line.html` and `visual-evidence.html` are the demo and legacy widgets.
+`public/visual-surface.html` is a single self-contained page (no build step) served as an MCP Apps resource whose `ui://` URI contains the package version, so a release invalidates ChatGPT's cached copy. It draws the image and marks as SVG, supports zoom and pan with native-resolution tiles, drawing and selecting, undo/redo, layers, processed-image tabs and the paired view, and talks to the host through the MCP Apps bridge. Inside, one `HostBridge` owns the host conversation and viewers are made by a factory (`createViewer`), so several viewers can be mounted side by side, each with its own camera, tool and selection. A shared `DocumentStore` (`src/surface/document-store.js`, inlined) polls `documents_get_changes` while the widget is visible and applies changes made by other authors without touching unsent marks or the camera. Marks are drawn from the same RenderPlan as the server's renders. The layout code (`public/workbench.js`) and the calculator panels (`public/calculator.js`) are separate source files inlined when the page is served (`src/surface/widget-source.js`). Since 0.19 it is a workbench: the canvas and the calculator are panels you can move, resize, dock and minimise inside the same widget, with one layout per device profile ([Workbench](WORKBENCH.md), [Surfaces](SURFACES.md)). The Store is a separate widget. `number-line.html` and `visual-evidence.html` are the demo and legacy widgets.
 
 ## Extending Estampes
 
@@ -86,6 +93,6 @@ The public extension surface is the module manifest and package format, the scen
 ## Constraints that shaped the design
 
 - Plugins cannot draw over images ChatGPT itself displays, so images are shown in Estampes's own canvas.
-- Images enter only through ChatGPT's native paths (attached or photographed file, or a public URL), so there is no custom upload UI.
+- Images enter through the host's native paths (an attached or photographed file in ChatGPT, or a public URL) or, for hosts that do not pass attachments to tools (Claude), through the canvas's own 選擇圖片／拍照 button, which uploads in slices. There is no separate upload page.
 - The host may deliver tool input after the tool result, resize the widget at any time, and drop large payloads; the widget and server keep payloads small and can reload an image by id.
 - Every feature stays generic: nothing in the tools or widget is specific to one kind of image.
