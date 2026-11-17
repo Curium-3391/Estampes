@@ -281,11 +281,11 @@ async function rollbackCanvas(entry, key, state, seq) {
 }
 
 // After a change: rewrite canvas.json and marks.svg, append one history line.
-export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note } = {}) {
+export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note, commandId, argsHash } = {}) {
   if (canvases) {
     // Acknowledged only once durable in the store: a failure rejects.
     const canvas = serializeCanvas(entry);
-    const line = { at: canvas.savedAt, tool, author, changed, ...(removed.length ? { removed } : {}), ...(note ? { note } : {}), marks: canvas.marks.length };
+    const line = { at: canvas.savedAt, tool, author, changed, ...(removed.length ? { removed } : {}), ...(note ? { note } : {}), ...(commandId ? { commandId, argsHash } : {}), marks: canvas.marks.length };
     const key = setKeyOf(entry), state = saveState(entry), seq = ++state.issued;
     // Marks are shared objects that later edits change in place, so the
     // durable copy kept for a rollback is taken now.
@@ -445,6 +445,12 @@ export async function saveDocument(bytes, sha) {
 export async function loadDocument(sha) {
   if (!root || !/^[0-9a-f]{64}$/.test(sha)) return null;
   try { return await readFile(pdfPath(sha)); } catch { return null; }
+}
+
+// The change log of one canvas (a copy has its own), for command-id lookups. Only the UVA store keeps command ids.
+export async function readCommandLog(entry) {
+  if (!canvases) return [];
+  return (await canvases.read(setKeyOf(entry)))?.extra.log ?? [];
 }
 
 // `files`: the older history.jsonl itself (migration); `base`: a workspace copy's prefix.
