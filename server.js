@@ -21,7 +21,7 @@ import { createVisualEvidence } from "./src/visual-input.js";
 import {
   applyCanvasChanges, canvasMarks, canvasLayers, snapshotCanvas, storeUserMarks, importMarks, shownLinks,
   applyPairChanges, pairLinks, reviewLink, reviewFinding, applyWorkspaceChanges, workspaceLinks, reviewWorkspaceLink, LINK_CONFIDENCE, LINK_REVIEW, editCanvas, takeUserEdits, LAYER_NAME_MAX,
-  undoCanvasEdit, redoCanvasEdit, canvasHistory,
+  undoCanvasEdit, redoCanvasEdit, canvasHistory, setKeyOf,
 } from "./src/canvas-state.js";
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
@@ -36,7 +36,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, useRecords, useCanvasStore } from "./src/storage.js";
+import { readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -75,6 +75,7 @@ import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
 import { renderCanvas, canvasReadRequest, canvasRevision } from "./src/scene/canvas-render.js";
 import { createRevisionTracker, classifyChange, MAX_POLLED_DOCUMENTS } from "./src/visual/document-revisions.js";
+import { COMMAND_ID, commandHash, judgeCommand, commandRecords, createCommandGate } from "./src/visual/commands.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { createCasClient } from "./src/cas/client.js";
@@ -723,6 +724,9 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
   });
 }
 
+// Every edit that carries a command id takes a turn here (user edits are few; this keeps check-then-apply
+// atomic). Module level on purpose: makeServer runs once per HTTP request, and the gate must be shared by all.
+const commandTurn = createCommandGate();
 function makeServer() {
   const server = new McpServer({ name: "estampes", version: VERSION }, { instructions: SERVER_INSTRUCTIONS });
   // Every tool result goes through the host size cap (src/result-budget.js);
@@ -1331,6 +1335,50 @@ function makeServer() {
     }
   );
 
+  // Lost-ACK lookup (UVA Phase 3): did a command the widget sent reach the canvas?
+  // App-only. "applied" comes only from the canvas's own durable change log; "unknown"
+  // means no record (never arrived, or older than the log keeps), so the widget may send
+  // it again with the same command id, which the server applies at most once.
+  registerAppTool(
+    server,
+    "commands_get_status",
+    {
+      title: "Look up widget commands",
+      description: "Ask whether commands the widget sent (by command id) were applied to a canvas document.",
+      inputSchema: z.object({
+        documentId: z.string().regex(/^(img:[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
+        commandIds: z.array(z.string().regex(COMMAND_ID)).min(1).max(24),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ documentId, commandIds }) => {
+      try {
+        const entries = documentId.startsWith("ws:") ? (await workspaceItems((await resolveRef(documentId)).doc)).map((it) => it.entry) : [await ensureSet(documentId)];
+        const logs = await Promise.all(entries.map((entry) => readCommandLog(entry)));
+        // A command that saved several canvases is applied only when each of them carries its record.
+        const groupLogs = new Map();
+        for (const log of logs) for (const l of commandRecords(log)) for (const key of l?.group ?? []) {
+          if (!commandIds.includes(l.commandId) || groupLogs.has(key)) continue;
+          groupLogs.set(key, commandRecords(await readCommandLog(await ensureSet(key))));
+        }
+        const results = commandIds.map((commandId) => {
+          const records = logs.flatMap((log) => commandRecords(log).filter((l) => l?.commandId === commandId));
+          const found = records.at(-1);
+          // A workspace command that saved several items is applied only when every one of them carries it.
+          const complete = found && (found.group ?? []).every((key) => groupLogs.get(key)?.some((l) => l?.commandId === commandId));
+          return complete ? { commandId, status: "applied", at: found.at, tool: found.tool } : { commandId, status: "unknown" };
+        });
+        return {
+          content: [{ type: "text", text: "Looked up " + commandIds.length + " command(s) for the widget." }],
+          structuredContent: { kind: "estampes.commands_status", documentId, commands: results },
+        };
+      } catch (error) {
+        return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
+      }
+    }
+  );
+
   // The whole canvas as one estampes.visual/1 document: images, layers,
   // marks with provenance, links and (with storage) the change history. No
   // widget and nothing ChatGPT-specific, so any MCP client can read it.
@@ -1925,13 +1973,32 @@ function makeServer() {
         remove: z.array(z.object({ id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional() }).strict()).max(30).default([]),
         history: z.object({ action: z.enum(["undo", "redo"]), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional() }).strict().optional()
           .describe("Undo or redo the user's last mark edit on one image (move, resize, restyle, relabel, delete). Cannot be combined with other edits."),
+        commandId: z.string().regex(COMMAND_ID).optional()
+          .describe("Made by the widget for one user action and reused when it retries. The same id with the same edits is applied once; a second call returns the current canvas with replayed: true."),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
-    async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step }) => {
+    async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step, commandId }) => {
+      // Edits with a command id run one at a time, from the lookup to the durable save, so a retry that
+      // arrives while the first call is still running waits for it and then finds its record.
+      const release = commandId ? await commandTurn() : null;
       try {
         if (step && (layers.length || order || marks.length || remove.length)) throw new Error("history cannot be combined with other edits");
+        // A command id seen before with the same edits has been applied: answer with the current canvas and change nothing.
+        const cmd = { ...(commandId ? { commandId, argsHash: commandHash({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step }) } : {}) };
+        let replayed = false;
+        let doneGroup = null; // the canvases the command first chose, in saving order (kept in the record), so a retry after a reorder keeps its targets
+        const done = new Set(); // keys of canvases whose change log already carries this command (not objects: the image cache can evict entries)
+        if (commandId) {
+          const scope = workspaceId ? (await workspaceItems((await resolveRef(workspaceId)).doc)).map((it) => it.entry) : [await ensureImage(imageId), ...(pairImageId ? [await ensureImage(pairImageId)] : [])];
+          // Judge each canvas on its own: a save that touched several canvases may have reached only some of them.
+          const verdicts = await Promise.all(scope.map(async (entry) => [entry, judgeCommand([await readCommandLog(entry)], commandId, cmd.argsHash)]));
+          if (verdicts.some(([, v]) => v.state === "mismatch")) throw new Error("Command " + commandId + " was already used for different edits.");
+          for (const [entry, v] of verdicts) if (v.state === "applied") { done.add(setKeyOf(entry)); doneGroup ??= v.group ?? null; }
+          // An undo/redo touches one canvas, so any record means it was applied. Edits are replayed per canvas below.
+          if (step && done.size) { replayed = true; layers = []; order = undefined; marks = []; remove = []; step = undefined; }
+        }
         const stepOf = (entry) => (step.action === "undo" ? undoCanvasEdit : redoCanvasEdit)(entry);
         const stateOf = (entries) => Object.fromEntries(entries.map(([key, entry]) => [key, canvasHistory(entry)]));
         const resolveUser = (m) => {
@@ -1946,7 +2013,7 @@ function makeServer() {
             if (step.item && !known.has(step.item)) throw new Error("No item " + step.item + " in " + workspaceId);
             const it = items.find((x) => x.id === (step.item ?? items[0].id));
             const edit = stepOf(it.entry);
-            await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: [edit.id] });
+            await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: [edit.id], ...cmd });
             return {
               content: [{ type: "text", text: (step.action === "undo" ? "Undid" : "Redid") + " the last edit of mark " + edit.id + " on item " + it.id + "." }],
               structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits: [{ ...edit, side: it.id }], annotations: wsMarks(items), layers: wsLayers(items),
@@ -1955,25 +2022,32 @@ function makeServer() {
           }
           for (const x of [...layers, ...marks, ...remove]) if (x.item && !known.has(x.item)) throw new Error("No item " + x.item + " in " + workspaceId);
           for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
-          const first = items[0].id, of = (x) => x.item ?? first;
+          const first = (doneGroup && items.find((x) => setKeyOf(x.entry) === doneGroup[0])?.id) || items[0].id, of = (x) => x.item ?? first;
           const undo = [], all = [];
+          let skipped = 0; const touchedKeys = [];
           try {
             for (const it of items) {
               const pick = {
                 layers: layers.filter((l) => of(l) === it.id).map(({ side: _s, item: _i, ...l }) => l), order: order?.[it.id],
                 marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
               };
+              if (doneGroup && !doneGroup.includes(setKeyOf(it.entry))) continue;
               if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
+              touchedKeys.push(setKeyOf(it.entry));
+              if (done.has(setKeyOf(it.entry))) { skipped++; continue; }
               const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
               undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
               all.push({ it, edits: editCanvas(it.entry, pick) });
             }
           } catch (error) { undo.forEach((u) => u()); throw error; }
-          for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
+          if (skipped && !all.length) replayed = true;
+          // The record names the canvases the command saves, so a status lookup can tell a half-saved command.
+          const wsCmd = commandId ? { ...cmd, group: doneGroup ?? touchedKeys } : cmd;
+          for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind), ...wsCmd });
           const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
           return {
             content: [{ type: "text", text: "Applied " + edits.length + " user edit(s) in workspace " + workspaceId + "." }],
-            structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, edits, annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink),
+            structuredContent: { kind: "estampes.canvas_edit", imageId, workspaceId, ...(replayed ? { replayed } : {}), edits, annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink),
               history: stateOf(items.map((x) => [x.id, x.entry])) },
           };
         }
@@ -1983,7 +2057,7 @@ function makeServer() {
         if (step) {
           if (step.side === "right" && !right) throw new Error("side:'right' needs pairImageId");
           const entry = step.side === "right" ? right : left, edit = stepOf(entry), side = step.side ?? "left";
-          await saveCanvas(entry, { tool: "edit_visual_canvas", author: "user", changed: [edit.id] });
+          await saveCanvas(entry, { tool: "edit_visual_canvas", author: "user", changed: [edit.id], ...cmd });
           const all = right ? pairMarks(left, right) : canvasMarks(left);
           return {
             content: [{ type: "text", text: (step.action === "undo" ? "Undid" : "Redid") + " the last edit of mark " + edit.id + " on " + (side === "right" ? pairImageId : imageId) + "." }],
@@ -1992,7 +2066,9 @@ function makeServer() {
               history: stateOf(right ? [["left", left], ["right", right]] : [["left", left]]) },
           };
         }
-        const pick = (side) => ({
+        const sideDone = (side) => (side === "right" ? !!right && done.has(setKeyOf(right)) : done.has(setKeyOf(left)));
+        replayed = replayed || (done.size > 0 && sideDone("left") && (!right || sideDone("right")));
+        const pick = (side) => sideDone(side) ? { layers: [], order: undefined, marks: [], remove: [], resolveUser } : ({
           layers: layers.filter((l) => (l.side ?? "left") === side).map(({ side: _s, ...l }) => l),
           order: order?.[side],
           marks: marks.filter((m) => (m.side ?? "left") === side),
@@ -2006,14 +2082,14 @@ function makeServer() {
           try { rightEdits = editCanvas(right, pick("right")); }
           catch (error) { undoLeft(); left.userEdits = leftEdits; throw error; }
         }
-        const history = { tool: "edit_visual_canvas", author: "user" };
-        await saveCanvas(left, { ...history, changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
-        if (right) await saveCanvas(right, { ...history, changed: rightEdits.map((e) => e.id ?? e.layer ?? e.kind) });
+        const history = { tool: "edit_visual_canvas", author: "user", ...cmd, ...(commandId && right ? { group: [setKeyOf(left), setKeyOf(right)] } : {}) };
+        if (!replayed && !sideDone("left")) await saveCanvas(left, { ...history, changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
+        if (right && !replayed && !sideDone("right")) await saveCanvas(right, { ...history, changed: rightEdits.map((e) => e.id ?? e.layer ?? e.kind) });
         const all = right ? pairMarks(left, right) : canvasMarks(left);
         return {
           content: [{ type: "text", text: "Applied " + (edits.length + rightEdits.length) + " user edit(s) to " + imageId + (right ? " + " + pairImageId : "") + "." }],
           structuredContent: {
-            kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}),
+            kind: "estampes.canvas_edit", imageId, ...(right ? { pairImageId } : {}), ...(replayed ? { replayed } : {}),
             edits: [...edits.map((e) => ({ ...e, side: "left" })), ...rightEdits.map((e) => ({ ...e, side: "right" }))],
             annotations: all, layers: right ? pairLayers(left, right) : canvasLayers(left),
             ...(right ? { links: shownLinks(left, right).map(widgetLink) } : {}),
@@ -2022,7 +2098,7 @@ function makeServer() {
         };
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
-      }
+      } finally { release?.(); }
     }
   );
 
