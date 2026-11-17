@@ -66,11 +66,14 @@ A passing automated test is not a result from a real ChatGPT host. See [Compatib
 | `src/image-store.js`, `src/storage.js` | Image intake, hashing, cache; optional disk storage |
 | `src/image-ops.js`, `src/image/*` | Pixel operations, derived views, transforms, registration, measurement, PDF, analysis engines |
 | `src/canvas-state.js`, `src/protocol.js`, `src/marks-file.js`, `src/mark-render.js` | Marks, layers, links, the `estampes.visual/2` document, SVG export, verification crops |
+| `src/visual/*`, `src/assessment.js`, `src/gesture-groups.js` | Annotation and layer contracts, hit testing, edit history, RenderPlan; claims and verification; gesture groups |
+| `src/uva/*`, `src/persistence/*`, `src/documents/*` | The default UVA store and its storage engine (data-integrity-critical, see [AGENTS.md](../AGENTS.md)) |
+| `src/oauth.js`, `src/security.js`, `src/result-budget.js`, `src/tool-guidance.js` | Sign-in and access key, host result-size budget, the model's MCP instructions |
 | `src/workspace.js`, `src/bundle.js`, `src/zip.js` | Workspaces and `.estampes` bundles |
 | `src/scene/*` | Scene objects, scene operations, expression parser, rendering |
 | `src/modules/*`, `src/builtin-modules/*` | Manifests, registry, lifecycle, packages, runtimes (declarative, WebAssembly, http), egress, jobs; Graph, calculator, plate solving |
 | `src/cas/*`, `cas-service/` | Calculator client and notebooks; the SymPy service (separate container) |
-| `src/surface/*`, `public/` | Panels and layouts; the widgets (`visual-surface.html` is one self-contained page, no build step) |
+| `src/surface/*`, `public/` | Panels, layouts and the widget `DocumentStore`; the widgets (`visual-surface.html` is one self-contained page, no build step; `public/workbench.js`, `public/calculator.js` and the shared modules listed in `src/surface/widget-source.js` are inlined into it when served) |
 | `scripts/` | `estampes-module.js` (module author and administrator CLI), `check-release.mjs`, `verify-backup-restore.mjs`, `make-sample-material.mjs` |
 | `docs/history/` | Archived milestone notes and the first protocols; not the current behaviour |
 

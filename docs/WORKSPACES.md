@@ -88,7 +88,7 @@ The intents folder is part of the storage folder, so a backup of both roots ([Ba
   "id": "ws:0f3c…", "name": "電路與手冊", "revision": 3, "layout": "auto",
   "items": [
     { "id": "wi-1", "asset": "img:2be4…", "set": "img:2be4…", "placement": { "x": 0, "y": 0, "width": 1000, "rotation": 0 } },
-    { "id": "wi-2", "asset": "img:7152…", "set": "img:7152…#c4a1b2c3d4e5f", "label": "PCB", "placement": { "x": 1060, "y": 0, "width": 1000, "rotation": 0 } }
+    { "id": "wi-2", "asset": "img:7152…", "set": "img:7152…#c4a1b2c3d4e5f", "label": "Photo", "placement": { "x": 1060, "y": 0, "width": 1000, "rotation": 0 } }
   ],
   "assets": [ { "id": "img:2be4…", "width": 1536, "height": 432, "source": "chat-file", "fileName": "opamp.jpg", "page": { "documentSha256": "…", "pageIndex": 4 } } ],
   "sets": [
