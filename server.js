@@ -75,7 +75,7 @@ import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
 import { renderCanvas, canvasReadRequest, canvasRevision } from "./src/scene/canvas-render.js";
 import { createRevisionTracker, classifyChange, MAX_POLLED_DOCUMENTS } from "./src/visual/document-revisions.js";
-import { COMMAND_ID, commandHash, judgeCommand } from "./src/visual/commands.js";
+import { COMMAND_ID, commandHash, judgeCommand, createCommandGate } from "./src/visual/commands.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { createCasClient } from "./src/cas/client.js";
@@ -1931,6 +1931,8 @@ function makeServer() {
   // renamed, reordered, locked and faded; the user's marks from any earlier
   // turn can be moved, restyled or relabelled; any unlocked mark can be
   // deleted. GPT is told about these edits on its next present_visual call.
+  // Every edit that carries a command id takes a turn here (user edits are few; this keeps check-then-apply atomic).
+  const commandTurn = createCommandGate();
   const EditMarkSchema = z.object({
     id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
@@ -1964,6 +1966,9 @@ function makeServer() {
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step, commandId }) => {
+      // Edits with a command id run one at a time, from the lookup to the durable save, so a retry that
+      // arrives while the first call is still running waits for it and then finds its record.
+      const release = commandId ? await commandTurn() : null;
       try {
         if (step && (layers.length || order || marks.length || remove.length)) throw new Error("history cannot be combined with other edits");
         // A command id seen before with the same edits has been applied: answer with the current canvas and change nothing.
@@ -2065,7 +2070,7 @@ function makeServer() {
         };
       } catch (error) {
         return { isError: true, content: [{ type: "text", text: String(error?.message || error) }] };
-      }
+      } finally { release?.(); }
     }
   );
 

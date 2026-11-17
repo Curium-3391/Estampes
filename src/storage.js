@@ -282,6 +282,7 @@ async function rollbackCanvas(entry, key, state, seq) {
 
 // After a change: rewrite canvas.json and marks.svg, append one history line.
 export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note, commandId, argsHash } = {}) {
+  if (commandId && !canvases) rememberCommand(entry, { at: new Date().toISOString(), tool, author, changed, commandId, argsHash });
   if (canvases) {
     // Acknowledged only once durable in the store: a failure rejects.
     const canvas = serializeCanvas(entry);
@@ -448,8 +449,17 @@ export async function loadDocument(sha) {
 }
 
 // The change log of one canvas (a copy has its own), for command-id lookups. Only the UVA store keeps command ids.
+// Without the UVA store (legacy files or memory only) the ids are kept in memory: retries within one run
+// are still applied once, but the record does not survive a restart.
+const memoryCommands = new Map();
+const MEMORY_COMMAND_LINES = 200;
+function rememberCommand(entry, line) {
+  const key = setKeyOf(entry), list = memoryCommands.get(key) ?? [];
+  memoryCommands.delete(key); memoryCommands.set(key, [...list, line].slice(-MEMORY_COMMAND_LINES));
+  while (memoryCommands.size > 256) memoryCommands.delete(memoryCommands.keys().next().value);
+}
 export async function readCommandLog(entry) {
-  if (!canvases) return [];
+  if (!canvases) return memoryCommands.get(setKeyOf(entry)) ?? [];
   return (await canvases.read(setKeyOf(entry)))?.extra.log ?? [];
 }
 

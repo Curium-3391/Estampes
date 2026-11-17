@@ -27,3 +27,17 @@ export function judgeCommand(logs, commandId, hash) {
   }
   return found ?? { state: "none" };
 }
+
+// Edits that carry a command id run one at a time, from the lookup to the durable save, so a
+// retry that arrives while the first call is still running waits and then finds its record.
+// `await gate()` gives a release function; call it in a finally.
+export function createCommandGate() {
+  let tail = Promise.resolve();
+  return () => {
+    let release;
+    const turn = new Promise((resolve) => { release = resolve; });
+    const ready = tail.then(() => release);
+    tail = tail.then(() => turn);
+    return ready;
+  };
+}
