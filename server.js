@@ -1353,12 +1353,18 @@ function makeServer() {
       try {
         const entries = documentId.startsWith("ws:") ? (await workspaceItems((await resolveRef(documentId)).doc)).map((it) => it.entry) : [await ensureSet(documentId)];
         const logs = await Promise.all(entries.map((entry) => readCommandLog(entry)));
+        // A command that saved several canvases is applied only when each of them carries its record.
+        const groupLogs = new Map();
+        for (const log of logs) for (const l of commandRecords(log)) for (const key of l?.group ?? []) {
+          if (!commandIds.includes(l.commandId) || groupLogs.has(key)) continue;
+          groupLogs.set(key, commandRecords(await readCommandLog(await ensureSet(key))));
+        }
         const results = commandIds.map((commandId) => {
           const records = logs.flatMap((log) => commandRecords(log).filter((l) => l?.commandId === commandId));
           const found = records.at(-1);
           // A workspace command that saved several items is applied only when every one of them carries it.
-          const carrying = logs.filter((log) => commandRecords(log).some((l) => l?.commandId === commandId)).length;
-          return found && carrying >= (found.canvases ?? 1) ? { commandId, status: "applied", at: found.at, tool: found.tool } : { commandId, status: "unknown" };
+          const complete = found && (found.group ?? []).every((key) => groupLogs.get(key)?.some((l) => l?.commandId === commandId));
+          return complete ? { commandId, status: "applied", at: found.at, tool: found.tool } : { commandId, status: "unknown" };
         });
         return {
           content: [{ type: "text", text: "Looked up " + commandIds.length + " command(s) for the widget." }],
@@ -2013,7 +2019,7 @@ function makeServer() {
           for (const key of Object.keys(order ?? {})) if (!known.has(key)) throw new Error("order: no item " + key + " in " + workspaceId);
           const first = items[0].id, of = (x) => x.item ?? first;
           const undo = [], all = [];
-          let skipped = 0;
+          let skipped = 0; const skippedKeys = [];
           try {
             for (const it of items) {
               const pick = {
@@ -2021,15 +2027,15 @@ function makeServer() {
                 marks: marks.filter((m) => of(m) === it.id), remove: remove.filter((m) => of(m) === it.id).map((m) => m.id), resolveUser,
               };
               if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
-              if (done.has(setKeyOf(it.entry))) { skipped++; continue; }
+              if (done.has(setKeyOf(it.entry))) { skipped++; skippedKeys.push(setKeyOf(it.entry)); continue; }
               const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
               undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
               all.push({ it, edits: editCanvas(it.entry, pick) });
             }
           } catch (error) { undo.forEach((u) => u()); throw error; }
           if (skipped && !all.length) replayed = true;
-          // The record says how many canvases the command saves, so a status lookup can tell a half-saved command.
-          const wsCmd = commandId ? { ...cmd, canvases: all.length + skipped } : cmd;
+          // The record names the canvases the command saves, so a status lookup can tell a half-saved command.
+          const wsCmd = commandId ? { ...cmd, group: [...skippedKeys, ...all.map(({ it }) => setKeyOf(it.entry))] } : cmd;
           for (const { it, edits } of all) await saveCanvas(it.entry, { tool: "edit_visual_canvas", author: "user", changed: edits.map((e) => e.id ?? e.layer ?? e.kind), ...wsCmd });
           const edits = all.flatMap(({ it, edits }) => edits.map((e) => ({ ...e, side: it.id })));
           return {
@@ -2069,7 +2075,7 @@ function makeServer() {
           try { rightEdits = editCanvas(right, pick("right")); }
           catch (error) { undoLeft(); left.userEdits = leftEdits; throw error; }
         }
-        const history = { tool: "edit_visual_canvas", author: "user", ...cmd };
+        const history = { tool: "edit_visual_canvas", author: "user", ...cmd, ...(commandId && right ? { group: [setKeyOf(left), setKeyOf(right)] } : {}) };
         if (!replayed && !sideDone("left")) await saveCanvas(left, { ...history, changed: edits.map((e) => e.id ?? e.layer ?? e.kind) });
         if (right && !replayed && !sideDone("right")) await saveCanvas(right, { ...history, changed: rightEdits.map((e) => e.id ?? e.layer ?? e.kind) });
         const all = right ? pairMarks(left, right) : canvasMarks(left);

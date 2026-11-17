@@ -218,5 +218,8 @@ test("a replay is still recognised when the image cache evicts the pair's canvas
     const again = ok(await s.call("edit_visual_canvas", args));
     assert.equal(again.structuredContent.replayed, true);
     assert.deepEqual(again.structuredContent.edits, []);
+    // Looked up through the left image only, the command is applied because the right canvas carries it too.
+    const st = (await s.call("commands_get_status", { documentId: ids[0], commandIds: ["cmd-pair-evict-1"] })).structuredContent.commands;
+    assert.equal(st[0].status, "applied");
   } finally { await s.stop(); }
 });
