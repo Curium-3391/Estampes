@@ -1949,6 +1949,8 @@ function makeServer() {
   // deleted. GPT is told about these edits on its next present_visual call.
   const EditMarkSchema = z.object({
     id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),
+    // Only to turn a box (rect) into a quadrilateral when the user rotates it (#70).
+    type: z.literal("polyline").optional(),
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
     points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
     label: z.string().max(64).optional(), note: z.string().max(200).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),

@@ -272,8 +272,14 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       // The AI's marks are shared too (#69): the user can move or reshape
       // them, and rewrite their label and note (#82). Author and style stay
       // the AI's.
+      // Rotating a box turns it into a quadrilateral (#70): a closed,
+      // unsmoothed four-corner polyline. No other change of type.
+      const turned = edit.type !== undefined && edit.type !== old.type;
+      if (turned && !(old.type === "rect" && edit.type === "polyline" && edit.closed === true && edit.smooth !== true && edit.points?.length === 4)) {
+        throw fail("marks", i, edit.id, "a mark keeps its type; only a box (rect) can become a quadrilateral (closed polyline with 4 points) when rotated");
+      }
       if (old.author !== "user") {
-        const changed = ["color", "size", "pen", "smooth", "closed"].filter((k) => edit[k] !== undefined && edit[k] !== old[k]);
+        const changed = (turned ? ["color", "size", "pen"] : ["color", "size", "pen", "smooth", "closed"]).filter((k) => edit[k] !== undefined && edit[k] !== old[k]);
         if (changed.length) throw fail("marks", i, edit.id, "the AI's marks can be moved, resized, reshaped or relabelled, but its " + changed.join(", ") + (changed.length > 1 ? " stay as the AI wrote them" : " stays as the AI wrote it"));
       }
       if (markLocked(entry, old)) throw Object.assign(fail("marks", i, edit.id, "its layer is locked [LAYER_LOCKED]"), { code: "LAYER_LOCKED" });
@@ -282,7 +288,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       const moved = geometryChanged(old, next);
       let stored = old.author === "user"
         ? { ...old, ...next, author: "user", grounding: old.grounding, layer: old.layer, ...(moved ? { edited: true } : {}) }
-        : { ...old, ...(Array.isArray(next.points) ? { points: next.points } : {}), x: next.x, y: next.y,
+        : { ...old, ...(turned ? { type: "polyline", closed: true } : {}), ...(Array.isArray(next.points) ? { points: next.points } : {}), x: next.x, y: next.y,
           ...(next.x2 !== undefined ? { x2: next.x2, y2: next.y2 } : {}), ...(moved ? { edited: true } : {}) };
       if (old.author !== "user" && edit.label !== undefined) {
         if (next.label) stored.label = next.label; else delete stored.label;
