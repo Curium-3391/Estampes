@@ -8,7 +8,7 @@ Labels: **Implemented** (in the code and covered by tests), **Optional** (needs 
 
 | Client | Tools over `/mcp` | Widgets (canvas, Store, calculator) | Evidence |
 | --- | --- | --- | --- |
-| ChatGPT web | Implemented | Implemented | Maintainer live sessions are recorded for the early canvas (0.4.x–0.6.x: images, marks, undo, zoom, layers, paired view). For everything added since (workspaces, modules and the Store, the calculator and workbench, bundles with surfaces) a live ChatGPT test is **Not tested**; the changelog and each feature page repeat this where it applies. |
+| ChatGPT web | Implemented | Implemented | Maintainer live sessions are recorded for the early canvas (0.4.x–0.6.x: images, marks, undo, zoom, layers, paired view). For everything added since (workspaces, modules and the Store, the calculator and workbench, bundles with surfaces, editing the AI's marks, quadrilaterals and text, live updates of an open canvas, background-run notes) a live ChatGPT test is **Not tested**; the changelog and each feature page repeat this where it applies. |
 | ChatGPT mobile apps | — | **Not tested** | No live check recorded. The workbench has a phone layout profile, checked only in the automated browser test with a fake host. A manual script is in [Workbench](WORKBENCH.md). |
 | ChatGPT desktop apps | — | **Not tested** | No live check recorded. |
 | LibreChat v0.8.9-rc1 | Tested in the report below | Canvas and public image URL tested. Local canvas upload unavailable. | [Issue #148](https://github.com/Curium-3391/Estampes/issues/148) and fake-host upload regression tests. |
@@ -33,7 +33,7 @@ Estampes now detects LibreChat from the MCP Apps handshake and shows an explanat
 
 | Platform | Status |
 | --- | --- |
-| Docker/compose on amd64 and arm64 | Implemented. Compose smoke test runs in CI on version tags only (`docker.yml`); multi-arch image build likewise. Not run on every pull request. |
+| Docker/compose on amd64 and arm64 | Implemented. `docker.yml` runs full validation and a Compose smoke test before publishing an Edge image from `main` and a release image from a version tag ([Releasing](RELEASE.md)). Not run on every pull request. |
 | Node 22 directly (`npm start`) | Implemented; unit and integration tests run in CI. |
 | Heroku, Render | Documented ([Deployment](DEPLOYMENT.md)); Render is used by the maintainer as test hosting. No automated check. |
 | Windows or macOS without Docker | **Not tested** |
