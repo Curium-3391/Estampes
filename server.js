@@ -432,6 +432,9 @@ const EDIT_TEXT = {
     (e.before && e.after ? " from " + JSON.stringify(roundGeometry(e.before)) + " to " + JSON.stringify(roundGeometry(e.after)) : "") +
     (e.author === "assistant" ? " (the user corrected where it is; your note on it stays, check it still fits)" : " (your earlier notes on it may no longer fit)"),
   "edit-note": (e) => "edited the note on their mark " + e.id,
+  "edit-text": (e) => "rewrote the text of YOUR mark " + e.id + (e.before && e.after ? ": label " + JSON.stringify(e.before.label) + " -> " + JSON.stringify(e.after.label) +
+    (e.before.note !== e.after.note ? ", note " + JSON.stringify(e.before.note) + " -> " + JSON.stringify(e.after.note) : "") : "") +
+    " (the user's wording now stands; do not overwrite it with your old text unless they ask)",
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
   "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
   "redo-edit": (e) => "redid their change to mark " + e.id + " (" + e.steps.join("+") + ")",
@@ -1893,7 +1896,8 @@ function makeServer() {
 
   // Private tool for the canvas widget: the user's own edits. Layers can be
   // renamed, reordered, locked and faded; the user's marks from any earlier
-  // turn can be moved, restyled or relabelled; any unlocked mark can be
+  // turn can be moved, restyled or relabelled; the AI's marks can be moved,
+  // reshaped and relabelled (label and note, #82); any unlocked mark can be
   // deleted. GPT is told about these edits on its next present_visual call.
   const EditMarkSchema = z.object({
     id: z.string().min(1).max(64), side: z.enum(["left", "right"]).optional(), item: WorkspaceItemId.optional(),

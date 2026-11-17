@@ -241,3 +241,60 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
     assert.deepEqual(ui.errors,[]);
   }finally{await s.close();}
 });
+
+// #82 live failure: the AI's label/note fields were read-only in the widget,
+// so a user could not change the text of AI-created marks. A tap on the drawn
+// label selects its mark, and a tap (even a jittery finger) never moves it.
+for(const touch of [false,true])test("#82: the user rewrites the label and note of AI-created marks: "+(touch?"mobile touch":"desktop"),{skip:noBrowser,timeout:90000},async()=>{
+  const s=await startStack({cas:false});
+  try{
+    const ok=async(name,args)=>{const r=await s.call(name,args);assert.ok(!r.isError,JSON.stringify(r.content));return r.structuredContent;};
+    const data=(await sharp({create:{width:900,height:1200,channels:3,background:"#ccc"}}).png().toBuffer()).toString("base64");
+    const imageId=(await ok("upload_visual_image",{total:data.length,offset:0,data})).imageId;
+    const annotations=[{id:"t82-A",type:"rect",x:.1,y:.15,x2:.4,y2:.35,label:"A",note:"AI note A"},
+      {id:"t82-B",type:"point",x:.7,y:.5,label:"B",note:"AI note B"},{id:"t82-C",type:"arrow",x:.2,y:.7,x2:.5,y2:.85,label:"C"}];
+    await ok("present_visual",{imageId,annotations});
+    const ui=await s.open({imageId,touch,viewport:touch?{width:390,height:844}:{width:1280,height:900},result:()=>s.call("present_visual",{imageId})});
+    await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
+    await ui.frame.locator('[data-mode="select"]').click();
+    const before=(await ok("get_visual_state",{imageId})).marks;
+    // Tap the drawn words "A", not the box.
+    const labelA=ui.frame.locator("#unified-layers text").filter({hasText:/^\? A$/});
+    await settled(ui);await labelA.scrollIntoViewIfNeeded();const lb=await labelA.boundingBox();
+    await tap(ui,{x:lb.x+lb.width-2,y:lb.y+lb.height/2},touch);
+    const label=ui.frame.getByRole("textbox",{name:"標籤",exact:true}),note=ui.frame.getByRole("textbox",{name:"標記備註",exact:true});
+    await label.waitFor();
+    assert.equal(await label.inputValue(),"A");assert.equal(await label.getAttribute("readonly"),null,"the AI's label is editable");
+    assert.equal(await note.inputValue(),"AI note A");
+    await label.fill("甲 晶片 Ω🙂");await note.fill("使用者改寫\n第二行 <b>");
+    await ui.frame.getByRole("button",{name:"儲存標籤與備註",exact:true}).click();
+    await ui.frame.locator("#status").filter({hasText:"已儲存標籤與備註"}).waitFor();
+    let marks=(await ok("get_visual_state",{imageId})).marks,a=marks.find(m=>m.id==="t82-A");
+    assert.equal(a.label,"甲 晶片 Ω🙂");assert.equal(a.finding.note,"使用者改寫\n第二行 <b>");
+    assert.equal(a.provenance.author,"assistant");
+    assert.deepEqual(a.geometry,before.find(m=>m.id==="t82-A").geometry,"saving text does not move the mark");
+    // The point: a jittery tap selects without moving it; clear its label.
+    const pb=await point(ui,.7,.5);
+    if(touch){
+      const cdp=await ui.page.context().newCDPSession(ui.page);
+      await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:pb.x,y:pb.y,id:1}]});
+      await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:pb.x+4,y:pb.y+3,id:1}]});
+      await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+      await cdp.detach();
+    }else await tap(ui,pb,false);
+    await ui.page.waitForTimeout(400);
+    assert.equal(await label.inputValue(),"B");
+    await label.fill("");await note.fill("");
+    await ui.frame.getByRole("button",{name:"儲存標籤與備註",exact:true}).click();
+    await ui.frame.locator("#status").filter({hasText:"已儲存標籤與備註"}).waitFor();
+    marks=(await ok("get_visual_state",{imageId})).marks;const b=marks.find(m=>m.id==="t82-B");
+    assert.equal(b.label,undefined);assert.equal(b.finding?.note,undefined);
+    assert.deepEqual(b.geometry,before.find(m=>m.id==="t82-B").geometry,"a tap to select never nudges the mark");
+    // The AI is told what the user rewrote, and the edit survives a reload.
+    const next=await s.call("present_visual",{imageId});
+    assert.match(next.content.map(c=>c.text).join("\n"),/rewrote the text of YOUR mark t82-A: label "A" -> "甲 晶片 Ω🙂"/);
+    await ui.reload();await ui.frame.locator("#unified-layers text").filter({hasText:"甲 晶片 Ω🙂"}).waitFor();
+    assert.deepEqual(ui.errors,[]);
+    await ui.shot("ai-label-edit-"+(touch?"mobile":"desktop"));
+  }finally{await s.close();}
+});
