@@ -70,3 +70,23 @@ test("a Graph document (gph:) opens in the widget on its colour, with its marks,
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("switching the widget from an image to a Graph drops the image's download links", { skip: noPython || noBrowser, timeout: 90000 }, async () => {
+  const s = await startStack({ env: { PUBLIC_BASE_URL: "https://estampes.example.test" } });
+  try {
+    await s.enable(["org.estampes.graph"]);
+    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const imageId = (JSON.stringify(img.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+    const ui = await s.open({ imageId });
+    await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => !document.querySelector("#export-image").hidden, null, { timeout: 20000 });
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    assert.deepEqual(await inner.evaluate(() => [document.querySelector("#export-image").hidden, document.querySelector("#export-marks").hidden]), [true, true],
+      "the Graph shows no download buttons that would fetch the previous image");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
