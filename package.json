@@ -12,7 +12,8 @@
     "test": "node --test",
     "uva:qualify": "node scripts/uva-qualify.mjs",
     "release:check": "node scripts/check-release.mjs",
-    "docs:check": "node scripts/check-docs.mjs"
+    "docs:check": "node scripts/check-docs.mjs",
+    "i18n:check": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
