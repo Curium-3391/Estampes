@@ -20,6 +20,9 @@ test("background values: absent or unknown means the image; solid needs #rrggbb"
   assert.deepEqual(canvasBackground({}), { kind: "image" });
   assert.deepEqual(canvasBackground({ background: { kind: "solid", color: "red" } }), { kind: "image" });
   assert.deepEqual(canvasBackground({ background: { kind: "weird" } }), { kind: "image" });
+  // A non-string colour that coerces to a match is still not a colour.
+  assert.deepEqual(canvasBackground({ background: { kind: "solid", color: ["#123456"] } }), { kind: "image" });
+  assert.throws(() => parseBackground({ kind: "solid", color: ["#123456"] }), /#rrggbb/);
   assert.deepEqual(canvasBackground({ background: { kind: "solid", color: "#ABCDEF" } }), { kind: "solid", color: "#abcdef" });
   assert.deepEqual(parseBackground(undefined), { kind: "image" });
   assert.deepEqual(parseBackground({ kind: "solid", color: "#FFFFFF" }), { kind: "solid", color: "#ffffff" });
@@ -47,6 +50,8 @@ test("a solid background is saved and restored; an image canvas record does not 
   const bad = restoreCanvas({ imageId: e.imageId, width: 300, height: 200, background: { kind: "solid", color: "#000000" } },
     { ...saved, background: { kind: "solid", color: "javascript:x" } });
   assert.equal(isSolid(bad), false);
+  const coerced = restoreCanvas({ imageId: e.imageId, width: 300, height: 200 }, { ...saved, background: { kind: "solid", color: ["#123456"] } });
+  assert.equal(isSolid(coerced), false);
 });
 
 test("render: a solid canvas is drawn in its colour; image canvases keep their revision", async () => {

@@ -7,13 +7,15 @@
 //   { kind: "solid", color: "#rrggbb" } a plain colour, drawn as a vector rect
 
 export const SOLID_COLOR = /^#[0-9a-fA-F]{6}$/;
+// Only a string is a colour: RegExp.test would coerce ["#123456"] to a match.
+const isColor = (c) => typeof c === "string" && SOLID_COLOR.test(c);
 
 // The background of a canvas entry. Anything that is not a valid solid
 // background is the image background, so an old or damaged record still shows
 // its image.
 export function canvasBackground(entry) {
   const b = entry?.background;
-  if (b?.kind === "solid" && SOLID_COLOR.test(b.color)) return { kind: "solid", color: b.color.toLowerCase() };
+  if (b?.kind === "solid" && isColor(b.color)) return { kind: "solid", color: b.color.toLowerCase() };
   return { kind: "image" };
 }
 
@@ -25,7 +27,7 @@ export function parseBackground(value) {
   if (value === undefined || value === null) return { kind: "image" };
   if (value?.kind === "image" && Object.keys(value).length === 1) return { kind: "image" };
   if (value?.kind === "solid") {
-    if (!SOLID_COLOR.test(value.color ?? "")) throw new Error("A solid background needs color as #rrggbb");
+    if (!isColor(value.color)) throw new Error("A solid background needs color as #rrggbb");
     if (Object.keys(value).some((k) => k !== "kind" && k !== "color")) throw new Error("A solid background takes only kind and color");
     return { kind: "solid", color: value.color.toLowerCase() };
   }

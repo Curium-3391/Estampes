@@ -1498,7 +1498,7 @@ const inRegion=r=>r&&[r.x,r.y,r.x2,r.y2].every(v=>typeof v==="number"&&v>=0&&v<=
 const dataUrl=img=>img&&/^image\/(png|jpeg)$/.test(img.mimeType)&&typeof img.data==="string"?"data:"+img.mimeType+";base64,"+img.data:null;
 // A canvas base is image pixels, or (UVA Phase 4A) a plain colour that is drawn as a vector rect,
 // never as an image. A solid base is kept as "solid:#rrggbb" wherever a photo URL would be.
-const baseUrl=img=>img?.background?.kind==="solid"&&/^#[0-9a-fA-F]{6}$/.test(img.background.color)?"solid:"+img.background.color.toLowerCase():dataUrl(img);
+const baseUrl=img=>img?.background?.kind==="solid"&&typeof img.background.color==="string"&&/^#[0-9a-fA-F]{6}$/.test(img.background.color)?"solid:"+img.background.color.toLowerCase():dataUrl(img);
 const isSolidBase=href=>typeof href==="string"&&href.startsWith("solid:");
 const drawBase=(href,attrs,parent)=>isSolidBase(href)?node("rect",{x:attrs.x,y:attrs.y,width:attrs.width,height:attrs.height,fill:href.slice(6),"data-base":"solid",...(attrs.transform?{transform:attrs.transform}:{})},parent):node("image",{href,...attrs,preserveAspectRatio:"none"},parent);
 // Hosts cap tool-result size (claude.ai near 150,000 characters), so a big
