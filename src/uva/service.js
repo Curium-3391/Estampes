@@ -341,14 +341,14 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   }
   async function render(documentId,sceneId){
     const d=await document(documentId),s=d.scenes.find(s=>s.id===sceneId)??(!sceneId?d.scenes[0]:null);if(!s)fail('NOT_FOUND','Unknown visual item');
-    // A transparent background (base image promoted to an image object) renders on white.
-    const b=s.background.kind==='asset'?await assetBytes(s.background.asset):await sharp({create:{width:Math.round(s.extent.width),height:Math.round(s.extent.height),channels:4,background:{r:255,g:255,b:255,alpha:1}}}).png().toBuffer();
-    const entry=legacyEntry(s,await imageData(s),s.background.asset?.legacyImageId??d.provenance.legacySetKey),hidden=new Set(s.layers.filter(l=>!l.visible).map(l=>l.id));
+    // A transparent background (base image promoted to an image object) renders on white; a solid one (a Graph) in its colour.
+    const b=s.background.kind==='asset'?await assetBytes(s.background.asset):await sharp({create:{width:Math.round(s.extent.width),height:Math.round(s.extent.height),channels:4,background:s.background.kind==='solid'?s.background.color:{r:255,g:255,b:255,alpha:1}}}).png().toBuffer();
+    const entry=legacyEntry(s,await imageData(s),s.background.asset?.legacyImageId??canvasKeyOf(d)),hidden=new Set(s.layers.filter(l=>!l.visible).map(l=>l.id));
     const svg=renderedObjects(entry).filter(r=>r.object.visibility==='public'&&!hidden.has(r.object.layer)).map(r=>`<g opacity="${s.layers.find(l=>l.id===r.object.layer)?.opacity??1}">${primitivesSvg(r.primitives,s.extent.width,s.extent.height)}</g>`).join('');
     const factor=Math.min(1,1000/Math.max(s.extent.width,s.extent.height)),width=Math.max(1,Math.round(s.extent.width*factor)),height=Math.max(1,Math.round(s.extent.height*factor));
     const bg=await sharp(b,{limitInputPixels:50_000_000}).rotate().resize(width,height,{fit:'fill'}).png().toBuffer();
     const editorImage={mimeType:'image/jpeg',data:(await sharp(bg).flatten({background:'#ffffff'}).jpeg({quality:75}).toBuffer()).toString('base64')};
-    const annotationSvg=s.layers.filter(l=>l.visible).map(l=>`<g opacity="${l.opacity}">`+s.annotations.filter(a=>a.layerId===l.id).map(a=>markSvg({type:a.type,...a.geometry,...a.style},(x,y)=>[x*s.extent.width,y*s.extent.height],s.extent.width/1000)).join('')+'</g>').join('');
+    const annotationSvg=s.layers.filter(l=>l.visible).map(l=>`<g opacity="${l.opacity}">`+s.annotations.filter(a=>a.layerId===l.id).map(a=>markSvg({type:a.type,...a.geometry,...a.style},a.anchor.space==='document'?(x,y)=>[x,y]:(x,y)=>[x*s.extent.width,y*s.extent.height],s.extent.width/1000)).join('')+'</g>').join('');
     const overlay=Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${s.extent.width} ${s.extent.height}">${svg}${annotationSvg}</svg>`);
     const preview=await sharp(bg).composite([{input:overlay}]).png().toBuffer();
     return {kind:KIND,documentId,sceneId:s.id,revision:d.revision,editorImage,preview:{mimeType:'image/png',data:preview.toString('base64')},image:{mimeType:'image/png',data:bg.toString('base64')},objectsSvg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s.extent.width} ${s.extent.height}">${svg}</svg>`};

@@ -4,6 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, readdir } from "node:fs/promises";
+import sharp from "sharp";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createUvaService } from "../src/uva/service.js";
@@ -132,4 +133,21 @@ test("a Graph edit still pending at shutdown is committed on the next start", { 
   const back = await ensureImage(g.imageId);
   assert.deepEqual([...back.marks.keys()], ["late"]);
   assert.equal((await graphDocs(s.service)).length, 1);
+});
+
+test("the UVA render action draws a Graph on its colour with its marks in place", { timeout: 120000 }, async (t) => {
+  const dirs = await folders(t);
+  const s = await open(dirs);
+  t.after(() => s.close().catch(() => {}));
+  const g = await createGraphCanvas({ width: 800, height: 500, color: "#123456" });
+  applyCanvasChanges(g, { annotations: [{ id: "dot", type: "point", x: .7, y: .3, color: "red" }], resolve });
+  await saveCanvas(g, { tool: "test" });
+  await s.store.flush();
+  const [doc] = await graphDocs(s.service);
+  const out = await s.service.dispatch({ action: "render", documentId: doc.id }, "assistant");
+  const { data, info } = await sharp(Buffer.from(out.preview.data, "base64")).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const px = (x, y) => [...data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3)];
+  assert.deepEqual([info.width, info.height], [800, 500]);
+  assert.deepEqual(px(5, 5), [0x12, 0x34, 0x56], "the Graph's colour, not white");
+  assert.notDeepEqual(px(560, 150), [0x12, 0x34, 0x56], "the mark is drawn where it is, in document units");
 });
