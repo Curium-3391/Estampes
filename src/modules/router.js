@@ -9,6 +9,7 @@ import { validateValue } from "./json-schema.js";
 import { capabilityPermissions, missingPermissions } from "./permissions.js";
 import { applySceneOps, renderedObjects, sceneRevision, SceneOpsError, VISIBILITY } from "../scene/scene-ops.js";
 import { localized } from "./manifest.js";
+import { plotContext } from "./plot-context.js";
 
 export class ModuleError extends Error {
   constructor(message, code = "invalid") { super(message); this.code = code; }
@@ -22,10 +23,13 @@ const OutputSchema = z.object({
   data: z.unknown().optional(),
 }).strict();
 
-// What a module sees of its target canvas: size, revision and (with
-// canvas.read) the public objects plus its own scratch objects.
+// What a module sees of its target canvas: its kind (a Graph document or an
+// image), size, revision and (with canvas.read) the public objects plus its
+// own scratch objects, and the plot context (axes and function plots) built
+// from them (plot-context.js), which is the same for both kinds.
 function canvasContext(entry, moduleId, granted) {
-  const base = { imageId: entry.imageId, width: entry.width, height: entry.height, revision: sceneRevision(entry) };
+  const kind = entry.kind === "graph" ? "graph" : "image";
+  const base = { imageId: entry.imageId, kind, width: entry.width, height: entry.height, revision: sceneRevision(entry) };
   if (!granted.includes("canvas.read")) return base;
   const objects = renderedObjects(entry)
     .filter((r) => r.object.visibility === "public" || r.object.provenance?.module === moduleId)
@@ -33,7 +37,7 @@ function canvasContext(entry, moduleId, granted) {
       label: r.object.label, source: r.object.provenance?.module ?? r.object.provenance?.author }));
   const marks = [...(entry.marks?.values() ?? [])].slice(0, 200).map((m) => ({ id: m.id, type: m.type, author: m.author,
     box: [m.x, m.y, m.x2 ?? m.x, m.y2 ?? m.y], ...(m.label ? { label: m.label } : {}) }));
-  return { ...base, objects, marks };
+  return { ...base, objects, marks, plot: plotContext({ kind, objects }) };
 }
 
 // canvases: { ensure(imageId), create(options), save(entry, history) }
