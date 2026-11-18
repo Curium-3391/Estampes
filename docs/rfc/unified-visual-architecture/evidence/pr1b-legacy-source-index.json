@@ -302,7 +302,7 @@
     },
     {
       "path": "src/surface/mcp-tools.js",
-      "sha256": "ce85f627b4a6a5abd00fb7caa1bdfb83b726b73f374365a8691a98e973f03b3d"
+      "sha256": "f5c53a5b89d4322475d3538f9274c9237c3e3093b8c16a98382af6435f177cf7"
     },
     {
       "path": "src/surface/refresh.js",
@@ -500,6 +500,15 @@
         "src/modules/audit.js"
       ],
       "previousSha256": "e27cd0b122f64500c5f23ac635ed47fd906904a2a1779df21878d9355c2d48e9"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User approved the UVA Phase 4A plan (2026-11-18, \u300c\u7167\u4f60\u8aaa\u7684\u505a\u300d), which lists amendment records for sealed files touched by each 4A PR, and asked to continue 4A-4 (\u300c\u76f4\u63a5\u958b4A\u300d)",
+      "reason": "UVA Phase 4A-4: the surface tools take a Graph document id (gph:) as the canvas, so the calculator panel opens beside a Graph and plots onto it; only the id pattern changes",
+      "files": [
+        "src/surface/mcp-tools.js"
+      ],
+      "previousSha256": "ce85f627b4a6a5abd00fb7caa1bdfb83b726b73f374365a8691a98e973f03b3d"
     }
   ]
 }

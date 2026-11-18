@@ -10,7 +10,8 @@ import { cellSummary } from "../cas/notebooks.js";
 import { SurfaceError } from "./store.js";
 import { refreshLinks, autoRefresh } from "./refresh.js";
 
-const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/);
+// The canvas: an image (img:) or a Graph document (gph:, UVA Phase 4A-4).
+const ImageIdSchema = z.string().regex(/^(img|gph):[0-9a-f]{16}$/);
 const WorkspaceIdSchema = z.string().regex(/^ws:[0-9a-f]{16}$/);
 const Where = { imageId: ImageIdSchema.optional(), workspaceId: WorkspaceIdSchema.optional() };
 const CAS = "org.estampes.cas";
