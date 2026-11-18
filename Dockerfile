@@ -30,7 +30,12 @@ ENV NODE_ENV=production \
 # The default goes in the older variable name, the lowest-priority one, so a
 # deployment that sets ESTAMPES_UVA_BETA_DIR or ESTAMPES_UVA_DIR keeps its store.
 # needs the OS flock backend for its writer lease.
-RUN apt-get update && apt-get install -y --no-install-recommends util-linux \
+# fonts-dejavu-core + fontconfig-config: server-side renders (render_canvas,
+# PNG exports) draw label text with system fonts; without any, every letter
+# becomes a missing-glyph box. DejaVu covers Latin, Greek, Cyrillic and basic
+# Arabic/Hebrew in about 3 MB. CJK fonts are much larger and are a separate
+# image variant (docs/rfc/i18n/README.md, D7).
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux fonts-dejavu-core fontconfig-config \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -38,6 +43,8 @@ COPY package.json package-lock.json server.js ./
 COPY src ./src
 COPY scripts ./scripts
 COPY public ./public
+# Fail the build if text cannot be rendered (see scripts/check-fonts.mjs).
+RUN node scripts/check-fonts.mjs
 # Run as the image's unprivileged "node" user (uid 1000). /data is created
 # here so a new named volume starts owned by that user.
 RUN chmod -R u=rwX,go=rX /app \
