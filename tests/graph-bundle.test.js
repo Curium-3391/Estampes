@@ -139,6 +139,35 @@ test("an import makes only the Graphs the workspace shows, and refuses a Graph l
   await s.close();
 });
 
+test("a bundle refused part-way stores no Graph: a bad Graph size, or a bad image after the Graphs", { timeout: 120000 }, async (t) => {
+  clearWorkspaces();
+  const dirs = await folders(t);
+  const s = await open(dirs);
+  t.after(() => s.close().catch(() => {}));
+  const a = await plottedGraph(), b = await plottedGraph();
+  const made = await createWorkspace({ items: [{ set: a.imageId }, { set: b.imageId }] });
+  const { buffer } = await exportBundle(made.workspace.id);
+  const rebuild = (assets) => {
+    const files = unzipFiles(buffer), manifest = JSON.parse(files.get("manifest.json").toString());
+    manifest.assets = assets(manifest.assets);
+    return zipFiles([...files].map(([name, data]) => ({ name, data: name === "manifest.json" ? Buffer.from(JSON.stringify(manifest)) : data })));
+  };
+  await s.store.flush();
+  const before = (await graphDocs(s.service)).length;
+  // The second Graph's size is invalid: refused before the first is made.
+  await assert.rejects(importBundle(rebuild((list) => list.map((x, n) => (n === 1 ? { ...x, width: 1 } : x)))), /200 to 4096/);
+  // An image asset that fails after the Graphs were prepared in memory.
+  await assert.rejects(importBundle(rebuild((list) => [...list, { id: "img:not-hex", file: "nope" }])), /malformed/);
+  await s.store.flush();
+  assert.equal((await graphDocs(s.service)).length, before, "no Graph stored by a refused import");
+  // The intact bundle still imports, with both Graphs.
+  const r = await importBundle(buffer);
+  assert.equal(r.verified, true);
+  await s.store.flush();
+  assert.equal((await graphDocs(s.service)).length, before + 2);
+  await s.close();
+});
+
 test("a copy of a Graph travels as a copy of the new Graph, with its own marks", { timeout: 120000 }, async (t) => {
   clearWorkspaces();
   const dirs = await folders(t);

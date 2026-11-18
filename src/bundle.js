@@ -25,8 +25,8 @@ import { zipFiles, unzipFiles } from "./zip.js";
 import { canvasMarks, canvasLayers, setKeyOf } from "./canvas-state.js";
 import { MARK_TYPES, MAX_POLYLINE_POINTS, MARK_STATUSES, MARK_COLORS, MARK_SIZES, MARK_PENS } from "./scene-catalog.js";
 import { entrySharp } from "./image-store.js";
-import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, restoreCanvas, createGraphCanvas } from "./storage.js";
-import { isGraphId, graphSpec } from "./visual/graph-docs.js";
+import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, restoreCanvas, draftGraphCanvas, persistGraphCanvas } from "./storage.js";
+import { isGraphId, graphSpec, forgetGraph } from "./visual/graph-docs.js";
 import { MODULE_ID } from "./modules/manifest.js";
 import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, bundleWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
 
@@ -209,7 +209,10 @@ const sameState = (entry, def) => canonicalById(canvasMarks(entry)) === canonica
 // the second import sees the first one's workspace and makes nothing.
 const importing = new Map();
 export function importBundle(buffer, options) {
-  const key = sha(buffer), before = importing.get(key) ?? Promise.resolve();
+  // Keyed by the bundle's id (what the repeat check compares), else by its bytes.
+  let key = "sha:" + sha(buffer);
+  try { const id = JSON.parse(unzipFiles(buffer).get("manifest.json").toString("utf8")).bundleId; if (typeof id === "string") key = "id:" + id; } catch {}
+  const before = importing.get(key) ?? Promise.resolve();
   const run = before.then(() => importBundleOnce(buffer, options));
   const settled = run.catch(() => {});
   importing.set(key, settled);
@@ -265,6 +268,9 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
 
   // Images: registered under the id this server derives from the bytes.
   const idMap = new Map(), entries = new Map(), madeGraphs = new Set();
+  // Graphs made here stay in memory until just before the workspace is
+  // adopted; any failure on the way drops them, so a refused bundle stores none.
+  try {
   const graphAssets = (Array.isArray(manifest.assets) ? manifest.assets : []).filter((a) => a?.kind === "graph");
   if (graphAssets.length) {
     // Only the Graphs the workspace shows are made, each once: a Graph asset
@@ -282,12 +288,15 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
       const again = await adoptWorkspace({ name, items: [], provenance: { bundleId: manifest.bundleId } });
       return { ...again, repeated: true, warnings, summary: [], manifest: { bundleId: manifest.bundleId } };
     }
-    for (const a of graphAssets) {
-      if (!shown.has(a.id)) continue;
+    // Every size and colour is checked before any Graph is made.
+    const specs = graphAssets.filter((a) => shown.has(a.id)).map((a) => {
       const own = setDefs.get(a.id), color = own?.background?.kind === "solid" ? own.background.color : undefined;
-      const spec = graphSpec({ width: a.width, height: a.height, ...(color ? { color } : {}), title: typeof a.title === "string" ? a.title : null });
-      const entry = await createGraphCanvas(spec);
-      idMap.set(a.id, entry.imageId); entries.set(a.id, entry); madeGraphs.add(entry.imageId);
+      return [a.id, graphSpec({ width: a.width, height: a.height, ...(color ? { color } : {}), title: typeof a.title === "string" ? a.title : null })];
+    });
+    // In memory only until the import is about to keep them (see below).
+    for (const [id, spec] of specs) {
+      const entry = draftGraphCanvas(spec);
+      idMap.set(id, entry.imageId); entries.set(id, entry); madeGraphs.add(entry.imageId);
     }
   }
   for (const a of Array.isArray(manifest.assets) ? manifest.assets : []) {
@@ -359,6 +368,7 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
     placement: it.placement && typeof it.placement === "object" ? defined({ x: Number(it.placement.x), y: Number(it.placement.y), width: Number(it.placement.width), rotation: [0, 90, 180, 270].includes(it.placement.rotation) ? it.placement.rotation : 0 }) : undefined }));
   for (const it of items) if (!it.asset || !it.set) throw new Error("Bundle workspace item points at something that is not in the bundle");
   const sets = touched.filter((t) => t.how !== "reused" || false).map((t) => t.target);
+  for (const id of madeGraphs) await persistGraphCanvas(await ensureImage(id));
   const adopted = await adoptWorkspace({ name: name || text(ws.name, 60), items, layout: ws.layout, provenance: { bundleId: manifest.bundleId, importedAt: new Date().toISOString(), format: manifest.format, generator: text(manifest.generator, 60) }, sets });
   if (adopted.repeated !== undefined || adopted.created === undefined) return { ...adopted, repeated: true, warnings, summary, manifest: { bundleId: manifest.bundleId } };
   for (const t of touched) if (t.how === "restored") await saveCanvas(t.target, { tool: "import_workspace_bundle", changed: [], note: "restored from bundle " + manifest.bundleId });
@@ -383,4 +393,8 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
     }
   }
   return { ...adopted, summary, warnings, mismatch, unsupported, verified, extras, manifest: { bundleId: manifest.bundleId, generator: manifest.generator } };
+  } catch (error) {
+    for (const id of madeGraphs) forgetGraph(id);
+    throw error;
+  }
 }
