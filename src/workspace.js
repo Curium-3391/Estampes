@@ -22,6 +22,7 @@
 // as a workspace without converting anything (legacy adapter); a change that
 // adds to one creates a new workspace that links its sets, and the original
 // canvas keeps working as before.
+import { canvasBackground } from "./visual/background.js";
 import { randomBytes, createHash } from "node:crypto";
 import { canvasMarks, canvasLayers, setKeyOf, workspaceLinks, linksOf, pairLinks } from "./canvas-state.js";
 import {
@@ -57,7 +58,7 @@ const serial = (job) => { const next = chain.then(job, job); chain = next.catch(
 function makeFork(base, setId, data) {
   const fork = Object.create(base);
   Object.assign(fork, {
-    baseAsObject:false, markHistory:{past:[],future:[]}, textHistory:{past:[],future:[]}, layerHistory:{past:[],future:[]}, deletedObjectBatches:[], setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
+    baseAsObject:false, background: canvasBackground(base), markHistory:{past:[],future:[]}, textHistory:{past:[],future:[]}, layerHistory:{past:[],future:[]}, deletedObjectBatches:[], setId, setKey: base.imageId + "#" + setId, marks: new Map(), layers: [], userEdits: [], rejections: [],
     pairLinks: new Map(), gestureDecisions: [], objects: undefined, lastViews: undefined, lastCheck: undefined, derivedFrom: undefined,
   });
   if (data) restoreCanvas(fork, data);
@@ -95,6 +96,8 @@ function copySet(entry) {
   const from = setKeyOf(entry);
   fork.marks = new Map(canvasMarks(entry).map((m) => [m.id, { ...clone(m), derivedFrom: { set: from, mark: m.id } }]));
   fork.baseAsObject=!!entry.baseAsObject;
+  // The colour is copied, not inherited: the copy stays as it is when the original changes.
+  fork.background = canvasBackground(entry);
   fork.layers = clone(entry.layers ?? []);
   fork.rejections = clone(entry.rejections ?? []);
   fork.gestureDecisions = clone(entry.gestureDecisions ?? []);

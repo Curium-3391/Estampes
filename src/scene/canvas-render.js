@@ -1,4 +1,5 @@
 // Public canvas pixels. No module execution, and no scratch objects.
+import { canvasBackground } from "../visual/background.js";
 import sharp from "sharp";
 import { createHash } from "node:crypto";
 import { entrySharp } from "../image-store.js";
@@ -18,6 +19,8 @@ export function canvasRevision(entry, hiddenLayers = []) {
     imageId: entry.imageId, setId: entry.setId, width: entry.width, height: entry.height,
     objects: [...(entry.objects?.values() ?? [])], marks: canvasMarks(entry),
     layers: canvasLayers(entry), baseAsObject: !!entry.baseAsObject, hiddenLayers: hiddenIds(hiddenLayers),
+    // Only a solid background enters the hash, so every image canvas keeps its revision.
+    ...(canvasBackground(entry).kind === "solid" ? { background: canvasBackground(entry) } : {}),
   }))).digest("hex").slice(0, 24);
 }
 
@@ -53,10 +56,13 @@ export async function renderCanvas(entry, { region, maxSide = 1600, format = "pn
   const labelOf = labels === "all" ? Object.fromEntries(marks.filter((m) => m.label).map((m) => [m.id, m.label])) : {};
   const marksSvg = planSvg(plan, { width: entry.width, height: entry.height, toPx: entry.width / 1000, objectsSvg, labels: labelOf });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${px.left} ${px.top} ${px.width} ${px.height}" preserveAspectRatio="none">${marksSvg}</svg>`;
-  const included = { base: !entry.baseAsObject, objects: objects.map((r) => r.object.id), marks: marks.map((m) => m.id) };
+  const included = { base: !entry.baseAsObject && canvasBackground(entry).kind === "image", objects: objects.map((r) => r.object.id), marks: marks.map((m) => m.id) };
   const warnings = scale > 1 ? ["Base image enlarged by interpolation; vector overlays rendered at output resolution."] : [];
-  const sourceKind = entry.source === "blank" ? "blank" : entry.page ? "pdf-page" : "image";
-  const base = entry.baseAsObject ? sharp({create:{width:entry.width,height:entry.height,channels:4,background:{r:0,g:0,b:0,alpha:0}}}) : entrySharp(entry);
+  const solid = canvasBackground(entry);
+  const sourceKind = solid.kind === "solid" ? "solid" : entry.source === "blank" ? "blank" : entry.page ? "pdf-page" : "image";
+  // A promoted base (baseAsObject) is never drawn, solid or not, as in the widget.
+  const base = entry.baseAsObject ? sharp({create:{width:entry.width,height:entry.height,channels:4,background:{r:0,g:0,b:0,alpha:0}}})
+    : solid.kind === "solid" ? sharp({ create: { width: entry.width, height: entry.height, channels: 3, background: solid.color } }) : entrySharp(entry);
   const pipeline = base.extract(px).resize(width, height).composite([{ input: Buffer.from(svg) }]);
   const data = await (format === "webp" ? pipeline.webp({ lossless: true }) : pipeline.png()).toBuffer();
   return { data, mimeType: "image/" + format, width, height,

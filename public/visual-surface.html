@@ -1433,7 +1433,7 @@ function render(){
      // A turned image is drawn upright in its own box, then rotated into place.
      const turn=f.rot===90?"translate("+(f.x0+f.h)+" "+f.y0+") rotate(90)":f.rot===180?"translate("+(f.x0+f.w)+" "+(f.y0+f.h)+") rotate(180)":
        f.rot===270?"translate("+f.x0+" "+(f.y0+f.w)+") rotate(270)":"translate("+f.x0+" "+f.y0+")";
-     if(href){if(!(ws?.items.find(it=>it.id===side)?.baseAsObject))node("image",{href,x:0,y:0,width:f.w,height:f.h,preserveAspectRatio:"none",transform:turn},sceneEl);}
+     if(href){if(!(ws?.items.find(it=>it.id===side)?.baseAsObject))drawBase(href,{x:0,y:0,width:f.w,height:f.h,transform:turn},sceneEl);}
      else{node("rect",{x:f.x0,y:f.y0,width:e.w,height:e.h,fill:"#8882"},sceneEl);
        const t=node("text",{x:f.x0+e.w/2,y:f.y0+e.h/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);t.textContent="正在載入圖片…";}
      if(ws){const t=node("text",{x:f.x0+8*K(),y:f.y0+22*K(),"font-size":16*K(),"font-weight":700,fill:"#fff",stroke:"#17212A","stroke-width":3*K(),"paint-order":"stroke"},sceneEl);t.textContent=sideTitle(side);}
@@ -1444,7 +1444,7 @@ function render(){
    const sceneKey=photo?photo.length+":"+photo.slice(-32)+"|"+(detail&&cam?detail.href.length+":"+detail.href.slice(-32)+JSON.stringify(detail.region):""):"";
    if(!(photo&&sceneEl.dataset.key===sceneKey&&sceneEl.childElementCount)){
    sceneEl.dataset.key=photo?sceneKey:"";sceneEl.replaceChildren();
-   if(photo){node("image",{href:photo,x:0,y:0,width:VW,height:VH,preserveAspectRatio:"none"},sceneEl);
+   if(photo){drawBase(photo,{x:0,y:0,width:VW,height:VH},sceneEl);
      if(detail&&cam){const r=detail.region;node("image",{href:detail.href,x:r.x*VW,y:r.y*VH,width:(r.x2-r.x)*VW,height:(r.y2-r.y)*VH,preserveAspectRatio:"none"},sceneEl);}}
    else{
      node("rect",{width:VW,height:VH,fill:"#8882"},sceneEl);
@@ -1522,6 +1522,11 @@ function applyInput(args){
 const allPhotos=()=>ws?ws.items.every(it=>it.photo):!!photo&&(!pair||!!pair.photo);
 const inRegion=r=>r&&[r.x,r.y,r.x2,r.y2].every(v=>typeof v==="number"&&v>=0&&v<=1)&&r.x2>r.x&&r.y2>r.y;
 const dataUrl=img=>img&&/^image\/(png|jpeg)$/.test(img.mimeType)&&typeof img.data==="string"?"data:"+img.mimeType+";base64,"+img.data:null;
+// A canvas base is image pixels, or (UVA Phase 4A) a plain colour that is drawn as a vector rect,
+// never as an image. A solid base is kept as "solid:#rrggbb" wherever a photo URL would be.
+const baseUrl=img=>img?.background?.kind==="solid"&&typeof img.background.color==="string"&&/^#[0-9a-fA-F]{6}$/.test(img.background.color)?"solid:"+img.background.color.toLowerCase():dataUrl(img);
+const isSolidBase=href=>typeof href==="string"&&href.startsWith("solid:");
+const drawBase=(href,attrs,parent)=>isSolidBase(href)?node("rect",{x:attrs.x,y:attrs.y,width:attrs.width,height:attrs.height,fill:href.slice(6),"data-base":"solid",...(attrs.transform?{transform:attrs.transform}:{})},parent):node("image",{href,...attrs,preserveAspectRatio:"none"},parent);
 // Hosts cap tool-result size (claude.ai near 150,000 characters), so a big
 // photo first arrives as a small preview and the full display image follows
 // in slices from load_visual_pixels (app-only). Views can be deferred too.
@@ -1606,15 +1611,15 @@ function applyResult(result){
  if(Array.isArray(meta["estampes/objects"]))setObjects(meta["estampes/objects"]);
  if(typeof meta["estampes/baseAsObject"]==="boolean")baseAsObject=meta["estampes/baseAsObject"];
  if(typeof meta["estampes/canRestoreObjects"]==="boolean")canRestoreObjects=meta["estampes/canRestoreObjects"];
- if(pair){refreshPairText();links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=dataUrl(meta["estampes/pairImage"])??pair.photo;upgradePair(meta["estampes/pairImage"]);}
+ if(pair){refreshPairText();links=cleanLinks(meta["estampes/links"]??r.links);pair.photo=baseUrl(meta["estampes/pairImage"])??pair.photo;upgradePair(meta["estampes/pairImage"]);}
  if(ws){
-   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=dataUrl(px)??it.photo;it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;upgradeItem(it,px);}}
+   for(const px of Array.isArray(meta["estampes/items"])?meta["estampes/items"]:[]){const it=ws.items.find(i=>i.id===px?.id);if(it){it.photo=baseUrl(px)??it.photo;it.objects=cleanObjects(px.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!px.baseAsObject;upgradeItem(it,px);}}
    links=viewLinks(meta["estampes/links"]??r.links);
    if(!allPhotos()||!full)syncCanvas(!full);
    render();return;
  }
  if(imageId){
-   photo=dataUrl(meta["estampes/image"])??photo;upgradeMain(meta["estampes/image"]);
+   photo=baseUrl(meta["estampes/image"])??photo;upgradeMain(meta["estampes/image"]);
    const incoming=Array.isArray(meta["estampes/views"])?meta["estampes/views"]:null;
    const next=(incoming??[]).map(v=>({label:String(v?.label??"").slice(0,24),href:dataUrl(v),region:v?.region}))
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
@@ -1645,9 +1650,9 @@ async function syncCanvas(force=false){
    const r=result?.structuredContent;
    if(r?.kind!=="estampes.visual_canvas"||r.imageId!==id)throw Error("Unexpected response");
    if(id!==imageId||pid!==pair?.imageId)return;
-   photo=dataUrl(r.image)??photo;exportLinks=r.exports??exportLinks;upgradeMain(r.image);
+   photo=baseUrl(r.image)??photo;exportLinks=r.exports??exportLinks;upgradeMain(r.image);
    if(pid&&r.pair?.imageId===pid){
-     pair.photo=dataUrl(r.pair.image)??pair.photo;upgradePair(r.pair.image);pair.width=Number(r.pair.width);pair.height=Number(r.pair.height);
+     pair.photo=baseUrl(r.pair.image)??pair.photo;upgradePair(r.pair.image);pair.width=Number(r.pair.width);pair.height=Number(r.pair.height);
      layoutPair(Number(r.width),Number(r.height),pair.width,pair.height);links=cleanLinks(r.links);
    }else if(Number(r.width)>0&&Number(r.height)>0)VH=Math.round(1000*r.height/r.width);
    if(Array.isArray(r.layers))setLayers(r.layers);
@@ -1689,7 +1694,7 @@ async function syncWorkspace(force){
      const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:it.imageId,...(it.set?.includes("#")?{setId:it.set.split("#")[1]}:{}),part:"image"}});
      if(ws?.id!==id)return;
      const r=result?.structuredContent;
-     if(!result?.isError&&r?.imageId===it.imageId){it.photo=dataUrl(r.image);upgradeItem(it,r.image);it.objects=cleanObjects(r.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!r.baseAsObject;}
+     if(!result?.isError&&r?.imageId===it.imageId){it.photo=baseUrl(r.image);upgradeItem(it,r.image);it.objects=cleanObjects(r.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!r.baseAsObject;}
      render();
    }
    status.textContent=allPhotos()?"已載入工作區的圖片與標記。":"有些圖片無法載入。";
@@ -1843,7 +1848,7 @@ onKey("keyup",e=>{if(e.code==="Space")spaceDown=false;});
 let detailTimer=0,detailSeq=0;
 function scheduleDetail(){
  clearTimeout(detailTimer);
- if(!imageId||!photo||frames||!cam||Z()<1.5)return;
+ if(!imageId||!photo||isSolidBase(photo)||frames||!cam||Z()<1.5)return;
  detailTimer=later(loadDetail,250);
 }
 async function loadDetail(){
