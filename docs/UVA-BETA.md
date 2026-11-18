@@ -324,6 +324,35 @@ provable in a container:
 host power loss, real ext4/XFS fsync ordering, physical ENOSPC, near-64 MiB cold
 start (issues #89 and #91).
 
+**Live Docker kill (2026-11-18, one manual run by the owner).** On macOS with
+OrbStack, the server container was killed with `docker compose kill` (SIGKILL)
+while it held a canvas of 21 marks on 11 layers (`img:298756bcc232f6bd`), then
+started again. At the kill, `pendingSeq` equalled `committedSeq` (94): no commit
+was in flight. After the restart:
+
+| Check | Result |
+|---|---|
+| Marks and ids | 21 of 21, same ids |
+| Layers | 11 of 11 |
+| Geometry and etags | identical |
+| `contentCommits` | 125 before, 125 after |
+| `failedWrites` | 0 |
+| Recent history | kept |
+
+This is one manual kill of an idle store. It does not show a kill during a
+commit, and it does not raise the qualification: production stays **NOT
+QUALIFIED**. Not covered, and added to the qualification backlog (#91):
+
+- a kill while a commit is in flight (`pendingSeq > committedSeq`), checking that
+  every acknowledged revision survives and the store opens without repair;
+- repeated kills of the live container (the scripted `uva-qualify.mjs` runs kill
+  a bare store process, not the Docker server);
+- fault injection at the commit and fsync steps of the live server;
+- a comparison of the full history and a hash of every document before and
+  after, not only the current canvas;
+- true power loss (OrbStack keeps data in a Linux VM whose disk the host may
+  cache; see [UVA-POWERLOSS.md](UVA-POWERLOSS.md)).
+
 ## Evidence and reporting
 
 See the [full integration report](rfc/unified-visual-architecture/PR-1B-FULL-INTEGRATION-REPORT.md)
