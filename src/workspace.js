@@ -30,6 +30,7 @@ import {
 } from "./storage.js";
 import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 import { protocolMark } from "./protocol.js";
+import { isGraphId } from "./visual/graph-docs.js";
 import { verificationOf } from "./assessment.js";
 
 export const WORKSPACE_PROTOCOL = "estampes.workspace/1";
@@ -67,8 +68,13 @@ function makeFork(base, setId, data) {
 
 export function parseSetKey(key) {
   const [imageId, setId, extra] = String(key ?? "").split("#");
+  // A Graph document (gph:) is a canvas of its own; copies of a Graph come with workspace support (UVA Phase 4A-4).
+  if (isGraphId(imageId) && extra === undefined) {
+    if (setId !== undefined) throw new Error("Copies of a Graph (" + imageId + ") are not supported yet; use the Graph itself");
+    return { imageId, setId };
+  }
   if (!IMAGE_ID.test(imageId) || extra !== undefined || (setId !== undefined && !SET_ID.test(setId))) {
-    throw new Error("Not an annotation set: " + JSON.stringify(key) + " (an imageId, or imageId#c<hex> for a copy)");
+    throw new Error("Not an annotation set: " + JSON.stringify(key) + " (an imageId or a Graph id, or imageId#c<hex> for a copy)");
   }
   return { imageId, setId };
 }

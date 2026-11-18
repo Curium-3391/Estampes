@@ -3,7 +3,7 @@ import { editLayerAppearance, layerState } from './layer-appearance.js';
 import { canvasRevision } from '../scene/canvas-render.js';
 
 export function registerLayerTools(server, { ensureSet, saveCanvas }) {
-  const target = { imageId: z.string().regex(/^img:[0-9a-f]{16}$/), setId: z.string().regex(/^c[0-9a-f]{12}$/).optional() };
+  const target = { imageId: z.string().regex(/^(img|gph):[0-9a-f]{16}$/), setId: z.string().regex(/^c[0-9a-f]{12}$/).optional() };
   const load = ({ imageId, setId }) => ensureSet(imageId + (setId ? '#' + setId : ''));
   const errorResult = (error) => ({ isError: true, content: [{ type: 'text', text: error.message }], structuredContent: { kind: 'estampes.layer_error', code: error.code ?? 'INVALID_LAYER_EDIT' } });
   server.registerTool('get_visual_layers', {
