@@ -60,11 +60,14 @@ function setSurface(r){
 // job would make the job wait for itself and stall every later change.
 function wbApply(ops,{retry=true}={}){
  const attempt=async(again)=>{
-  const key=uuid();
+  const key=uuid(),canvas=wb.key;
   try{
    const r=await wbCall("surface_apply",{...wbArgs(),expectedRevision:wb.surface.revision,idempotencyKey:key,ops});
+   // The widget moved to another canvas meanwhile: this answer is the old one's.
+   if(canvas!==wb.key)return;
    setSurface(r);return r;
   }catch(err){
+   if(canvas!==wb.key)return;
    if(again&&/changed since revision/.test(String(err.message))){await wbLoad();return attempt(false);}
    status.textContent="沒有套用："+String(err.message||err);await wbLoad();
   }

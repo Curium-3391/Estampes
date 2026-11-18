@@ -111,3 +111,28 @@ test("switching from an image with the calculator in front to a Graph shows the 
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("a workbench change still on its way when the widget switches to a Graph does not bring the old workbench back", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph", "org.estampes.cas"]);
+    const first = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
+    const imageId = first.structuredContent.imageId;
+    const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" }) });
+    await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    // A layout change for the image, whose answer arrives only after the switch.
+    const held = ui.net.holdReply("surface_apply");
+    await ui.frame.locator('.wb-panel:not([data-panel="p:canvas"]) [data-act="minimize"]').first().click();
+    await held.reached;
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    held.release();
+    await ui.page.waitForTimeout(500);
+    assert.equal(await ui.frame.locator(".calc").count(), 0, "the late answer for the image does not put its calculator back");
+    assert.equal(await ui.frame.locator("#panel-canvas svg#surface").isVisible(), true);
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
