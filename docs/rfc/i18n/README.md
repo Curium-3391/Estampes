@@ -185,3 +185,20 @@ All ten were decided on 2026-11-18 by the maintainer, who accepted every recomme
 | D8 | Third-party module runtime strings | Design now inside module system v2 vs later | **Make it a required section of the P5 design now.** Implement later |
 | D9 | Timing versus UVA | Start Phase 1 now / after open Phase 4A PRs / after P5 | **Phase 0 now. Phase 1 after the open 4A PRs merge**, per panel, with a short freeze on `visual-surface.html` |
 | D10 | RTL | Full mirroring in v1 vs bidi-safe user text now, mirroring when the first RTL locale ships | **Bidi-safe user text now. Mirroring later** |
+
+### 12.1 D1 in practice: English base or zh-TW base
+
+The maintainer asked what "zh-TW complete" means and whether it is native support. It is native under both options: zh-TW strings are hand-written in the repository, never machine-translated at runtime, and CI requires every key to exist in zh-TW. "Base" only decides which catalog is the reference for keys and the last fallback. The comparison:
+
+| Aspect | English base (decided) | zh-TW base (alternative) |
+| --- | --- | --- |
+| What a zh user sees | Identical. With a Chinese host locale or `ESTAMPES_DEFAULT_LOCALE=zh-TW`, every string is zh-TW | Identical |
+| Writing a new string | Add the key to `en.json` and `zh-TW.json` in the same PR. The parity check fails otherwise | Add it to `zh-TW.json` and `en.json` in the same PR. Same rule, other order |
+| Fallback when a key is missing | Falls back to English. With parity enforced for en and zh-TW, this only happens in partial extra locales (a ja user sees English for untranslated strings) | Falls back to Chinese. A ja or en user of a partial locale sees Chinese, which most non-Chinese readers cannot use |
+| Third-party modules | Matches what exists: manifest base fields (`name`, `description`, capability `description`) are already English, and module authors elsewhere will write English first. `nameI18n` adds zh-TW | Modules would be expected to ship zh-TW as their base, or the core needs a second rule ("module base is English, core base is zh-TW"). That is confusing and goes against the existing manifest format |
+| Outside contributors | Can write the English string. The maintainer or a translator fills zh-TW. CI parity needs a "translation pending" marker so their PR is not blocked | Must write Chinese to add any UI text, which most outside contributors cannot do |
+| Maintainer effort | The maintainer reads zh-TW first but has to keep English in sync | Natural for the maintainer, who already writes zh-TW, but English quality depends on later passes |
+| Consistency with docs | Same as docs policy: English canonical, zh-TW maintained | Opposite of docs policy |
+| Migration cost | Phase 1 has to write English for about 630 existing zh lines | Phase 1 extraction is mechanical. English can follow later |
+
+Net: the difference is mostly about contributors, third-party modules and fallback for future partial locales, not about what Chinese users see. zh-TW base is cheaper for Phase 1 alone. English base is cheaper over time for an open, public module ecosystem. A middle path is possible: extract zh-TW first in Phase 1 (pinned locale, byte-identical) and write the English catalog in Phase 2, while keeping English as the base. The phase plan already does this.
