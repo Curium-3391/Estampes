@@ -1855,7 +1855,13 @@ function markDistance(m,p,tol){
    return out>0?out:Math.min(tol*.9,P.x-x1,x2-P.x,P.y-y1,y2-P.y);
  }
  const pts=m.points.map(q=>({x:px(q.x),y:py(q.y)}));if(m.closed)pts.push(pts[0]);
- let d=Infinity;for(let i=1;i<pts.length;i++)d=Math.min(d,distSeg(P,pts[i-1],pts[i]));return d;
+ let d=Infinity;for(let i=1;i<pts.length;i++)d=Math.min(d,distSeg(P,pts[i-1],pts[i]));
+ // Inside a closed shape counts as near, like inside a box, so a turned box
+ // (or any quadrilateral or loop) can be grabbed by its body (#70).
+ if(m.closed&&pts.length>3){let inside=false;
+   for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if((a.y>P.y)!==(b.y>P.y)&&P.x<a.x+(P.y-a.y)*(b.x-a.x)/(b.y-a.y))inside=!inside;}
+   if(inside)return Math.min(tol*.9,d);}
+ return d;
 }
 function pickMark(p){
  const tol=12*U();
