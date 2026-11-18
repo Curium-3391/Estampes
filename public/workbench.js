@@ -16,8 +16,12 @@ const uuid=()=>(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.ra
 const wbKeyNow=()=>ws?ws.id:imageId;
 const wbArgs=()=>ws?{workspaceId:ws.id}:{imageId};
 const wbProfileNow=()=>profileFor(window.innerWidth,1000);
+// An answer that comes back after the widget moved to another canvas belongs
+// to the old one: it is refused (code "stale") so no caller applies it.
 async function wbCall(name,args){
+ const key=wbKeyNow();
  const result=await request("tools/call",{name,arguments:args});
+ if(key!==wbKeyNow())throw Object.assign(Error("畫布已切換，這個結果沒有套用。"),{code:"stale"});
  const r=result?.structuredContent;
  if(result?.isError||!r)throw Object.assign(Error(r?.message||result?.content?.[0]?.text||"失敗"),{code:r?.code});
  return r;
@@ -31,9 +35,20 @@ function wbSync(){
 let wbResizeTimer=0;
 window.addEventListener("resize",()=>{clearTimeout(wbResizeTimer);wbResizeTimer=setTimeout(()=>{
  if(!wb.surface)return;const next=wbProfileNow();if(next===wb.profile)return;wb.profile=next;renderWB();},150);});
+// A Graph (gph:) has no surface of its own yet (UVA 4A-4): it shows the canvas
+// alone, never a calculator or window layout left over from the previous canvas.
+const wbGraphNow=()=>!ws&&typeof imageId==="string"&&!/^img:/.test(imageId);
+function wbCanvasOnly(){
+ wb.surface=null;
+ for(const [id,el] of wb.els){if(id==="p:canvas"){el.style.cssText="";el.hidden=false;el.querySelector(".wb-head").hidden=true;}else{el.remove();wb.els.delete(id);wb.calc.delete(id);}}
+ wbEl.hidden=false;wbEl.classList.add("solo");wbEl.classList.remove("mobile","windows");
+ wbBar.replaceChildren();
+}
 async function wbLoad(){
- try{setSurface(await wbCall("surface_get_state",wbArgs()));}
- catch(err){wbEl.hidden=false;wbBar.replaceChildren(h("span",{class:"wb-note"},"工作台暫時無法使用："+String(err.message||err)));}
+ const key=wb.key;
+ if(wbGraphNow()){wbCanvasOnly();return;}
+ try{const r=await wbCall("surface_get_state",wbArgs());if(key===wb.key)setSurface(r);}
+ catch(err){if(key!==wb.key)return;wbEl.hidden=false;wbBar.replaceChildren(h("span",{class:"wb-note"},"工作台暫時無法使用："+String(err.message||err)));}
 }
 function setSurface(r){
  if(r.kind!=="estampes.surface")return;
@@ -49,16 +64,19 @@ function setSurface(r){
 // job would make the job wait for itself and stall every later change.
 function wbApply(ops,{retry=true}={}){
  const attempt=async(again)=>{
-  const key=uuid();
+  const key=uuid(),canvas=wb.key;
   try{
    const r=await wbCall("surface_apply",{...wbArgs(),expectedRevision:wb.surface.revision,idempotencyKey:key,ops});
+   // The widget moved to another canvas meanwhile: this answer is the old one's.
+   if(canvas!==wb.key)return;
    setSurface(r);return r;
   }catch(err){
+   if(canvas!==wb.key)return;
    if(again&&/changed since revision/.test(String(err.message))){await wbLoad();return attempt(false);}
    status.textContent="沒有套用："+String(err.message||err);await wbLoad();
   }
  };
- const run=()=>attempt(retry);
+ const run=()=>wb.surface?attempt(retry):undefined;
  wb.chain=wb.chain.then(run,run);return wb.chain;
 }
 const wbLayout=(layout,profile=wb.profile)=>wbApply([{op:"layout",profile,layout}]);

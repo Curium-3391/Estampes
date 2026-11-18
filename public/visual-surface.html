@@ -413,6 +413,8 @@ const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公�
 // their own aspect ratio, so normalized coordinates map without distortion.
 let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
 const IMAGE_ID=/^img:[0-9a-f]{16}$/;
+// One canvas on its own: an image or a Graph document (gph:, drawn on its colour). Pairs and workspaces stay images for now.
+const CANVAS_ID=/^(img|gph):[0-9a-f]{16}$/;
 // Paired view: two different images side by side, each 1000 units wide,
 // so ink and labels keep the size they have on a single photo. A workspace
 // is the same with any number of images, each placed (and possibly turned
@@ -1493,15 +1495,15 @@ function applyInput(args){
  appliedKey=key;
  if(wsArg){
    const items=cleanItems(wsArg.items),same=ws?.id===wsArg.id;
-   if(!same){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();renderViewTabs();}
+   if(!same){photo=null;exportLinks=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();renderViewTabs();}
    const old=new Map((ws?.items??[]).map(it=>[it.imageId,it.photo]));
    pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||"工作區",revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
    imageId=items[0].imageId;layoutWorkspace(ws.items);
- }else if(typeof args.imageId==="string"&&IMAGE_ID.test(args.imageId)){
+ }else if(typeof args.imageId==="string"&&CANVAS_ID.test(args.imageId)){
    if(ws){ws=null;frames=null;photo=null;}
    const pid=typeof pairId==="string"&&IMAGE_ID.test(pairId)?pairId:null;
    const sameImage=args.imageId===imageId&&pid===(pair?.imageId??null);
-   if(!sameImage){photo=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;objects=[];baseAsObject=false;canRestoreObjects=false;renderViewTabs();}
+   if(!sameImage){photo=null;exportLinks=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();gestures=[];gestureDecisions=[];selectedGesture=null;groupingFrom=null;objects=[];baseAsObject=false;canRestoreObjects=false;renderViewTabs();}
    imageId=args.imageId;
    const w=Number(args.width),h=Number(args.height);
    if(pid){

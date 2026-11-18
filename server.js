@@ -36,7 +36,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
+import { createGraphCanvas, readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -281,7 +281,11 @@ const RegionSchema = z.object({
   x: Point01, y: Point01, x2: Point01, y2: Point01,
 }).describe("Normalized source-image box (top-left origin). Omit for the whole image.");
 const documentRevisions = createRevisionTracker();
-const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/).describe("imageId returned by load_image");
+// Pixel tools read an image (img:). A Graph document (gph:, UVA Phase 4A-2)
+// has no pixels: those tools refuse it and name render_canvas instead. Canvas
+// tools (marks, layers, objects, rendering) take either.
+const ImageIdSchema = z.string().regex(/^img:[0-9a-f]{16}$/, { message: "Expected an image id (img:<16 hex>). A Graph (gph:) has no pixels to read: use render_canvas to see it" }).describe("imageId returned by load_image");
+const CanvasIdSchema = z.string().regex(/^(img|gph):[0-9a-f]{16}$/).describe("The canvas: an image's imageId (img:) or a Graph document (gph:)");
 const DerivedViewIdSchema = z.string().regex(/^dv:[0-9a-f]{16}$/).describe("derivedViewId returned by process_image");
 // A coordinateFrame naming a derived view becomes that view's exact
 // derived -> normalized matrix; the older region form passes through.
@@ -454,7 +458,8 @@ const userEditsText = (edits) => edits.length
 // With an access key the links are signed, so an image hash alone is not
 // enough to download a picture.
 const exportLink = (hex, file) => publicUrl() + "/export/" + hex + "/" + file + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, hex, file) : "");
-const exportLinks = (imageId) => publicUrl() ? {
+// Download links serve an image's working copy and its marks; a Graph has no image, so it gets none (yet).
+const exportLinks = (imageId) => publicUrl() && /^img:/.test(imageId) ? {
   image: exportLink(imageId.slice(4), "image.jpg"),
   marks: exportLink(imageId.slice(4), "marks.svg"),
 } : undefined;
@@ -899,7 +904,7 @@ function makeServer() {
       inputSchema: z.object({
         image: ChatFileSchema.optional().describe("Image file from the conversation; loads and shows it in one call"),
         imageUrl: z.string().url().max(2048).optional().describe("Public https URL of an image"),
-        imageId: ImageIdSchema.optional(),
+        imageId: CanvasIdSchema.optional(),
         upload: z.boolean().optional().describe("Open an empty canvas where the user picks or photographs an image on their device. Use it when the user wants to show you a picture but no image file reaches this tool (no `image` parameter in this app, or the attachment is not passed to tools)."),
         scene: SceneSchema.optional().describe("Bundled demo scene; use only when there is no real image"),
         marksFile: ChatFileSchema.optional().describe("Estampes marks SVG (exported earlier) attached by the user; restores its marks"),
@@ -988,6 +993,8 @@ function makeServer() {
           throw new Error("links, removeLinks and side:'right' need a paired view (pairImage, pairImageUrl or pairImageId)");
         }
         if (paired && (scene || views.length || marksFile)) throw new Error("A paired view needs two real images and does not take scene, views or marksFile");
+        if (views.length && imageId && !/^img:/.test(imageId)) throw new Error("views are processed images of a photo's pixels; a Graph (gph:) has none. Use render_canvas to see a Graph");
+        if (paired && imageId && !/^img:/.test(imageId)) throw new Error("A paired view needs two images; a Graph (gph:) cannot be one side of a pair yet. Show the Graph alone with imageId");
         if (image || imageUrl) imageId = (await loadImageInput({ image, imageUrl })).imageId;
         if (paired) {
           if (pairImage || pairImageUrl) pairImageId = (await loadImageInput({ image: pairImage, imageUrl: pairImageUrl })).imageId;
@@ -1215,7 +1222,7 @@ function makeServer() {
       title: "Load visual canvas",
       description: "Reload a photo canvas for the Estampes widget.",
       inputSchema: z.object({
-        imageId: ImageIdSchema, setId:z.string().regex(/^c[0-9a-f]{12}$/).optional(),
+        imageId: CanvasIdSchema, setId:z.string().regex(/^c[0-9a-f]{12}$/).optional(),
         part: z.enum(["canvas", "check", "image"]).default("canvas"),
         pairImageId: ImageIdSchema.optional(),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Reload a whole workspace (imageId = its first image)"),
@@ -1301,7 +1308,7 @@ function makeServer() {
       description: "Ask which of up to 12 canvas documents changed since the revision the widget last saw.",
       inputSchema: z.object({
         documents: z.array(z.object({
-          documentId: z.string().regex(/^(img:[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
+          documentId: z.string().regex(/^((?:img|gph):[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
           sinceRevision: z.object({ epoch: z.string().max(40), counter: z.number().int().min(0), hash: z.string().max(80) }).optional(),
         })).min(1).max(MAX_POLLED_DOCUMENTS),
       }),
@@ -1351,7 +1358,7 @@ function makeServer() {
       title: "Look up widget commands",
       description: "Ask whether commands the widget sent (by command id) were applied to a canvas document.",
       inputSchema: z.object({
-        documentId: z.string().regex(/^(img:[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
+        documentId: z.string().regex(/^((?:img|gph):[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
         commandIds: z.array(z.string().regex(COMMAND_ID)).min(1).max(24),
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
@@ -1393,7 +1400,7 @@ function makeServer() {
       title: "Read the visual canvas state",
       description: "Return everything on an Estampes canvas as one estampes.visual/2 JSON document: images, layers (order, lock, opacity), marks (geometry normalized to their own image, style, label, note/status, who made them and how), links between a paired left and right image, the confidence, evidence and verification state of every note and link, the claims the user rejected, and optionally the recent change history. Read-only. Use it to recall what is on a canvas without redrawing it, or to hand the canvas to another tool.",
       inputSchema: z.object({
-        imageId: ImageIdSchema,
+        imageId: CanvasIdSchema,
         pairImageId: ImageIdSchema.optional().describe("Right-hand image of a paired view"),
         history: z.number().int().min(0).max(200).default(0).describe("How many recent changes to include (needs server storage)"),
       }),
@@ -1724,7 +1731,7 @@ function makeServer() {
       description:"Validate the user's 2D normalized image annotations.",
       inputSchema:z.object({
         scene:SceneSchema.optional(),
-        imageId:ImageIdSchema.optional(),
+        imageId:CanvasIdSchema.optional(),
         pairImageId:ImageIdSchema.optional(),
         workspaceId:z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
         hiddenLayers:z.array(z.object({id:z.string().regex(/^L\d+$/),side:z.string().max(64).optional()})).max(200).default([]),
@@ -1832,7 +1839,7 @@ function makeServer() {
       title: "Review a link between paired images",
       description: "Record the user's verdict on a link in an Estampes paired view.",
       inputSchema: z.object({
-        imageId: ImageIdSchema,
+        imageId: CanvasIdSchema,
         pairImageId: ImageIdSchema.optional(),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional(),
         fromItem: WorkspaceItemId.optional(), toItem: WorkspaceItemId.optional(),
@@ -1879,7 +1886,7 @@ function makeServer() {
       title: "Review a note on a mark",
       description: "Record the user's verdict on the assistant's note about one mark in an Estampes canvas.",
       inputSchema: z.object({
-        imageId: ImageIdSchema.describe("The image the mark is on (the right image's id for a mark on the right of a paired view)"),
+        imageId: CanvasIdSchema.describe("The image the mark is on (the right image's id for a mark on the right of a paired view)"),
         markId: z.string().min(1).max(64),
         review: z.enum([...LINK_REVIEW, "unreviewed"]),
         reason: z.string().max(200).optional(),
@@ -1918,7 +1925,7 @@ function makeServer() {
       title: "Review a gesture group",
       description: "Record the user's verdict on whether some of their strokes in an Estampes canvas form one gesture.",
       inputSchema: z.object({
-        imageId: ImageIdSchema.describe("The image the strokes are on (the right image's id for the right of a paired view)"),
+        imageId: CanvasIdSchema.describe("The image the strokes are on (the right image's id for the right of a paired view)"),
         memberIds: z.array(z.string().min(1).max(64)).min(2).max(8),
         verdict: z.enum([...GESTURE_VERDICTS, "unreviewed"]),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Workspace view: the strokes are on the canvas of this workspace's `item`"),
@@ -1968,7 +1975,7 @@ function makeServer() {
       title: "Edit the visual canvas",
       description: "Apply the user's own layer and mark edits from the Estampes canvas.",
       inputSchema: z.object({
-        imageId: ImageIdSchema,
+        imageId: CanvasIdSchema,
         pairImageId: ImageIdSchema.optional(),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Edits in a workspace view: entries name their `item`"),
         layers: z.array(z.object({
@@ -2359,7 +2366,7 @@ function makeServer() {
   server.registerTool("render_canvas", {
     title: "Read visible canvas pixels",
     description: "Render the base image, public scene objects and saved marks, including Graph and handwriting. Use for whiteboards and mixed scenes; process_image reads only source pixels. Pass the submission's canvasReads request (expectedRevision and hiddenLayers) to preserve its state and visibility; STALE_CANVAS means that old state is unavailable. Mark labels default to none; formula and axis text stay visible. Returns a pixel-to-canvas mapping. Does not run modules or include scratch. Shared layer visibility is respected; hiddenLayers can additionally hide layers for this render. Workspace copies require setId from canvasReads.",
-    inputSchema: z.object({ imageId: ImageIdSchema, setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
+    inputSchema: z.object({ imageId: CanvasIdSchema, setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
       region: RegionSchema.optional(), maxSide: z.number().int().min(64).max(4096).default(1600),
       format: z.enum(["png", "webp"]).default("png"), labels: z.enum(["none", "all"]).default("none"),
       hiddenLayers: z.array(z.string().regex(/^L\d+$/)).max(200).default([]),
@@ -3201,7 +3208,7 @@ configureCas({ client: casClientInstance, notebooks: createNotebooks({ dir: modu
 const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "", records: () => recordStore });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
-  canvases: { ensure: ensureImage, create: createBlankCanvas, save: saveCanvas }, readSource,
+  canvases: { ensure: ensureImage, create: ({ kind, color, ...options } = {}) => (kind === "graph" ? createGraphCanvas({ ...options, ...(color ? { color } : {}) }) : createBlankCanvas(options)), save: saveCanvas }, readSource,
 });
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
 // A UVA store that cannot start (for example a history too long to open within

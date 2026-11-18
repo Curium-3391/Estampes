@@ -75,13 +75,18 @@ export async function startStack({ cas = true, env = {} } = {}) {
       const errors = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
-      const net = { offline: false, polls: 0, bytes: 0, last: 0, sent: [], dropReplyOnce: null };
+      const net = { offline: false, polls: 0, bytes: 0, last: 0, sent: [], dropReplyOnce: null, hold: null,
+        // Holds the next answer to `name`; returns {reached, release}.
+        holdReply(name) { let reached, release; const h = { name, released: new Promise((r) => { release = r; }) };
+          const got = new Promise((r) => { h.reached = r; }); net.hold = h; return { reached: got, release }; } };
       await page.exposeFunction("hostCall", async (params) => {
         if (params?.name === "documents_get_changes") { net.polls++; if (net.offline) throw new Error("offline (test)"); }
         // quietPoll: for a test whose result carries things the server does not have (it edits the
         // host result by hand), the widget's poll hears "no news" instead of the server's state.
         if (quietPoll && params?.name === "documents_get_changes") return { content: [], structuredContent: { kind: "estampes.documents_changes", documents: [] } };
         const r = await client.callTool(params);
+        // hold: keep this tool's answer back until the test releases it (a slow reply).
+        if (net.hold && params?.name === net.hold.name) { const h = net.hold; net.hold = null; h.reached(); await h.released; }
         if (params?.name === "edit_visual_canvas") net.sent.push(params.arguments?.commandId ?? null);
         // Lost ACK: the server applied the call, the host never delivers the answer.
         if (net.dropReplyOnce && params?.name === net.dropReplyOnce) { net.dropReplyOnce = null; throw new Error("reply lost (test)"); }

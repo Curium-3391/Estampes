@@ -75,7 +75,7 @@ export function registerTextTools(server, { ensureSet, saveCanvas }) {
   const n = z.number().finite().min(0).max(1);
   registerAppTool(server, "edit_canvas_text", {
     title: "Edit canvas text", description: "User canvas text: read, create, update, delete or undo/redo. Uses existing vector shape/text records. Read first; edits require that revision. Locked layers and stale edits are refused. Workspace copies use setId.",
-    inputSchema: z.object({ imageId: z.string().regex(/^img:[0-9a-f]{16}$/), setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
+    inputSchema: z.object({ imageId: z.string().regex(/^(img|gph):[0-9a-f]{16}$/), setId: z.string().regex(/^c[0-9a-f]{12}$/).optional(),
       action: z.enum(["read", "create", "update", "delete", "undo", "redo"]).default("read"),
       expectedRevision: z.string().regex(/^cv:[0-9a-f]{24}$/).optional(), id: z.string().regex(/^o\d{1,6}$/).optional(),
       props: z.object({ x: n.optional(), y: n.optional(), text: z.string().min(1).max(80).optional(), size: z.number().min(6).max(64).optional(), fill: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional() }).strict().optional(),

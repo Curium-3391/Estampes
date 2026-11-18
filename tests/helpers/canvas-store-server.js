@@ -24,7 +24,7 @@ export async function startCanvasStoreServer(storage, beta, { idle = "3600", env
   let stopped = false;
   const end = async (signal) => { if (stopped) return; stopped = true; await client.close().catch(() => {}); proc.kill(signal); await exited; };
   return {
-    call, raw, port,
+    call, raw, port, client,
     stop: () => end("SIGTERM"),
     kill: () => end("SIGKILL"),
     async upload(color) {
