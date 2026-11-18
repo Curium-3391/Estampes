@@ -190,6 +190,7 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_RATE_LIMIT_PER_MIN` | `120` | Requests per minute per client IP on `/mcp`; `0` disables. |
 | `ESTAMPES_CORS_ORIGINS` | `*` | Browser origins allowed by CORS (only browser tools such as MCP Inspector need it). |
 | `ESTAMPES_ADMIN_KEY` | generated in `<storage>/admin-key` | Administrator secret for approving module installs, updates and purges (`scripts/estampes-module.js approve`). Separate from the connector key; 32–256 letters, digits, `-` or `_`. See [Modules](MODULES.md). |
+| `ESTAMPES_NEW_CANVAS` | `graph` | What a new blank canvas is (a module run with `newCanvas`, or the calculator opened without a canvas). `graph`: a Graph document (`gph:`, a plain colour with vector axes, kept in the UVA store; a server without the store makes a blank image). `image`: the older blank image (`img:`). A caller can always ask for either with `newCanvas.kind`. |
 | `ESTAMPES_MODULE_ALLOW_UNSIGNED` | `0` | `1` allows installing module packages without a signature (always shown as high risk). |
 | `ESTAMPES_MAX_RESULT_CHARS` | `145000` | Largest tool result in characters; model-facing images shrink to fit (Claude drops results above about 150,000). `0` turns it off. |
 | `ESTAMPES_LOG_FORMAT` | `text` | `json` for one JSON object per log line. |

@@ -108,7 +108,7 @@ async function runScenario({ committed }) {
         const prep = await s1.call("prepare_module_change", { action: "enable", module: id });
         await s1.call("store_commit_plan", { planId: prep.structuredContent.plan.planId, consent: prep._meta["estampes/consent"].consent });
       }
-      const plotted = await s1.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+      const plotted = await s1.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
       surface = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
       const opened = await s1.call("surface_apply", { imageId: surface, ops: [{ op: "open-panel", module: "org.estampes.cas", panel: "calculator" }] });
       const nb = opened.structuredContent.panels.find((p) => p.kind === "calculator").notebook;

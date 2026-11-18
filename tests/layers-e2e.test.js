@@ -10,7 +10,7 @@ test("layers in a browser: base image + overlay image + Graph curve, fade and re
   try {
     await s.enable(["org.estampes.graph"]);
     const mk = async (expression) => {
-      const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: {} });
+      const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind: "image" } });
       return (JSON.stringify(r.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     };
     const a = await mk("x^2"), b = await mk("sin(x)");

@@ -14,19 +14,19 @@ test("manage_surface_panels shows the calculator, with or without a canvas, and 
     const notebook = calc.structuredContent.data.notebookId;
     assert.match(notebook, /^nb:[0-9a-f]{12}$/);
 
-    // No canvas given: a blank canvas is made (kept behind the calculator, which fills the workbench).
+    // No canvas given: a new canvas is made, a Graph by default (kept behind the calculator, which fills the workbench).
     const opened = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator", notebook });
     assert.ok(!opened.isError, JSON.stringify(opened.content));
     assert.equal(opened.structuredContent.kind, "estampes.visual_surface");
-    assert.match(opened.structuredContent.imageId, /^img:[0-9a-f]{16}$/);
-    assert.ok(opened._meta["estampes/image"], "pixels travel to the widget");
+    assert.match(opened.structuredContent.imageId, /^gph:[0-9a-f]{16}$/);
+    assert.equal(opened._meta["estampes/image"].background?.kind, "solid", "a Graph sends its colour, not pixels");
     const panel = opened.structuredContent.surface.panels.find((p) => p.kind === "calculator");
     assert.equal(panel.notebook, notebook, "the panel shows the notebook the model made");
     const st = (await s.call("surface_get_state", { imageId: opened.structuredContent.imageId })).structuredContent;
     assert.equal(st.layouts.desktop.placements[panel.panelId].mode, "maximized", "the calculator is what the user sees");
 
     // An existing canvas (a photo, an earlier plot) keeps its own id.
-    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const beside = await s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" });
     assert.equal(beside.structuredContent.imageId, imageId);
@@ -39,7 +39,7 @@ test("browser: the widget opened by manage_surface_panels shows the calculator w
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
-    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const calc = await s.call("execute_module", { module: "org.estampes.cas", capability: "calculate", params: { operation: "differentiate", text: "sin(x^2)", variable: "x" } });
     const notebook = calc.structuredContent.data.notebookId;

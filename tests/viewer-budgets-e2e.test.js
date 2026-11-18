@@ -10,7 +10,7 @@ const POLL_MS = 2000;
 
 async function openDoc(s) {
   await s.enable(["org.estampes.graph"]);
-  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
   const id = (JSON.stringify(r.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
   const ui = await s.open({ imageId: id });
   await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });

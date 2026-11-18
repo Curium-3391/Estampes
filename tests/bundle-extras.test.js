@@ -14,7 +14,7 @@ test("export writes surface.json and notebooks; install rebuilds them under new 
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
-    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const opened = await s.call("surface_apply", { imageId, ops: [{ op: "open-panel", module: "org.estampes.cas", panel: "calculator" }] });
     const nb = opened.structuredContent.panels.find((p) => p.kind === "calculator").notebook;

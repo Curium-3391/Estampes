@@ -60,7 +60,7 @@ test("modules over MCP: Store, consent, enable, plot sin(x), edit, restart", { t
     const caps = await s.client.callTool({ name: "get_module_capabilities", arguments: { module: "org.estampes.graph" } });
     assert.ok(caps.structuredContent.capabilities.some((c) => c.id === "plot_function" && c.inputSchema.required.includes("expression")));
 
-    const run = await s.client.callTool({ name: "execute_module", arguments: { module: "org.estampes.graph", capability: "plot_function", params: { expression: "sin(x)", domain: [-6.283185307179586, 6.283185307179586] } } });
+    const run = await s.client.callTool({ name: "execute_module", arguments: { module: "org.estampes.graph", capability: "plot_function", params: { expression: "sin(x)", domain: [-6.283185307179586, 6.283185307179586] }, newCanvas: { kind: "image" } } });
     assert.ok(!run.isError, text(run));
     assert.ok(run.content.some((b) => b.type === "image"), "preview image for the model");
     const canvasId = run.structuredContent.imageId;

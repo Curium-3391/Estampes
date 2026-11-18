@@ -7,7 +7,7 @@ import { startStack, noPython, noBrowser } from "./helpers/widget-host.js";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const plot = async (s, expression) => {
-  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: {} });
+  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind: "image" } });
   return (JSON.stringify(r.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
 };
 

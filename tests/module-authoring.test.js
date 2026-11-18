@@ -78,7 +78,7 @@ test("author walkthrough: create, test, sign, trust, install, enable, run", { ti
     await confirm("enable", "org.estampes.graph", false);
 
     // add_label targets an existing canvas, so make one with Graph first.
-    const plotted = await call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const plotted = await call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
     const imageId = JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/)[0];
     const ran = await call("execute_module", { module: "org.example.labeler", capability: "add_label", params: { x: 0.2, y: 0.2, text: "hello" }, canvas: imageId });
     const revision = ran.structuredContent.module.revision;

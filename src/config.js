@@ -75,6 +75,9 @@ export const config = Object.freeze({
   adminKey: (process.env.ESTAMPES_ADMIN_KEY ?? "").trim(),
   // Install module packages that carry no signature (they are always shown as high risk).
   moduleAllowUnsigned: str("ESTAMPES_MODULE_ALLOW_UNSIGNED") === "1",
+  // What a new blank canvas is (execute_module newCanvas, a calculator with no canvas):
+  // "graph" (default) a Graph document (gph:) when the UVA store is on; "image" the older blank PNG.
+  newCanvasKind: str("ESTAMPES_NEW_CANVAS", "graph") === "image" ? "image" : "graph",
   logFormat: str("ESTAMPES_LOG_FORMAT", "text") === "json" ? "json" : "text",
 });
 
