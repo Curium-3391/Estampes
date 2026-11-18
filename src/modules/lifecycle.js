@@ -67,7 +67,18 @@ export function createLifecycle({ registry, audit, admin = null, actions = {} })
       const risk = details.risk ?? riskOf(added);
       const requiresAdmin = details.requiresAdmin ?? risk === "high";
       const now = Date.now();
+      // The same change asked for again while a plan for it is still pending
+      // (the Store widget reloaded and lost its copy, or the model asked
+      // twice) gets that plan back, so an approval the administrator already
+      // gave to it still applies. Only a byte-for-byte identical, unexpired,
+      // uncommitted plan is reused: a different version, permission set or
+      // package digest always makes a new plan that needs its own approval.
+      const sameChange = JSON.stringify([action, moduleId, mod?.record?.version ?? null, details.toVersion ?? null, details.requested ?? [], risk, requiresAdmin, details.options ?? options]);
+      for (const existing of plans.values()) {
+        if (existing.status === "pending" && now <= existing.expiresAtMs && existing.fingerprint === sameChange) return existing;
+      }
       const plan = {
+        fingerprint: sameChange,
         planId: "plan_" + randomBytes(9).toString("base64url"), action, module: moduleId,
         name: details.name ?? mod?.manifest.name, fromVersion: mod?.record?.version ?? null, toVersion: details.toVersion ?? null,
         permissions: { requested: details.requested ?? [], added: added.map(describePermission), removed: details.diff?.removed ?? [] },
@@ -120,7 +131,7 @@ export function createLifecycle({ registry, audit, admin = null, actions = {} })
     },
     // What the Store or model may see of a plan: never the consent nonce.
     publicPlan(plan) {
-      const { consent, expiresAtMs, options, ...rest } = plan;
+      const { consent, expiresAtMs, options, fingerprint, ...rest } = plan;
       return rest;
     },
   };

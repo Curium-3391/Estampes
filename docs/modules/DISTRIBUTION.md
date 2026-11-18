@@ -34,7 +34,7 @@ node scripts/estampes-module.js index --out estampes-index.json --key mykey.priv
   --publisher "Example Author" --scope org.example org.example.mymodule-1.2.0.estpkg.json [more packages…]
 ```
 
-`index` refuses a package that the key did not sign or whose id is outside `--scope`, and prints the key's fingerprint (`sha256:` and 64 hex digits). Put the fingerprint in your README, where administrators can compare it. Upload `estampes-index.json` and the packages as assets of the same GitHub Release: file names in the index are resolved next to the index, so the stable link `https://github.com/<owner>/<repo>/releases/latest/download/estampes-index.json` always points at the newest release. Older versions can stay listed; `sync` takes the newest of each id.
+`index` refuses a package that the key did not sign or whose id is outside `--scope`, and prints the key's fingerprint (`sha256:` and 64 hex digits). Put the fingerprint in your README, where administrators can compare it. Upload `estampes-index.json` and the packages as assets of the same GitHub Release: file names in the index are resolved next to the index URL the source was added with (not the storage address GitHub redirects it to), so the stable link `https://github.com/<owner>/<repo>/releases/latest/download/estampes-index.json` always points at the newest release. Older versions can stay listed; `sync` takes the newest of each id.
 
 Administrator, once:
 

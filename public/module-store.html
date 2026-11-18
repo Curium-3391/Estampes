@@ -152,9 +152,9 @@ function renderPlan(){
  if(p.status!=="pending"){box.append(el("p",{textContent:p.status==="committed"?"已套用。":"這個計畫已"+p.status+"。"}));view.replaceChildren(box);return;}
  const consent=consents.get(p.planId);
  if(p.requiresAdmin){
-  const cmd="docker compose exec estampes node scripts/estampes-module.js approve "+p.planId;
+  const cmd="node scripts/estampes-module.js approve "+p.planId;
   box.append(el("div",{className:"box warn"},el("strong",{textContent:"需要管理員核准"}),
-   admin.configured?el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"在架設 Estampes 的伺服器上執行下面這行（管理金鑰不會經過聊天），再按確認："}):
+   admin.configured?el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"在架設 Estampes 的伺服器上、專案資料夾內執行下面這行（管理金鑰不會經過聊天），再按確認。用 Docker 的話，前面加上 docker compose exec estampes 。核准只對這一個計畫有效；請保持這個視窗開著，若重新整理，請在商店重新按安裝（同一份變更會沿用同一個計畫）。"}):
     el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"這台伺服器沒有開啟儲存，無法核准這類變更。設定 ESTAMPES_STORAGE_DIR 後才能安裝套件。"}),
    admin.configured?el("code",{textContent:cmd,style:"display:block;user-select:all"}):null));
  }
