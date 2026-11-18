@@ -164,3 +164,24 @@ test("a calculator plot still on its way when the widget switches to a Graph doe
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("a workspace with three Graphs and an image shows each Graph on its colour with its axes, and the image as an image", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph"]);
+    const graph = async (expression) => (JSON.stringify((await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind: "graph" } })).structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0];
+    const graphs = [await graph("x^2"), await graph("sin(x)"), await graph("x^3")];
+    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const imageId = (JSON.stringify(img.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+    const made = await s.call("create_workspace", { canvases: [...graphs, imageId] });
+    const workspaceId = made.structuredContent.workspaceId;
+    await s.call("present_visual", { workspaceId, annotations: [{ id: "m", item: "wi-2", type: "point", x: .5, y: .5, label: "on sin" }] });
+    const ui = await s.open({ result: () => s.call("present_visual", { workspaceId }) });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => document.querySelectorAll('#surface rect[data-base="solid"]').length === 3, null, { timeout: 20000 });
+    assert.equal(await inner.evaluate(() => document.querySelectorAll("#surface image").length), 1, "only the image item is a picture");
+    await inner.waitForFunction(() => document.querySelectorAll('#unified-layers g[data-object="o1"]').length === 4, null, { timeout: 20000 });
+    assert.ok(await inner.evaluate(() => document.querySelector('#unified-layers g[data-object="o1"] path, #unified-layers g[data-object="o1"] line')), "the axes are vector paths");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
