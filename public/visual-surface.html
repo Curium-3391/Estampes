@@ -35,6 +35,9 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #surface{display:block;width:100%;height:auto;min-height:min(320px,60vh);max-height:max(640px,calc(100vh - var(--chrome,280px)));border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #offline-note{font-size:.83rem;margin:.2rem 0;padding:.3rem .5rem;border:1px solid #C26A00;border-radius:6px;color:CanvasText;background:color-mix(in srgb,#C26A00 14%,Canvas)}
 #offline-note[hidden]{display:none}
+#diag{font-size:.75rem;margin:.2rem 0;opacity:.8}
+#diag[hidden]{display:none}
+#diag pre{white-space:pre-wrap;word-break:break-all;margin:.2rem 0;user-select:text}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
 #check-view{margin:0}#check-view img{display:block;max-width:100%;max-height:max(640px,calc(100vh - var(--chrome,280px)));margin:auto;border:1px solid #8886;border-radius:10px}
@@ -266,6 +269,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 </div>
 <p id="status" role="status" aria-live="polite">正在連接對話…</p>
 <p id="offline-note" role="status" hidden>連不上伺服器：畫面是上次的內容，可能不是最新，新的標註也還沒存到伺服器。</p>
+<div id="diag" hidden><pre id="diag-text"></pre></div>
 </main></template></div></div>
 <script type="module">
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
@@ -321,6 +325,12 @@ function createHost(){
  return {on,whenReady,request,notify,start,get ready(){return ready},get name(){return hostName}};
 }
 const host=createHost();
+// What this widget knows about where its marks came from and what it last sent, for bug reports:
+// tap the status line to show it. Times are local clock; it holds no image data.
+const diag={source:"",sourceAt:0,polls:0,pollAt:0,pollError:"",revision:"",applied:0,appliedAt:0,busy:0,edit:null,hooks:new Set()};
+const diagNote=patch=>{Object.assign(diag,patch);for(const f of [...diag.hooks]){try{f()}catch{}}};
+const diagTime=t=>t?new Date(t).toISOString().slice(11,23):"-";
+const diagPoint=(list,id)=>{const m=(Array.isArray(list)?list:[]).find(a=>a?.id===id);const g=m?.points?.[0]??m;return g&&typeof g.x==="number"?"("+g.x.toFixed(3)+","+g.y.toFixed(3)+")":"-"};
 
 // ===== Viewer: one canvas with its own camera, tool, selection and drafts =====
 // `scope` is where its elements live (the document, or a shadow root); `rootEl`
@@ -671,6 +681,11 @@ function editOnServer(args){
  const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});return run;
 }
 async function editOnServerNow(body,target,commandId){
+ const sentAt=Date.now(),first=body.marks?.[0];
+ // One record per command: a second viewer's edit in flight cannot overwrite what this one reports.
+ const rec={commandId,sentAt,state:"sent",id:first?.id??"",sent:first?diagPoint(body.marks,first.id):"-"};
+ const note=patch=>{Object.assign(rec,patch);diagNote({edit:rec})};
+ note({});
  const sameTarget=()=>imageId===target.imageId&&(pair?pair.imageId:null)===target.pairImageId&&(ws?ws.id:null)===target.wsId;
  const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId:target.imageId,...(target.pairImageId?{pairImageId:target.pairImageId}:{}),...body,commandId}});
  let result;
@@ -685,11 +700,12 @@ async function editOnServerNow(body,target,commandId){
   }catch{}
   status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
   try{result=await send()}
-  catch(second){throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
+  catch(second){note({state:"no answer: "+String(second.message||second).slice(0,100),ackAt:Date.now()});throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
  }
- if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+ if(result?.isError){note({state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()});throw Error(result.content?.[0]?.text||"tool error");}
  const r=result?.structuredContent;
- if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId)throw Error("Unexpected response");
+ if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId){note({state:"unexpected answer",ackAt:Date.now()});throw Error("Unexpected response");}
+ note({state:r.replayed?"acknowledged (replayed)":"acknowledged",ackAt:Date.now(),returned:diagPoint(r.annotations,rec.id)});
  if(!sameTarget())return r;
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
@@ -1552,6 +1568,7 @@ function applyHostResult(result){
  if(key===hostResultKey)return;
  // The AI working in the background (#81): a one-line note, not a reopened canvas.
  if(meta["estampes/presentation"]==="background"&&!gotResult&&!backgroundShown){showBackground(result,key);return;}
+ diagNote({source:"host result ("+(result?._meta?"_meta":"no _meta")+")",sourceAt:Date.now()});
  applyResult(result);hostResultKey=key;
 }
 let backgroundResult=null,backgroundShown=false;
@@ -2618,6 +2635,15 @@ function applyPolled(s,id){
 }
 // The poll cannot reach the server: keep showing the last snapshot, say so, and never claim it is saved or current.
 let offlineShown=false;
+const diagText=scope.querySelector("#diag-text");
+if(diagText){const draw=()=>{if(disposed)return;const e=diag.edit;
+ diagText.textContent=["來源: "+(diag.source||"-")+" @"+diagTime(diag.sourceAt),
+  "輪詢: "+diag.polls+" 次, 最近 "+diagTime(diag.pollAt)+(diag.pollError?" 錯誤 "+diag.pollError:" 正常")+"; 已套用 "+diag.applied+" 次 @"+diagTime(diag.appliedAt)+" 版本 "+(diag.revision||"-")+"; 忙碌略過 "+diag.busy,
+  e?"最近修改: "+e.id+" "+e.state+" cmd "+String(e.commandId).slice(0,8)+" 送出 "+diagTime(e.sentAt)+(e.ackAt?" 回覆 "+(e.ackAt-e.sentAt)+"ms":"")+" 送出座標 "+e.sent+" 伺服器回傳 "+(e.returned??"-"):"最近修改: -",
+  "畫面: "+(selected?selected+" "+(()=>{const m=findMark(selected);return m?.points?"("+m.points[0].x.toFixed(3)+","+m.points[0].y.toFixed(3)+")":m?"("+Number(m.x).toFixed(3)+","+Number(m.y).toFixed(3)+")":"-"})():"（未選取）")].join("\n");};
+ diag.hooks.add(draw);disposers.push(()=>diag.hooks.delete(draw));const box=scope.querySelector("#diag"),st=scope.querySelector("#status");
+ // Tap the status line to show or hide this block (hidden by default, so the layout is unchanged).
+ st?.addEventListener("click",()=>{if(box){box.hidden=!box.hidden;draw();}});draw();}
 function setStale(on){
  on=!!on;if(on===offlineShown||disposed)return;offlineShown=on;
  rootEl.toggleAttribute("data-offline",on);
@@ -2690,7 +2716,8 @@ const bindings=new Map(); // viewer -> {id, off, applied, pending}
 function flushBinding(v,b){
  if(!b.pending)return;
  if(v.documentRef()!==b.id){b.pending=null;return}
- if(v.applyPolled(b.pending.snapshot,b.id)!==false){b.applied=b.pending.key;b.pending=null}
+ if(v.applyPolled(b.pending.snapshot,b.id)!==false){diagNote({applied:diag.applied+1,appliedAt:Date.now(),revision:b.pending.key});b.applied=b.pending.key;b.pending=null}
+ else diagNote({busy:diag.busy+1});
 }
 function bindViewers(){
  for(const [v,b] of [...bindings])if(v.disposed||!viewers.has(v)||v.documentRef()!==b.id){b.off();bindings.delete(v);}
@@ -2715,7 +2742,9 @@ async function pollNow(){
  if(!host.ready)return null;
  if(polling){pollAgain=true;return null}
  polling=true;
- try{bindViewers();for(const [v,b] of bindings)flushBinding(v,b);return await docs.reconcile();}
+ try{bindViewers();for(const [v,b] of bindings)flushBinding(v,b);const rep=await docs.reconcile();
+   const e=[...bindings.keys()].map(v=>docs.get(v.documentRef())?.error).find(Boolean);
+   diagNote({polls:diag.polls+1,pollAt:Date.now(),pollError:rep?.failed?String(e||"failed"):""});return rep;}
  finally{polling=false;if(pollAgain){pollAgain=false;queueMicrotask(()=>{pollNow()})}}
 }
 const schedulePoll=()=>{clearTimeout(pollTimer);if(document.hidden)return;pollTimer=setTimeout(async()=>{try{await pollNow()}catch{}schedulePoll()},POLL_MS)};
