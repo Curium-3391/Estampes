@@ -16,7 +16,7 @@ import { canvasBackground } from "../src/visual/background.js";
 import { isGraphId, forgetGraph } from "../src/visual/graph-docs.js";
 import { createWorkspace, clearWorkspaces, getWorkspace, workspaceItems, commitTransfer } from "../src/workspace.js";
 import { exportBundle, importBundle } from "../src/bundle.js";
-import { unzipFiles } from "../src/zip.js";
+import { unzipFiles, zipFiles } from "../src/zip.js";
 
 const resolve = (a) => a;
 async function folders(t) {
@@ -108,6 +108,35 @@ test("two concurrent imports of one Graph bundle make one Graph and one workspac
   assert.equal([a, b].filter((r) => r.repeated).length, 1, "the second one is a repeat");
   await s.store.flush();
   assert.equal((await graphDocs(s.service)).length, before + 1, "one new Graph, none left behind");
+  await s.close();
+});
+
+test("an import makes only the Graphs the workspace shows, and refuses a Graph listed twice", { timeout: 120000 }, async (t) => {
+  clearWorkspaces();
+  const dirs = await folders(t);
+  const s = await open(dirs);
+  t.after(() => s.close().catch(() => {}));
+  const g = await plottedGraph();
+  const made = await createWorkspace({ items: [{ set: g.imageId }] });
+  const { buffer } = await exportBundle(made.workspace.id);
+  // The manifest itself is not hashed: rewrite its asset list and zip again.
+  const rebuild = (assets) => {
+    const files = unzipFiles(buffer), manifest = JSON.parse(files.get("manifest.json").toString());
+    manifest.assets = assets(manifest.assets);
+    return zipFiles([...files].map(([name, data]) => ({ name, data: name === "manifest.json" ? Buffer.from(JSON.stringify(manifest)) : data })));
+  };
+  const unused = Array.from({ length: 30 }, (_, n) => ({ id: "gph:" + (n + 1).toString(16).padStart(16, "0"), kind: "graph", width: 800, height: 500 }));
+  await s.store.flush();
+  const before = (await graphDocs(s.service)).length;
+  const r = await importBundle(rebuild((list) => [...list, ...unused]));
+  assert.equal(r.verified, true, JSON.stringify({ mismatch: r.mismatch, warnings: r.warnings }));
+  await s.store.flush();
+  assert.equal((await graphDocs(s.service)).length, before + 1, "30 unused Graph assets made nothing");
+
+  await assert.rejects(importBundle(rebuild((list) => [...list, list[0]])), /lists the Graph .* twice/);
+  await s.store.flush();
+  assert.equal((await graphDocs(s.service)).length, before + 1, "a refused bundle made nothing");
+  await s.close();
 });
 
 test("a copy of a Graph travels as a copy of the new Graph, with its own marks", { timeout: 120000 }, async (t) => {
@@ -137,6 +166,7 @@ test("a copy of a Graph travels as a copy of the new Graph, with its own marks",
   assert.deepEqual(canvasMarks(other).map((m) => m.label).sort(), ["copy only", "vertex"]);
   assert.equal(objectsOf(other), objectsOf(g));
   assert.deepEqual(canvasBackground(other), { kind: "solid", color: "#fbf8f1" });
+  await s.close();
 });
 
 test("a server without the UVA store refuses a bundle with a Graph and makes nothing", { timeout: 120000 }, async (t) => {

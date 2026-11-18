@@ -267,6 +267,15 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
   const idMap = new Map(), entries = new Map(), madeGraphs = new Set();
   const graphAssets = (Array.isArray(manifest.assets) ? manifest.assets : []).filter((a) => a?.kind === "graph");
   if (graphAssets.length) {
+    // Only the Graphs the workspace shows are made, each once: a Graph asset
+    // needs no file, so nothing else bounds how many a manifest could list.
+    const shown = new Set([...used].map((k) => setDefs.get(k).imageId ?? k.split("#")[0]));
+    const seen = new Set();
+    for (const a of graphAssets) {
+      if (!isGraphId(a.id)) throw new Error("Bundle asset " + JSON.stringify(a?.id) + " is malformed");
+      if (seen.has(a.id)) throw new Error("Bundle lists the Graph " + a.id + " twice");
+      seen.add(a.id);
+    }
     // A Graph gets a new id on every import, so a repeated import is answered
     // before any Graph is made (an image's id comes from its bytes and needs no such check).
     if (await bundleWorkspace(manifest.bundleId)) {
@@ -274,7 +283,7 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
       return { ...again, repeated: true, warnings, summary: [], manifest: { bundleId: manifest.bundleId } };
     }
     for (const a of graphAssets) {
-      if (!isGraphId(a.id)) throw new Error("Bundle asset " + JSON.stringify(a?.id) + " is malformed");
+      if (!shown.has(a.id)) continue;
       const own = setDefs.get(a.id), color = own?.background?.kind === "solid" ? own.background.color : undefined;
       const spec = graphSpec({ width: a.width, height: a.height, ...(color ? { color } : {}), title: typeof a.title === "string" ? a.title : null });
       const entry = await createGraphCanvas(spec);
