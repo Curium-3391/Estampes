@@ -664,6 +664,8 @@ async function findByProvenance(bundleId) {
   return null;
 }
 
+// The workspace an earlier import of this bundle made, or null.
+export const bundleWorkspace = (bundleId) => findByProvenance(bundleId);
 export const getWorkspace = (id) => loadWorkspace(id);
 // Tests start from an empty registry.
 export function clearWorkspaces() { workspaces.clear(); forks.clear(); previews.clear(); keyIndex.clear(); }

@@ -139,7 +139,7 @@ test("with a public URL, an image gets download links and a Graph gets none that
   await s.stop();
 });
 
-test("Graphs sit in a workspace beside an image: marks per item, restart, refused pairs and bundles", { timeout: 180000 }, async (t) => {
+test("Graphs sit in a workspace beside an image: marks per item, restart, bundles, refused pairs", { timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await startCanvasStoreServer(storage, beta, { idle: "0" });
   t.after(() => s.kill());
@@ -171,17 +171,14 @@ test("Graphs sit in a workspace beside an image: marks per item, restart, refuse
   const added = await s.call("edit_workspace", { workspaceId: wsId, canvases: [(await newGraph(s, "x")).id], expectedRevision: shown.structuredContent.workspace.revision });
   assert.equal(added.structuredContent.items.length, 5);
 
-  // Not yet: a Graph in a paired view, a Graph in a bundle. Each is refused and makes nothing.
+  // Not yet: a Graph in a paired view. Refused, and makes nothing.
   const pair = await s.raw("create_workspace", { from: [graphs[0] + "+" + image] });
   assert.equal(pair.isError, true);
   assert.match(JSON.stringify(pair.content), /paired view needs two images/);
-  const before = await list(join(storage, "workspaces"));
-  for (const ref of [wsId, graphs[0]]) {
-    const bundle = await s.raw("export_workspace_bundle", { workspace: ref });
-    assert.equal(bundle.isError, true, ref);
-    assert.match(JSON.stringify(bundle.content), /cannot be exported as a bundle yet/);
-  }
-  assert.deepEqual(await list(join(storage, "workspaces")), before, "a refused export of a bare Graph makes no workspace");
+  // A bundle carries the Graphs as data (no image file for them), the image as its file.
+  const bundle = await s.call("export_workspace_bundle", { workspace: wsId });
+  const kinds = bundle.structuredContent.manifest.assets.map((a) => a.kind ?? "image");
+  assert.deepEqual(kinds.sort(), ["graph", "graph", "graph", "graph", "image"]);
 
   await s.stop();
   s = await startCanvasStoreServer(storage, beta, { idle: "0" });

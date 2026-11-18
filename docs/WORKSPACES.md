@@ -122,6 +122,7 @@ sets/<n>.json     one annotation set: layers, marks, links, rejected claims, ges
 - Import checks the format version, every hash and size, rejects unsafe paths and oversized content, and validates each mark (type, 0..1 coordinates, text lengths, enums). A mark that cannot be kept is skipped and reported in `unsupported`; the rest is imported. Hashes detect damage; they do not prove who made the bundle.
 - Import never overwrites. An image whose canvas is empty here gets the bundle's canvas; an identical canvas is reused (`collision: "reuse"`); a canvas that already has different marks gets an independent copy (`derivedFrom` remembers it). `collision: "copy"` always copies.
 - Importing the same bundle again returns the same workspace (`provenance.bundleId`).
+- A Graph document (`gph:`) has no image file. The manifest lists it as an asset with `kind: "graph"`, its size and title, and no file; its set carries its colour, axes, plots and marks. Import makes a new Graph (a new `gph:` id) and restores the set into it, so a Graph is never reused or overwritten. Graph copies (`gph:<hex>#c<hex>`) come along as copies of the new Graph. A server without the UVA canvas store refuses a bundle with a Graph before creating anything.
 - After import the workspace is read back and compared with the manifest totals (`verified`, `mismatch`, `unsupported`).
 
 ### Surface and notebooks in a bundle
