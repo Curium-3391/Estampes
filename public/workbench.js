@@ -36,7 +36,7 @@ window.addEventListener("resize",()=>{clearTimeout(wbResizeTimer);wbResizeTimer=
 const wbGraphNow=()=>!ws&&typeof imageId==="string"&&!/^img:/.test(imageId);
 function wbCanvasOnly(){
  wb.surface=null;
- for(const [id,el] of wb.els){if(id==="p:canvas"){el.style.cssText="";el.hidden=false;}else{el.remove();wb.els.delete(id);wb.calc.delete(id);}}
+ for(const [id,el] of wb.els){if(id==="p:canvas"){el.style.cssText="";el.hidden=false;el.querySelector(".wb-head").hidden=true;}else{el.remove();wb.els.delete(id);wb.calc.delete(id);}}
  wbEl.hidden=false;wbEl.classList.add("solo");wbEl.classList.remove("mobile","windows");
  wbBar.replaceChildren();
 }
@@ -69,7 +69,7 @@ function wbApply(ops,{retry=true}={}){
    status.textContent="沒有套用："+String(err.message||err);await wbLoad();
   }
  };
- const run=()=>attempt(retry);
+ const run=()=>wb.surface?attempt(retry):undefined;
  wb.chain=wb.chain.then(run,run);return wb.chain;
 }
 const wbLayout=(layout,profile=wb.profile)=>wbApply([{op:"layout",profile,layout}]);

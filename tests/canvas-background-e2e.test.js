@@ -106,6 +106,7 @@ test("switching from an image with the calculator in front to a Graph shows the 
     await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
     await ui.frame.locator("#panel-canvas svg#surface").waitFor({ state: "visible", timeout: 10000 });
     assert.equal(await ui.frame.locator(".calc").count(), 0, "the previous image's calculator is not left in front of the Graph");
+    assert.equal(await ui.frame.locator('[data-panel="p:canvas"] .wb-head').isVisible(), false, "no window controls that would act on a surface the Graph does not have");
     assert.equal(await ui.frame.locator("#wb-bar", { hasText: "工作台暫時無法使用" }).count(), 0, "no workbench error for a Graph");
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
