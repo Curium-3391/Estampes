@@ -75,3 +75,27 @@ test("canvas height changes ease in, and the mark still lands under the pointer 
     assert.ok(hit, "a mark sits under the click");
   } finally { await stack.close(); }
 });
+
+test("window mode: a grip under the panel area sets its height, double-click resets, keys work", { skip: noBrowser, timeout: 60000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1300, height: 1000 } });
+    await frame.locator("#surface").waitFor({ timeout: 15000 });
+    // The window layout needs the calculator module; force its CSS class so only the grip is exercised.
+    await frame.locator("#wb").evaluate((el) => { el.classList.remove("solo", "mobile"); el.classList.add("windows"); });
+    const grip = frame.locator("#wb-height-grip");
+    assert.ok(await grip.isVisible(), "grip is shown in window mode");
+    const area = () => frame.locator("#wb-area").evaluate((el) => el.getBoundingClientRect().height);
+    const h0 = await area();
+    const gb = await grip.boundingBox();
+    await page.mouse.move(gb.x + gb.width / 2, gb.y + gb.height / 2);
+    await page.mouse.down(); await page.mouse.move(gb.x + gb.width / 2, gb.y + gb.height / 2 + 150, { steps: 5 }); await page.mouse.up();
+    const h1 = await area();
+    assert.ok(h1 > h0 + 120, `dragged taller: ${h0} -> ${h1}`);
+    await grip.focus(); await page.keyboard.press("ArrowUp");
+    assert.ok((await area()) < h1, "arrow up shrinks");
+    await grip.dblclick();
+    assert.ok(Math.abs((await area()) - h0) < 2, "double-click restores the default");
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});
