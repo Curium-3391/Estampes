@@ -89,7 +89,8 @@ const folder = (imageId) => join(root, "images", imageId.slice(4));
 const hexOk = (imageId) => /^img:[0-9a-f]{16}$/.test(imageId);
 // A link store is keyed by an image's own canvas or by a copy of one.
 export const SET_ID = /^c[0-9a-f]{8,16}$/;
-const setKeyOk = (key) => { const [image, set, extra] = String(key).split("#"); return hexOk(image) && extra === undefined && (set === undefined || SET_ID.test(set)); };
+// A Graph (gph:) is a canvas too: links to it are kept like links to an image.
+const setKeyOk = (key) => { const [image, set, extra] = String(key).split("#"); return (hexOk(image) || isGraphId(image)) && extra === undefined && (set === undefined || SET_ID.test(set)); };
 // Where a canvas lives: an image's own canvas, or a copy in sets/.
 const canvasPath = (entry) => entry.setId ? join(folder(entry.imageId), "sets", entry.setId + ".json") : join(folder(entry.imageId), "canvas.json");
 
