@@ -203,7 +203,21 @@ const sameState = (entry, def) => canonicalById(canvasMarks(entry)) === canonica
   && JSON.stringify(canvasBackground(entry)) === JSON.stringify(canvasBackground(def))
   && linkSigs([...(entry.pairLinks ?? new Map()).values()].map((m) => [...m.values()])) === linkSigs(Object.values(def.links));
 
-export async function importBundle(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
+// Imports of the same bundle run one at a time. A Graph gets a new id on every
+// import, so two concurrent imports of one bundle would each make Graphs and
+// the one that loses the workspace adoption would leave them behind; in turn,
+// the second import sees the first one's workspace and makes nothing.
+const importing = new Map();
+export function importBundle(buffer, options) {
+  const key = sha(buffer), before = importing.get(key) ?? Promise.resolve();
+  const run = before.then(() => importBundleOnce(buffer, options));
+  const settled = run.catch(() => {});
+  importing.set(key, settled);
+  settled.then(() => { if (importing.get(key) === settled) importing.delete(key); });
+  return run;
+}
+
+async function importBundleOnce(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
   if (!["reuse", "copy"].includes(collision)) throw new Error("collision must be reuse or copy");
   const files = unzipFiles(buffer);
   const parse = (file) => {

@@ -92,6 +92,24 @@ test("a bundle carries a Graph as data, and the import makes a new Graph with th
   await s.close();
 });
 
+test("two concurrent imports of one Graph bundle make one Graph and one workspace", { timeout: 120000 }, async (t) => {
+  clearWorkspaces();
+  const dirs = await folders(t);
+  const s = await open(dirs);
+  t.after(() => s.close().catch(() => {}));
+  const g = await plottedGraph();
+  const made = await createWorkspace({ items: [{ set: g.imageId }] });
+  const { buffer } = await exportBundle(made.workspace.id);
+  await s.store.flush();
+  const before = (await graphDocs(s.service)).length;
+  const [a, b] = await Promise.all([importBundle(buffer), importBundle(buffer)]);
+  const ids = [a, b].map((r) => r.workspaceId ?? r.workspace?.id);
+  assert.equal(ids[0], ids[1], "both answer with the same workspace");
+  assert.equal([a, b].filter((r) => r.repeated).length, 1, "the second one is a repeat");
+  await s.store.flush();
+  assert.equal((await graphDocs(s.service)).length, before + 1, "one new Graph, none left behind");
+});
+
 test("a copy of a Graph travels as a copy of the new Graph, with its own marks", { timeout: 120000 }, async (t) => {
   clearWorkspaces();
   const dirs = await folders(t);
