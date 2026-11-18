@@ -28,6 +28,22 @@ import { zipFiles, unzipFiles } from '../zip.js';
 export const BETA_LIMITS = Object.freeze({ workspaces:4, items:4, revisions:25, annotations:128, objects:64, documentBytes:1024**2, assetBytes:8*1024**2, allAssetBytes:64*1024**2, allExportBytes:128*1024**2 });
 const OWNER='owner:uva-beta-instance', KIND='estampes.uva/1', MIRROR_KEY='estampes.beta:mirror', RECORD_KEY='estampes.beta:record';
 const hash=b=>createHash('sha256').update(b).digest('hex');
+// The canvas a mirror document holds: an image's canvas (provenance.legacySetKey,
+// img:<hex>) or a Graph's (gph:<hex>, UVA Phase 4A-2). The document schema's
+// legacy key names images only, so a Graph's key is kept in the mirror extension.
+const canvasKeyOf=d=>d?.extensions?.[MIRROR_KEY]?.canvasKey??d?.provenance?.legacySetKey;
+const GRAPH_KEY=/^gph:[0-9a-f]{16}(?:#c[0-9a-f]{12})?$/,GRAPH_COLOR=/^#[0-9a-f]{6}$/;
+// A Graph has no image: its marks are in document units (its width and
+// height) and anchored to the document.
+function toDocumentSpace(scene){
+  const {width:w,height:h}=scene.extent;
+  for(const a of scene.annotations){
+    const g=a.geometry;
+    for(const [k,f] of [['x',w],['y',h],['x2',w],['y2',h]])if(g[k]!==undefined)g[k]=g[k]*f;
+    if(Array.isArray(g.points))g.points=g.points.map(p=>({...p,x:p.x*w,y:p.y*h}));
+    a.anchor={space:'document'};
+  }
+}
 const now=()=>new Date().toISOString();
 const matrix=(w,h)=>[w,0,0,0,h,0,0,0,1];
 const PNG_URI='data:image/png;base64,';
@@ -174,6 +190,14 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     // A record document (workspace, surface, notebook) has one empty transparent scene.
     if(d.extensions?.[RECORD_KEY]){if(d.scenes.some(s=>s.background.kind!=='transparent'||s.annotations.length||s.objects.length))fail('INTEGRITY_ERROR','A record document holds no visual content');return;}
     for(const s of d.scenes){
+      // A Graph: a solid colour, marks anchored to the document, no image behind.
+      if(canvasDoc&&d.kind==='graph'){
+        if(s.background.kind!=='solid')fail('INTEGRITY_ERROR','A Graph document is drawn on a solid background');
+        if(s.annotations.some(a=>a.anchor.space!=='document'))fail('UNSUPPORTED_TARGET','Marks of a Graph are anchored to the document');
+        if(s.objects.some(o=>o.type==='embedded-document'))fail('UNSUPPORTED_TARGET','Image/embedded objects need explicit asset/binding intake; source is unchanged');
+        for(const o of s.objects)if(o.type==='image')await assetBytes(o.props.asset);
+        continue;
+      }
       if(s.background.kind!=='asset'&&!(canvasDoc&&s.background.kind==='transparent'))fail('UNSUPPORTED_TARGET','Beta scenes require an image background');
       const anchor=s.background.kind==='asset'?s.background.asset:s.annotations[0]?.anchor.asset;
       if(s.background.kind!=='asset'&&anchor&&anchor.legacyImageId!==d.provenance.legacySetKey.split('#')[0])fail('INTEGRITY_ERROR','Marks of a canvas are anchored to another image');
@@ -317,14 +341,14 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   }
   async function render(documentId,sceneId){
     const d=await document(documentId),s=d.scenes.find(s=>s.id===sceneId)??(!sceneId?d.scenes[0]:null);if(!s)fail('NOT_FOUND','Unknown visual item');
-    // A transparent background (base image promoted to an image object) renders on white.
-    const b=s.background.kind==='asset'?await assetBytes(s.background.asset):await sharp({create:{width:Math.round(s.extent.width),height:Math.round(s.extent.height),channels:4,background:{r:255,g:255,b:255,alpha:1}}}).png().toBuffer();
-    const entry=legacyEntry(s,await imageData(s),s.background.asset?.legacyImageId??d.provenance.legacySetKey),hidden=new Set(s.layers.filter(l=>!l.visible).map(l=>l.id));
+    // A transparent background (base image promoted to an image object) renders on white; a solid one (a Graph) in its colour.
+    const b=s.background.kind==='asset'?await assetBytes(s.background.asset):await sharp({create:{width:Math.round(s.extent.width),height:Math.round(s.extent.height),channels:4,background:s.background.kind==='solid'?s.background.color:{r:255,g:255,b:255,alpha:1}}}).png().toBuffer();
+    const entry=legacyEntry(s,await imageData(s),s.background.asset?.legacyImageId??canvasKeyOf(d)),hidden=new Set(s.layers.filter(l=>!l.visible).map(l=>l.id));
     const svg=renderedObjects(entry).filter(r=>r.object.visibility==='public'&&!hidden.has(r.object.layer)).map(r=>`<g opacity="${s.layers.find(l=>l.id===r.object.layer)?.opacity??1}">${primitivesSvg(r.primitives,s.extent.width,s.extent.height)}</g>`).join('');
     const factor=Math.min(1,1000/Math.max(s.extent.width,s.extent.height)),width=Math.max(1,Math.round(s.extent.width*factor)),height=Math.max(1,Math.round(s.extent.height*factor));
     const bg=await sharp(b,{limitInputPixels:50_000_000}).rotate().resize(width,height,{fit:'fill'}).png().toBuffer();
     const editorImage={mimeType:'image/jpeg',data:(await sharp(bg).flatten({background:'#ffffff'}).jpeg({quality:75}).toBuffer()).toString('base64')};
-    const annotationSvg=s.layers.filter(l=>l.visible).map(l=>`<g opacity="${l.opacity}">`+s.annotations.filter(a=>a.layerId===l.id).map(a=>markSvg({type:a.type,...a.geometry,...a.style},(x,y)=>[x*s.extent.width,y*s.extent.height],s.extent.width/1000)).join('')+'</g>').join('');
+    const annotationSvg=s.layers.filter(l=>l.visible).map(l=>`<g opacity="${l.opacity}">`+s.annotations.filter(a=>a.layerId===l.id).map(a=>markSvg({type:a.type,...a.geometry,...a.style},a.anchor.space==='document'?(x,y)=>[x,y]:(x,y)=>[x*s.extent.width,y*s.extent.height],s.extent.width/1000)).join('')+'</g>').join('');
     const overlay=Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${s.extent.width} ${s.extent.height}">${svg}${annotationSvg}</svg>`);
     const preview=await sharp(bg).composite([{input:overlay}]).png().toBuffer();
     return {kind:KIND,documentId,sceneId:s.id,revision:d.revision,editorImage,preview:{mimeType:'image/png',data:preview.toString('base64')},image:{mimeType:'image/png',data:bg.toString('base64')},objectsSvg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s.extent.width} ${s.extent.height}">${svg}</svg>`};
@@ -402,7 +426,9 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     // The in-memory canvas (mirror mode) can hold undefined fields; compare and map its JSON form.
     const {savedAt,...source}=JSON.parse(JSON.stringify(canvas)),sourceHash=hashJson(source),key=source.imageId+(source.setId?'#'+source.setId:'');
     const s=await snapshot();if(s.state!=='ready')fail('RECOVERY_REQUIRED','Writer is read-only; mirror paused');
-    const prior=s.documents.find(d=>d.provenance?.legacySetKey===key&&d.extensions?.[MIRROR_KEY]);
+    const graph=GRAPH_KEY.test(key);
+    if(graph&&!canvasStore)fail('UNSUPPORTED_TARGET','Graph documents live only in the UVA canvas store');
+    const prior=s.documents.find(d=>canvasKeyOf(d)===key&&d.extensions?.[MIRROR_KEY]);
     if(prior?.extensions[MIRROR_KEY].sourceHash===sourceHash&&(prior.extensions[MIRROR_KEY].authority??'legacy-canvas')===authority&&(prior.extensions[MIRROR_KEY].extraHash??null)===extraHash)return {status:'unchanged',documentId:prior.id,revision:prior.revision,sourceHash,extraHash,seq:prior.extensions[MIRROR_KEY].sourceSeq??null};
     // History compaction retires what no recovery point needs, so the store
     // keeps about the last 7 days of commits (the ACK replay window). This cap
@@ -411,8 +437,13 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     if(commits>=mirrorMaxCommits){mirrorState={...mirrorState,budgetExhausted:true,commits};fail('LIMIT','Commit budget reached ('+commits+'/'+mirrorMaxCommits+' commits retained in the 7-day replay window). Saves stay pending and the canvas is unaffected; they resume as older commits age out.');}
     // The asset is identified before it is written, so a canvas that cannot be
     // mapped never copies its image into the store.
-    const time=now(),digest=Buffer.isBuffer(bytes)?hash(bytes):'',asset={assetId:'asset:sha256:'+digest,legacyImageId:'img:'+digest.slice(0,16)};
-    if(source.imageId!==asset.legacyImageId)fail('INTEGRITY_ERROR','Legacy source bytes and image identity disagree');
+    // A Graph has no image and so no asset. The shared mapping is given a
+    // stand-in identity derived from the key; nothing may keep it (checked below).
+    const time=now(),digest=graph?hash('estampes-graph\0'+key):Buffer.isBuffer(bytes)?hash(bytes):'',asset={assetId:'asset:sha256:'+digest,legacyImageId:'img:'+digest.slice(0,16)};
+    if(graph){
+      if(bytes!==null&&bytes!==undefined)fail('INTEGRITY_ERROR','A Graph document has no image bytes');
+      if(source.background?.kind!=='solid'||!GRAPH_COLOR.test(source.background.color))fail('INVALID_INPUT','A Graph canvas needs a solid #rrggbb background');
+    }else if(source.imageId!==asset.legacyImageId)fail('INTEGRITY_ERROR','Legacy source bytes and image identity disagree');
     const docId=prior?.id??allocated('doc','mirror:'+key),sceneId=prior?.scenes[0].id??allocated('scene','mirror:'+key),layerId=allocated('layer','mirror:'+key);
     const blocked=(message)=>{mirrorState={...mirrorState,blocked:{...(mirrorState?.blocked),[key]:message}};return {status:'blocked',issues:[{message}],sourceHash};};
     // Image objects (add_image_layer, the promoted base image) carry their PNG
@@ -433,12 +464,17 @@ export async function createUvaService({enabled=false,directory:root='',profile=
         linkKeys[bindingId]=otherKey;
       }
     }
-    const mapped=mapLegacyCanvas(intake.source,{relationBindings,documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??('Canvas '+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
+    const mapped=mapLegacyCanvas(graph?{...intake.source,imageId:asset.legacyImageId}:intake.source,{relationBindings,documentId:docId,sceneId,sourceStoreId:s.root.storeInstanceId,asset,sourceToDocument:matrix(source.width,source.height),ownerId:OWNER,title:prior?.title??((graph?'Graph ':'Canvas ')+key),projectedAt:time,sourceTrust:'migrated-local',unlayeredLayerId:layerId});
     if(mapped.document)restoreImageObjects(mapped.document,intake.images);
     if(!mapped.document)return blocked(mapped.report.issues.filter(i=>i.blocking).map(i=>i.message).join('; '));
     if(mapped.document.scenes[0].annotations.length>limits.annotations||mapped.document.scenes[0].objects.length>limits.objects)return blocked('Canvas exceeds '+limits.annotations+' marks or '+limits.objects+' objects');
     if(!prior&&s.documents.length>=limits.workspaces)return blocked('Store holds the maximum of '+limits.workspaces+' canvases');
-    await putAsset(bytes);
+    if(graph){
+      const sc=mapped.document.scenes[0];
+      sc.background={kind:'solid',color:source.background.color};
+      toDocumentSpace(sc);
+      if(JSON.stringify([mapped.document,mapped.sidecars]).includes(asset.assetId))return blocked('Graph canvas holds content tied to an image; it stays pending');
+    }else await putAsset(bytes);
     for(const image of intake.images)await putAsset(image.bytes);
     if(mirrorState?.blocked?.[key]){const {[key]:_,...rest}=mirrorState.blocked;mirrorState={...mirrorState,blocked:rest};}
     const scene=mapped.document.scenes[0];
@@ -458,19 +494,19 @@ export async function createUvaService({enabled=false,directory:root='',profile=
       const prev=new Map(prior.scenes[0][kind].map(e=>[e.id,e])),strip=e=>canonicalJson({...e,revision:0,provenance:{...e.provenance,lastEditedAt:null,lastEditedBy:null}});
       scene[kind]=scene[kind].map(e=>{const old=prev.get(e.id);if(!old)return e;return strip(old)===strip(e)?old:{...e,revision:old.revision+1};});
     }
-    let ext={[MIRROR_KEY]:{sourceHash,syncedAt:time,authority:'legacy-canvas'},'estampes.beta:legacyArchives':mapped.sidecars};
+    let ext={[MIRROR_KEY]:{sourceHash,syncedAt:time,authority:'legacy-canvas',...(graph?{canvasKey:key}:{})},'estampes.beta:legacyArchives':mapped.sidecars};
     let d,expected=null;
     if(prior){d=structuredClone(prior);scene.revision=prior.scenes[0].revision+1;d.scenes[0]=scene;d.bindings=mapped.document.bindings;d.revision++;d.updatedAt=time;d.extensions=ext;expected=prior.revision;}
-    else d={schema:'estampes.document/1',id:docId,kind:'image',title:'Canvas '+key,revision:1,state:'active',persistence:profile==='linux-local-durable'?'durable':'memory',createdAt:time,updatedAt:time,defaultSceneId:scene.id,scenes:[scene],bindings:mapped.document.bindings,annotationSupport:'shared-v1',provenance:{createdBy:'migration',legacySetKey:key},extensions:ext};
+    else d={schema:'estampes.document/1',id:docId,kind:graph?'graph':'image',title:(graph?'Graph ':'Canvas ')+key,revision:1,state:'active',persistence:profile==='linux-local-durable'?'durable':'memory',createdAt:time,updatedAt:time,defaultSceneId:scene.id,scenes:[scene],bindings:mapped.document.bindings,annotationSupport:'shared-v1',provenance:graph?{createdBy:'migration'}:{createdBy:'migration',legacySetKey:key},extensions:ext};
     let residualBytes=0;
     if(canvasStore){
       // The document is the record: keep only what its structure does not carry,
       // and prove the canvas comes back exactly before committing.
-      const projected=projectCanvas(d,{unlayeredLayerId:layerId,linkKeys,images:new Map(intake.images.map(i=>[i.asset.assetId,i.base64]))}),residual=diffJson(projected,source)??null;
+      const projected=projectCanvas(d,{canvasKey:key,unlayeredLayerId:layerId,linkKeys,images:new Map(intake.images.map(i=>[i.asset.assetId,i.base64]))}),residual=diffJson(projected,source)??null;
       if(hashJson(applyPatch(projected,residual))!==sourceHash)fail('INTEGRITY_ERROR','Canvas does not round-trip through its UVA document; it stays in legacy storage');
       residualBytes=residual?Buffer.byteLength(JSON.stringify(residual)):0;
       // sourceSeq orders this record against the pending copies (src/uva/canvas-store.js).
-      d.extensions={[MIRROR_KEY]:{sourceHash,syncedAt:time,sourceSavedAt:typeof savedAt==='string'?savedAt:null,sourceSeq:Number.isSafeInteger(seq)?seq:null,legacyHash:typeof legacyHash==='string'?legacyHash:null,authority,residual,...(Object.keys(linkKeys).length?{linkKeys}:{}),...(extraJson?{extra:extraJson,extraHash}:{})}};
+      d.extensions={[MIRROR_KEY]:{sourceHash,syncedAt:time,sourceSavedAt:typeof savedAt==='string'?savedAt:null,sourceSeq:Number.isSafeInteger(seq)?seq:null,legacyHash:typeof legacyHash==='string'?legacyHash:null,authority,residual,...(graph?{canvasKey:key}:{}),...(Object.keys(linkKeys).length?{linkKeys}:{}),...(extraJson?{extra:extraJson,extraHash}:{})}};
     }
     checkLimits(d,limits);await verifyAssets(d);
     const command={requestId:'req:'+randomUUID(),changes:[{expectedRevision:expected,document:d}]};
@@ -482,14 +518,14 @@ export async function createUvaService({enabled=false,directory:root='',profile=
   // The committed canvas of an image, rebuilt from its UVA document, or null
   // when the store does not hold it as the record (no document, or a read-only mirror).
   async function canvasState(imageId){
-    const d=(await snapshot()).documents.find(d=>d.provenance?.legacySetKey===imageId&&d.extensions?.[MIRROR_KEY]);
+    const d=(await snapshot()).documents.find(d=>canvasKeyOf(d)===imageId&&d.extensions?.[MIRROR_KEY]);
     const ext=d?.extensions[MIRROR_KEY];if(!ext||ext.authority!=='uva')return null;
-    const canvas=applyPatch(projectCanvas(d,{unlayeredLayerId:allocated('layer','mirror:'+imageId),linkKeys:ext.linkKeys??{},images:await imageData(d.scenes[0])}),ext.residual);
+    const canvas=applyPatch(projectCanvas(d,{canvasKey:imageId,unlayeredLayerId:allocated('layer','mirror:'+imageId),linkKeys:ext.linkKeys??{},images:await imageData(d.scenes[0])}),ext.residual);
     if(hashJson(canvas)!==ext.sourceHash||(ext.extra!==undefined&&hashJson(ext.extra)!==ext.extraHash))fail('INTEGRITY_ERROR','UVA canvas document does not reproduce its recorded canvas hash');
     return {canvas:{...canvas,...(ext.sourceSavedAt?{savedAt:ext.sourceSavedAt}:{})},sourceHash:ext.sourceHash,extra:ext.extra??null,seq:ext.sourceSeq??0,legacyHash:ext.legacyHash??null,documentId:d.id,revision:d.revision};
   }
   // Images whose canvas this store holds as the record.
-  async function canvasImages(){return (await snapshot()).documents.filter(d=>d.extensions?.[MIRROR_KEY]?.authority==='uva').map(d=>d.provenance.legacySetKey);}
+  async function canvasImages(){return (await snapshot()).documents.filter(d=>d.extensions?.[MIRROR_KEY]?.authority==='uva').map(canvasKeyOf);}
   // Records besides canvases (canvas store only): a workspace, a panel surface or
   // a calculator notebook, keyed "<kind>/<id>". Each is one document whose
   // extension holds the record's JSON with its hash and seq, so it shares the

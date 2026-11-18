@@ -28,11 +28,13 @@ import { join, dirname } from "node:path";
 import { hashJson } from "../documents/validation.js";
 import { createMirror } from "./mirror.js";
 
-// A canvas key: an image's own canvas (img:<hex>) or a workspace copy of it
-// (img:<hex>#c<hex>).
-const KEY = /^img:([0-9a-f]{16})(?:#(c[0-9a-f]{12}))?$/;
-const PENDING = /^([0-9a-f]{16})(?:-(c[0-9a-f]{12}))?\.json$/;
-const parts = (key) => { const m = KEY.exec(key ?? ""); return m ? { hex: m[1], setId: m[2] ?? null } : null; };
+// A canvas key: an image's own canvas (img:<hex>), a Graph document
+// (gph:<hex>, no image bytes), or a workspace copy of either (<id>#c<hex>).
+// A Graph's pending file carries a "gph-" prefix so it can never share a name
+// with an image's.
+const KEY = /^(img|gph):([0-9a-f]{16})(?:#(c[0-9a-f]{12}))?$/;
+const PENDING = /^(gph-)?([0-9a-f]{16})(?:-(c[0-9a-f]{12}))?\.json$/;
+const parts = (key) => { const m = KEY.exec(key ?? ""); return m ? { prefix: m[1], hex: m[2], setId: m[3] ?? null } : null; };
 const keyOf = (canvas) => (canvas?.imageId ?? "") + (canvas?.setId ? "#" + canvas.setId : "");
 const RECORD = "estampes.canvas-pending/2";
 export const LOG_LINES = 200;
@@ -71,7 +73,7 @@ export async function createCanvasStore({ service, storageDir, idleMs = 15000, m
   const created = await mkdir(dir, { recursive: true, mode: 0o700 });
   // A new folder must itself survive a crash before its files can.
   if (created) for (let d = dir; ; d = dirname(d)) { await syncDir(dirname(d)); if (d === created || dirname(d) === d) break; }
-  const file = (key) => { const p = parts(key); return join(dir, p.hex + (p.setId ? "-" + p.setId : "") + ".json"); };
+  const file = (key) => { const p = parts(key); return join(dir, (p.prefix === "gph" ? "gph-" : "") + p.hex + (p.setId ? "-" + p.setId : "") + ".json"); };
   // `known`: { hash, extraHash, seq, canvas, extra } of the latest record, per
   // canvas. Every write goes through this store, so a record once read or
   // written stays current. Canvases are bounded by the memory cache that holds
@@ -108,7 +110,9 @@ export async function createCanvasStore({ service, storageDir, idleMs = 15000, m
     service, idleMs, maxWaitMs, log,
     read: async (key) => {
       const r = await readPending(key);
-      return r && { canvas: r.canvas, seq: r.seq, extra: cleanExtra(r.extra), bytes: await service.imageBytes("img:" + parts(key).hex) };
+      // A Graph has no image bytes.
+      const p = parts(key);
+      return r && { canvas: r.canvas, seq: r.seq, extra: cleanExtra(r.extra), bytes: p.prefix === "img" ? await service.imageBytes("img:" + p.hex) : null };
     },
     onSynced: async (key, result) => {
       if (result.status === "blocked") { track(key, { blocked: true }); note(); return; }
@@ -191,7 +195,7 @@ export async function createCanvasStore({ service, storageDir, idleMs = 15000, m
   for (const name of await readdir(dir)) {
     const m = PENDING.exec(name);
     if (m) {
-      const key = "img:" + m[1] + (m[2] ? "#" + m[2] : "");
+      const key = (m[1] ? "gph:" : "img:") + m[2] + (m[3] ? "#" + m[3] : "");
       // A record in the older format (the legacy file was still written then)
       // holds just the canvas: it is carried over with an empty extra.
       const r = await readJson(join(dir, name));

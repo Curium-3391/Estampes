@@ -14,6 +14,7 @@
 // the cache evicts it or the container restarts. Without a storage dir every
 // function here is a no-op and Estampes behaves as before.
 import { canvasBackground, isSolid } from "./visual/background.js";
+import { isGraphId, newGraphId, graphSpec, graphEntry, rememberGraph, cachedGraph, GRAPH_COLOR } from "./visual/graph-docs.js";
 import { mkdir, readFile, writeFile, rename, appendFile, readdir, stat, rm } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { config, log } from "./config.js";
@@ -88,7 +89,8 @@ const folder = (imageId) => join(root, "images", imageId.slice(4));
 const hexOk = (imageId) => /^img:[0-9a-f]{16}$/.test(imageId);
 // A link store is keyed by an image's own canvas or by a copy of one.
 export const SET_ID = /^c[0-9a-f]{8,16}$/;
-const setKeyOk = (key) => { const [image, set, extra] = String(key).split("#"); return hexOk(image) && extra === undefined && (set === undefined || SET_ID.test(set)); };
+// A Graph (gph:) is a canvas too: links to it are kept like links to an image.
+const setKeyOk = (key) => { const [image, set, extra] = String(key).split("#"); return (hexOk(image) || isGraphId(image)) && extra === undefined && (set === undefined || SET_ID.test(set)); };
 // Where a canvas lives: an image's own canvas, or a copy in sets/.
 const canvasPath = (entry) => entry.setId ? join(folder(entry.imageId), "sets", entry.setId + ".json") : join(folder(entry.imageId), "canvas.json");
 
@@ -211,8 +213,47 @@ export async function intakeImage(bytes, options) {
   return entry;
 }
 
+// ---- Graph documents (UVA Phase 4A-2) -------------------------------------
+// A Graph (gph:<hex>) has no image: no bytes, no asset, no image file. Its
+// canvas record is written only to the UVA canvas store; a server without it
+// refuses Graphs instead of keeping them in memory or in legacy files.
+const GRAPH_NEEDS_STORE = "Graph documents (gph:) are kept only in the UVA canvas store (the default with ESTAMPES_STORAGE_DIR); this server runs without it";
+const graphMeta = (entry) => ({ imageId: entry.imageId, kind: "graph", source: "graph", fileName: entry.fileName ?? null,
+  working: { width: entry.width, height: entry.height }, storedAt: new Date().toISOString() });
+// A new, empty Graph. Resolves once its record is durable; nothing else is written.
+export async function createGraphCanvas(options = {}) {
+  if (!canvases) throw new Error(GRAPH_NEEDS_STORE);
+  const spec = graphSpec(options), imageId = newGraphId(), entry = graphEntry(imageId, spec);
+  restoreCanvas(entry, { imageId, width: spec.width, height: spec.height, background: { kind: "solid", color: spec.color }, marks: [], layers: [] });
+  await canvases.write(imageId, { canvas: serializeCanvas(entry), meta: graphMeta(entry), log: [] });
+  log("info", "[storage] graph created", { imageId });
+  return rememberGraph(entry);
+}
+async function ensureGraph(imageId) {
+  const cached = cachedGraph(imageId);
+  if (cached) return cached;
+  if (!canvases) throw new Error(GRAPH_NEEDS_STORE);
+  return once(imageId, async () => {
+    const again = cachedGraph(imageId);
+    if (again) return again;
+    const record = await canvases.read(imageId);
+    if (!record?.canvas) throw new Error("Unknown Graph " + imageId);
+    const bg = canvasBackground(record.canvas);
+    const entry = graphEntry(imageId, { width: record.canvas.width, height: record.canvas.height,
+      color: bg.kind === "solid" ? bg.color : GRAPH_COLOR, title: record.extra.meta?.fileName ?? null });
+    restoreCanvas(entry, record.canvas);
+    // A Graph has no image to fall back to: its background stays a colour.
+    if (!isSolid(entry)) entry.background = { kind: "solid", color: GRAPH_COLOR };
+    restoreDerived(entry, record.extra.derived);
+    log("info", "[storage] graph restored", { imageId, marks: entry.marks?.size ?? 0 });
+    return rememberGraph(entry);
+  });
+}
+
 // The image for an id: memory first, then disk (after eviction or restart).
+// A Graph id resolves to its Graph entry.
 export async function ensureImage(imageId) {
+  if (isGraphId(imageId)) return ensureGraph(imageId);
   // An image whose load is under way is waited for even if already cached.
   // A load that failed part-way leaves a cached entry without its saved canvas:
   // it counts as unsaved, so the next call runs the load again.
@@ -369,7 +410,7 @@ export async function readSource(imageId) {
   try { return await readFile(join(folder(imageId), "source")); } catch { return null; }
 }
 export async function readMeta(imageId) {
-  if (canvases && hexOk(imageId)) {
+  if (canvases && (hexOk(imageId) || isGraphId(imageId))) {
     const meta = (await canvases.read(imageId))?.extra.meta;
     if (meta) return meta;
     await ensureImage(imageId).catch(() => null);
@@ -481,7 +522,7 @@ export async function readCommandLog(entry) {
 
 // `files`: the older history.jsonl itself (migration); `base`: a workspace copy's prefix.
 export async function readHistory(imageId, limit = 50, { files = false, base = "" } = {}) {
-  if (canvases && !files && hexOk(imageId)) return ((await canvases.read(imageId))?.extra.log ?? []).slice(-limit);
+  if (canvases && !files && (hexOk(imageId) || isGraphId(imageId))) return ((await canvases.read(imageId))?.extra.log ?? []).slice(-limit);
   if (!root || !hexOk(imageId)) return [];
   try {
     const lines = (await readFile(join(folder(imageId), base + "history.jsonl"), "utf8")).trim().split("\n").filter(Boolean);

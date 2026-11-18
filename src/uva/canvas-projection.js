@@ -29,9 +29,18 @@ function sort(v) {
 // the canvas carries them inline as a data URI.
 // `linkKeys` maps the id of each relation binding to the set key of the other
 // canvas; the binding keeps the legacy link record verbatim.
-export function projectCanvas(document, { unlayeredLayerId, images = new Map(), linkKeys = {} } = {}) {
-  // legacySetKey is img:<hex>, or img:<hex>#<setId> for a workspace copy.
-  const scene = document.scenes[0], [imageId, setId] = document.provenance.legacySetKey.split("#");
+// `canvasKey` names the canvas (a Graph's gph:<hex> is not a legacySetKey);
+// without it the document's legacySetKey does.
+export function projectCanvas(document, { canvasKey, unlayeredLayerId, images = new Map(), linkKeys = {} } = {}) {
+  // img:<hex> or gph:<hex>, with #<setId> for a workspace copy.
+  const scene = document.scenes[0], [imageId, setId] = (canvasKey ?? document.provenance.legacySetKey).split("#");
+  // Marks anchored to the document (a Graph) are in document units; the canvas keeps 0..1.
+  const { width: w, height: h } = scene.extent;
+  const unscale = (g) => {
+    for (const [k, f] of [["x", w], ["y", h], ["x2", w], ["y2", h]]) if (g[k] !== undefined) g[k] = g[k] / f;
+    if (Array.isArray(g.points)) g.points = g.points.map((p) => ({ ...p, x: p.x / w, y: p.y / h }));
+    return g;
+  };
   const layerOf = (id) => (id === unlayeredLayerId ? {} : { layer: id });
   const layers = scene.layers.filter((l) => l.id !== unlayeredLayerId).map((l) => ({
     id: l.id, ...(l.author === "unknown" ? {} : { author: l.author }), ...(l.name === undefined ? {} : { name: l.name }),
@@ -44,7 +53,7 @@ export function projectCanvas(document, { unlayeredLayerId, images = new Map(), 
     if (p.author === "user" || p.author === "assistant") m.author = p.author;
     m.grounding = p.grounding; // the canvas code always writes it
     m.type = a.type;
-    Object.assign(m, clone(a.geometry), layerOf(a.layerId));
+    Object.assign(m, a.anchor.space === "document" ? unscale(clone(a.geometry)) : clone(a.geometry), layerOf(a.layerId));
     if (a.label !== undefined) m.label = a.label;
     Object.assign(m, clone(a.style));
     for (const k of FINDING) if (a.finding?.[k] !== undefined) m[k] = clone(a.finding[k]);
@@ -75,6 +84,7 @@ export function projectCanvas(document, { unlayeredLayerId, images = new Map(), 
   }
   return {
     ...(scene.background.kind === "transparent" ? { baseAsObject: true } : {}),
+    ...(scene.background.kind === "solid" ? { background: { kind: "solid", color: scene.background.color } } : {}),
     version: 1, imageId, width: scene.extent.width, height: scene.extent.height, marks, layers, links,
     ...(scene.rejections.length ? { rejections: clone(scene.rejections) } : {}),
     ...(scene.gestureDecisions.length ? { gestureDecisions: scene.gestureDecisions.map((g) => clone(g.original)) } : {}),
