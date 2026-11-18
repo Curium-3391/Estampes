@@ -35,18 +35,8 @@ function wbSync(){
 let wbResizeTimer=0;
 window.addEventListener("resize",()=>{clearTimeout(wbResizeTimer);wbResizeTimer=setTimeout(()=>{
  if(!wb.surface)return;const next=wbProfileNow();if(next===wb.profile)return;wb.profile=next;renderWB();},150);});
-// A Graph (gph:) has no surface of its own yet (UVA 4A-4): it shows the canvas
-// alone, never a calculator or window layout left over from the previous canvas.
-const wbGraphNow=()=>!ws&&typeof imageId==="string"&&!/^img:/.test(imageId);
-function wbCanvasOnly(){
- wb.surface=null;
- for(const [id,el] of wb.els){if(id==="p:canvas"){el.style.cssText="";el.hidden=false;el.querySelector(".wb-head").hidden=true;}else{el.remove();wb.els.delete(id);wb.calc.delete(id);}}
- wbEl.hidden=false;wbEl.classList.add("solo");wbEl.classList.remove("mobile","windows");
- wbBar.replaceChildren();
-}
 async function wbLoad(){
  const key=wb.key;
- if(wbGraphNow()){wbCanvasOnly();return;}
  try{const r=await wbCall("surface_get_state",wbArgs());if(key===wb.key)setSurface(r);}
  catch(err){if(key!==wb.key)return;wbEl.hidden=false;wbBar.replaceChildren(h("span",{class:"wb-note"},"工作台暫時無法使用："+String(err.message||err)));}
 }

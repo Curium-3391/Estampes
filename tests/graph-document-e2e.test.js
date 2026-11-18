@@ -98,15 +98,16 @@ test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apa
 // a canvas tool must not quietly refuse one.
 const TAKES_GRAPH = ["commands_get_status.documentId", "create_workspace.canvases", "edit_workspace.canvases", "documents_get_changes.documents", "edit_canvas_text.imageId", "edit_scene_object.imageId",
   "edit_visual_canvas.imageId", "edit_visual_layers.imageId", "execute_module.canvas", "get_visual_layers.imageId", "get_visual_state.imageId",
+  "get_surface_state.imageId", "manage_surface_panels.imageId", "surface_apply.imageId", "surface_cas.imageId", "surface_get_state.imageId",
   "load_visual_canvas.imageId", "present_visual.imageId", "render_canvas.imageId", "review_gesture_group.imageId", "review_visual_finding.imageId",
   "review_visual_link.imageId", "validate_visual_annotations.imageId"];
-// Pixel tools, paired views (the right side is an image), and tools whose Graph support comes later (workspaces, surfaces: 4A-4).
+// Pixel tools and paired views (the right side is an image).
 const IMAGE_ONLY = ["add_image_layer.imageId", "add_image_layer.sourceImageId", "assess_image.imageId", "calibrate_scale.imageId", 
-  "detect_features.imageId", "edit_visual_canvas.pairImageId", "get_derived_view.imageId", "get_surface_state.imageId",
+  "detect_features.imageId", "edit_visual_canvas.pairImageId", "get_derived_view.imageId",
   "get_visual_state.pairImageId", "inspect_image.imageId", "load_visual_canvas.pairImageId", "load_visual_pixels.imageId", "load_visual_region.imageId",
-  "manage_surface_panels.imageId", "measure_image.imageId", "overlay_grid.imageId", "present_visual.pairImageId", "process_image.imageId",
-  "register_images.imageId", "register_images.otherImageId", "review_visual_link.pairImageId", "surface_apply.imageId", "surface_cas.imageId",
-  "surface_get_state.imageId", "validate_visual_annotations.pairImageId"];
+  "measure_image.imageId", "overlay_grid.imageId", "present_visual.pairImageId", "process_image.imageId",
+  "register_images.imageId", "register_images.otherImageId", "review_visual_link.pairImageId",
+  "validate_visual_annotations.pairImageId"];
 
 test("every tool argument naming a canvas or image is classified as taking a Graph or not", { timeout: 120000 }, async (t) => {
   const { storage, beta } = await folders(t);

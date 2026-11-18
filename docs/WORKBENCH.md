@@ -4,6 +4,7 @@ Since 0.19.0 the Visual Surface widget is a small window manager. The canvas (ph
 
 ## Using it
 
+- Each canvas has its own surface: an image (`img:`), a Graph document (`gph:`, a solid colour with vector axes; since UVA Phase 4A) or a workspace. Switching canvas switches to that canvas's panels and layouts.
 - Alone, the canvas looks as before and offers **＋ 科學計算機** (enabled once the user has enabled the CAS module in the Store).
 - With two panels open, the widget switches to windows: drag a title bar to move, drag the right/bottom edges or the lower-right corner to resize, `☰` for dock presets (left, right, top, bottom, floating, bring to front), `–` to minimise to a chip, `▢` to maximise inside the workbench. Closing a calculator keeps its notebook.
 - Keyboard: focus a title bar, then **Alt+Arrows** move it and **Alt+Shift+Arrows** resize it. Every menu item and button is reachable by Tab.
