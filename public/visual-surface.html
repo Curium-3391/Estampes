@@ -4,7 +4,7 @@
 <style id="page-css">
 :root{color-scheme:light dark;font-family:system-ui,-apple-system,sans-serif}
 *{box-sizing:border-box}body{margin:0;padding:12px;background:Canvas;color:CanvasText}
-main{max-width:820px;margin:auto;border:1px solid #8885;border-radius:14px;padding:16px}
+main{margin:auto;border:1px solid #8885;border-radius:14px;padding:16px}
 main:focus{outline:none}
 header{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
 h2{font-size:1rem;margin:0}small,.help,#status{color:GrayText}
@@ -22,6 +22,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #zoom-level{min-width:3.5em;text-align:center;font-variant-numeric:tabular-nums}#zoom-tools .hint{font-size:.78rem;color:GrayText}
 body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #surface.panning{cursor:grab}
+#surface,#check-view img{transition:max-height .18s ease-out}
+@media(prefers-reduced-motion:reduce){#surface,#check-view img{transition:none}}
 #context-details{margin:12px 0;border:1px solid #8885;border-radius:10px;padding:0 12px}
 #context-details>summary{cursor:pointer;padding:10px 0;font-size:.86rem}
 #context-details .context-panel{padding:0;margin:0 0 10px;border:0}
@@ -30,12 +32,15 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 .context-panel select,.context-panel textarea,.context-panel input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #8887;background:Canvas;color:CanvasText;font:inherit;font-size:.89rem}
 .context-panel textarea{min-height:66px;resize:vertical}
 .context-panel .hint{font-size:.75rem;color:GrayText;margin:0}
-#surface{display:block;width:100%;height:auto;min-height:min(320px,60vh);max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
+#surface{display:block;width:100%;height:auto;min-height:min(320px,60vh);max-height:max(640px,calc(100vh - var(--chrome,280px)));border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #offline-note{font-size:.83rem;margin:.2rem 0;padding:.3rem .5rem;border:1px solid #C26A00;border-radius:6px;color:CanvasText;background:color-mix(in srgb,#C26A00 14%,Canvas)}
 #offline-note[hidden]{display:none}
+#diag{font-size:.75rem;margin:.2rem 0;opacity:.8}
+#diag[hidden]{display:none}
+#diag pre{white-space:pre-wrap;word-break:break-all;margin:.2rem 0;user-select:text}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
 #caption{font-size:.82rem;color:GrayText}
-#check-view{margin:0}#check-view img{display:block;max-width:100%;max-height:640px;margin:auto;border:1px solid #8886;border-radius:10px}
+#check-view{margin:0}#check-view img{display:block;max-width:100%;max-height:max(640px,calc(100vh - var(--chrome,280px)));margin:auto;border:1px solid #8886;border-radius:10px}
 #check-view figcaption{font-size:.85rem;margin-top:6px}
 #findings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 #findings:empty{display:none}
@@ -101,7 +106,7 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 #style-tools .swatch[aria-pressed="true"]{outline:3px solid #356BD6;outline-offset:2px}
 #style-tools .sep{width:1px;height:24px;background:#8886;margin:0 4px}
 /* ---- workbench: Graph / canvas and calculator panels in one surface ---- */
-#wb{max-width:820px;margin:auto}
+#wb{margin:auto}
 #wb.windows,#wb.mobile{max-width:none}
 #wb-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
 #wb-bar:empty{display:none}
@@ -125,7 +130,7 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 .wb-body{flex:1;min-height:0;overflow:auto}
 .wb-panel>.wb-body>main{max-width:none;border:0;border-radius:0;margin:0}
 #wb.solo .wb-panel>.wb-body>main{border:1px solid #8885;border-radius:14px}
-#wb.solo .wb-panel>.wb-body>main{max-width:820px;margin:auto}
+#wb.solo .wb-panel>.wb-body>main{margin:auto}
 .wb-resize{position:absolute;z-index:3;touch-action:none}
 .wb-resize.r{top:8px;bottom:12px;right:0;width:8px;cursor:ew-resize}
 .wb-resize.b{left:8px;right:12px;bottom:0;height:8px;cursor:ns-resize}
@@ -264,6 +269,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 </div>
 <p id="status" role="status" aria-live="polite">正在連接對話…</p>
 <p id="offline-note" role="status" hidden>連不上伺服器：畫面是上次的內容，可能不是最新，新的標註也還沒存到伺服器。</p>
+<div id="diag" hidden><pre id="diag-text"></pre></div>
 </main></template></div></div>
 <script type="module">
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
@@ -302,6 +308,9 @@ function createHost(){
   const send=()=>{queued=false;
    const root=document.documentElement,prev=root.style.height;root.style.height="max-content";
    const height=Math.ceil(root.getBoundingClientRect().height),width=Math.ceil(root.scrollWidth);root.style.height=prev;
+   // Room for everything but the picture, so the picture can use the rest of a frame the user made big.
+   const surf=[document.querySelector("#surface"),document.querySelector("#check-view img")].find(e=>e&&e.getBoundingClientRect().height>0);
+   if(surf){const chrome=Math.round(Math.max(0,height-surf.getBoundingClientRect().height));root.style.setProperty("--chrome",chrome+"px")}
    const key=width+"x"+height;if(!height||key===lastSize)return;lastSize=key;
    try{notify("ui/notifications/size-changed",{width,height})}catch{}};
   const schedule=()=>{if(queued)return;queued=true;requestAnimationFrame(send)};
@@ -316,6 +325,12 @@ function createHost(){
  return {on,whenReady,request,notify,start,get ready(){return ready},get name(){return hostName}};
 }
 const host=createHost();
+// What this widget knows about where its marks came from and what it last sent, for bug reports:
+// tap the status line to show it. Times are local clock; it holds no image data.
+const diag={source:"",sourceAt:0,polls:0,pollAt:0,pollError:"",revision:"",applied:0,appliedAt:0,busy:0,stale:0,edit:null,hooks:new Set()};
+const diagNote=patch=>{Object.assign(diag,patch);for(const f of [...diag.hooks]){try{f()}catch{}}};
+const diagTime=t=>t?new Date(t).toISOString().slice(11,23):"-";
+const diagPoint=(list,id)=>{const m=(Array.isArray(list)?list:[]).find(a=>a?.id===id);const g=m?.points?.[0]??m;return g&&typeof g.x==="number"?"("+g.x.toFixed(3)+","+g.y.toFixed(3)+")":"-"};
 
 // ===== Viewer: one canvas with its own camera, tool, selection and drafts =====
 // `scope` is where its elements live (the document, or a shadow root); `rootEl`
@@ -663,9 +678,19 @@ function editOnServer(args){
  const target={imageId,pairImageId:pair?pair.imageId:null,wsId:ws?ws.id:null};
  // One id per user action, reused when the answer is lost: the server applies it once (UVA lost-ACK handling).
  const commandId=newCommandId();
- const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});return run;
+ editsInFlight++;
+ const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});
+ // Until the server's answer is in, a poll snapshot cannot be newer than this edit: it waits, and one that started before
+ // the edit finished is dropped (a fresh poll follows), so the mark never flickers back to its previous place.
+ run.then(()=>{},()=>{}).then(()=>{editsInFlight--;editSerial++;if(!editsInFlight)queueMicrotask(()=>{window.estampesSurface?.pollNow?.().catch(()=>{})})});
+ return run;
 }
 async function editOnServerNow(body,target,commandId){
+ const sentAt=Date.now(),first=body.marks?.[0];
+ // One record per command: a second viewer's edit in flight cannot overwrite what this one reports.
+ const rec={commandId,sentAt,state:"sent",id:first?.id??"",sent:first?diagPoint(body.marks,first.id):"-"};
+ const note=patch=>{Object.assign(rec,patch);diagNote({edit:rec})};
+ note({});
  const sameTarget=()=>imageId===target.imageId&&(pair?pair.imageId:null)===target.pairImageId&&(ws?ws.id:null)===target.wsId;
  const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId:target.imageId,...(target.pairImageId?{pairImageId:target.pairImageId}:{}),...body,commandId}});
  let result;
@@ -680,11 +705,12 @@ async function editOnServerNow(body,target,commandId){
   }catch{}
   status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
   try{result=await send()}
-  catch(second){throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
+  catch(second){note({state:"no answer: "+String(second.message||second).slice(0,100),ackAt:Date.now()});throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
  }
- if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+ if(result?.isError){note({state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()});throw Error(result.content?.[0]?.text||"tool error");}
  const r=result?.structuredContent;
- if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId)throw Error("Unexpected response");
+ if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId){note({state:"unexpected answer",ackAt:Date.now()});throw Error("Unexpected response");}
+ note({state:r.replayed?"acknowledged (replayed)":"acknowledged",ackAt:Date.now(),returned:diagPoint(r.annotations,rec.id)});
  if(!sameTarget())return r;
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
@@ -1552,6 +1578,7 @@ function applyHostResult(result){
  if(key===hostResultKey)return;
  // The AI working in the background (#81): a one-line note, not a reopened canvas.
  if(meta["estampes/presentation"]==="background"&&!gotResult&&!backgroundShown){showBackground(result,key);return;}
+ diagNote({source:"host result ("+(result?._meta?"_meta":"no _meta")+")",sourceAt:Date.now()});
  applyResult(result);hostResultKey=key;
 }
 let backgroundResult=null,backgroundShown=false;
@@ -2579,7 +2606,8 @@ const documentRef=()=>ws?ws.id:pair?null:imageId;
 // in progress would lose its element).
 const polledSig=()=>JSON.stringify([layers,gestures,objects,baseAsObject,assistantMarks,priorUserMarks,userMarks.filter(m=>sentIds.has(m.id)),past.length,future.length,ws?[ws.revision,links,ws.items.map(i=>[i.id,i.objects,i.baseAsObject])]:null]);
 // Returns false when the user is in the middle of something; the caller tries again later.
-const interacting=()=>pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
+let editsInFlight=0,editSerial=0;
+const interacting=()=>editsInFlight>0||pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
 // Saved marks inside the undo/redo stacks follow the server too, so undoing a draft cannot bring back
 // an old version of a mark another viewer moved or deleted. Unsent marks in the stacks stay as they are.
 function reconcileHistory(byId){
@@ -2618,13 +2646,22 @@ function applyPolled(s,id){
 }
 // The poll cannot reach the server: keep showing the last snapshot, say so, and never claim it is saved or current.
 let offlineShown=false;
+const diagText=scope.querySelector("#diag-text");
+if(diagText){const draw=()=>{if(disposed)return;const e=diag.edit;
+ diagText.textContent=["來源: "+(diag.source||"-")+" @"+diagTime(diag.sourceAt),
+  "輪詢: "+diag.polls+" 次, 最近 "+diagTime(diag.pollAt)+(diag.pollError?" 錯誤 "+diag.pollError:" 正常")+"; 已套用 "+diag.applied+" 次 @"+diagTime(diag.appliedAt)+" 版本 "+(diag.revision||"-")+"; 忙碌略過 "+diag.busy+" 過期略過 "+diag.stale,
+  e?"最近修改: "+e.id+" "+e.state+" cmd "+String(e.commandId).slice(0,8)+" 送出 "+diagTime(e.sentAt)+(e.ackAt?" 回覆 "+(e.ackAt-e.sentAt)+"ms":"")+" 送出座標 "+e.sent+" 伺服器回傳 "+(e.returned??"-"):"最近修改: -",
+  "畫面: "+(selected?selected+" "+(()=>{const m=findMark(selected);return m?.points?"("+m.points[0].x.toFixed(3)+","+m.points[0].y.toFixed(3)+")":m?"("+Number(m.x).toFixed(3)+","+Number(m.y).toFixed(3)+")":"-"})():"（未選取）")].join("\n");};
+ diag.hooks.add(draw);disposers.push(()=>diag.hooks.delete(draw));const box=scope.querySelector("#diag"),st=scope.querySelector("#status");
+ // Tap the status line to show or hide this block (hidden by default, so the layout is unchanged).
+ st?.addEventListener("click",()=>{if(box){box.hidden=!box.hidden;draw();}});draw();}
 function setStale(on){
  on=!!on;if(on===offlineShown||disposed)return;offlineShown=on;
  rootEl.toggleAttribute("data-offline",on);
  const note=scope.querySelector("#offline-note");if(note)note.hidden=!on;
  if(!on)status.textContent="已重新連上伺服器。";
 }
-return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
+return {scope,rootEl,feed:applyHostResult,get editSerial(){return editSerial},documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
  try{cancelGestures()}catch{}
  disposed=true;
@@ -2690,20 +2727,22 @@ const bindings=new Map(); // viewer -> {id, off, applied, pending}
 function flushBinding(v,b){
  if(!b.pending)return;
  if(v.documentRef()!==b.id){b.pending=null;return}
- if(v.applyPolled(b.pending.snapshot,b.id)!==false){b.applied=b.pending.key;b.pending=null}
+ if(b.pending.serial!==v.editSerial){b.pending=null;diagNote({stale:(diag.stale||0)+1});return} // fetched before an edit of this viewer finished
+ if(v.applyPolled(b.pending.snapshot,b.id)!==false){diagNote({applied:diag.applied+1,appliedAt:Date.now(),revision:b.pending.key});b.applied=b.pending.key;b.pending=null}
+ else diagNote({busy:diag.busy+1});
 }
 function bindViewers(){
  for(const [v,b] of [...bindings])if(v.disposed||!viewers.has(v)||v.documentRef()!==b.id){b.off();bindings.delete(v);}
  for(const v of viewers){
   if(v.disposed||bindings.has(v))continue;
   const id=v.documentRef();if(!id)continue;
-  const b={id,applied:null,pending:null};
+  const b={id,applied:null,pending:null,fetchSerial:v.editSerial};
   const take=st=>{
    v.setStale(!!st?.stale);
    if(!st?.snapshot||!st.revision)return;
    const key=st.revision.epoch+":"+st.revision.counter+":"+st.revision.hash;
    if(key===b.applied)return;
-   b.pending={key,snapshot:st.snapshot};flushBinding(v,b);
+   b.pending={key,snapshot:st.snapshot,serial:b.fetchSerial};flushBinding(v,b);
   };
   b.off=docs.subscribe(id,take);
   take(docs.get(id)); // a viewer joining a document the store already knows catches up at once
@@ -2715,7 +2754,9 @@ async function pollNow(){
  if(!host.ready)return null;
  if(polling){pollAgain=true;return null}
  polling=true;
- try{bindViewers();for(const [v,b] of bindings)flushBinding(v,b);return await docs.reconcile();}
+ try{bindViewers();for(const [v,b] of bindings){flushBinding(v,b);b.fetchSerial=v.editSerial}const rep=await docs.reconcile();
+   const e=[...bindings.keys()].map(v=>docs.get(v.documentRef())?.error).find(Boolean);
+   diagNote({polls:diag.polls+1,pollAt:Date.now(),pollError:rep?.failed?String(e||"failed"):""});return rep;}
  finally{polling=false;if(pollAgain){pollAgain=false;queueMicrotask(()=>{pollNow()})}}
 }
 const schedulePoll=()=>{clearTimeout(pollTimer);if(document.hidden)return;pollTimer=setTimeout(async()=>{try{await pollNow()}catch{}schedulePoll()},POLL_MS)};
