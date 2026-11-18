@@ -114,3 +114,17 @@ test("every tool argument naming a canvas or image is classified as taking a Gra
   assert.deepEqual(refuses.sort(), [...IMAGE_ONLY].sort(), "arguments that take only an image");
   await s.stop();
 });
+
+test("with a public URL, an image gets download links and a Graph gets none that would not resolve", { timeout: 120000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  const s = await startCanvasStoreServer(storage, beta, { env: { PUBLIC_BASE_URL: "https://estampes.example.test" } });
+  t.after(() => s.kill());
+  await s.enable(GRAPH);
+  const image = await s.upload("#335577");
+  assert.ok((await s.call("present_visual", { imageId: image })).structuredContent.exports?.image, "an image keeps its links");
+  const { id } = await newGraph(s);
+  const shown = await s.call("present_visual", { imageId: id });
+  assert.equal(shown.structuredContent.exports, undefined);
+  assert.doesNotMatch(JSON.stringify(shown), /\/export\/[0-9a-f]{16}\//, "no image or marks link for a Graph");
+  await s.stop();
+});

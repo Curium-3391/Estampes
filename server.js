@@ -458,7 +458,8 @@ const userEditsText = (edits) => edits.length
 // With an access key the links are signed, so an image hash alone is not
 // enough to download a picture.
 const exportLink = (hex, file) => publicUrl() + "/export/" + hex + "/" + file + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, hex, file) : "");
-const exportLinks = (imageId) => publicUrl() ? {
+// Download links serve an image's working copy and its marks; a Graph has no image, so it gets none (yet).
+const exportLinks = (imageId) => publicUrl() && /^img:/.test(imageId) ? {
   image: exportLink(imageId.slice(4), "image.jpg"),
   marks: exportLink(imageId.slice(4), "marks.svg"),
 } : undefined;

@@ -40,3 +40,33 @@ test("a solid background is a rect, not an image; Graph axes are paths and text"
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("a Graph document (gph:) opens in the widget on its colour, with its marks, and is polled as itself", { skip: noPython || noBrowser, timeout: 60000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph"]);
+    const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph", color: "#fbf8f1" } });
+    const id = (JSON.stringify(r.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0];
+    assert.ok(id, "a Graph id");
+    const ui = await s.open({ imageId: id });
+    await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    await s.call("present_visual", { imageId: id, annotations: [{ id: "g1", type: "rect", x: .2, y: .2, x2: .4, y2: .4, label: "g1" }], findings: [{ id: "g1", note: "on a Graph" }] });
+    for (let i = 0; i < 40 && !(await inner.evaluate(() => document.querySelectorAll(".finding-row").length)); i++) {
+      await inner.evaluate(() => window.estampesSurface?.pollNow?.());
+      await new Promise((ok) => setTimeout(ok, 150));
+    }
+    const seen = await inner.evaluate(() => ({
+      fill: document.querySelector('#surface rect[data-base="solid"]').getAttribute("fill"),
+      images: document.querySelectorAll("#surface image").length,
+      rows: document.querySelectorAll(".finding-row").length,
+      ref: JSON.stringify(window.estampesSurface?.viewers()[0]?.documentRef() ?? null),
+    }));
+    assert.equal(seen.fill, "#fbf8f1");
+    assert.equal(seen.images, 0, "no <image> element");
+    assert.equal(seen.rows, 1, "the mark reached the widget through its poll");
+    assert.match(seen.ref, new RegExp(id.replace(":", ":")), "the viewer is bound to the Graph, not to another canvas");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
