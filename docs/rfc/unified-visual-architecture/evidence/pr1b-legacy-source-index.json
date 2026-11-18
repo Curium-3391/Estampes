@@ -38,7 +38,10 @@
     "src/modules/runtimes/wasm.js",
     "src/modules/router.js",
     "src/modules/lifecycle.js",
-    "public/module-store.html"
+    "public/module-store.html",
+    "src/modules/admin.js",
+    "src/oauth.js",
+    "src/modules/json-schema.js"
   ],
   "files": [
     {
@@ -472,12 +475,22 @@
     },
     {
       "date": "2026-11-18",
-      "authorizedBy": "User approved the UVA Phase 4A plan (2026-11-18, 「照你說的做」), which lists amendment records for sealed files touched by each 4A PR, graph/index.js included",
+      "authorizedBy": "User approved the UVA Phase 4A plan (2026-11-18, \u300c\u7167\u4f60\u8aaa\u7684\u505a\u300d), which lists amendment records for sealed files touched by each 4A PR, graph/index.js included",
       "reason": "UVA Phase 4A-3: the graph module reads axes and function plots through the plot context adapter (src/modules/plot-context.js) instead of the raw object list; capabilities, parser and sampler unchanged",
       "files": [
         "src/builtin-modules/graph/index.js"
       ],
       "previousSha256": "457d58cd294e3917a93c0f75fec165c87cbd43d8f1ab77a6650b5ab54f340307"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User explicitly authorized (2026-11-19 thread \u4fee\u5fa9\u7b2c\u4e09\u65b9\u6a21\u7d44\u9a57\u6536\u554f\u984c\u4e26\u5be9\u67e5\u64f4\u5145\u76f8\u5bb9\u6027) adding these three files to authorizedIntegrationSeams",
+      "reason": "Wording only: schema messages say '1 character'/'1 item', and the admin approve and access-key hints no longer assume Docker; other legacy source fingerprints stay intact",
+      "files": [
+        "src/modules/admin.js",
+        "src/oauth.js",
+        "src/modules/json-schema.js"
+      ]
     }
   ]
 }
