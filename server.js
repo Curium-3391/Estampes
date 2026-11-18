@@ -3244,9 +3244,9 @@ if (wantCanvasStore && !canvasStore) {
 // The key is printed once, when it is made; afterwards only where it lives.
 if (keyInfo.source === "generated" || keyInfo.source === "memory") {
   log("warn", "[auth] generated an access key. Connector URL: https://<your host>/mcp?key=" + keyInfo.key +
-    (keyInfo.path ? " (saved in " + keyInfo.path + "; read it again with: docker compose exec estampes cat " + keyInfo.path + ")" : " (not saved: no storage; it changes on restart)"));
+    (keyInfo.path ? " (saved in " + keyInfo.path + "; read it again with: cat " + keyInfo.path + ", or in Docker: docker compose exec estampes cat " + keyInfo.path + ")" : " (not saved: no storage; it changes on restart)"));
 } else if (keyInfo.source === "file") {
-  log("info", "[auth] access key loaded from " + keyInfo.path + " (docker compose exec estampes cat " + keyInfo.path + ")");
+  log("info", "[auth] access key loaded from " + keyInfo.path + " (read it with: cat " + keyInfo.path + ", or in Docker: docker compose exec estampes cat " + keyInfo.path + ")");
 } else if (keyInfo.source === "open") {
   log(config.requireKey ? "warn" : "info", "[auth] no access key: anyone who can reach /mcp can use this server" +
     (config.requireKey ? " (ESTAMPES_ALLOW_OPEN=1)" : ""));
