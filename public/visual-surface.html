@@ -682,7 +682,10 @@ function editOnServer(args){
 }
 async function editOnServerNow(body,target,commandId){
  const sentAt=Date.now(),first=body.marks?.[0];
- diagNote({edit:{commandId,sentAt,state:"sent",id:first?.id??"",sent:first?diagPoint(body.marks,first.id):"-"}});
+ // One record per command: a second viewer's edit in flight cannot overwrite what this one reports.
+ const rec={commandId,sentAt,state:"sent",id:first?.id??"",sent:first?diagPoint(body.marks,first.id):"-"};
+ const note=patch=>{Object.assign(rec,patch);diagNote({edit:rec})};
+ note({});
  const sameTarget=()=>imageId===target.imageId&&(pair?pair.imageId:null)===target.pairImageId&&(ws?ws.id:null)===target.wsId;
  const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId:target.imageId,...(target.pairImageId?{pairImageId:target.pairImageId}:{}),...body,commandId}});
  let result;
@@ -697,12 +700,12 @@ async function editOnServerNow(body,target,commandId){
   }catch{}
   status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
   try{result=await send()}
-  catch(second){throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
+  catch(second){note({state:"no answer: "+String(second.message||second).slice(0,100),ackAt:Date.now()});throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
  }
- if(result?.isError){diagNote({edit:{...diag.edit,state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()}});throw Error(result.content?.[0]?.text||"tool error");}
+ if(result?.isError){note({state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()});throw Error(result.content?.[0]?.text||"tool error");}
  const r=result?.structuredContent;
- if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId){diagNote({edit:{...diag.edit,state:"unexpected answer",ackAt:Date.now()}});throw Error("Unexpected response");}
- diagNote({edit:{...diag.edit,state:r.replayed?"acknowledged (replayed)":"acknowledged",ackAt:Date.now(),returned:diagPoint(r.annotations,diag.edit?.id)}});
+ if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId){note({state:"unexpected answer",ackAt:Date.now()});throw Error("Unexpected response");}
+ note({state:r.replayed?"acknowledged (replayed)":"acknowledged",ackAt:Date.now(),returned:diagPoint(r.annotations,rec.id)});
  if(!sameTarget())return r;
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
