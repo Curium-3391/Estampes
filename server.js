@@ -993,6 +993,7 @@ function makeServer() {
           throw new Error("links, removeLinks and side:'right' need a paired view (pairImage, pairImageUrl or pairImageId)");
         }
         if (paired && (scene || views.length || marksFile)) throw new Error("A paired view needs two real images and does not take scene, views or marksFile");
+        if (paired && imageId && !/^img:/.test(imageId)) throw new Error("A paired view needs two images; a Graph (gph:) cannot be one side of a pair yet. Show the Graph alone with imageId");
         if (image || imageUrl) imageId = (await loadImageInput({ image, imageUrl })).imageId;
         if (paired) {
           if (pairImage || pairImageUrl) pairImageId = (await loadImageInput({ image: pairImage, imageUrl: pairImageUrl })).imageId;
