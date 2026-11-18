@@ -40,8 +40,13 @@ async function setup() {
   const base = "https://github.com/ex/mods/releases/latest/download/";
   // GitHub-like: release URLs redirect to a storage host.
   const files = {
-    [base + "estampes-index.json"]: { redirect: "https://objects.example-cdn.net/idx?sig=1" },
-    "https://objects.example-cdn.net/idx?sig=1": Buffer.from(JSON.stringify(index)),
+    [base + "estampes-index.json"]: { redirect: "https://objects.example-cdn.net/release-assets/123/idx-uuid?sig=1" },
+    "https://objects.example-cdn.net/release-assets/123/idx-uuid?sig=1": Buffer.from(JSON.stringify(index)),
+    // Like GitHub: the index is served from an opaque storage path, while each
+    // package is reached through its own name next to the *original* index URL.
+    [base + "lab-1.0.0.estpkg.json"]: { redirect: "https://objects.example-cdn.net/lab-1.0.0.estpkg.json" },
+    [base + "lab-1.1.0.estpkg.json"]: { redirect: "https://objects.example-cdn.net/lab-1.1.0.estpkg.json" },
+    [base + "other.estpkg.json"]: { redirect: "https://objects.example-cdn.net/other.estpkg.json" },
     "https://objects.example-cdn.net/lab-1.0.0.estpkg.json": a1,
     "https://objects.example-cdn.net/lab-1.1.0.estpkg.json": a2,
     "https://objects.example-cdn.net/other.estpkg.json": b,
@@ -114,11 +119,11 @@ test("sync refuses a changed key, a swapped package and a size mismatch", async 
   // The publisher's account is taken over and a new key signs a new index.
   const other = generateSigningKey();
   const evil = pkg(other, "pub", "org.example.lab", "9.0.0");
-  files["https://objects.example-cdn.net/idx?sig=1"] = Buffer.from(JSON.stringify(buildIndex({ publisher: { name: "Example" }, keyId: "pub", privateKeyPem: other.privateKey, scopes: ["org.example"], packages: [] })));
+  files["https://objects.example-cdn.net/release-assets/123/idx-uuid?sig=1"] = Buffer.from(JSON.stringify(buildIndex({ publisher: { name: "Example" }, keyId: "pub", privateKeyPem: other.privateKey, scopes: ["org.example"], packages: [] })));
   let r = await sources.sync("ex");
   assert.match(r[0].error, /different key/);
   // Same key, but the hosted package file was replaced by another one of the right size... or not.
-  files["https://objects.example-cdn.net/idx?sig=1"] = Buffer.from(JSON.stringify(index));
+  files["https://objects.example-cdn.net/release-assets/123/idx-uuid?sig=1"] = Buffer.from(JSON.stringify(index));
   files["https://objects.example-cdn.net/lab-1.1.0.estpkg.json"] = evil;
   r = await sources.sync("ex");
   assert.ok(r.find((x) => x.id === "org.example.lab").error);

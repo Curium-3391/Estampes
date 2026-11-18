@@ -1,20 +1,20 @@
 # Modules
 
-Estampes core is a shared canvas: you, GPT and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
+Estampes core is a shared canvas: you, the AI (ChatGPT or Claude) and tools look at the same picture, point at it, annotate it and check claims about it. A **module** adds a capability that produces or analyses things on that canvas, such as plotting a function. Modules extend how people and AI interact, not what GPT can do in general: email or search belong to ChatGPT's own apps.
 
 Status: this page describes what is implemented on `main` (0.20.1 and later): the contract, capability profiles, the built-in Graph, calculator ([CAS](CAS.md)) and plate-solving modules, the Store, managed packages and package sources ([Distributing modules](modules/DISTRIBUTION.md)), declarative, WebAssembly and http modules, background jobs (including `present: false` runs that do not reopen the canvas), info cards, and panels in the workbench. Not implemented: an OCR module, and anything marked planned or "still to come" below. Section headings that name a version say when the feature arrived, not the current state. Live-ChatGPT testing of the newer parts is recorded in the [changelog](../CHANGELOG.md) and each feature's page; where a page says it was not executed, it was not.
 
 ## How it fits together
 
 ```
-GPT ── execute_module ──▶ router ──▶ module (returns data only)
+AI ── execute_module ──▶ router ──▶ module (returns data only)
                              │            │ scene operations
 user ─ Store / canvas ─▶ lifecycle        ▼
                           audit      core: validate, apply all-or-nothing,
                                      revision, provenance, render ──▶ canvas
 ```
 
-- The model sees five fixed tools. Enabling a module never changes the tool list, so there is nothing to reconnect.
+- The model sees a fixed set of module tools: `open_module_store`, `list_modules`, `get_module_capabilities`, `execute_module`, `get_module_job` and `prepare_module_change`. Enabling or installing a module never changes the tool list, so there is nothing to reconnect.
 - A module never touches canvas state. It returns scene operations; the core validates them, assigns ids and draws with its own renderer. Modules cannot ship HTML, scripts or SVG.
 - Changing what is enabled takes a **plan** the user confirms in the Store. The model can prepare a plan but cannot approve it: committing needs a one-time consent token delivered only to the Store widget.
 
@@ -24,12 +24,22 @@ Estampes's own format (not an MCP standard). Validated strictly: unknown fields,
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Reverse-DNS name such as `org.estampes.graph`. A name, not proof that the publisher owns the domain. |
-| `version`, `coreCompatibility` | Module version; range of Estampes versions it works with (for example `>=0.10.0 <1.0.0`). |
-| `runtime` | `builtin` (ships with Estampes), `declarative` (scene-operation templates, no code), `wasm` (a WebAssembly file inside a signed package), `http` (a described request to an approved external service). |
-| `permissions` | What it may do, granted when enabled (below). |
-| `capabilities[]` | `id`, description, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, `examples` (`description`, `params`, and for tests `expect` and, http only, `mockResponse`; see [Testing modules](modules/TESTING.md#http-specifics)). |
-| `network`, `secrets` | Reserved for adapters: hosts it may call with a description of what data leaves, and named secrets the administrator provides. |
+| `schema` | Always `estampes.module/1`. |
+| `id` | Reverse-DNS name such as `org.estampes.graph` (3 to 6 dot-separated parts). A name, not proof that the publisher owns the domain. |
+| `name`, `nameI18n` | Display name (at most 60 characters) and optional translations by language code (`{"zh-TW": "…"}`, at most 8). The Store currently shows `name` only. |
+| `description`, `descriptionI18n` | At most 400 characters, with the same optional translations. |
+| `version`, `coreCompatibility` | Module version (`MAJOR.MINOR.PATCH`); range of Estampes versions it works with (for example `>=0.10.0 <1.0.0`). |
+| `publisher` | `{name, url?}` (`url` must be https). |
+| `license`, `source`, `homepage` | License text; optional https links. |
+| `category` | One of `math`, `diagram`, `analysis`, `text`, `astronomy`, `electronics`, `utility`, `other` (default `other`). Any other value is refused. |
+| `runtime` | `{kind, entry, abi?}`. `kind`: `builtin` (ships with Estampes; refused in packages), `declarative` (scene-operation templates, no code; `entry` is a label such as `operations`), `wasm` (a WebAssembly file inside a signed package; `entry` is the file, `abi` is `estampes.wasm/1`), `http` (a described request to an approved external service). |
+| `permissions` | What it may do, granted when enabled (below). At most 12. |
+| `limits` | Optional `timeMs` (50–30000), `memoryMb` (1–256), `outputKb` (1–1024) and `jobMs` (1000–1800000, async capabilities only). |
+| `capabilities[]` | `id`, `title`, `description`, `inputSchema` (JSON Schema subset), `target` (`none`, `canvas`, `canvas-or-new`), optional narrower `permissions`, optional `profile` / `profileI18n` (below), `async`, `examples` (`description`, `params`, and for tests `expect` and, http only, `mockResponse`; see [Testing modules](modules/TESTING.md#http-specifics)), and the body that fits the runtime: `operations` (declarative) or `request` and `response` (http). |
+| `network`, `secrets` | For `http` modules: `network` lists the hosts it may call (`allow`) and says what data leaves (`dataFlow`); `secrets` names API keys the administrator provides. See [Talking to external services](#talking-to-external-services-http-modules). |
+| `dependencies`, `panels` | Optional: other modules it needs, and panels it offers inside the Visual Surface (data only; `kind` names a renderer that ships with Estampes). |
+
+Rules the manifest check enforces across fields: a capability whose `target` is not `none` needs `canvas.write`; `target: canvas-or-new` additionally needs `workspace.write` (it may create a new blank canvas); `declarative` capabilities carry `operations`, `http` capabilities carry `request`, and no other runtime may; a capability's own `permissions` must be a subset of the module's.
 
 ## Capability profile
 
@@ -52,7 +62,8 @@ An input schema says what a capability accepts, not whether it is the right tool
 | `canvas.write` | low | Add objects and change its own |
 | `workspace.write` | low | Create new blank canvases |
 | `asset.read.selected` | medium | Read pixels of the target image or region |
-| `module.storage.write` | medium | Keep its own data on the server |
+| `module.storage.write` | medium | Keep its own data on the server. Reserved: the permission can be declared and is shown, but no module storage API exists yet, so holding it does nothing today |
+| `cas.compute` | medium | Use the local SymPy calculator service (sends only expressions; no internet) |
 | `network.request.approved` | high | Send requests to its listed hosts (may upload images) |
 | `module.secrets` | high | Use administrator-provided secrets |
 
@@ -62,7 +73,7 @@ The grant is stored when you approve enabling. The router checks it on every cal
 
 `object.create` (type, props, optional `ref` that later operations in the same batch can use as `$ref`, `visibility` `public` or `scratch`), `object.update`, `object.delete` (`cascade` for dependants), `object.publish` (scratch to public). Rules enforced by the core: at most 64 operations and 200 objects per canvas, props validated per object type, `expectedRevision` for optimistic concurrency, no changes in a locked layer, a module may change only objects it created, and the user may change anything.
 
-Object types (full property lists below): `axes-2d` (ranges, grid, `π` ticks, labels), `function-plot` (`expression`, `domain`, `frame` = an axes object) and `shape` (polyline, polygon, dots, circle, rect, arrow, point, text, in canvas or frame space). `info-card` is a fact sheet, not a drawing: a title and up to 24 rows of label, value and an optional https link, listed beside the canvas (see [Info cards](#info-cards)). Coordinates of canvas objects are normalized to the canvas (top left origin) like marks; frame space uses the axes' numeric range with y up.
+Object types (full property lists below): `axes-2d` (ranges, grid, `π` ticks, labels), `function-plot` (`expression`, `domain`, `frame` = an axes object) and `shape` (polyline, polygon, dots, circle, rect, arrow, point, text, in canvas or frame space). `info-card` is a fact sheet, not a drawing: a title and up to 24 rows of label, value and an optional https link, listed beside the canvas (see [Info cards](#info-cards)). Coordinates of canvas objects are normalized to the canvas (top left origin) like marks; frame space uses the axes' numeric range with y up. The next section spells out what that means for a module author.
 
 Function plots support `props.labelMode`: `auto` renders `y = ` followed by the current expression; `custom` preserves `props.label` (an empty or omitted label hides it). With no mode, an existing label—including an empty or formula-looking label—is treated as custom; without a label the mode is auto. Setting `label` on an update selects custom unless `labelMode` is also supplied. Switching to auto discards the stored label. Core applies these rules to module operations and direct Canvas edits, even when Graph is disabled. Modes persist with the objects. Graph's `plot_function` and `update_plot` accept `labelMode`; to migrate an old plot explicitly, call `update_plot` with `{ "object": "o2", "labelMode": "auto" }`.
 
@@ -77,6 +88,18 @@ Properties, as validated by the core (`src/scene/objects.js`); unknown propertie
 | `image` | for built-in modules (a PNG layer) |
 
 `style` is `{color, width (0.2–12), dash (solid, dashed, dotted), opacity (0.1–1)}`. Colours are `#RRGGBB` or one of `gold`, `blue`, `red`, `green`, `yellow`, `magenta`, `cyan`, `white`, `black`, `gray`, `ink`.
+
+### Coordinate semantics (what the renderer does today)
+
+This describes existing behaviour; it is the contract module authors can rely on, and it will not change for existing modules.
+
+- **Canvas space.** `x` and `y` are fractions of the canvas **width** and **height** respectively, origin at the top left, y growing downwards. `(0.5, 0.5)` is the centre of any canvas.
+- **Values outside 0..1 are accepted and drawn clipped.** The core only requires finite numbers: a bar from `x = 0.9` to `1.3` is stored as given and the part beyond the right edge is simply not visible. This is intended (a shape may be partly off canvas), so a module that must stay visible should clamp itself, for example `{"$calc": "min(x + l, 0.98)", "with": {...}}`, or narrow its `inputSchema` (`minimum`/`maximum`).
+- **x and y have different units.** One unit of x is the canvas width, one unit of y its height, so on a 1600×1000 canvas a step of 0.1 is 160 px across and 100 px down. Lengths and angles computed from fractions are distorted on non-square canvases: an arrow from `(0.1, 0.1)` to `(0.3, 0.3)` is drawn at about 32° on 1600×1000, not 45°. For a true angle θ with canvas aspect `a = height / width` (0.625 for 1600×1000), use `dy = dx · tan(θ) / a`. Declarative templates cannot read the canvas size, so a module that needs real angles takes the aspect as a parameter; `try` uses 1600×1000 (aspect 0.625) unless `--image` is given, and WebAssembly modules receive `canvas.width` and `canvas.height` in the request. Only `arrow` heads and `text` line spacing are corrected for the aspect by the renderer.
+- **Sizes are in canvas units.** `size` (text), `style.width` and `r` are measured on a canvas that is 1000 units wide, whatever its pixel size, so they scale with the picture. `circle.r` is a fraction of the canvas width (a circle stays round); in frame space it is in the frame's x units.
+- **Text anchor.** A `text` shape is drawn with its left edge at `x` (`anchor: start`) and its vertical centre at `y`; `\n` starts a new line below. There is no align property, so a label cannot be centred or right-aligned without knowing its rendered width; place it beside a point rather than on it, or estimate roughly 0.6 × `size` canvas units per character.
+- **Frame space** (`space: "frame"`) uses the numeric ranges of the referenced `axes-2d` object with y up, and is not clipped to the axes region: only function plots are clipped to their axes, so a frame-space shape outside the range is drawn outside the axes (it is still clipped by the canvas edge). Keep such shapes inside the range yourself.
+- Not available today, and not promised: reading the canvas size in a template (for example a `$canvas` placeholder) or a text `align` property. They would be additions, not changes to the rules above.
 
 **Scratch objects** are the model's working notes: they are in the model's preview image but not drawn for the user or exported until published. This is not secrecy: scratch objects are still readable by the module that made them and by the model.
 
@@ -93,7 +116,7 @@ Expressions: `x`, numbers, `+ - * / ^`, implicit multiplication (`2x`, `3(x+1)`,
 
 ## Storage and audit
 
-With `ESTAMPES_STORAGE_DIR`, module data lives in `<storage>/modules/`: `registry.json` (state and grants) and `audit.jsonl` (plans, approvals, refusals, runs and failures; secrets never appear). Without storage, state lives in memory and modules start disabled again after a restart. Objects are part of each canvas's `canvas.json`, so they survive a restart even if a module is later disabled; disabling stops new runs but does not delete anything.
+With `ESTAMPES_STORAGE_DIR`, module data lives in `<storage>/modules/`: `registry.json` (state and grants) and `audit.jsonl` (plans, approvals, refusals, runs and failures; secrets never appear). Without storage, state lives in memory and modules start disabled again after a restart. Objects belong to the canvas (with the default UVA store they are saved in the canvas document inside the UVA store; the legacy store keeps them in the canvas's `canvas.json`; see [Architecture](ARCHITECTURE.md#state-and-persistence)), so they survive a restart even if a module is later disabled; disabling stops new runs but does not delete anything.
 
 ## Installing packages
 
@@ -118,7 +141,7 @@ Then open the Store: the package appears under installable packages. Press insta
 | install, update, purge | your confirmation **and** administrator approval from the server |
 | enable, disable, rollback, uninstall | your confirmation (enabling high-risk permissions also needs administrator approval) |
 
-What the server checks before a version becomes active: size (2 MB) and safe file paths; the manifest and `coreCompatibility`; a runtime this server has (`declarative`; `builtin` is refused for packages and built-in ids cannot be replaced); the digest; a signature by a key listed in `<storage>/modules/trusted-keys.json` whose `scopes` cover the module id (keys only publish under their own prefixes); then the module's examples run through the same checks as `execute_module` on a throwaway canvas. A failure at any step leaves the old version active.
+What the server checks before a version becomes active: size (2 MB) and safe file paths; the manifest and `coreCompatibility`; a runtime this server has (`declarative`, `wasm` or `http`; `builtin` is refused for packages and built-in ids cannot be replaced); the digest; a signature by a key listed in `<storage>/modules/trusted-keys.json` whose `scopes` cover the module id (keys only publish under their own prefixes); then the module's examples run through the same checks as `execute_module` on a throwaway canvas. A failure at any step leaves the old version active.
 
 Layout under `<storage>/modules/`:
 
