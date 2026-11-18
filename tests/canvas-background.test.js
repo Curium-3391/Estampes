@@ -159,3 +159,25 @@ test("render: a promoted base (baseAsObject) is not drawn even when the canvas i
   assert.equal(data[3], 0, "transparent where the base would be");
   assert.equal(out.metadata.included.base, false);
 });
+
+test("render verification crops show the solid colour; the stored image stays untouched", async () => {
+  const { renderVerification } = await import("../src/mark-render.js");
+  const { visibleEntry } = await import("../src/visual/background.js");
+  const png = await sharp({ create: { width: 200, height: 200, channels: 3, background: "#ff0000" } }).png().toBuffer();
+  const { registerImage } = await import("../src/image-store.js");
+  const e = await registerImage(png, { source: "chat-file", fileName: "red.png" });
+  const mark = { id: "m1", type: "rect", x: 0.4, y: 0.4, x2: 0.6, y2: 0.6, color: "blue" };
+  assert.equal(visibleEntry(e), e, "an image canvas is used as it is");
+  e.background = { kind: "solid", color: "#00ff00" };
+  const check = await renderVerification(visibleEntry(e), [mark], ["m1"]);
+  const bytes = Buffer.from(check.image?.data ?? check.data ?? check.png ?? "", "base64");
+  const { data } = await sharp(bytes.length ? bytes : check.buffer).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  let green = 0, red = 0;
+  for (let i = 0; i < data.length; i += 3) {
+    if (data[i] < 40 && data[i + 1] > 215 && data[i + 2] < 40) green++;
+    if (data[i] > 215 && data[i + 1] < 40 && data[i + 2] < 40) red++;
+  }
+  assert.ok(green > data.length / 3 / 4, "the crop shows the solid colour (" + green + " green pixels)");
+  assert.equal(red, 0, "nothing of the stored image shows");
+  assert.deepEqual([...e.pixels.subarray(0, 3)], [255, 0, 0], "the stored pixels are unchanged");
+});

@@ -78,7 +78,7 @@ import { createRevisionTracker, classifyChange, MAX_POLLED_DOCUMENTS } from "./s
 import { COMMAND_ID, commandHash, judgeCommand, commandRecords, createCommandGate } from "./src/visual/commands.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
-import { backgroundPayload } from "./src/visual/background.js";
+import { backgroundPayload, visibleEntry } from "./src/visual/background.js";
 import { createCasClient } from "./src/cas/client.js";
 import { createNotebooks } from "./src/cas/notebooks.js";
 import { createSurfaceStore } from "./src/surface/store.js";
@@ -608,7 +608,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
   for (const side of ["left", "right"]) {
     const entry = sides[side], own = canvasMarks(entry);
     const drawn = changed.filter((id) => annotations.some((a) => a.id === id && (a.side ?? "left") === side));
-    if (verify && drawn.length) checks.push({ side, check: await renderVerification(entry, own, drawn) });
+    if (verify && drawn.length) checks.push({ side, check: await renderVerification(visibleEntry(entry), own, drawn) });
     ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, side })));
   }
   const pending = linkList.filter(needsReview);
@@ -699,7 +699,7 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
     const drawn = changed.filter((c) => c.item === id && annotations.some((a) => a.id === c.id && (a.item ?? items[0].id) === id)).map((c) => c.id);
     if (!drawn.length) continue;
     const own = canvasMarks(entry);
-    if (verify) checks.push({ item: id, check: await renderVerification(entry, own, drawn) });
+    if (verify) checks.push({ item: id, check: await renderVerification(visibleEntry(entry), own, drawn) });
     ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, item: id })));
   }
   const pending = linkList.filter(needsReview);
@@ -1040,7 +1040,7 @@ function makeServer() {
         }
         const resolved = canvasMarks(entry), layers = canvasLayers(entry);
         const drawn = changed.filter(id => annotations.some(a => a.id === id));
-        const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
+        const check = verify && drawn.length ? await renderVerification(visibleEntry(entry), resolved, drawn) : null;
         const ink = inkReport(resolved.filter(m => drawn.includes(m.id)), entry);
         const exports = exportLinks(imageId);
         const shown = await shownBase(entry, INLINE_IMAGE_CHARS);

@@ -40,3 +40,25 @@ export function backgroundPayload(entry) {
   const b = canvasBackground(entry);
   return b.kind === "solid" ? { background: b, width: entry.width, height: entry.height, full: true } : null;
 }
+
+// The canvas as the user sees it, for code that draws marks over the base
+// pixels (render verification). A solid canvas gets plain pixels of its colour;
+// the stored image and its bytes are untouched. Pixel analysis tools keep
+// reading the stored image.
+const solidPixels = new WeakMap();
+export function visibleEntry(entry) {
+  const b = canvasBackground(entry);
+  if (b.kind !== "solid" || entry.baseAsObject) return entry;
+  const key = entry.width + "x" + entry.height + b.color;
+  let cached = solidPixels.get(entry);
+  if (cached?.key !== key) {
+    const rgb = [1, 3, 5].map((i) => parseInt(b.color.slice(i, i + 2), 16));
+    const pixels = Buffer.alloc(entry.width * entry.height * 3);
+    for (let i = 0; i < pixels.length; i += 3) { pixels[i] = rgb[0]; pixels[i + 1] = rgb[1]; pixels[i + 2] = rgb[2]; }
+    cached = { key, pixels };
+    solidPixels.set(entry, cached);
+  }
+  const view = Object.create(entry);
+  view.pixels = cached.pixels; view.channels = 3;
+  return view;
+}
