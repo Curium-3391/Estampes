@@ -306,7 +306,7 @@ function createHost(){
    const height=Math.ceil(root.getBoundingClientRect().height),width=Math.ceil(root.scrollWidth);root.style.height=prev;
    // Room for everything but the picture, so the picture can use the rest of a frame the user made big.
    const surf=document.querySelector("#surface");
-   if(surf){const chrome=Math.round(Math.min(600,Math.max(120,height-surf.getBoundingClientRect().height)));root.style.setProperty("--chrome",chrome+"px")}
+   if(surf){const chrome=Math.round(Math.max(0,height-surf.getBoundingClientRect().height));root.style.setProperty("--chrome",chrome+"px")}
    const key=width+"x"+height;if(!height||key===lastSize)return;lastSize=key;
    try{notify("ui/notifications/size-changed",{width,height})}catch{}};
   const schedule=()=>{if(queued)return;queued=true;requestAnimationFrame(send)};
