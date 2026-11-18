@@ -140,7 +140,7 @@ What any option has to respect:
 
 Fallback chain for server renders under C: per-glyph through fontconfig, in the order *pack the person's locale prefers → other installed packs → base DejaVu*. A glyph that nothing covers stays a box, and the render result should then say which scripts were missing, so the model does not claim a label is readable.
 
-**Recommendation:** replace the image variant in D7 with **B now** and **C in P5**. B needs only documentation and solves CJK for a self-hosted owner today. C is the long-term, in-app answer, and its manifest kind should be designed into module system v2 next to module locales (§6.3), not added to `estampes.module/1`. Official font packs (Noto CJK TC/SC/JP/KR, Noto Arabic, Noto Devanagari) would be the first entries, signed by the project. If C ships, B stays as the escape hatch for fonts nobody packaged. This changes decision D7, so it waits for the maintainer.
+**Recommendation:** replace the image variant in D7 with **B now** and **C in P5**. B needs only documentation and solves CJK for a self-hosted owner today. C is the long-term, in-app answer, and its manifest kind should be designed into module system v2 next to module locales (§6.3), not added to `estampes.module/1`. Official font packs (Noto CJK TC/SC/JP/KR, Noto Arabic, Noto Devanagari) would be the first entries, signed by the project. If C ships, B stays as the escape hatch for fonts nobody packaged. The maintainer accepted this on 2026-11-18, replacing the image variant in D7.
 
 ## 8. Test strategy
 
@@ -203,7 +203,7 @@ All ten were decided on 2026-11-18 by the maintainer, who accepted every recomme
 | D4 | Language of messages posted as the user (T2) | (a) Person's locale plus English structured block. (b) Always English. (c) Keep zh | **(a).** The chat shows them as the person's words, and the block keeps the model's reading stable |
 | D5 | Model-facing text (tool descriptions and results) | Keep English and invariant vs localize | **Keep English and invariant**, guarded by a golden test |
 | D6 | Default names stored in documents | Key plus literal cache (new docs only) vs keep literal | **Key plus literal cache, new documents only.** No migration of old data |
-| D7 | Fonts for server-side rendering | Add Noto to the main image / separate `-fonts` image variant / do nothing | **Verify first (Phase 0). If glyphs are missing, use a build-arg variant** so the default image stays small |
+| D7 | Fonts for server-side rendering | Add Noto to the main image / separate `-fonts` image variant / do nothing | **Revised 2026-11-18 (§7.1):** a small Latin font in the base image (bug fix), plus a mounted font folder now, plus Store font packs in module system v2 (P5). No image variant |
 | D8 | Third-party module runtime strings | Design now inside module system v2 vs later | **Make it a required section of the P5 design now.** Implement later |
 | D9 | Timing versus UVA | Start Phase 1 now / after open Phase 4A PRs / after P5 | **Phase 0 now. Phase 1 after the open 4A PRs merge**, per panel, with a short freeze on `visual-surface.html` |
 | D10 | RTL | Full mirroring in v1 vs bidi-safe user text now, mirroring when the first RTL locale ships | **Bidi-safe user text now. Mirroring later** |
