@@ -120,6 +120,28 @@ Changes:
 - **Text metrics.** Anything that measures text width for layout (label boxes, `labelWidth`) must not assume one character equals one cell. Use `Intl.Segmenter` for grapheme counts and real measurement in the widget.
 - **Line breaking.** CJK needs no spaces, and Thai needs dictionary breaking. Rely on browser and Pango line breaking. Never `split(" ")` user text for wrapping.
 
+### 7.1 Extra fonts: image variant, mounted folder, or font packs in the Store
+
+Question from the maintainer (2026-11-18): could fonts be installed through the module Store instead of a separate image variant (D7)?
+
+What any option has to respect:
+
+- **A small Latin font stays in the base image regardless.** Core text (grid labels, numbers, ids, English labels) must render without any optional add-on, and the Docker build checks it. Optional fonts only add scripts.
+- **Server renders use fontconfig.** `sharp`/librsvg resolves fonts through fontconfig, which falls back per glyph across every installed font. The base image's config (`fontconfig-config`) already scans `/usr/share/fonts`, `/usr/local/share/fonts` and the user's font folder. So any option only has to put font files in one of those folders, or in a folder named by a generated `fonts.conf`. Fontconfig reads the font list when the process starts, so a newly added font may need a server restart. Picking up fonts without a restart (a render worker process, or a rescan) is to be verified.
+- **Widgets are unaffected.** The canvas in the browser uses the viewer's own fonts. Only server renders (`render_canvas`, PNG exports, verification crops) need these fonts.
+- **Fonts are untrusted binaries.** FreeType parses them inside the server process, and font parsers have had security bugs. Any font from outside the image is a security-sensitive input in the sense of `AGENTS.md`.
+- **Size and licence.** Noto Sans CJK is about 16–20 MB per weight and region, and about 100 MB for the full set. Redistributed fonts must carry their licence (OFL 1.1 or Apache 2.0 for Noto and DejaVu).
+
+| Option | How | Pros | Cons |
+| --- | --- | --- | --- |
+| A. Image variant (D7 as decided) | A build arg that adds CJK fonts, or a `-cjk` image tag | Simple. Fonts come from Debian packages | One more image to build, test and publish for every release. Users must switch images. One combination per variant (CJK, Arabic, Indic… multiply) |
+| B. Mounted font folder | Document a read-only volume, for example `./fonts:/usr/local/share/fonts:ro` in `compose.yaml` | Works with no code change once the base fonts fix lands. Any font, any script. Survives image updates. Trust is the owner's own choice of files | Manual: the user downloads font files. No in-app discovery |
+| C. Font packs in the Store | A new package kind carrying font files, a licence and a coverage list (scripts or languages), installed under `/data/fonts/<pack>/`, with the core generating a `fonts.conf` that includes those folders | One image. Install from the canvas. Per-language preference order can be generated (for example zh-TW prefers Noto Sans CJK TC over SC for Han glyphs). The Store can warn that a label uses a script no installed font covers | Needs a new manifest runtime kind (`fonts` or `assets`), a change to the public `estampes.module` format, so it belongs in **module system v2 (P5)**. Binary untrusted input needs signature, source allowlist, size cap, licence check and coverage check at install. Downloads go through the module egress rules |
+
+Fallback chain for server renders under C: per-glyph through fontconfig, in the order *pack the person's locale prefers → other installed packs → base DejaVu*. A glyph that nothing covers stays a box, and the render result should then say which scripts were missing, so the model does not claim a label is readable.
+
+**Recommendation:** replace the image variant in D7 with **B now** and **C in P5**. B needs only documentation and solves CJK for a self-hosted owner today. C is the long-term, in-app answer, and its manifest kind should be designed into module system v2 next to module locales (§6.3), not added to `estampes.module/1`. Official font packs (Noto CJK TC/SC/JP/KR, Noto Arabic, Noto Devanagari) would be the first entries, signed by the project. If C ships, B stays as the escape hatch for fonts nobody packaged. This changes decision D7, so it waits for the maintainer.
+
 ## 8. Test strategy
 
 All of these run in `npm test` or a new `npm run i18n:check`. None needs a live host.
