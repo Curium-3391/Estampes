@@ -2,6 +2,8 @@
 // same result, two viewers on one document, and what an unchanged poll costs.
 // (Fake host, not live ChatGPT or Claude.)
 import test from "node:test";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { startStack, noPython, noBrowser } from "./helpers/widget-host.js";
 
@@ -137,5 +139,39 @@ test("edits are sent one at a time: a newer edit waits while an older one is bei
     assert.ok(ids.length >= 3, "first sent twice, then the second one: " + JSON.stringify(ids));
     assert.equal(ids[0], ids[1], "the retry reuses the id");
     assert.notEqual(ids[2], ids[0], "the next edit comes after, with its own id");
+  } finally { await s.close(); }
+});
+
+test("recreating the widget from an old tool result restores the newer canvas from the server and creates nothing", { skip: noPython || noBrowser, timeout: 60000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph"]);
+    const id = await plot(s, "x^2");
+    // The result the host delivered when the widget was first built (before any mark existed).
+    const first = await s.call("present_visual", { imageId: id });
+    const ui = await s.open({ imageId: id, result: async () => first });
+    await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
+    let inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => window.estampesSurface.viewers()[0].documentRef(), null, { timeout: 20000 });
+    await s.call("present_visual", { ...mark("ai-1", 0.2), imageId: id });
+    await inner.evaluate(() => window.estampesSurface.pollNow());
+    await until(inner, () => document.querySelectorAll(".finding-row").length === 1, null, "the first mark");
+    const logLines = async () => ((await s.call("get_visual_state", { imageId: id, history: 100 })).structuredContent.history ?? []).length;
+    // Every directory in the storage root (images, canvases, documents): recreation must not add one.
+    const docs = async () => JSON.stringify((await readdir(s.dir, { recursive: true, withFileTypes: true })).filter((e) => e.isDirectory() && !/uva-pending|\.tmp/.test(join(e.parentPath ?? e.path, e.name))).map((e) => join(e.parentPath ?? e.path, e.name).slice(s.dir.length)).sort());
+    const before = await logLines(), docsBefore = await docs();
+    assert.ok(before > 0 && JSON.parse(docsBefore).length > 0, "the checks read something");
+
+    // The host throws the widget away and builds a new one from the same OLD tool result.
+    await ui.reload();
+    await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
+    inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => window.estampesSurface?.viewers()[0]?.documentRef(), null, { timeout: 20000 });
+    await inner.evaluate(() => window.estampesSurface.pollNow());
+    await until(inner, () => document.querySelectorAll(".finding-row").length === 1, null, "the newer mark after recreation");
+
+    assert.equal(await logLines(), before, "recreating the widget wrote nothing to the canvas history");
+    assert.equal(await docs(), docsBefore, "and created no document");
+    assert.deepEqual(ui.net.sent, [], "and sent no edit");
   } finally { await s.close(); }
 });
