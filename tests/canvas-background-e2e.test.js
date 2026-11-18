@@ -40,3 +40,127 @@ test("a solid background is a rect, not an image; Graph axes are paths and text"
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("a Graph document (gph:) opens in the widget on its colour, with its marks, and is polled as itself", { skip: noPython || noBrowser, timeout: 60000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph"]);
+    const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph", color: "#fbf8f1" } });
+    const id = (JSON.stringify(r.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0];
+    assert.ok(id, "a Graph id");
+    const ui = await s.open({ imageId: id });
+    await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    await s.call("present_visual", { imageId: id, annotations: [{ id: "g1", type: "rect", x: .2, y: .2, x2: .4, y2: .4, label: "g1" }], findings: [{ id: "g1", note: "on a Graph" }] });
+    for (let i = 0; i < 40 && !(await inner.evaluate(() => document.querySelectorAll(".finding-row").length)); i++) {
+      await inner.evaluate(() => window.estampesSurface?.pollNow?.());
+      await new Promise((ok) => setTimeout(ok, 150));
+    }
+    const seen = await inner.evaluate(() => ({
+      fill: document.querySelector('#surface rect[data-base="solid"]').getAttribute("fill"),
+      images: document.querySelectorAll("#surface image").length,
+      rows: document.querySelectorAll(".finding-row").length,
+      ref: JSON.stringify(window.estampesSurface?.viewers()[0]?.documentRef() ?? null),
+    }));
+    assert.equal(seen.fill, "#fbf8f1");
+    assert.equal(seen.images, 0, "no <image> element");
+    assert.equal(seen.rows, 1, "the mark reached the widget through its poll");
+    assert.match(seen.ref, new RegExp(id.replace(":", ":")), "the viewer is bound to the Graph, not to another canvas");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
+
+test("switching the widget from an image to a Graph drops the image's download links", { skip: noPython || noBrowser, timeout: 90000 }, async () => {
+  const s = await startStack({ env: { PUBLIC_BASE_URL: "https://estampes.example.test" } });
+  try {
+    await s.enable(["org.estampes.graph"]);
+    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const imageId = (JSON.stringify(img.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+    const ui = await s.open({ imageId });
+    await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    await inner.waitForFunction(() => !document.querySelector("#export-image").hidden, null, { timeout: 20000 });
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    assert.deepEqual(await inner.evaluate(() => [document.querySelector("#export-image").hidden, document.querySelector("#export-marks").hidden]), [true, true],
+      "the Graph shows no download buttons that would fetch the previous image");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
+
+test("switching from an image with the calculator in front to a Graph shows the Graph's canvas, not a dead workbench", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph", "org.estampes.cas"]);
+    const first = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
+    const imageId = first.structuredContent.imageId;
+    const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" }) });
+    await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    await ui.frame.locator("#panel-canvas svg#surface").waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(await ui.frame.locator(".calc").count(), 0, "the previous image's calculator is not left in front of the Graph");
+    assert.equal(await ui.frame.locator('[data-panel="p:canvas"] .wb-head').isVisible(), false, "no window controls that would act on a surface the Graph does not have");
+    assert.equal(await ui.frame.locator("#wb-bar", { hasText: "工作台暫時無法使用" }).count(), 0, "no workbench error for a Graph");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
+
+test("a workbench change still on its way when the widget switches to a Graph does not bring the old workbench back", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph", "org.estampes.cas"]);
+    const first = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
+    const imageId = first.structuredContent.imageId;
+    const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" }) });
+    await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    // A layout change for the image, whose answer arrives only after the switch.
+    const held = ui.net.holdReply("surface_apply");
+    await ui.frame.locator('.wb-panel:not([data-panel="p:canvas"]) [data-act="minimize"]').first().click();
+    await held.reached;
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    held.release();
+    await ui.page.waitForTimeout(500);
+    assert.equal(await ui.frame.locator(".calc").count(), 0, "the late answer for the image does not put its calculator back");
+    assert.equal(await ui.frame.locator("#panel-canvas svg#surface").isVisible(), true);
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
+
+test("a calculator plot still on its way when the widget switches to a Graph does not apply the image's plot result to the Graph", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph", "org.estampes.cas"]);
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+    const calc = await s.call("execute_module", { module: "org.estampes.cas", capability: "calculate", params: { operation: "differentiate", text: "sin(x^2)", variable: "x" } });
+    const notebook = calc.structuredContent.data.notebookId;
+    const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator", notebook }) });
+    await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^3" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    const held = ui.net.holdReply("surface_cas");
+    await ui.frame.locator("button", { hasText: "畫在 Graph" }).first().click();
+    await held.reached;
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    await ui.page.waitForTimeout(300);
+    const before = await inner.evaluate(() => document.querySelector("#surface").innerHTML);
+    held.release();
+    await ui.page.waitForTimeout(800);
+    assert.doesNotMatch(await inner.evaluate(() => document.querySelector("#status")?.textContent ?? ""), /計算機的結果已畫成/, "the image's plot result is not applied to the Graph");
+    assert.equal(await inner.evaluate(() => document.querySelector("#surface").innerHTML), before, "the Graph keeps its own drawing");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
