@@ -1425,7 +1425,7 @@ function makeServer() {
   // shows; marks are drawn with present_visual as before.
   const WorkspaceRef = z.string().trim().min(4).max(80)
     .describe("ws:<id> for a workspace; an imageId for a single canvas; imageId+pairImageId (joined with +) for a paired view");
-  const CanvasKey = z.string().regex(/^(img:[0-9a-f]{16}(#c[0-9a-f]{8,16})?|gph:[0-9a-f]{16})$/).describe("An image's own canvas (its imageId), a copy (imageId#c<hex>), or a Graph document (gph:<hex>)");
+  const CanvasKey = z.string().regex(/^(img|gph):[0-9a-f]{16}(#c[0-9a-f]{8,16})?$/).describe("An image's own canvas (its imageId), a Graph document (gph:<hex>), or a copy of either (<id>#c<hex>)");
   const IdempotencyKey = z.string().trim().min(1).max(80).optional()
     .describe("Any unique string for this change; repeating a call with the same key (e.g. after a timeout) returns the first result instead of applying it twice");
   const itemsText = (doc, check) => doc.items.map((it) => {

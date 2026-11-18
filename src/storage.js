@@ -378,6 +378,11 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
 
 // A copy of a canvas (workspace Copy), or null when there is none on disk.
 export async function readSet(imageId, setId) {
+  // A copy of a Graph lives only in the UVA store, like the Graph itself.
+  if (isGraphId(imageId)) {
+    const record = canvases && SET_ID.test(setId) ? await canvases.read(imageId + "#" + setId) : null;
+    return record?.canvas?.setId === setId ? record.canvas : null;
+  }
   if (canvases && hexOk(imageId) && SET_ID.test(setId)) {
     const key = imageId + "#" + setId, record = await canvases.read(key);
     if (record) {
