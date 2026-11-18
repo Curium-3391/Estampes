@@ -634,19 +634,52 @@ async function serverStep(action){
 }
 // In a workspace an edit names its item where a paired view names its side.
 const asItems=list=>list?.map(({side,...x})=>({...x,...(side?{item:side}:{})}));
-async function editOnServer(args){
- if(!ready||!imageId)throw Error("尚未連線");
+const newCommandId=()=>{try{if(crypto.randomUUID)return crypto.randomUUID()}catch{}return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,12)};
+// Edits go one at a time: if one loses its answer and is retried, a newer edit must not be applied before it
+// (two opacity changes could otherwise end with the older value). A failed edit does not block the next one.
+let editTail=Promise.resolve();
+function editOnServer(args){
+ if(!ready||!imageId)return Promise.reject(Error("尚未連線"));
+ // The request and its target are fixed when the user acts, not when its turn comes: if the viewer shows another
+ // document while this edit waits, or while its answer is lost, it still goes to the document the user edited,
+ // and the answer is not applied to the new one.
  const body=ws?{...args,layers:asItems(args.layers),marks:asItems(args.marks),remove:asItems(args.remove),workspaceId:ws.id}:args;
  for(const k of ["layers","marks","remove"])if(body[k]===undefined)delete body[k];
- const result=await request("tools/call",{name:"edit_visual_canvas",arguments:{imageId,...(pair?{pairImageId:pair.imageId}:{}),...body}});
+ const target={imageId,pairImageId:pair?pair.imageId:null,wsId:ws?ws.id:null};
+ // One id per user action, reused when the answer is lost: the server applies it once (UVA lost-ACK handling).
+ const commandId=newCommandId();
+ const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});return run;
+}
+async function editOnServerNow(body,target,commandId){
+ const sameTarget=()=>imageId===target.imageId&&(pair?pair.imageId:null)===target.pairImageId&&(ws?ws.id:null)===target.wsId;
+ const send=()=>request("tools/call",{name:"edit_visual_canvas",arguments:{imageId:target.imageId,...(target.pairImageId?{pairImageId:target.pairImageId}:{}),...body,commandId}});
+ let result;
+ try{result=await send()}
+ catch(first){
+  // No answer: the edit may or may not have arrived. Ask the server by command id, then send the same id again;
+  // the server answers a known id with the current canvas instead of applying it twice.
+  let known=null;
+  try{
+   const st=await request("tools/call",{name:"commands_get_status",arguments:{documentId:target.wsId||target.imageId,commandIds:[commandId]}});
+   known=st?.structuredContent?.commands?.[0]?.status??null;
+  }catch{}
+  status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
+  try{result=await send()}
+  catch(second){throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
+ }
  if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
  const r=result?.structuredContent;
- if(r?.kind!=="estampes.canvas_edit"||r.imageId!==imageId)throw Error("Unexpected response");
+ if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId)throw Error("Unexpected response");
+ if(!sameTarget())return r;
  applyServerCanvas(r.annotations,r.layers,r.links);
  unsentEdits.push(...(Array.isArray(r.edits)?r.edits:[]).slice(0,30));
  if(r.history&&typeof r.history==="object")serverHistory=r.history;
  const lastEdit=Array.isArray(r.edits)?r.edits[r.edits.length-1]:null;
- if(lastEdit?.side)lastEditKey=lastEdit.side;else if(!pair&&!ws)lastEditKey="left";
+ // A replayed answer carries no edits (the server applied them earlier): take the side/item from what was asked,
+ // so Undo still goes to the canvas the user edited last.
+ const asked=[...(body.marks||[]),...(body.layers||[]),...(body.remove||[])].at(-1);
+ const askedKey=body.history?(body.history.item??body.history.side):(asked?(asked.item??asked.side??(pair?"left":null)):null);
+ if(lastEdit?.side)lastEditKey=lastEdit.side;else if(r.replayed&&askedKey)lastEditKey=askedKey;else if(!pair&&!ws)lastEditKey="left";
  return r;
 }
 // The server's canvas after an edit. Unsent marks stay as they are.
