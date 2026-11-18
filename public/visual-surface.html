@@ -30,7 +30,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 .context-panel select,.context-panel textarea,.context-panel input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #8887;background:Canvas;color:CanvasText;font:inherit;font-size:.89rem}
 .context-panel textarea{min-height:66px;resize:vertical}
 .context-panel .hint{font-size:.75rem;color:GrayText;margin:0}
-#surface{display:block;width:100%;height:auto;max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
+#surface{display:block;width:100%;height:auto;min-height:min(320px,60vh);max-height:640px;border:1px solid #8886;border-radius:10px;touch-action:none;user-select:none;cursor:crosshair}
 #offline-note{font-size:.83rem;margin:.2rem 0;padding:.3rem .5rem;border:1px solid #C26A00;border-radius:6px;color:CanvasText;background:color-mix(in srgb,#C26A00 14%,Canvas)}
 #offline-note[hidden]{display:none}
 #status{font-size:.83rem;min-height:1.3rem;overflow-wrap:anywhere}
@@ -292,10 +292,25 @@ function createHost(){
   if(msg.method==="ui/notifications/tool-result")emit("tool-result",msg.params);
  });
  window.addEventListener("openai:set_globals",()=>emit("globals"));
+ // MCP Apps hosts size the widget frame from ui/notifications/size-changed;
+ // without it the frame keeps a default or stale size (clipped content, or a
+ // frame that tracks whatever image is loaded). Report the real content size.
+ let sizeWatching=false,lastSize="";
+ function reportSize(){
+  if(sizeWatching||typeof ResizeObserver!=="function")return;sizeWatching=true;
+  let queued=false;
+  const send=()=>{queued=false;
+   const root=document.documentElement,prev=root.style.height;root.style.height="max-content";
+   const height=Math.ceil(root.getBoundingClientRect().height),width=Math.ceil(root.scrollWidth);root.style.height=prev;
+   const key=width+"x"+height;if(!height||key===lastSize)return;lastSize=key;
+   try{notify("ui/notifications/size-changed",{width,height})}catch{}};
+  const schedule=()=>{if(queued)return;queued=true;requestAnimationFrame(send)};
+  new ResizeObserver(schedule).observe(document.body);schedule();
+ }
  async function start(){
   try{const init=await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen","pip"]},protocolVersion:"2026-01-26"});
    hostName=init?.hostInfo?.name??"";
-   notify("ui/notifications/initialized",{});ready=true;waiters.splice(0).forEach(f=>f());}
+   notify("ui/notifications/initialized",{});ready=true;waiters.splice(0).forEach(f=>f());reportSize();}
   catch(err){emit("failed",err)}
  }
  return {on,whenReady,request,notify,start,get ready(){return ready},get name(){return hostName}};
