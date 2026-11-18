@@ -30,12 +30,25 @@ ENV NODE_ENV=production \
 # The default goes in the older variable name, the lowest-priority one, so a
 # deployment that sets ESTAMPES_UVA_BETA_DIR or ESTAMPES_UVA_DIR keeps its store.
 # needs the OS flock backend for its writer lease.
-# fonts-dejavu-core + fontconfig-config: server-side renders (render_canvas,
-# PNG exports) draw label text with system fonts; without any, every letter
-# becomes a missing-glyph box. DejaVu covers Latin, Greek, Cyrillic and basic
-# Arabic/Hebrew in about 3 MB. CJK fonts are much larger and are a separate
-# image variant (docs/rfc/i18n/README.md, D7).
-RUN apt-get update && apt-get install -y --no-install-recommends util-linux fonts-dejavu-core fontconfig-config \
+# Fonts for server-side renders (render_canvas, PNG exports): sharp draws
+# label text with system fonts, and without any every letter becomes a
+# missing-glyph box. English and Traditional Chinese are built in:
+# fonts-dejavu-core (Latin, Greek, Cyrillic, basic Arabic/Hebrew, about 3 MB)
+# and Noto Sans CJK Regular only (one collection file, about 20 MB; the bold
+# and serif files of fonts-noto-cjk are removed). 99-estampes-han.conf puts its
+# Traditional Chinese face right after each DejaVu family, so Han characters
+# in labels default to TC glyphs rather than the SC/JP/KR faces. Other scripts: mount
+# a fonts folder (docs/DEPLOYMENT.md "Fonts for other languages").
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux fonts-dejavu-core fontconfig-config fonts-noto-cjk \
+ && find /usr/share/fonts -name 'Noto*CJK*' ! -name 'NotoSansCJK-Regular.ttc' -delete \
+ && test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc \
+ && printf '%s\n' '<?xml version="1.0"?>' '<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">' \
+    '<fontconfig>' \
+    '<match target="pattern"><test qual="any" name="family"><string>DejaVu Sans</string></test><edit name="family" mode="append"><string>Noto Sans CJK TC</string></edit></match>' \
+    '<match target="pattern"><test qual="any" name="family"><string>DejaVu Serif</string></test><edit name="family" mode="append"><string>Noto Sans CJK TC</string></edit></match>' \
+    '<match target="pattern"><test qual="any" name="family"><string>DejaVu Sans Mono</string></test><edit name="family" mode="append"><string>Noto Sans CJK TC</string></edit></match>' \
+    '</fontconfig>' \
+    > /etc/fonts/conf.d/99-estampes-han.conf \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -44,7 +57,7 @@ COPY src ./src
 COPY scripts ./scripts
 COPY public ./public
 # Fail the build if text cannot be rendered (see scripts/check-fonts.mjs).
-RUN node scripts/check-fonts.mjs
+RUN node scripts/check-fonts.mjs --require cjk,cjk-tc
 # Run as the image's unprivileged "node" user (uid 1000). /data is created
 # here so a new named volume starts owned by that user.
 RUN chmod -R u=rwX,go=rX /app \
