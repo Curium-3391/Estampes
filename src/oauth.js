@@ -155,7 +155,7 @@ export function createOAuth({ getKey, fetchClientDocument = null }) {
       '<form method="post" action="/oauth/authorize">' + hidden +
       '<label>Access key<br><input type="password" name="access_key" autocomplete="current-password" required autofocus></label>' +
       '<br><button type="submit" name="decision" value="allow">允許</button> <button type="submit" name="decision" value="deny">拒絕</button></form>' +
-      '<p class="small">找 key：伺服器啟動紀錄裡的連接網址 <code>?key=</code> 後面那段，或 Docker 的 <code>docker compose exec estampes cat /data/access-key</code>。</p>' +
+      '<p class="small">找 key：伺服器啟動紀錄裡的連接網址 <code>?key=</code> 後面那段，或存放資料夾裡的 <code>access-key</code> 檔（Docker 用 <code>docker compose exec estampes cat /data/access-key</code>）。</p>' +
       "</body></html>";
   }
 

@@ -2,7 +2,9 @@
 // anything the chat can carry. The model, the widget and ChatGPT never see
 // the admin key. The administrator approves a plan on the server itself:
 //
-//   docker compose exec estampes node scripts/estampes-module.js approve <planId>
+//   node scripts/estampes-module.js approve <planId>
+//
+// (inside Docker, prefix it with: docker compose exec estampes)
 //
 // which writes a small file proving knowledge of <storage>/admin-key (or
 // ESTAMPES_ADMIN_KEY). Committing a plan that needs administrator approval
