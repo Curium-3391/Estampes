@@ -58,3 +58,20 @@ test("a small frame keeps the old 640px canvas limit", { skip: noBrowser, timeou
     assert.equal(max, 640);
   } finally { await stack.close(); }
 });
+
+test("canvas height changes ease in, and the mark still lands under the pointer in a wide frame", { skip: noBrowser, timeout: 60000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1700, height: 1200 } });
+    await frame.locator("#surface").waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+    const tr = await frame.locator("#surface").evaluate((el) => getComputedStyle(el).transitionProperty + "|" + getComputedStyle(el).transitionDuration);
+    assert.match(tr, /max-height/);
+    const box = await frame.locator("#surface").boundingBox();
+    const px = box.x + box.width * 0.6, py = box.y + box.height * 0.4;
+    await page.mouse.click(px, py);
+    await page.waitForTimeout(400);
+    const hit = await frame.locator("#surface").evaluate((el, [x, y]) => [...el.querySelectorAll("circle")].some((c) => { const r = c.getBoundingClientRect(); return Math.abs(r.x + r.width / 2 - x) < 3 && Math.abs(r.y + r.height / 2 - y) < 3; }), [px, py]);
+    assert.ok(hit, "a mark sits under the click");
+  } finally { await stack.close(); }
+});

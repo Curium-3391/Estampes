@@ -22,6 +22,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #zoom-level{min-width:3.5em;text-align:center;font-variant-numeric:tabular-nums}#zoom-tools .hint{font-size:.78rem;color:GrayText}
 body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #surface.panning{cursor:grab}
+#surface,#check-view img{transition:max-height .18s ease-out}
+@media(prefers-reduced-motion:reduce){#surface,#check-view img{transition:none}}
 #context-details{margin:12px 0;border:1px solid #8885;border-radius:10px;padding:0 12px}
 #context-details>summary{cursor:pointer;padding:10px 0;font-size:.86rem}
 #context-details .context-panel{padding:0;margin:0 0 10px;border:0}
