@@ -152,8 +152,10 @@ export function restoreCanvas(entry, data) {
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => setKeyOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   entry.baseAsObject = !!data.baseAsObject;
-  // Only a valid solid background is kept; anything else means the image.
-  if (isSolid(data)) entry.background = canvasBackground(data); else delete entry.background;
+  // Only a valid solid background is kept; anything else means the image. The
+  // value is always the entry's own: a set copy is made with Object.create(base),
+  // so deleting it would expose the base's background instead.
+  entry.background = canvasBackground(data);
   entry.deletedObjectBatches = Array.isArray(data.deletedObjectBatches) ? data.deletedObjectBatches.slice(-10) : [];
   restoreObjects(entry, data.objects);
   entry.sceneRevision = Number.isInteger(data.sceneRevision) ? data.sceneRevision : 0;

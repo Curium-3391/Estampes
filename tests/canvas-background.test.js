@@ -83,3 +83,42 @@ test("Graph axes, plots and labels are vector primitives, never images", async (
   assert.equal(kinds.has("image"), false, "kinds: " + [...kinds].join(","));
   for (const k of kinds) assert.ok(["path", "circle", "text"].includes(k), k);
 });
+
+test("a set copy restored without a background shows its image, not its base's colour", async () => {
+  useStorageDir("");
+  const base = await createBlankCanvas({ width: 300, height: 200 });
+  base.background = { kind: "solid", color: "#203040" };
+  const fork = Object.create(base);
+  restoreCanvas(fork, { imageId: base.imageId, marks: [] });
+  assert.equal(isSolid(fork), false, "the fork's own value shadows the base");
+  assert.equal("background" in serializeCanvas(fork), false);
+  assert.equal(isSolid(base), true);
+});
+
+test("bundles carry a solid background; a different colour is not reused", async () => {
+  const { clearImages, registerImage } = await import("../src/image-store.js");
+  const { clearWorkspaces, getWorkspace, workspaceItems } = await import("../src/workspace.js");
+  const { exportBundle, importBundle } = await import("../src/bundle.js");
+  clearImages(); clearWorkspaces(); useStorageDir("");
+  const png = await sharp({ create: { width: 300, height: 200, channels: 3, background: "#eeeeee" } }).png().toBuffer();
+  const entry = await registerImage(png, { source: "chat-file", fileName: "any.png" });
+  entry.background = { kind: "solid", color: "#203040" };
+  // Not empty, so an import compares instead of restoring.
+  applySceneOps(entry, [{ op: "object.create", type: "axes-2d", props: { xRange: [-1, 1], yRange: [-1, 1] } }], { author: "user" });
+  const { buffer } = await exportBundle(entry.imageId);
+  entry.background = { kind: "solid", color: "#ffffff" };
+  const other = await importBundle(buffer, { collision: "reuse" });
+  assert.equal(other.summary[0].how, "copied");
+  assert.equal(other.verified, true, JSON.stringify(other.mismatch));
+  const [copy] = (await workspaceItems(await getWorkspace(other.workspace.id))).map((it) => it.entry);
+  assert.deepEqual(canvasBackground(copy), { kind: "solid", color: "#203040" }, "the copy keeps the exported colour");
+  assert.deepEqual(canvasBackground(entry), { kind: "solid", color: "#ffffff" }, "the local canvas is not overwritten");
+  // The same colour on another canvas: identical, so reused.
+  const png2 = await sharp({ create: { width: 300, height: 200, channels: 3, background: "#dddddd" } }).png().toBuffer();
+  const twin = await registerImage(png2, { source: "chat-file", fileName: "b.png" });
+  twin.background = { kind: "solid", color: "#405060" };
+  applySceneOps(twin, [{ op: "object.create", type: "axes-2d", props: { xRange: [-1, 1], yRange: [-1, 1] } }], { author: "user" });
+  const same = await importBundle((await exportBundle(twin.imageId)).buffer, { collision: "reuse" });
+  assert.equal(same.summary[0].how, "reused");
+  assert.equal(same.verified, true, JSON.stringify(same.mismatch));
+});

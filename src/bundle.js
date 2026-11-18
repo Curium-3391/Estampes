@@ -16,6 +16,7 @@
 // the bundle. Import checks the format, every hash and size, rejects unsafe
 // paths and oversized content, validates each mark, and never overwrites:
 // canvases that already have different marks get an independent copy.
+import { canvasBackground, isSolid } from "./visual/background.js";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
 import { zipFiles, unzipFiles } from "./zip.js";
@@ -161,6 +162,8 @@ function cleanSet(raw, where, warnings) {
   }
   return {
     key: raw.key, imageId: raw.imageId, marks, layers, links: linkMap, linkCount: links,
+    // A solid background (UVA Phase 4A) travels with its set; anything else means the image.
+    background: isSolid(raw) ? canvasBackground(raw) : undefined,
     rejections: Array.isArray(raw.rejections) ? raw.rejections.filter((r) => r && typeof r.kind === "string" && r.from).slice(0, 200) : [],
     gestureDecisions: Array.isArray(raw.gestureDecisions) ? raw.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string").slice(0, 100) : [],
     objects: Array.isArray(raw.objects) ? raw.objects.slice(0, 500) : undefined,
@@ -188,6 +191,7 @@ const sameState = (entry, def) => canonicalById(canvasMarks(entry)) === canonica
   && JSON.stringify(entry.rejections ?? []) === JSON.stringify(def.rejections)
   && JSON.stringify(entry.gestureDecisions ?? []) === JSON.stringify(def.gestureDecisions)
   && objectsOf(entry) === bundleObjects(def)
+  && JSON.stringify(canvasBackground(entry)) === JSON.stringify(canvasBackground(def))
   && linkSigs([...(entry.pairLinks ?? new Map()).values()].map((m) => [...m.values()])) === linkSigs(Object.values(def.links));
 
 export async function importBundle(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
@@ -278,7 +282,8 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
   }
   for (const [key, { def, image, base, own, how }] of plan) {
     const data = { imageId: image, marks: def.marks, layers: def.layers, rejections: def.rejections, gestureDecisions: def.gestureDecisions,
-      ...(def.objects !== undefined ? { objects: def.objects, sceneRevision: def.sceneRevision, objectSeq: def.objectSeq } : {}), links: {}, derivedFrom: def.derivedFrom };
+      ...(def.objects !== undefined ? { objects: def.objects, sceneRevision: def.sceneRevision, objectSeq: def.objectSeq } : {}),
+      ...(def.background ? { background: def.background } : {}), links: {}, derivedFrom: def.derivedFrom };
     let target;
     if (how === "restored") { restoreCanvas(base, data); target = base; }
     else if (how === "reused") target = base;
