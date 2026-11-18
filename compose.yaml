@@ -37,8 +37,9 @@ services:
       # out with scripts/uva-to-legacy.mjs.
       - uva-beta:/uva-beta
       - cas-run:/run/estampes-cas
-      # Extra fonts for labels in server-side renders (Chinese, Japanese,
-      # Korean...): put .ttf/.otf/.ttc files in ./fonts, uncomment, restart.
+      # Extra fonts for labels in server-side renders (English and Traditional
+      # Chinese are built in; for other scripts put .ttf/.otf/.ttc files in
+      # ./fonts, uncomment, restart.
       # See docs/DEPLOYMENT.md "Fonts for other languages".
       # - ./fonts:/usr/local/share/fonts:ro
     # Least privilege: nothing but /data (and a small /tmp) is writable, no

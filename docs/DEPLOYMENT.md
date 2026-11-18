@@ -65,9 +65,9 @@ PDF page rendering is optional: build with `docker compose build --build-arg EST
 
 ### Fonts for other languages
 
-Labels in server-side renders (`render_canvas`, PNG exports, verification crops) are drawn with the fonts inside the container. The image ships a small font (DejaVu) for Latin, Greek, Cyrillic and basic Arabic/Hebrew. Chinese, Japanese and Korean labels need a font you add. The canvas in the browser is not affected: it uses the viewer's own fonts.
+Labels in server-side renders (`render_canvas`, PNG exports, verification crops) are drawn with the fonts inside the container. The image has **English and Traditional Chinese built in**: DejaVu (Latin, Greek, Cyrillic, basic Arabic/Hebrew) and Noto Sans CJK Regular, with Han characters defaulting to its Traditional Chinese glyphs. Japanese and Korean text also renders with that font, but Han characters use Traditional Chinese shapes. Other scripts (Thai, Devanagari and so on) need a font you add. The canvas in the browser is not affected: it uses the viewer's own fonts.
 
-1. Make a `fonts` folder next to `compose.yaml` and put font files in it (`.ttf`, `.otf` or `.ttc`). For Traditional Chinese, for example, `NotoSansCJKtc-Regular.otf` from [Noto CJK](https://github.com/notofonts/noto-cjk) (SIL Open Font License).
+1. Make a `fonts` folder next to `compose.yaml` and put font files in it (`.ttf`, `.otf` or `.ttc`). For example, a [Noto](https://notofonts.github.io/) font for the script you need (SIL Open Font License).
 2. In `compose.yaml`, uncomment `- ./fonts:/usr/local/share/fonts:ro` under the `estampes` volumes.
 3. Restart: `docker compose up -d`.
 

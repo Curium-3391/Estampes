@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const run = (env = {}) => spawnSync(process.execPath, ["scripts/check-fonts.mjs"], { encoding: "utf8", env: { ...process.env, ...env } });
+const run = (env = {}, args = []) => spawnSync(process.execPath, ["scripts/check-fonts.mjs", ...args], { encoding: "utf8", env: { ...process.env, ...env } });
 
 test("server-side text renders with the fonts on this machine", () => {
   const r = run();
@@ -22,4 +22,16 @@ test("the check fails when no font is available", () => {
   const r = run({ FONTCONFIG_FILE: conf });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.match(r.stdout, /fonts FAILED/);
+});
+
+test("--require cjk fails when only a Latin font is available", () => {
+  const dejavu = "/usr/share/fonts/truetype/dejavu";
+  if (!fs.existsSync(dejavu)) return; // the negative case needs DejaVu alone; skip where it is not installed
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "estampes-latinonly-"));
+  const conf = path.join(dir, "fonts.conf");
+  fs.writeFileSync(conf, `<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>${dejavu}</dir><cachedir>${dir}/cache</cachedir></fontconfig>`);
+  assert.equal(run({ FONTCONFIG_FILE: conf }).status, 0, "Latin alone passes");
+  const r = run({ FONTCONFIG_FILE: conf }, ["--require", "cjk"]);
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /cjk/);
 });
