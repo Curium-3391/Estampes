@@ -140,8 +140,10 @@ export async function resolveRef(ref) {
   const text = String(ref ?? "").trim();
   if (WORKSPACE_ID.test(text)) return { ref: text, doc: await loadWorkspace(text), legacy: false };
   const ids = text.split("+").map((s) => s.trim());
+  if (ids.length === 1 && isGraphId(ids[0])) return { ref: ids[0], doc: await legacyWorkspace(ids[0]), legacy: true };
+  if (ids.length === 2 && ids.some(isGraphId)) throw new Error("A paired view needs two images; a Graph (gph:) cannot be one side of a pair yet. Put it in a workspace with the image instead");
   if (!ids.length || ids.length > 2 || !ids.every((s) => IMAGE_ID.test(s))) {
-    throw new Error("Not a workspace or canvas: " + JSON.stringify(ref) + " (use ws:<id>, an imageId, or imageId+pairImageId)");
+    throw new Error("Not a workspace or canvas: " + JSON.stringify(ref) + " (use ws:<id>, an imageId or Graph id, or imageId+pairImageId)");
   }
   if (ids[0] === ids[1]) throw new Error("A paired view needs two different images");
   return { ref: ids.join("+"), doc: await legacyWorkspace(ids[0], ids[1]), legacy: true };
@@ -388,6 +390,7 @@ async function planTransfer({ source, target, items, mode = "link", removeFromSo
     if (mode === "link" && same) { skipped.push({ item: it.id, set: it.set, reason: "the target already shows this canvas as " + same.id }); continue; }
     if (mode === "copy" && copied) { skipped.push({ item: it.id, set: it.set, reason: "the target already holds a copy of this canvas (" + copied.setKey + ")" }); continue; }
     if (targetItems.length + add.length >= MAX_ITEMS) throw new Error("The target would hold more than " + MAX_ITEMS + " images");
+    if (mode === "copy" && isGraphId(entry.imageId)) throw new Error("Copies of a Graph (" + entry.imageId + ") are not supported yet; use mode link to show the Graph itself");
     add.push({ from: it, entry, ...setSummary(entry) });
   }
   // Pages of one document shown from two different renders.

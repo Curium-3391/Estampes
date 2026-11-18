@@ -1482,7 +1482,7 @@ focusChoice.addEventListener("change",()=>{selectedFocusId=focusChoice.value;ren
 // every resize, e.g. after a tab click changes the height). Only genuinely
 // new data may reset the view and the user's unsent marks.
 let appliedKey=null;
-const cleanItems=list=>(Array.isArray(list)?list:[]).filter(it=>it&&/^wi-\d{1,4}$/.test(it.id)&&IMAGE_ID.test(it.imageId)).slice(0,24)
+const cleanItems=list=>(Array.isArray(list)?list:[]).filter(it=>it&&/^wi-\d{1,4}$/.test(it.id)&&CANVAS_ID.test(it.imageId)).slice(0,24)
  .map(it=>({id:it.id,imageId:it.imageId,width:Number(it.width),height:Number(it.height),placement:it.placement??{},label:String(it.label??"").slice(0,40),set:typeof it.set==="string"&&it.set.split("#")[0]===it.imageId?it.set:it.copy?null:it.imageId}));
 function applyInput(args){
  if(!args)return;

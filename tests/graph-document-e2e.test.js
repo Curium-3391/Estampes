@@ -96,13 +96,13 @@ test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apa
 // a Graph (gph:) or not. A new tool, or a changed pattern, fails this test until
 // it is classified: a tool that reads pixels must not quietly take a Graph, and
 // a canvas tool must not quietly refuse one.
-const TAKES_GRAPH = ["commands_get_status.documentId", "documents_get_changes.documents", "edit_canvas_text.imageId", "edit_scene_object.imageId",
+const TAKES_GRAPH = ["commands_get_status.documentId", "create_workspace.canvases", "edit_workspace.canvases", "documents_get_changes.documents", "edit_canvas_text.imageId", "edit_scene_object.imageId",
   "edit_visual_canvas.imageId", "edit_visual_layers.imageId", "execute_module.canvas", "get_visual_layers.imageId", "get_visual_state.imageId",
   "load_visual_canvas.imageId", "present_visual.imageId", "render_canvas.imageId", "review_gesture_group.imageId", "review_visual_finding.imageId",
   "review_visual_link.imageId", "validate_visual_annotations.imageId"];
 // Pixel tools, paired views (the right side is an image), and tools whose Graph support comes later (workspaces, surfaces: 4A-4).
-const IMAGE_ONLY = ["add_image_layer.imageId", "add_image_layer.sourceImageId", "assess_image.imageId", "calibrate_scale.imageId", "create_workspace.canvases",
-  "detect_features.imageId", "edit_visual_canvas.pairImageId", "edit_workspace.canvases", "get_derived_view.imageId", "get_surface_state.imageId",
+const IMAGE_ONLY = ["add_image_layer.imageId", "add_image_layer.sourceImageId", "assess_image.imageId", "calibrate_scale.imageId", 
+  "detect_features.imageId", "edit_visual_canvas.pairImageId", "get_derived_view.imageId", "get_surface_state.imageId",
   "get_visual_state.pairImageId", "inspect_image.imageId", "load_visual_canvas.pairImageId", "load_visual_pixels.imageId", "load_visual_region.imageId",
   "manage_surface_panels.imageId", "measure_image.imageId", "overlay_grid.imageId", "present_visual.pairImageId", "process_image.imageId",
   "register_images.imageId", "register_images.otherImageId", "review_visual_link.pairImageId", "surface_apply.imageId", "surface_cas.imageId",
@@ -136,5 +136,60 @@ test("with a public URL, an image gets download links and a Graph gets none that
   const shown = await s.call("present_visual", { imageId: id });
   assert.equal(shown.structuredContent.exports, undefined);
   assert.doesNotMatch(JSON.stringify(shown), /\/export\/[0-9a-f]{16}\//, "no image or marks link for a Graph");
+  await s.stop();
+});
+
+test("Graphs sit in a workspace beside an image: marks per item, restart, refused copies, pairs and bundles", { timeout: 180000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await startCanvasStoreServer(storage, beta, { idle: "0" });
+  t.after(() => s.kill());
+  await s.enable(GRAPH);
+  const image = await s.upload("#335577");
+  const graphs = [(await newGraph(s, "x^2")).id, (await newGraph(s, "sin(x)", { color: "#FBF8F1" })).id, (await newGraph(s, "x^3")).id];
+  const made = await s.call("create_workspace", { name: "mixed", canvases: [...graphs, image] });
+  const wsId = made.structuredContent.workspaceId;
+  assert.match(wsId, /^ws:/);
+  const shown = await s.call("present_visual", { workspaceId: wsId, annotations: [
+    { id: "g1", item: "wi-1", type: "point", x: .2, y: .3, label: "on graph 1" },
+    { id: "g3", item: "wi-3", type: "rect", x: .1, y: .1, x2: .3, y2: .3, label: "on graph 3" },
+    { id: "im", item: "wi-4", type: "point", x: .5, y: .5, label: "on image" }] });
+  const items = shown.structuredContent.workspace.items;
+  assert.deepEqual(items.map((it) => it.imageId), [...graphs, image]);
+  // Each mark lands on its own canvas, and a Graph item shows its axes.
+  assert.deepEqual(await s.labels(graphs[0]), ["on graph 1"]);
+  assert.deepEqual(await s.labels(graphs[1]), []);
+  assert.deepEqual(await s.labels(graphs[2]), ["on graph 3"]);
+  assert.deepEqual(await s.labels(image), ["on image"]);
+  const px = shown._meta["estampes/items"];
+  assert.deepEqual(px.slice(0, 3).map((p) => p.background?.kind), ["solid", "solid", "solid"], "Graph items come as their colour");
+  assert.equal(px[1].background.color, "#fbf8f1");
+  assert.ok(px.slice(0, 3).every((p) => p.objects.some((o) => o.type === "axes-2d")), "and with their axes");
+
+  // A Graph alone, as a workspace source ("from"), and an edit that adds a Graph.
+  const fromGraph = await s.call("create_workspace", { from: [graphs[1]] });
+  assert.deepEqual(fromGraph.structuredContent.items.map((it) => it.set), [graphs[1]]);
+  const added = await s.call("edit_workspace", { workspaceId: wsId, canvases: [(await newGraph(s, "x")).id], expectedRevision: shown.structuredContent.workspace.revision });
+  assert.equal(added.structuredContent.items.length, 5);
+
+  // Not yet: copies of a Graph, a Graph in a paired view, a Graph in a bundle. Each is refused and makes nothing.
+  const copy = await s.raw("merge_workspaces", { target: image, source: graphs[0], mode: "copy" });
+  assert.equal(copy.isError, true);
+  assert.match(JSON.stringify(copy.content), /Copies of a Graph/);
+  const pair = await s.raw("create_workspace", { from: [graphs[0] + "+" + image] });
+  assert.equal(pair.isError, true);
+  assert.match(JSON.stringify(pair.content), /paired view needs two images/);
+  const before = await list(join(storage, "workspaces"));
+  for (const ref of [wsId, graphs[0]]) {
+    const bundle = await s.raw("export_workspace_bundle", { workspace: ref });
+    assert.equal(bundle.isError, true, ref);
+    assert.match(JSON.stringify(bundle.content), /cannot be exported as a bundle yet/);
+  }
+  assert.deepEqual(await list(join(storage, "workspaces")), before, "a refused export of a bare Graph makes no workspace");
+
+  await s.stop();
+  s = await startCanvasStoreServer(storage, beta, { idle: "0" });
+  const back = await s.call("present_visual", { workspaceId: wsId });
+  assert.deepEqual(back.structuredContent.workspace.items.slice(0, 4).map((it) => it.imageId), [...graphs, image], "the workspace comes back after a restart");
+  assert.deepEqual(await s.labels(graphs[2]), ["on graph 3"]);
   await s.stop();
 });
