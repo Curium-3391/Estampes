@@ -224,3 +224,20 @@ function openMenu(id,anchor){
 function closeMenu(){wb.menu?.remove();wb.menu=null;}
 document.addEventListener("pointerdown",e=>{if(wb.menu&&!wb.menu.contains(e.target))closeMenu();});
 new ResizeObserver(()=>{if(!wb.surface)return;const p=wbProfileNow();if(p!==wb.profile){wb.profile=p;renderWB();}}).observe(document.body);
+// A grip under the panel area: ChatGPT gives an inline widget no resize handle, so the
+// area height is the user's to set. Drag to resize, double-click to go back to the default.
+{
+ const KEY="estampes.wbHeight",MIN=360,MAX=3000;
+ const grip=h("div",{id:"wb-height-grip",role:"separator","aria-orientation":"horizontal",tabindex:"0",title:"拖曳調整視窗高度，雙擊還原；鍵盤：上下方向鍵"});
+ wbArea.after(grip);
+ const apply=px=>{if(px==null)wbArea.style.removeProperty("height");else wbArea.style.height=Math.round(Math.min(MAX,Math.max(MIN,px)))+"px";};
+ const save=()=>{try{const v=wbArea.style.height;v?localStorage.setItem(KEY,v):localStorage.removeItem(KEY)}catch{}};
+ try{const v=parseFloat(localStorage.getItem(KEY));if(v>0)apply(v)}catch{}
+ let drag=null;
+ grip.addEventListener("pointerdown",e=>{drag={y:e.clientY,h:wbArea.getBoundingClientRect().height};grip.setPointerCapture(e.pointerId);e.preventDefault();});
+ grip.addEventListener("pointermove",e=>{if(drag)apply(drag.h+e.clientY-drag.y);});
+ const end=()=>{if(drag){drag=null;save()}};
+ grip.addEventListener("pointerup",end);grip.addEventListener("pointercancel",end);
+ grip.addEventListener("dblclick",()=>{apply(null);save()});
+ grip.addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;e.preventDefault();apply(wbArea.getBoundingClientRect().height+(e.key==="ArrowDown"?40:-40));save();});
+}

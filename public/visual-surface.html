@@ -116,6 +116,9 @@ input.reason{font:inherit;font-size:.8rem;padding:3px 7px;border:1px solid #8886
 .wb-tab[aria-selected="true"]{background:#356BD6;color:white;border-color:transparent}
 .wb-launch{display:flex;gap:6px;flex-wrap:wrap}
 #wb-area{position:relative}
+#wb-height-grip{display:none}
+#wb.windows #wb-height-grip{display:block;height:14px;margin-top:4px;border-radius:7px;cursor:ns-resize;touch-action:none;background:linear-gradient(#0000 5px,#8886 5px,#8886 8px,#0000 8px)}
+#wb-height-grip:hover,#wb-height-grip:focus-visible{background:linear-gradient(#0000 4px,#356BD6 4px,#356BD6 9px,#0000 9px);outline:none}
 #wb.windows #wb-area{height:min(78vh,820px);min-height:520px;border:1px dashed #8885;border-radius:12px;overflow:hidden}
 #wb.windows .wb-panel{position:absolute;display:flex;flex-direction:column;border:1px solid #8886;border-radius:12px;background:Canvas;overflow:hidden;box-shadow:0 2px 10px #0003}
 #wb.windows .wb-panel[hidden],#wb.mobile .wb-panel[hidden]{display:none}
@@ -312,7 +315,8 @@ function createHost(){
    const surf=[document.querySelector("#surface"),document.querySelector("#check-view img")].find(e=>e&&e.getBoundingClientRect().height>0);
    if(surf){const chrome=Math.round(Math.max(0,height-surf.getBoundingClientRect().height));root.style.setProperty("--chrome",chrome+"px")}
    const key=width+"x"+height;if(!height||key===lastSize)return;lastSize=key;
-   try{notify("ui/notifications/size-changed",{width,height})}catch{}};
+   try{notify("ui/notifications/size-changed",{width,height})}catch{}
+   try{window.openai?.notifyIntrinsicHeight?.(height)}catch{}};
   const schedule=()=>{if(queued)return;queued=true;requestAnimationFrame(send)};
   new ResizeObserver(schedule).observe(document.body);schedule();
  }
