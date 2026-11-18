@@ -143,7 +143,7 @@ function renderBar(open,lay,mobile,solo){
  bar.push(launch);
  for(const p of open){const pl=lay.placements[p.panelId];
   if(!mobile&&pl?.mode==="minimized"&&p.kind!=="canvas")bar.push(h("button",{class:"wb-chip",onclick:()=>wbLayout({op:"restore",panelId:p.panelId})},"還原："+wbTitle(p)));}
- if(!solo){bar.push(h("button",{class:"wb-chip",title:"把目前這個裝置的面板排回預設位置",onclick:()=>wbLayout({op:"reset",profile:wb.profile,panelIds:openPanels().map(p=>p.panelId)})},"重設版面"));}
+ if(!solo){bar.push(h("button",{class:"wb-chip",title:"把目前這個裝置的面板排回預設位置",onclick:()=>{window.dispatchEvent(new Event("estampes-wb-reset-height"));wbLayout({op:"reset",profile:wb.profile,panelIds:openPanels().map(p=>p.panelId)})}},"重設版面"));}
  wbBar.replaceChildren(...bar);
 }
 const wbTitle=p=>p.kind==="canvas"?"畫布":p.kind==="calculator"?"科學計算機"+(/(\d+)$/.exec(p.panelId)?.[1]>1?" "+/(\d+)$/.exec(p.panelId)[1]:""):p.title;
@@ -231,20 +231,26 @@ function openMenu(id,anchor){
 function closeMenu(){wb.menu?.remove();wb.menu=null;}
 document.addEventListener("pointerdown",e=>{if(wb.menu&&!wb.menu.contains(e.target))closeMenu();});
 new ResizeObserver(()=>{if(!wb.surface)return;const p=wbProfileNow();if(p!==wb.profile){wb.profile=p;renderWB();}}).observe(document.body);
-// A grip under the panel area: ChatGPT gives an inline widget no resize handle, so the
+// One grip, one height, shared by every layout (window mode sets the panel area, the single canvas sets the picture). A grip under the panel area: ChatGPT gives an inline widget no resize handle, so the
 // area height is the user's to set. Drag to resize, double-click to go back to the default.
 {
- const KEY="estampes.wbHeight",MIN=360,MAX=3000;
- const grip=h("div",{id:"wb-height-grip",role:"separator","aria-orientation":"horizontal",tabindex:"0",title:"拖曳調整視窗高度，雙擊還原；鍵盤：上下方向鍵"});
+ const KEY="estampes.wbHeight",MIN=320,MAX=3000;
+ const grip=h("div",{id:"wb-height-grip",role:"separator","aria-orientation":"horizontal",tabindex:"0",title:"拖曳調整畫布高度（單張圖與雙視窗共用），雙擊還原；鍵盤：上下方向鍵"});
  wbArea.after(grip);
- const apply=px=>{if(px==null)wbArea.style.removeProperty("height");else wbArea.style.height=Math.round(Math.min(MAX,Math.max(MIN,px)))+"px";};
- const save=()=>{try{const v=wbArea.style.height;v?localStorage.setItem(KEY,v):localStorage.removeItem(KEY)}catch{}};
+ // The height lives in a CSS variable that only the window layout reads, so going back to the
+ // single-canvas or phone layout never inherits it.
+ const apply=px=>{if(px==null)wbEl.style.removeProperty("--wb-h");else wbEl.style.setProperty("--wb-h",Math.round(Math.min(MAX,Math.max(MIN,px)))+"px");};
+ const save=()=>{try{const v=wbEl.style.getPropertyValue("--wb-h");v?localStorage.setItem(KEY,v):localStorage.removeItem(KEY)}catch{}};
+ window.addEventListener("estampes-wb-reset-height",()=>{apply(null);save()});
  try{const v=parseFloat(localStorage.getItem(KEY));if(v>0)apply(v)}catch{}
  let drag=null;
- grip.addEventListener("pointerdown",e=>{drag={y:e.clientY,h:wbArea.getBoundingClientRect().height};grip.setPointerCapture(e.pointerId);e.preventDefault();});
+ const syncGrip=()=>{const el=wbEl.classList.contains("windows")?wbArea:document.querySelector("#surface");grip.style.visibility=el&&el.getBoundingClientRect().height>0?"":"hidden"};
+ new ResizeObserver(syncGrip).observe(wbEl);syncGrip();
+ const current=()=>{const el=wbEl.classList.contains("windows")?wbArea:document.querySelector("#surface");return el.getBoundingClientRect().height};
+ grip.addEventListener("pointerdown",e=>{const h0=current();if(!(h0>0))return;drag={y:e.clientY,h:h0};grip.setPointerCapture(e.pointerId);e.preventDefault();});
  grip.addEventListener("pointermove",e=>{if(drag)apply(drag.h+e.clientY-drag.y);});
  const end=()=>{if(drag){drag=null;save()}};
  grip.addEventListener("pointerup",end);grip.addEventListener("pointercancel",end);
  grip.addEventListener("dblclick",()=>{apply(null);save()});
- grip.addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;e.preventDefault();apply(wbArea.getBoundingClientRect().height+(e.key==="ArrowDown"?40:-40));save();});
+ grip.addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;e.preventDefault();const h0=current();if(!(h0>0))return;apply(h0+(e.key==="ArrowDown"?40:-40));save();});
 }

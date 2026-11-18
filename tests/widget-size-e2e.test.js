@@ -38,7 +38,7 @@ test("the canvas has a minimum height whatever the picture's shape", async () =>
 test("a frame the user made big gives the canvas more room (no 820px / 640px caps)", { skip: noBrowser, timeout: 60000 }, async () => {
   const stack = await startStack({ cas: false });
   try {
-    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1700, height: 1200 } });
+    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1700, height: 1500 } });
     await frame.locator("#surface").waitFor({ timeout: 15000 });
     await page.waitForTimeout(800);
     const m = await frame.locator("#surface").evaluate((el) => ({ w: el.getBoundingClientRect().width, max: parseFloat(getComputedStyle(el).maxHeight), vh: innerHeight }));
@@ -94,8 +94,55 @@ test("window mode: a grip under the panel area sets its height, double-click res
     assert.ok(h1 > h0 + 120, `dragged taller: ${h0} -> ${h1}`);
     await grip.focus(); await page.keyboard.press("ArrowUp");
     assert.ok((await area()) < h1, "arrow up shrinks");
+    // One shared height: the single-canvas layout takes the same value, and nothing is left behind when switching back.
+    const surfH = () => frame.locator("#surface").evaluate((el) => el.getBoundingClientRect().height);
+    const chosen = await frame.locator("#wb").evaluate((el) => parseFloat(el.style.getPropertyValue("--wb-h")));
+    await frame.locator("#wb").evaluate((el) => { el.classList.remove("windows"); el.classList.add("solo"); });
+    await page.waitForTimeout(400); // max-height eases in
+    const soloH = await surfH();
+    assert.ok(Math.abs(soloH - chosen) < 2, `solo canvas uses the shared height: ${soloH} vs ${chosen}`);
+    assert.ok(await grip.isVisible(), "grip is also shown for the single canvas");
+    await frame.locator("#wb").evaluate((el) => { el.classList.remove("solo"); el.classList.add("windows"); });
+    await page.waitForTimeout(100);
     await grip.dblclick();
     assert.ok(Math.abs((await area()) - h0) < 2, "double-click restores the default");
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});
+
+test("single canvas: grip sets the shared height; double-click gives the default back", { skip: noBrowser, timeout: 60000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1000, height: 1100 } });
+    await frame.locator("#surface").waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+    const surf = () => frame.locator("#surface").evaluate((el) => el.getBoundingClientRect().height);
+    const h0 = await surf();
+    const grip = frame.locator("#wb-height-grip");
+    assert.ok(await grip.isVisible());
+    const gb = await grip.boundingBox();
+    await page.mouse.move(gb.x + gb.width / 2, gb.y + gb.height / 2);
+    await page.mouse.down(); await page.mouse.move(gb.x + gb.width / 2, gb.y + gb.height / 2 - 80, { steps: 4 }); await page.mouse.up();
+    await page.waitForTimeout(400);
+    assert.ok((await surf()) < h0 - 60, "dragging up shrinks the canvas");
+    await grip.dblclick();
+    await page.waitForTimeout(400);
+    assert.ok(Math.abs((await surf()) - h0) < 3, "double-click restores the default");
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});
+
+test("grip does nothing while the canvas it resizes is hidden (calculator tab on a phone)", { skip: noBrowser, timeout: 60000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1000, height: 1100 } });
+    await frame.locator("#surface").waitFor({ timeout: 15000 });
+    await frame.locator("#wb").evaluate((el) => el.style.setProperty("--wb-h", "700px"));
+    await frame.locator("#surface").evaluate((el) => { el.style.display = "none"; });
+    const grip = frame.locator("#wb-height-grip");
+    await grip.focus(); await page.keyboard.press("ArrowUp");
+    const v = await frame.locator("#wb").evaluate((el) => el.style.getPropertyValue("--wb-h"));
+    assert.equal(v, "700px", "a hidden canvas must not overwrite the shared height");
     assert.deepEqual(errors, []);
   } finally { await stack.close(); }
 });
