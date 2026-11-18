@@ -2236,7 +2236,9 @@ function endDrag(){
  const after=findMark(before.id);if(moved&&after)updateMark(before,after,"已移動標記。");
 }
 hit.addEventListener("pointerup",endDrag);
-hit.addEventListener("pointercancel",()=>{findingPointer=null;if(dragHandle){replaceLocal(dragHandle.before);dragHandle=null;render();}if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}});
+hit.addEventListener("pointercancel",()=>{findingPointer=null;
+ // The browser or host took the gesture away (a scroll, a system gesture): the mark goes back, and the user is told why.
+ if(dragHandle){replaceLocal(dragHandle.before);dragHandle=null;status.textContent="拖曳被瀏覽器或主機中斷（pointercancel），標記已還原。";render();}if(dragMove){replaceLocal(dragMove.before);dragMove=null;status.textContent="拖曳被瀏覽器或主機中斷（pointercancel），標記已還原。";render();}});
 // Drawing facts for gesture grouping: order and time relative to the first
 // stroke since the last send (no clock time), and the input device.
 let batchStart=null,strokeStart=0,strokePointer="",strokeCount=0;
@@ -2559,7 +2561,7 @@ workbenchApi=setupWorkbench();
 function cancelGestures(){
  pointers.clear();pinch=null;panning=null;gestureLock=false;spaceDown=false;
  cancelStroke();findingPointer=null;
- if(dragMove){replaceLocal(dragMove.before);dragMove=null;render();}
+ if(dragMove){replaceLocal(dragMove.before);dragMove=null;status.textContent="拖曳已取消（畫布大小改變或離開），標記已還原。";render();}
 }
 // A resize changes the coordinate frame under a pointer; end the gesture.
 if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new ResizeObserver(entries=>{const r=entries[entries.length-1]?.contentRect;if(!r||disposed)return;const w=Math.round(r.width),h=Math.round(r.height);const changed=lastW>=0&&(w!==lastW||h!==lastH);lastW=w;lastH=h;if(changed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
