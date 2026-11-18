@@ -77,13 +77,13 @@ export function validateValue(schema, value, path = "params", depth = 0) {
     if (schema.exclusiveMaximum !== undefined && value >= schema.exclusiveMaximum) throw new Error(path + ": must be < " + schema.exclusiveMaximum);
   }
   if (t === "string") {
-    if (schema.minLength !== undefined && value.length < schema.minLength) throw new Error(path + ": at least " + schema.minLength + " characters");
-    if (schema.maxLength !== undefined && value.length > schema.maxLength) throw new Error(path + ": at most " + schema.maxLength + " characters");
+    if (schema.minLength !== undefined && value.length < schema.minLength) throw new Error(path + ": at least " + schema.minLength + (schema.minLength === 1 ? " character" : " characters"));
+    if (schema.maxLength !== undefined && value.length > schema.maxLength) throw new Error(path + ": at most " + schema.maxLength + (schema.maxLength === 1 ? " character" : " characters"));
     if (schema.pattern && !new RegExp(schema.pattern, "u").test(value)) throw new Error(path + ": does not match " + schema.pattern);
   }
   if (t === "array") {
-    if (schema.minItems !== undefined && value.length < schema.minItems) throw new Error(path + ": at least " + schema.minItems + " items");
-    if (schema.maxItems !== undefined && value.length > schema.maxItems) throw new Error(path + ": at most " + schema.maxItems + " items");
+    if (schema.minItems !== undefined && value.length < schema.minItems) throw new Error(path + ": at least " + schema.minItems + (schema.minItems === 1 ? " item" : " items"));
+    if (schema.maxItems !== undefined && value.length > schema.maxItems) throw new Error(path + ": at most " + schema.maxItems + (schema.maxItems === 1 ? " item" : " items"));
     return schema.items ? value.map((v, i) => validateValue(schema.items, v, path + "[" + i + "]", depth + 1)) : [...value];
   }
   if (t === "object") {
