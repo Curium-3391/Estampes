@@ -227,16 +227,17 @@ test("an update plan goes stale when a newer version is installed first", async 
   assert.equal(h.registry.record("org.example.callout").version, "1.2.0");
 });
 
-test("an install plan goes stale when the package is installed by another plan first", async () => {
+test("asking again for the same install returns the pending plan, and committing it twice installs once", async () => {
   const s = await setup();
   await s.put("callout-1", sign(v("1.0.0")));
   const h = await s.boot();
   const a = await h.lifecycle.prepare("install", "org.example.callout");
   const b = await h.lifecycle.prepare("install", "org.example.callout");
+  assert.equal(b.planId, a.planId);
   await writeApproval(s.storage, s.key, a.planId);
   await h.lifecycle.commit(a.planId, { consent: a.consent });
-  await writeApproval(s.storage, s.key, b.planId);
-  await assert.rejects(h.lifecycle.commit(b.planId, { consent: b.consent }), /installed after this plan/);
+  assert.equal((await h.lifecycle.commit(a.planId, { consent: a.consent })).repeated, true);
+  await assert.rejects(h.lifecycle.prepare("install", "org.example.callout"), /already installed/);
 });
 
 test("a failed rollback leaves the running version, lock and record unchanged", async () => {

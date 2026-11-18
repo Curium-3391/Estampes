@@ -231,10 +231,9 @@ export function createSources({ dir, coreVersion, transport, allowUnsigned = fal
       const trusted = await trustedMap();
       const results = [];
       for (const src of sources) {
-        let index, location;
+        let index;
         try {
           const fetched = await fetchIndex(src.url);
-          location = fetched.location;
           ({ index } = verifyIndex(fetched.bytes, { fingerprint: src.fingerprint }));
         } catch (error) { results.push({ source: src.name, error: String(error?.message || error) }); continue; }
         const newest = new Map();
@@ -242,9 +241,12 @@ export function createSources({ dir, coreVersion, transport, allowUnsigned = fal
           if (!inScope(p.id, src.scopes)) { results.push({ source: src.name, id: p.id, version: p.version, error: "outside the scopes this server accepted from " + src.name + " (" + src.scopes.join(", ") + ")" }); continue; }
           if (!newest.has(p.id) || compareVersions(p.version, newest.get(p.id).version) > 0) newest.set(p.id, p);
         }
+        // File names in the index resolve against the URL the source was added
+        // with, not the address the index was finally served from: a GitHub
+        // Release redirects to a storage host whose path has no sibling files.
         for (const p of newest.values()) {
           try {
-            const { bytes } = await fetchBytes(p.file, { base: location, maxBytes: MAX_PACKAGE_BYTES, transport });
+            const { bytes } = await fetchBytes(p.file, { base: src.url, maxBytes: MAX_PACKAGE_BYTES, transport });
             if (bytes.length !== p.bytes) throw new SourceError("size " + bytes.length + " does not match the index (" + p.bytes + ")");
             const v = verifyBundle(bytes, { trusted, allowUnsigned: false, coreVersion });
             if (v.signer?.keyId !== src.keyId) throw new SourceError("not signed by the source's key " + src.keyId);

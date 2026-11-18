@@ -36,7 +36,9 @@
     "src/modules/runtimes/http.js",
     "src/modules/runtimes/declarative.js",
     "src/modules/runtimes/wasm.js",
-    "src/modules/router.js"
+    "src/modules/router.js",
+    "src/modules/lifecycle.js",
+    "public/module-store.html"
   ],
   "files": [
     {
@@ -433,7 +435,7 @@
     },
     {
       "date": "2026-11-16",
-      "authorizedBy": "User explicitly authorized (2026-11-16 thread 補強第三方模組測試與發行) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
+      "authorizedBy": "User explicitly authorized (2026-11-16 thread \u88dc\u5f37\u7b2c\u4e09\u65b9\u6a21\u7d44\u6e2c\u8a66\u8207\u767c\u884c) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
       "reason": "Third-party module hardening: example mockResponse/expect in the manifest, one response mapping shared by real calls and self-tests, self-test reports, fixtures hidden from the model, and declarative template additions needed by the external-developer acceptance; other legacy source fingerprints stay intact",
       "files": [
         "src/modules/manifest.js",
@@ -445,7 +447,7 @@
     },
     {
       "date": "2026-11-16",
-      "authorizedBy": "User explicitly authorized (2026-11-16 thread 補強第三方模組測試與發行) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
+      "authorizedBy": "User explicitly authorized (2026-11-16 thread \u88dc\u5f37\u7b2c\u4e09\u65b9\u6a21\u7d44\u6e2c\u8a66\u8207\u767c\u884c) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
       "reason": "WebAssembly modules can refuse a call with a readable {\"error\": message} reply, found by the external-developer acceptance; other legacy source fingerprints stay intact",
       "files": [
         "src/modules/runtimes/wasm.js"
@@ -453,10 +455,19 @@
     },
     {
       "date": "2026-11-16",
-      "authorizedBy": "User explicitly authorized (2026-11-16 thread 補強第三方模組測試與發行) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
+      "authorizedBy": "User explicitly authorized (2026-11-16 thread \u88dc\u5f37\u7b2c\u4e09\u65b9\u6a21\u7d44\u6e2c\u8a66\u8207\u767c\u884c) adding the src/modules files touched by third-party module hardening to authorizedIntegrationSeams",
       "reason": "Gap fixes from the external-developer acceptance: http modules that declare a multipart canvas-image file receive the target canvas's original image reader (asset.read.selected only); other legacy source fingerprints stay intact",
       "files": [
         "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-18",
+      "authorizedBy": "User explicitly authorized (2026-11-18 thread \u4fee\u5fa9\u7b2c\u4e09\u65b9\u6a21\u7d44\u9a57\u6536\u554f\u984c\u4e26\u5be9\u67e5\u64f4\u5145\u76f8\u5bb9\u6027, decision card) adding src/modules/lifecycle.js and public/module-store.html to authorizedIntegrationSeams",
+      "reason": "#195: asking again for the same pending plan returns it, so a reloaded Store widget keeps the administrator's approval; the Store's approve command no longer assumes Docker; other legacy source fingerprints stay intact",
+      "files": [
+        "src/modules/lifecycle.js",
+        "public/module-store.html"
       ]
     },
     {
