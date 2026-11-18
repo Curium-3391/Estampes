@@ -244,11 +244,13 @@ new ResizeObserver(()=>{if(!wb.surface)return;const p=wbProfileNow();if(p!==wb.p
  window.addEventListener("estampes-wb-reset-height",()=>{apply(null);save()});
  try{const v=parseFloat(localStorage.getItem(KEY));if(v>0)apply(v)}catch{}
  let drag=null;
+ const syncGrip=()=>{const el=wbEl.classList.contains("windows")?wbArea:document.querySelector("#surface");grip.style.visibility=el&&el.getBoundingClientRect().height>0?"":"hidden"};
+ new ResizeObserver(syncGrip).observe(wbEl);syncGrip();
  const current=()=>{const el=wbEl.classList.contains("windows")?wbArea:document.querySelector("#surface");return el.getBoundingClientRect().height};
- grip.addEventListener("pointerdown",e=>{drag={y:e.clientY,h:current()};grip.setPointerCapture(e.pointerId);e.preventDefault();});
+ grip.addEventListener("pointerdown",e=>{const h0=current();if(!(h0>0))return;drag={y:e.clientY,h:h0};grip.setPointerCapture(e.pointerId);e.preventDefault();});
  grip.addEventListener("pointermove",e=>{if(drag)apply(drag.h+e.clientY-drag.y);});
  const end=()=>{if(drag){drag=null;save()}};
  grip.addEventListener("pointerup",end);grip.addEventListener("pointercancel",end);
  grip.addEventListener("dblclick",()=>{apply(null);save()});
- grip.addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;e.preventDefault();apply(current()+(e.key==="ArrowDown"?40:-40));save();});
+ grip.addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;e.preventDefault();const h0=current();if(!(h0>0))return;apply(h0+(e.key==="ArrowDown"?40:-40));save();});
 }

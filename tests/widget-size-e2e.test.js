@@ -131,3 +131,18 @@ test("single canvas: grip sets the shared height; double-click gives the default
     assert.deepEqual(errors, []);
   } finally { await stack.close(); }
 });
+
+test("grip does nothing while the canvas it resizes is hidden (calculator tab on a phone)", { skip: noBrowser, timeout: 60000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1000, height: 1100 } });
+    await frame.locator("#surface").waitFor({ timeout: 15000 });
+    await frame.locator("#wb").evaluate((el) => el.style.setProperty("--wb-h", "700px"));
+    await frame.locator("#surface").evaluate((el) => { el.style.display = "none"; });
+    const grip = frame.locator("#wb-height-grip");
+    await grip.focus(); await page.keyboard.press("ArrowUp");
+    const v = await frame.locator("#wb").evaluate((el) => el.style.getPropertyValue("--wb-h"));
+    assert.equal(v, "700px", "a hidden canvas must not overwrite the shared height");
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});
