@@ -114,6 +114,24 @@ test("lifecycle: state survives a restart; disabling stops execution but keeps t
   assert.equal(canvasObjects(run.entry).length, 2);
 });
 
+test("lifecycle: asking again for the same pending change returns the same plan, so an approval is not wasted (#195)", async () => {
+  const { h } = await host();
+  const first = await h.lifecycle.prepare("enable", "org.estampes.graph", {}, { by: "store" });
+  // A reloaded Store widget asks again: same plan id and consent, no second plan.
+  const again = await h.lifecycle.prepare("enable", "org.estampes.graph", {}, { by: "store" });
+  assert.equal(again.planId, first.planId);
+  assert.equal(again.consent, first.consent);
+  assert.equal("fingerprint" in h.lifecycle.publicPlan(again), false);
+  // A different change is a different plan.
+  const other = await h.lifecycle.prepare("enable", "org.estampes.cas", {}, { by: "store" });
+  assert.notEqual(other.planId, first.planId);
+  // A committed plan is never handed out again.
+  await h.lifecycle.commit(first.planId, { consent: first.consent });
+  await assert.rejects(h.lifecycle.prepare("enable", "org.estampes.graph", {}, { by: "store" }), /already enabled/);
+  const off = await h.lifecycle.prepare("disable", "org.estampes.graph", {}, { by: "store" });
+  assert.notEqual(off.planId, first.planId);
+});
+
 test("router: sin(x) then sin(2x) on the same canvas, expected revision enforced, bad input explained", async () => {
   const { h } = await host();
   await enable(h);
