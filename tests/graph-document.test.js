@@ -151,3 +151,21 @@ test("the UVA render action draws a Graph on its colour with its marks in place"
   assert.deepEqual(px(5, 5), [0x12, 0x34, 0x56], "the Graph's colour, not white");
   assert.notDeepEqual(px(560, 150), [0x12, 0x34, 0x56], "the mark is drawn where it is, in document units");
 });
+
+test("links from one Graph to another survive a save and a restore", { timeout: 120000 }, async (t) => {
+  const dirs = await folders(t);
+  let s = await open(dirs);
+  t.after(() => s.close().catch(() => {}));
+  const a = await createGraphCanvas(), b = await createGraphCanvas();
+  applyCanvasChanges(a, { annotations: [{ id: "left", type: "point", x: .2, y: .2 }], resolve });
+  applyCanvasChanges(b, { annotations: [{ id: "right", type: "point", x: .8, y: .8 }], resolve });
+  a.pairLinks = new Map([[b.imageId, new Map([["k1", { id: "k1", left: "left", right: "right", label: "same peak" }]])]]);
+  await saveCanvas(a, { tool: "test" });
+  await saveCanvas(b, { tool: "test" });
+  await s.close();
+  s = await open(dirs);
+  forgetGraph(a.imageId);
+  const back = await ensureImage(a.imageId);
+  assert.deepEqual([...back.pairLinks.keys()], [b.imageId]);
+  assert.equal(back.pairLinks.get(b.imageId).get("k1").label, "same peak");
+});
