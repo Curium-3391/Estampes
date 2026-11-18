@@ -63,6 +63,16 @@ Repeat the pull and up commands to update. For a reproducible test, set `ESTAMPE
 
 PDF page rendering is optional: build with `docker compose build --build-arg ESTAMPES_WITH_PDF=1` (adds about 60 MB). See [PDF pages](IMAGE-PIPELINE.md#pdf-pages).
 
+### Fonts for other languages
+
+Labels in server-side renders (`render_canvas`, PNG exports, verification crops) are drawn with the fonts inside the container. The image ships a small font (DejaVu) for Latin, Greek, Cyrillic and basic Arabic/Hebrew. Chinese, Japanese and Korean labels need a font you add. The canvas in the browser is not affected: it uses the viewer's own fonts.
+
+1. Make a `fonts` folder next to `compose.yaml` and put font files in it (`.ttf`, `.otf` or `.ttc`). For Traditional Chinese, for example, `NotoSansCJKtc-Regular.otf` from [Noto CJK](https://github.com/notofonts/noto-cjk) (SIL Open Font License).
+2. In `compose.yaml`, uncomment `- ./fonts:/usr/local/share/fonts:ro` under the `estampes` volumes.
+3. Restart: `docker compose up -d`.
+
+Fonts are read when the server starts, so restart after adding or removing one. Only add fonts from sources you trust: the server parses them. Installing font packs from the module Store is planned (see the [multilingual RFC](rfc/i18n/README.md#71-extra-fonts-image-variant-mounted-folder-or-font-packs-in-the-store)).
+
 ### What is stored
 
 With `ESTAMPES_STORAGE_DIR` set (compose sets `/data`) and the default UVA store, images, canvases, workspaces and panels are kept in the store (`uva-pending/` plus the store folder) and no `images/` file is written; see [UVA store](UVA-BETA.md). With `ESTAMPES_CANVAS_STORE=legacy`, every image gets a folder `images/<hash>/`:
