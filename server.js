@@ -1615,9 +1615,6 @@ function makeServer() {
     async ({ workspace, fileNames }) => {
       try {
         let ref = workspace;
-        // A Graph has no image for the bundle yet (UVA Phase 4A-4): refused before anything is made.
-        const graph = (await resolveRef(ref)).doc.items.find((it) => /^gph:/.test(it.set));
-        if (graph) throw new Error("A Graph (" + graph.set + ") cannot be exported as a bundle yet" + (/^ws:/.test(ref) ? "; remove it from the workspace (edit_workspace remove, item " + graph.id + ") to export the images" : ""));
         if (!/^ws:/.test(ref)) {
           const made = await createWorkspace({ items: (await resolveRef(ref)).doc.items.map((it) => ({ set: it.set, label: it.label })) });
           ref = made.workspace.id;

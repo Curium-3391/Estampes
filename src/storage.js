@@ -222,11 +222,22 @@ const graphMeta = (entry) => ({ imageId: entry.imageId, kind: "graph", source: "
   working: { width: entry.width, height: entry.height }, storedAt: new Date().toISOString() });
 // A new, empty Graph. Resolves once its record is durable; nothing else is written.
 export async function createGraphCanvas(options = {}) {
+  return persistGraphCanvas(draftGraphCanvas(options));
+}
+// A new Graph in memory only, nothing written yet: a caller that may still
+// fail (a bundle import) writes it with persistGraphCanvas once it will keep
+// it, or drops it with forgetGraph, so a failure leaves no stored Graph.
+export function draftGraphCanvas(options = {}) {
   if (!canvases) throw new Error(GRAPH_NEEDS_STORE);
   const spec = graphSpec(options), imageId = newGraphId(), entry = graphEntry(imageId, spec);
   restoreCanvas(entry, { imageId, width: spec.width, height: spec.height, background: { kind: "solid", color: spec.color }, marks: [], layers: [] });
-  await canvases.write(imageId, { canvas: serializeCanvas(entry), meta: graphMeta(entry), log: [] });
-  log("info", "[storage] graph created", { imageId });
+  return rememberGraph(entry);
+}
+// Writes a Graph's record (its canvas as it is now, and its metadata). Resolves once durable.
+export async function persistGraphCanvas(entry) {
+  if (!canvases) throw new Error(GRAPH_NEEDS_STORE);
+  await canvases.write(entry.imageId, { canvas: serializeCanvas(entry), meta: graphMeta(entry), log: [] });
+  log("info", "[storage] graph created", { imageId: entry.imageId });
   return rememberGraph(entry);
 }
 async function ensureGraph(imageId) {

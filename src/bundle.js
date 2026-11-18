@@ -5,6 +5,8 @@
 //   workspace.json         items, placement, names (estampes.workspace/1 shape, no secrets)
 //   assets/<hash>.<ext>    the image bytes of every item (the original file when the server
 //                          still has it, else the working copy as PNG; see manifest `assets`)
+//                          A Graph (gph:, UVA Phase 4A) has no bytes: its asset is listed with
+//                          kind "graph" and no file, and its axes and plots travel in its set.
 //   sets/<n>.json          one annotation set: layers, marks, links, rejected claims, objects
 //   surface.json           (optional) the Visual Surface: open panels and one layout per device profile
 //   notebooks/<n>.json     (optional) calculator notebooks the surface shows: definitions, cells, Graph links
@@ -23,9 +25,10 @@ import { zipFiles, unzipFiles } from "./zip.js";
 import { canvasMarks, canvasLayers, setKeyOf } from "./canvas-state.js";
 import { MARK_TYPES, MAX_POLYLINE_POINTS, MARK_STATUSES, MARK_COLORS, MARK_SIZES, MARK_PENS } from "./scene-catalog.js";
 import { entrySharp } from "./image-store.js";
-import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, restoreCanvas } from "./storage.js";
+import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, restoreCanvas, draftGraphCanvas, persistGraphCanvas } from "./storage.js";
+import { isGraphId, graphSpec, forgetGraph } from "./visual/graph-docs.js";
 import { MODULE_ID } from "./modules/manifest.js";
-import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
+import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, bundleWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
 
 export const BUNDLE_FORMAT = "estampes.bundle/1";
 const MAX_MARKS_PER_SET = 5000, MAX_LAYERS = 200, MAX_LINKS = 5000, MAX_NOTEBOOKS = 20;
@@ -44,6 +47,12 @@ export async function exportBundle(ref, { version = "dev", fileNames = true, ext
   const done = new Map();
   for (const { entry } of items) {
     if (done.has(entry.imageId)) continue;
+    if (isGraphId(entry.imageId)) {
+      // No bytes to carry: the importing server makes a new Graph of this size.
+      done.set(entry.imageId, null);
+      assets.push(defined({ id: entry.imageId, kind: "graph", width: entry.width, height: entry.height, title: fileNames ? entry.fileName ?? undefined : undefined }));
+      continue;
+    }
     const info = await assetInfo(entry);
     let bytes = await readSource(entry.imageId), sourceIncluded = !!bytes;
     if (!bytes) {
@@ -194,7 +203,24 @@ const sameState = (entry, def) => canonicalById(canvasMarks(entry)) === canonica
   && JSON.stringify(canvasBackground(entry)) === JSON.stringify(canvasBackground(def))
   && linkSigs([...(entry.pairLinks ?? new Map()).values()].map((m) => [...m.values()])) === linkSigs(Object.values(def.links));
 
-export async function importBundle(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
+// Imports of the same bundle run one at a time. A Graph gets a new id on every
+// import, so two concurrent imports of one bundle would each make Graphs and
+// the one that loses the workspace adoption would leave them behind; in turn,
+// the second import sees the first one's workspace and makes nothing.
+const importing = new Map();
+export function importBundle(buffer, options) {
+  // Keyed by the bundle's id (what the repeat check compares), else by its bytes.
+  let key = "sha:" + sha(buffer);
+  try { const id = JSON.parse(unzipFiles(buffer).get("manifest.json").toString("utf8")).bundleId; if (typeof id === "string") key = "id:" + id; } catch {}
+  const before = importing.get(key) ?? Promise.resolve();
+  const run = before.then(() => importBundleOnce(buffer, options));
+  const settled = run.catch(() => {});
+  importing.set(key, settled);
+  settled.then(() => { if (importing.get(key) === settled) importing.delete(key); });
+  return run;
+}
+
+async function importBundleOnce(buffer, { name, collision = "reuse", allowPartial = false } = {}) {
   if (!["reuse", "copy"].includes(collision)) throw new Error("collision must be reuse or copy");
   const files = unzipFiles(buffer);
   const parse = (file) => {
@@ -241,8 +267,40 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
   }
 
   // Images: registered under the id this server derives from the bytes.
-  const idMap = new Map(), entries = new Map();
+  const idMap = new Map(), entries = new Map(), madeGraphs = new Set();
+  // Graphs made here stay in memory until just before the workspace is
+  // adopted; any failure on the way drops them, so a refused bundle stores none.
+  try {
+  const graphAssets = (Array.isArray(manifest.assets) ? manifest.assets : []).filter((a) => a?.kind === "graph");
+  if (graphAssets.length) {
+    // Only the Graphs the workspace shows are made, each once: a Graph asset
+    // needs no file, so nothing else bounds how many a manifest could list.
+    const shown = new Set([...used].map((k) => setDefs.get(k).imageId ?? k.split("#")[0]));
+    const seen = new Set();
+    for (const a of graphAssets) {
+      if (!isGraphId(a.id)) throw new Error("Bundle asset " + JSON.stringify(a?.id) + " is malformed");
+      if (seen.has(a.id)) throw new Error("Bundle lists the Graph " + a.id + " twice");
+      seen.add(a.id);
+    }
+    // A Graph gets a new id on every import, so a repeated import is answered
+    // before any Graph is made (an image's id comes from its bytes and needs no such check).
+    if (await bundleWorkspace(manifest.bundleId)) {
+      const again = await adoptWorkspace({ name, items: [], provenance: { bundleId: manifest.bundleId } });
+      return { ...again, repeated: true, warnings, summary: [], manifest: { bundleId: manifest.bundleId } };
+    }
+    // Every size and colour is checked before any Graph is made.
+    const specs = graphAssets.filter((a) => shown.has(a.id)).map((a) => {
+      const own = setDefs.get(a.id), color = own?.background?.kind === "solid" ? own.background.color : undefined;
+      return [a.id, graphSpec({ width: a.width, height: a.height, ...(color ? { color } : {}), title: typeof a.title === "string" ? a.title : null })];
+    });
+    // In memory only until the import is about to keep them (see below).
+    for (const [id, spec] of specs) {
+      const entry = draftGraphCanvas(spec);
+      idMap.set(id, entry.imageId); entries.set(id, entry); madeGraphs.add(entry.imageId);
+    }
+  }
   for (const a of Array.isArray(manifest.assets) ? manifest.assets : []) {
+    if (a?.kind === "graph") continue;
     const bytes = files.get(a?.file);
     if (!bytes || !/^img:[0-9a-f]{16}$/.test(a.id)) throw new Error("Bundle asset " + JSON.stringify(a?.id) + " is malformed");
     const entry = await intakeImage(bytes, { source: "bundle", fileName: typeof a.fileName === "string" ? a.fileName.slice(0, 120) : null });
@@ -270,7 +328,8 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
     if (!image) throw new Error("Bundle set " + key + " refers to an image that is not in the bundle");
     const base = await ensureImage(image);
     const own = !key.includes("#");
-    const how = own && fresh(base) ? "restored" : own && collision === "reuse" && sameState(base, def) ? "reused" : "copied";
+    // A Graph this import just made is empty apart from its colour: its own set is restored into it.
+    const how = own && (fresh(base) || madeGraphs.has(image)) ? "restored" : own && collision === "reuse" && sameState(base, def) ? "reused" : "copied";
     plan.set(key, { def, image, base, own, how });
   }
   for (let changed = true; changed;) {
@@ -309,6 +368,7 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
     placement: it.placement && typeof it.placement === "object" ? defined({ x: Number(it.placement.x), y: Number(it.placement.y), width: Number(it.placement.width), rotation: [0, 90, 180, 270].includes(it.placement.rotation) ? it.placement.rotation : 0 }) : undefined }));
   for (const it of items) if (!it.asset || !it.set) throw new Error("Bundle workspace item points at something that is not in the bundle");
   const sets = touched.filter((t) => t.how !== "reused" || false).map((t) => t.target);
+  for (const id of madeGraphs) await persistGraphCanvas(await ensureImage(id));
   const adopted = await adoptWorkspace({ name: name || text(ws.name, 60), items, layout: ws.layout, provenance: { bundleId: manifest.bundleId, importedAt: new Date().toISOString(), format: manifest.format, generator: text(manifest.generator, 60) }, sets });
   if (adopted.repeated !== undefined || adopted.created === undefined) return { ...adopted, repeated: true, warnings, summary, manifest: { bundleId: manifest.bundleId } };
   for (const t of touched) if (t.how === "restored") await saveCanvas(t.target, { tool: "import_workspace_bundle", changed: [], note: "restored from bundle " + manifest.bundleId });
@@ -333,4 +393,8 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
     }
   }
   return { ...adopted, summary, warnings, mismatch, unsupported, verified, extras, manifest: { bundleId: manifest.bundleId, generator: manifest.generator } };
+  } catch (error) {
+    for (const id of madeGraphs) forgetGraph(id);
+    throw error;
+  }
 }
