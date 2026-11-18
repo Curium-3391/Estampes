@@ -136,3 +136,31 @@ test("a workbench change still on its way when the widget switches to a Graph do
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
+
+test("a calculator plot still on its way when the widget switches to a Graph does not apply the image's plot result to the Graph", { skip: noPython || noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack();
+  try {
+    await s.enable(["org.estampes.graph", "org.estampes.cas"]);
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+    const calc = await s.call("execute_module", { module: "org.estampes.cas", capability: "calculate", params: { operation: "differentiate", text: "sin(x^2)", variable: "x" } });
+    const notebook = calc.structuredContent.data.notebookId;
+    const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator", notebook }) });
+    await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    const g = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^3" }, newCanvas: { kind: "graph" } });
+    const shown = await s.call("present_visual", { imageId: (JSON.stringify(g.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0] });
+    const held = ui.net.holdReply("surface_cas");
+    await ui.frame.locator("button", { hasText: "畫在 Graph" }).first().click();
+    await held.reached;
+    await inner.evaluate((r) => window.estampesSurface.viewers()[0].feed(r), { structuredContent: shown.structuredContent, _meta: shown._meta, content: shown.content });
+    await inner.waitForFunction(() => document.querySelector('#surface rect[data-base="solid"]'), null, { timeout: 20000 });
+    await ui.page.waitForTimeout(300);
+    const before = await inner.evaluate(() => document.querySelector("#surface").innerHTML);
+    held.release();
+    await ui.page.waitForTimeout(800);
+    assert.doesNotMatch(await inner.evaluate(() => document.querySelector("#status")?.textContent ?? ""), /計算機的結果已畫成/, "the image's plot result is not applied to the Graph");
+    assert.equal(await inner.evaluate(() => document.querySelector("#surface").innerHTML), before, "the Graph keeps its own drawing");
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});

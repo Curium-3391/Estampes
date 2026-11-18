@@ -16,8 +16,12 @@ const uuid=()=>(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.ra
 const wbKeyNow=()=>ws?ws.id:imageId;
 const wbArgs=()=>ws?{workspaceId:ws.id}:{imageId};
 const wbProfileNow=()=>profileFor(window.innerWidth,1000);
+// An answer that comes back after the widget moved to another canvas belongs
+// to the old one: it is refused (code "stale") so no caller applies it.
 async function wbCall(name,args){
+ const key=wbKeyNow();
  const result=await request("tools/call",{name,arguments:args});
+ if(key!==wbKeyNow())throw Object.assign(Error("畫布已切換，這個結果沒有套用。"),{code:"stale"});
  const r=result?.structuredContent;
  if(result?.isError||!r)throw Object.assign(Error(r?.message||result?.content?.[0]?.text||"失敗"),{code:r?.code});
  return r;

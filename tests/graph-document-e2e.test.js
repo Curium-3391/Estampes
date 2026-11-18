@@ -80,6 +80,10 @@ test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apa
   assert.equal(pair.isError, true, "a Graph is not one side of a paired view yet");
   assert.match(JSON.stringify(pair.content), /paired view/);
   assert.deepEqual(await s.labels(a.id), ["only-a"], "the refused pair changed nothing");
+  const viewed = await s.raw("present_visual", { imageId: a.id, annotations: [{ id: "y", type: "point", x: .3, y: .3 }], views: [{ label: "v", ops: [{ op: "grayscale" }] }] });
+  assert.equal(viewed.isError, true, "a Graph has no processed views");
+  assert.match(JSON.stringify(viewed.content), /render_canvas/);
+  assert.deepEqual(await s.labels(a.id), ["only-a"], "the refused views changed nothing");
 
   const plain = await s.call("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "x" }, newCanvas: {}, present: false });
   assert.match(JSON.stringify(plain.structuredContent), /img:[0-9a-f]{16}/, "without kind the new canvas is the old blank image");
