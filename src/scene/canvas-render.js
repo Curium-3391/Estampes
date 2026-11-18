@@ -60,8 +60,9 @@ export async function renderCanvas(entry, { region, maxSide = 1600, format = "pn
   const warnings = scale > 1 ? ["Base image enlarged by interpolation; vector overlays rendered at output resolution."] : [];
   const solid = canvasBackground(entry);
   const sourceKind = solid.kind === "solid" ? "solid" : entry.source === "blank" ? "blank" : entry.page ? "pdf-page" : "image";
-  const base = solid.kind === "solid" ? sharp({ create: { width: entry.width, height: entry.height, channels: 3, background: solid.color } })
-    : entry.baseAsObject ? sharp({create:{width:entry.width,height:entry.height,channels:4,background:{r:0,g:0,b:0,alpha:0}}}) : entrySharp(entry);
+  // A promoted base (baseAsObject) is never drawn, solid or not, as in the widget.
+  const base = entry.baseAsObject ? sharp({create:{width:entry.width,height:entry.height,channels:4,background:{r:0,g:0,b:0,alpha:0}}})
+    : solid.kind === "solid" ? sharp({ create: { width: entry.width, height: entry.height, channels: 3, background: solid.color } }) : entrySharp(entry);
   const pipeline = base.extract(px).resize(width, height).composite([{ input: Buffer.from(svg) }]);
   const data = await (format === "webp" ? pipeline.webp({ lossless: true }) : pipeline.png()).toBuffer();
   return { data, mimeType: "image/" + format, width, height,

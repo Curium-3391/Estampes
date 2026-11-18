@@ -131,3 +131,31 @@ test("bundles carry a solid background; a different colour is not reused", async
   assert.equal(bareImport.summary[0].how, "copied");
   assert.deepEqual(canvasBackground(bare), { kind: "solid", color: "#222222" }, "the local colour is kept");
 });
+
+test("a copied set takes the colour as it was; a later change to the original does not reach it", async () => {
+  const { clearImages, registerImage } = await import("../src/image-store.js");
+  const { clearWorkspaces, getWorkspace, workspaceItems, commitTransfer } = await import("../src/workspace.js");
+  const { threeImageFixture } = await import("./fixtures/three-images.js");
+  clearImages(); clearWorkspaces(); useStorageDir("");
+  const { a, b1, b2 } = await threeImageFixture(registerImage);
+  b1.background = { kind: "solid", color: "#204060" };
+  const merged = await commitTransfer({ source: b1.imageId + "+" + b2.imageId, target: a.imageId });
+  const split = await commitTransfer({ source: merged.workspaceId, target: "new", items: ["wi-2"], mode: "copy", name: "copy" });
+  const [copy] = await workspaceItems(await getWorkspace(split.workspaceId));
+  assert.notEqual(copy.entry, b1);
+  assert.deepEqual(canvasBackground(copy.entry), { kind: "solid", color: "#204060" });
+  b1.background = { kind: "solid", color: "#ffffff" };
+  assert.deepEqual(canvasBackground(copy.entry), { kind: "solid", color: "#204060" }, "independent of the original");
+  assert.deepEqual(serializeCanvas(copy.entry).background, { kind: "solid", color: "#204060" });
+});
+
+test("render: a promoted base (baseAsObject) is not drawn even when the canvas is solid", async () => {
+  const e = await createBlankCanvas({ width: 400, height: 300 });
+  e.background = { kind: "solid", color: "#336699" };
+  e.baseAsObject = true;
+  const out = await renderCanvas(e, { maxSide: 400 });
+  const { data, info } = await sharp(out.data).raw().toBuffer({ resolveWithObject: true });
+  assert.equal(info.channels, 4);
+  assert.equal(data[3], 0, "transparent where the base would be");
+  assert.equal(out.metadata.included.base, false);
+});
