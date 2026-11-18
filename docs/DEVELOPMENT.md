@@ -56,6 +56,8 @@ Run the tiers locally with `node scripts/run-ci-tests.mjs fast` or `node scripts
 
 **Unset `ESTAMPES_*` variables before running tests.** Some tests assert the defaults (for example "storage is off") and fail if your shell exports `ESTAMPES_STORAGE_DIR`. This was observed: an exported storage folder made `mcp-http.test.js` fail.
 
+**Hard-coded user-visible text.** `npm run i18n:check` lists text that should come from a message catalog ([multilingual RFC](rfc/i18n/README.md#8-test-strategy)). It only warns for now. Please do not add new hard-coded user text. Add `--verbose` to see each line.
+
 A passing automated test is not a result from a real ChatGPT host. See [Compatibility](COMPATIBILITY.md).
 
 ## Tour of the code
