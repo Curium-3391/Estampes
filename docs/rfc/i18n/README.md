@@ -1,6 +1,6 @@
 # RFC: Multilingual support (i18n / l10n)
 
-Status: **draft, for decision**. Docs only: nothing here changes behaviour. Written 2026-11-18 against `main` at `e42115a` (0.20.1 + UVA Phase 4A-1).
+Status: **accepted 2026-11-18**: the maintainer took every recommendation in §12 (D1–D10). Docs only: nothing here changes behaviour. Written 2026-11-18 against `main` at `e42115a` (0.20.1 + UVA Phase 4A-1).
 
 Scope: the whole framework, so widget UI, server-rendered pages, MCP tool text, messages the widget posts into the chat, default names stored in documents, module and package metadata, canvas text rendering, and docs. Every rule here is generic and works for any image type. Nothing is tied to one kind of picture.
 
@@ -169,7 +169,9 @@ Each phase is one or a few PRs. Phases 0–2 change no persisted format.
 
 **Global rollback.** Through Phase 2, the zh-TW catalog equals today's strings and the `ESTAMPES_I18N=off` flag pins the locale to zh-TW, so turning the flag off restores today's UI without a redeploy of older code. Phases 3–5 add only optional fields and per-feature flags. No phase migrates or rewrites existing user data.
 
-## 12. Decisions needed
+## 12. Decisions
+
+All ten were decided on 2026-11-18 by the maintainer, who accepted every recommendation below. The "Recommendation" column is therefore the decision.
 
 | # | Decision | Options | Recommendation |
 | --- | --- | --- | --- |
