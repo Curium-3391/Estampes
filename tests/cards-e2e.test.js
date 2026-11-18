@@ -9,7 +9,7 @@ test("info cards in a browser: per-module groups, fold, hide and bring back", { 
   const s = await startStack({ cas: false });
   try {
     await s.enable(["org.estampes.graph"]);
-    const made = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const made = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(made.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const card = (id, module, title, shown) => ({ id, type: "info-card", layer: null, module, primitives: [],
       card: { title, ...(shown === undefined ? {} : { shown }), rows: [{ label: "中心", value: "(1, 2)" }, { label: "連結", value: "開啟", href: "https://example.org/a" }, { label: "壞連結", value: "x", href: "javascript:alert(1)" }] } });

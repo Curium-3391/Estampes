@@ -127,7 +127,7 @@ export function registerModuleTools(server, deps) {
         kind: z.enum(["image", "graph"]).optional().describe("graph: a Graph document (gph:) drawn on a plain colour, with no image behind it"),
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().describe("Background colour of a graph (#rrggbb, default white)"),
       }).strict().refine((o) => o.kind === "graph" ? o.background === undefined : o.color === undefined, "background is for an image canvas, color for a graph")
-        .optional().describe("Options for a new blank canvas (default 1600x1000, light; kind graph for a Graph document)"),
+        .optional().describe("Options for a new blank canvas, 1600x1000 by default. Without kind it is a Graph document (gph:) on servers with the canvas store; kind image (or a background preset) gives a blank image"),
       expectedRevision: z.number().int().min(0).optional(),
       visibility: z.enum(["public", "scratch"]).default("public"),
       layer: z.string().trim().min(1).max(40).optional().describe("Layer name for new objects; default the module's name"),

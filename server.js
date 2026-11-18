@@ -3203,12 +3203,20 @@ ACCESS_KEY = keyInfo.key;
 const modulesDir = storage.enabled && storage.writable ? config.storageDir : "";
 const adminInfo = await resolveAdminKey({ storageDir: modulesDir, configured: config.adminKey });
 if (adminInfo.source === "generated") log("warn", "[modules] made an administrator key for approving module installs, saved in " + adminInfo.path + ". It never goes in the chat; approve a plan with: node scripts/estampes-module.js approve <planId>");
+// A new blank canvas (UVA Phase 4A-4). Unless the caller asks for an image
+// (kind "image", or an image background preset), it is a Graph document:
+// a plain colour with vector objects and no image behind it. A server without
+// the UVA store, or with ESTAMPES_NEW_CANVAS=image, makes the older blank image.
+function newCanvas({ kind, color, ...options } = {}) {
+  const graph = kind === "graph" || (kind === undefined && options.background === undefined && config.newCanvasKind === "graph" && !!canvasStore);
+  return graph ? createGraphCanvas({ ...options, ...(color ? { color } : {}) }) : createBlankCanvas(options);
+}
 const casClientInstance = createCasClient({ socketPath: config.casSocket });
 configureCas({ client: casClientInstance, notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "", records: () => recordStore }) });
 const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "", records: () => recordStore });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
-  canvases: { ensure: ensureImage, create: ({ kind, color, ...options } = {}) => (kind === "graph" ? createGraphCanvas({ ...options, ...(color ? { color } : {}) }) : createBlankCanvas(options)), save: saveCanvas }, readSource,
+  canvases: { ensure: ensureImage, create: newCanvas, save: saveCanvas }, readSource,
 });
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
 // A UVA store that cannot start (for example a history too long to open within

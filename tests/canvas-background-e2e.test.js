@@ -9,7 +9,7 @@ test("a solid background is a rect, not an image; Graph axes are paths and text"
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph"]);
-    const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
     const id = (JSON.stringify(r.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const solid = async () => {
       const res = await s.call("present_visual", { imageId: id });
@@ -75,7 +75,7 @@ test("switching the widget from an image to a Graph drops the image's download l
   const s = await startStack({ env: { PUBLIC_BASE_URL: "https://estampes.example.test" } });
   try {
     await s.enable(["org.estampes.graph"]);
-    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(img.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const ui = await s.open({ imageId });
     await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
@@ -95,8 +95,8 @@ test("switching from an image with the calculator in front to a Graph shows the 
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
-    const first = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
-    const imageId = first.structuredContent.imageId;
+    const first = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
+    const imageId = (JSON.stringify(first.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" }) });
     await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
     const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
@@ -117,8 +117,8 @@ test("a workbench change still on its way when the widget switches to a Graph do
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
-    const first = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
-    const imageId = first.structuredContent.imageId;
+    const first = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
+    const imageId = (JSON.stringify(first.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const ui = await s.open({ imageId, result: () => s.call("manage_surface_panels", { imageId, action: "open", module: "org.estampes.cas", panel: "calculator" }) });
     await ui.frame.locator(".calc").waitFor({ timeout: 30000 });
     const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
@@ -142,7 +142,7 @@ test("a calculator plot still on its way when the widget switches to a Graph doe
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
-    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const calc = await s.call("execute_module", { module: "org.estampes.cas", capability: "calculate", params: { operation: "differentiate", text: "sin(x^2)", variable: "x" } });
     const notebook = calc.structuredContent.data.notebookId;
@@ -172,7 +172,7 @@ test("a workspace with three Graphs and an image shows each Graph on its colour 
     await s.enable(["org.estampes.graph"]);
     const graph = async (expression) => (JSON.stringify((await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind: "graph" } })).structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0];
     const graphs = [await graph("x^2"), await graph("sin(x)"), await graph("x^3")];
-    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const img = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(img.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const made = await s.call("create_workspace", { canvases: [...graphs, imageId] });
     const workspaceId = made.structuredContent.workspaceId;

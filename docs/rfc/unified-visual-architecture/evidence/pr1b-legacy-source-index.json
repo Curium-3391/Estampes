@@ -190,7 +190,7 @@
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "266fa89865dabcc9c9591e9f84ee3171f33f33f17fddfa16705b033f3ebcce8c"
+      "sha256": "836675156ca0de942262365b9df1dbba3952ecc14729ee9dd450e2a39ed4d598"
     },
     {
       "path": "src/modules/packages.js",
@@ -509,6 +509,15 @@
         "src/surface/mcp-tools.js"
       ],
       "previousSha256": "ce85f627b4a6a5abd00fb7caa1bdfb83b726b73f374365a8691a98e973f03b3d"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User approved the UVA Phase 4A plan (2026-11-18, \u300c\u7167\u4f60\u8aaa\u7684\u505a\u300d), which lists amendment records for sealed files touched by each 4A PR, and asked to continue 4A-4 (\u300c\u76f4\u63a5\u958b4A\u300d)",
+      "reason": "UVA Phase 4A-4: a new blank canvas is a Graph document by default; only the newCanvas description changes to say so",
+      "files": [
+        "src/modules/mcp-tools.js"
+      ],
+      "previousSha256": "266fa89865dabcc9c9591e9f84ee3171f33f33f17fddfa16705b033f3ebcce8c"
     }
   ]
 }

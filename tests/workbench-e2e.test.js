@@ -53,7 +53,7 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
       const prep = await call(client, "prepare_module_change", { action: "enable", module: id });
       await call(client, "store_commit_plan", { planId: prep.structuredContent.plan.planId, consent: prep._meta["estampes/consent"].consent });
     }
-    const plotted = await call(client, "execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const plotted = await call(client, "execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     assert.ok(imageId);
 

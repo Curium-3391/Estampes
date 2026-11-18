@@ -1,7 +1,7 @@
 // UVA Phase 4A-2: Graph documents through the real server and its MCP tools.
 // execute_module(newCanvas: {kind: "graph"}) makes a gph: document with no
 // image; canvas tools take it, pixel tools refuse it and name render_canvas.
-// The default newCanvas is unchanged (a blank image) until 4A-4.
+// Since 4A-4d a newCanvas without kind is a Graph too; kind image keeps the blank image.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, readdir } from "node:fs/promises";
@@ -57,7 +57,7 @@ test("a Graph made by the graph module has no image, takes marks and edits, rend
   await s.stop();
 });
 
-test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apart; the default new canvas is still an image", { timeout: 180000 }, async (t) => {
+test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apart; the default new canvas is a Graph, kind image a blank image", { timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
   const s = await startCanvasStoreServer(storage, beta, { idle: "0" });
   t.after(() => s.kill());
@@ -85,8 +85,10 @@ test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apa
   assert.match(JSON.stringify(viewed.content), /render_canvas/);
   assert.deepEqual(await s.labels(a.id), ["only-a"], "the refused views changed nothing");
 
-  const plain = await s.call("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "x" }, newCanvas: {}, present: false });
-  assert.match(JSON.stringify(plain.structuredContent), /img:[0-9a-f]{16}/, "without kind the new canvas is the old blank image");
+  const byDefault = await s.call("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "x" }, newCanvas: {}, present: false });
+  assert.match(JSON.stringify(byDefault.structuredContent), /gph:[0-9a-f]{16}/, "without kind the new canvas is a Graph");
+  const plain = await s.call("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" }, present: false });
+  assert.match(JSON.stringify(plain.structuredContent), /img:[0-9a-f]{16}/, "kind image is the blank image");
   const bad = await s.raw("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "graph", background: "paper" } });
   assert.equal(bad.isError, true, "background names an image canvas's paper, not a Graph colour");
   await s.stop();

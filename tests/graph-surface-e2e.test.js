@@ -27,10 +27,11 @@ test("the calculator opens beside a Graph and plots onto it; the Graph's surface
     const back = await s.call("get_visual_state", { imageId: graph });
     assert.ok(JSON.stringify(back.structuredContent).includes("function-plot"), "the plot is on the Graph");
 
-    // An image has its own surface: the Graph's calculator is not there.
+    // A new canvas has its own surface: the Graph's calculator is not there.
     const blank = await s.call("manage_surface_panels", { action: "open", module: "org.estampes.cas", panel: "calculator" });
     const other = blank.structuredContent.surface?.imageId ?? blank.structuredContent.imageId;
-    assert.match(other, /^img:/);
+    assert.match(other, /^gph:/);
+    assert.notEqual(other, graph);
     const otherNb = blank.structuredContent.surface.panels.find((p) => p.kind === "calculator").notebook;
     assert.notEqual(otherNb, nb);
   } finally { await s.close(); }

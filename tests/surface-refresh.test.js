@@ -8,7 +8,7 @@ test("link refresh: stale plots are recomputed and redrawn, manually and automat
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
-    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const plotted = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const opened = await s.call("surface_apply", { imageId, ops: [{ op: "open-panel", module: "org.estampes.cas", panel: "calculator" }] });
     const nb = opened.structuredContent.panels.find((p) => p.kind === "calculator").notebook;
@@ -59,7 +59,7 @@ test("link refresh: stale plots are recomputed and redrawn, manually and automat
     // Turning auto-refresh on redraws plots that were already stale; the model's own
     // changes (execute_module) trigger it too, and so do plots on another canvas.
     await cas("set_options", { autoRefresh: false });
-    const other = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: {} });
+    const other = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "image" } });
     const otherId = (JSON.stringify(other.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     const calc2 = await cas("calculate", { operation: "differentiate", text: "f(x)", variable: "x" });
     const cell2 = calc2.structuredContent.data.cell.cellId;

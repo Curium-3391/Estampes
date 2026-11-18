@@ -110,7 +110,7 @@ test("surface over MCP: panels, calculator, plot, layouts per profile, restart",
       const done = await call(s.client, "store_commit_plan", { planId: prep.structuredContent.plan.planId, consent: prep._meta["estampes/consent"].consent });
       assert.equal(done.structuredContent.result.state, "enabled");
     }
-    const plotted = await call(s.client, "execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: {} });
+    const plotted = await call(s.client, "execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x^2" }, newCanvas: { kind: "image" } });
     const imageId = (JSON.stringify(plotted.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
     assert.ok(imageId, "a blank canvas was made");
 
