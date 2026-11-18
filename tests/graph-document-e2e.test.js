@@ -139,7 +139,7 @@ test("with a public URL, an image gets download links and a Graph gets none that
   await s.stop();
 });
 
-test("Graphs sit in a workspace beside an image: marks per item, restart, refused copies, pairs and bundles", { timeout: 180000 }, async (t) => {
+test("Graphs sit in a workspace beside an image: marks per item, restart, refused pairs and bundles", { timeout: 180000 }, async (t) => {
   const { storage, beta } = await folders(t);
   let s = await startCanvasStoreServer(storage, beta, { idle: "0" });
   t.after(() => s.kill());
@@ -171,10 +171,7 @@ test("Graphs sit in a workspace beside an image: marks per item, restart, refuse
   const added = await s.call("edit_workspace", { workspaceId: wsId, canvases: [(await newGraph(s, "x")).id], expectedRevision: shown.structuredContent.workspace.revision });
   assert.equal(added.structuredContent.items.length, 5);
 
-  // Not yet: copies of a Graph, a Graph in a paired view, a Graph in a bundle. Each is refused and makes nothing.
-  const copy = await s.raw("merge_workspaces", { target: image, source: graphs[0], mode: "copy" });
-  assert.equal(copy.isError, true);
-  assert.match(JSON.stringify(copy.content), /Copies of a Graph/);
+  // Not yet: a Graph in a paired view, a Graph in a bundle. Each is refused and makes nothing.
   const pair = await s.raw("create_workspace", { from: [graphs[0] + "+" + image] });
   assert.equal(pair.isError, true);
   assert.match(JSON.stringify(pair.content), /paired view needs two images/);
@@ -191,5 +188,44 @@ test("Graphs sit in a workspace beside an image: marks per item, restart, refuse
   const back = await s.call("present_visual", { workspaceId: wsId });
   assert.deepEqual(back.structuredContent.workspace.items.slice(0, 4).map((it) => it.imageId), [...graphs, image], "the workspace comes back after a restart");
   assert.deepEqual(await s.labels(graphs[2]), ["on graph 3"]);
+  await s.stop();
+});
+
+test("a copy of a Graph is a Graph of its own: same axes and marks, then edited apart, and back after a restart", { timeout: 180000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await startCanvasStoreServer(storage, beta, { idle: "0" });
+  t.after(() => s.kill());
+  await s.enable(GRAPH);
+  const image = await s.upload("#335577");
+  const { id: graph } = await newGraph(s, "x^2", { color: "#FBF8F1" });
+  await s.call("present_visual", { imageId: graph, annotations: [{ id: "p", type: "point", x: .4, y: .6, label: "on the original" }] });
+  const preview = await s.call("merge_workspaces", { target: image, source: graph, mode: "copy" });
+  const merged = await s.call("merge_workspaces", { target: image, source: graph, mode: "copy", commit: true, previewId: preview.structuredContent.previewId });
+  const wsId = merged.structuredContent.workspaceId;
+  const { items } = (await s.call("get_workspace_state", { workspace: wsId })).structuredContent;
+  const item = items.find((it) => it.set.startsWith(graph + "#c"));
+  assert.ok(item, "the workspace holds a copy of the Graph: " + JSON.stringify(items));
+  const copyKey = item.set;
+  // A copy's marks, as the workspace document lists them.
+  const copyLabels = async () => (await s.call("get_workspace_state", { workspace: wsId })).structuredContent.sets
+    .find((set) => set.key === copyKey).marks.map((m) => m.label ?? m.id).sort();
+  assert.match(copyKey, /^gph:[0-9a-f]{16}#c[0-9a-f]{8,16}$/);
+  assert.deepEqual(await copyLabels(), ["on the original"], "the copy starts with the Graph's marks");
+
+  const shown = await s.call("present_visual", { workspaceId: wsId, annotations: [{ id: "q", item: item.id, type: "point", x: .1, y: .1, label: "on the copy" }] });
+  assert.deepEqual((await copyLabels()).sort(), ["on the copy", "on the original"]);
+  assert.deepEqual(await s.labels(graph), ["on the original"], "a mark on the copy leaves the Graph as it was");
+  const px = shown._meta["estampes/items"].find((p) => p.id === item.id);
+  assert.equal(px.background?.kind, "solid", "the copy is drawn as its colour, not an image");
+  assert.equal(px.background.color, "#fbf8f1");
+  assert.ok(px.objects.some((o) => o.type === "axes-2d"), "with the Graph's vector axes");
+  const pixels = await s.raw("inspect_image", { imageId: copyKey });
+  assert.equal(pixels.isError, true, "a pixel tool refuses the copy too");
+
+  await s.stop();
+  s = await startCanvasStoreServer(storage, beta, { idle: "0" });
+  assert.deepEqual((await copyLabels()).sort(), ["on the copy", "on the original"], "the copy comes back after a restart");
+  const back = await s.call("present_visual", { workspaceId: wsId });
+  assert.ok(back.structuredContent.workspace.items.some((it) => it.set === copyKey));
   await s.stop();
 });

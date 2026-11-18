@@ -68,12 +68,8 @@ function makeFork(base, setId, data) {
 
 export function parseSetKey(key) {
   const [imageId, setId, extra] = String(key ?? "").split("#");
-  // A Graph document (gph:) is a canvas of its own; copies of a Graph come with workspace support (UVA Phase 4A-4).
-  if (isGraphId(imageId) && extra === undefined) {
-    if (setId !== undefined) throw new Error("Copies of a Graph (" + imageId + ") are not supported yet; use the Graph itself");
-    return { imageId, setId };
-  }
-  if (!IMAGE_ID.test(imageId) || extra !== undefined || (setId !== undefined && !SET_ID.test(setId))) {
+  // A Graph document (gph:) is a canvas of its own, and gph:<hex>#c<hex> a copy of it (UVA Phase 4A-4b).
+  if (!(IMAGE_ID.test(imageId) || isGraphId(imageId)) || extra !== undefined || (setId !== undefined && !SET_ID.test(setId))) {
     throw new Error("Not an annotation set: " + JSON.stringify(key) + " (an imageId or a Graph id, or imageId#c<hex> for a copy)");
   }
   return { imageId, setId };
@@ -390,7 +386,6 @@ async function planTransfer({ source, target, items, mode = "link", removeFromSo
     if (mode === "link" && same) { skipped.push({ item: it.id, set: it.set, reason: "the target already shows this canvas as " + same.id }); continue; }
     if (mode === "copy" && copied) { skipped.push({ item: it.id, set: it.set, reason: "the target already holds a copy of this canvas (" + copied.setKey + ")" }); continue; }
     if (targetItems.length + add.length >= MAX_ITEMS) throw new Error("The target would hold more than " + MAX_ITEMS + " images");
-    if (mode === "copy" && isGraphId(entry.imageId)) throw new Error("Copies of a Graph (" + entry.imageId + ") are not supported yet; use mode link to show the Graph itself");
     add.push({ from: it, entry, ...setSummary(entry) });
   }
   // Pages of one document shown from two different renders.
