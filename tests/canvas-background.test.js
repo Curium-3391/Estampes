@@ -121,4 +121,13 @@ test("bundles carry a solid background; a different colour is not reused", async
   const same = await importBundle((await exportBundle(twin.imageId)).buffer, { collision: "reuse" });
   assert.equal(same.summary[0].how, "reused");
   assert.equal(same.verified, true, JSON.stringify(same.mismatch));
+  // A canvas whose only state is its colour is not empty: a different colour is copied, never restored over it.
+  const png3 = await sharp({ create: { width: 300, height: 200, channels: 3, background: "#cccccc" } }).png().toBuffer();
+  const bare = await registerImage(png3, { source: "chat-file", fileName: "c.png" });
+  bare.background = { kind: "solid", color: "#111111" };
+  const bareBundle = (await exportBundle(bare.imageId)).buffer;
+  bare.background = { kind: "solid", color: "#222222" };
+  const bareImport = await importBundle(bareBundle, { collision: "reuse" });
+  assert.equal(bareImport.summary[0].how, "copied");
+  assert.deepEqual(canvasBackground(bare), { kind: "solid", color: "#222222" }, "the local colour is kept");
 });

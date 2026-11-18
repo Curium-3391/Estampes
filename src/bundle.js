@@ -257,7 +257,8 @@ export async function importBundle(buffer, { name, collision = "reuse", allowPar
   const keyMap = new Map(), touched = [], summary = [];
   // Empty means no marks, no layers and no scene objects: a canvas holding
   // only a Graph is not empty and is never overwritten by a restore.
-  const fresh = (entry) => !canvasMarks(entry).length && !(entry.layers ?? []).length && !(serializeCanvas(entry).objects ?? []).length;
+  // A solid background is state too: a canvas that has only its colour is not empty.
+  const fresh = (entry) => !canvasMarks(entry).length && !(entry.layers ?? []).length && !(serializeCanvas(entry).objects ?? []).length && !isSolid(entry);
   // Decide first, act after: a set can be reused only if every set its
   // links point at is reused too. A reused set keeps its own links, which
   // name the local peers; when a peer becomes a copy, those links would not
