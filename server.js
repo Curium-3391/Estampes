@@ -78,6 +78,7 @@ import { createRevisionTracker, classifyChange, MAX_POLLED_DOCUMENTS } from "./s
 import { COMMAND_ID, commandHash, judgeCommand, commandRecords, createCommandGate } from "./src/visual/commands.js";
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
+import { backgroundPayload } from "./src/visual/background.js";
 import { createCasClient } from "./src/cas/client.js";
 import { createNotebooks } from "./src/cas/notebooks.js";
 import { createSurfaceStore } from "./src/surface/store.js";
@@ -484,7 +485,11 @@ const pairLayers = (left, right) => [
 const uploads = new Map();
 const INLINE_IMAGE_CHARS = 80_000;
 const INLINE_TOTAL_CHARS = 90_000;
-const metaImage = (img) => ({ mimeType: img.mimeType, data: img.data, width: img.width, height: img.height, ...(img.full ? {} : { preview: true }) });
+const metaImage = (img) => img.background ? { background: img.background, width: img.width, height: img.height }
+  : ({ mimeType: img.mimeType, data: img.data, width: img.width, height: img.height, ...(img.full ? {} : { preview: true }) });
+// The canvas base as it travels to the widget: image pixels, or for a solid
+// background (UVA Phase 4A) only its colour and size, never an image.
+const shownBase = async (entry, maxChars) => backgroundPayload(entry) ?? widgetImage(entry, maxChars);
 
 // Image layers (add_image_layer, a promoted base image, a copied canvas) keep
 // their full PNG inline in the scene, up to 8 MB. Inside a tool result that
@@ -607,7 +612,7 @@ async function presentPair({ left, right, annotations, findings, remove, reset, 
     ink.push(...inkReport(own.filter((m) => drawn.includes(m.id)), entry).map((i) => ({ ...i, side })));
   }
   const pending = linkList.filter(needsReview);
-  const [shownLeft, shownRight] = [await widgetImage(left, INLINE_IMAGE_CHARS / 2), await widgetImage(right, INLINE_IMAGE_CHARS / 2)];
+  const [shownLeft, shownRight] = [await shownBase(left, INLINE_IMAGE_CHARS / 2), await shownBase(right, INLINE_IMAGE_CHARS / 2)];
   const text = "Paired view: LEFT " + left.imageId + " (" + left.width + "x" + left.height + " px), RIGHT " + right.imageId +
     " (" + right.width + "x" + right.height + " px), side by side, not overlaid. Coordinates are normalized to each mark's own image. " +
     marks.length + " marks (side, id, rounded box): " + JSON.stringify(marks.map(compactMark)) +
@@ -657,7 +662,7 @@ async function wsPixels(items) {
   // fetches every image itself instead.
   if (each < 8000) return [];
   for (const { id, entry } of items) {
-    const shown = await widgetImage(entry, each);
+    const shown = await shownBase(entry, each);
     out.push({ id, objects:widgetObjects(entry),baseAsObject:!!entry.baseAsObject, ...metaImage(shown) });
   }
   return out;
@@ -1038,7 +1043,7 @@ function makeServer() {
         const check = verify && drawn.length ? await renderVerification(entry, resolved, drawn) : null;
         const ink = inkReport(resolved.filter(m => drawn.includes(m.id)), entry);
         const exports = exportLinks(imageId);
-        const shown = await widgetImage(entry, INLINE_IMAGE_CHARS);
+        const shown = await shownBase(entry, INLINE_IMAGE_CHARS);
         const rendered = [];
         for (const view of views) {
           const { out: full, record } = await deliverView(entry, { region: view.region, ops: view.ops, geometry: view.geometry, sampling: view.sampling });
@@ -1080,7 +1085,7 @@ function makeServer() {
           // Pixels go to the widget only; the model already has them from load_image.
           _meta: {
             "estampes/image": metaImage(shown),
-            "estampes/views": budgetViews(rendered, shown.data.length),
+            "estampes/views": budgetViews(rendered, shown.data?.length ?? 0),
             "estampes/annotations": resolved,
             "estampes/baseAsObject": !!entry.baseAsObject, "estampes/objects": widgetObjects(entry), "estampes/canRestoreObjects": !!entry.deletedObjectBatches?.length,
           },
@@ -1234,7 +1239,7 @@ function makeServer() {
         }
         const entry = await ensureSet(imageId+(setId?"#"+setId:""));
         if (part === "image") {
-          const shown = await widgetImage(entry, INLINE_IMAGE_CHARS);
+          const shown = await shownBase(entry, INLINE_IMAGE_CHARS);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Image " + imageId + " sent to the widget." }],
             structuredContent: { kind: "estampes.visual_canvas", imageId, part, width: entry.width, height: entry.height,
@@ -1242,7 +1247,7 @@ function makeServer() {
           }, { appOnly: true });
         }
         if (pairImageId && part === "canvas") {
-          const right = await ensureImage(pairImageId), shown = await widgetImage(right, INLINE_IMAGE_CHARS / 2), own = await widgetImage(entry, INLINE_IMAGE_CHARS / 2);
+          const right = await ensureImage(pairImageId), shown = await shownBase(right, INLINE_IMAGE_CHARS / 2), own = await shownBase(entry, INLINE_IMAGE_CHARS / 2);
           return logSizes("load_visual_canvas", {
             content: [{ type: "text", text: "Paired canvas data for " + imageId + " + " + pairImageId + " sent to the widget." }],
             structuredContent: {
@@ -1268,8 +1273,8 @@ function makeServer() {
               gestureGroups: gestureGroups(canvasMarks(entry), entry, entry.gestureDecisions),
               objects: widgetObjects(entry),baseAsObject:!!entry.baseAsObject,
               ...(await (async () => {
-                const shown = await widgetImage(entry, INLINE_IMAGE_CHARS);
-                return { image: metaImage(shown), views: budgetViews((entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })), shown.data.length) };
+                const shown = await shownBase(entry, INLINE_IMAGE_CHARS);
+                return { image: metaImage(shown), views: budgetViews((entry.lastViews ?? []).map(v => ({ label: v.label, region: v.region, ...pixels(v) })), shown.data?.length ?? 0) };
               })()),
               ...(check ? { check: checkSummary(check) } : {}),
             };
@@ -2800,7 +2805,7 @@ function makeServer() {
 // present_visual returns), for tools that change a canvas without drawing
 // marks themselves, such as execute_module.
 async function canvasPayload(entry) {
-  const shown = await widgetImage(entry, INLINE_IMAGE_CHARS), marks = canvasMarks(entry), exports = exportLinks(entry.imageId);
+  const shown = await shownBase(entry, INLINE_IMAGE_CHARS), marks = canvasMarks(entry), exports = exportLinks(entry.imageId);
   return {
     structuredContent: {
       kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: entry.imageId, width: entry.width, height: entry.height,

@@ -13,6 +13,7 @@
 // Memory stays the working copy; disk is what lets an image come back after
 // the cache evicts it or the container restarts. Without a storage dir every
 // function here is a no-op and Estampes behaves as before.
+import { canvasBackground, isSolid } from "./visual/background.js";
 import { mkdir, readFile, writeFile, rename, appendFile, readdir, stat, rm } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { config, log } from "./config.js";
@@ -123,6 +124,7 @@ export function serializeCanvas(entry) {
   for (const [rightId, store] of entry.pairLinks ?? []) if (store.size) links[rightId] = [...store.values()];
   return {
     ...(entry.baseAsObject ? { baseAsObject: true } : {}),
+    ...(isSolid(entry) ? { background: canvasBackground(entry) } : {}),
     version: CANVAS_VERSION, imageId: entry.imageId, width: entry.width, height: entry.height,
     ...(entry.setId ? { setId: entry.setId, ...(entry.derivedFrom ? { derivedFrom: entry.derivedFrom } : {}) } : {}),
     marks: canvasMarks(entry), layers: entry.layers ?? [], links,
@@ -150,6 +152,8 @@ export function restoreCanvas(entry, data) {
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => setKeyOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   entry.baseAsObject = !!data.baseAsObject;
+  // Only a valid solid background is kept; anything else means the image.
+  if (isSolid(data)) entry.background = canvasBackground(data); else delete entry.background;
   entry.deletedObjectBatches = Array.isArray(data.deletedObjectBatches) ? data.deletedObjectBatches.slice(-10) : [];
   restoreObjects(entry, data.objects);
   entry.sceneRevision = Number.isInteger(data.sceneRevision) ? data.sceneRevision : 0;

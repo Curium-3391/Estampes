@@ -98,3 +98,13 @@ test("image objects are projected back to their inline PNG from the asset bytes"
   assert.deepEqual(canvas.objects[0].props, { png: "data:image/png;base64," + bytes.toString("base64"), region: { x: 0, y: 0, x2: .5, y2: .5 }, source: "copy" });
   assert.throws(() => projectCanvas(mapped.document, { unlayeredLayerId: UNLAYERED }), /needs the bytes/);
 });
+
+test("a solid background (Phase 4A-1) survives the UVA store round trip exactly", () => {
+  const entry = { imageId: asset().legacyImageId, width: 1600, height: 1000, background: { kind: "solid", color: "#203040" } };
+  applyCanvasChanges(entry, { annotations: [{ id: "a1", type: "rect", x: .1, y: .2, x2: .4, y2: .5 }], resolve });
+  const canvas = json(serializeCanvas(entry));
+  assert.deepEqual(canvas.background, { kind: "solid", color: "#203040" });
+  const residual = roundTrip(canvas);
+  // The document's own solid background is not mapped yet, so the field is carried in the residual.
+  assert.deepEqual(residual?.o?.background, { v: { kind: "solid", color: "#203040" } });
+});
