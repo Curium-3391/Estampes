@@ -327,7 +327,7 @@ function createHost(){
 const host=createHost();
 // What this widget knows about where its marks came from and what it last sent, for bug reports:
 // tap the status line to show it. Times are local clock; it holds no image data.
-const diag={source:"",sourceAt:0,polls:0,pollAt:0,pollError:"",revision:"",applied:0,appliedAt:0,busy:0,edit:null,hooks:new Set()};
+const diag={source:"",sourceAt:0,polls:0,pollAt:0,pollError:"",revision:"",applied:0,appliedAt:0,busy:0,stale:0,edit:null,hooks:new Set()};
 const diagNote=patch=>{Object.assign(diag,patch);for(const f of [...diag.hooks]){try{f()}catch{}}};
 const diagTime=t=>t?new Date(t).toISOString().slice(11,23):"-";
 const diagPoint=(list,id)=>{const m=(Array.isArray(list)?list:[]).find(a=>a?.id===id);const g=m?.points?.[0]??m;return g&&typeof g.x==="number"?"("+g.x.toFixed(3)+","+g.y.toFixed(3)+")":"-"};
@@ -678,7 +678,12 @@ function editOnServer(args){
  const target={imageId,pairImageId:pair?pair.imageId:null,wsId:ws?ws.id:null};
  // One id per user action, reused when the answer is lost: the server applies it once (UVA lost-ACK handling).
  const commandId=newCommandId();
- const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});return run;
+ editsInFlight++;
+ const run=editTail.then(()=>editOnServerNow(body,target,commandId));editTail=run.catch(()=>{});
+ // Until the server's answer is in, a poll snapshot cannot be newer than this edit: it waits, and one that started before
+ // the edit finished is dropped (a fresh poll follows), so the mark never flickers back to its previous place.
+ run.then(()=>{},()=>{}).then(()=>{editsInFlight--;editSerial++;if(!editsInFlight)queueMicrotask(()=>{window.estampesSurface?.pollNow?.().catch(()=>{})})});
+ return run;
 }
 async function editOnServerNow(body,target,commandId){
  const sentAt=Date.now(),first=body.marks?.[0];
@@ -2596,7 +2601,8 @@ const documentRef=()=>ws?ws.id:pair?null:imageId;
 // in progress would lose its element).
 const polledSig=()=>JSON.stringify([layers,gestures,objects,baseAsObject,assistantMarks,priorUserMarks,userMarks.filter(m=>sentIds.has(m.id)),past.length,future.length,ws?[ws.revision,links,ws.items.map(i=>[i.id,i.objects,i.baseAsObject])]:null]);
 // Returns false when the user is in the middle of something; the caller tries again later.
-const interacting=()=>pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
+let editsInFlight=0,editSerial=0;
+const interacting=()=>editsInFlight>0||pointers.size>0||!!panning||!!dragMove||!!textSession||!!textDrag||textBusy||!!findingPointer||!!scope.activeElement?.matches?.("input,textarea,select,[contenteditable]");
 // Saved marks inside the undo/redo stacks follow the server too, so undoing a draft cannot bring back
 // an old version of a mark another viewer moved or deleted. Unsent marks in the stacks stay as they are.
 function reconcileHistory(byId){
@@ -2638,7 +2644,7 @@ let offlineShown=false;
 const diagText=scope.querySelector("#diag-text");
 if(diagText){const draw=()=>{if(disposed)return;const e=diag.edit;
  diagText.textContent=["來源: "+(diag.source||"-")+" @"+diagTime(diag.sourceAt),
-  "輪詢: "+diag.polls+" 次, 最近 "+diagTime(diag.pollAt)+(diag.pollError?" 錯誤 "+diag.pollError:" 正常")+"; 已套用 "+diag.applied+" 次 @"+diagTime(diag.appliedAt)+" 版本 "+(diag.revision||"-")+"; 忙碌略過 "+diag.busy,
+  "輪詢: "+diag.polls+" 次, 最近 "+diagTime(diag.pollAt)+(diag.pollError?" 錯誤 "+diag.pollError:" 正常")+"; 已套用 "+diag.applied+" 次 @"+diagTime(diag.appliedAt)+" 版本 "+(diag.revision||"-")+"; 忙碌略過 "+diag.busy+" 過期略過 "+diag.stale,
   e?"最近修改: "+e.id+" "+e.state+" cmd "+String(e.commandId).slice(0,8)+" 送出 "+diagTime(e.sentAt)+(e.ackAt?" 回覆 "+(e.ackAt-e.sentAt)+"ms":"")+" 送出座標 "+e.sent+" 伺服器回傳 "+(e.returned??"-"):"最近修改: -",
   "畫面: "+(selected?selected+" "+(()=>{const m=findMark(selected);return m?.points?"("+m.points[0].x.toFixed(3)+","+m.points[0].y.toFixed(3)+")":m?"("+Number(m.x).toFixed(3)+","+Number(m.y).toFixed(3)+")":"-"})():"（未選取）")].join("\n");};
  diag.hooks.add(draw);disposers.push(()=>diag.hooks.delete(draw));const box=scope.querySelector("#diag"),st=scope.querySelector("#status");
@@ -2650,7 +2656,7 @@ function setStale(on){
  const note=scope.querySelector("#offline-note");if(note)note.hidden=!on;
  if(!on)status.textContent="已重新連上伺服器。";
 }
-return {scope,rootEl,feed:applyHostResult,documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
+return {scope,rootEl,feed:applyHostResult,get editSerial(){return editSerial},documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
  try{cancelGestures()}catch{}
  disposed=true;
@@ -2716,6 +2722,7 @@ const bindings=new Map(); // viewer -> {id, off, applied, pending}
 function flushBinding(v,b){
  if(!b.pending)return;
  if(v.documentRef()!==b.id){b.pending=null;return}
+ if(b.pending.serial!==v.editSerial){b.pending=null;diagNote({stale:(diag.stale||0)+1});return} // fetched before an edit of this viewer finished
  if(v.applyPolled(b.pending.snapshot,b.id)!==false){diagNote({applied:diag.applied+1,appliedAt:Date.now(),revision:b.pending.key});b.applied=b.pending.key;b.pending=null}
  else diagNote({busy:diag.busy+1});
 }
@@ -2724,13 +2731,13 @@ function bindViewers(){
  for(const v of viewers){
   if(v.disposed||bindings.has(v))continue;
   const id=v.documentRef();if(!id)continue;
-  const b={id,applied:null,pending:null};
+  const b={id,applied:null,pending:null,fetchSerial:v.editSerial};
   const take=st=>{
    v.setStale(!!st?.stale);
    if(!st?.snapshot||!st.revision)return;
    const key=st.revision.epoch+":"+st.revision.counter+":"+st.revision.hash;
    if(key===b.applied)return;
-   b.pending={key,snapshot:st.snapshot};flushBinding(v,b);
+   b.pending={key,snapshot:st.snapshot,serial:b.fetchSerial};flushBinding(v,b);
   };
   b.off=docs.subscribe(id,take);
   take(docs.get(id)); // a viewer joining a document the store already knows catches up at once
@@ -2742,7 +2749,7 @@ async function pollNow(){
  if(!host.ready)return null;
  if(polling){pollAgain=true;return null}
  polling=true;
- try{bindViewers();for(const [v,b] of bindings)flushBinding(v,b);const rep=await docs.reconcile();
+ try{bindViewers();for(const [v,b] of bindings){flushBinding(v,b);b.fetchSerial=v.editSerial}const rep=await docs.reconcile();
    const e=[...bindings.keys()].map(v=>docs.get(v.documentRef())?.error).find(Boolean);
    diagNote({polls:diag.polls+1,pollAt:Date.now(),pollError:rep?.failed?String(e||"failed"):""});return rep;}
  finally{polling=false;if(pollAgain){pollAgain=false;queueMicrotask(()=>{pollNow()})}}
