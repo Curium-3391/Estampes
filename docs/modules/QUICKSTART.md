@@ -2,7 +2,7 @@
 
 Build, test, sign and install a small module that puts a text label on a canvas. About 15 minutes. Every command here is run by `tests/module-authoring.test.js`, so if a step stops working, that test fails.
 
-Reference: [Modules](../MODULES.md) (the full contract), [Testing modules](TESTING.md). You only need Node 22 and a clone of the repository (`npm ci`). No ChatGPT is needed for steps 1–5.
+Reference: [Modules](../MODULES.md) (the full contract), [Testing modules](TESTING.md). You need Node 22 ([nodejs.org](https://nodejs.org/) or a version manager such as nvm) and a clone of the repository with `npm ci` run in it. On Windows, run the commands in WSL (Ubuntu) or Git Bash, or use the PowerShell variants shown below. No ChatGPT or Claude is needed for steps 1–5.
 
 ## What you are building
 
@@ -13,8 +13,14 @@ A **declarative** module: a manifest with scene-operation templates and no code.
 The module CLI keeps trusted keys and the install inbox in the server's storage folder (`/data` by default). While developing, use a throwaway one so you never touch a real server:
 
 ```sh
-export ESTAMPES_STORAGE_DIR=$(mktemp -d)
+export ESTAMPES_STORAGE_DIR=$(mktemp -d)        # macOS, Linux, WSL, Git Bash
 ```
+
+```powershell
+$env:ESTAMPES_STORAGE_DIR = (New-Item -ItemType Directory -Path (Join-Path $env:TEMP "estampes-dev-$(Get-Random)")).FullName   # PowerShell
+```
+
+Run `node scripts/estampes-module.js --help` any time for the list of commands.
 
 Use the same variable when you start a development server in step 6.
 
@@ -26,7 +32,7 @@ node scripts/estampes-module.js init mymodule org.example.labeler
 
 Expected: `Created mymodule/module.json. Next: node scripts/estampes-module.js test mymodule/module.json`. The id is reverse-DNS (`org.example.labeler`); `init` refuses to overwrite files you already have. `mymodule/module.json` now holds one capability, `add_label`:
 
-- `inputSchema` declares `x`, `y` (0 to 1, normalized to the canvas with the origin at the top left) and `text`;
+- `inputSchema` declares `x`, `y` (0 to 1, normalized to the canvas with the origin at the top left; see [coordinate semantics](../MODULES.md#coordinate-semantics-what-the-renderer-does-today)) and `text`;
 - `operations` has one `object.create` of a `shape` of kind `text`, with `{"$param": "x"}` placeholders filled from the validated input;
 - `examples` has one example call. **Examples are required in practice**: they are what the install self-test runs and what the Store shows.
 
@@ -50,7 +56,7 @@ To see what a call produces, run it once on a scratch canvas and get a picture, 
 node scripts/estampes-module.js try mymodule/module.json add_label --params '{"x":0.1,"y":0.1,"text":"hello"}' --out result.png
 ```
 
-It prints the objects it created (and the `data`), writes `result.png`, and takes `--example <n>` instead of `--params` to run one of your examples, or `--image photo.jpg` to draw on your own picture. For an http module, `try` uses an example's `mockResponse` and never calls the network.
+It prints the objects it created (and the `data`), writes `result.png` (drawn on a blank white 1600×1000 canvas unless you pass `--image`, so proportions and text size look as they would on a canvas of that shape), and takes `--example <n>` instead of `--params` to run one of your examples, or `--image photo.jpg` to draw on your own picture. For an http module, `try` uses an example's `mockResponse` and never calls the network.
 
 Other messages you will meet: a capability that targets a canvas without `canvas.write` (`needs canvas.write`), a template with an invalid property (`operations[0]: props.kind: Invalid option …`), or an operation on something that does not exist (`operations[1]: no such object`). Fix the manifest and rerun until it prints `OK`.
 
@@ -87,15 +93,15 @@ Start a development server on the same storage folder (see the [development guid
 ESTAMPES_ALLOW_OPEN=1 npm start
 ```
 
-In ChatGPT (through a tunnel; see [Deployment](../DEPLOYMENT.md)): ask *"Open the Estampes Store"*, find the package under installable packages and press **Install**. The Store shows the plan with its permissions and a command such as:
+In ChatGPT or Claude (through a tunnel; see [Deployment](../DEPLOYMENT.md)): ask *"Open the Estampes Store"*, find the package under installable packages and press **Install**. The Store shows the plan with its permissions and a command such as:
 
 ```sh
 node scripts/estampes-module.js approve <planId>
 ```
 
-Run it in the same terminal environment (same `ESTAMPES_STORAGE_DIR`), then press **Confirm** in the Store. Installing needs both you (the user) and the administrator, and the administrator's approval is a file written on the server, so ChatGPT cannot give it. Installing does not enable the module: enabling is a second plan that shows the permissions; confirm it too.
+Run it in the same terminal environment (same `ESTAMPES_STORAGE_DIR`; with Docker, prefix it with `docker compose exec estampes`), then press **Confirm** in the Store. The approval belongs to that one plan id, and the plan lives in the Store widget's memory: keep the conversation with the Store open between pressing Install and Confirm. If the widget reloads (you switch conversations, say), pressing Install again makes a new plan id that needs its own `approve`. Installing needs both you (the user) and the administrator, and the administrator's approval is a file written on the server, so the AI cannot give it. Installing does not enable the module: enabling is a second plan that shows the permissions; confirm it too.
 
-`add_label` targets an **existing canvas** (the template's `target` is `canvas`). Ask ChatGPT to plot a function with Graph first, then: *"Add the label 'hello' near the top left."* Expected: a text object appears on the canvas, in its own layer named after your module.
+`add_label` targets an **existing canvas** (the template's `target` is `canvas`). Ask the AI to plot a function with Graph first, then: *"Add the label 'hello' near the top left."* Expected: a text object appears on the canvas, in its own layer named after your module.
 
 Without ChatGPT, `tests/module-authoring.test.js` drives exactly this sequence over MCP (prepare, approve, commit, enable, `execute_module`), and `tests/module-acceptance.test.js` does it for a declarative, a WebAssembly and an http module, from a signed source to a result on the canvas; copy from them to script your own checks.
 

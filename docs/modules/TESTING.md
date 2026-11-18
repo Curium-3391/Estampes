@@ -119,3 +119,23 @@ What a mock cannot tell you: whether the real service still answers in that shap
 - `node scripts/estampes-module.js test` passes and every capability has examples.
 - The permission list is the smallest that works, and each `network.allow` host and `dataFlow` sentence is true.
 - You tested the install flow once end to end (level 4), and, if you can, once in ChatGPT (level 5). Say in your README which of these you did.
+
+## Common messages
+
+`expect.error` matches a substring of the message, so use the stable part. These are the texts today (`<path>` is the field, such as `add_label example.x`):
+
+| Situation | Message contains |
+| --- | --- |
+| number too small / large | `must be >= 0`, `must be <= 1`, `must be > 0`, `must be < 1` |
+| wrong type | `expected number, got string` |
+| value not allowed | `must be one of "a", "b"`; for a fixed value `must be "x"` |
+| string length | `at least 1 character`, `at most 80 characters` |
+| list length | `at least 1 item`, `at most 10 items` |
+| missing required field | `.<name>: required` |
+| extra field | `unknown field "<name>"` |
+| pattern | `does not match <pattern>` |
+| a capability targeting a canvas without `canvas.write` | `needs canvas.write` |
+| `canvas-or-new` without `workspace.write` | `target canvas-or-new needs workspace.write` |
+| invalid manifest field | `manifest.<field>: …` (for example `manifest.category: Invalid option: expected one of …`) |
+| bad object property | `operations[<n>]: props.<name>: …` |
+| operation on a missing object | `operations[<n>]: no such object` |

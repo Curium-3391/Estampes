@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Administrator and author tool for Estampes modules. Run it where the
-// server's storage folder is (inside the container: docker compose exec
-// estampes node scripts/estampes-module.js ...). Nothing here talks to a
-// network; ESTAMPES_STORAGE_DIR (default /data) says where the server keeps modules.
+// server's storage folder is (with Docker, prefix every command with:
+// docker compose exec estampes). Only `fetch` and
+// `source add|sync` use the network (https, public addresses); ESTAMPES_STORAGE_DIR (default /data) says where the server keeps modules.
 //
 //   keygen <keyId> [dir]              new ed25519 signing key pair (author)
 //   pack <module.json> --out <file> [--key private.pem --key-id <id>]
@@ -42,6 +42,12 @@ import { createAudit } from "../src/modules/audit.js";
 const storage = process.env.ESTAMPES_STORAGE_DIR || "/data";
 const dir = join(storage, "modules");
 const [cmd, ...rest] = process.argv.slice(2);
+// `--help`, `-h`, `help` or no command: print the command list from the comment at the top of this file.
+if (!cmd || ["--help", "-h", "help"].includes(cmd)) {
+  const self = await readFile(new URL(import.meta.url), "utf8");
+  console.log(self.split("\n").slice(1).filter((l, i, all) => all.slice(0, i + 1).every((x) => x.startsWith("//"))).map((l) => l.replace(/^\/\/ ?/, "")).join("\n").trimEnd());
+  process.exit(0);
+}
 const flag = (name) => { const i = rest.indexOf("--" + name); return i >= 0 ? rest[i + 1] : undefined; };
 const flags = (name) => rest.flatMap((a, i) => (a === "--" + name && rest[i + 1] !== undefined ? [rest[i + 1]] : []));
 // Positional arguments: everything that is not a --flag or a flag's value.
@@ -301,7 +307,7 @@ try {
     const [src] = rest; await ensureDirs(dir); await copyFile(src, join(dir, "inbox", basename(src)));
     console.log("Copied into the inbox.");
   } else {
-    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|index|source|fetch|trust|inbox|copy|approve|secret|init|test|try> ...  (see the comment at the top of this file)");
+    console.log("Usage: node scripts/estampes-module.js <keygen|pack|verify|index|source|fetch|trust|inbox|copy|approve|secret|init|test|try> ...  (--help lists every command with its arguments)");
     process.exitCode = cmd ? 1 : 0;
   }
 } catch (error) { die(String(error?.message || error)); }
