@@ -3,11 +3,14 @@
 // stores and renders them, and evaluates expressions with its own parser.
 import { readFileSync } from "node:fs";
 import { compileExpression } from "../../scene/expression.js";
+import { plotContextOf } from "../../modules/plot-context.js";
 
 export const manifest = JSON.parse(readFileSync(new URL("./manifest.json", import.meta.url), "utf8"));
 
 const TWO_PI = 2 * Math.PI;
-const axesOn = (canvas) => (canvas?.objects ?? []).filter((o) => o.type === "axes-2d");
+// Axes and plots come from the plot context (UVA 4A-3), the same for a Graph
+// document and an image canvas; never from the raw object list.
+const axesOn = (canvas) => plotContextOf(canvas).frames;
 
 function pickAxes(canvas, frame) {
   const all = axesOn(canvas);
@@ -59,14 +62,14 @@ export function run(capability, params, { canvas }) {
     return { operations: ops, method: "adaptive sampling of the parsed expression", summary: "y = " + fn.source + (axes ? " on axes " + axes.id : " on new axes") };
   }
   if (capability === "update_plot") {
-    const target = (canvas?.objects ?? []).find((o) => o.id === params.object);
-    if (!target || target.type !== "function-plot") throw new Error(params.object + " is not a function plot on this canvas");
+    const target = plotContextOf(canvas).plots.find((o) => o.id === params.object);
+    if (!target) throw new Error(params.object + " is not a function plot on this canvas");
     if (params.expression) compileExpression(params.expression);
     const props = {
       ...(params.expression ? { expression: params.expression } : {}), ...(params.domain ? { domain: params.domain } : {}),
       ...(params.label !== undefined ? { label: params.label } : {}),
       ...(params.labelMode !== undefined ? { labelMode: params.labelMode } : {}),
-      ...(params.color ? { style: { ...(target.props.style ?? {}), color: params.color } } : {}),
+      ...(params.color ? { style: { ...(target.style ?? {}), color: params.color } } : {}),
     };
     if (!Object.keys(props).length) throw new Error("nothing to change: give expression, domain, color, label or labelMode");
     return { operations: [{ op: "object.update", id: target.id, props }], summary: "updated " + target.id };
