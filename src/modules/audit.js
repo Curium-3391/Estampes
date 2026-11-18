@@ -33,6 +33,8 @@ export function createAudit(dir) {
     // From disk, for the CLI and after a restart.
     async read(limit = 200) {
       if (!file) return this.recent(limit);
+      // Lines recorded before this call are still being appended: wait for them.
+      await chain;
       try {
         const lines = (await readFile(file, "utf8")).trim().split("\n").filter(Boolean).slice(-limit);
         return lines.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean).reverse();

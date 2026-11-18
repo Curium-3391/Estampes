@@ -162,7 +162,7 @@
     },
     {
       "path": "src/modules/audit.js",
-      "sha256": "e27cd0b122f64500c5f23ac635ed47fd906904a2a1779df21878d9355c2d48e9"
+      "sha256": "4474d1f3acf8159ef4a69d780a8a766d49d2ecc39cc880a348e6d6fc10bbe582"
     },
     {
       "path": "src/modules/egress.js",
@@ -491,6 +491,15 @@
         "src/oauth.js",
         "src/modules/json-schema.js"
       ]
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User chose \u300c\u53e6\u958b PR \u4fee\u5fa9\u300d on 2026-11-19 (thread UVA Phase 4A) for the module audit read race",
+      "reason": "Fix: read() awaits the pending appends before reading audit.jsonl, so entries recorded just before a read are not missed (intermittent tests/packages.test.js failure); nothing else in the file changes",
+      "files": [
+        "src/modules/audit.js"
+      ],
+      "previousSha256": "e27cd0b122f64500c5f23ac635ed47fd906904a2a1779df21878d9355c2d48e9"
     }
   ]
 }

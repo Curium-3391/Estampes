@@ -49,7 +49,8 @@ async function publishAndInstall(example, id, { extraFiles = [], secret, transpo
     await h.lifecycle.commit(plan.planId, { consent: plan.consent });
   }
   assert.equal(h.registry.record(id).state, "enabled");
-  return { h, cleanup: async () => { await rm(storage, { recursive: true, force: true }); await rm(work, { recursive: true, force: true }); } };
+  // The audit log appends in the background: let it finish before its folder is removed (ENOTEMPTY otherwise).
+  return { h, cleanup: async () => { await h.audit.flush(); await rm(storage, { recursive: true, force: true }); await rm(work, { recursive: true, force: true }); } };
 }
 
 test("acceptance 1, declarative: numbered markers", { timeout: 60000 }, async () => {
