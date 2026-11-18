@@ -49,11 +49,21 @@ export async function checkFonts(scripts = ["latin"]) {
     if (s === "cjk-tc") { const r = await checkTraditionalChinese(); if (!r.ok) return r; continue; }
     const [x, y, ratio] = SAMPLES[s] ?? [];
     if (!x) return { ok: false, reason: "unknown script " + s };
-    const a = await pixels(x), b = await pixels(y);
-    if (!ink(a)) return { ok: false, reason: s + ": no text was drawn at all" };
-    if (Buffer.compare(a, b) === 0) return { ok: false, reason: s + ": different characters render identically (missing-glyph boxes), no font covers them" };
-    if (ratio && ink(a) < ratio * ink(b)) return { ok: false, reason: s + ": characters render as missing-glyph boxes (ink " + ink(a) + " vs " + ink(b) + "), no font covers them" };
+    const r = judgeSample(s, await pixels(x), await pixels(y), ratio);
+    if (!r.ok) return r;
   }
+  return { ok: true };
+}
+
+// The verdict on one sample pair. With no font at all, librsvg draws a string
+// either as missing-glyph boxes or, at random, as nothing, and two boxed
+// renders can differ in a few anti-aliased grey levels. So both renders must
+// draw ink, and they are compared as black-and-white masks, not byte for byte.
+const mask = (data) => Buffer.from(data.map((v) => (v < 128 ? 0 : 255)));
+export function judgeSample(s, a, b, ratio = 0) {
+  if (!ink(a) || !ink(b)) return { ok: false, reason: s + ": no text was drawn at all" };
+  if (Buffer.compare(mask(a), mask(b)) === 0) return { ok: false, reason: s + ": different characters render identically (missing-glyph boxes), no font covers them" };
+  if (ratio && ink(a) < ratio * ink(b)) return { ok: false, reason: s + ": characters render as missing-glyph boxes (ink " + ink(a) + " vs " + ink(b) + "), no font covers them" };
   return { ok: true };
 }
 
