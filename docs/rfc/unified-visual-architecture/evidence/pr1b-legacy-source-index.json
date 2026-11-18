@@ -61,7 +61,7 @@
     },
     {
       "path": "src/builtin-modules/graph/index.js",
-      "sha256": "457d58cd294e3917a93c0f75fec165c87cbd43d8f1ab77a6650b5ab54f340307"
+      "sha256": "5e727dc6603c9ae42ff5b6697f4b883a525d57e188920ac042da04e4616f18eb"
     },
     {
       "path": "src/bundle.js",
@@ -458,6 +458,15 @@
       "files": [
         "src/modules/router.js"
       ]
+    },
+    {
+      "date": "2026-11-18",
+      "authorizedBy": "User approved the UVA Phase 4A plan (2026-11-18, 「照你說的做」), which lists amendment records for sealed files touched by each 4A PR, graph/index.js included",
+      "reason": "UVA Phase 4A-3: the graph module reads axes and function plots through the plot context adapter (src/modules/plot-context.js) instead of the raw object list; capabilities, parser and sampler unchanged",
+      "files": [
+        "src/builtin-modules/graph/index.js"
+      ],
+      "previousSha256": "457d58cd294e3917a93c0f75fec165c87cbd43d8f1ab77a6650b5ab54f340307"
     }
   ]
 }
