@@ -22,9 +22,10 @@ Talking about a specific spot in a picture usually means screenshots, circling t
 - **Many images, one place:** a workspace holds up to 24 images side by side, each with its own marks and coordinates; merge, split, copy and link them without flattening anything, and carry a whole workspace to another server as one `.estampes` file.
 - **Measure and align:** register two images (with honest quality reporting), overlay or difference them, assess sharpness and noise, calibrate a scale and measure distance, area or angle with uncertainty, render PDF pages, and detect candidate shapes, lines, circles or text.
 - **Modules on the same canvas:** an optional Store adds capabilities that put *objects* on the canvas instead of pixels: plot a function (Graph), compute exactly with SymPy in a separate sandboxed container (calculator, with results you can plot), or plate-solve a photo of the sky. Each module asks for explicit permissions, and you approve every change.
+- **English and Traditional Chinese:** every widget follows the chat app's language, and a **Language** menu in the canvas and Store headers lets each person choose; the choice stays in their own browser. Set `ESTAMPES_DEFAULT_LOCALE` for the language used when neither says ([Deployment](docs/DEPLOYMENT.md)).
 - **Across turns and chats:** marks, layers and change history are stored on your own server and export as an image, a layered SVG (opens in Inkscape) or an `estampes.visual/2` JSON document you can load again.
 
-Images come in through the chat (uploaded or photographed in ChatGPT), a public URL the AI supplies, or the canvas's own **選擇圖片／拍照** button (for Claude, which does not pass attachments to tools). Estampes handles pixels and coordinates; **recognition is still the AI's job**, and uncertain locations are shown as such.
+Images come in through the chat (uploaded or photographed in ChatGPT), a public URL the AI supplies, or the canvas's own **Choose image / take photo** button (for Claude, which does not pass attachments to tools). Estampes handles pixels and coordinates; **recognition is still the AI's job**, and uncertain locations are shown as such.
 
 ## Quick start
 
@@ -101,6 +102,7 @@ The current version is in [`package.json`](package.json) and at `/version` on yo
 - Plugins cannot draw over images ChatGPT itself shows (such as image search results), so images are shown in the Estampes canvas instead.
 - The access key is one shared secret, not per-user accounts. ChatGPT carries it in the connector URL (do not share that URL); Claude signs in with it once on your server's own page and keeps a token.
 - Claude support (sign-in, canvas upload, result-size limits) is covered by automated tests; it has not yet been tried in a live Claude chat.
+- Language: English and Traditional Chinese. Following the chat app's language is tested with fake hosts; whether ChatGPT and Claude report a language to widgets has not been checked live, so set `ESTAMPES_DEFAULT_LOCALE` to the language you want when they do not. Text sent to the AI as your words (mark intents, verdicts) is still Traditional Chinese until a later phase.
 - Self-hosting only; there is no hosted service.
 
 ## License
