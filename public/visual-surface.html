@@ -2416,7 +2416,7 @@ async function displayMode(mode){
  try{
    if(window.openai?.requestDisplayMode)await window.openai.requestDisplayMode({mode});
    else await request("ui/request-display-mode",{mode});
- }catch(err){status.textContent="這個對話程式不支援切換顯示方式："+String(err.message||err)}
+ }catch(err){status.textContent=t("vs.host.displayModeFailed",{message:String(err.message||err)})}
 }
 scope.querySelector("#fullscreen").addEventListener("click",()=>displayMode("fullscreen"));
 scope.querySelector("#clear").addEventListener("click",()=>{if(userMarks.length){commitMarks([]);selectedFocusId=null;render()}});
@@ -2453,16 +2453,18 @@ host.whenReady().then(()=>{
  if(isLibreChat()){
    scope.querySelector("#upload-empty p").textContent=libreChatUploadHelp;
    uploadBig.hidden=true;
-   uploadBtn.textContent="圖片上傳說明";
-   uploadBtn.title="查看 LibreChat 的圖片上傳限制";
+   uploadBtn.textContent=t("vs.upload.libreChatButton");
+   uploadBtn.title=t("vs.upload.libreChatTitle");
  }
- ready=true;readyWaiters.splice(0).forEach(f=>f());render();if(!rootEl.classList.contains("awaiting-upload"))status.textContent="已連線，可以任意點選或拖曳標註。";
+ ready=true;readyWaiters.splice(0).forEach(f=>f());render();if(!rootEl.classList.contains("awaiting-upload"))status.textContent=t("vs.host.ready");
  else if(isLibreChat())status.textContent="";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;});
-own(host.on("failed",err=>{status.textContent="和對話程式連線失敗："+String(err.message||err)}));
+own(host.on("failed",err=>{status.textContent=t("vs.host.failed",{message:String(err.message||err)})}));
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 // The user's verdicts on AI's links, as text AI reads in the chat.
+// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
+// splits it into a localized sentence plus an English structured block.
 const VERDICT_ZH={link:{confirmed:"確認是同一個",rejected:"否決，不是同一個",unreviewed:"撤回我先前的判斷"},
  note:{confirmed:"確認你的說明正確",rejected:"否決你的說明",unreviewed:"撤回我先前的判斷"}};
 const GESTURE_ZH={"user-confirmed":"是同一個手勢","user-rejected":"不是同一個手勢，請分開看","unreviewed":"撤回我先前的判斷"};
@@ -2498,6 +2500,7 @@ function editMessage(list){
    list.map(e=>"- "+(ws?e.side+"：":pair?(e.side==="right"?"右圖：":"左圖："):"")+(EDIT_ZH[e.kind]?.(e)??e.kind)).join("\n")+
    "\n請以畫布現在的狀態為準；需要時用 present_visual（"+(ws?"workspaceId="+ws.id:"imageId")+"）重新讀取。";
 }
+// i18n-ignore-end
 send.addEventListener("click",async()=>{
  const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
  const reviewed=unsentReviews,edited=unsentEdits;
@@ -2510,8 +2513,8 @@ send.addEventListener("click",async()=>{
      const response=await request("ui/message",{role:"user",content:[{type:"text",text:extra()}]});
      if(response?.isError)throw Error("Host rejected message");
      clearExtra();
-     status.textContent="已把你的判斷與修改傳給 AI。";
-   }catch(err){status.textContent="傳送失敗："+String(err.message||err)}
+     status.textContent=t("vs.send.extraDone");
+   }catch(err){status.textContent=t("vs.send.failed",{message:String(err.message||err)})}
    render();return;
  }
  const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,note,color,size,pen,side,strokeOrder,relativeStartMs,relativeEndMs,pointerType})=>({
@@ -2525,7 +2528,7 @@ send.addEventListener("click",async()=>{
  const replyQuote=quoteInput.value.trim().slice(0,300);
  let validated=false,reason="",chatMessage="";
  try{
-   status.textContent="正在驗證座標並整理對話上下文…";
+   status.textContent=t("vs.send.validating");
    const result=await request("tools/call",{
      name:"validate_visual_annotations",
      arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),...(ws?{workspaceId:ws.id}:{}),annotations:marks,intent,note,replyQuote,hiddenLayers:[...hiddenLayers].map(serverLayer),
@@ -2554,6 +2557,7 @@ send.addEventListener("click",async()=>{
  if(!validated){
    // Failure fallback: still carry user-supplied intention, image identity,
    // normalized geometry, and arrowhead meaning, without claiming validation.
+   // i18n-ignore-start: user-voice text sent to the AI (RFC class T2, Phase 3).
    chatMessage="我透過 Estampes 做了視覺標註，但伺服器尚未驗證這次資料。\n"+
      "目的："+INTENT_TEXT[intent]+"。\n"+
      (note?"我的補充："+note+"\n":"")+
@@ -2566,11 +2570,11 @@ send.addEventListener("click",async()=>{
      "原圖左上角為原點，座標為 0..1。\n"+
      (intent==="point-out"?"點是位置，框是範圍，箭頭尖端(x2,y2)是我指的對象。\n":"點是位置，框是範圍；箭頭保留起點(x,y)到尖端(x2,y2)的方向，它是指向還是表示方向／流向，請看我的補充說明。\n")+
      "未經驗證的標註："+JSON.stringify(marks);
+   // i18n-ignore-end
  }
  if(reviewed.length||edited.length)chatMessage+="\n\n"+extra();
  try{
-   status.textContent=(validated?"座標與意圖已驗證；":"驗證失敗，嘗試傳送原始資料；")+
-     "訊息送往 AI 中…";
+   status.textContent=t(validated?"vs.send.sendingValidated":"vs.send.sendingRaw");
    const response=await request("ui/message",{
      role:"user",content:[{type:"text",text:chatMessage}]
    });
@@ -2579,11 +2583,9 @@ send.addEventListener("click",async()=>{
    clearExtra();
    batchStart=null;strokeCount=0;
    past=[];future=[];
-   status.textContent=(validated?"v0.2 上下文事件已提交；":"未驗證標註已提交；")+
-     (imageId?"已送出的標記會變淡，下次只問新畫的。":"請確認 AI 是否呼叫 inspect_visual 並辨識真正的圖片像素。");
+   status.textContent=t("vs.send.done",{what:validated?t("vs.send.doneValidated"):t("vs.send.doneRaw"),next:imageId?t("vs.send.nextImage"):t("vs.send.nextDemo")});
  }catch(err){
-   status.textContent=(validated?"座標驗證成功；":"座標驗證失敗："+reason+"；")+
-     "聊天傳送失敗："+String(err.message||err);
+   status.textContent=t("vs.send.chatFailed",{validation:validated?t("vs.send.validationOk"):t("vs.send.validationFailed",{reason}),message:String(err.message||err)});
  }
  render();
 });
@@ -2600,7 +2602,7 @@ workbenchApi=setupWorkbench();
 function cancelGestures(){
  pointers.clear();pinch=null;panning=null;gestureLock=false;spaceDown=false;
  cancelStroke();findingPointer=null;
- if(dragMove){replaceLocal(dragMove.before);dragMove=null;status.textContent="拖曳已取消（畫布大小改變或離開），標記已還原。";render();}
+ if(dragMove){replaceLocal(dragMove.before);dragMove=null;status.textContent=t("vs.drag.cancelledResize");render();}
 }
 // A resize changes the coordinate frame under a pointer; end the gesture.
 if(typeof ResizeObserver==="function"){let lastW=-1,lastH=-1;const ro=new ResizeObserver(entries=>{const r=entries[entries.length-1]?.contentRect;if(!r||disposed)return;const w=Math.round(r.width),h=Math.round(r.height);const changed=lastW>=0&&(w!==lastW||h!==lastH);lastW=w;lastH=h;if(changed)cancelGestures()});ro.observe(svg);disposers.push(()=>ro.disconnect());}
@@ -2655,10 +2657,10 @@ function applyPolled(s,id){
 let offlineShown=false;
 const diagText=scope.querySelector("#diag-text");
 if(diagText){const draw=()=>{if(disposed)return;const e=diag.edit;
- diagText.textContent=["來源: "+(diag.source||"-")+" @"+diagTime(diag.sourceAt),
-  "輪詢: "+diag.polls+" 次, 最近 "+diagTime(diag.pollAt)+(diag.pollError?" 錯誤 "+diag.pollError:" 正常")+"; 已套用 "+diag.applied+" 次 @"+diagTime(diag.appliedAt)+" 版本 "+(diag.revision||"-")+"; 忙碌略過 "+diag.busy+" 過期略過 "+diag.stale,
-  e?"最近修改: "+e.id+" "+e.state+" cmd "+String(e.commandId).slice(0,8)+" 送出 "+diagTime(e.sentAt)+(e.ackAt?" 回覆 "+(e.ackAt-e.sentAt)+"ms":"")+" 送出座標 "+e.sent+" 伺服器回傳 "+(e.returned??"-"):"最近修改: -",
-  "畫面: "+(selected?selected+" "+(()=>{const m=findMark(selected);return m?.points?"("+m.points[0].x.toFixed(3)+","+m.points[0].y.toFixed(3)+")":m?"("+Number(m.x).toFixed(3)+","+Number(m.y).toFixed(3)+")":"-"})():"（未選取）")].join("\n");};
+ diagText.textContent=[t("vs.diag.source",{source:diag.source||"-",at:diagTime(diag.sourceAt)}),
+  t("vs.diag.poll",{polls:diag.polls,at:diagTime(diag.pollAt),result:diag.pollError?t("vs.diag.pollError",{error:diag.pollError}):t("vs.diag.pollOk"),applied:diag.applied,appliedAt:diagTime(diag.appliedAt),revision:diag.revision||"-",busy:diag.busy,stale:diag.stale}),
+  e?t("vs.diag.edit",{id:e.id,state:e.state,command:String(e.commandId).slice(0,8),sentAt:diagTime(e.sentAt),ack:e.ackAt?t("vs.diag.ack",{ms:e.ackAt-e.sentAt}):"",sent:e.sent,returned:e.returned??"-"}):t("vs.diag.noEdit"),
+  t("vs.diag.view",{selection:selected?selected+" "+(()=>{const m=findMark(selected);return m?.points?"("+m.points[0].x.toFixed(3)+","+m.points[0].y.toFixed(3)+")":m?"("+Number(m.x).toFixed(3)+","+Number(m.y).toFixed(3)+")":"-"})():t("vs.diag.noSelection")})].join("\n");};
  diag.hooks.add(draw);disposers.push(()=>diag.hooks.delete(draw));const box=scope.querySelector("#diag"),st=scope.querySelector("#status");
  // Tap the status line to show or hide this block (hidden by default, so the layout is unchanged).
  st?.addEventListener("click",()=>{if(box){box.hidden=!box.hidden;draw();}});draw();}
@@ -2666,7 +2668,7 @@ function setStale(on){
  on=!!on;if(on===offlineShown||disposed)return;offlineShown=on;
  rootEl.toggleAttribute("data-offline",on);
  const note=scope.querySelector("#offline-note");if(note)note.hidden=!on;
- if(!on)status.textContent="已重新連上伺服器。";
+ if(!on)status.textContent=t("vs.offline.back");
 }
 return {scope,rootEl,feed:applyHostResult,get editSerial(){return editSerial},documentRef,applyPolled,setStale,cancelGestures,get disposed(){return disposed},dispose(){
  if(disposed)return;
