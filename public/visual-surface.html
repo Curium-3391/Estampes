@@ -279,6 +279,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 </main></template></div></div>
 <script type="module">
 __ESTAMPES_I18N__
+__ESTAMPES_USERVOICE__
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
 // The widget talks to its host once, however many viewers it shows. Viewers
 // subscribe to events (tool-input, tool-result, globals) and send requests
@@ -391,15 +392,6 @@ const checkTab=scope.querySelector('[data-view="check"]'),undoBtn=scope.querySel
 const exportImageBtn=scope.querySelector("#export-image"),exportMarksBtn=scope.querySelector("#export-marks");
 let exportLinks=null;
 const zoomTools=scope.querySelector("#zoom-tools"),zoomLevel=scope.querySelector("#zoom-level");
-const INTENT_TEXT=i18nMap({
- "free-annotate":"vs.intentText.free-annotate",
- "point-out":"vs.intentText.point-out",
- "ask-about-region":"vs.intentText.ask-about-region",
- "answer-question":"vs.intentText.answer-question",
- "correct-assistant":"vs.intentText.correct-assistant",
- "compare":"vs.intentText.compare",
- "report-issue":"vs.intentText.report-issue"
-});
 const SCENES={
  landscape:`<rect width="640" height="360" fill="#DBEAF0"/><rect y="230" width="640" height="130" fill="#A4C7A4"/>
  <circle cx="508" cy="73" r="39" fill="#F2C76F"/><path d="M0 255 L167 72 L324 255Z" fill="#90A9AE"/>
@@ -2470,50 +2462,25 @@ own(host.on("failed",err=>{status.textContent=t("vs.host.failed",{message:String
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 // The user's verdicts on AI's links, as text AI reads in the chat.
-// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
-// splits it into a localized sentence plus an English structured block.
-const VERDICT_ZH={link:{confirmed:"確認是同一個",rejected:"否決，不是同一個",unreviewed:"撤回我先前的判斷"},
- note:{confirmed:"確認你的說明正確",rejected:"否決你的說明",unreviewed:"撤回我先前的判斷"}};
-const GESTURE_ZH={"user-confirmed":"是同一個手勢","user-rejected":"不是同一個手勢，請分開看","unreviewed":"撤回我先前的判斷"};
-const canvasName=()=>ws?"工作區 "+ws.id+"："+ws.items.map(it=>it.id+"="+it.imageId).join("、"):imageId+(pair?" ＋ 右 "+pair.imageId:"");
+// What the canvas shows, for messages posted as the person.
+const canvasRef=()=>ws?{kind:"workspace",id:ws.id,items:ws.items.map(it=>({id:it.id,imageId:it.imageId}))}:pair?{kind:"pair",left:imageId,right:pair.imageId}:{kind:"single",imageId};
+// The person's verdicts on AI's claims and stroke groups (src/surface/user-voice.js).
 function reviewMessage(list){
- const gestureList=list.filter(r=>r.kind==="gesture");list=list.filter(r=>r.kind!=="gesture");
- const gesture=gestureList.length?"我在 Estampes 畫布上說明了哪些筆畫屬於同一個手勢（筆畫本身沒有被合併或修改）：\n"+
-   gestureList.map(r=>"- "+(frames?(ws?r.side+" ":r.side==="right"?"右圖 ":"左圖 "):"")+r.labels.join(" + ")+"："+
-     (r.made&&r.verdict==="user-confirmed"?"我把它們組成同一個手勢":r.made&&r.verdict==="unreviewed"?"我把它們拆開了，請分開看":GESTURE_ZH[r.verdict])).join("\n"):"";
- if(!list.length)return gesture;
- return (gesture?gesture+"\n\n":"")+"我在 Estampes 畫布上審核了你的說法（"+canvasName()+"）：\n"+
-   list.map(r=>"- "+(r.kind==="link"?"連結 "+(r.label||r.rawId||r.id)+(ws?"（"+r.fromItem+" "+rawOf(markById(r.left)??{id:r.left})+" ↔ "+r.toItem+" "+rawOf(markById(r.right)??{id:r.right})+"）":"（左 "+r.left+" ↔ 右 "+r.right+"）"):
-     (frames?(ws?r.side+" ":r.side==="right"?"右圖 ":"左圖 "):"")+"標記 "+(r.label||r.id)+" 的說明「"+r.note+"」")+"："+VERDICT_ZH[r.kind][r.verdict]+
-     (r.verdict==="rejected"&&(r.reason||r.reviewReason)?"，理由："+(r.reason||r.reviewReason):"")).join("\n")+
-   "\n請以我的判斷為準：被否決的說法不要再依賴，也不要在沒有新證據時重提；未確認的只是候選。";
+ const side=r=>frames?r.side:undefined,reason=r=>r.reason||r.reviewReason;
+ return reviewParts(list.map(r=>r.kind==="gesture"?{kind:"gesture",side:side(r),labels:r.labels,verdict:r.verdict,made:r.made}
+   :r.kind==="link"?{kind:"link",label:r.label||r.rawId||r.id,verdict:r.verdict,reason:reason(r),fromItem:r.fromItem,toItem:r.toItem,
+     left:ws?rawOf(markById(r.left)??{id:r.left}):r.left,right:ws?rawOf(markById(r.right)??{id:r.right}):r.right}
+   :{kind:"note",side:side(r),label:r.label||r.id,note:r.note,verdict:r.verdict,reason:reason(r)}),canvasRef(),i18nT);
 }
-// The user's hand edits (layers, moved or deleted marks) as chat text. The
-// server also tells AI on its next call; this makes it visible right away.
-const EDIT_ZH={
- "rename-layer":e=>"把圖層 "+e.layer+"「"+e.from+"」改名為「"+e.to+"」",
- "lock-layer":e=>"鎖定了圖層 "+e.layer+"（請不要修改或刪除裡面的標記）","unlock-layer":e=>"解鎖了圖層 "+e.layer,
- "reorder-layers":e=>"調整了圖層順序（由下到上）"+(e.order??[]).join("、"),
- "remove-mark":e=>"刪除了"+(e.author==="user"?"我的":"你的")+"標記 "+e.id+(e.label?"「"+e.label+"」":""),
- "move-mark":e=>({move:"移動了",resize:"改了大小：",reshape:"改了形狀："}[e.change]??"移動或改了形狀：")+(e.author==="assistant"?"你的":"我的")+"標記 "+e.id+(e.label?"「"+e.label+"」":"")+
-   (e.author==="assistant"?"（我修正了它的位置；你的說明保留，請確認是否仍適用）":"（你先前對它的說明可能不再適用）"),
- "restyle-mark":e=>"改了我的標記 "+e.id+(e.label?"「"+e.label+"」":"")+" 的樣式或標籤",
- "edit-text":e=>"改寫了你的標記 "+e.id+" 的文字"+(e.before&&e.after?"：標籤「"+e.before.label+"」→「"+e.after.label+"」"+(e.before.note!==e.after.note?"，備註「"+e.before.note+"」→「"+e.after.note+"」":""):"")+"（請以我改的文字為準）",
- "undo-edit":e=>"復原了標記 "+e.id+" 的上一個修改（"+(e.steps??[]).join("+")+"），它回到修改前的樣子",
- "redo-edit":e=>"重做了標記 "+e.id+" 的修改（"+(e.steps??[]).join("+")+"）",
-};
-function editMessage(list){
- return "我在 Estampes 畫布上手動修改了（"+canvasName()+"）：\n"+
-   list.map(e=>"- "+(ws?e.side+"：":pair?(e.side==="right"?"右圖：":"左圖："):"")+(EDIT_ZH[e.kind]?.(e)??e.kind)).join("\n")+
-   "\n請以畫布現在的狀態為準；需要時用 present_visual（"+(ws?"workspaceId="+ws.id:"imageId")+"）重新讀取。";
-}
-// i18n-ignore-end
+// The user's hand edits (layers, moved or deleted marks). The server also
+// tells AI on its next call; this makes it visible right away.
+const editMessage=list=>editParts(list,canvasRef(),i18nT);
 send.addEventListener("click",async()=>{
  const freshIds=userMarks.filter(m=>!sentIds.has(m.id)).map(m=>m.id);
  const reviewed=unsentReviews,edited=unsentEdits;
  if(!ready||(!freshIds.length&&!reviewed.length&&!edited.length))return;
  send.disabled=true;
- const extra=()=>[...(reviewed.length?[reviewMessage(reviewed)]:[]),...(edited.length?[editMessage(edited)]:[])].join("\n\n");
+ const extra=()=>joinUserVoice(reviewMessage(reviewed),editMessage(edited));
  const clearExtra=()=>{unsentReviews=unsentReviews.filter(r=>!reviewed.includes(r));unsentEdits=unsentEdits.filter(r=>!edited.includes(r));};
  if(!freshIds.length){
    try{
@@ -2566,20 +2533,7 @@ send.addEventListener("click",async()=>{
  if(!validated){
    // Failure fallback: still carry user-supplied intention, image identity,
    // normalized geometry, and arrowhead meaning, without claiming validation.
-   // i18n-ignore-start: user-voice text sent to the AI (RFC class T2, Phase 3).
-   chatMessage="我透過 Estampes 做了視覺標註，但伺服器尚未驗證這次資料。\n"+
-     "目的："+INTENT_TEXT[intent]+"。\n"+
-     (note?"我的補充："+note+"\n":"")+
-     (replyQuote?"我手動提供的前文引述："+replyQuote+"\n":
-       "沒有前文的精確引述，請勿猜測。\n")+
-     (imageId?"畫布 imageId="+imageId+"；手繪與場景物件請用 render_canvas，照片細節才用 process_image。這次提交尚未保存，合成圖可能不含新筆畫，不可宣稱已看過；":
-       "SVG 底圖 id=demo:"+selectedScene+" revision=svg-v1 viewBox=640×360，")+
-     (pair?"右圖 imageId="+pair.imageId+"，每個標註的 side 表示在左圖或右圖；":"")+
-     (ws?"這是工作區 workspaceId="+ws.id+"（"+ws.items.map(it=>it.id+"="+it.imageId).join("、")+"），每個標註的 item 表示它在哪張圖上；":"")+
-     "原圖左上角為原點，座標為 0..1。\n"+
-     (intent==="point-out"?"點是位置，框是範圍，箭頭尖端(x2,y2)是我指的對象。\n":"點是位置，框是範圍；箭頭保留起點(x,y)到尖端(x2,y2)的方向，它是指向還是表示方向／流向，請看我的補充說明。\n")+
-     "未經驗證的標註："+JSON.stringify(marks);
-   // i18n-ignore-end
+   chatMessage=joinUserVoice(fallbackParts({intent,note,replyQuote,canvas:canvasRef(),scene:selectedScene,marks},i18nT));
  }
  if(reviewed.length||edited.length)chatMessage+="\n\n"+extra();
  try{

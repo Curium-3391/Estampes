@@ -81,17 +81,16 @@ send.addEventListener("click",async()=>{
    ?t("nl.sendingVerified")
    :t("nl.sendingUnverified");
  try {
-// i18n-ignore-start: user-voice text sent to the AI (RFC class T2, Phase 3).
+   // Posted as the person: their sentence, then an English block for the assistant (RFC i18n D4).
    const result=await request("ui/message",{
      role:"user",
      content:[{
        type:"text",
-       text:"我在 Estampes 的 -4 至 4 數線上指向 "+value+
-         "。標註："+JSON.stringify(payload)+
-         "。請確認你收到我指認的數字。"
+       text:i18nT("msg.numberLine.summary",{value})+"\n\n--- Estampes number line, for the assistant ---\n"+
+         "The person pointed at "+value+" on the Estampes number line from -4 to 4. Annotation: "+JSON.stringify(payload)+
+         "\nConfirm the number you received."
      }]
    });
-// i18n-ignore-end
    if(result?.isError)throw Error("Host returned isError");
    status.textContent=validationOk
      ?t("nl.sentVerified")

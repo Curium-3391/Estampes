@@ -203,6 +203,8 @@ test("a freshly drawn annotation keeps its note through send, chat and reload",{
     const mark=state.marks.find(m=>m.label==="新標籤");assert.ok(mark);assert.equal(mark.finding?.note,note);
     const message=await ui.page.evaluate(()=>window.sentMessages.at(-1).content[0].text);
     assert.ok(message.includes(JSON.stringify(note)),"the structured event sent to the assistant includes the note");
+    assert.ok(message.startsWith("我在 Estampes 畫布上標了 1 個地方："),"the person's sentence comes first, in their language");
+    assert.ok(message.includes("\n\n--- Estampes annotation, for the assistant ---\n"),"then the English block for the assistant");
     await ui.reload();await ui.frame.locator("#unified-layers circle").waitFor();
     await ui.frame.locator('[data-mode="select"]').click();await tap(ui,await point(ui,.7,.7),false);
     assert.equal(await ui.frame.getByRole("textbox",{name:"標記備註",exact:true}).inputValue(),note);
