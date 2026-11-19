@@ -640,9 +640,9 @@ function renderLayers(){
    const box=el("input",{type:"checkbox",checked:!off,title:t("vs.layer.toggleTitle"),dataset:{layer:l.id,act:"toggle"}});
    const name=el("span",{className:"name"});
    if(renamingLayer===l.id){
-     const input=el("input",{value:l.name,maxLength:40,"aria-label":t("vs.layer.nameLabel"),dataset:{layer:l.id,act:"name"}});
+     const input=el("input",{value:i18nName(l.name),maxLength:40,"aria-label":t("vs.layer.nameLabel"),dataset:{layer:l.id,act:"name"}});
      name.append(input);frame(()=>{input.focus();input.select();});
-   }else name.append(el("button",{type:"button",className:"layer-evidence-button",textContent:(findingGroupsOpen.has(l.id)?"▾ ":"▸ ")+sideName(l.id)+l.name,"aria-expanded":String(findingGroupsOpen.has(l.id)),dataset:{layer:l.id,act:"evidence"}}));
+   }else name.append(el("button",{type:"button",className:"layer-evidence-button",textContent:(findingGroupsOpen.has(l.id)?"▾ ":"▸ ")+sideName(l.id)+i18nName(l.name),"aria-expanded":String(findingGroupsOpen.has(l.id)),dataset:{layer:l.id,act:"evidence"}}));
    const op=Math.round((l.opacity??1)*100);
    const same=shownOrder.filter(o=>serverLayer(o.id).side===serverLayer(l.id).side),pos=same.indexOf(l);
    row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),
@@ -776,7 +776,7 @@ layersEl.addEventListener("input",e=>{
 function finishRename(input,save){
  const id=input.dataset.layer,name=input.value.trim();renamingLayer=null;
  const l=layerOf(id);
- if(!save||!l||!name||name===l.name){render();return;}
+ if(!save||!l||!name||name===l.name||name===i18nName(l.name)){render();return;}
  const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,name}]},t("vs.layer.renamed",{name}));
 }
 layersEl.addEventListener("keydown",e=>{
@@ -793,7 +793,7 @@ layersEl.addEventListener("click",e=>{
  const {side,id:raw}=serverLayer(id);
  if(b.dataset.act==="rename"){renamingLayer=id;render();}
  if(b.dataset.act==="copyid"){const text=side&&frames?side+" "+raw:raw;try{navigator.clipboard.writeText(text).then(()=>{b.textContent=t("vs.layer.copied");later(()=>{b.textContent=raw;},900);},()=>{});}catch{}return;}
- if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?t("vs.layer.unlocked",{name:l.name}):t("vs.layer.lockedMsg",{name:l.name}));
+ if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?t("vs.layer.unlocked",{name:i18nName(l.name)}):t("vs.layer.lockedMsg",{name:i18nName(l.name)}));
  if(b.dataset.act==="up")reorder(id,1);
  if(b.dataset.act==="down")reorder(id,-1);
 });
@@ -1227,7 +1227,7 @@ function renderView(){
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?t("vs.caption.processed",{label:processed.label}):
    {annotated:t("vs.caption.annotated"),original:t("vs.caption.original"),zoom:t("vs.caption.zoom"),check:t("vs.caption.check")}[viewMode];
- scope.querySelector("#caption").textContent=t("vs.caption.line",{subject:ws?t("vs.caption.workspace",{name:ws.name,count:ws.items.length}):pair?t("vs.caption.pair",{left:imageId,right:pair.imageId}):imageId?t("vs.caption.photo",{id:imageId}):SCENE_NAMES[selectedScene],title});
+ scope.querySelector("#caption").textContent=t("vs.caption.line",{subject:ws?t("vs.caption.workspace",{name:i18nName(ws.name),count:ws.items.length}):pair?t("vs.caption.pair",{left:imageId,right:pair.imageId}):imageId?t("vs.caption.photo",{id:imageId}):SCENE_NAMES[selectedScene],title});
 }
 // ---- Scene objects (function plots, axes, shapes from modules) -----------
 // The server's trusted renderer sends drawing primitives in 0..1 canvas
@@ -2077,7 +2077,7 @@ function renderSelection(){
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
  const mine=isUser(m),layer=layerOf(m.layer);
  selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"AI"))}),
-   el("span",{className:"meta",textContent:t("vs.selection.meta",{who:mine?t("vs.selection.mine"):t("vs.selection.ai"),where:isFresh(m)?t("vs.selection.unsent"):layer?t("vs.selection.layer",{name:layer.name}):t("vs.selection.sent"),locked:isLocked(m)?t("vs.selection.locked"):""})}));
+   el("span",{className:"meta",textContent:t("vs.selection.meta",{who:mine?t("vs.selection.mine"):t("vs.selection.ai"),where:isFresh(m)?t("vs.selection.unsent"):layer?t("vs.selection.layer",{name:i18nName(layer.name)}):t("vs.selection.sent"),locked:isLocked(m)?t("vs.selection.locked"):""})}));
  const permitted=canEditText(m);
  const input=el("input",{value:m.label??"",maxLength:64,placeholder:t("vs.selection.label"),"aria-label":t("vs.selection.label"),readOnly:!permitted});
  const note=el("textarea",{value:m.note??"",maxLength:200,rows:3,placeholder:t("vs.selection.notePlaceholder"),"aria-label":t("vs.selection.noteLabel"),readOnly:!permitted});

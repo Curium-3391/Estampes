@@ -22,6 +22,66 @@ export function matchLocale(tag, locales) {
   return locales.find((l) => l.toLowerCase() === parts[0]) ?? null;
 }
 
+// Default names stored in documents (RFC docs/rfc/i18n Phase 4, T5). The
+// server writes a layer or workspace name such as "AI · 第2次" as plain text
+// in its own language when it creates it. A viewer sees it in theirs: the
+// stored text is recognised against every shipped catalog's template and
+// rendered again with `render` (a translator for the viewer's locale). The
+// stored name is never changed; text that matches no template, such as a
+// name the person typed, is returned as it is.
+// A template that wraps another name ("{name} (split)") comes first, so the
+// inner name is not read as part of an outer template's parameter.
+const NAME_KEYS = ["name.workspace.split", "name.layer.numbered", "name.layer.imported", "name.layer.replay",
+  "name.layer.module", "name.marksFile.user", "name.copy.original", "name.workspace.default",
+  "name.workspace.canvas", "name.workspace.pair", "name.text"];
+const COPY_PARTS = ["name.copy.image", "name.copy.marks", "name.copy.object"];
+const AUTHORS = ["user", "assistant"];
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const nameRegexCache = new WeakMap();
+function nameTemplate(catalog, message, tail = "") {
+  const params = [];
+  const body = escapeRe(message).replace(/\\\{(\w+)\\\}/g, (_, p) => { params.push(p); return p === "n" ? "(\\d{1,6})" : "(.+?)"; });
+  return { re: new RegExp("^" + body + tail + "$", "u"), params };
+}
+function nameTemplates(catalog) {
+  let list = nameRegexCache.get(catalog);
+  if (list) return list;
+  list = [];
+  for (const key of NAME_KEYS) if (typeof catalog[key] === "string")
+    list.push({ key, ...nameTemplate(catalog, catalog[key], key === "name.text" ? "( · \\d{1,3})?" : "") });
+  // A copied canvas's layers: "<prefix><part>", e.g. "Copy of a.png · image".
+  if (typeof catalog["name.copy.prefix"] === "string") for (const part of COPY_PARTS) if (typeof catalog[part] === "string")
+    list.push({ key: "name.copy.prefix", part, ...nameTemplate(catalog, catalog["name.copy.prefix"] + catalog[part]) });
+  nameRegexCache.set(catalog, list);
+  return list;
+}
+export function localizeDefaultName(name, catalogs, render, order = Object.keys(catalogs), depth = 0) {
+  if (typeof name !== "string" || !name || depth > 2) return name;
+  for (const locale of order) {
+    const catalog = catalogs[locale];
+    if (!catalog) continue;
+    for (const tpl of nameTemplates(catalog)) {
+      const m = tpl.re.exec(name);
+      if (!m) continue;
+      const params = {};
+      let ok = true;
+      tpl.params.forEach((p, i) => {
+        const v = m[i + 1];
+        if (p === "author") {
+          const who = AUTHORS.find((a) => catalog["name.author." + a] === v);
+          if (who) params.author = render("name.author." + who); else ok = false;
+        } else if (p === "name") params.name = localizeDefaultName(v, catalogs, render, order, depth + 1);
+        else params[p] = v;
+      });
+      if (!ok) continue;
+      let out = render(tpl.key, params) + (tpl.part ? render(tpl.part) : "");
+      if (tpl.key === "name.text" && m[tpl.params.length + 1]) out += m[tpl.params.length + 1];
+      return out;
+    }
+  }
+  return name;
+}
+
 // The widget's translator. Resolution, first match wins: the person's own
 // pick (localStorage, this browser only; never written into a canvas
 // document, which is shared) → the host's locale → the instance default the
@@ -98,6 +158,9 @@ export function widgetI18n(catalogs, instanceDefault, options = {}) {
     i18nHost(tag) { if (fromHost && typeof tag === "string" && tag) { host = matchLocale(tag, locales); update(); } return current; },
     i18nPick: pick,
     i18nOnChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // A stored default name in the current locale (see localizeDefaultName).
+    // The current locale's own templates are tried first.
+    i18nName: (name) => localizeDefaultName(name, catalogs, translate, [current, ...locales.filter((l) => l !== current)]),
     // A lookup table whose values are message keys, read in the current
     // locale on every access: i18nMap({ low: "store.risk.low" }).low.
     // Use it for tables built once at start-up, which would otherwise keep

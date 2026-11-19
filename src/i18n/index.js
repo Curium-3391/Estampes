@@ -67,7 +67,7 @@ export const t = (key, params, locale = DEFAULT_LOCALE) => i18nFor(locale).t(key
 export function widgetI18nSource(locale = DEFAULT_LOCALE, { fromHost = config.localeFromHost } = {}) {
   const runtime = readFileSync(join(HERE, "runtime.js"), "utf8").replace(/^export\s+/gm, "");
   const safe = (v) => JSON.stringify(v).replace(/<\//g, "<\\/").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-  return "const { t, i18nT, i18nLocale, i18nHost, i18nPick, i18nOnChange, i18nPicker, i18nMap } = (() => {\n" + runtime + "\n" +
+  return "const { t, i18nT, i18nLocale, i18nHost, i18nPick, i18nOnChange, i18nPicker, i18nMap, i18nName } = (() => {\n" + runtime + "\n" +
     readFileSync(join(HERE, "widget-runtime.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn widgetI18n(" + safe(CATALOGS) + ", " + safe(locale) + ", " + safe({ fromHost, html: LANG_TAGS }) + ");\n})();";
 }
