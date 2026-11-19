@@ -45,4 +45,4 @@ The widget side (window manager, calculator panel) is described in [WORKBENCH.md
 
 ## Limits of this version
 
-The Graph panel and the photo canvas share one viewport (`p:canvas`); a second, independent Graph viewport is not implemented. Single-user trust boundary: two widgets of the same user cannot overwrite each other silently (revision check), but there is no multi-user editing.
+The Graph panel and the photo canvas share one viewport (`p:canvas`); a second, independent Graph viewport is not implemented. Single-user trust boundary: two widgets of the same user cannot overwrite each other silently (revision check), but there is no multi-user editing. Opening the `graph` panel (button or `manage_surface_panels`) therefore does not add a window: it brings `p:canvas` forward, restoring it if minimized or covered by a maximized window.

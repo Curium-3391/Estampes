@@ -772,6 +772,8 @@
   "wb.grip.title": "拖曳移動",
   "wb.height.title": "拖曳調整畫布高度（單張圖與雙視窗共用），雙擊還原；鍵盤：上下方向鍵",
   "wb.launch.alreadyOpen": "已經開啟",
+  "wb.graph.show": "函數圖",
+  "wb.graph.showTitle": "顯示函數圖畫布（移到最前面）",
   "wb.launch.button": "＋ {title}",
   "wb.launch.disabled": "到 Store 啟用「{module}」後才能使用",
   "wb.launch.label": "開啟面板",
