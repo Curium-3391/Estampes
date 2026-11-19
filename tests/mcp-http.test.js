@@ -170,7 +170,7 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(checked.structuredContent?.event?.schemaVersion,"0.2-draft");
     assert.equal(checked.structuredContent?.event?.image?.intrinsicSize?.unit,"svg-user-unit");
     assert.equal(checked.structuredContent?.event?.interaction?.replyTo?.messageId,null);
-    assert.match(checked.structuredContent?.chatMessage,/這次的目的/);
+    assert.match(checked.structuredContent?.chatMessage,/Intent: free-annotate\. Requested action: interpret-annotation/);
     const contextReply=await client.callTool({name:"validate_visual_annotations",arguments:{
       scene:"landscape",
       annotations:[userMarks[1]],
@@ -186,7 +186,16 @@ test("MCP discovers tools, calls show_number_line, and reads its inline UI", { t
     assert.equal(event?.interaction?.replyTo?.provenance,"user-entered");
     assert.equal(event?.annotations?.[0]?.arrowhead,"end");
     assert.match(contextReply.structuredContent?.chatMessage,/你指的是哪座山/);
-    assert.match(contextReply.structuredContent?.chatMessage,/尖端（x2,y2）/);
+    assert.match(contextReply.structuredContent?.chatMessage,/tip \(x2,y2\)/);
+    // The widget names its language in _meta: the sentence posted as the person
+    // follows it, the assistant block does not change.
+    const english=await client.callTool({name:"validate_visual_annotations",_meta:{"estampes/locale":"en-US"},arguments:{
+      scene:"landscape",annotations:[userMarks[1]],intent:"correct-assistant",note:"不是後面的山，是這棵樹",replyQuote:"你指的是哪座山？"}});
+    const [enSentence,enBlock]=english.structuredContent.chatMessage.split("\n\n--- Estampes annotation");
+    const [zhSentence,zhBlock]=contextReply.structuredContent.chatMessage.split("\n\n--- Estampes annotation");
+    assert.match(enSentence,/^I marked 1 place on the Estampes canvas: I am correcting what you pointed out before\.\nNote: 不是後面的山，是這棵樹\nAbout this earlier message: 你指的是哪座山？$/);
+    assert.match(zhSentence,/^我在 Estampes 畫布上標了 1 個地方：我要更正你先前的指認。/);
+    assert.equal(enBlock,zhBlock);
     // Some MCP clients represent schema rejection as a tool error result,
     // others raise a protocol error. Both are valid rejections.
     let rejected=false;

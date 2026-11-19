@@ -70,7 +70,7 @@ import sharp from "sharp";
 import { fitResult } from "./src/result-budget.js";
 import { createHash, randomBytes } from "node:crypto";
 import { createOAuth, readBody } from "./src/oauth.js";
-import { localeFromAcceptLanguage } from "./src/i18n/index.js";
+import { localeFromAcceptLanguage, matchLocale } from "./src/i18n/index.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
@@ -1761,7 +1761,9 @@ function makeServer() {
       annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
-    async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions,hiddenLayers})=>{
+    async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions,hiddenLayers},ctx)=>{
+      // The sentence posted as the person is in the widget's language; the assistant block is English.
+      const locale=matchLocale(ctx?.mcpReq?._meta?.["estampes/locale"])??undefined;
       // Validation is geometric only; no image classification or host
       // conversation access is claimed. The user supplies the intent/quote.
       try {
@@ -1787,7 +1789,7 @@ function makeServer() {
           }
           return {
             content:[{type:"text",text:"Validated "+checked.length+" user-authored annotations in workspace "+workspaceId+"; explicit interaction intent="+intent+" (geometry only)."}],
-            structuredContent:{kind:"estampes.validated_annotations",imageId:first.imageId,count:checked.length,annotations:checked,event,chatMessage:formatAnnotationChatMessage(event),itemLayers},
+            structuredContent:{kind:"estampes.validated_annotations",imageId:first.imageId,count:checked.length,annotations:checked,event,chatMessage:formatAnnotationChatMessage(event,{locale}),itemLayers},
           };
         }
         if(!imageId===!scene) throw new Error("Provide exactly one of imageId or scene");
@@ -1814,7 +1816,7 @@ function makeServer() {
         if(entry)event.canvasReads=[{side:"left",request:canvasReadRequest(entry,hiddenLayers.filter(l=>!l.side||l.side==="left").map(l=>l.id))},
           ...(right?[{side:"right",request:canvasReadRequest(right,hiddenLayers.filter(l=>l.side==="right").map(l=>l.id))}]:[])];
         if(entry)event.image.sourceKind=entry.source==="blank"?"blank":entry.page?"pdf-page":"image";
-        const chatMessage=formatAnnotationChatMessage(event);
+        const chatMessage=formatAnnotationChatMessage(event,{locale});
         const ids=checked.map(a=>a.id);
         if(entry)await saveCanvas(entry,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});
         if(right)await saveCanvas(right,{tool:"validate_visual_annotations",author:"user",changed:ids,note:intent});

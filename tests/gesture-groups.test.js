@@ -46,9 +46,9 @@ test("the strokes stay separate, unchanged marks in the event; the group is extr
   assert.deepEqual(event.annotations[1].stroke, { order: 3, relativeStartMs: 900, relativeEndMs: 1200 });
   assert.equal(event.gestureGroups.length, 1);
   const message = formatAnnotationChatMessage(event);
-  assert.match(message, /YOU 2 \+ YOU 3 → 可能是一支方向箭頭/);
-  assert.match(message, /系統依幾何推測，我沒有確認/);
-  assert.match(message, /不要說成我確定的意思/);
+  assert.match(message, /YOU 2 \+ YOU 3 -> possibly a direction arrow/);
+  assert.match(message, /inferred from geometry, not confirmed by the person/);
+  assert.match(message, /do not present them as what the person meant/);
 });
 
 test("T06: two lines that only cross in their middles are not grouped", () => {
@@ -78,7 +78,7 @@ test("T08: the user's no keeps the candidate visible as rejected; the strokes ar
   assert.equal(g.confirmation, "user-rejected");
   assert.equal(shaft.points.length, 15);
   const event = buildAnnotationEvent({ image: { imageId: "img", width: W, height: H }, annotations: [shaft, head], gestureDecisions: entry.gestureDecisions });
-  assert.match(formatAnnotationChatMessage(event), /不是同一個手勢，請分開看/);
+  assert.match(formatAnnotationChatMessage(event), /the person said these are not one gesture; read them separately/);
   recordGestureDecision(entry, ["user-fewj-2", "user-fewj-3"], "unreviewed");
   assert.equal(entry.gestureDecisions.length, 0);
 });
