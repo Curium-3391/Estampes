@@ -198,7 +198,7 @@
     },
     {
       "path": "src/modules/permissions.js",
-      "sha256": "945dcef25bdd4b552c3d058882fa1f736484922eac8688a5a894583fe0c71544"
+      "sha256": "042eb2ae0d79b2d8cbefc227939a07c60af05070c2d19f6931ed8ab855e885c8"
     },
     {
       "path": "src/modules/registry.js",
@@ -290,7 +290,7 @@
     },
     {
       "path": "src/surface/bundle-extras.js",
-      "sha256": "f51c750ca9ba326e27458e76f56e2b1194bf0d91c1a66ae8add951392e2f754e"
+      "sha256": "6ec64ea1de81d0bcfb796b4c8130565df1d2018eac2be6ffd2d1b53c7656ad4c"
     },
     {
       "path": "src/surface/geometry.js",
@@ -518,6 +518,24 @@
         "src/modules/mcp-tools.js"
       ],
       "previousSha256": "266fa89865dabcc9c9591e9f84ee3171f33f33f17fddfa16705b033f3ebcce8c"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d), including D9's phased string extraction, and started Phase 1 once UVA 4A was done (2026-11-19, \u300c4A\u5b8c\u6210\u300d)",
+      "reason": "i18n Phase 1-4: permission descriptions come from the zh-TW and en catalogs; the zh/en fields, risk levels and ids are unchanged",
+      "files": [
+        "src/modules/permissions.js"
+      ],
+      "previousSha256": "945dcef25bdd4b552c3d058882fa1f736484922eac8688a5a894583fe0c71544"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d), including D9's phased string extraction, and started Phase 1 once UVA 4A was done (2026-11-19, \u300c4A\u5b8c\u6210\u300d)",
+      "reason": "i18n Phase 1-4: an i18n-ignore marker on the stale-calculator note, which names a zh-TW button for the model (class T3, Phase 2); no behaviour change",
+      "files": [
+        "src/surface/bundle-extras.js"
+      ],
+      "previousSha256": "f51c750ca9ba326e27458e76f56e2b1194bf0d91c1a66ae8add951392e2f754e"
     }
   ]
 }

@@ -88,3 +88,17 @@ test("served widgets have no i18n placeholders left and every marker resolves", 
     for (const m of html.split("<script")[0].matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)) assert.ok(m[1] in CATALOGS["zh-TW"], f + ": " + m[1]);
   }
 });
+
+test("server-side default names and permission text are unchanged while pinned to zh-TW", async () => {
+  const { newLayerRecord, AUTHOR_NAME } = await import("../src/visual/layer-contract.js");
+  const { describePermission } = await import("../src/modules/permissions.js");
+  assert.deepEqual(AUTHOR_NAME, { user: "你", assistant: "AI" });
+  assert.equal(newLayerRecord([{ id: "L1", author: "assistant" }], "assistant").name, "AI · 第2次");
+  assert.equal(t("name.layer.imported", { author: "你" }), "你 · 匯入");
+  assert.equal(t("name.copy.prefix", { source: "a.png" }) + t("name.copy.image"), "複本 a.png · 圖片");
+  assert.equal(t("name.workspace.pair", { left: "img:a", right: "img:b" }), "對照 img:a + img:b");
+  assert.equal(t("name.workspace.split", { name: "工作區" }), "工作區（拆出）");
+  assert.deepEqual(describePermission("cas.compute"), { id: "cas.compute", risk: "medium",
+    zh: "使用本機的 SymPy 計算服務（只傳送算式，不連外網）", en: "Use the local SymPy calculator service (sends only expressions; no internet)" });
+  assert.deepEqual(describePermission("nope"), { id: "nope", risk: "high", zh: "未知權限", en: "Unknown permission" });
+});

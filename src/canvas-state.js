@@ -13,6 +13,7 @@ import { recordChange, undoChange, redoChange, historyState } from "./visual/ann
 import {
   LAYER_NAME_MAX, AUTHOR_NAME, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
+import { t } from "./i18n/index.js";
 export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
@@ -195,7 +196,7 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
   const changed = [];
   let replay = null, layer = null;
   for (const mark of priorUser) {
-    if (!state.has(mark.id)) state.set(mark.id, { ...mark, layer: (replay ??= newLayer(entry, "user", "你 · 重播")).id });
+    if (!state.has(mark.id)) state.set(mark.id, { ...mark, layer: (replay ??= newLayer(entry, "user", t("name.layer.replay", { author: AUTHOR_NAME.user }))).id });
   }
   const before = new Map(annotations.concat(findings).map((x) => [x.id, state.get(x.id)]));
   annotations.forEach(({ ifMatch, ...raw }, i) => {
@@ -357,7 +358,7 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
     const key = mark.author + "\u0000" + (mark.layer ?? "");
     if (!mapped.has(key)) {
       const from = layers.find((l) => l.id === mark.layer && l.author === mark.author);
-      const created = newLayer(entry, mark.author, from?.name || AUTHOR_NAME[mark.author] + " · 匯入");
+      const created = newLayer(entry, mark.author, from?.name || t("name.layer.imported", { author: AUTHOR_NAME[mark.author] }));
       if (from) applyLayerEdit(created, {
         opacity: typeof from.opacity === "number" && Number.isFinite(from.opacity) && from.opacity >= 0 && from.opacity <= 1 ? from.opacity : undefined,
         visible: typeof from.visible === "boolean" ? from.visible : undefined,

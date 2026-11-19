@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { applySceneOps, canvasObjects } from "./scene-ops.js";
 import { moduleLayer, canvasMarks } from "../canvas-state.js";
 import { serializeCanvas, restoreCanvas } from "../storage.js";
+import { t } from "../i18n/index.js";
 
 const full={x:0,y:0,x2:1,y2:1};
 async function png(entry){
@@ -24,15 +25,15 @@ export async function composeCanvas(target, source=null, region=full){
   const create=(type,props,name)=>applySceneOps(target,[{op:"object.create",type,props}],{author:"user"},{layer:name}).created[0];
   try{
     if(targetBase){
-      const id=create("image",{png:targetBase,region:full,source:target.imageId},"原始圖片");
+      const id=create("image",{png:targetBase,region:full,source:target.imageId},t("name.copy.original"));
       const layer=target.objects.get(id).layer;
       target.layers=[target.layers.find(l=>l.id===layer),...target.layers.filter(l=>l.id!==layer)];
       target.baseAsObject=true;
     }
     if(!source)return {created:[]};
     const layerMap=new Map(),idMap=new Map(),created=[];
-    const prefix="複本 "+(source.fileName||source.imageId)+" · ";
-    if(sourceBase)created.push(create("image",{png:sourceBase,region,source:source.imageId},prefix+"圖片"));
+    const prefix=t("name.copy.prefix",{source:source.fileName||source.imageId});
+    if(sourceBase)created.push(create("image",{png:sourceBase,region,source:source.imageId},prefix+t("name.copy.image")));
     for(const l of sourceState.layers){const next=moduleLayer(target,prefix+l.name+" "+(target.objectSeq??0),l.module);Object.assign(next,{author:l.author,opacity:l.opacity,visible:l.visible,locked:l.locked});layerMap.set(l.id,next.id);}
     for(const old of [...(sourceState.objects??[])].sort((a,b)=>(a.type==="axes-2d"?-1:0)-(b.type==="axes-2d"?-1:0))){
       if(old.visibility!=="public")continue;
@@ -46,7 +47,7 @@ export async function composeCanvas(target, source=null, region=full){
         if(p.points)p.points=p.points.map(([x,y])=>{const q=point(x,y);return [q.x,q.y];});
         if(p.r)p.r*=sx;
       }
-      const id=create(old.type,p,prefix+"物件"),next=target.objects.get(id);
+      const id=create(old.type,p,prefix+t("name.copy.object")),next=target.objects.get(id);
       if(layerMap.has(old.layer))next.layer=layerMap.get(old.layer);
       next.derivedFrom={image:source.imageId,object:old.id};idMap.set(old.id,id);created.push(id);
     }
@@ -56,7 +57,7 @@ export async function composeCanvas(target, source=null, region=full){
       Object.assign(m,point(old.x,old.y));
       if(old.x2!==undefined){const q=point(old.x2,old.y2);m.x2=q.x;m.y2=q.y;}
       if(old.points)m.points=old.points.map(q=>point(q.x,q.y));
-      m.layer=layerMap.get(old.layer)??moduleLayer(target,prefix+"標註").id;
+      m.layer=layerMap.get(old.layer)??moduleLayer(target,prefix+t("name.copy.marks")).id;
       m.derivedFrom={image:source.imageId,mark:old.id};
       if(m.evidence)m.evidence=m.evidence.map(e=>e.image===source.imageId&&e.region?{...e,image:target.imageId,region:[region.x+e.region[0]*sx,region.y+e.region[1]*sy,region.x+e.region[2]*sx,region.y+e.region[3]*sy]}:e);
       target.marks.set(m.id,m);

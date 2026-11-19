@@ -2,15 +2,18 @@
 // the instance owner grants them when enabling it. The router checks the
 // grant on every call, so a module can never do more than was approved,
 // and an update that asks for more must be approved again.
+import { t } from "../i18n/index.js";
+// Descriptions come from the catalogs; zh and en stay as fields because the
+// Store and get_module_capabilities read them (Phase 2 picks one by locale).
 export const PERMISSIONS = Object.freeze({
-  "canvas.read": { risk: "low", zh: "讀取目標畫布上的物件與標記摘要", en: "Read the objects and marks on the target canvas" },
-  "canvas.write": { risk: "low", zh: "在目標畫布新增、修改自己建立的物件", en: "Add objects to the target canvas and change its own objects" },
-  "workspace.write": { risk: "low", zh: "建立新的空白畫布", en: "Create new blank canvases" },
-  "asset.read.selected": { risk: "medium", zh: "讀取目標圖片（或選定區域）的像素", en: "Read the pixels of the target image or selected region" },
-  "module.storage.write": { risk: "medium", zh: "在伺服器保存自己的設定與資料", en: "Keep its own settings and data on the server" },
-  "cas.compute": { risk: "medium", zh: "使用本機的 SymPy 計算服務（只傳送算式，不連外網）", en: "Use the local SymPy calculator service (sends only expressions; no internet)" },
-  "network.request.approved": { risk: "high", zh: "連線到清單上的外部網站（可能傳送圖片）", en: "Send requests to the listed external hosts (may upload images)" },
-  "module.secrets": { risk: "high", zh: "使用管理員設定的 API 金鑰等密鑰（模組看不到原文）", en: "Use secrets such as API keys set by the administrator (never shown to the module)" },
+  "canvas.read": { risk: "low", zh: t("perm.canvasRead", undefined, "zh-TW"), en: t("perm.canvasRead", undefined, "en") },
+  "canvas.write": { risk: "low", zh: t("perm.canvasWrite", undefined, "zh-TW"), en: t("perm.canvasWrite", undefined, "en") },
+  "workspace.write": { risk: "low", zh: t("perm.workspaceWrite", undefined, "zh-TW"), en: t("perm.workspaceWrite", undefined, "en") },
+  "asset.read.selected": { risk: "medium", zh: t("perm.assetReadSelected", undefined, "zh-TW"), en: t("perm.assetReadSelected", undefined, "en") },
+  "module.storage.write": { risk: "medium", zh: t("perm.moduleStorageWrite", undefined, "zh-TW"), en: t("perm.moduleStorageWrite", undefined, "en") },
+  "cas.compute": { risk: "medium", zh: t("perm.casCompute", undefined, "zh-TW"), en: t("perm.casCompute", undefined, "en") },
+  "network.request.approved": { risk: "high", zh: t("perm.networkRequestApproved", undefined, "zh-TW"), en: t("perm.networkRequestApproved", undefined, "en") },
+  "module.secrets": { risk: "high", zh: t("perm.moduleSecrets", undefined, "zh-TW"), en: t("perm.moduleSecrets", undefined, "en") },
 });
 export const PERMISSION_NAMES = Object.keys(PERMISSIONS);
 const RANK = { low: 0, medium: 1, high: 2 };
@@ -24,7 +27,7 @@ export function permissionDiff(granted = [], requested = []) {
   return { added, removed, unchanged: requested.filter((p) => g.has(p)), risk: riskOf(added) };
 }
 
-export const describePermission = (p) => ({ id: p, ...(PERMISSIONS[p] ?? { risk: "high", zh: "未知權限", en: "Unknown permission" }) });
+export const describePermission = (p) => ({ id: p, ...(PERMISSIONS[p] ?? { risk: "high", zh: t("perm.unknown", undefined, "zh-TW"), en: t("perm.unknown", undefined, "en") }) });
 
 // A capability may need less than its module; it can never need more.
 export function capabilityPermissions(manifest, capability) {

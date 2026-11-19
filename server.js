@@ -869,7 +869,7 @@ function makeServer() {
   }
 
   const ViewSchema = z.object({
-    label: z.string().min(1).max(24).describe("Short tab name, e.g. 增強對比 or 二值化"),
+    label: z.string().min(1).max(24).describe("Short tab name, e.g. 增強對比 or 二值化"), // model-facing (T3) example name; i18n-ignore
     ops: z.array(OpSchema).max(8).default([]),
     region: RegionSchema.optional(),
     geometry: GeometrySchema.optional(),
@@ -886,7 +886,7 @@ function makeServer() {
         "Whenever YOU ask the user to point at, circle or mark something, call this in the same turn so they have a canvas to draw on (imageId re-opens it with every mark); never ask without one. Also call it when the user asks for the canvas/drawing board again. Do not call it for text-only follow-ups. " +
         "Pass the attached file as `image` (or `imageUrl`) to load and show it in ONE call, or imageId from an earlier Estampes call; `scene` is only for bundled SVG demos. " +
         "Marks PERSIST per photo with stable ids: the user's submitted marks and your earlier marks are kept automatically. `annotations` adds marks or edits one by re-using its id; `remove` deletes ids; `reset` clears all; `findings` attaches note/status to any mark, including the user's (never redraw a user's mark). Ids starting 'user-' and bare labels like 'YOU 3' belong to the user's marks; your own labels may refer to them, e.g. 'YOU 3 → C105'. " +
-        "Marks are grouped in LAYERS the user can show, hide, rename, reorder, fade or LOCK: never change or remove marks in a locked layer (findings are still allowed). The user can also move, restyle or delete marks by hand; results list these USER EDITS once, so trust them over your memory. get_visual_state returns the whole canvas as JSON when you need to recall it without redrawing. Each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '第一輪', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " +
+        "Marks are grouped in LAYERS the user can show, hide, rename, reorder, fade or LOCK: never change or remove marks in a locked layer (findings are still allowed). The user can also move, restyle or delete marks by hand; results list these USER EDITS once, so trust them over your memory. get_visual_state returns the whole canvas as JSON when you need to recall it without redrawing. Each user submission and each of your calls that adds marks becomes one layer. Give `layer` a short name for what this call draws (e.g. '第一輪', '第二次檢查'); re-using a name of one of your layers adds to it, which keeps related marks together over a long session. " + // model-facing (T3) text naming a zh-TW UI label; Phase 2. i18n-ignore
         "Put your answer ON the mark: `note` (e.g. the text or value you read) and `status:'inspected'` only after you looked at those pixels. " +
         "If you read positions off a process_image output, pass `coordinateFrame` = {derivedViewId} of that output and its pixel coordinates; Estampes converts them exactly. For overlay_grid use its cellCenters, or coordinateFrame {region (plus width/height for pixels)}. " +
         "The result includes a VERIFICATION image: the same crop of the real photo without and with your marks (numbered). Check that the marks sit on the right pixels before telling the user it is done; fix with the same id if not. " +
@@ -970,7 +970,7 @@ function makeServer() {
             throw new Error("upload opens an empty canvas; it takes no image, scene, workspace or marks");
           }
           return {
-            content: [{ type: "text", text: "Opened an empty Estampes canvas with a 選擇圖片／拍照 (pick or photograph an image) button. " +
+            content: [{ type: "text", text: "Opened an empty Estampes canvas with a 選擇圖片／拍照 (pick or photograph an image) button. " + // model-facing (T3) text naming a zh-TW UI label; Phase 2. i18n-ignore
               "When the user adds a picture, the canvas reports its imageId in the conversation; then use that imageId with present_visual, inspect_image or process_image. Nothing is loaded yet." }],
             structuredContent: { kind: "estampes.visual_surface", awaitingUpload: true, coordinateSystem: "normalized-top-left" },
           };
@@ -1080,7 +1080,7 @@ function makeServer() {
                 (check.layout === "side-by-side" ? "left" : "top") + " = original pixels, " +
                 (check.layout === "side-by-side" ? "right" : "bottom") + " = with marks numbered " +
                 check.numbers.map(n => n.n + "=" + n.id).join(", ") +
-                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done. The user can open the same image in the canvas tab 「AI 驗收圖」." : ""),
+                ". Compare them: say whether each mark really sits on its target; if not, fix it (same id) before claiming it is done. The user can open the same image in the canvas tab 「AI 驗收圖」." : ""), // model-facing (T3) text naming a zh-TW UI label; Phase 2. i18n-ignore
           }, ...(check ? [imageBlock(check)] : [])],
           structuredContent: {
             kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId, width: entry.width, height: entry.height,

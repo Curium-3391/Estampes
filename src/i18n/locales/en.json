@@ -6,5 +6,14 @@
   "oauth.findKey": "Finding the key: the part after <code>?key=</code> in the connect URL in the server's startup log, or the <code>access-key</code> file in the storage folder (with Docker: <code>docker compose exec estampes cat /data/access-key</code>).",
   "oauth.onlyIfYou": "Enter it only if you just pressed connect yourself (for example Claude's Connect); after signing in you return to the address above. If you don't recognize it, press Deny.",
   "oauth.title": "Connect Estampes",
-  "oauth.wrongKey": "The access key is not correct. Please try again."
+  "oauth.wrongKey": "The access key is not correct. Please try again.",
+  "perm.assetReadSelected": "Read the pixels of the target image or selected region",
+  "perm.canvasRead": "Read the objects and marks on the target canvas",
+  "perm.canvasWrite": "Add objects to the target canvas and change its own objects",
+  "perm.casCompute": "Use the local SymPy calculator service (sends only expressions; no internet)",
+  "perm.moduleSecrets": "Use secrets such as API keys set by the administrator (never shown to the module)",
+  "perm.moduleStorageWrite": "Keep its own settings and data on the server",
+  "perm.networkRequestApproved": "Send requests to the listed external hosts (may upload images)",
+  "perm.unknown": "Unknown permission",
+  "perm.workspaceWrite": "Create new blank canvases"
 }

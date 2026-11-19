@@ -39,6 +39,6 @@ export async function installBundleExtras({ surfaceStore, notebooks, workspaceId
     try { out.surface = (await surfaceStore.importFor(workspaceId, extras.surface, { notebookMap: map })).created; }
     catch (e) { out.notes.push("The surface was not imported: " + String(e.message ?? e).slice(0, 120)); }
   }
-  if (out.notebooks) out.notes.push("Calculator results came in as stale: press 重算 to verify them with SymPy.");
+  if (out.notebooks) out.notes.push("Calculator results came in as stale: press 重算 to verify them with SymPy."); // model-facing (T3) text naming a zh-TW UI label; Phase 2. i18n-ignore
   return out;
 }

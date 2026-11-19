@@ -6,6 +6,7 @@ import { markSvg } from "./mark-render.js";
 import { READABLE_PROTOCOLS, marksFromDocument } from "./protocol.js";
 import { renderedObjects } from "./scene/scene-ops.js";
 import { primitivesSvg } from "./scene/objects.js";
+import { t } from "./i18n/index.js";
 
 export const MARKS_FORMAT = "estampes-marks";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -33,7 +34,7 @@ export function exportMarksSvg(entry, marks, layers = []) {
   const known = new Set(layers.map((l) => l.id));
   const groups = [
     ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity, l.id, l.visible)),
-    layer("estampes-user", "使用者", marks.filter((m) => m.author === "user" && !known.has(m.layer))),
+    layer("estampes-user", t("name.marksFile.user"), marks.filter((m) => m.author === "user" && !known.has(m.layer))),
     layer("estampes-gpt", "AI", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
   ].filter(Boolean).join("\n");
   const payload = JSON.stringify({ format: MARKS_FORMAT, version: 2, imageId: entry.imageId, width: W, height: H,
