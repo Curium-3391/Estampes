@@ -209,6 +209,22 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
     // 9. The chat app switches to English: the open calculator is rebuilt in
     // English and keeps what was typed and chosen. Status text the page wrote
     // earlier (the message line) keeps its language until it next changes.
+    // A switch during a calculation waits for it to settle before rebuilding.
+    await w.locator(".calc select").first().selectOption("integrate");
+    await w.locator(".calc-input").fill("sin(x)^7*exp(x)*ln(x)/(x^2+1)");
+    await w.locator(".calc-go .primary").click();
+    const stopBtn = w.locator(".calc-go button").nth(1);
+    await stopBtn.waitFor({ state: "visible", timeout: 10000 });
+    await page.evaluate(() => document.getElementById("w").contentWindow.postMessage({ jsonrpc: "2.0", method: "ui/notifications/host-context-changed", params: { locale: "en-US" } }, "*"));
+    // The rebuild waits: the controls on screen are still the busy ones, in Chinese.
+    assert.equal(await stopBtn.getAttribute("aria-label"), "停止計算");
+    await stopBtn.click();
+    await w.locator(".calc-go .primary", { hasText: "Compute" }).waitFor({ timeout: 20000 });
+    assert.equal(await w.locator(".calc-go .primary").isEnabled(), true, "Compute is usable after the rebuilt controls");
+    assert.equal(await w.locator(".calc-go button").nth(1).isHidden(), true, "Stop is hidden again");
+    await page.evaluate(() => document.getElementById("w").contentWindow.postMessage({ jsonrpc: "2.0", method: "ui/notifications/host-context-changed", params: { locale: "zh-TW" } }, "*"));
+    await w.locator(".calc-go .primary", { hasText: "計算" }).waitFor({ timeout: 10000 });
+
     await w.locator(".calc-input").fill("y+1");
     await w.locator(".calc select[aria-label]").first().selectOption("factor");
     await page.evaluate(() => document.getElementById("w").contentWindow.postMessage({ jsonrpc: "2.0", method: "ui/notifications/host-context-changed", params: { locale: "en-US" } }, "*"));

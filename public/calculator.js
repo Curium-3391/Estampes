@@ -183,7 +183,7 @@ async function runCalc(id){
   else{setMsg(st,"","");st.editing=null;ui.input.value="";applyRefresh(st,r);}
   await wbRefresh();
  }catch(err){if(st.cancelled)setMsg(st,t("calc.msg.stoppedNoResult"),"");else setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();}
+ finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();relabelLater(id);}
 }
 // A calculation carries an id so the Stop button can end it in the service.
 const newJob=st=>{st.job=uuid().replace(/[^0-9a-f]/g,"").padEnd(16,"0").slice(0,16);return st.job;};
@@ -209,7 +209,7 @@ async function refreshLinks(id){
  st.busy=true;renderCalc(p);setMsg(st,t("calc.msg.refreshing"),"");
  try{const r=await wbCall("surface_cas",{imageId,capability:"refresh_links",params:{notebook:p.notebook}});applyRefresh(st,r);if(!r.refresh?.updated.length&&!r.refresh?.failed.length)setMsg(st,t("calc.msg.upToDate"),"");await wbRefresh();}
  catch(err){setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;renderCalc(p);}
+ finally{st.busy=false;renderCalc(p);relabelLater(p.panelId);}
 }
 const ERR_ZH=e=>({syntax:t("calc.err.code.syntax"),unsupported:t("calc.err.code.unsupported"),domain:t("calc.err.code.domain"),timeout:t("calc.err.code.timeout"),resource_limit:t("calc.err.code.resource_limit"),worker_unavailable:t("calc.err.code.worker_unavailable"),cancelled:t("calc.err.code.cancelled"),internal:t("calc.err.code.internal")}[e?.code]??"")+(e?.message??"");
 async function runDefine(id,d){
@@ -229,6 +229,8 @@ async function wbRefresh(){setSurface(await wbCall("surface_get_state",wbArgs())
 function relabelCalc(id){
  const st=wb.calc.get(id),old=st?.ui,p=wb.surface?.panels.find(x=>x.panelId===id);
  if(!old||!p||!old.root.isConnected)return;
+ // A pending request still holds these controls: rebuild once it settles.
+ if(st.busy){st.relabel=true;return;}
  const fields=r=>[...r.querySelectorAll("input,select,textarea")],folds=r=>[...r.querySelectorAll("details")];
  const vals=fields(old.root).map(e=>e.type==="checkbox"?e.checked:e.value),opens=folds(old.root).map(d=>d.open);
  st.ui=null;buildCalcUI(p);const ui=st.ui;
@@ -239,6 +241,7 @@ function relabelCalc(id){
  ui.msg.textContent=old.msg.textContent;if(old.msg.dataset.kind)ui.msg.dataset.kind=old.msg.dataset.kind;
  old.root.replaceWith(ui.root);renderCalc(p);
 }
+function relabelLater(id){const st=wb.calc.get(id);if(st?.relabel&&!st.busy){st.relabel=false;relabelCalc(id);}}
 i18nOnChange(()=>{for(const id of [...wb.calc.keys()])try{relabelCalc(id)}catch{}});
 function renderCalc(p){
  const el=wb.els.get(p.panelId),st=calcState(p.panelId);
@@ -294,7 +297,7 @@ async function recompute(p,c){
  st.busy=true;st.ui.stop.hidden=false;setMsg(st,t("calc.msg.recomputing"),"");
  try{const r=await wbCall("surface_cas",{...(imageId?{imageId}:{}),capability:"recompute",params:{notebook:p.notebook,cell:c.cellId,job:newJob(st)}});setMsg(st,"","");applyRefresh(st,r);await wbRefresh();}
  catch(err){if(st.cancelled)setMsg(st,t("calc.msg.stoppedKept"),"");else setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);}
+ finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);relabelLater(p.panelId);}
 }
 async function plotCell(p,c,link){
  const st=calcState(p.panelId);
