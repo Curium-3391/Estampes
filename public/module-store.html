@@ -6,6 +6,7 @@
 *{box-sizing:border-box}body{margin:0;padding:10px;background:Canvas;color:CanvasText}
 main{max-width:760px;margin:auto;border:1px solid var(--line);border-radius:14px;padding:14px}
 header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;justify-content:space-between}
+.estampes-lang{font-size:.8rem;color:GrayText}.estampes-lang select{font:inherit}
 h2{font-size:1.05rem;margin:0}h3{font-size:1rem;margin:0 0 4px}small,.muted{color:var(--muted)}small{font-size:.75rem}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 8px}
 button{font:inherit;color:inherit;background:transparent;border:1px solid #8886;border-radius:9px;padding:8px 12px;cursor:pointer;min-height:40px}
@@ -42,13 +43,18 @@ code{font-size:.82rem;overflow-wrap:anywhere}
 </main>
 <script type="module">
 __ESTAMPES_I18N__
-document.querySelector("#server").textContent=t("store.subtitle",{version:"__ESTAMPES_VERSION__"});
-document.querySelector("nav").setAttribute("aria-label",t("store.nav.label"));
-for(const b of document.querySelectorAll("[data-tab]"))b.textContent=t("store.tab."+b.dataset.tab);
+function chrome(){
+ document.querySelector("#server").textContent=t("store.subtitle",{version:"__ESTAMPES_VERSION__"});
+ document.querySelector("nav").setAttribute("aria-label",t("store.nav.label"));
+ for(const b of document.querySelectorAll("[data-tab]"))b.textContent=t("store.tab."+b.dataset.tab);
+}
+chrome();i18nOnChange(chrome);
+document.querySelector("header").append(i18nPicker());
 document.querySelector("#status").textContent=t("store.status.connecting");
 const view=document.querySelector("#view"),status=document.querySelector("#status");
 const tabs=[...document.querySelectorAll("[data-tab]")];
-const tmap=(prefix,keys)=>Object.fromEntries(keys.map(k=>[k,t(prefix+k)]));
+// Read in the current language on every access (the person may switch it).
+const tmap=(prefix,keys)=>i18nMap(Object.fromEntries(keys.map(k=>[k,prefix+k])));
 const CATEGORY=tmap("store.category.",["math","diagram","analysis","text","astronomy","electronics","utility","other"]);
 const STATE=tmap("store.state.",["available","installed","enabled","disabled","failed"]);
 const RISK=tmap("store.risk.",["low","medium","high"]);
@@ -244,12 +250,15 @@ function request(method,params){return new Promise((resolve,reject)=>{const id=+
 window.addEventListener("message",event=>{if(event.source!==window.parent)return;const msg=event.data;if(msg?.jsonrpc!=="2.0")return;
  if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);return;}
  if(msg.method==="ui/notifications/tool-result")applyResult(msg.params);
+ if(msg.method==="ui/notifications/host-context-changed")i18nHost(msg.params?.locale);
 });
 let seenOutput=null;
 const fromGlobals=()=>{const o=window.openai;if(!o?.toolOutput||o.toolOutput===seenOutput)return;seenOutput=o.toolOutput;applyResult({structuredContent:o.toolOutput,_meta:o.toolResponseMetadata});};
-window.addEventListener("openai:set_globals",fromGlobals);fromGlobals();
+window.addEventListener("openai:set_globals",()=>{i18nHost(window.openai?.locale);fromGlobals()});fromGlobals();
+i18nOnChange(()=>render());
 render();
-(async()=>{try{await request("ui/initialize",{appInfo:{name:"estampes-module-store",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen"]},protocolVersion:"2026-01-26"});
+(async()=>{try{const init=await request("ui/initialize",{appInfo:{name:"estampes-module-store",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen"]},protocolVersion:"2026-01-26"});
+ i18nHost(init?.hostContext?.locale);
  notify("ui/notifications/initialized",{});ready=true;status.textContent="";
  if(pendingDetail){openDetail(pendingDetail);pendingDetail=null;}else{await refresh();}
  if(tab==="activity")loadActivity();}

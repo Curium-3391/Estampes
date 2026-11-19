@@ -31,3 +31,9 @@ test("the repository has no hard-coded user-visible text (Phase 1 done, strict)"
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /i18n:check ok/);
 });
+
+test("the English catalog has every key (Phase 2)", () => {
+  const out = JSON.parse(run("--json").stdout);
+  assert.deepEqual(out.catalogErrors, []);
+  assert.equal(out.missing.en, 0);
+});

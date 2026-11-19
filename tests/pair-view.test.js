@@ -10,6 +10,9 @@ import { applyPairChanges, pairLinks, reviewLink, canvasMarks, storeUserMarks } 
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
 import { t } from "../src/i18n/index.js";
 
+// The widget's start-up tables (i18nMap) read the current language; one language is enough here.
+const i18nMap = (keys) => Object.fromEntries(Object.entries(keys).map(([k, key]) => [k, t(key)]));
+
 const image = async (w, h, colour) => registerImage(await sharp({ create: { width: w, height: h, channels: 3, background: colour } }).png().toBuffer(), { source: "test" });
 const box = (id, side, x = 0.1) => ({ id, side, type: "rect", x, y: 0.1, x2: x + 0.1, y2: 0.2 });
 
@@ -60,9 +63,9 @@ const source = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
 test("widget maps each image's coordinates into the side-by-side canvas and back", () => {
   const start = source.indexOf("function layoutPair("), stop = source.indexOf("// Layer ids are per image");
   assert.ok(start > 0 && stop > start);
-  const v = new Function("t", "let VW=1000,VH=750,pair={},ws=null,frames=null;const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
+  const v = new Function("t", "i18nMap", "let VW=1000,VH=750,pair={},ws=null,frames=null;const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
     "const round=n=>Math.round(n*100000)/100000;\n" + source.slice(start, stop) +
-    "\nreturn {layoutPair,toView,toSide,sideAt,get VW(){return VW},get VH(){return VH}};")(t);
+    "\nreturn {layoutPair,toView,toSide,sideAt,get VW(){return VW},get VH(){return VH}};")(t, i18nMap);
   v.layoutPair(1600, 1000, 1500, 2000);
   assert.equal(v.VW, 2040); assert.equal(v.VH, 1333);
   const right = { id: "p", side: "right", type: "polyline", x: 0.2, y: 0.3, x2: 0.4, y2: 0.5, points: [{ x: 0.2, y: 0.3 }, { x: 0.4, y: 0.5 }] };
@@ -77,9 +80,9 @@ test("widget maps each image's coordinates into the side-by-side canvas and back
 
 test("widget lays out a workspace, turns rotated images and maps marks back exactly", () => {
   const start = source.indexOf("function layoutPair("), stop = source.indexOf("// Layer ids are per image");
-  const v = new Function("t", "let VW=1000,VH=750,pair=null,frames=null;let ws={items:[{id:'wi-1'},{id:'wi-2'},{id:'wi-3'}]};const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
+  const v = new Function("t", "i18nMap", "let VW=1000,VH=750,pair=null,frames=null;let ws={items:[{id:'wi-1'},{id:'wi-2'},{id:'wi-3'}]};const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
     "const round=n=>Math.round(n*100000)/100000;\n" + source.slice(start, stop) +
-    "\nreturn {layoutWorkspace,toView,toSide,sideAt,framePoint,frameUV,get frames(){return frames},get VW(){return VW},get VH(){return VH}};")(t);
+    "\nreturn {layoutWorkspace,toView,toSide,sideAt,framePoint,frameUV,get frames(){return frames},get VW(){return VW},get VH(){return VH}};")(t, i18nMap);
   v.layoutWorkspace([
     { id: "wi-1", width: 1536, height: 432, placement: { x: 0, y: 0, width: 1000, rotation: 0 } },
     { id: "wi-2", width: 1152, height: 1536, placement: { x: 1060, y: 0, width: 1000, rotation: 90 } },

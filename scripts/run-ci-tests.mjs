@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 
+const LOCALE_PRELOAD = new URL("../tests/helpers/locale.mjs", import.meta.url).href;
+
 const [tier, suite, ...extra] = process.argv.slice(2);
 const validSuite = suite === "legacy" || /^[1-9]\d*\/[1-9]\d*$/.test(suite ?? "");
 if (!["fast", "full"].includes(tier) || extra.length || (suite !== undefined && (tier !== "full" || !validSuite))) {
@@ -9,7 +11,9 @@ if (!["fast", "full"].includes(tier) || extra.length || (suite !== undefined && 
 }
 
 function test(args, env = process.env) {
-  const result = spawnSync(process.execPath, ["--test", ...args], { env, stdio: "inherit" });
+  // tests/helpers/locale.mjs pins the interface language the tests assert
+  // (by URL, so the runner also works from another folder).
+  const result = spawnSync(process.execPath, ["--import", LOCALE_PRELOAD, "--test", ...args], { env, stdio: "inherit" });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

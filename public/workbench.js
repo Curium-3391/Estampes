@@ -220,6 +220,7 @@ function openMenu(id,anchor){
 }
 function closeMenu(){wb.menu?.remove();wb.menu=null;}
 document.addEventListener("pointerdown",e=>{if(wb.menu&&!wb.menu.contains(e.target))closeMenu();});
+i18nOnChange(()=>{if(wb.surface)renderWB();});
 new ResizeObserver(()=>{if(!wb.surface)return;const p=wbProfileNow();if(p!==wb.profile){wb.profile=p;renderWB();}}).observe(document.body);
 // One grip, one height, shared by every layout (window mode sets the panel area, the single canvas sets the picture). A grip under the panel area: ChatGPT gives an inline widget no resize handle, so the
 // area height is the user's to set. Drag to resize, double-click to go back to the default.
@@ -227,6 +228,7 @@ new ResizeObserver(()=>{if(!wb.surface)return;const p=wbProfileNow();if(p!==wb.p
  const KEY="estampes.wbHeight",MIN=320,MAX=3000;
  const grip=h("div",{id:"wb-height-grip",role:"separator","aria-orientation":"horizontal",tabindex:"0",title:t("wb.height.title")});
  wbArea.after(grip);
+ i18nOnChange(()=>{grip.title=t("wb.height.title");});
  // The height lives in a CSS variable that only the window layout reads, so going back to the
  // single-canvas or phone layout never inherits it.
  const apply=px=>{if(px==null)wbEl.style.removeProperty("--wb-h");else wbEl.style.setProperty("--wb-h",Math.round(Math.min(MAX,Math.max(MIN,px)))+"px");};

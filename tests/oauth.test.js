@@ -54,6 +54,11 @@ test("OAuth sign-in: discovery, registration, consent with the access key, PKCE,
     assert.match(pageHtml, /Claude/);
     assert.match(pageHtml, /name="access_key"/);
     assert.match(page.headers.get("content-security-policy"), /frame-ancestors 'none'/);
+    assert.match(pageHtml, /<html lang="zh-Hant">/, "no Accept-Language: the instance default");
+    // The page follows the browser's language; the form and its checks do not change.
+    const english = await (await fetch(base + "/oauth/authorize?" + new URLSearchParams(params), { headers: { "accept-language": "en-US,en;q=0.9" } })).text();
+    assert.match(english, /<html lang="en">/);
+    assert.match(english, /name="access_key"/);
 
     // Unregistered redirect: shown on the page, never redirected.
     const wrongRedirect = await fetch(base + "/oauth/authorize?" + new URLSearchParams({ ...params, redirect_uri: "https://evil.example/cb" }), { redirect: "manual" });

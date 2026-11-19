@@ -64,9 +64,10 @@ function texToMathML(tex){
 }
 
 // ---------- scientific calculator panel ----------
-const OPS=[["evaluate",t("calc.op.evaluate")],["simplify",t("calc.op.simplify")],["expand",t("calc.op.expand")],["factor",t("calc.op.factor")],["differentiate",t("calc.op.differentiate")],["integrate",t("calc.op.integrate")],["limit",t("calc.op.limit")],["series",t("calc.op.series")],["solve",t("calc.op.solve")],["solve_system",t("calc.op.solve_system")],["nsolve",t("calc.op.nsolve")],["substitute",t("calc.op.substitute")],["matrix",t("calc.op.matrix")],["summation",t("calc.op.summation")],["product",t("calc.op.product")],["together",t("calc.op.together")],["apart",t("calc.op.apart")],["cancel",t("calc.op.cancel")],["collect",t("calc.op.collect")],["trigsimp",t("calc.op.trigsimp")]];
-const OP_ZH=Object.fromEntries(OPS);
-const STATUS_ZH={exact:t("calc.status.exact"),approximate:t("calc.status.approximate"),complex:t("calc.status.complex"),conditional:t("calc.status.conditional"),partial:t("calc.status.partial"),undefined:t("calc.status.undefined")};
+// Read in the current language on every use (i18nMap), so a language change also renames them.
+const OPS=["evaluate","simplify","expand","factor","differentiate","integrate","limit","series","solve","solve_system","nsolve","substitute","matrix","summation","product","together","apart","cancel","collect","trigsimp"];
+const OP_ZH=i18nMap(Object.fromEntries(OPS.map(v=>[v,"calc.op."+v])));
+const STATUS_ZH=i18nMap({exact:"calc.status.exact",approximate:"calc.status.approximate",complex:"calc.status.complex",conditional:"calc.status.conditional",partial:"calc.status.partial",undefined:"calc.status.undefined"});
 const PARAM_ROWS={differentiate:["variable","order"],integrate:["variable","lower","upper"],limit:["variable","point","direction"],series:["variable","point","n"],solve:["variable","domain"],solve_system:[],nsolve:["variable","guess"],
  substitute:["subs"],matrix:["mode","other"],summation:["variable","lower","upper"],product:["variable","lower","upper"],collect:["variable"],apart:["variable"]};
 const KEYS=[["π","pi"],["e","e"],["i","I"],["√","sqrt("],["^","^"],["( )","()"],["|x|","abs()"],["sin","sin("],["cos","cos("],["tan","tan("],["ln","ln("],["exp","exp("],["×","*"],["÷","/"],["∞","oo"],["!","!"]];
@@ -85,7 +86,7 @@ async function copyText(text){
 function buildCalcUI(p){
  const st=calcState(p.panelId);
  const input=h("textarea",{class:"calc-input",rows:"2",maxlength:"4096",spellcheck:"false",autocomplete:"off",autocapitalize:"off",autocorrect:"off","aria-label":t("calc.input.label"),placeholder:t("calc.input.placeholder")});
- const op=h("select",{"aria-label":t("calc.op.label")},OPS.map(([v,t])=>h("option",{value:v},t)));
+ const op=h("select",{"aria-label":t("calc.op.label")},OPS.map(v=>h("option",{value:v},OP_ZH[v])));
  const mode=h("div",{class:"calc-mode",role:"group","aria-label":t("calc.mode.label")},
   h("button",{type:"button","data-m":"text","aria-pressed":"true"},t("calc.mode.text")),h("button",{type:"button","data-m":"latex","aria-pressed":"false",title:t("calc.mode.latexTitle",{a:"\\frac{1}{3}",b:"\\sqrt{x}",c:"x^{2}"})},"LaTeX"));
  const params=h("div",{class:"calc-params"});
@@ -182,7 +183,7 @@ async function runCalc(id){
   else{setMsg(st,"","");st.editing=null;ui.input.value="";applyRefresh(st,r);}
   await wbRefresh();
  }catch(err){if(st.cancelled)setMsg(st,t("calc.msg.stoppedNoResult"),"");else setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();}
+ finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();relabelLater(id);}
 }
 // A calculation carries an id so the Stop button can end it in the service.
 const newJob=st=>{st.job=uuid().replace(/[^0-9a-f]/g,"").padEnd(16,"0").slice(0,16);return st.job;};
@@ -208,7 +209,7 @@ async function refreshLinks(id){
  st.busy=true;renderCalc(p);setMsg(st,t("calc.msg.refreshing"),"");
  try{const r=await wbCall("surface_cas",{imageId,capability:"refresh_links",params:{notebook:p.notebook}});applyRefresh(st,r);if(!r.refresh?.updated.length&&!r.refresh?.failed.length)setMsg(st,t("calc.msg.upToDate"),"");await wbRefresh();}
  catch(err){setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;renderCalc(p);}
+ finally{st.busy=false;renderCalc(p);relabelLater(p.panelId);}
 }
 const ERR_ZH=e=>({syntax:t("calc.err.code.syntax"),unsupported:t("calc.err.code.unsupported"),domain:t("calc.err.code.domain"),timeout:t("calc.err.code.timeout"),resource_limit:t("calc.err.code.resource_limit"),worker_unavailable:t("calc.err.code.worker_unavailable"),cancelled:t("calc.err.code.cancelled"),internal:t("calc.err.code.internal")}[e?.code]??"")+(e?.message??"");
 async function runDefine(id,d){
@@ -223,6 +224,25 @@ async function runDefine(id,d){
 }
 function setMsg(st,text,kind){st.message=text;st.messageKind=kind;if(st.ui){st.ui.msg.textContent=text;st.ui.msg.dataset.kind=kind;}}
 async function wbRefresh(){setSurface(await wbCall("surface_get_state",wbArgs()));}
+// A language change rebuilds each open calculator's controls in the new
+// language and puts back what the person had entered, chosen and opened.
+function relabelCalc(id){
+ const st=wb.calc.get(id),old=st?.ui,p=wb.surface?.panels.find(x=>x.panelId===id);
+ if(!old||!p||!old.root.isConnected)return;
+ // A pending request still holds these controls: rebuild once it settles.
+ if(st.busy){st.relabel=true;return;}
+ const fields=r=>[...r.querySelectorAll("input,select,textarea")],folds=r=>[...r.querySelectorAll("details")];
+ const vals=fields(old.root).map(e=>e.type==="checkbox"?e.checked:e.value),opens=folds(old.root).map(d=>d.open);
+ st.ui=null;buildCalcUI(p);const ui=st.ui;
+ const now=fields(ui.root);if(now.length===vals.length)now.forEach((e,k)=>{if(e.type==="checkbox")e.checked=vals[k];else e.value=vals[k];});
+ const fs=folds(ui.root);if(fs.length===opens.length)fs.forEach((d,k)=>{d.open=opens[k];});
+ for(const b of ui.mode.children)b.setAttribute("aria-pressed",String(b.dataset.m===st.mode));
+ ui.keys.hidden=old.keys.hidden;ui.keysBtn.setAttribute("aria-expanded",String(!ui.keys.hidden));ui.stop.hidden=old.stop.hidden;
+ ui.msg.textContent=old.msg.textContent;if(old.msg.dataset.kind)ui.msg.dataset.kind=old.msg.dataset.kind;
+ old.root.replaceWith(ui.root);renderCalc(p);
+}
+function relabelLater(id){const st=wb.calc.get(id);if(st?.relabel&&!st.busy){st.relabel=false;relabelCalc(id);}}
+i18nOnChange(()=>{for(const id of [...wb.calc.keys()])try{relabelCalc(id)}catch{}});
 function renderCalc(p){
  const el=wb.els.get(p.panelId),st=calcState(p.panelId);
  if(!st.ui){const ui=buildCalcUI(p);el.querySelector(".wb-body").replaceChildren(ui);}
@@ -277,7 +297,7 @@ async function recompute(p,c){
  st.busy=true;st.ui.stop.hidden=false;setMsg(st,t("calc.msg.recomputing"),"");
  try{const r=await wbCall("surface_cas",{...(imageId?{imageId}:{}),capability:"recompute",params:{notebook:p.notebook,cell:c.cellId,job:newJob(st)}});setMsg(st,"","");applyRefresh(st,r);await wbRefresh();}
  catch(err){if(st.cancelled)setMsg(st,t("calc.msg.stoppedKept"),"");else setMsg(st,String(err.message||err),"error");}
- finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);}
+ finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);relabelLater(p.panelId);}
 }
 async function plotCell(p,c,link){
  const st=calcState(p.panelId);

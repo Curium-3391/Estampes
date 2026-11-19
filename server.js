@@ -70,6 +70,7 @@ import sharp from "sharp";
 import { fitResult } from "./src/result-budget.js";
 import { createHash, randomBytes } from "node:crypto";
 import { createOAuth, readBody } from "./src/oauth.js";
+import { localeFromAcceptLanguage } from "./src/i18n/index.js";
 import { registerModuleTools } from "./src/modules/mcp-tools.js";
 import { registerTextTools } from "./src/visual/text-tools.js";
 import { registerLayerTools } from "./src/visual/layer-tools.js";
@@ -2922,12 +2923,14 @@ async function handleOAuth(req, res, url) {
     }
     if (path === "/oauth/authorize" && (req.method === "GET" || req.method === "POST")) {
       const params = req.method === "GET" ? Object.fromEntries(url.searchParams) : await readBody(req);
-      const out = await (req.method === "GET" ? oauth.checkAuthorize(params) : oauth.approve(params));
+      // The sign-in page follows the browser's language (no widget runtime here).
+      const locale = localeFromAcceptLanguage(req.headers["accept-language"]) ?? undefined;
+      const out = await (req.method === "GET" ? oauth.checkAuthorize(params) : oauth.approve(params, { locale }));
       if (out.redirect) {
         if (req.method === "POST") log("info", "[oauth] sign-in " + (out.redirect.includes("code=") ? "approved" : "not approved"));
         redirect(out.redirect);
       } else if (out.html) html(out.status, out.html);
-      else if (out.client) html(200, oauth.consentPage(params, { client: out.client }));
+      else if (out.client) html(200, oauth.consentPage(params, { client: out.client, locale }));
       else html(400, "<!doctype html><meta charset=utf-8><title>Estampes</title><p>" + out.page.replace(/[<>&]/g, "") + "</p>");
       return;
     }

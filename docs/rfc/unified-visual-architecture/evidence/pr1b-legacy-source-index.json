@@ -342,11 +342,11 @@
     },
     {
       "path": "public/number-line.html",
-      "sha256": "75a55af922736fae8e0d4d93776d3d25fdfecd5af25a55fbceed2cdcb4cc66cc"
+      "sha256": "530f110b3acdd86cc33a66d50ba02af8b28ab840d48b40935e787027b37a0abf"
     },
     {
       "path": "public/visual-evidence.html",
-      "sha256": "3574a7914592c186e04f92bcdc9e45f6d7be5e2acb731c97eb2a6d74cb08e88b"
+      "sha256": "f2f3da4e8caa0f8f6c5ce3d098b8a1a397a7b456cc816b4d9f21986501be26b9"
     },
     {
       "path": "public/visual-surface.html",
@@ -554,6 +554,33 @@
         "public/visual-evidence.html"
       ],
       "previousSha256": "097d6a4a0d3bedbbae40106b3bd909c5e52ed21157afd326b035e0d5a999750d"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d) and asked to start Phase 2 (2026-11-19, \u300c\u597d\u300d)",
+      "reason": "i18n Phase 2-2: pass the host's locale from ui/initialize to the i18n runtime (i18nHost) so the widget follows the chat app's language; no other change",
+      "files": [
+        "public/number-line.html"
+      ],
+      "previousSha256": "75a55af922736fae8e0d4d93776d3d25fdfecd5af25a55fbceed2cdcb4cc66cc"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d) and asked to start Phase 2 (2026-11-19, \u300c\u597d\u300d)",
+      "reason": "i18n Phase 2-2: pass the host's locale from ui/initialize to the i18n runtime (i18nHost) so the widget follows the chat app's language; no other change",
+      "files": [
+        "public/visual-evidence.html"
+      ],
+      "previousSha256": "3574a7914592c186e04f92bcdc9e45f6d7be5e2acb731c97eb2a6d74cb08e88b"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d) and asked to start Phase 2 (2026-11-19, \u300c\u597d\u300d)",
+      "reason": "i18n Phase 2-3: the evidence view titles become a lookup table read in the current language (i18nMap), so a language change in the widget also renames them. No behaviour change in the pinned zh-TW locale.",
+      "files": [
+        "public/visual-evidence.html"
+      ],
+      "previousSha256": "64bac2fe73cec1fc19615ee087b3abafd1d870425c579b472b26379e94e58470"
     }
   ]
 }
