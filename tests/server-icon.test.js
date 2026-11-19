@@ -17,7 +17,7 @@ async function start(env) {
   throw new Error("server failed to start");
 }
 
-test("server icon: advertised in initialize and served without a key", { timeout: 30000 }, async () => {
+test("server icon: advertised in initialize as a URL and served without a key", { timeout: 30000 }, async () => {
   const { base, handle } = await start({ ESTAMPES_ACCESS_KEY: "s3cret" });
   try {
     const png = readFileSync("public/estampes-icon.png");
@@ -34,6 +34,7 @@ test("server icon: advertised in initialize and served without a key", { timeout
     assert.equal(info.name, "estampes");
     assert.equal(info.icons.length, 1);
     assert.equal(info.icons[0].mimeType, "image/png");
-    assert.deepEqual(Buffer.from(info.icons[0].src.split(",")[1], "base64"), png);
+    assert.equal(info.icons[0].src, base + "/icon.png");
+    assert.deepEqual(Buffer.from(await (await fetch(info.icons[0].src)).arrayBuffer()), png);
   } finally { handle.kill(); }
 });
