@@ -1164,7 +1164,7 @@ gesturesEl.addEventListener("click",e=>{
 // Hand grouping: "組成手勢" on a selected mark, then tap another of yours.
 function finishGrouping(m){
  const from=findMark(groupingFrom);groupingFrom=null;
- if(!from||!m||!isUser(m)||m.id===from.id||(pair&&(m.side??"left")!==(from.side??"left"))){status.textContent="沒有組合；請點同一張圖上另一筆你的標記。";render();return;}
+ if(!from||!m||!isUser(m)||m.id===from.id||(pair&&(m.side??"left")!==(from.side??"left"))){status.textContent=t("vs.gesture.groupWrong");render();return;}
  const old=liveGestures().find(g=>g.memberIds.includes(from.id)&&g.confirmation==="user-confirmed");
  const ids=[...new Set([...(old?.memberIds??[from.id]),m.id])].slice(0,8);
  if(old&&old.provenance==="user-created")decideGesture(old.memberIds,"unreviewed");
@@ -1220,11 +1220,11 @@ function renderView(){
  const r=processed?.region;
  svg.setAttribute("viewBox",processed?[r.x*VW,r.y*VH,(r.x2-r.x)*VW,(r.y2-r.y)*VH].join(" "):
    viewMode==="zoom"&&focus?cropBox(focus):zoomable()&&cam?[cam.x,cam.y,cam.w,cam.h].join(" "):"0 0 "+VW+" "+VH);
- zoomTools.hidden=!zoomable();zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?" · 原始解析度":"");
+ zoomTools.hidden=!zoomable();zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?t("vs.zoom.fullResolution"):"");
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
- const title=processed?processed.label+" · 處理後檢視（不含標註）":
-   {annotated:"標註與編輯 · AI 金色／使用者藍色",original:"完整原圖 · 不包含標註",zoom:"局部放大 · 不遮擋底圖",check:"AI 驗收圖"}[viewMode];
- scope.querySelector("#caption").textContent=(ws?"工作區「"+ws.name+"」· "+ws.items.length+" 張圖並排，不疊合":pair?"左 "+imageId+" ｜ 右 "+pair.imageId+" · 左右對照，不疊合":imageId?"照片 "+imageId:SCENE_NAMES[selectedScene])+" · "+title;
+ const title=processed?t("vs.caption.processed",{label:processed.label}):
+   {annotated:t("vs.caption.annotated"),original:t("vs.caption.original"),zoom:t("vs.caption.zoom"),check:t("vs.caption.check")}[viewMode];
+ scope.querySelector("#caption").textContent=t("vs.caption.line",{subject:ws?t("vs.caption.workspace",{name:ws.name,count:ws.items.length}):pair?t("vs.caption.pair",{left:imageId,right:pair.imageId}):imageId?t("vs.caption.photo",{id:imageId}):SCENE_NAMES[selectedScene],title});
 }
 // ---- Scene objects (function plots, axes, shapes from modules) -----------
 // The server's trusted renderer sends drawing primitives in 0..1 canvas
@@ -1260,7 +1260,7 @@ function fullLayers(list,id,setId){
      let hit=imageId===id&&!setId&&patchLayers(objects,key,href);
      for(const it of ws?.items??[])if(it.imageId===id&&itemSet(it)===setId)hit=patchLayers(it.objects,key,href)||hit;
      if(hit)render();
-   }).catch(err=>{status.textContent="圖層清晰版載入失敗，先顯示預覽："+String(err.message||err);}).finally(()=>layerLoading.delete(cacheKey));
+   }).catch(err=>{status.textContent=t("vs.layer.sharpFailed",{message:String(err.message||err)});}).finally(()=>layerLoading.delete(cacheKey));
  }
 }
 function renderObjects(){
@@ -1304,7 +1304,7 @@ function restackLayers(){
  }
 }
 
-const OBJECT_KIND={"info-card":"資訊卡",image:"圖片","function-plot":"函數","axes-2d":"座標軸",shape:"圖形"};
+const OBJECT_KIND={"info-card":t("vs.objectKind.info-card"),image:t("vs.objectKind.image"),"function-plot":t("vs.objectKind.function-plot"),"axes-2d":t("vs.objectKind.axes-2d"),shape:t("vs.objectKind.shape")};
 const pair2=v=>Array.isArray(v)&&v.length===2&&v.every(num)?v:null;
 // Fact sheets (info-card objects) are grouped by module. Each card folds open
 // and closed, starts folded, and can be hidden; hidden cards are listed at the
@@ -1335,10 +1335,10 @@ function renderCards(){
  for(const o of shown)byModule.set(o.module||"core",[...(byModule.get(o.module||"core")||[]),o]);
  for(const [module,list] of byModule){
    const group=el("div",{className:"obj",style:"display:block"});
-   group.append(el("div",{className:"kind",textContent:module+" · "+list.length+" 張資訊卡"}));
+   group.append(el("div",{className:"kind",textContent:t("vs.cards.group",{module,count:list.length})}));
    for(const o of list){
      const card=el("details",{style:"margin-top:4px"});
-     const hide=el("button",{textContent:"隱藏",title:"收起這張卡片，之後可從下方叫回來",style:"margin-left:8px"});
+     const hide=el("button",{textContent:t("vs.cards.hide"),title:t("vs.cards.hideTitle"),style:"margin-left:8px"});
      hide.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();flip(o,true);});
      card.append(el("summary",{},el("strong",{textContent:o.card.title||o.id}),hide));
      for(const r of o.card.rows){
@@ -1353,9 +1353,9 @@ function renderCards(){
  }
  if(away.length){
    const box=el("details",{className:"obj",style:"display:block"});
-   box.append(el("summary",{textContent:"已隱藏的資訊卡（"+away.length+"）"}));
+   box.append(el("summary",{textContent:t("vs.cards.hidden",{count:away.length})}));
    for(const o of away){
-     const show=el("button",{textContent:"顯示：「"+(o.card.title||o.id)+"」· "+(o.module||"core"),style:"display:block;margin-top:4px"});
+     const show=el("button",{textContent:t("vs.cards.show",{title:o.card.title||o.id,module:o.module||"core"}),style:"display:block;margin-top:4px"});
      show.addEventListener("click",()=>flip(o,false));box.append(show);
    }
    objectsPanel.append(box);
@@ -1365,17 +1365,17 @@ function renderObjectsPanel(){
  const editable=objects.filter(o=>o.editable&&o.type!=="shape");
  objectsPanel.hidden=!imageId||!!pair||!!ws;objectsPanel.replaceChildren();
  if(objectsPanel.hidden)return;
- objectsPanel.append(el("div",{className:"kind",textContent:"模組物件（可直接修改，AI 下一輪會看到）"}));
- const sourceInput=el("input",{placeholder:"來源 imageId（留空只啟用底圖層）","aria-label":"加入圖片圖層來源"});
- const add=el("button",{textContent:"加入圖片／畫布圖層",disabled:!ready});
+ objectsPanel.append(el("div",{className:"kind",textContent:t("vs.objects.heading")}));
+ const sourceInput=el("input",{placeholder:t("vs.objects.sourcePlaceholder"),"aria-label":t("vs.objects.sourceLabel")});
+ const add=el("button",{textContent:t("vs.objects.addLayer"),disabled:!ready});
  add.addEventListener("click",async()=>{
    add.disabled=true;
    try{const result=await request("tools/call",{name:"add_image_layer",arguments:{imageId,...(sourceInput.value.trim()?{sourceImageId:sourceInput.value.trim()}:{})}});
-     if(result?.isError)throw Error(result.content?.[0]?.text||"失敗");const r=result.structuredContent;
+     if(result?.isError)throw Error(result.content?.[0]?.text||t("vs.err.failed"));const r=result.structuredContent;
      baseAsObject=!!r.baseAsObject;setObjects(r.objects);if(typeof r.baseAsObject==="boolean")baseAsObject=r.baseAsObject;setLayers(r.layers);applyServerCanvas(r.annotations,r.layers);render();
    }catch(error){status.textContent=error.message;add.disabled=false;}
  });objectsPanel.append(sourceInput,add);
- if(canRestoreObjects){const undo=el("button",{textContent:"復原上次刪除的物件",disabled:!ready||!!editingObject});undo.addEventListener("click",()=>editObject(null,{restore:true}));objectsPanel.append(undo);}
+ if(canRestoreObjects){const undo=el("button",{textContent:t("vs.objects.restore"),disabled:!ready||!!editingObject});undo.addEventListener("click",()=>editObject(null,{restore:true}));objectsPanel.append(undo);}
  renderCards();
  for(const o of editable){
    const row=el("div",{className:"obj",dataset:{object:o.id}});
@@ -1383,24 +1383,24 @@ function renderObjectsPanel(){
    const numIn=(v,label)=>el("input",{className:"num",type:"number",step:"any",value:num(v)?String(+v.toFixed(6)):"","aria-label":label,disabled:o.locked||!ready});
    const fields={};
    if(o.type==="function-plot"){
-     fields.expression=el("input",{className:"expr",value:String(o.editable.expression??""),maxLength:256,"aria-label":"算式 y =",disabled:o.locked||!ready});
-     const dom=pair2(o.editable.domain);fields.d0=numIn(dom?.[0],"x 起點");fields.d1=numIn(dom?.[1],"x 終點");
-     fields.labelMode=el("select",{"aria-label":"曲線標籤模式",disabled:o.locked||!ready});
-     for(const [value,text] of [["auto","標籤跟隨公式"],["custom","自訂標籤"]])fields.labelMode.append(el("option",{value,textContent:text}));
+     fields.expression=el("input",{className:"expr",value:String(o.editable.expression??""),maxLength:256,"aria-label":t("vs.objects.exprLabel"),disabled:o.locked||!ready});
+     const dom=pair2(o.editable.domain);fields.d0=numIn(dom?.[0],t("vs.objects.xStart"));fields.d1=numIn(dom?.[1],t("vs.objects.xEnd"));
+     fields.labelMode=el("select",{"aria-label":t("vs.objects.labelMode"),disabled:o.locked||!ready});
+     for(const [value,text] of [["auto",t("vs.objects.labelAuto")],["custom",t("vs.objects.labelCustom")]])fields.labelMode.append(el("option",{value,textContent:text}));
      fields.labelMode.value=o.editable.labelMode??"auto";
-     fields.label=el("input",{value:o.editable.label??"",maxLength:80,"aria-label":"自訂曲線標籤",disabled:o.locked||!ready||fields.labelMode.value==="auto"});
+     fields.label=el("input",{value:o.editable.label??"",maxLength:80,"aria-label":t("vs.objects.customLabel"),disabled:o.locked||!ready||fields.labelMode.value==="auto"});
      fields.labelMode.addEventListener("change",()=>{fields.label.disabled=o.locked||!ready||fields.labelMode.value==="auto";});
-     row.append("y =",fields.expression,"x：",fields.d0,"～",fields.d1,fields.labelMode,fields.label);
+     row.append("y =",fields.expression,t("vs.objects.axisSep"),fields.d0,t("vs.objects.rangeSep"),fields.d1,fields.labelMode,fields.label);
    }else if(o.type==="image"){
-     const r=o.editable.region;for(const k of ["x","y","x2","y2"])fields[k]=numIn(r[k],k);row.append("範圍：",...Object.values(fields));
+     const r=o.editable.region;for(const k of ["x","y","x2","y2"])fields[k]=numIn(r[k],k);row.append(t("vs.objects.range"),...Object.values(fields));
    }else if(o.type==="axes-2d"){
      const xr=pair2(o.editable.xRange),yr=pair2(o.editable.yRange);
-     fields.x0=numIn(xr?.[0],"x 最小");fields.x1=numIn(xr?.[1],"x 最大");fields.y0=numIn(yr?.[0],"y 最小");fields.y1=numIn(yr?.[1],"y 最大");
-     fields.title=el("input",{value:o.editable.title??"",maxLength:80,"aria-label":"圖表標題",disabled:o.locked||!ready});
-     row.append("x：",fields.x0,"～",fields.x1,"y：",fields.y0,"～",fields.y1,"標題：",fields.title);
+     fields.x0=numIn(xr?.[0],t("vs.objects.xMin"));fields.x1=numIn(xr?.[1],t("vs.objects.xMax"));fields.y0=numIn(yr?.[0],t("vs.objects.yMin"));fields.y1=numIn(yr?.[1],t("vs.objects.yMax"));
+     fields.title=el("input",{value:o.editable.title??"",maxLength:80,"aria-label":t("vs.objects.chartTitle"),disabled:o.locked||!ready});
+     row.append(t("vs.objects.axisSep"),fields.x0,t("vs.objects.rangeSep"),fields.x1,t("vs.objects.yAxisSep"),fields.y0,t("vs.objects.rangeSep"),fields.y1,t("vs.objects.titleSep"),fields.title);
    }
-   const apply=el("button",{textContent:"套用",disabled:o.locked||!ready||editingObject===o.id});
-   const del=el("button",{textContent:"刪除",title:"刪除這個物件（座標軸會連同畫在上面的函數一起刪除）",disabled:o.locked||!ready||editingObject===o.id});
+   const apply=el("button",{textContent:t("vs.objects.apply"),disabled:o.locked||!ready||editingObject===o.id});
+   const del=el("button",{textContent:t("vs.objects.delete"),title:t("vs.objects.deleteTitle"),disabled:o.locked||!ready||editingObject===o.id});
    apply.addEventListener("click",()=>{
      const val=i=>i&&i.value.trim()!==""?Number(i.value):null;
      let props={};
@@ -1424,10 +1424,10 @@ async function editObject(id,args){
  try{
    const result=await request("tools/call",{name:"edit_scene_object",arguments:{imageId,...(id?{id}:{}),...args}});
    const r=result?.structuredContent;
-   if(result?.isError||r?.kind!=="estampes.scene_objects")throw Error(r?.message||result?.content?.[0]?.text||"失敗");
+   if(result?.isError||r?.kind!=="estampes.scene_objects")throw Error(r?.message||result?.content?.[0]?.text||t("vs.err.failed"));
    setObjects(r.objects);if(typeof r.baseAsObject==="boolean")baseAsObject=r.baseAsObject;canRestoreObjects=!!r.canRestoreObjects;if(Array.isArray(r.layers))setLayers(r.layers);
-   status.textContent=(args.restore?"已復原刪除的物件":(args.remove?"已刪除 ":"已更新 ")+id)+(r.notes?.length?"（"+r.notes.map(n=>n.note).join("；")+"）":"")+"。AI 下一次讀取畫布時會看到。";
- }catch(err){status.textContent="沒有套用："+String(err.message||err);}
+   status.textContent=t("vs.objects.done",{what:args.restore?t("vs.objects.restored"):t(args.remove?"vs.objects.removed":"vs.objects.updated",{id}),notes:r.notes?.length?t("vs.paren",{text:r.notes.map(n=>n.note).join(t("vs.sep.semicolon"))}):""});
+ }catch(err){status.textContent=t("wb.err.notApplied",{message:String(err.message||err)});}
  finally{editingObject=null;render();}
 }
 function render(){
@@ -1444,7 +1444,7 @@ function render(){
        f.rot===270?"translate("+f.x0+" "+(f.y0+f.w)+") rotate(270)":"translate("+f.x0+" "+f.y0+")";
      if(href){if(!(ws?.items.find(it=>it.id===side)?.baseAsObject))drawBase(href,{x:0,y:0,width:f.w,height:f.h,transform:turn},sceneEl);}
      else{node("rect",{x:f.x0,y:f.y0,width:e.w,height:e.h,fill:"#8882"},sceneEl);
-       const t=node("text",{x:f.x0+e.w/2,y:f.y0+e.h/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);t.textContent="正在載入圖片…";}
+       const t=node("text",{x:f.x0+e.w/2,y:f.y0+e.h/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);t.textContent=i18nT("vs.loading.image");}
      if(ws){const t=node("text",{x:f.x0+8*K(),y:f.y0+22*K(),"font-size":16*K(),"font-weight":700,fill:"#fff",stroke:"#17212A","stroke-width":3*K(),"paint-order":"stroke"},sceneEl);t.textContent=sideTitle(side);}
    }
  }else if(imageId){
@@ -1458,14 +1458,14 @@ function render(){
    else{
      node("rect",{width:VW,height:VH,fill:"#8882"},sceneEl);
      const t=node("text",{x:VW/2,y:VH/2,"text-anchor":"middle","font-size":20*K(),fill:"#888"},sceneEl);
-     t.textContent="正在載入照片…";
+     t.textContent=i18nT("vs.loading.photo");
    }
    }
  }else{sceneEl.dataset.key="";sceneEl.innerHTML=SCENES[selectedScene];}
  renderObjects();renderCanvasMarks();restackLayers();
  if(baseAsObject&&!frames&&(viewMode==="annotated"||viewMode==="zoom")){sceneEl.dataset.key="";sceneEl.replaceChildren();}
  const fresh=userMarks.filter(m=>!sentIds.has(m.id)).length;
- counter.textContent="未送出："+fresh+" · 已送出或先前的標記："+(userMarks.length-fresh+priorUserMarks.length);
+ counter.textContent=t("vs.counter",{fresh,sent:userMarks.length-fresh+priorUserMarks.length});
  send.disabled=!ready||(fresh===0&&!unsentReviews.length&&!unsentEdits.length);
  undoBtn.disabled=!past.length&&!canServerStep("undo");redoBtn.disabled=!future.length&&!canServerStep("redo");
  exportImageBtn.hidden=!!frames||!(imageId&&exportLinks?.image);exportMarksBtn.hidden=!!frames||!(imageId&&exportLinks?.marks);
@@ -1500,7 +1500,7 @@ function applyInput(args){
    const items=cleanItems(wsArg.items),same=ws?.id===wsArg.id;
    if(!same){photo=null;exportLinks=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();renderViewTabs();}
    const old=new Map((ws?.items??[]).map(it=>[it.imageId,it.photo]));
-   pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||"工作區",revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
+   pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||t("vs.workspace.defaultName"),revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
    imageId=items[0].imageId;layoutWorkspace(ws.items);
  }else if(typeof args.imageId==="string"&&CANVAS_ID.test(args.imageId)){
    if(ws){ws=null;frames=null;photo=null;}
@@ -1559,7 +1559,7 @@ async function upgradePhoto(key,id,setId,apply){
  if(!id||upgrading.has(key))return;
  upgrading.add(key);
  try{const href=await fetchPixels(id,{setId});if(href){apply(href);render();}}
- catch(err){status.textContent="清晰版照片載入失敗，先顯示預覽："+String(err.message||err);}
+ catch(err){status.textContent=t("vs.photo.sharpFailed",{message:String(err.message||err)});}
  finally{upgrading.delete(key)}
 }
 const upgradeMain=img=>{if(img?.preview){const id=imageId;upgradePhoto("main:"+id,id,null,h=>{if(imageId===id)photo=h})}};
@@ -1596,19 +1596,19 @@ function showBackground(result,key){
  rootEl.classList.add("background-run");document.body.classList.add("estampes-background");
  let note=rootEl.querySelector(":scope > .background-note");
  if(!note){note=el("div",{className:"background-note",role:"status"});rootEl.prepend(note);}
- const r=result.structuredContent,open=el("button",{textContent:"顯示畫布",dataset:{act:"show-background"}});
+ const r=result.structuredContent,open=el("button",{textContent:t("vs.background.show"),dataset:{act:"show-background"}});
  open.addEventListener("click",()=>{
    const b=backgroundResult;backgroundResult=null;backgroundShown=true;note.remove();
    rootEl.classList.remove("background-run");document.body.classList.remove("estampes-background");
    if(b){applyResult(b.result);hostResultKey=b.key;if(ready&&imageId&&!photo)syncCanvas(false);}
  });
- note.replaceChildren(el("span",{textContent:"AI 正在背景更新或檢查畫布"+(r.imageId?"（"+r.imageId+"）":"")+"；你的畫布沒有被重新開啟，完成後 AI 會顯示結果。"}),open);
+ note.replaceChildren(el("span",{textContent:t("vs.background.note",{id:r.imageId?t("vs.paren",{text:r.imageId}):""})}),open);
 }
 function applyResult(result){
  const r=result?.structuredContent;if(r?.kind!=="estampes.visual_surface")return;
  gotResult=true;
  // An empty canvas waiting for the user's own picture.
- if(r.awaitingUpload&&!r.imageId){rootEl.classList.add("awaiting-upload");status.textContent=isLibreChat()?"":"按「選擇圖片／拍照」放一張圖片到畫布。";return;}
+ if(r.awaitingUpload&&!r.imageId){rootEl.classList.add("awaiting-upload");status.textContent=isLibreChat()?"":t("vs.upload.prompt");return;}
  rootEl.classList.remove("awaiting-upload");
  // Pixels and full mark geometry travel in widget-only _meta; the model
  // only gets a compact list. ChatGPT also exposes _meta on window.openai.
@@ -1651,7 +1651,7 @@ async function syncCanvas(force=false){
  if(ws)return syncWorkspace(force);
  if(!imageId||(photo&&(!pair||pair.photo)&&!force)||syncing)return;
  syncing=true;const id=imageId;
- status.textContent="照片沒有隨結果送到，正在重新載入…";
+ status.textContent=t("vs.photo.reloading");
  try{
    const pid=pair?.imageId;
    const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:id,...(pid?{pairImageId:pid}:{})}});
@@ -1675,9 +1675,9 @@ async function syncCanvas(force=false){
      .filter(v=>v.label&&v.href&&inRegion(v.region)).slice(0,3);
    renderViewTabs();setCheck(r.check??null);
    if(Array.isArray(r.views))completeViews(r.views);
-   status.textContent=photo?"已重新載入照片與標記。":"照片資料無法載入。";
+   status.textContent=photo?t("vs.photo.reloaded"):t("vs.photo.unavailable");
  }catch(err){
-   status.textContent="照片載入失敗："+String(err.message||err)+"。若伺服器沒有開啟儲存，照片只保留約一小時，過期請重新上傳。";
+   status.textContent=t("vs.photo.loadFailed",{message:String(err.message||err)});
  }finally{syncing=false;render()}
 }
 // A workspace: marks, layers and links in one call, then each missing image.
@@ -1699,15 +1699,15 @@ async function syncWorkspace(force){
      links=viewLinks(r.links);
    }
    for(const it of ws.items.filter(i=>!i.photo||!Array.isArray(i.objects))){
-     status.textContent="正在載入圖片 "+sideTitle(it.id)+"…";
+     status.textContent=t("vs.workspace.loadingItem",{name:sideTitle(it.id)});
      const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:it.imageId,...(it.set?.includes("#")?{setId:it.set.split("#")[1]}:{}),part:"image"}});
      if(ws?.id!==id)return;
      const r=result?.structuredContent;
      if(!result?.isError&&r?.imageId===it.imageId){it.photo=baseUrl(r.image);upgradeItem(it,r.image);it.objects=cleanObjects(r.objects);fullLayers(it.objects,it.imageId,itemSet(it));it.baseAsObject=!!r.baseAsObject;}
      render();
    }
-   status.textContent=allPhotos()?"已載入工作區的圖片與標記。":"有些圖片無法載入。";
- }catch(err){status.textContent="工作區載入失敗："+String(err.message||err);}
+   status.textContent=allPhotos()?t("vs.workspace.loaded"):t("vs.workspace.someFailed");
+ }catch(err){status.textContent=t("vs.workspace.loadFailed",{message:String(err.message||err)});}
  finally{syncing=false;render()}
 }
 // The verification image AI checked its marks against, fetched on demand.
@@ -1724,18 +1724,18 @@ async function loadCheck(){
    const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId,part:"check"}});
    if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
    checkImage=dataUrl(result?.structuredContent?.check?.image);
-   if(!checkImage)throw Error("沒有驗收圖");
+   if(!checkImage)throw Error(t("vs.check.none"));
    render();
- }catch(err){checkCaption.textContent="驗收圖載入失敗："+String(err.message||err)}
+ }catch(err){checkCaption.textContent=t("vs.check.loadFailed",{message:String(err.message||err)})}
  finally{loadingCheck=false}
 }
 function renderCheck(){
- if(!check){checkCaption.textContent="這次 AI 沒有新畫的標記，所以沒有驗收圖。";return}
- if(!checkImage){checkImg.removeAttribute("src");checkCaption.textContent="正在載入驗收圖…";loadCheck();return}
+ if(!check){checkCaption.textContent=t("vs.check.noMarks");return}
+ if(!checkImage){checkImg.removeAttribute("src");checkCaption.textContent=t("vs.check.loading");loadCheck();return}
  checkImg.src=checkImage;
- const [a,b]=check.layout==="side-by-side"?["左","右"]:["上","下"];
- checkCaption.textContent="AI 畫完後用這張圖檢查自己的標記："+a+"邊是原圖，"+b+"邊是同一區域加上編號標記。編號："+
-   check.numbers.map(n=>n.n+"＝"+(n.label||n.id)).join("、")+"。";
+ const [a,b]=check.layout==="side-by-side"?[t("vs.check.left"),t("vs.check.right")]:[t("vs.check.top"),t("vs.check.bottom")];
+ checkCaption.textContent=t("vs.check.caption",{a,b,numbers:
+   check.numbers.map(n=>t("vs.check.number",{n:n.n,label:n.label||n.id})).join(t("vs.sep.list"))});
 }
 function fromPointer(event){const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;
  const matrix=svg.getScreenCTM();if(!matrix)return null;
@@ -1791,7 +1791,7 @@ function renderSoon(){
  if(wait<=0){clearTimeout(camRenderTimer);camRenderTimer=0;camRenderAt=performance.now();scheduleRender();return;}
  if(!camRenderTimer)camRenderTimer=later(()=>{camRenderTimer=0;camRenderAt=performance.now();scheduleRender();},wait);
 }
-const cameraMoved=()=>{zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?" · 原始解析度":"");renderSoon();};
+const cameraMoved=()=>{zoomLevel.textContent=Math.round(Z()*100)+"%"+(detail&&cam?t("vs.zoom.fullResolution"):"");renderSoon();};
 function setCam(next){
  if(!next||next.w>=VW*0.999)cam=null;
  else{const w=clamp(next.w,VW/MAX_ZOOM,VW),h=w*VH/VW;cam={w,h,x:clamp(next.x,0,VW-w),y:clamp(next.y,0,VH-h)};}
@@ -2028,18 +2028,18 @@ async function updateMark(before,after,done,textOnly=false){
    replaceLocal(before);commitMarks(userMarks.map(m=>m.id===after.id?after:m));status.textContent=done;render();return;
  }
  replaceLocal(after);render();
- try{await editOnServer({marks:[textOnly?{id:rawOf(after),...(frames?{side:sideKey(after.side)}:{}),label:after.label??"",note:after.note??""}:editFields(after)]});status.textContent=done+" AI 下次回覆時會知道。";}
- catch(err){replaceLocal(before);status.textContent="修改失敗："+String(err.message||err);}
+ try{await editOnServer({marks:[textOnly?{id:rawOf(after),...(frames?{side:sideKey(after.side)}:{}),label:after.label??"",note:after.note??""}:editFields(after)]});status.textContent=t("vs.edit.doneNotify",{done});}
+ catch(err){replaceLocal(before);status.textContent=t("vs.edit.failed",{message:String(err.message||err)});}
  render();
 }
 async function deleteMark(m){
  if(!canDelete(m))return;
  selected=null;
- if(isFresh(m)){commitMarks(userMarks.filter(u=>u.id!==m.id));status.textContent="已刪除（可按上一步復原）。";render();return;}
+ if(isFresh(m)){commitMarks(userMarks.filter(u=>u.id!==m.id));status.textContent=t("vs.edit.deletedLocal");render();return;}
  try{await editOnServer({remove:[{id:rawOf(m),...(frames?{side:sideKey(m.side)}:{})}]});
    userMarks=userMarks.filter(u=>u.id!==m.id);
-   status.textContent="已刪除"+(isUser(m)?"你的":" AI 的")+"標記「"+(m.label||m.id)+"」；AI 下次回覆時會知道。";}
- catch(err){status.textContent="刪除失敗："+String(err.message||err);}
+   status.textContent=t(isUser(m)?"vs.edit.deletedMine":"vs.edit.deletedAi",{name:m.label||m.id});}
+ catch(err){status.textContent=t("vs.edit.deleteFailed",{message:String(err.message||err)});}
  render();
 }
 // Pen buttons restyle the selected mark when it is yours.
@@ -2048,7 +2048,7 @@ function restyleSelected(){
  const next={...m};for(const k of ["color","size","pen"])delete next[k];
  // Unsent marks store only non-default style; the server needs it spelled out.
  Object.assign(next,isFresh(m)?styleFields():{color:penStyle.color,size:penStyle.size,pen:penStyle.pen});
- updateMark(m,next,"已改變標記樣式。");return true;
+ updateMark(m,next,t("vs.edit.restyled"));return true;
 }
 function bounds(m){
  const xs=[m.x,m.x2??m.x,...(m.points??[]).map(q=>q.x)],ys=[m.y,m.y2??m.y,...(m.points??[]).map(q=>q.y)];
@@ -2074,35 +2074,35 @@ function renderSelection(){
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
  const mine=isUser(m),layer=layerOf(m.layer);
  selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"AI"))}),
-   el("span",{className:"meta",textContent:(mine?"你的標記":"AI 的標記")+" · "+(isFresh(m)?"未送出":layer?"圖層「"+layer.name+"」":"已送出")+(isLocked(m)?" · 🔒 已鎖定":"")}));
+   el("span",{className:"meta",textContent:t("vs.selection.meta",{who:mine?t("vs.selection.mine"):t("vs.selection.ai"),where:isFresh(m)?t("vs.selection.unsent"):layer?t("vs.selection.layer",{name:layer.name}):t("vs.selection.sent"),locked:isLocked(m)?t("vs.selection.locked"):""})}));
  const permitted=canEditText(m);
- const input=el("input",{value:m.label??"",maxLength:64,placeholder:"標籤","aria-label":"標籤",readOnly:!permitted});
- const note=el("textarea",{value:m.note??"",maxLength:200,rows:3,placeholder:"這個標記的備註","aria-label":"標記備註",readOnly:!permitted});
- selectionEl.append(el("label",{},"標籤（最多 64 字元）",input),el("label",{},"備註（最多 200 字元）",note));
+ const input=el("input",{value:m.label??"",maxLength:64,placeholder:t("vs.selection.label"),"aria-label":t("vs.selection.label"),readOnly:!permitted});
+ const note=el("textarea",{value:m.note??"",maxLength:200,rows:3,placeholder:t("vs.selection.notePlaceholder"),"aria-label":t("vs.selection.noteLabel"),readOnly:!permitted});
+ selectionEl.append(el("label",{},t("vs.selection.labelField"),input),el("label",{},t("vs.selection.noteField"),note));
  if(permitted){
    const save=()=>{const current=findMark(m.id);if(!canEditText(current))return;
      const label=input.value.trim(),text=note.value;
      input.blur();note.blur();
-     if(label!==(current.label??"")||text!==(current.note??""))updateMark(current,{...current,label,note:text},"已儲存標籤與備註。",true);
+     if(label!==(current.label??"")||text!==(current.note??""))updateMark(current,{...current,label,note:text},t("vs.selection.saved"),true);
    };
-   const apply=el("button",{textContent:"儲存標籤與備註"});apply.addEventListener("click",save);
+   const apply=el("button",{textContent:t("vs.selection.save")});apply.addEventListener("click",save);
    input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing&&e.keyCode!==229){e.preventDefault();save();}});
    note.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)&&!e.isComposing){e.preventDefault();save();}});
-   selectionEl.append(apply,el("span",{className:"meta",textContent:mine?"拖曳移動 · 拖曳控制點改大小或形狀 · 方向鍵微調 · 畫筆按鈕改樣式":
-     "這是 AI 的標記：可改寫標籤與備註、拖曳移動、拖曳控制點改大小或形狀；樣式維持 AI 的設定。"}));
- }else selectionEl.append(el("span",{className:"meta",textContent:"此圖層已鎖定；請先解鎖才能編輯。"}));
- if(canDelete(m))selectionEl.append(el("button",{textContent:mine?"刪除":"刪除 AI 的標記",dataset:{act:"delete"}}));
+   selectionEl.append(apply,el("span",{className:"meta",textContent:mine?t("vs.selection.hintMine"):
+     t("vs.selection.hintAi")}));
+ }else selectionEl.append(el("span",{className:"meta",textContent:t("vs.selection.layerLocked")}));
+ if(canDelete(m))selectionEl.append(el("button",{textContent:mine?t("vs.objects.delete"):t("vs.selection.deleteAi"),dataset:{act:"delete"}}));
  if(mine){
    const inGroup=liveGestures().find(g=>g.memberIds.includes(m.id)&&g.confirmation==="user-confirmed");
-   selectionEl.append(el("button",{textContent:groupingFrom===m.id?"取消組合":"和另一筆組成手勢",dataset:{act:"group"},title:"這幾筆是同一個手勢（例如箭桿＋箭頭）；筆畫本身不會被合併"}));
-   if(inGroup)selectionEl.append(el("button",{textContent:"拆開手勢",dataset:{act:"ungroup"}}));
+   selectionEl.append(el("button",{textContent:groupingFrom===m.id?t("vs.selection.groupCancel"):t("vs.selection.group"),dataset:{act:"group"},title:t("vs.selection.groupTitle")}));
+   if(inGroup)selectionEl.append(el("button",{textContent:t("vs.selection.ungroup"),dataset:{act:"ungroup"}}));
  }
- selectionEl.append(el("button",{textContent:"取消選取",dataset:{act:"deselect"}}));
+ selectionEl.append(el("button",{textContent:t("vs.selection.deselect"),dataset:{act:"deselect"}}));
 }
 selectionEl.addEventListener("click",e=>{
  const act=e.target.closest("button")?.dataset.act;
  if(act==="delete")deleteMark(findMark(selected));
- if(act==="group"){groupingFrom=groupingFrom===selected?null:selected;status.textContent=groupingFrom?"再點另一筆你的標記，把它們當成同一個手勢。":"已取消組合。";render();}
+ if(act==="group"){groupingFrom=groupingFrom===selected?null:selected;status.textContent=groupingFrom?t("vs.selection.groupNext"):t("vs.selection.groupCancelled");render();}
  if(act==="ungroup"){const g=liveGestures().find(g=>g.memberIds.includes(selected)&&g.confirmation==="user-confirmed");if(g)decideGesture(g.memberIds,g.provenance==="user-created"?"unreviewed":"user-rejected");}
  if(act==="deselect"){selected=null;render();}
 });
@@ -2111,7 +2111,7 @@ function nudgeSelected(dx,dy){
  nudge??={before:m};
  replaceLocal(shifted(m,dx,dy));render();
  clearTimeout(nudge.timer);
- nudge.timer=later(()=>{const {before}=nudge;nudge=null;const after=findMark(before.id);if(after)updateMark(before,after,"已微調位置。");},500);
+ nudge.timer=later(()=>{const {before}=nudge;nudge=null;const after=findMark(before.id);if(after)updateMark(before,after,t("vs.edit.nudged"));},500);
 }
 onKey("keydown",e=>{
  if(!selected||e.target.closest?.("input,textarea,select,button,summary")||viewMode!=="annotated")return;
@@ -2125,14 +2125,14 @@ const textEditor=scope.querySelector("#text-editor"),textInput=scope.querySelect
 let textSession=null,textDrag=null,textOpening=0,textBusy=false;
 const textContext=()=>JSON.stringify([imageId,pair?.imageId,ws?.id,ws?.items.map(it=>[it.id,it.set])]);
 function textTarget(side){
- if(ws){const it=ws.items.find(it=>it.id===side);if(!it||!it.set)throw Error("找不到工作區的文字畫布，請重新開啟。");return {imageId:it.imageId,...(itemSet(it)?{setId:itemSet(it)}:{})};}
+ if(ws){const it=ws.items.find(it=>it.id===side);if(!it||!it.set)throw Error(t("vs.text.noWorkspaceCanvas"));return {imageId:it.imageId,...(itemSet(it)?{setId:itemSet(it)}:{})};}
  return {imageId:pair&&side==="right"?pair.imageId:imageId};
 }
 const textObjects=side=>ws?ws.items.find(it=>it.id===side)?.objects??[]:pair&&side==="right"?pair.objects??[]:objects;
 async function callText(target,args){
  const result=await request("tools/call",{name:"edit_canvas_text",arguments:{...target,...args}});
- if(result?.isError)throw Error(result.content?.[0]?.text||"文字修改失敗");
- const r=result?.structuredContent;if(r?.kind!=="estampes.canvas_text")throw Error("文字回應格式不符");return r;
+ if(result?.isError)throw Error(result.content?.[0]?.text||t("vs.text.editFailed"));
+ const r=result?.structuredContent;if(r?.kind!=="estampes.canvas_text")throw Error(t("vs.text.badResponse"));return r;
 }
 function applyTextState(side,r){
  const all=cleanObjects(r.objects),list=pair?all.filter(o=>o.type==="shape"&&o.editable?.kind==="text"):all,target=textTarget(side);fullLayers(list,target.imageId,target.setId??null);
@@ -2151,7 +2151,7 @@ async function refreshPairText(){
 }
 function fillTextEditor(){
  if(!textSession)return;const p=textSession.props;
- textEditor.hidden=false;scope.querySelector("#text-subject").textContent=(frames?sideTitle(textSession.side)+" · ":"")+(textSession.id?"編輯文字":"新增文字");textInput.value=p.text??"";textSize.value=String(p.size??15);textColor.value=textSession.displayColor??(HEX.test(p.fill)?p.fill:COLORS[p.fill]??(HEX.test(p.style?.color)?p.style.color:COLORS[p.style?.color])??"#579DF6");
+ textEditor.hidden=false;scope.querySelector("#text-subject").textContent=(frames?sideTitle(textSession.side)+t("vs.sep.dot"):"")+(textSession.id?t("vs.text.edit"):t("vs.text.new"));textInput.value=p.text??"";textSize.value=String(p.size??15);textColor.value=textSession.displayColor??(HEX.test(p.fill)?p.fill:COLORS[p.fill]??(HEX.test(p.style?.color)?p.style.color:COLORS[p.style?.color])??"#579DF6");
  textButtons();
 }
 function textButtons(){
@@ -2164,15 +2164,15 @@ function textButtons(){
 }
 async function openText(side,point,id=null,focus=true){
  const opening=++textOpening,context=textContext();
- textSession=null;textEditor.hidden=true;selected=null;status.textContent="正在讀取文字…";
+ textSession=null;textEditor.hidden=true;selected=null;status.textContent=t("vs.text.reading");
  try{
    const target=textTarget(side);
    const r=await callText(target,{action:"read"});if(opening!==textOpening||context!==textContext())return null;
    applyTextState(side,r);const obj=id?r.objects.find(o=>o.id===id):null;
-   if(id&&!obj?.editable?.text)throw Error("這個文字已變更或刪除，請重新選取。");
+   if(id&&!obj?.editable?.text)throw Error(t("vs.text.gone"));
    textSession={side,target,id,revision:r.revision,history:r.history,context,locked:!!obj?.locked,displayColor:obj?.primitives.find(p=>p.k==="text")?.fill,props:obj?.editable??{x:point.x,y:point.y,text:"",size:20,fill:COLORS[penStyle.color]??"#579DF6"}};
    selected=null;fillTextEditor();render();
-   status.textContent=textSession.locked?"此文字所在圖層已鎖定；可先解鎖再編輯。":id?"可編輯文字，或拖曳文字移動位置。":"輸入文字後按儲存，也可用 Ctrl／⌘ + Enter。";
+   status.textContent=textSession.locked?t("vs.text.locked"):id?t("vs.text.editable"):t("vs.text.newHint");
    if(focus)textInput.focus();return textSession;
  }catch(err){status.textContent=err.message;return null;}
 }
@@ -2184,12 +2184,12 @@ async function textAction(action,props){
    if(session.context!==textContext())return;applyTextState(session.side,r);
    const id=r.selectedId??session.id,obj=r.objects.find(o=>o.id===id);
    if(textSession===session){Object.assign(session,{id:obj?id:null,revision:r.revision,history:r.history,props:obj?.editable??session.props,displayColor:obj?.primitives.find(p=>p.k==="text")?.fill,locked:!!obj?.locked});fillTextEditor();}
-   status.textContent="已儲存文字變更；AI 下次讀取畫布時會看到。";render();
- }catch(err){render();status.textContent="文字未套用："+err.message+"（可按重新讀取後確認）";}
+   status.textContent=t("vs.text.saved");render();
+ }catch(err){render();status.textContent=t("vs.text.notApplied",{message:err.message});}
  finally{textBusy=false;textButtons();}
 }
 scope.querySelector("#text-save").addEventListener("click",()=>{
- if(!textSession||!textInput.value.trim()){status.textContent="請輸入文字。";return;}
+ if(!textSession||!textInput.value.trim()){status.textContent=t("vs.text.empty");return;}
  const props={x:textSession.props.x,y:textSession.props.y,text:textInput.value,size:Number(textSize.value),fill:textColor.value};
  textAction(textSession.id?"update":"create",props);
 });
@@ -2232,7 +2232,7 @@ hit.addEventListener("pointermove",e=>{
 hit.addEventListener("pointerup",async()=>{
  if(!textDrag)return;const d=textDrag;textDrag=null;const session=await d.pending;
  if(!d.moved||!session){render();return;}
- if(session!==textSession||session.props.x!==d.props.x||session.props.y!==d.props.y){status.textContent="文字位置已更新，請確認後重新拖曳。";render();return;}
+ if(session!==textSession||session.props.x!==d.props.x||session.props.y!==d.props.y){status.textContent=t("vs.text.moved");render();return;}
  await textAction("update",d.next);
 });
 hit.addEventListener("pointercancel",cancelTextDrag);
@@ -2251,12 +2251,12 @@ hit.addEventListener("pointerdown",e=>{
  const p=fromPointer(e);if(!p)return;
  const grip=groupingFrom?null:handleAt(p);
  if(grip){dragHandle={before:grip.mark,k:grip.handle.k,start:p,moved:false,slop:dragSlop(e)};findingPointer=null;hit.setPointerCapture(e.pointerId);
-   status.textContent="拖曳控制點以調整「"+(grip.mark.label||grip.mark.id)+"」的大小或形狀。";render();return;}
+   status.textContent=t("vs.handles.hint",{name:grip.mark.label||grip.mark.id});render();return;}
  const m=pickMark(p);
  if(groupingFrom){finishGrouping(m);return;}
  selected=m?.id??null;findingPointer=m?{id:m.id,start:p}:null;
  if(canMove(m)){dragMove={start:p,before:m,moved:false,slop:dragSlop(e)};hit.setPointerCapture(e.pointerId);}
- status.textContent=m?"已選取「"+(m.label||m.id)+"」。":"這裡沒有標記；點在線條或框上就能選取。";
+ status.textContent=m?t("vs.select.selected",{name:m.label||m.id}):t("vs.select.nothing");
  render();
 });
 hit.addEventListener("pointermove",e=>{
@@ -2270,16 +2270,16 @@ hit.addEventListener("pointermove",e=>{
 });
 function endDrag(){
  if(dragHandle){const {before,moved,k}=dragHandle;dragHandle=null;const after=findMark(before.id);
-   if(moved&&after)updateMark(before,after,k==="rot"?"已旋轉標記。":before.type==="rect"?"已調整標記大小。":"已調整標記形狀。");else render();return;}
+   if(moved&&after)updateMark(before,after,k==="rot"?t("vs.edit.rotated"):before.type==="rect"?t("vs.edit.resized"):t("vs.edit.reshaped"));else render();return;}
  const clicked=findingPointer;findingPointer=null;
  if(clicked)revealFinding(findMark(clicked.id));
  if(!dragMove)return;const {before,moved}=dragMove;dragMove=null;
- const after=findMark(before.id);if(moved&&after)updateMark(before,after,"已移動標記。");
+ const after=findMark(before.id);if(moved&&after)updateMark(before,after,t("vs.edit.moved"));
 }
 hit.addEventListener("pointerup",endDrag);
 hit.addEventListener("pointercancel",()=>{findingPointer=null;
  // The browser or host took the gesture away (a scroll, a system gesture): the mark goes back, and the user is told why.
- if(dragHandle){replaceLocal(dragHandle.before);dragHandle=null;status.textContent="拖曳被瀏覽器或主機中斷（pointercancel），標記已還原。";render();}if(dragMove){replaceLocal(dragMove.before);dragMove=null;status.textContent="拖曳被瀏覽器或主機中斷（pointercancel），標記已還原。";render();}});
+ if(dragHandle){replaceLocal(dragHandle.before);dragHandle=null;status.textContent=t("vs.drag.cancelledByHost");render();}if(dragMove){replaceLocal(dragMove.before);dragMove=null;status.textContent=t("vs.drag.cancelledByHost");render();}});
 // Drawing facts for gesture grouping: order and time relative to the first
 // stroke since the last send (no clock time), and the input device.
 let batchStart=null,strokeStart=0,strokePointer="",strokeCount=0;
@@ -2309,7 +2309,7 @@ hit.addEventListener("pointerup",e=>{if(!start||mode==="select"||mode==="text")r
  Object.assign(mark,strokeFacts());
  // Paired view: a mark belongs to the image it was started on and stays inside it.
  if(frames)mark=toView(toSide({...mark,side:sideAt(start)}));
- if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent="拖曳距離太短，請重試。";}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent="已新增標註；用「選取」可編輯標籤與備註，或直接傳給 AI。";}
+ if(mode!=="point"&&Math.hypot(px(mark.x2-mark.x),py(mark.y2-mark.y))<7*U()){status.textContent=t("vs.draw.tooShort");}else{commitMarks([...userMarks,mark]);selectedFocusId="mine-"+(userMarks.length-1);status.textContent=t("vs.draw.added");}
  }start=null;previewEl.replaceChildren();render();});
 hit.addEventListener("pointercancel",()=>{start=null;stroke=[];previewEl.replaceChildren()});
 intentSelect.addEventListener("change",render);
@@ -2326,14 +2326,14 @@ function openLink(href){
  request("ui/open-link",{url:href}).catch(()=>{window.open(href,"_blank","noopener")});
 }
 exportImageBtn.addEventListener("click",()=>openLink(exportLinks?.image));
-exportMarksBtn.addEventListener("click",()=>{openLink(exportLinks?.marks);status.textContent="SVG 是你和 AI 目前所有標記（分兩個圖層）；之後把它和圖片一起上傳回對話，就能還原標記。"});
+exportMarksBtn.addEventListener("click",()=>{openLink(exportLinks?.marks);status.textContent=t("vs.export.marksHint")});
 // Pick or photograph an image right here. Some hosts cannot hand chat
 // attachments to tools, so the widget sends the file itself, in slices,
 // through the app-only upload_visual_image tool, then shows its canvas and
 // tells the model the new imageId.
 const uploadBtn=scope.querySelector("#upload"),uploadFile=scope.querySelector("#upload-file");
 const uploadBig=scope.querySelector("#upload-big");
-const libreChatUploadHelp="LibreChat 需要逐段批准，且限制每次呼叫的大小，目前無法在畫布上傳本機圖片。可用既有的 Estampes imageId 開圖。請勿把私密圖片公開。";
+const libreChatUploadHelp=t("vs.upload.libreChatHelp");
 const isLibreChat=()=>host.name==="LibreChat";
 function pickUpload(){
  if(isLibreChat()){status.textContent=libreChatUploadHelp;return}
@@ -2366,11 +2366,11 @@ let uploading=false;
 async function uploadImage(file){
  if(uploading)return;
  if(isLibreChat()){status.textContent=libreChatUploadHelp;return}
- if(!ready){status.textContent="還在連接對話，請稍候再選圖片。";return}
- if(!/^image\//.test(file.type||"image/")){status.textContent="請選擇圖片檔。";return}
+ if(!ready){status.textContent=t("vs.upload.notReady");return}
+ if(!/^image\//.test(file.type||"image/")){status.textContent=t("vs.upload.notImage");return}
  uploading=true;uploadBtn.disabled=true;
  try{
-   status.textContent="正在準備圖片…";
+   status.textContent=t("vs.upload.preparing");
    const {bytes,name}=await uploadBytes(file);
    const data=toBase64(bytes);
    let size=240000,offset=0,uploadId=null,result=null;
@@ -2380,7 +2380,7 @@ async function uploadImage(file){
        result=await request("tools/call",{name:"upload_visual_image",arguments:{...(uploadId?{uploadId}:{}),fileName:String(name||"image").slice(0,120),total:data.length,offset,data:part}});
        if(result?.isError){
          const message=result.content?.find(item=>item.type==="text"&&item.text?.trim())?.text;
-         throw Error(message||"對話程式未完成上傳呼叫。可能是未批准、超過呼叫大小限制，或工具執行失敗。");
+         throw Error(message||t("vs.upload.hostFailed"));
        }
      }catch(err){
        if(part.length<=MIN_UPLOAD_SLICE||!isUploadSizeRejection(String(err.message||err)))throw err;
@@ -2390,20 +2390,18 @@ async function uploadImage(file){
      const r=result?.structuredContent;
      offset+=part.length;
      if(offset<data.length){
-       if(r?.kind!=="estampes.upload_progress"||!r.uploadId||r.received!==offset||r.total!==data.length)throw Error("伺服器沒有確認收到這個分段");
+       if(r?.kind!=="estampes.upload_progress"||!r.uploadId||r.received!==offset||r.total!==data.length)throw Error(t("vs.upload.chunkUnconfirmed"));
        uploadId=r.uploadId;
      }
-     status.textContent="上傳中… "+Math.min(100,Math.round(offset*100/data.length))+"%";
+     status.textContent=t("vs.upload.progress",{percent:Math.min(100,Math.round(offset*100/data.length))});
    }
    const r=result?.structuredContent;
-   if(r?.kind!=="estampes.visual_surface"||!r.imageId)throw Error("伺服器沒有回傳畫布");
+   if(r?.kind!=="estampes.visual_surface"||!r.imageId)throw Error(t("vs.upload.noCanvas"));
    gotResult=true;applyResult(result);
-   const text="我在 Estampes 畫布上傳了一張圖片："+r.imageId+"（"+r.width+"×"+r.height+" px，檔名 "+JSON.stringify(name)+"）。"+
-     "它已經在畫布上，Estampes 工具已連線，不需要重新上傳。要看內容請呼叫 inspect_image({imageId:\""+r.imageId+"\"})；"+
-     "要在這張圖上畫標註請呼叫 present_visual({imageId:\""+r.imageId+"\", annotations:[…]})。";
+   const text=t("vs.upload.message",{id:r.imageId,width:r.width,height:r.height,name:JSON.stringify(name),inspect:"inspect_image({imageId:\""+r.imageId+"\"})",present:"present_visual({imageId:\""+r.imageId+"\", annotations:[…]})"});
    await tellModel(text);
-   status.textContent="已上傳 "+r.imageId+"，AI 會在你下一則訊息看到它。";
- }catch(err){status.textContent="上傳失敗："+String(err.message||err)}
+   status.textContent=t("vs.upload.done",{id:r.imageId});
+ }catch(err){status.textContent=t("vs.upload.failed",{message:String(err.message||err)})}
  finally{uploading=false;uploadBtn.disabled=false}
 }
 // Model context first (silent); a chat message where the host lacks it.

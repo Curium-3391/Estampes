@@ -127,6 +127,7 @@ test("the canvas records stroke facts, shows candidates and sends the user's ver
   assert.match(html, /Object\.assign\(mark,strokeFacts\(\)\)/);
   assert.match(html, /name:"review_gesture_group"/);
   assert.match(html, /gestureDecisions:gestureDecisions\.filter/);
-  assert.match(html, /和另一筆組成手勢/);
+  assert.match(html, /t\("vs\.selection\.group"\)/);
+  assert.equal((await import("../src/i18n/index.js")).t("vs.selection.group"), "和另一筆組成手勢");
   assert.match(html, /setGestures\(r\.event\.gestureGroups,\{merge:true\}\)/);
 });
