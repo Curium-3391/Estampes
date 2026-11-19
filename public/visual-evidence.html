@@ -131,10 +131,11 @@ window.addEventListener("message",event=>{
 });
 (async()=>{
  try{
-   await request("ui/initialize",{
+   const init=await request("ui/initialize",{
      appInfo:{name:"estampes-evidence-viewer",version:"__ESTAMPES_VERSION__"},
      appCapabilities:{},protocolVersion:"2026-01-26"
    });
+   i18nHost(init?.hostContext?.locale);
    notify("ui/notifications/initialized",{});
    ready=true;retry.disabled=!lastInput;
    if(!hydrateCompat()&&viewer.hidden)status.textContent=t("ev.receiving");

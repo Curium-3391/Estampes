@@ -302,8 +302,9 @@ function createHost(){
   if(typeof msg.id==="number"){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message||JSON.stringify(msg.error))):p.resolve(msg.result);if(p.settles)emit("settled");return;}
   if(msg.method==="ui/notifications/tool-input")emit("tool-input",msg.params);
   if(msg.method==="ui/notifications/tool-result")emit("tool-result",msg.params);
+  if(msg.method==="ui/notifications/host-context-changed")i18nHost(msg.params?.locale);
  });
- window.addEventListener("openai:set_globals",()=>emit("globals"));
+ window.addEventListener("openai:set_globals",()=>{i18nHost(window.openai?.locale);emit("globals")});
  // MCP Apps hosts size the widget frame from ui/notifications/size-changed;
  // without it the frame keeps a default or stale size (clipped content, or a
  // frame that tracks whatever image is loaded). Report the real content size.
@@ -325,13 +326,16 @@ function createHost(){
  }
  async function start(){
   try{const init=await request("ui/initialize",{appInfo:{name:"estampes-visual-surface",version:"__ESTAMPES_VERSION__"},appCapabilities:{availableDisplayModes:["inline","fullscreen","pip"]},protocolVersion:"2026-01-26"});
-   hostName=init?.hostInfo?.name??"";
+   hostName=init?.hostInfo?.name??"";i18nHost(init?.hostContext?.locale);
    notify("ui/notifications/initialized",{});ready=true;waiters.splice(0).forEach(f=>f());reportSize();}
   catch(err){emit("failed",err)}
  }
  return {on,whenReady,request,notify,start,get ready(){return ready},get name(){return hostName}};
 }
 const host=createHost();
+// A new language (the host reported one, or the person picked one) redraws
+// the dynamic text; static markup is re-applied by the i18n runtime.
+i18nOnChange(()=>{try{render()}catch{}});
 // What this widget knows about where its marks came from and what it last sent, for bug reports:
 // tap the status line to show it. Times are local clock; it holds no image data.
 const diag={source:"",sourceAt:0,polls:0,pollAt:0,pollError:"",revision:"",applied:0,appliedAt:0,busy:0,stale:0,edit:null,hooks:new Set()};

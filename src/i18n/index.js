@@ -1,12 +1,13 @@
 // Server side of the message catalogs (docs/rfc/i18n §4–5).
 // Catalogs live in src/i18n/locales/<tag>.json. English is the key and
-// fallback language (decision D1); zh-TW is complete. During Phase 1 every
-// surface is pinned to zh-TW, so what users see is exactly what it was
-// before the strings moved into the catalog.
+// fallback language (decision D1); en and zh-TW are complete. The locale is
+// resolved per view (Phase 2): see matchLocale and widgetI18nSource.
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createI18n } from "./runtime.js";
+import { matchLocale as matchIn } from "./widget-runtime.js";
+import { config, addConfigWarning } from "../config.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -14,26 +15,46 @@ export const CATALOGS = Object.freeze(Object.fromEntries(
   readdirSync(join(HERE, "locales")).filter((f) => f.endsWith(".json")).sort()
     .map((f) => [f.slice(0, -5), Object.freeze(JSON.parse(readFileSync(join(HERE, "locales", f), "utf8")))])));
 
-// Phase 1: the resolved locale is always zh-TW (RFC §9). Phase 2 replaces
-// this with user override → host locale → ESTAMPES_DEFAULT_LOCALE → en.
-export const PINNED_LOCALE = "zh-TW";
+export const LOCALES = Object.freeze(Object.keys(CATALOGS));
+
+// Tag negotiation is shared with the browser (./widget-runtime.js).
+export const matchLocale = (tag) => matchIn(tag, LOCALES);
+
+// The instance default (ESTAMPES_DEFAULT_LOCALE), else English.
+const configured = config.defaultLocale;
+export const DEFAULT_LOCALE = configured ? matchLocale(configured) ?? "en" : "en";
+if (configured && !matchLocale(configured)) {
+  addConfigWarning("ESTAMPES_DEFAULT_LOCALE=" + JSON.stringify(configured) + " is not a supported language (" + LOCALES.join(", ") + "); using en");
+}
 
 const instances = new Map();
-export function i18nFor(locale = PINNED_LOCALE) {
-  if (!instances.has(locale)) instances.set(locale, createI18n(CATALOGS, locale));
-  return instances.get(locale);
+export function i18nFor(locale = DEFAULT_LOCALE) {
+  const l = matchLocale(locale) ?? DEFAULT_LOCALE;
+  if (!instances.has(l)) instances.set(l, createI18n(CATALOGS, l, [...new Set([DEFAULT_LOCALE, "en"])].filter((x) => x !== l)));
+  return instances.get(l);
 }
-export const t = (key, params, locale = PINNED_LOCALE) => i18nFor(locale).t(key, params);
+// Server-rendered text uses the instance default unless a caller passes the
+// viewer's locale. Default names (T5) stay in the default until Phase 4.
+export const t = (key, params, locale = DEFAULT_LOCALE) => i18nFor(locale).t(key, params);
 
 // Source inlined into widget HTML at the __ESTAMPES_I18N__ placeholder: the
-// runtime with its exports stripped, the catalogs, and a `t` bound to the
-// locale. "</" is escaped so a message can never close the <script>.
-export function widgetI18nSource(locale = PINNED_LOCALE) {
+// runtime with its exports stripped, all catalogs, and a translator whose
+// locale the widget resolves in the browser (RFC §5): the person's own pick
+// (kept in this browser only, never in a canvas document) → the host's
+// locale (window.openai.locale now, MCP Apps hostContext.locale once the
+// widget calls i18nHost) → the instance default → en. "</" is escaped so a
+// message can never close the <script>.
+//   t / i18nT(key, params)   translate (i18nT is for code where a local `t` shadows it)
+//   i18nLocale()             the resolved locale
+//   i18nHost(tag)            report the host's locale; re-applies if it changes
+//   i18nPick(tag | null)     the person's own choice; null clears it
+//   i18nOnChange(fn)         re-render dynamic text after a change
+export function widgetI18nSource(locale = DEFAULT_LOCALE, { fromHost = config.localeFromHost } = {}) {
   const runtime = readFileSync(join(HERE, "runtime.js"), "utf8").replace(/^export\s+/gm, "");
-  const catalogs = JSON.stringify(CATALOGS).replace(/<\//g, "<\\/").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-  // i18nT is the same function, for code where a local `t` shadows it.
-  return "const { t, i18nT, i18nLocale } = (() => {\n" + runtime +
-    "\nconst i = createI18n(" + catalogs + ", " + JSON.stringify(locale) + ");\nreturn { t: i.t, i18nT: i.t, i18nLocale: i.locale };\n})();";
+  const safe = (v) => JSON.stringify(v).replace(/<\//g, "<\\/").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  return "const { t, i18nT, i18nLocale, i18nHost, i18nPick, i18nOnChange } = (() => {\n" + runtime + "\n" +
+    readFileSync(join(HERE, "widget-runtime.js"), "utf8").replace(/^export\s+/gm, "") +
+    "\nreturn widgetI18n(" + safe(CATALOGS) + ", " + safe(locale) + ", " + safe({ fromHost, html: LANG_TAGS }) + ");\n})();";
 }
 
 // Static widget markup (docs/rfc/i18n §5). Markup outside <script>/<style>
@@ -43,13 +64,13 @@ export function widgetI18nSource(locale = PINNED_LOCALE) {
 //   <p data-i18n-html="k"></p>               trusted catalog HTML (our own catalog only)
 //   <input data-i18n-placeholder="k">        also title, aria-label, alt
 //   <html lang="__ESTAMPES_LANG__">          the locale's language tag
-// The markers stay in the output, so a later phase can re-apply another
-// locale in the browser.
+// The markers stay in the output, so the widget re-applies them in the
+// browser when it resolves another locale (src/i18n/widget-runtime.js).
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
 const escHtml = (v) => String(v).replace(/[&<>"]/g, (c) => ESC[c]);
 const LANG_TAGS = { "zh-TW": "zh-Hant" };
-export const htmlLang = (locale = PINNED_LOCALE) => LANG_TAGS[locale] ?? locale;
-export function localizeHtml(html, locale = PINNED_LOCALE) {
+export const htmlLang = (locale = DEFAULT_LOCALE) => LANG_TAGS[locale] ?? locale;
+export function localizeHtml(html, locale = DEFAULT_LOCALE) {
   const { t: tr } = i18nFor(locale);
   return html.split(/(<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>)/i).map((part, i) => i % 2 ? part : part
     .replace(/\bdata-i18n-(title|aria-label|placeholder|alt)="([^"]+)"/g, (m, attr, key) => attr + '="' + escHtml(tr(key)) + '" ' + m)

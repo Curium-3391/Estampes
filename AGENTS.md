@@ -31,7 +31,7 @@ Read `CONTRIBUTING.md`, `docs/DEVELOPMENT.md`, `docs/ARCHITECTURE.md`, `docs/MOD
 ## Verification and handoff
 
 1. Explain what changed, why, and the affected paths in the PR.
-2. Run the relevant targeted tests, then `npm test` and `npm run docs:check` where the environment permits. For calculator changes, run `python -m unittest discover -s cas-service/tests -v` in an environment with `cas-service/requirements.lock` installed. For release changes, run `npm run release:check`.
+2. Run the relevant targeted tests (`node --import ./tests/helpers/locale.mjs --test tests/<file>.test.js`; the preload pins the zh-TW interface the tests assert), then `npm test` and `npm run docs:check` where the environment permits. For calculator changes, run `python -m unittest discover -s cas-service/tests -v` in an environment with `cas-service/requirements.lock` installed. For release changes, run `npm run release:check`.
 3. Add or update regression tests for behavior changes; include negative tests for security-sensitive paths and failure/recovery tests for persistence changes.
 4. State exactly which checks ran, passed, failed, or were skipped, and whether a real-host check was performed.
 5. Leave the PR unmerged for human review. Never represent an open PR or an unexecuted CI check as an approved release.

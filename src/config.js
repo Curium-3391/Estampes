@@ -78,10 +78,18 @@ export const config = Object.freeze({
   // What a new blank canvas is (execute_module newCanvas, a calculator with no canvas):
   // "graph" (default) a Graph document (gph:) when the UVA store is on; "image" the older blank PNG.
   newCanvasKind: str("ESTAMPES_NEW_CANVAS", "graph") === "image" ? "image" : "graph",
+  // Interface language (docs/rfc/i18n §5): the instance default when neither
+  // the person nor the host names one. A BCP 47 tag such as en or zh-TW; an
+  // unsupported tag falls back to English with a warning (src/i18n/index.js).
+  defaultLocale: str("ESTAMPES_DEFAULT_LOCALE"),
+  // 0 ignores the host's locale, so every view uses ESTAMPES_DEFAULT_LOCALE
+  // unless the person picked a language in the widget.
+  localeFromHost: str("ESTAMPES_LOCALE_FROM_HOST", "1") !== "0",
   logFormat: str("ESTAMPES_LOG_FORMAT", "text") === "json" ? "json" : "text",
 });
 
 export const configWarnings = () => [...warnings];
+export const addConfigWarning = (message) => { warnings.push(message); };
 
 // One line per event on stdout/stderr, which `docker compose logs`, Heroku
 // and Render all collect. json gives one object per line for log tools.
