@@ -9,7 +9,10 @@
 //
 // What it flags today: CJK text in code that is not a comment, and a
 // hard-coded <html lang>. A line ending in `i18n-ignore` is skipped (for
-// deliberate cases such as demo SVG content or a list of hedge words).
+// deliberate cases such as demo SVG content or a list of hedge words), and so
+// is every line between a line containing `i18n-ignore-start` and one
+// containing `i18n-ignore-end` (for a whole block, such as user-voice text
+// sent to the AI that a later phase splits; say why on the start line).
 // Comments are skipped by a simple line heuristic, not a parser.
 //
 // Catalog checks (src/i18n/locales/*.json, Phase 1 on) always fail, in
@@ -32,7 +35,7 @@ const args = new Set(process.argv.slice(2));
 const ROOTS = ["public", "src", "server.js"];
 const EXT = new Set([".js", ".mjs", ".html"]);
 const CJK = /[぀-ヿ㐀-䶿一-鿿豈-﫿！-｠、-〿]/;
-const HTML_LANG = /<html[^>]*\blang="[^"]+"/;
+const HTML_LANG = /<html[^>]*\blang="(?!__ESTAMPES_LANG__")[^"]+"/;
 
 function files(rel, out = []) {
   const abs = path.join(ROOT, rel);
@@ -55,8 +58,11 @@ function isComment(line, state) {
 const findings = [];
 const counts = {};
 for (const f of ROOTS.flatMap((r) => files(r)).sort()) {
-  const state = { block: false };
+  const state = { block: false, ignore: false };
   fs.readFileSync(path.join(ROOT, f), "utf8").split("\n").forEach((line, i) => {
+    if (line.includes("i18n-ignore-start")) { state.ignore = true; return; }
+    if (line.includes("i18n-ignore-end")) { state.ignore = false; return; }
+    if (state.ignore) return;
     if (isComment(line, state) || /i18n-ignore\s*(\*\/|-->)?\s*$/.test(line)) return;
     const kind = HTML_LANG.test(line) ? "html-lang" : CJK.test(line) ? "cjk" : null;
     if (!kind) return;

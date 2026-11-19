@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { readFileSync } from "node:fs";
+import { t } from "../src/i18n/index.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { SERVER_INSTRUCTIONS, provenanceNote, withErrorProvenance } from "../src/tool-guidance.js";
@@ -36,12 +37,16 @@ test("instructions name the follow-up tools for an uploaded image and a running 
 
 test("the canvas upload message names the imageId and the tools to call on it", () => {
   const html = readFileSync(new URL("../public/visual-surface.html", import.meta.url), "utf8");
-  const at = html.indexOf("我在 Estampes 畫布上傳了一張圖片");
+  // The widget fills the catalog message with the exact tool calls for this image.
+  const at = html.indexOf('t("vs.upload.message"');
   assert.ok(at > 0);
-  const msg = html.slice(at, at + 400);
+  const call = html.slice(at, at + 400);
+  assert.match(call, /inspect:"inspect_image\(\{imageId/);
+  assert.match(call, /present:"present_visual\(\{imageId/);
+  const msg = t("vs.upload.message", { id: "img:0", width: 1, height: 1, name: '"a.png"', inspect: "INSPECT", present: "PRESENT" });
+  assert.match(msg, /^我在 Estampes 畫布上傳了一張圖片：img:0/);
   assert.match(msg, /不需要重新上傳/);
-  assert.match(msg, /inspect_image\(\{imageId/);
-  assert.match(msg, /present_visual\(\{imageId/);
+  assert.match(msg, /INSPECT[\s\S]*PRESENT/);
 });
 
 test("initialize carries the instructions and a real tool error says which tool replied", { timeout: 30000 }, async () => {
