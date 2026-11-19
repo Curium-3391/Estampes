@@ -53,8 +53,8 @@ test("M0.4 tools and message bridge are both present",()=>{
   // Intent is optional, so the user can point first without filling a form.
   assert.match(html,/const intent=intentSelect.value\|\|"free-annotate"/);
   assert.doesNotMatch(html,/!intentSelect\.value/);
-  assert.match(html,/沒有前文的精確引述/);
-  assert.match(html,/箭頭尖端/);
+  // The fallback message posted when validation fails (src/surface/user-voice.js).
+  assert.match(html,/chatMessage=joinUserVoice\(fallbackParts\(/);
 });
 
 test("M0.4 uses fixed local scenes; no arbitrary image URL fetch",()=>{

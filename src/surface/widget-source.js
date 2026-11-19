@@ -24,9 +24,16 @@ export const documentStoreSource = () =>
     readFileSync(join(ROOT, "src", "surface", "document-store.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn { createDocumentStore, POLL_BATCH };\n})();";
 
+// Messages posted as the person (T2): their sentence plus an English block.
+export const userVoiceSource = () =>
+  "const { reviewParts, editParts, fallbackParts, joinUserVoice } = (() => {\n" +
+    readFileSync(join(ROOT, "src", "surface", "user-voice.js"), "utf8").replace(/^export\s+/gm, "") +
+    "\nreturn { reviewParts, editParts, fallbackParts, joinUserVoice };\n})();";
+
 // Localize the static markup first, then inline the scripts: localizeHtml
 // never touches <script> content, and the inlined sources stay as they are.
 export const inlineWorkbench = (html) => localizeHtml(html)
   .replace("__ESTAMPES_WORKBENCH__", () => workbenchSource())
   .replace("__ESTAMPES_DOCSTORE__", () => documentStoreSource())
+  .replace("__ESTAMPES_USERVOICE__", () => userVoiceSource())
   .replace("__ESTAMPES_I18N__", () => widgetI18nSource());

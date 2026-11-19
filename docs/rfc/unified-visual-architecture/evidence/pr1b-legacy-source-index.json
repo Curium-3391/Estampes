@@ -342,7 +342,7 @@
     },
     {
       "path": "public/number-line.html",
-      "sha256": "530f110b3acdd86cc33a66d50ba02af8b28ab840d48b40935e787027b37a0abf"
+      "sha256": "297204b57e71a23886a4f4642aa4769254504f889e5cc16a837a070d5ee577f1"
     },
     {
       "path": "public/visual-evidence.html",
@@ -581,6 +581,15 @@
         "public/visual-evidence.html"
       ],
       "previousSha256": "64bac2fe73cec1fc19615ee087b3abafd1d870425c579b472b26379e94e58470"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d) and asked to start Phase 3 (2026-11-19, \u300c\u4f86\u300d)",
+      "reason": "i18n Phase 3-2: the message the number line posts as the person becomes a sentence in their language plus an English block for the assistant (RFC D4); the pointed value and annotation payload are unchanged",
+      "files": [
+        "public/number-line.html"
+      ],
+      "previousSha256": "530f110b3acdd86cc33a66d50ba02af8b28ab840d48b40935e787027b37a0abf"
     }
   ]
 }

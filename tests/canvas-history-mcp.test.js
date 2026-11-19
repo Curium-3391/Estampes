@@ -101,5 +101,6 @@ test("the canvas buttons fall back to server undo/redo for sent edits", () => {
   assert.match(html, /function redo\(\)\{if\(!future\.length\)\{serverStep\("redo"\)/);
   assert.match(html, /undoBtn\.disabled=!past\.length&&!canServerStep\("undo"\)/);
   assert.match(html, /history:\{action,/);
-  assert.match(html, /"undo-edit":e=>/);
+  // The edit notice posted as the person names undone edits (src/surface/user-voice.js).
+  assert.match(readFileSync(new URL("../src/surface/user-voice.js", import.meta.url), "utf8"), /"undo-edit": \(e\) =>/);
 });
