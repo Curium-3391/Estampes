@@ -15,7 +15,7 @@
 // Catalog checks (src/i18n/locales/*.json, Phase 1 on) always fail, in
 // every mode: a message that does not parse, a key outside zh-TW (the
 // complete catalog), a translation whose parameters differ from zh-TW, and a
-// t("literal.key") in code that no catalog has. Keys zh-TW has and en lacks
+// t("literal.key") or data-i18n="key" in code that no catalog has. Keys zh-TW has and en lacks
 // are only counted until Phase 2 fills en.
 
 import fs from "node:fs";
@@ -87,10 +87,11 @@ for (const loc of Object.keys(catalogs)) {
     else if (k in params[loc] && k in params[BASE] && sig(params[loc][k]) !== sig(params[BASE][k])) catalogErrors.push(`${loc}: ${k} has parameters ${sig(params[loc][k])}, ${BASE} has ${sig(params[BASE][k])}`);
   }
 }
+const MARKUP_KEY = /\bdata-i18n(?:-[a-z-]+)?="([^"]+)"/g;
 const KEY_USE = /\bt\(\s*["']([a-z][\w.-]*)["']\s*[,)]/g;
 for (const f of ROOTS.flatMap((r) => files(r)).sort()) {
   const src = fs.readFileSync(path.join(ROOT, f), "utf8");
-  for (const m of src.matchAll(KEY_USE)) {
+  for (const m of [...src.matchAll(KEY_USE), ...(f.endsWith(".html") ? src.matchAll(MARKUP_KEY) : [])]) {
     if (!(m[1] in catalogs[BASE])) catalogErrors.push(`${f}: t("${m[1]}") is not in ${BASE}`);
   }
 }
