@@ -280,6 +280,11 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 <script type="module">
 __ESTAMPES_I18N__
 __ESTAMPES_USERVOICE__
+// Server errors with a known code are shown as a sentence in the person's
+// language (RFC docs/rfc/i18n Phase 3); any other error keeps the server's text.
+const ERR_CODES=["LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
+function toolError(result,fallback){const e=Error(result?.content?.[0]?.text||fallback);const c=result?.structuredContent?.code;if(typeof c==="string")e.code=c;return e;}
+function errText(err){const m=String(err?.message||err);const c=typeof err?.code==="string"?err.code:/\[([A-Z_]+)\]/.exec(m)?.[1];return ERR_CODES.includes(c)?i18nT("vs.err.code."+c):m;}
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
 // The widget talks to its host once, however many viewers it shows. Viewers
 // subscribe to events (tool-input, tool-result, globals) and send requests
@@ -666,7 +671,7 @@ async function serverStep(action){
  try{
   await editOnServer({history:{action,...(ws?{item:key}:pair?{side:key}:{})}});
   status.textContent=action==="undo"?t("vs.history.undone"):t("vs.history.redone");
- }catch(err){status.textContent=t(action==="undo"?"vs.history.undoFailed":"vs.history.redoFailed",{message:String(err.message||err)});}
+ }catch(err){status.textContent=t(action==="undo"?"vs.history.undoFailed":"vs.history.redoFailed",{message:errText(err)});}
  selectedFocusId=null;render();
 }
 // In a workspace an edit names its item where a paired view names its side.
@@ -714,7 +719,7 @@ async function editOnServerNow(body,target,commandId){
   try{result=await send()}
   catch(second){note({state:"no answer: "+String(second.message||second).slice(0,100),ackAt:Date.now()});throw Error(t("vs.ack.unknown",{message:String(second.message||second)}))}
  }
- if(result?.isError){note({state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()});throw Error(result.content?.[0]?.text||"tool error");}
+ if(result?.isError){note({state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()});throw toolError(result,"tool error");}
  const r=result?.structuredContent;
  if(r?.kind!=="estampes.canvas_edit"||r.imageId!==target.imageId){note({state:"unexpected answer",ackAt:Date.now()});throw Error("Unexpected response");}
  note({state:r.replayed?"acknowledged (replayed)":"acknowledged",ackAt:Date.now(),returned:diagPoint(r.annotations,rec.id)});
@@ -745,7 +750,7 @@ function applyServerCanvas(annotations,layerList,linkList){
 }
 async function layerEdit(args,done){
  try{await editOnServer(args);status.textContent=done;}
- catch(err){status.textContent=t("vs.layer.editFailed",{message:String(err.message||err)});}
+ catch(err){status.textContent=t("vs.layer.editFailed",{message:errText(err)});}
  render();
 }
 function reorder(id,dir){
@@ -959,12 +964,12 @@ linksEl.addEventListener("click",async e=>{
    const l=links.find(x=>x.id===id);
    const where=ws?{workspaceId:ws.id,fromItem:l.fromItem,toItem:l.toItem,linkId:l.rawId}:{pairImageId:pair.imageId,linkId:id};
    const result=await request("tools/call",{name:"review_visual_link",arguments:{imageId,...where,review:verdict,...(reason?{reason}:{})}});
-   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   if(result?.isError)throw toolError(result,"tool error");
    const link=viewLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
    links=links.map(l=>l.id===id?link:l);
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="link:"+id),{key:"link:"+id,kind:"link",...link,verdict}];
    status.textContent=t("vs.review.recorded");
- }catch(err){status.textContent=t("vs.review.recordFailed",{message:String(err.message||err)})}
+ }catch(err){status.textContent=t("vs.review.recordFailed",{message:errText(err)})}
  render();
 });
 const markOptions=()=>[
@@ -1078,14 +1083,14 @@ findingsEl.addEventListener("click",async e=>{
    const onImage=ws?(ws.items.find(it=>it.id===m.side)?.imageId??imageId):pair&&m.side==="right"?pair.imageId:imageId;
    const where=ws?{workspaceId:ws.id,item:m.side}:{};
    const result=await request("tools/call",{name:"review_visual_finding",arguments:{imageId:onImage,...where,markId:rawOf(m),review:verdict,...(reason?{reason}:{})}});
-   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   if(result?.isError)throw toolError(result,"tool error");
    const back=result?.structuredContent?.mark;if(!back||back.id!==rawOf(m))throw Error("Unexpected response");
    delete m.review;delete m.reviewReason;delete m.verification;
    findingReasons.delete(m.id);
    if(back.review)m.review=back.review;if(back.reviewReason)m.reviewReason=back.reviewReason;
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:rawOf(m),label:m.label,note:m.note,side:m.side,verdict,reason}];
    status.textContent=t("vs.review.recorded");
- }catch(err){status.textContent=t("vs.review.recordFailed",{message:String(err.message||err)})}
+ }catch(err){status.textContent=t("vs.review.recordFailed",{message:errText(err)})}
  render();
 });
 // ---- Gesture groups ----------------------------------------------------------
@@ -1146,10 +1151,10 @@ async function decideGesture(memberIds,verdict){
  if(imageId&&ready){
    try{
      const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict,...(ws?{workspaceId:ws.id,item:findMark(ids[0])?.side??firstSide()}:{})}});
-     if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+     if(result?.isError)throw toolError(result,"tool error");
      // The server holds this verdict now; keeping the override would hide a later verdict from another viewer.
      gestureDecisions=gestureDecisions.filter(d=>!(gkey(d.memberIds)===key&&d.verdict===verdict));
-   }catch(err){status.textContent=t("vs.gesture.saveFailed",{message:String(err.message||err)})}
+   }catch(err){status.textContent=t("vs.gesture.saveFailed",{message:errText(err)})}
  }
  render();
 }
@@ -1258,7 +1263,7 @@ function fullLayers(list,id,setId){
      let hit=imageId===id&&!setId&&patchLayers(objects,key,href);
      for(const it of ws?.items??[])if(it.imageId===id&&itemSet(it)===setId)hit=patchLayers(it.objects,key,href)||hit;
      if(hit)render();
-   }).catch(err=>{status.textContent=t("vs.layer.sharpFailed",{message:String(err.message||err)});}).finally(()=>layerLoading.delete(cacheKey));
+   }).catch(err=>{status.textContent=t("vs.layer.sharpFailed",{message:errText(err)});}).finally(()=>layerLoading.delete(cacheKey));
  }
 }
 function renderObjects(){
@@ -1369,9 +1374,9 @@ function renderObjectsPanel(){
  add.addEventListener("click",async()=>{
    add.disabled=true;
    try{const result=await request("tools/call",{name:"add_image_layer",arguments:{imageId,...(sourceInput.value.trim()?{sourceImageId:sourceInput.value.trim()}:{})}});
-     if(result?.isError)throw Error(result.content?.[0]?.text||t("vs.err.failed"));const r=result.structuredContent;
+     if(result?.isError)throw toolError(result,t("vs.err.failed"));const r=result.structuredContent;
      baseAsObject=!!r.baseAsObject;setObjects(r.objects);if(typeof r.baseAsObject==="boolean")baseAsObject=r.baseAsObject;setLayers(r.layers);applyServerCanvas(r.annotations,r.layers);render();
-   }catch(error){status.textContent=error.message;add.disabled=false;}
+   }catch(error){status.textContent=errText(error);add.disabled=false;}
  });objectsPanel.append(sourceInput,add);
  if(canRestoreObjects){const undo=el("button",{textContent:t("vs.objects.restore"),disabled:!ready||!!editingObject});undo.addEventListener("click",()=>editObject(null,{restore:true}));objectsPanel.append(undo);}
  renderCards();
@@ -1425,7 +1430,7 @@ async function editObject(id,args){
    if(result?.isError||r?.kind!=="estampes.scene_objects")throw Error(r?.message||result?.content?.[0]?.text||t("vs.err.failed"));
    setObjects(r.objects);if(typeof r.baseAsObject==="boolean")baseAsObject=r.baseAsObject;canRestoreObjects=!!r.canRestoreObjects;if(Array.isArray(r.layers))setLayers(r.layers);
    status.textContent=t("vs.objects.done",{what:args.restore?t("vs.objects.restored"):t(args.remove?"vs.objects.removed":"vs.objects.updated",{id}),notes:r.notes?.length?t("vs.paren",{text:r.notes.map(n=>n.note).join(t("vs.sep.semicolon"))}):""});
- }catch(err){status.textContent=t("wb.err.notApplied",{message:String(err.message||err)});}
+ }catch(err){status.textContent=t("wb.err.notApplied",{message:errText(err)});}
  finally{editingObject=null;render();}
 }
 function render(){
@@ -1544,7 +1549,7 @@ async function fetchPixels(id,{setId=null,view=null,object=null}={}){
  let offset=0,mime="image/jpeg";const parts=[];
  for(let i=0;i<200;i++){
    const result=await request("tools/call",{name:"load_visual_pixels",arguments:{imageId:id,...(setId?{setId}:{}),...(view!=null?{view}:{}),...(object?{object}:{}),offset}});
-   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   if(result?.isError)throw toolError(result,"tool error");
    const r=result?.structuredContent;
    if(r?.kind!=="estampes.visual_pixels"||r.imageId!==id||r.offset!==offset||typeof r.data!=="string")throw Error("Unexpected response");
    mime=r.mimeType;parts.push(r.data);offset+=r.data.length;
@@ -1557,7 +1562,7 @@ async function upgradePhoto(key,id,setId,apply){
  if(!id||upgrading.has(key))return;
  upgrading.add(key);
  try{const href=await fetchPixels(id,{setId});if(href){apply(href);render();}}
- catch(err){status.textContent=t("vs.photo.sharpFailed",{message:String(err.message||err)});}
+ catch(err){status.textContent=t("vs.photo.sharpFailed",{message:errText(err)});}
  finally{upgrading.delete(key)}
 }
 const upgradeMain=img=>{if(img?.preview){const id=imageId;upgradePhoto("main:"+id,id,null,h=>{if(imageId===id)photo=h})}};
@@ -1653,7 +1658,7 @@ async function syncCanvas(force=false){
  try{
    const pid=pair?.imageId;
    const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId:id,...(pid?{pairImageId:pid}:{})}});
-   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   if(result?.isError)throw toolError(result,"tool error");
    const r=result?.structuredContent;
    if(r?.kind!=="estampes.visual_canvas"||r.imageId!==id)throw Error("Unexpected response");
    if(id!==imageId||pid!==pair?.imageId)return;
@@ -1675,7 +1680,7 @@ async function syncCanvas(force=false){
    if(Array.isArray(r.views))completeViews(r.views);
    status.textContent=photo?t("vs.photo.reloaded"):t("vs.photo.unavailable");
  }catch(err){
-   status.textContent=t("vs.photo.loadFailed",{message:String(err.message||err)});
+   status.textContent=t("vs.photo.loadFailed",{message:errText(err)});
  }finally{syncing=false;render()}
 }
 // A workspace: marks, layers and links in one call, then each missing image.
@@ -1685,7 +1690,7 @@ async function syncWorkspace(force){
  try{
    if(force){
      const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId,workspaceId:id}});
-     if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+     if(result?.isError)throw toolError(result,"tool error");
      const r=result?.structuredContent;
      if(r?.kind!=="estampes.visual_canvas"||r.workspaceId!==id||ws?.id!==id)throw Error("Unexpected response");
      const items=cleanItems(r.workspace?.items);
@@ -1705,7 +1710,7 @@ async function syncWorkspace(force){
      render();
    }
    status.textContent=allPhotos()?t("vs.workspace.loaded"):t("vs.workspace.someFailed");
- }catch(err){status.textContent=t("vs.workspace.loadFailed",{message:String(err.message||err)});}
+ }catch(err){status.textContent=t("vs.workspace.loadFailed",{message:errText(err)});}
  finally{syncing=false;render()}
 }
 // The verification image AI checked its marks against, fetched on demand.
@@ -1720,11 +1725,11 @@ async function loadCheck(){
  loadingCheck=true;
  try{
    const result=await request("tools/call",{name:"load_visual_canvas",arguments:{imageId,part:"check"}});
-   if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
+   if(result?.isError)throw toolError(result,"tool error");
    checkImage=dataUrl(result?.structuredContent?.check?.image);
    if(!checkImage)throw Error(t("vs.check.none"));
    render();
- }catch(err){checkCaption.textContent=t("vs.check.loadFailed",{message:String(err.message||err)})}
+ }catch(err){checkCaption.textContent=t("vs.check.loadFailed",{message:errText(err)})}
  finally{loadingCheck=false}
 }
 function renderCheck(){
@@ -2027,7 +2032,7 @@ async function updateMark(before,after,done,textOnly=false){
  }
  replaceLocal(after);render();
  try{await editOnServer({marks:[textOnly?{id:rawOf(after),...(frames?{side:sideKey(after.side)}:{}),label:after.label??"",note:after.note??""}:editFields(after)]});status.textContent=t("vs.edit.doneNotify",{done});}
- catch(err){replaceLocal(before);status.textContent=t("vs.edit.failed",{message:String(err.message||err)});}
+ catch(err){replaceLocal(before);status.textContent=t("vs.edit.failed",{message:errText(err)});}
  render();
 }
 async function deleteMark(m){
@@ -2037,7 +2042,7 @@ async function deleteMark(m){
  try{await editOnServer({remove:[{id:rawOf(m),...(frames?{side:sideKey(m.side)}:{})}]});
    userMarks=userMarks.filter(u=>u.id!==m.id);
    status.textContent=t(isUser(m)?"vs.edit.deletedMine":"vs.edit.deletedAi",{name:m.label||m.id});}
- catch(err){status.textContent=t("vs.edit.deleteFailed",{message:String(err.message||err)});}
+ catch(err){status.textContent=t("vs.edit.deleteFailed",{message:errText(err)});}
  render();
 }
 // Pen buttons restyle the selected mark when it is yours.
@@ -2129,7 +2134,7 @@ function textTarget(side){
 const textObjects=side=>ws?ws.items.find(it=>it.id===side)?.objects??[]:pair&&side==="right"?pair.objects??[]:objects;
 async function callText(target,args){
  const result=await request("tools/call",{name:"edit_canvas_text",arguments:{...target,...args}});
- if(result?.isError)throw Error(result.content?.[0]?.text||t("vs.text.editFailed"));
+ if(result?.isError)throw toolError(result,t("vs.text.editFailed"));
  const r=result?.structuredContent;if(r?.kind!=="estampes.canvas_text")throw Error(t("vs.text.badResponse"));return r;
 }
 function applyTextState(side,r){
@@ -2172,7 +2177,7 @@ async function openText(side,point,id=null,focus=true){
    selected=null;fillTextEditor();render();
    status.textContent=textSession.locked?t("vs.text.locked"):id?t("vs.text.editable"):t("vs.text.newHint");
    if(focus)textInput.focus();return textSession;
- }catch(err){status.textContent=err.message;return null;}
+ }catch(err){status.textContent=errText(err);return null;}
 }
 async function textAction(action,props){
  const session=textSession;if(!session||textBusy||session.context!==textContext())return;
@@ -2183,7 +2188,7 @@ async function textAction(action,props){
    const id=r.selectedId??session.id,obj=r.objects.find(o=>o.id===id);
    if(textSession===session){Object.assign(session,{id:obj?id:null,revision:r.revision,history:r.history,props:obj?.editable??session.props,displayColor:obj?.primitives.find(p=>p.k==="text")?.fill,locked:!!obj?.locked});fillTextEditor();}
    status.textContent=t("vs.text.saved");render();
- }catch(err){render();status.textContent=t("vs.text.notApplied",{message:err.message});}
+ }catch(err){render();status.textContent=t("vs.text.notApplied",{message:errText(err)});}
  finally{textBusy=false;textButtons();}
 }
 scope.querySelector("#text-save").addEventListener("click",()=>{
@@ -2398,7 +2403,7 @@ async function uploadImage(file){
    const text=t("vs.upload.message",{id:r.imageId,width:r.width,height:r.height,name:JSON.stringify(name),inspect:"inspect_image({imageId:\""+r.imageId+"\"})",present:"present_visual({imageId:\""+r.imageId+"\", annotations:[…]})"});
    await tellModel(text);
    status.textContent=t("vs.upload.done",{id:r.imageId});
- }catch(err){status.textContent=t("vs.upload.failed",{message:String(err.message||err)})}
+ }catch(err){status.textContent=t("vs.upload.failed",{message:errText(err)})}
  finally{uploading=false;uploadBtn.disabled=false}
 }
 // Model context first (silent); a chat message where the host lacks it.
@@ -2413,7 +2418,7 @@ async function displayMode(mode){
  try{
    if(window.openai?.requestDisplayMode)await window.openai.requestDisplayMode({mode});
    else await request("ui/request-display-mode",{mode});
- }catch(err){status.textContent=t("vs.host.displayModeFailed",{message:String(err.message||err)})}
+ }catch(err){status.textContent=t("vs.host.displayModeFailed",{message:errText(err)})}
 }
 scope.querySelector("#fullscreen").addEventListener("click",()=>displayMode("fullscreen"));
 scope.querySelector("#clear").addEventListener("click",()=>{if(userMarks.length){commitMarks([]);selectedFocusId=null;render()}});
@@ -2458,7 +2463,7 @@ host.whenReady().then(()=>{
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;});
 // A language change redraws every view that builds its text from code.
 own(i18nOnChange(()=>{if(!disposed)try{render()}catch{}}));
-own(host.on("failed",err=>{status.textContent=t("vs.host.failed",{message:String(err.message||err)})}));
+own(host.on("failed",err=>{status.textContent=t("vs.host.failed",{message:errText(err)})}));
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
 // The user's verdicts on AI's links, as text AI reads in the chat.
@@ -2488,7 +2493,7 @@ send.addEventListener("click",async()=>{
      if(response?.isError)throw Error("Host rejected message");
      clearExtra();
      status.textContent=t("vs.send.extraDone");
-   }catch(err){status.textContent=t("vs.send.failed",{message:String(err.message||err)})}
+   }catch(err){status.textContent=t("vs.send.failed",{message:errText(err)})}
    render();return;
  }
  const marks=userMarks.map(toSide).map(({id,type,x,y,x2,y2,points,smooth,closed,label,note,color,size,pen,side,strokeOrder,relativeStartMs,relativeEndMs,pointerType})=>({
@@ -2548,7 +2553,7 @@ send.addEventListener("click",async()=>{
    past=[];future=[];
    status.textContent=t("vs.send.done",{what:validated?t("vs.send.doneValidated"):t("vs.send.doneRaw"),next:imageId?t("vs.send.nextImage"):t("vs.send.nextDemo")});
  }catch(err){
-   status.textContent=t("vs.send.chatFailed",{validation:validated?t("vs.send.validationOk"):t("vs.send.validationFailed",{reason}),message:String(err.message||err)});
+   status.textContent=t("vs.send.chatFailed",{validation:validated?t("vs.send.validationOk"):t("vs.send.validationFailed",{reason}),message:errText(err)});
  }
  render();
 });
@@ -2692,7 +2697,7 @@ __ESTAMPES_DOCSTORE__
 const POLL_MS=2000;
 const docs=createDocumentStore({fetchChanges:async list=>{
  const r=await host.request("tools/call",{name:"documents_get_changes",arguments:{documents:list}});
- if(r?.isError)throw Error(r.content?.[0]?.text||"tool error");
+ if(r?.isError)throw toolError(r,"tool error");
  const sc=r?.structuredContent;if(sc?.kind!=="estampes.documents_changes")throw Error("Unexpected response");
  return sc;
 }});
