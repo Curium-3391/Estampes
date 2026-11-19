@@ -110,6 +110,24 @@ test("window mode: a grip under the panel area sets its height, double-click res
   } finally { await stack.close(); }
 });
 
+test("window mode follows a big user-sized frame (no 820px cap) and keeps 520px minimum in a small one", { skip: noBrowser, timeout: 60000 }, async () => {
+  const stack = await startStack({ cas: false });
+  try {
+    const { page, frame, errors } = await stack.open({ result: () => stack.call("present_visual", {}), viewport: { width: 1800, height: 1300 } });
+    await frame.locator("#surface").waitFor({ timeout: 15000 });
+    await frame.locator("#wb").evaluate((el) => { el.classList.remove("solo", "mobile"); el.classList.add("windows"); });
+    await page.waitForTimeout(800);
+    const m = await frame.locator("#wb-area").evaluate((el) => ({ h: el.getBoundingClientRect().height, bottom: el.getBoundingClientRect().bottom, vh: innerHeight }));
+    assert.ok(m.h > 900, "panel area grows past the old 820px cap: " + JSON.stringify(m));
+    assert.ok(m.bottom <= m.vh, "and still fits in the frame: " + JSON.stringify(m));
+    await page.setViewportSize({ width: 1000, height: 540 });
+    await page.waitForTimeout(800);
+    const small = await frame.locator("#wb-area").evaluate((el) => el.getBoundingClientRect().height);
+    assert.equal(Math.round(small), 520);
+    assert.deepEqual(errors, []);
+  } finally { await stack.close(); }
+});
+
 test("single canvas: grip sets the shared height; double-click gives the default back", { skip: noBrowser, timeout: 60000 }, async () => {
   const stack = await startStack({ cas: false });
   try {

@@ -121,7 +121,7 @@ body.fullscreen #wb-height-grip{display:none}
 /* One shared height for both layouts: the panel area in window mode, the canvas when alone. */
 body:not(.fullscreen) #wb:not(.windows) #surface{height:var(--wb-h,auto);max-height:var(--wb-h,max(640px,calc(100vh - var(--chrome,280px))))}
 #wb-height-grip:hover,#wb-height-grip:focus-visible{background:linear-gradient(#0000 4px,#356BD6 4px,#356BD6 9px,#0000 9px);outline:none}
-#wb.windows #wb-area{height:var(--wb-h,min(78vh,820px));min-height:520px;border:1px dashed #8885;border-radius:12px;overflow:hidden}
+#wb.windows #wb-area{height:var(--wb-h,max(520px,calc(100vh - var(--wb-chrome,160px))));min-height:520px;border:1px dashed #8885;border-radius:12px;overflow:hidden}
 #wb.windows .wb-panel{position:absolute;display:flex;flex-direction:column;border:1px solid #8886;border-radius:12px;background:Canvas;overflow:hidden;box-shadow:0 2px 10px #0003}
 #wb.windows .wb-panel[hidden],#wb.mobile .wb-panel[hidden]{display:none}
 .wb-panel{position:relative}
@@ -315,7 +315,9 @@ function createHost(){
    const root=document.documentElement,prev=root.style.height;root.style.height="max-content";
    const height=Math.ceil(root.getBoundingClientRect().height),width=Math.ceil(root.scrollWidth);root.style.height=prev;
    // Room for everything but the picture, so the picture can use the rest of a frame the user made big.
-   const surf=[document.querySelector("#surface"),document.querySelector("#check-view img")].find(e=>e&&e.getBoundingClientRect().height>0);
+   const wbArea=document.querySelector("#wb.windows #wb-area");
+   if(wbArea&&wbArea.getBoundingClientRect().height>0)root.style.setProperty("--wb-chrome",Math.round(Math.max(0,height-wbArea.getBoundingClientRect().height))+"px");
+   const surf=wbArea?null:[document.querySelector("#surface"),document.querySelector("#check-view img")].find(e=>e&&e.getBoundingClientRect().height>0);
    if(surf){const chrome=Math.round(Math.max(0,height-surf.getBoundingClientRect().height));root.style.setProperty("--chrome",chrome+"px")}
    const key=width+"x"+height;if(!height||key===lastSize)return;lastSize=key;
    try{notify("ui/notifications/size-changed",{width,height})}catch{}
