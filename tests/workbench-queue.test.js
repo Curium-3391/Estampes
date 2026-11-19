@@ -6,6 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { t } from "../src/i18n/index.js";
 
 const source = readFileSync(new URL("../public/workbench.js", import.meta.url), "utf8");
 const start = source.indexOf("function wbApply(");
@@ -15,6 +16,7 @@ const wbApplySource = source.slice(start, end);
 function harness(responses) {
   const calls = [];
   const ctx = {
+    t,
     wb: { chain: Promise.resolve(), surface: { revision: 1 } },
     status: { textContent: "" },
     uuid: () => "k" + calls.length,

@@ -21,9 +21,9 @@ const wbProfileNow=()=>profileFor(window.innerWidth,1000);
 async function wbCall(name,args){
  const key=wbKeyNow();
  const result=await request("tools/call",{name,arguments:args});
- if(key!==wbKeyNow())throw Object.assign(Error("畫布已切換，這個結果沒有套用。"),{code:"stale"});
+ if(key!==wbKeyNow())throw Object.assign(Error(t("wb.err.stale")),{code:"stale"});
  const r=result?.structuredContent;
- if(result?.isError||!r)throw Object.assign(Error(r?.message||result?.content?.[0]?.text||"失敗"),{code:r?.code});
+ if(result?.isError||!r)throw Object.assign(Error(r?.message||result?.content?.[0]?.text||t("wb.err.failed")),{code:r?.code});
  return r;
 }
 function wbSync(){
@@ -38,7 +38,7 @@ window.addEventListener("resize",()=>{clearTimeout(wbResizeTimer);wbResizeTimer=
 async function wbLoad(){
  const key=wb.key;
  try{const r=await wbCall("surface_get_state",wbArgs());if(key===wb.key)setSurface(r);}
- catch(err){if(key!==wb.key)return;wbEl.hidden=false;wbBar.replaceChildren(h("span",{class:"wb-note"},"工作台暫時無法使用："+String(err.message||err)));}
+ catch(err){if(key!==wb.key)return;wbEl.hidden=false;wbBar.replaceChildren(h("span",{class:"wb-note"},t("wb.err.unavailable",{message:String(err.message||err)})));}
 }
 function setSurface(r){
  if(r.kind!=="estampes.surface")return;
@@ -63,7 +63,7 @@ function wbApply(ops,{retry=true}={}){
   }catch(err){
    if(canvas!==wb.key)return;
    if(again&&/changed since revision/.test(String(err.message))){await wbLoad();return attempt(false);}
-   status.textContent="沒有套用："+String(err.message||err);await wbLoad();
+   status.textContent=t("wb.err.notApplied",{message:String(err.message||err)});await wbLoad();
   }
  };
  const run=()=>wb.surface?attempt(retry):undefined;
@@ -98,45 +98,45 @@ function renderWB(){
 }
 function decoratePanel(el,p){
  const lay=layoutNow(),pl=lay.placements[p.panelId];
- const title=el.querySelector(".wb-title");if(title)title.textContent=p.title==="Canvas"?"畫布與函數圖":wbTitle(p);
- const max=el.querySelector("[data-act=maximize]");if(max){max.setAttribute("aria-pressed",String(pl?.mode==="maximized"));max.title=pl?.mode==="maximized"?"還原大小":"在工作台內最大化";}
+ const title=el.querySelector(".wb-title");if(title)title.textContent=p.title==="Canvas"?t("wb.canvasAndGraph"):wbTitle(p);
+ const max=el.querySelector("[data-act=maximize]");if(max){max.setAttribute("aria-pressed",String(pl?.mode==="maximized"));max.title=pl?.mode==="maximized"?t("wb.restoreSize"):t("wb.maximize.title");}
  el.dataset.state=p.moduleState??"enabled";
  const solo=openPanels().length<=1;el.querySelector(".wb-head").hidden=solo&&p.panelId==="p:canvas";
 }
 function renderBar(open,lay,mobile,solo){
  const bar=[];
  if(mobile&&!solo){
-  const tabs=h("div",{class:"wb-tabs",role:"tablist","aria-label":"面板"});
+  const tabs=h("div",{class:"wb-tabs",role:"tablist","aria-label":t("wb.tabs.label")});
   lay.order.filter(id=>open.some(p=>p.panelId===id)).forEach((id,i,arr)=>{
    const p=open.find(x=>x.panelId===id);
    tabs.append(h("button",{role:"tab","aria-selected":String(lay.active===id),class:"wb-tab",onclick:()=>{wbLayout({op:"focus",panelId:id});}},wbTitle(p)));
   });
   const a=lay.order.indexOf(lay.active);
-  tabs.append(h("button",{class:"wb-mini",title:"把這個分頁往前移","aria-label":"往前移",disabled:a<=0,onclick:()=>wbReorder(-1)},"◀"),
-   h("button",{class:"wb-mini",title:"把這個分頁往後移","aria-label":"往後移",disabled:a<0||a>=lay.order.length-1,onclick:()=>wbReorder(1)},"▶"));
+  tabs.append(h("button",{class:"wb-mini",title:t("wb.tab.moveBackTitle"),"aria-label":t("wb.tab.moveBack"),disabled:a<=0,onclick:()=>wbReorder(-1)},"◀"),
+   h("button",{class:"wb-mini",title:t("wb.tab.moveForwardTitle"),"aria-label":t("wb.tab.moveForward"),disabled:a<0||a>=lay.order.length-1,onclick:()=>wbReorder(1)},"▶"));
   bar.push(tabs);
  }
  // Launcher: panels the enabled modules offer.
- const launch=h("div",{class:"wb-launch",role:"group","aria-label":"開啟面板"});
+ const launch=h("div",{class:"wb-launch",role:"group","aria-label":t("wb.launch.label")});
  for(const a of wb.surface.available){
   if(a.kind!=="calculator")continue;
   const openCount=wb.surface.panels.filter(p=>p.module===a.module&&p.panel===a.panel&&p.open).length;
   const full=openCount>=a.maxInstances,off=!a.enabled;
-  launch.append(h("button",{class:"wb-open",disabled:off||full,title:off?"到 Store 啟用「"+a.moduleName+"」後才能使用":full?"已經開啟":"開啟"+a.title,onclick:()=>wbApply([{op:"open-panel",module:a.module,panel:a.panel}])},
-   "＋ "+(a.kind==="calculator"?"科學計算機":a.title)+(off?"（未啟用）":"")));
+  launch.append(h("button",{class:"wb-open",disabled:off||full,title:off?t("wb.launch.disabled",{module:a.moduleName}):full?t("wb.launch.alreadyOpen"):t("wb.launch.open",{title:a.title}),onclick:()=>wbApply([{op:"open-panel",module:a.module,panel:a.panel}])},
+   t("wb.launch.button",{title:a.kind==="calculator"?t("wb.calculator"):a.title})+(off?t("wb.launch.notEnabled"):"")));
  }
  // The canvas (photo + Graph) is always open; when it is minimized or covered
  // by a maximized window this button lays the windows out side by side again.
  const cv=open.find(p=>p.kind==="canvas"),cpl=cv&&lay.placements[cv.panelId];
  const covered=cv&&!mobile&&(cpl?.mode==="minimized"||open.some(p=>p!==cv&&lay.placements[p.panelId]?.mode==="maximized"));
- if(covered)launch.prepend(h("button",{class:"wb-open",title:"把畫布與函數圖叫回來，和其他視窗並排",onclick:()=>wbLayout({op:"reset",profile:wb.profile,panelIds:open.map(p=>p.panelId)})},"＋ 函數圖／畫布"));
+ if(covered)launch.prepend(h("button",{class:"wb-open",title:t("wb.launch.recallTitle"),onclick:()=>wbLayout({op:"reset",profile:wb.profile,panelIds:open.map(p=>p.panelId)})},t("wb.launch.recall")));
  bar.push(launch);
  for(const p of open){const pl=lay.placements[p.panelId];
-  if(!mobile&&pl?.mode==="minimized"&&p.kind!=="canvas")bar.push(h("button",{class:"wb-chip",onclick:()=>wbLayout({op:"restore",panelId:p.panelId})},"還原："+wbTitle(p)));}
- if(!solo){bar.push(h("button",{class:"wb-chip",title:"把目前這個裝置的面板排回預設位置",onclick:()=>{window.dispatchEvent(new Event("estampes-wb-reset-height"));wbLayout({op:"reset",profile:wb.profile,panelIds:openPanels().map(p=>p.panelId)})}},"重設版面"));}
+  if(!mobile&&pl?.mode==="minimized"&&p.kind!=="canvas")bar.push(h("button",{class:"wb-chip",onclick:()=>wbLayout({op:"restore",panelId:p.panelId})},t("wb.restore",{title:wbTitle(p)})));}
+ if(!solo){bar.push(h("button",{class:"wb-chip",title:t("wb.resetTitle"),onclick:()=>{window.dispatchEvent(new Event("estampes-wb-reset-height"));wbLayout({op:"reset",profile:wb.profile,panelIds:openPanels().map(p=>p.panelId)})}},t("wb.reset")));}
  wbBar.replaceChildren(...bar);
 }
-const wbTitle=p=>p.kind==="canvas"?"畫布":p.kind==="calculator"?"科學計算機"+(/(\d+)$/.exec(p.panelId)?.[1]>1?" "+/(\d+)$/.exec(p.panelId)[1]:""):p.title;
+const wbTitle=p=>p.kind==="canvas"?t("wb.canvas"):p.kind==="calculator"?t("wb.calculator")+(/(\d+)$/.exec(p.panelId)?.[1]>1?" "+/(\d+)$/.exec(p.panelId)[1]:""):p.title;
 function wbReorder(dir){
  const lay=layoutNow(),ids=lay.order.filter(id=>openPanels().some(p=>p.panelId===id)),i=ids.indexOf(lay.active),j=i+dir;
  if(i<0||j<0||j>=ids.length)return;const next=[...ids];[next[i],next[j]]=[next[j],next[i]];
@@ -146,11 +146,11 @@ function wbReorder(dir){
 function canvasPanel(p){const main=document.querySelector("#panel-canvas"),el=buildPanel(p);el.querySelector(".wb-body").append(main);return el;}
 function buildPanel(p){
  const head=h("div",{class:"wb-head"},
-  h("span",{class:"wb-grip",tabindex:"0",role:"button","aria-label":wbTitle(p)+"：按住拖曳移動；Alt＋方向鍵移動，Alt＋Shift＋方向鍵調整大小","aria-describedby":"wb-help",title:"拖曳移動"},"⠿ ",h("span",{class:"wb-title"},wbTitle(p))),
-  h("button",{class:"wb-mini","data-act":"menu","aria-haspopup":"menu",title:"停靠與位置","aria-label":"停靠與位置選單"},"☰"),
-  h("button",{class:"wb-mini","data-act":"minimize",title:"縮到列上","aria-label":"縮小"},"–"),
-  h("button",{class:"wb-mini","data-act":"maximize",title:"在工作台內最大化","aria-label":"最大化","aria-pressed":"false"},"▢"),
-  p.kind!=="canvas"?h("button",{class:"wb-mini","data-act":"close",title:"關閉面板（資料會保留）","aria-label":"關閉"},"✕"):null);
+  h("span",{class:"wb-grip",tabindex:"0",role:"button","aria-label":t("wb.grip.label",{title:wbTitle(p)}),"aria-describedby":"wb-help",title:t("wb.grip.title")},"⠿ ",h("span",{class:"wb-title"},wbTitle(p))),
+  h("button",{class:"wb-mini","data-act":"menu","aria-haspopup":"menu",title:t("wb.menu.title"),"aria-label":t("wb.menu.label")},"☰"),
+  h("button",{class:"wb-mini","data-act":"minimize",title:t("wb.minimize.title"),"aria-label":t("wb.minimize.label")},"–"),
+  h("button",{class:"wb-mini","data-act":"maximize",title:t("wb.maximize.title"),"aria-label":t("wb.maximize.label"),"aria-pressed":"false"},"▢"),
+  p.kind!=="canvas"?h("button",{class:"wb-mini","data-act":"close",title:t("wb.close.title"),"aria-label":t("wb.close.label")},"✕"):null);
  const body=h("div",{class:"wb-body"});
  const el=h("section",{class:"wb-panel","data-panel":p.panelId,"aria-label":wbTitle(p)},head,body,
   h("span",{class:"wb-resize r","data-edge":"e","aria-hidden":"true"}),h("span",{class:"wb-resize b","data-edge":"s","aria-hidden":"true"}),h("span",{class:"wb-resize rb","data-edge":"se","aria-hidden":"true"}));
@@ -203,13 +203,13 @@ function startDrag(e,id,edge,el){
 function openMenu(id,anchor){
  closeMenu();
  const item=(label,layout)=>h("button",{role:"menuitem",onclick:()=>{closeMenu();wbLayout(layout);}},label);
- const menu=h("div",{class:"wb-menu",role:"menu","aria-label":"停靠與位置"},
-  item("靠左停靠",{op:"arrange",panelId:id,rect:{x:0,y:0,w:0.5,h:1},dock:"left"}),
-  item("靠右停靠",{op:"arrange",panelId:id,rect:{x:0.5,y:0,w:0.5,h:1},dock:"right"}),
-  item("靠上停靠",{op:"arrange",panelId:id,rect:{x:0,y:0,w:1,h:0.5},dock:"top"}),
-  item("靠下停靠",{op:"arrange",panelId:id,rect:{x:0,y:0.5,w:1,h:0.5},dock:"bottom"}),
-  item("浮動在上方",{op:"arrange",panelId:id,rect:{x:0.3,y:0.1,w:0.45,h:0.7},dock:"free"}),
-  item("移到最上層",{op:"focus",panelId:id}));
+ const menu=h("div",{class:"wb-menu",role:"menu","aria-label":t("wb.menu.title")},
+  item(t("wb.dock.left"),{op:"arrange",panelId:id,rect:{x:0,y:0,w:0.5,h:1},dock:"left"}),
+  item(t("wb.dock.right"),{op:"arrange",panelId:id,rect:{x:0.5,y:0,w:0.5,h:1},dock:"right"}),
+  item(t("wb.dock.top"),{op:"arrange",panelId:id,rect:{x:0,y:0,w:1,h:0.5},dock:"top"}),
+  item(t("wb.dock.bottom"),{op:"arrange",panelId:id,rect:{x:0,y:0.5,w:1,h:0.5},dock:"bottom"}),
+  item(t("wb.dock.free"),{op:"arrange",panelId:id,rect:{x:0.3,y:0.1,w:0.45,h:0.7},dock:"free"}),
+  item(t("wb.focus"),{op:"focus",panelId:id}));
  anchor.after(menu);wb.menu=menu;menu.querySelector("button").focus();
  menu.addEventListener("keydown",ev=>{
   const bs=[...menu.querySelectorAll("button")],i=bs.indexOf(document.activeElement);
@@ -225,7 +225,7 @@ new ResizeObserver(()=>{if(!wb.surface)return;const p=wbProfileNow();if(p!==wb.p
 // area height is the user's to set. Drag to resize, double-click to go back to the default.
 {
  const KEY="estampes.wbHeight",MIN=320,MAX=3000;
- const grip=h("div",{id:"wb-height-grip",role:"separator","aria-orientation":"horizontal",tabindex:"0",title:"拖曳調整畫布高度（單張圖與雙視窗共用），雙擊還原；鍵盤：上下方向鍵"});
+ const grip=h("div",{id:"wb-height-grip",role:"separator","aria-orientation":"horizontal",tabindex:"0",title:t("wb.height.title")});
  wbArea.after(grip);
  // The height lives in a CSS variable that only the window layout reads, so going back to the
  // single-canvas or phone layout never inherits it.
