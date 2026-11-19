@@ -31,8 +31,9 @@ export const t = (key, params, locale = PINNED_LOCALE) => i18nFor(locale).t(key,
 export function widgetI18nSource(locale = PINNED_LOCALE) {
   const runtime = readFileSync(join(HERE, "runtime.js"), "utf8").replace(/^export\s+/gm, "");
   const catalogs = JSON.stringify(CATALOGS).replace(/<\//g, "<\\/").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-  return "const { t, i18nLocale } = (() => {\n" + runtime +
-    "\nconst i = createI18n(" + catalogs + ", " + JSON.stringify(locale) + ");\nreturn { t: i.t, i18nLocale: i.locale };\n})();";
+  // i18nT is the same function, for code where a local `t` shadows it.
+  return "const { t, i18nT, i18nLocale } = (() => {\n" + runtime +
+    "\nconst i = createI18n(" + catalogs + ", " + JSON.stringify(locale) + ");\nreturn { t: i.t, i18nT: i.t, i18nLocale: i.locale };\n})();";
 }
 
 // Static widget markup (docs/rfc/i18n §5). Markup outside <script>/<style>

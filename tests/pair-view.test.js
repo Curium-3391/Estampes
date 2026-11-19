@@ -8,6 +8,7 @@ import { registerImage, clearImages } from "../src/image-store.js";
 beforeEach(() => clearImages());
 import { applyPairChanges, pairLinks, reviewLink, canvasMarks, storeUserMarks } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve } from "../src/scene-catalog.js";
+import { t } from "../src/i18n/index.js";
 
 const image = async (w, h, colour) => registerImage(await sharp({ create: { width: w, height: h, channels: 3, background: colour } }).png().toBuffer(), { source: "test" });
 const box = (id, side, x = 0.1) => ({ id, side, type: "rect", x, y: 0.1, x2: x + 0.1, y2: 0.2 });
@@ -59,9 +60,9 @@ const source = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
 test("widget maps each image's coordinates into the side-by-side canvas and back", () => {
   const start = source.indexOf("function layoutPair("), stop = source.indexOf("// Layer ids are per image");
   assert.ok(start > 0 && stop > start);
-  const v = new Function("let VW=1000,VH=750,pair={},ws=null,frames=null;const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
+  const v = new Function("t", "let VW=1000,VH=750,pair={},ws=null,frames=null;const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
     "const round=n=>Math.round(n*100000)/100000;\n" + source.slice(start, stop) +
-    "\nreturn {layoutPair,toView,toSide,sideAt,get VW(){return VW},get VH(){return VH}};")();
+    "\nreturn {layoutPair,toView,toSide,sideAt,get VW(){return VW},get VH(){return VH}};")(t);
   v.layoutPair(1600, 1000, 1500, 2000);
   assert.equal(v.VW, 2040); assert.equal(v.VH, 1333);
   const right = { id: "p", side: "right", type: "polyline", x: 0.2, y: 0.3, x2: 0.4, y2: 0.5, points: [{ x: 0.2, y: 0.3 }, { x: 0.4, y: 0.5 }] };
@@ -76,9 +77,9 @@ test("widget maps each image's coordinates into the side-by-side canvas and back
 
 test("widget lays out a workspace, turns rotated images and maps marks back exactly", () => {
   const start = source.indexOf("function layoutPair("), stop = source.indexOf("// Layer ids are per image");
-  const v = new Function("let VW=1000,VH=750,pair=null,frames=null;let ws={items:[{id:'wi-1'},{id:'wi-2'},{id:'wi-3'}]};const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
+  const v = new Function("t", "let VW=1000,VH=750,pair=null,frames=null;let ws={items:[{id:'wi-1'},{id:'wi-2'},{id:'wi-3'}]};const GAP=40;const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));" +
     "const round=n=>Math.round(n*100000)/100000;\n" + source.slice(start, stop) +
-    "\nreturn {layoutWorkspace,toView,toSide,sideAt,framePoint,frameUV,get frames(){return frames},get VW(){return VW},get VH(){return VH}};")();
+    "\nreturn {layoutWorkspace,toView,toSide,sideAt,framePoint,frameUV,get frames(){return frames},get VW(){return VW},get VH(){return VH}};")(t);
   v.layoutWorkspace([
     { id: "wi-1", width: 1536, height: 432, placement: { x: 0, y: 0, width: 1000, rotation: 0 } },
     { id: "wi-2", width: 1152, height: 1536, placement: { x: 1060, y: 0, width: 1000, rotation: 90 } },
@@ -106,8 +107,8 @@ test("widget shows links with numbers, asks the user to review every unverified 
   assert.match(source, /name:"review_visual_finding"/);
   // Any unverified claim asks, whatever GPT's confidence; GPT's own evidence is labelled as such.
   assert.match(source, /const ask=stateOf\(l\)==="unverified"/);
-  assert.match(source, /僅模型自述 · /);
-  assert.match(source, /待你確認/);
+  assert.match(source, /t\("vs\.claim\.unverified"/);
+  assert.match(t("vs.claim.unverified", { confidence: "", source: t("vs.claim.modelOnly") }), /^僅模型自述 · 待你確認$/);
   assert.match(source, /function showEvidence\(key,e\)/);
   assert.match(source, /function reviewMessage\(list\)/);
   assert.match(source, /if\(reviewed\.length\|\|edited\.length\)chatMessage\+="\\n\\n"\+extra\(\)/);

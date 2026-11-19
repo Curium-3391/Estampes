@@ -386,13 +386,13 @@ const exportImageBtn=scope.querySelector("#export-image"),exportMarksBtn=scope.q
 let exportLinks=null;
 const zoomTools=scope.querySelector("#zoom-tools"),zoomLevel=scope.querySelector("#zoom-level");
 const INTENT_TEXT={
- "free-annotate":"自由標註（意思以我的補充說明和畫面為準）",
- "point-out":"我想指出這個位置",
- "ask-about-region":"請解釋我標記的區域",
- "answer-question":"我正在回答你先前的問題",
- "correct-assistant":"我要更正你先前的指認",
- "compare":"請比較我標記的東西",
- "report-issue":"我想指出這裡的問題"
+ "free-annotate":t("vs.intentText.free-annotate"),
+ "point-out":t("vs.intentText.point-out"),
+ "ask-about-region":t("vs.intentText.ask-about-region"),
+ "answer-question":t("vs.intentText.answer-question"),
+ "correct-assistant":t("vs.intentText.correct-assistant"),
+ "compare":t("vs.intentText.compare"),
+ "report-issue":t("vs.intentText.report-issue")
 };
 const SCENES={
  landscape:`<rect width="640" height="360" fill="#DBEAF0"/><rect y="230" width="640" height="130" fill="#A4C7A4"/>
@@ -411,7 +411,7 @@ const SCENES={
  <text x="320" y="185" font-family="Georgia, serif" font-size="98" fill="#34424E" text-anchor="middle">E = mc²</text>
  <path d="M90 231H550" stroke="#D3CEC5" stroke-width="2"/><text x="320" y="278" text-anchor="middle" font-size="20" fill="#76818B">Example formula surface</text>`
 };
-const SCENE_NAMES={landscape:"風景插畫",shapes:"幾何形狀",formula:"公式"};
+const SCENE_NAMES={landscape:t("vs.scene.landscape"),shapes:t("vs.scene.shapes"),formula:t("vs.scene.formula")};
 // Canvas units: 640×360 for demo scenes; real photos use width 1000 and
 // their own aspect ratio, so normalized coordinates map without distortion.
 let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
@@ -457,10 +457,10 @@ function frameUV(f,X,Y){const x=X-f.x0,y=Y-f.y0;
  const [lx,ly]=f.rot===90?[y,f.h-x]:f.rot===180?[f.w-x,f.h-y]:f.rot===270?[f.w-y,x]:[x,y];return [lx/f.w,ly/f.h];}
 const firstSide=()=>ws?ws.items[0]?.id:"left";
 // What to call an image in the UI: 左/右, or a workspace item's label.
-const SIDE_ZH0={left:"左",right:"右"};
+const SIDE_ZH0={left:t("vs.side.left"),right:t("vs.side.right")};
 function sideTitle(side){
- if(ws){const i=ws.items.findIndex(it=>it.id===side);return i<0?"?":(ws.items[i].label||"圖"+(i+1));}
- return SIDE_ZH0[side]??"左";
+ if(ws){const i=ws.items.findIndex(it=>it.id===side);return i<0?"?":(ws.items[i].label||t("vs.side.item",{n:i+1}));}
+ return SIDE_ZH0[side]??t("vs.side.left");
 }
 const sideTag=side=>frames?sideTitle(side??firstSide())+" ":"";
 // Marks are kept in canvas-normalized coordinates while shown; the server
@@ -502,7 +502,7 @@ const rawOf=m=>m.rawId??m.id;
 const linksEl=scope.querySelector("#links"),linkEl=scope.querySelector("#link-annotations");
 let links=[],selectedLink=null,unsentReviews=[];
 const LINK_COLORS=["#E4572E","#2E86AB","#3BB273","#C03AA8","#E1A100","#00A6A6","#7D5BA6","#D1495B"];
-const CONFIDENCE_TEXT={high:"信心高",medium:"信心中",low:"信心低"};
+const CONFIDENCE_TEXT={high:t("vs.confidence.high"),medium:t("vs.confidence.medium"),low:t("vs.confidence.low")};
 const cleanLinks=list=>(Array.isArray(list)?list:[]).filter(l=>l&&typeof l.id==="string"&&typeof l.left==="string"&&typeof l.right==="string")
  .map(l=>({id:l.id.slice(0,64),left:l.left,right:l.right,label:String(l.label??"").slice(0,64),note:String(l.note??"").slice(0,200),
    confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null,
@@ -527,12 +527,12 @@ const cleanEvidence=list=>(Array.isArray(list)?list:[]).filter(e=>e&&typeof e.sa
   says:e.says.slice(0,160),region:Array.isArray(e.region)&&e.region.length===4&&e.region.every(v=>Number.isFinite(v)&&v>=0&&v<=1)?e.region:null})).slice(0,6);
 const stateOf=c=>c.verification??(c.review==="confirmed"?"user-confirmed":c.review==="rejected"?"user-rejected":
   cleanEvidence(c.evidence).some(e=>e.observer==="tool")?"independently-verified":"unverified");
-const STATE_ZH={"user-confirmed":"你已確認","stale-confirmation":"確認已過期：標記移動過，請再確認","user-rejected":"你已否決","independently-verified":"工具已驗證"};
-const SIDE_ZH={left:"左",right:"右"};
+const STATE_ZH={"user-confirmed":t("vs.claimState.user-confirmed"),"stale-confirmation":t("vs.claimState.stale-confirmation"),"user-rejected":t("vs.claimState.user-rejected"),"independently-verified":t("vs.claimState.independently-verified")};
+const SIDE_ZH={left:t("vs.side.left"),right:t("vs.side.right")};
 function claimChip(c,cls){
  const state=stateOf(c),tool=cleanEvidence(c.evidence).some(e=>e.observer==="tool");
  const chip=el("span",{className:cls+(state==="unverified"||state==="stale-confirmation"?" ask":state==="independently-verified"?" tool":"")});
- chip.textContent=state==="unverified"?(c.confidence?CONFIDENCE_TEXT[c.confidence]+" · ":"")+(tool?"":"僅模型自述 · ")+"待你確認":STATE_ZH[state];
+ chip.textContent=state==="unverified"?t("vs.claim.unverified",{confidence:c.confidence?CONFIDENCE_TEXT[c.confidence]+t("vs.sep.dot"):"",source:tool?"":t("vs.claim.modelOnly")}):STATE_ZH[state];
  return chip;
 }
 // Evidence buttons zoom to where AI says it saw the clue.
@@ -542,8 +542,8 @@ function evidenceRow(owner,c){
  const row=el("span",{className:"evidence"});
  list.forEach((e,i)=>{
    const side=sideOfImage(e.image);
-   const who=e.observer==="tool"?"工具":e.observer==="user"?"你":"AI 自述";
-   const b=el("button",{type:"button",textContent:"證據"+(i+1)+(frames?"（"+sideTitle(side)+"）":"")+"・"+who+"："+e.says,title:e.region?"放大到這個位置":"沒有給位置"});
+   const who=e.observer==="tool"?t("vs.evidence.byTool"):e.observer==="user"?t("vs.evidence.byUser"):t("vs.evidence.byModel");
+   const b=el("button",{type:"button",textContent:t("vs.evidence.button",{n:i+1,side:frames?t("vs.paren",{text:sideTitle(side)}):"",who,says:e.says}),title:e.region?t("vs.evidence.zoom"):t("vs.evidence.noRegion")});
    b.dataset.evidence=owner+"|"+i;b.disabled=!e.region;b.classList.toggle("on",selectedEvidence?.key===owner+"|"+i);
    row.append(b);
  });
@@ -571,11 +571,11 @@ function renderEvidenceBox(){
 }
 function reviewControls(li,c){
  if(stateOf(c)==="unverified"||stateOf(c)==="stale-confirmation"){
-   for(const [verdict,text] of [["confirmed","確認"],["rejected","否決"]])li.append(el("button",{type:"button",textContent:text,dataset:{review:verdict}}));
-   li.append(el("input",{className:"reason",maxLength:200,placeholder:"否決理由（選填）"}));
- }else if(c.review)li.append(el("button",{type:"button",textContent:"撤回",title:"取消你的判斷",dataset:{review:"unreviewed"}}));
- if(c.reviewReason)li.append(el("span",{className:"note",textContent:"你的理由："+c.reviewReason}));
- if(c.ambiguities?.length)li.append(el("span",{className:"unresolved",textContent:"尚未解決："+c.ambiguities.join("；")}));
+   for(const [verdict,text] of [["confirmed",t("vs.review.confirm")],["rejected",t("vs.review.reject")]])li.append(el("button",{type:"button",textContent:text,dataset:{review:verdict}}));
+   li.append(el("input",{className:"reason",maxLength:200,placeholder:t("vs.review.reasonPlaceholder")}));
+ }else if(c.review)li.append(el("button",{type:"button",textContent:t("vs.review.withdraw"),title:t("vs.review.withdrawTitle"),dataset:{review:"unreviewed"}}));
+ if(c.reviewReason)li.append(el("span",{className:"note",textContent:t("vs.review.yourReason",{reason:c.reviewReason})}));
+ if(c.ambiguities?.length)li.append(el("span",{className:"unresolved",textContent:t("vs.review.unresolved",{list:c.ambiguities.join(t("vs.sep.semicolon"))})}));
 }
 // Layers: each send and each AI drawing call is one layer of marks. The
 // viewer hides whole layers; hidden layers stay on the canvas and in AI's
@@ -634,23 +634,23 @@ function renderLayers(){
  const shownOrder=[...list].reverse();
  shownOrder.forEach((l,i)=>{
    const off=hiddenLayers.has(l.id)||l.visible===false,row=el("div",{className:"row"+(off?" off":"")+(l.locked?" locked":""),dataset:{layer:l.id}});
-   const box=el("input",{type:"checkbox",checked:!off,title:"顯示／隱藏圖層（同步至共用畫布）",dataset:{layer:l.id,act:"toggle"}});
+   const box=el("input",{type:"checkbox",checked:!off,title:t("vs.layer.toggleTitle"),dataset:{layer:l.id,act:"toggle"}});
    const name=el("span",{className:"name"});
    if(renamingLayer===l.id){
-     const input=el("input",{value:l.name,maxLength:40,"aria-label":"圖層名稱",dataset:{layer:l.id,act:"name"}});
+     const input=el("input",{value:l.name,maxLength:40,"aria-label":t("vs.layer.nameLabel"),dataset:{layer:l.id,act:"name"}});
      name.append(input);frame(()=>{input.focus();input.select();});
    }else name.append(el("button",{type:"button",className:"layer-evidence-button",textContent:(findingGroupsOpen.has(l.id)?"▾ ":"▸ ")+sideName(l.id)+l.name,"aria-expanded":String(findingGroupsOpen.has(l.id)),dataset:{layer:l.id,act:"evidence"}}));
    const op=Math.round((l.opacity??1)*100);
    const same=shownOrder.filter(o=>serverLayer(o.id).side===serverLayer(l.id).side),pos=same.indexOf(l);
    row.append(box,el("span",{className:"dot",style:"background:"+(l.author==="user"?"#579DF6":"#E4AE57")}),
-     el("button",{type:"button",className:"layer-id",textContent:serverLayer(l.id).id,title:"圖層 ID "+serverLayer(l.id).id+(frames?"（"+sideTitle(serverLayer(l.id).side)+"）":"")+" · 點擊複製","aria-label":"複製圖層 ID "+serverLayer(l.id).id,dataset:{layer:l.id,act:"copyid"}}),name,
+     el("button",{type:"button",className:"layer-id",textContent:serverLayer(l.id).id,title:t("vs.layer.idTitle",{id:serverLayer(l.id).id,side:frames?t("vs.paren",{text:sideTitle(serverLayer(l.id).side)}):""}),"aria-label":t("vs.layer.copyId",{id:serverLayer(l.id).id}),dataset:{layer:l.id,act:"copyid"}}),name,
      el("span",{className:"count",textContent:String(counts.get(l.id))}),
-     el("button",{textContent:"✎",title:"改名","aria-label":"改名",disabled:!ready,dataset:{layer:l.id,act:"rename"}}),
-     el("input",{type:"range",min:"0",max:"100",step:"5",value:String(op),title:"透明度","aria-label":"透明度",disabled:!ready,dataset:{layer:l.id,act:"opacity"}}),
+     el("button",{textContent:"✎",title:t("vs.layer.rename"),"aria-label":t("vs.layer.rename"),disabled:!ready,dataset:{layer:l.id,act:"rename"}}),
+     el("input",{type:"range",min:"0",max:"100",step:"5",value:String(op),title:t("vs.layer.opacity"),"aria-label":t("vs.layer.opacity"),disabled:!ready,dataset:{layer:l.id,act:"opacity"}}),
      el("span",{className:"pct",textContent:op+"%"}),
-     el("button",{textContent:l.locked?"🔒 已鎖":"🔓",title:l.locked?"解鎖：允許你和 AI 修改這層":"鎖定：你和 AI 都不能移動、改樣式或刪除這層的標記","aria-pressed":String(!!l.locked),disabled:!ready,dataset:{layer:l.id,act:"lock"}}),
-     el("button",{textContent:"↑",title:"往上一層",disabled:!ready||pos<=0,dataset:{layer:l.id,act:"up"}}),
-     el("button",{textContent:"↓",title:"往下一層",disabled:!ready||pos>=same.length-1,dataset:{layer:l.id,act:"down"}}));
+     el("button",{textContent:l.locked?t("vs.layer.locked"):"🔓",title:l.locked?t("vs.layer.unlockTitle"):t("vs.layer.lockTitle"),"aria-pressed":String(!!l.locked),disabled:!ready,dataset:{layer:l.id,act:"lock"}}),
+     el("button",{textContent:"↑",title:t("vs.layer.upTitle"),disabled:!ready||pos<=0,dataset:{layer:l.id,act:"up"}}),
+     el("button",{textContent:"↓",title:t("vs.layer.downTitle"),disabled:!ready||pos>=same.length-1,dataset:{layer:l.id,act:"down"}}));
    layerRows.set(l.id,row);
  });
 }
@@ -667,8 +667,8 @@ async function serverStep(action){
  if(!key)return;
  try{
   await editOnServer({history:{action,...(ws?{item:key}:pair?{side:key}:{})}});
-  status.textContent=action==="undo"?"已復原上一個已送出的修改。":"已重做。";
- }catch(err){status.textContent=(action==="undo"?"無法復原：":"無法重做：")+String(err.message||err);}
+  status.textContent=action==="undo"?t("vs.history.undone"):t("vs.history.redone");
+ }catch(err){status.textContent=t(action==="undo"?"vs.history.undoFailed":"vs.history.redoFailed",{message:String(err.message||err)});}
  selectedFocusId=null;render();
 }
 // In a workspace an edit names its item where a paired view names its side.
@@ -678,7 +678,7 @@ const newCommandId=()=>{try{if(crypto.randomUUID)return crypto.randomUUID()}catc
 // (two opacity changes could otherwise end with the older value). A failed edit does not block the next one.
 let editTail=Promise.resolve();
 function editOnServer(args){
- if(!ready||!imageId)return Promise.reject(Error("尚未連線"));
+ if(!ready||!imageId)return Promise.reject(Error(t("vs.err.notConnected")));
  // The request and its target are fixed when the user acts, not when its turn comes: if the viewer shows another
  // document while this edit waits, or while its answer is lost, it still goes to the document the user edited,
  // and the answer is not applied to the new one.
@@ -712,9 +712,9 @@ async function editOnServerNow(body,target,commandId){
    const st=await request("tools/call",{name:"commands_get_status",arguments:{documentId:target.wsId||target.imageId,commandIds:[commandId]}});
    known=st?.structuredContent?.commands?.[0]?.status??null;
   }catch{}
-  status.textContent=known==="applied"?"伺服器已收到這個修改，正在取回最新畫布…":"沒有收到確認，正在用同一個編號重送…";
+  status.textContent=known==="applied"?t("vs.ack.applied"):t("vs.ack.resending");
   try{result=await send()}
-  catch(second){note({state:"no answer: "+String(second.message||second).slice(0,100),ackAt:Date.now()});throw Error("不確定這個修改有沒有存到伺服器："+String(second.message||second))}
+  catch(second){note({state:"no answer: "+String(second.message||second).slice(0,100),ackAt:Date.now()});throw Error(t("vs.ack.unknown",{message:String(second.message||second)}))}
  }
  if(result?.isError){note({state:"refused: "+String(result.content?.[0]?.text||"tool error").slice(0,120),ackAt:Date.now()});throw Error(result.content?.[0]?.text||"tool error");}
  const r=result?.structuredContent;
@@ -747,7 +747,7 @@ function applyServerCanvas(annotations,layerList,linkList){
 }
 async function layerEdit(args,done){
  try{await editOnServer(args);status.textContent=done;}
- catch(err){status.textContent="圖層修改失敗："+String(err.message||err);}
+ catch(err){status.textContent=t("vs.layer.editFailed",{message:String(err.message||err)});}
  render();
 }
 function reorder(id,dir){
@@ -757,12 +757,12 @@ function reorder(id,dir){
  const i=ids.indexOf(id),j=i+dir;if(i<0||j<0||j>=ids.length)return;
  [ids[i],ids[j]]=[ids[j],ids[i]];
  const raw=ids.map(x=>serverLayer(x).id);
- layerEdit({order:{[side]:raw}},"已調整圖層順序。");
+ layerEdit({order:{[side]:raw}},t("vs.layer.reordered"));
 }
 layersEl.addEventListener("change",e=>{
  const t=e.target,id=t?.dataset?.layer;if(!id)return;
- if(t.dataset.act==="toggle"){hiddenLayers.delete(id);saveHidden();const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,visible:t.checked}]},"已調整圖層顯示。");}
- if(t.dataset.act==="opacity"){const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,opacity:Number(t.value)/100}]},"已調整透明度。");}
+ if(t.dataset.act==="toggle"){hiddenLayers.delete(id);saveHidden();const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,visible:t.checked}]},i18nT("vs.layer.visibilityChanged"));}
+ if(t.dataset.act==="opacity"){const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,opacity:Number(t.value)/100}]},i18nT("vs.layer.opacityChanged"));}
 });
 // Live preview while the slider moves; the panel itself is not rebuilt.
 layersEl.addEventListener("input",e=>{
@@ -774,7 +774,7 @@ function finishRename(input,save){
  const id=input.dataset.layer,name=input.value.trim();renamingLayer=null;
  const l=layerOf(id);
  if(!save||!l||!name||name===l.name){render();return;}
- const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,name}]},"圖層已改名為「"+name+"」。");
+ const {side,id:raw}=serverLayer(id);layerEdit({layers:[{id:raw,side,name}]},t("vs.layer.renamed",{name}));
 }
 layersEl.addEventListener("keydown",e=>{
  if(e.target?.dataset?.act!=="name")return;
@@ -783,14 +783,14 @@ layersEl.addEventListener("keydown",e=>{
 });
 layersEl.addEventListener("focusout",e=>{if(e.target?.dataset?.act==="name"&&renamingLayer)finishRename(e.target,true);});
 layersEl.addEventListener("click",e=>{
- if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();const edits=layers.filter(l=>l.visible===false).map(l=>{const {side,id}=serverLayer(l.id);return {id,side,visible:true};});if(edits.length)layerEdit({layers:edits},"已顯示所有圖層。");else render();return;}
+ if(e.target.id==="show-all-layers"){hiddenLayers.clear();saveHidden();const edits=layers.filter(l=>l.visible===false).map(l=>{const {side,id}=serverLayer(l.id);return {id,side,visible:true};});if(edits.length)layerEdit({layers:edits},t("vs.layer.allShown"));else render();return;}
  const b=e.target.closest("button[data-act]");if(!b)return;
  const id=b.dataset.layer,l=layerOf(id);if(!l)return;
  if(b.dataset.act==="evidence"){layersExpanded=true;findingGroupsOpen.has(id)?findingGroupsOpen.delete(id):findingGroupsOpen.add(id);render();return;}
  const {side,id:raw}=serverLayer(id);
  if(b.dataset.act==="rename"){renamingLayer=id;render();}
- if(b.dataset.act==="copyid"){const text=side&&frames?side+" "+raw:raw;try{navigator.clipboard.writeText(text).then(()=>{b.textContent="已複製";later(()=>{b.textContent=raw;},900);},()=>{});}catch{}return;}
- if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?"已解鎖「"+l.name+"」。":"已鎖定「"+l.name+"」：你和 AI 都不能再改這層的標記。");
+ if(b.dataset.act==="copyid"){const text=side&&frames?side+" "+raw:raw;try{navigator.clipboard.writeText(text).then(()=>{b.textContent=t("vs.layer.copied");later(()=>{b.textContent=raw;},900);},()=>{});}catch{}return;}
+ if(b.dataset.act==="lock")layerEdit({layers:[{id:raw,side,locked:!l.locked}]},l.locked?t("vs.layer.unlocked",{name:l.name}):t("vs.layer.lockedMsg",{name:l.name}));
  if(b.dataset.act==="up")reorder(id,1);
  if(b.dataset.act==="down")reorder(id,-1);
 });
@@ -933,11 +933,11 @@ function renderLinks(){
    li.classList.toggle("selected",l.id===selectedLink);li.classList.toggle("rejected",l.review==="rejected");
    const num=document.createElement("span");num.className="num";num.style.background=color;num.textContent=String(i+1);
    const what=document.createElement("span");what.className="what";what.textContent=l.label||l.rawId||l.id;
-   const name=m=>m?(m.label||rawOf(m)):"（已刪除）";
+   const name=m=>m?(m.label||rawOf(m)):t("vs.link.deleted");
    const endsText=document.createElement("span");endsText.className="ends";
-   endsText.textContent=ws?sideTitle(l.fromItem)+" "+name(a)+" ↔ "+sideTitle(l.toItem)+" "+name(b):"左 "+name(a)+" ↔ 右 "+name(b);
+   endsText.textContent=ws?sideTitle(l.fromItem)+" "+name(a)+" ↔ "+sideTitle(l.toItem)+" "+name(b):t("vs.link.endsPair",{a:name(a),b:name(b)});
    li.append(num,what,endsText,claimChip(l,"chip"));
-   if(l.previouslyRejected)li.append(el("span",{className:"chip",textContent:"曾被你否決，AI 附了新證據"}));
+   if(l.previouslyRejected)li.append(el("span",{className:"chip",textContent:t("vs.claim.rejectedBefore")}));
    reviewControls(li,l);
    if(l.note){const n=document.createElement("span");n.className="note";n.textContent=l.note;li.append(n);}
    const ev=evidenceRow("link:"+l.id,l);if(ev)li.append(ev);
@@ -965,8 +965,8 @@ linksEl.addEventListener("click",async e=>{
    const link=viewLinks([result?.structuredContent?.link])[0];if(!link)throw Error("Unexpected response");
    links=links.map(l=>l.id===id?link:l);
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="link:"+id),{key:"link:"+id,kind:"link",...link,verdict}];
-   status.textContent="已記錄你的判斷；按「把標註傳給 AI」讓 AI 知道。";
- }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
+   status.textContent=t("vs.review.recorded");
+ }catch(err){status.textContent=t("vs.review.recordFailed",{message:String(err.message||err)})}
  render();
 });
 const markOptions=()=>[
@@ -974,7 +974,7 @@ const markOptions=()=>[
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
 ].filter(item=>shown(item.mark));
-const STATUS_TEXT={inspected:"AI 表示已看過像素",uncertain:"AI 不確定"};
+const STATUS_TEXT={inspected:t("vs.markStatus.inspected"),uncertain:t("vs.markStatus.uncertain")};
 // Expansion is keyed by stable mark/layer identity, never array positions.
 let findingGroupsOpen=new Set(),focusedFinding=null,openFinding=null;
 const findingReasons=new Map();
@@ -1010,17 +1010,17 @@ function renderFindings(){
  }
  const order=new Map(layers.map((l,i)=>[l.id,i]));
  const manager=el("details",{id:"layer-manager",open:layersExpanded});
- manager.append(el("summary",{title:"圖層由上到下疊放；每層證據依最新更新排序",textContent:"圖層與證據 · "+layerRows.size+" 層 · "+[...groups.values()].flat().filter(({mark})=>mark.note&&stateOf(mark)==="unverified").length+" 待確認"}));
+ manager.append(el("summary",{title:t("vs.layers.summaryTitle"),textContent:t("vs.layers.summary",{layers:layerRows.size,pending:[...groups.values()].flat().filter(({mark})=>mark.note&&stateOf(mark)==="unverified").length})}));
  manager.addEventListener("toggle",()=>{if(manager.isConnected)layersExpanded=manager.open;});
- if(hiddenLayers.size||layers.some(l=>l.visible===false))manager.append(el("button",{id:"show-all-layers",textContent:"全部顯示"}));
+ if(hiddenLayers.size||layers.some(l=>l.visible===false))manager.append(el("button",{id:"show-all-layers",textContent:t("vs.layers.showAll")}));
  for(const [key,items] of [...groups].sort((a,b)=>(order.get(b[0])??-1)-(order.get(a[0])??-1))){
    // Evidence order is independent from layer/ink stacking. Legacy entries
    // without timestamps retain reverse insertion order as a stable fallback.
    const newest=[...items].reverse().sort((a,b)=>(b.mark.findingUpdatedAt??0)-(a.mark.findingUpdatedAt??0));
    const group=el("li",{className:"finding-group"});
    const pending=items.filter(({mark:m})=>m.note&&stateOf(m)==="unverified").length;
-   const header=layerRows.get(key)||el("button",{type:"button",textContent:"未分層證據",onclick:()=>{findingGroupsOpen.has(key)?findingGroupsOpen.delete(key):findingGroupsOpen.add(key);render();}});
-   header.append(el("span",{className:"badge",textContent:items.length+" 項 · "+pending+" 待確認"}));
+   const header=layerRows.get(key)||el("button",{type:"button",textContent:t("vs.layers.ungrouped"),onclick:()=>{findingGroupsOpen.has(key)?findingGroupsOpen.delete(key):findingGroupsOpen.add(key);render();}});
+   header.append(el("span",{className:"badge",textContent:t("vs.layers.groupBadge",{items:items.length,pending})}));
    group.append(header);
    const details=el("div",{className:"layer-evidence",hidden:!findingGroupsOpen.has(key)});
    const list=el("ol",{className:"finding-list"});
@@ -1029,10 +1029,10 @@ function renderFindings(){
      const li=el("li",{className:"finding-item",dataset:{key:item.key,mark:id}});
      const row=el("button",{type:"button",className:"finding-row",dataset:{mark:id},
        "aria-expanded":String(expanded),"aria-current":String(focusedFinding===id),
-       title:"點一下定位並高亮，再點展開詳情"});
+       title:t("vs.finding.title")});
      row.append(el("span",{className:"who",style:"color:"+(item.author==="AI"?"#C98A2E":"#3C7FE0"),textContent:m.label||m.id||(item.author==="AI"?"AI":"YOU")}),
-       el("span",{className:"badge",textContent:CONFIDENCE_TEXT[m.confidence]||"未提供信心"}),
-       el("span",{className:"badge"+(m.note&&stateOf(m)==="unverified"?" ask":""),textContent:m.note?(STATE_ZH[stateOf(m)]||"待確認"):"無待審說明"}));
+       el("span",{className:"badge",textContent:CONFIDENCE_TEXT[m.confidence]||t("vs.confidence.none")}),
+       el("span",{className:"badge"+(m.note&&stateOf(m)==="unverified"?" ask":""),textContent:m.note?(STATE_ZH[stateOf(m)]||t("vs.claimState.pending")):t("vs.finding.noNote")}));
      li.append(row);
      if(expanded){
        const detail=el("div",{className:"finding-detail"});
@@ -1040,17 +1040,17 @@ function renderFindings(){
        if(STATUS_TEXT[m.status])detail.append(el("span",{className:"badge",textContent:STATUS_TEXT[m.status]}));
        if(m.note&&m.id){
          detail.append(claimChip(m,"badge"));
-         if(m.previouslyRejected)detail.append(el("span",{className:"badge",textContent:"曾被你否決，AI 附了新證據"}));
+         if(m.previouslyRejected)detail.append(el("span",{className:"badge",textContent:t("vs.claim.rejectedBefore")}));
          reviewControls(detail,m);
          const reason=detail.querySelector("input.reason");
-         if(reason){reason.value=findingReasons.get(id)||"";reason.setAttribute("aria-label","否決理由（選填）");}
+         if(reason){reason.value=findingReasons.get(id)||"";reason.setAttribute("aria-label",t("vs.review.reasonPlaceholder"));}
          const ev=evidenceRow("mark:"+m.id,m);if(ev)detail.append(ev);
        }
        li.append(detail);
      }
      list.append(li);
    }
-   if(!items.length)details.append(el("p",{className:"help",textContent:"這個圖層還沒有證據或待審說明。"}));
+   if(!items.length)details.append(el("p",{className:"help",textContent:t("vs.layers.emptyGroup")}));
    details.append(list);group.append(details);findingsEl.append(group);
  }
  manager.append(findingsEl);layersEl.replaceChildren(manager);
@@ -1086,8 +1086,8 @@ findingsEl.addEventListener("click",async e=>{
    findingReasons.delete(m.id);
    if(back.review)m.review=back.review;if(back.reviewReason)m.reviewReason=back.reviewReason;
    unsentReviews=[...unsentReviews.filter(r=>r.key!=="mark:"+m.id),{key:"mark:"+m.id,kind:"note",id:rawOf(m),label:m.label,note:m.note,side:m.side,verdict,reason}];
-   status.textContent="已記錄你的判斷；按「把標註傳給 AI」讓 AI 知道。";
- }catch(err){status.textContent="記錄失敗："+String(err.message||err)}
+   status.textContent=t("vs.review.recorded");
+ }catch(err){status.textContent=t("vs.review.recordFailed",{message:String(err.message||err)})}
  render();
 });
 // ---- Gesture groups ----------------------------------------------------------
@@ -1098,9 +1098,9 @@ findingsEl.addEventListener("click",async e=>{
 let gestures=[],gestureDecisions=[],selectedGesture=null,groupingFrom=null;
 const gesturesEl=scope.querySelector("#gestures"),gestureOutlineEl=scope.querySelector("#gesture-outline");
 const gkey=ids=>[...new Set(ids)].sort().join("+");
-const MEANING_TEXT={"direction-arrow":"可能是一支方向箭頭","connected-path":"可能是一條分段畫的路徑","unknown":"可能是同一個手勢"};
-const HEAD_TEXT={right:"往右","up-right":"往右上",up:"往上","up-left":"往左上",left:"往左","down-left":"往左下",down:"往下","down-right":"往右下"};
-const CONFIRM_TEXT={unconfirmed:"系統推測 · 待你確認","user-confirmed":"你確認是同一個手勢","user-rejected":"你說不是"};
+const MEANING_TEXT={"direction-arrow":t("vs.gesture.meaning.direction-arrow"),"connected-path":t("vs.gesture.meaning.connected-path"),"unknown":t("vs.gesture.meaning.unknown")};
+const HEAD_TEXT={right:t("vs.gesture.heading.right"),"up-right":t("vs.gesture.heading.up-right"),up:t("vs.gesture.heading.up"),"up-left":t("vs.gesture.heading.up-left"),left:t("vs.gesture.heading.left"),"down-left":t("vs.gesture.heading.down-left"),down:t("vs.gesture.heading.down"),"down-right":t("vs.gesture.heading.down-right")};
+const CONFIRM_TEXT={unconfirmed:t("vs.gesture.confirm.unconfirmed"),"user-confirmed":t("vs.gesture.confirm.user-confirmed"),"user-rejected":t("vs.gesture.confirm.user-rejected")};
 function setGestures(list,{merge=false}={}){
  const before=merge?gestures:[];
  // Verdicts given in this widget win until the server echoes them.
@@ -1123,11 +1123,11 @@ function renderGestures(){
    const ms=g.memberIds.map(findMark),own=g.provenance==="user-created";
    const li=el("li",{className:(g.key===selectedGesture?"selected":"")+(g.confirmation==="user-rejected"?" rejected":"")});
    li.dataset.gesture=g.key;
-   li.append(el("span",{className:"what",textContent:(pair?(g.side==="right"?"右 ":"左 "):"")+ms.map(m=>m.label||m.id).join(" + ")}),
-     el("span",{className:"ends",textContent:MEANING_TEXT[g.proposedMeaning]+(g.heading?"（"+HEAD_TEXT[g.heading]+"）":"")}),
-     el("span",{className:"chip"+(g.confirmation==="unconfirmed"?" ask":""),textContent:own?"你組合的":CONFIRM_TEXT[g.confirmation]}));
-   if(g.confirmation==="unconfirmed")li.append(el("button",{textContent:"是同一個手勢",dataset:{gv:"user-confirmed"}}),el("button",{textContent:"不是",dataset:{gv:"user-rejected"}}));
-   else li.append(el("button",{textContent:own?"拆開":"撤回我的判斷",dataset:{gv:"unreviewed"}}));
+   li.append(el("span",{className:"what",textContent:(pair?(g.side==="right"?t("vs.gesture.rightPrefix"):t("vs.gesture.leftPrefix")):"")+ms.map(m=>m.label||m.id).join(" + ")}),
+     el("span",{className:"ends",textContent:MEANING_TEXT[g.proposedMeaning]+(g.heading?t("vs.paren",{text:HEAD_TEXT[g.heading]}):"")}),
+     el("span",{className:"chip"+(g.confirmation==="unconfirmed"?" ask":""),textContent:own?t("vs.gesture.mine"):CONFIRM_TEXT[g.confirmation]}));
+   if(g.confirmation==="unconfirmed")li.append(el("button",{textContent:t("vs.gesture.same"),dataset:{gv:"user-confirmed"}}),el("button",{textContent:t("vs.gesture.notSame"),dataset:{gv:"user-rejected"}}));
+   else li.append(el("button",{textContent:own?t("vs.gesture.split"):t("vs.gesture.withdraw"),dataset:{gv:"unreviewed"}}));
    gesturesEl.append(li);
    if(g.key===selectedGesture&&viewMode==="annotated"&&ms.every(shown)){
      const bs=ms.map(bounds),pad=12*U();
@@ -1144,14 +1144,14 @@ async function decideGesture(memberIds,verdict){
  else if(verdict==="user-confirmed")gestures=[...gestures,{key,memberIds:ids,proposedMeaning:"unknown",provenance:"user-created",confirmation:"user-confirmed",heading:null,side:findMark(ids[0])?.side==="right"?"right":"left"}];
  const side=(known??gestures.find(g=>g.key===key))?.side;
  unsentReviews=[...unsentReviews.filter(r=>r.key!=="gesture:"+key),{key:"gesture:"+key,kind:"gesture",labels:ids.map(id=>findMark(id)?.label||id),verdict,made:!known||known.provenance==="user-created",side}];
- status.textContent="已記錄；按「把標註傳給 AI」讓 AI 知道。";
+ status.textContent=t("vs.gesture.recorded");
  if(imageId&&ready){
    try{
      const result=await request("tools/call",{name:"review_gesture_group",arguments:{imageId:pair&&side==="right"?pair.imageId:imageId,memberIds:ids,verdict,...(ws?{workspaceId:ws.id,item:findMark(ids[0])?.side??firstSide()}:{})}});
      if(result?.isError)throw Error(result.content?.[0]?.text||"tool error");
      // The server holds this verdict now; keeping the override would hide a later verdict from another viewer.
      gestureDecisions=gestureDecisions.filter(d=>!(gkey(d.memberIds)===key&&d.verdict===verdict));
-   }catch(err){status.textContent="已記在畫布上，但存到伺服器失敗："+String(err.message||err)}
+   }catch(err){status.textContent=t("vs.gesture.saveFailed",{message:String(err.message||err)})}
  }
  render();
 }

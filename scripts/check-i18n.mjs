@@ -88,7 +88,7 @@ for (const loc of Object.keys(catalogs)) {
   }
 }
 const MARKUP_KEY = /\bdata-i18n(?:-[a-z-]+)?="([^"]+)"/g;
-const KEY_USE = /\bt\(\s*["']([a-z][\w.-]*)["']\s*[,)]/g;
+const KEY_USE = /\b(?:t|i18nT)\(\s*["']([a-z][\w.-]*)["']\s*[,)]/g;
 for (const f of ROOTS.flatMap((r) => files(r)).sort()) {
   const src = fs.readFileSync(path.join(ROOT, f), "utf8");
   for (const m of [...src.matchAll(KEY_USE), ...(f.endsWith(".html") ? src.matchAll(MARKUP_KEY) : [])]) {
