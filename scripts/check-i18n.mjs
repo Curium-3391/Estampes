@@ -4,8 +4,8 @@
 // Run it with `npm run i18n:check`. No server, browser or network needed.
 //
 // Warn mode (default): prints findings and a per-file count, exits 0.
-// `--strict`: exits 1 when anything is found (turned on once Phase 1
-// extraction is done). `--json`: machine-readable counts per file.
+// `--strict`: exits 1 when anything is found. Phase 1 extraction is done,
+// so CI and tests/i18n-check.test.js run it strict. `--json`: machine-readable counts per file.
 //
 // What it flags today: CJK text in code that is not a comment, and a
 // hard-coded <html lang>. A line ending in `i18n-ignore` is skipped (for

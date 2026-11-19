@@ -1,5 +1,6 @@
-// i18n Phase 0: the hard-coded-text check runs in warn mode (exit 0) and
-// fails in --strict mode while hard-coded text remains. See docs/rfc/i18n.
+// i18n: the hard-coded-text check runs in warn mode (exit 0) by default and
+// fails in --strict mode while hard-coded text remains. Phase 1 extraction is
+// done, so the repository itself must pass --strict. See docs/rfc/i18n §8.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -23,4 +24,10 @@ test("i18n:check --json reports counts per file", () => {
 test("i18n:check --strict fails exactly when something is found", () => {
   const total = JSON.parse(run("--json").stdout).total;
   assert.equal(run("--strict").status, total ? 1 : 0);
+});
+
+test("the repository has no hard-coded user-visible text (Phase 1 done, strict)", () => {
+  const r = run("--strict", "--verbose");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /i18n:check ok/);
 });

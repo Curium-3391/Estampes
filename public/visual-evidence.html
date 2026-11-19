@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="__ESTAMPES_LANG__">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -27,24 +27,25 @@ figcaption{font-size:.8rem;color:GrayText;padding:8px 10px;background:Canvas}
 </head>
 <body>
 <main>
-<header><h1>Estampes · Visual Evidence</h1><small>v__ESTAMPES_VERSION__ · 舊版獨立 PNG 檢視器</small></header>
-<p id="details">準備接收影像資料…</p>
+<header><h1>Estampes · Visual Evidence</h1><small>v__ESTAMPES_VERSION__ · <span data-i18n="ev.subtitle"></span></small></header>
+<p id="details" data-i18n="ev.waiting"></p>
 <div id="viewer" hidden>
-<nav aria-label="切換影像來源">
-<button type="button" data-view="marked" aria-pressed="true">中性焦點全圖</button>
-<button type="button" data-view="original" aria-pressed="false">原始完整圖片</button>
-<button type="button" data-view="crop" aria-pressed="false">局部放大（無標記）</button>
+<nav data-i18n-aria-label="ev.sources">
+<button type="button" data-view="marked" aria-pressed="true" data-i18n="ev.view.marked"></button>
+<button type="button" data-view="original" aria-pressed="false" data-i18n="ev.view.original"></button>
+<button type="button" data-view="crop" aria-pressed="false" data-i18n="ev.view.crop"></button>
 </nav>
-<figure><img id="image" alt="Estampes 完整影像與標註焦點"><figcaption id="caption">中性焦點全圖</figcaption></figure>
+<figure><img id="image" data-i18n-alt="ev.imageAlt"><figcaption id="caption" data-i18n="ev.view.marked"></figcaption></figure>
 </div>
-<p id="status" role="status" aria-live="polite">正在與對話建立元件連線…</p>
-<button type="button" id="retry" disabled>重新取得圖片</button>
+<p id="status" role="status" aria-live="polite" data-i18n="ev.connecting"></p>
+<button type="button" id="retry" disabled data-i18n="ev.retry"></button>
 <script type="module">
+__ESTAMPES_I18N__
 const resultImage=document.querySelector("#image"),status=document.querySelector("#status");
 const caption=document.querySelector("#caption"),details=document.querySelector("#details");
 const viewer=document.querySelector("#viewer"),retry=document.querySelector("#retry");
 const tabs=Array.from(document.querySelectorAll("[data-view]"));
-const titleMap={marked:"中性焦點全圖",original:"原始完整圖片",crop:"局部放大（無標記）"};
+const titleMap={marked:t("ev.view.marked"),original:t("ev.view.original"),crop:t("ev.view.crop")};
 const sources={original:"",marked:"",crop:""};
 let currentView="marked",lastInput=null,pending=new Map(),seq=0,ready=false;
 function notify(method,params){window.parent.postMessage({jsonrpc:"2.0",method,params},"*")}
@@ -59,9 +60,9 @@ function inputReceived(args){
  lastInput=value;
  const scene=String(value.scene??"").slice(0,40);
  const focus=value.focus;
- let message="場景："+scene+" · 原始 SVG viewBox 640×360 · PNG 640×360 pixels";
+ let message=t("ev.details",{scene});
  if(focus&&typeof focus.x==="number"&&typeof focus.y==="number"){
-   message+=" · 焦點="+focus.type+" ("+focus.x+", "+focus.y+")";
+   message+=t("ev.focus",{type:focus.type,x:focus.x,y:focus.y});
    if(typeof focus.x2==="number")message+=" → ("+focus.x2+", "+focus.y2+")";
  }
  details.textContent=message;
@@ -71,8 +72,8 @@ function switchView(name){
  if(!sources[name])return;
  currentView=name;
  resultImage.src=sources[name];
- resultImage.alt=titleMap[name]+"；由 Estampes 原始 SVG 轉成 PNG";
- caption.textContent=titleMap[name]+" · 圖片像素由 Estampes 工具回傳";
+ resultImage.alt=t("ev.alt",{title:titleMap[name]});
+ caption.textContent=t("ev.caption",{title:titleMap[name]});
  for(const tab of tabs)tab.setAttribute("aria-pressed",String(tab.dataset.view===name));
 }
 // Images travel in the tool result's _meta (widget-only); structuredContent
@@ -93,7 +94,7 @@ function showResult(input,meta){
  }
  viewer.hidden=false;
  switchView(currentView);
- status.textContent="已取得 3 張 PNG：完整原圖、標記全圖、無標記局部裁切。";
+ status.textContent=t("ev.loaded");
  return true;
 }
 function hydrateCompat(){
@@ -106,11 +107,11 @@ function hydrateCompat(){
 for(const tab of tabs)tab.addEventListener("click",()=>switchView(tab.dataset.view));
 retry.addEventListener("click",async()=>{
  if(!ready||!lastInput)return;
- retry.disabled=true;status.textContent="重新取得圖片中…";
+ retry.disabled=true;status.textContent=t("ev.retrying");
  try{
    const result=await request("tools/call",{name:"present_visual_evidence",arguments:lastInput});
-   if(!showResult(result))throw Error("工具沒有回傳完整的圖片資料");
- }catch(e){status.textContent="無法取得 PNG："+String(e.message||e);}
+   if(!showResult(result))throw Error(t("ev.incomplete"));
+ }catch(e){status.textContent=t("ev.failed",{message:String(e.message||e)});}
  finally{retry.disabled=false}
 });
 window.addEventListener("message",event=>{
@@ -124,7 +125,7 @@ window.addEventListener("message",event=>{
  if(msg.method==="ui/notifications/tool-input")inputReceived(msg.params);
  if(msg.method==="ui/notifications/tool-result"){
    if(!showResult(msg.params)){
-     status.textContent="工具結果已收到，但缺少圖片資料。";
+     status.textContent=t("ev.noImages");
    }
  }
 });
@@ -136,8 +137,8 @@ window.addEventListener("message",event=>{
    });
    notify("ui/notifications/initialized",{});
    ready=true;retry.disabled=!lastInput;
-   if(!hydrateCompat()&&viewer.hidden)status.textContent="畫布已連線，正在接收工具回傳的圖片…";
- }catch(e){status.textContent="元件連線失敗："+String(e.message||e)}
+   if(!hydrateCompat()&&viewer.hidden)status.textContent=t("ev.receiving");
+ }catch(e){status.textContent=t("ev.connectFailed",{message:String(e.message||e)})}
 })();
 </script>
 </main>

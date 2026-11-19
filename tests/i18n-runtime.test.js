@@ -82,7 +82,7 @@ test("static markup is filled at serve time; scripts and styles are left alone",
 });
 
 test("served widgets have no i18n placeholders left and every marker resolves", () => {
-  for (const f of ["visual-surface.html", "module-store.html"]) {
+  for (const f of ["visual-surface.html", "module-store.html", "number-line.html", "visual-evidence.html"]) {
     const html = inlineWorkbench(readFileSync(new URL("../public/" + f, import.meta.url), "utf8"));
     assert.ok(!/__ESTAMPES_(I18N|LANG)__/.test(html), f);
     for (const m of html.split("<script")[0].matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)) assert.ok(m[1] in CATALOGS["zh-TW"], f + ": " + m[1]);
