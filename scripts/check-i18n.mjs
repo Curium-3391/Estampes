@@ -15,6 +15,10 @@
 // sent to the AI that a later phase splits; say why on the start line).
 // Comments are skipped by a simple line heuristic, not a parser.
 //
+// Text in a built-in module (src/builtin-modules/) is module-owned: it is
+// localized through the module's own locales/ in module system v2 (RFC §6.3,
+// P5), so it is listed as deferred and never fails --strict.
+//
 // Catalog checks (src/i18n/locales/*.json, Phase 1 on) always fail, in
 // every mode: a message that does not parse, a key outside zh-TW (the
 // complete catalog), a translation whose parameters differ from zh-TW, and a
@@ -55,7 +59,9 @@ function isComment(line, state) {
   return t.startsWith("//") || t.startsWith("*");
 }
 
+const MODULE_OWNED = "src/builtin-modules/";
 const findings = [];
+const deferred = {};
 const counts = {};
 for (const f of ROOTS.flatMap((r) => files(r)).sort()) {
   const state = { block: false, ignore: false };
@@ -66,6 +72,7 @@ for (const f of ROOTS.flatMap((r) => files(r)).sort()) {
     if (isComment(line, state) || /i18n-ignore\s*(\*\/|-->)?\s*$/.test(line)) return;
     const kind = HTML_LANG.test(line) ? "html-lang" : CJK.test(line) ? "cjk" : null;
     if (!kind) return;
+    if (f.startsWith(MODULE_OWNED)) { deferred[f] = (deferred[f] ?? 0) + 1; return; }
     counts[f] = (counts[f] ?? 0) + 1;
     findings.push({ file: f, line: i + 1, kind, text: line.trim().slice(0, 100) });
   });
@@ -106,13 +113,15 @@ const missing = Object.fromEntries(Object.keys(catalogs).filter((l) => l !== BAS
 
 const total = findings.length;
 if (args.has("--json")) {
-  console.log(JSON.stringify({ total, counts, catalogErrors, keys: Object.keys(catalogs[BASE]).length, missing }, null, 2));
+  console.log(JSON.stringify({ total, counts, deferred, catalogErrors, keys: Object.keys(catalogs[BASE]).length, missing }, null, 2));
 } else {
   if (args.has("--verbose")) for (const x of findings) console.log(`${x.file}:${x.line}: [${x.kind}] ${x.text}`);
   for (const [f, n] of Object.entries(counts).sort((a, b) => b[1] - a[1])) console.log(String(n).padStart(5) + "  " + f);
   console.log(total
     ? `i18n:check ${args.has("--strict") ? "FAILED" : "warning"}: ${total} line(s) with hard-coded user-visible text in ${Object.keys(counts).length} file(s). See docs/rfc/i18n/README.md §8. --verbose lists them.`
     : "i18n:check ok: no hard-coded user-visible text found.");
+  const d = Object.values(deferred).reduce((a, b) => a + b, 0);
+  if (d) console.log(`deferred: ${d} line(s) of module-owned text in ${Object.keys(deferred).join(", ")} (module locales/, RFC §6.3).`);
   console.log(`catalogs: ${Object.keys(catalogs[BASE]).length} key(s) in ${BASE}; ` +
     Object.entries(missing).map(([l, n]) => `${l} lacks ${n}`).join(", ") + ".");
   for (const e of catalogErrors) console.error("catalog error: " + e);

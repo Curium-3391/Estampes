@@ -112,7 +112,7 @@ export function sameRegion(next, old) {
 // one's words appear in the other ("疑似 Rasalhague" ~ "Rasalhague（蛇夫座 α）").
 // Hedges such as 疑似 or "maybe" do not count as words.
 const norm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
-const HEDGES = /^(疑似|可能是|可能|應該是|應該|大概|也許|似乎|或許|maybe|probably|possibly|likely|perhaps)/;
+const HEDGES = /^(疑似|可能是|可能|應該是|應該|大概|也許|似乎|或許|maybe|probably|possibly|likely|perhaps)/; // hedge words to match in either language, not UI text; i18n-ignore
 const words = (s) => (String(s ?? "").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])
   .flatMap((w) => /[\p{Script=Han}]/u.test(w) ? w.match(/[\p{Script=Han}]+|[^\p{Script=Han}]+/gu) : [w])
   .map((w) => w.replace(HEDGES, "")).filter((w) => w.length >= 2);

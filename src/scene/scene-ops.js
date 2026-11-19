@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { OBJECT_TYPES, OBJECT_TYPE_NAMES, validateProps, renderObject } from "./objects.js";
 import { moduleLayer } from "../canvas-state.js";
+import { t } from "../i18n/index.js";
 
 export const SCENE_OPS_PROTOCOL = "estampes.scene-ops/1";
 export const OP_KINDS = ["object.create", "object.update", "object.delete", "object.publish", "object.restore"];
@@ -128,7 +129,7 @@ export function applySceneOps(entry, operations, source, { expectedRevision, vis
         catch (error) { throw error instanceof SceneOpsError ? error : new SceneOpsError(error.message, { index: i }); }
         checkRefs(op.type, props, i);
         const id = nextId(entry);
-        intoLayer ??= moduleLayer(entry, layerName || source.layerName || "模組", source.module);
+        intoLayer ??= moduleLayer(entry, layerName || source.layerName || t("name.layer.module"), source.module);
         map.set(id, {
           id, type: op.type, props, layer: intoLayer.id, visibility: op.visibility ?? visibility,
           ...(op.label ? { label: op.label } : {}),

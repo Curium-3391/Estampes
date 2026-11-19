@@ -32,6 +32,7 @@ import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 import { protocolMark } from "./protocol.js";
 import { isGraphId } from "./visual/graph-docs.js";
 import { verificationOf } from "./assessment.js";
+import { t } from "./i18n/index.js";
 
 export const WORKSPACE_PROTOCOL = "estampes.workspace/1";
 export const MAX_ITEMS = 24;
@@ -151,7 +152,7 @@ export async function legacyWorkspace(imageId, pairImageId) {
   if (pairImageId) items.push({ id: "wi-2", asset: pairImageId, set: pairImageId });
   for (const it of items) await ensureSet(it.set);
   const doc = { protocol: WORKSPACE_PROTOCOL, id: null, legacy: { imageId, ...(pairImageId ? { pairImageId } : {}) },
-    name: pairImageId ? "對照 " + imageId + " + " + pairImageId : "畫布 " + imageId, revision: 0, layout: "auto", items, nextItem: items.length + 1 };
+    name: pairImageId ? t("name.workspace.pair", { left: imageId, right: pairImageId }) : t("name.workspace.canvas", { imageId }), revision: 0, layout: "auto", items, nextItem: items.length + 1 };
   await layoutAll(doc);
   return doc;
 }
@@ -214,7 +215,7 @@ export async function inspectWorkspace(doc) {
 const strip = (doc) => { const { undo: _u, keys: _k, ...rest } = doc; return clone(rest); };
 
 function newDoc(name) {
-  return { protocol: WORKSPACE_PROTOCOL, id: "ws:" + hex(8), name: cleanName(name) || "工作區", revision: 0, layout: "auto",
+  return { protocol: WORKSPACE_PROTOCOL, id: "ws:" + hex(8), name: cleanName(name) || t("name.workspace.default"), revision: 0, layout: "auto",
     createdAt: now(), updatedAt: now(), items: [], nextItem: 1, undo: [], keys: [] };
 }
 const cleanName = (s) => String(s ?? "").trim().slice(0, NAME_MAX);
@@ -485,7 +486,7 @@ export function commitTransfer({ previewId, key, ...direct }) {
     // Work on copies: the live documents change only when everything worked.
     if (tgt && !tgt.legacy) { before.set(tgt.doc.id, strip(tgt.doc)); target = clone(tgt.doc); }
     else {
-      target = newDoc(args.name || (tgt ? tgt.doc.name : src.doc.name + "（拆出）"));
+      target = newDoc(args.name || (tgt ? tgt.doc.name : t("name.workspace.split", { name: src.doc.name })));
       before.set(target.id, null);
       for (const it of tgt?.doc.items ?? []) addItem(target, { asset: it.asset, set: it.set, label: it.label });
     }

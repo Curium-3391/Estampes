@@ -8,6 +8,8 @@ export const INTENTS = Object.freeze([
   "free-annotate", "point-out", "ask-about-region", "answer-question", "correct-assistant",
   "compare", "report-issue"
 ]);
+// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
+// splits it into a localized sentence plus an English structured block.
 export const INTENT_LABELS = Object.freeze({
   "free-annotate": "自由標註（意思以我的補充說明和畫面為準）",
   "point-out": "我想指出這個位置",
@@ -17,6 +19,7 @@ export const INTENT_LABELS = Object.freeze({
   "compare": "請比較我標記的東西",
   "report-issue": "我想指出這裡的問題",
 });
+// i18n-ignore-end
 export const SCENE_META = Object.freeze({
   landscape: Object.freeze({id:"demo:landscape",revision:"svg-v1",width:640,height:360}),
   shapes: Object.freeze({id:"demo:shapes",revision:"svg-v1",width:640,height:360}),
@@ -38,8 +41,11 @@ export const INTENT_ACTIONS = Object.freeze({
 export const ARROW_HINTS = Object.freeze(["unspecified", "point-to-target"]);
 export const arrowHintFor = (intent) => intent === "point-out" ? "point-to-target" : "unspecified";
 const HEADINGS = ["right", "up-right", "up", "up-left", "left", "down-left", "down", "down-right"];
+// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
+// splits it into a localized sentence plus an English structured block.
 const HEADINGS_ZH = { right: "由左往右", "up-right": "往右上", up: "由下往上", "up-left": "往左上",
   left: "由右往左", "down-left": "往左下", down: "由上往下", "down-right": "往右下" };
+// i18n-ignore-end
 // Direction in image pixels (normalized coordinates stretch with the aspect
 // ratio). angleDeg: 0 = right, 90 = up, counter-clockwise.
 export function arrowDirection(g, width, height) {
@@ -159,6 +165,8 @@ export function buildAnnotationEvent({scene,image,pairImage,workspace,annotation
   };
 }
 
+// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
+// splits it into a localized sentence plus an English structured block.
 function arrowLines(event) {
   const arrows=event.annotations.filter(m=>m.type==="arrow"&&m.role!=="context");
   if(!arrows.length)return [];
@@ -247,3 +255,4 @@ export function formatAnnotationChatMessage(event) {
   );
   return lines.join("\n");
 }
+// i18n-ignore-end

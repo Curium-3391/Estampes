@@ -115,7 +115,7 @@ export function registerModuleTools(server, deps) {
       "Results list object ids and the canvas's scene revision; pass expectedRevision to refuse the change if the canvas changed meanwhile. " +
       "visibility 'scratch' keeps objects as your own working notes, drawn only in the preview image you get, not in the user's canvas; publish them later with the module or leave them. " +
       "The result includes a PREVIEW image of the canvas with all objects: check it before telling the user it is done. " +
-      "present false (for iterative tuning: several runs before you show anything) keeps the chat quiet: the canvas is not reopened for the user, only a one-line note with a 顯示畫布 button; you still get the preview. Show the final result with present_visual({imageId}).",
+      "present false (for iterative tuning: several runs before you show anything) keeps the chat quiet: the canvas is not reopened for the user, only a one-line note with a 顯示畫布 button; you still get the preview. Show the final result with present_visual({imageId}).", // model-facing (T3) text naming a zh-TW UI label; Phase 2. i18n-ignore
     inputSchema: z.object({
       module: ModuleIdSchema,
       capability: z.string().min(1).max(48),

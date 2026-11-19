@@ -2,9 +2,10 @@
 // whom they were made. The user can rename, reorder, lock and fade it. This
 // module owns the record shape and the rules; canvas-state.js applies them
 // to a photo canvas (UVA Phase 2, PR-2A).
+import { t } from "../i18n/index.js";
 export const LAYER_FIELDS = Object.freeze(["id", "author", "name", "module", "locked", "opacity", "visible"]);
 export const LAYER_NAME_MAX = 40;
-export const AUTHOR_NAME = Object.freeze({ user: "你", assistant: "AI" });
+export const AUTHOR_NAME = Object.freeze({ user: t("name.author.user"), assistant: t("name.author.assistant") });
 
 // Opacity is stored in steps of 0.05; 1 (fully opaque) is the absence of the field.
 export const layerOpacity = (v) => Math.round(Math.min(1, Math.max(0, v)) * 20) / 20;
@@ -19,7 +20,7 @@ const nextId = (layers) => "L" + (layers.reduce((m, l) => Math.max(m, idNumber(l
 // author's previous layers: "AI · 第2次".
 export function newLayerRecord(layers, author, name) {
   const n = layers.filter((l) => l.author === author).length + 1;
-  return { id: nextId(layers), author, name: name || AUTHOR_NAME[author] + " · 第" + n + "次" };
+  return { id: nextId(layers), author, name: name || t("name.layer.numbered", { author: AUTHOR_NAME[author], n }) };
 }
 
 // Apply one user edit (name / locked / opacity) to a layer record in place.
