@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="__ESTAMPES_LANG__"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Estampes — Visual Surface</title>
 <style id="page-css">
 :root{color-scheme:light dark;font-family:system-ui,-apple-system,sans-serif}
@@ -179,101 +179,101 @@ math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",serif}
 body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!important}
 .awaiting-upload #upload-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 16px;border:2px dashed #8aa4c8;border-radius:12px;text-align:center}
 .awaiting-upload #upload,.awaiting-upload #surface,.awaiting-upload #caption,.awaiting-upload #edit-tools,.awaiting-upload #style-tools,.awaiting-upload #zoom-tools,.awaiting-upload .view-tabs,.awaiting-upload #context-details,.awaiting-upload .actions:not(#extra-actions){display:none}
-</style></head><body><div id="wb" class="solo"><div id="wb-bar"></div><p id="wb-help" hidden>拖曳標題列移動面板，拖曳右下角調整大小；鍵盤：在標題列按 Alt＋方向鍵移動，Alt＋Shift＋方向鍵調整大小。</p><div id="wb-area"><template id="viewer-tpl"><main id="panel-canvas">
+</style></head><body><div id="wb" class="solo"><div id="wb-bar"></div><p id="wb-help" hidden data-i18n="vs.wb-help.text"></p><div id="wb-area"><template id="viewer-tpl"><main id="panel-canvas">
 <header><h2>Estampes · Visual Surface</h2><small>v__ESTAMPES_VERSION__</small></header>
-<p class="help">同一張圖片，同一套座標。標籤<strong>金色＝AI</strong>、<strong>藍色＝你</strong>，線條顏色可自選；預設顯示原圖，可直接標記、放大，或切換到 AI 提供的處理後檢視。</p>
-<nav class="view-tabs" aria-label="檢視模式">
-<button data-view="annotated" aria-pressed="true">標註與編輯</button>
-<button data-view="original" aria-pressed="false">原始圖片</button>
-<button data-view="zoom" aria-pressed="false">局部放大</button>
-<button data-view="check" aria-pressed="false" hidden title="AI 畫完後自己檢查用的圖">AI 驗收圖</button>
-<select id="focus-choice" hidden aria-label="放大哪個標註"></select>
+<p class="help" data-i18n-html="vs.help.html"></p>
+<nav class="view-tabs" data-i18n-aria-label="vs.viewTabs.aria-label">
+<button data-view="annotated" aria-pressed="true" data-i18n="vs.view.annotated.text"></button>
+<button data-view="original" aria-pressed="false" data-i18n="vs.view.original.text"></button>
+<button data-view="zoom" aria-pressed="false" data-i18n="vs.view.zoom.text"></button>
+<button data-view="check" aria-pressed="false" hidden data-i18n-title="vs.view.check.title" data-i18n="vs.view.check.text"></button>
+<select id="focus-choice" hidden data-i18n-aria-label="vs.focus-choice.aria-label"></select>
 </nav>
-<div class="toolbar" id="edit-tools" role="group" aria-label="標註工具">
-<button data-mode="select" aria-pressed="false" title="點一個標記選取它；拖曳移動你自己的標記，Delete 刪除，方向鍵微調">選取</button>
-<button data-mode="point" aria-pressed="true">點選</button>
-<button data-mode="text" aria-pressed="false">文字</button>
-<button data-mode="rect" aria-pressed="false">框選</button>
-<button data-mode="arrow" aria-pressed="false">箭頭</button>
-<button data-mode="quad" aria-pressed="false" title="拖曳畫出四邊形；之後用「選取」拖曳四個角對齊傾斜或透視的物體，或拖曳圓形控制點旋轉">四邊形</button>
-<button data-mode="polyline" aria-pressed="false" title="按住拖曳自由畫；滑鼠、繪圖板、Apple Pencil、S Pen 都可以">手繪</button>
-<button id="undo" title="Ctrl+Z">上一步</button><button id="redo" title="Ctrl+Shift+Z / Ctrl+Y">下一步</button><button id="clear">清除我的標註</button>
+<div class="toolbar" id="edit-tools" role="group" data-i18n-aria-label="vs.edit-tools.aria-label">
+<button data-mode="select" aria-pressed="false" data-i18n-title="vs.mode.select.title" data-i18n="vs.mode.select.text"></button>
+<button data-mode="point" aria-pressed="true" data-i18n="vs.mode.point.text"></button>
+<button data-mode="text" aria-pressed="false" data-i18n="vs.mode.text.text"></button>
+<button data-mode="rect" aria-pressed="false" data-i18n="vs.mode.rect.text"></button>
+<button data-mode="arrow" aria-pressed="false" data-i18n="vs.mode.arrow.text"></button>
+<button data-mode="quad" aria-pressed="false" data-i18n-title="vs.mode.quad.title" data-i18n="vs.mode.quad.text"></button>
+<button data-mode="polyline" aria-pressed="false" data-i18n-title="vs.mode.polyline.title" data-i18n="vs.mode.polyline.text"></button>
+<button id="undo" title="Ctrl+Z" data-i18n="vs.undo.text"></button><button id="redo" title="Ctrl+Shift+Z / Ctrl+Y" data-i18n="vs.redo.text"></button><button id="clear" data-i18n="vs.clear.text"></button>
 </div>
-<div id="style-tools" role="group" aria-label="畫筆樣式">
-<button class="swatch" data-color="blue" aria-pressed="true" aria-label="藍" style="background:#579DF6"></button>
-<button class="swatch" data-color="red" aria-pressed="false" aria-label="紅" style="background:#F2545B"></button>
-<button class="swatch" data-color="green" aria-pressed="false" aria-label="綠" style="background:#3DDC84"></button>
-<button class="swatch" data-color="yellow" aria-pressed="false" aria-label="黃" style="background:#FFD23F"></button>
-<button class="swatch" data-color="magenta" aria-pressed="false" aria-label="洋紅" style="background:#E36BF0"></button>
-<button class="swatch" data-color="cyan" aria-pressed="false" aria-label="青" style="background:#3FD0E0"></button>
-<button class="swatch" data-color="white" aria-pressed="false" aria-label="白" style="background:#FFFFFF"></button>
-<button class="swatch" data-color="black" aria-pressed="false" aria-label="黑" style="background:#111111"></button>
+<div id="style-tools" role="group" data-i18n-aria-label="vs.style-tools.aria-label">
+<button class="swatch" data-color="blue" aria-pressed="true" data-i18n-aria-label="vs.color.blue.aria-label" style="background:#579DF6"></button>
+<button class="swatch" data-color="red" aria-pressed="false" data-i18n-aria-label="vs.color.red.aria-label" style="background:#F2545B"></button>
+<button class="swatch" data-color="green" aria-pressed="false" data-i18n-aria-label="vs.color.green.aria-label" style="background:#3DDC84"></button>
+<button class="swatch" data-color="yellow" aria-pressed="false" data-i18n-aria-label="vs.color.yellow.aria-label" style="background:#FFD23F"></button>
+<button class="swatch" data-color="magenta" aria-pressed="false" data-i18n-aria-label="vs.color.magenta.aria-label" style="background:#E36BF0"></button>
+<button class="swatch" data-color="cyan" aria-pressed="false" data-i18n-aria-label="vs.color.cyan.aria-label" style="background:#3FD0E0"></button>
+<button class="swatch" data-color="white" aria-pressed="false" data-i18n-aria-label="vs.color.white.aria-label" style="background:#FFFFFF"></button>
+<button class="swatch" data-color="black" aria-pressed="false" data-i18n-aria-label="vs.color.black.aria-label" style="background:#111111"></button>
 <span class="sep"></span>
-<button data-size="fine" aria-pressed="false" title="放大後畫細線用">極細</button>
-<button data-size="thin" aria-pressed="false">細</button>
-<button data-size="medium" aria-pressed="true">中</button>
-<button data-size="thick" aria-pressed="false">粗</button>
+<button data-size="fine" aria-pressed="false" data-i18n-title="vs.size.fine.title" data-i18n="vs.size.fine.text"></button>
+<button data-size="thin" aria-pressed="false" data-i18n="vs.size.thin.text"></button>
+<button data-size="medium" aria-pressed="true" data-i18n="vs.size.medium.text"></button>
+<button data-size="thick" aria-pressed="false" data-i18n="vs.size.thick.text"></button>
 <span class="sep"></span>
-<button data-pen="pen" aria-pressed="true">筆</button>
-<button data-pen="highlighter" aria-pressed="false" title="半透明，不會蓋住底下的圖">螢光筆</button>
+<button data-pen="pen" aria-pressed="true" data-i18n="vs.pen.pen.text"></button>
+<button data-pen="highlighter" aria-pressed="false" data-i18n-title="vs.pen.highlighter.title" data-i18n="vs.pen.highlighter.text"></button>
 </div>
-<div class="toolbar" id="zoom-tools" role="group" aria-label="縮放">
-<button id="zoom-out" title="縮小" aria-label="縮小">－</button><span id="zoom-level">100%</span><button id="zoom-in" title="放大" aria-label="放大">＋</button>
-<button id="zoom-fit">整張</button>
-<button data-mode="pan" aria-pressed="false" title="拖曳移動畫面；也可以按住空白鍵或用滑鼠中鍵拖曳">移動</button>
-<span class="hint">雙指捏合或 Ctrl＋滾輪縮放，放大後畫細線</span>
+<div class="toolbar" id="zoom-tools" role="group" data-i18n-aria-label="vs.zoom-tools.aria-label">
+<button id="zoom-out" data-i18n-title="vs.zoom-out.title" data-i18n-aria-label="vs.zoom-out.aria-label" data-i18n="vs.zoom-out.text"></button><span id="zoom-level">100%</span><button id="zoom-in" data-i18n-title="vs.zoom-in.title" data-i18n-aria-label="vs.zoom-in.aria-label" data-i18n="vs.zoom-in.text"></button>
+<button id="zoom-fit" data-i18n="vs.zoom-fit.text"></button>
+<button data-mode="pan" aria-pressed="false" data-i18n-title="vs.mode.pan.title" data-i18n="vs.mode.pan.text"></button>
+<span class="hint" data-i18n="vs.zoom.hint"></span>
 </div>
-<div id="upload-empty"><p>把要討論的圖片放到這個畫布。可以選擇裝置上的檔案，手機也可以直接拍照。</p><button id="upload-big" class="primary">選擇圖片／拍照</button></div>
-<svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="可互動的雙向標註畫布">
+<div id="upload-empty"><p data-i18n="vs.uploadEmpty.text"></p><button id="upload-big" class="primary" data-i18n="vs.upload-big.text"></button></div>
+<svg id="surface" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" data-i18n-aria-label="vs.surface.aria-label">
 
 <g id="scene"></g><g id="processed"></g><g id="scene-objects"></g><g id="stored-annotations"></g><g id="unified-layers"></g><g id="fresh-annotations"></g><g id="link-annotations"></g><g id="evidence-box"></g><g id="gesture-outline"></g><g id="selection-outline"></g><g id="preview"></g>
 <rect id="hit" width="640" height="360" fill="transparent"/>
 </svg>
-<figure id="check-view" hidden><img id="check-img" alt="AI 畫完後的驗收圖"><figcaption id="check-caption"></figcaption></figure>
-<p id="caption">示範底圖 · 原始內容與 SVG 標註分開</p>
-<section id="text-editor" hidden aria-label="文字物件編輯器">
-<strong id="text-subject">文字</strong>
-<label>文字（最多 80 字元）<textarea id="text-content" maxlength="80" rows="3" aria-label="文字內容"></textarea></label>
-<label>字級<input id="text-size" type="number" min="6" max="64" value="20" aria-label="文字字級"></label>
-<label>顏色<input id="text-color" type="color" value="#579df6" aria-label="文字顏色"></label>
-<button id="text-save">儲存文字</button><button id="text-delete">刪除文字</button>
-<button id="text-undo">復原文字</button><button id="text-redo">重做文字</button><button id="text-refresh">重新讀取</button><button id="text-close">關閉</button>
-<p>點選或拖曳文字可編輯及移動；換行會保留。Ctrl／⌘ + Enter 儲存。</p>
+<figure id="check-view" hidden><img id="check-img" data-i18n-alt="vs.check-img.alt"><figcaption id="check-caption"></figcaption></figure>
+<p id="caption" data-i18n="vs.caption.text"></p>
+<section id="text-editor" hidden data-i18n-aria-label="vs.text-editor.aria-label">
+<strong id="text-subject" data-i18n="vs.text-subject.text"></strong>
+<label data-i18n="vs.textEditor.contentLabel"><textarea id="text-content" maxlength="80" rows="3" data-i18n-aria-label="vs.text-content.aria-label"></textarea></label>
+<label data-i18n="vs.textEditor.sizeLabel"><input id="text-size" type="number" min="6" max="64" value="20" data-i18n-aria-label="vs.text-size.aria-label"></label>
+<label data-i18n="vs.textEditor.colorLabel"><input id="text-color" type="color" value="#579df6" data-i18n-aria-label="vs.text-color.aria-label"></label>
+<button id="text-save" data-i18n="vs.text-save.text"></button><button id="text-delete" data-i18n="vs.text-delete.text"></button>
+<button id="text-undo" data-i18n="vs.text-undo.text"></button><button id="text-redo" data-i18n="vs.text-redo.text"></button><button id="text-refresh" data-i18n="vs.text-refresh.text"></button><button id="text-close" data-i18n="vs.text-close.text"></button>
+<p data-i18n="vs.textEditor.hint"></p>
 </section>
-<div id="selection" hidden role="group" aria-label="選取的標記"></div>
-<div id="layers" hidden role="group" aria-label="圖層：顯示、改名、排序、透明度、鎖定"></div>
-<div id="objects" hidden role="group" aria-label="模組建立的物件：可直接修改"></div>
-<ol id="links" aria-label="左右兩張圖的對應連結"></ol>
-<ol id="findings" aria-label="AI 對各標記的說明"></ol>
-<ol id="gestures" aria-label="可能屬於同一個手勢的筆畫"></ol>
-<details id="context-details"><summary>補充給 AI 的目的或問題（選填）</summary><section class="context-panel" aria-label="標註上下文">
-<label for="intent">這次標註的目的</label>
+<div id="selection" hidden role="group" data-i18n-aria-label="vs.selection.aria-label"></div>
+<div id="layers" hidden role="group" data-i18n-aria-label="vs.layers.aria-label"></div>
+<div id="objects" hidden role="group" data-i18n-aria-label="vs.objects.aria-label"></div>
+<ol id="links" data-i18n-aria-label="vs.links.aria-label"></ol>
+<ol id="findings" data-i18n-aria-label="vs.findings.aria-label"></ol>
+<ol id="gestures" data-i18n-aria-label="vs.gestures.aria-label"></ol>
+<details id="context-details"><summary data-i18n="vs.context.summary"></summary><section class="context-panel" data-i18n-aria-label="vs.context.aria-label">
+<label for="intent" data-i18n="vs.for.intent.text"></label>
 <select id="intent">
-<option value="">自由標註（預設：意思看我的補充說明）</option>
-<option value="point-out">只是指出「這裡」（箭頭尖端＝我指的東西）</option>
-<option value="ask-about-region">請解釋這個區域</option>
-<option value="answer-question">回答你剛剛問我的問題</option>
-<option value="correct-assistant">更正你之前指錯的位置</option>
-<option value="compare">比較我標記的東西</option>
-<option value="report-issue">指出這裡有問題</option>
+<option value="" data-i18n="vs.intent.free"></option>
+<option value="point-out" data-i18n="vs.value.point-out.text"></option>
+<option value="ask-about-region" data-i18n="vs.value.ask-about-region.text"></option>
+<option value="answer-question" data-i18n="vs.value.answer-question.text"></option>
+<option value="correct-assistant" data-i18n="vs.value.correct-assistant.text"></option>
+<option value="compare" data-i18n="vs.value.compare.text"></option>
+<option value="report-issue" data-i18n="vs.value.report-issue.text"></option>
 </select>
-<label for="note">補充一句話（選填，但建議寫）</label>
-<textarea id="note" maxlength="500" placeholder="例如：我指的是這棵樹，不是後面的山。或：我覺得水是往這個方向流的。"></textarea>
-<label for="quote">你在回覆的那句話（選填，手動貼上）</label>
-<input id="quote" maxlength="300" placeholder="例如：你剛剛問我哪一個元件發熱？">
-<p class="hint">Estampes 不會自動讀取聊天紀錄。送出後 AI 可呼叫 inspect_visual 取得原始圖片與局部裁切；模型是否真的看到圖片仍須確認。</p>
+<label for="note" data-i18n="vs.for.note.text"></label>
+<textarea id="note" maxlength="500" data-i18n-placeholder="vs.note.placeholder"></textarea>
+<label for="quote" data-i18n="vs.for.quote.text"></label>
+<input id="quote" maxlength="300" data-i18n-placeholder="vs.quote.placeholder">
+<p class="hint" data-i18n="vs.context.hint"></p>
 </section></details>
-<div class="actions"><span id="counter">我的標註：0</span>
-<button id="send" class="primary" disabled>把標註傳給 AI</button></div>
+<div class="actions"><span id="counter" data-i18n="vs.counter.text"></span>
+<button id="send" class="primary" disabled data-i18n="vs.send.text"></button></div>
 <div class="actions" id="extra-actions">
-<button id="upload" title="從裝置選一張圖片或用相機拍照，直接放到這個畫布；不經過聊天附件">選擇圖片／拍照</button>
+<button id="upload" data-i18n-title="vs.upload.title" data-i18n="vs.upload.text"></button>
 <input type="file" id="upload-file" accept="image/*" hidden>
-<button id="fullscreen">全螢幕</button>
-<button id="export-image" hidden title="校正方向後的圖，所有座標都以它為準">下載圖片</button>
-<button id="export-marks" hidden title="每個圖層各自一組，可在繪圖軟體裡開關；之後上傳回對話可還原標記與圖層">下載標記 SVG</button>
+<button id="fullscreen" data-i18n="vs.fullscreen.text"></button>
+<button id="export-image" hidden data-i18n-title="vs.export-image.title" data-i18n="vs.export-image.text"></button>
+<button id="export-marks" hidden data-i18n-title="vs.export-marks.title" data-i18n="vs.export-marks.text"></button>
 </div>
-<p id="status" role="status" aria-live="polite">正在連接對話…</p>
-<p id="offline-note" role="status" hidden>連不上伺服器：畫面是上次的內容，可能不是最新，新的標註也還沒存到伺服器。</p>
+<p id="status" role="status" aria-live="polite" data-i18n="vs.status.text"></p>
+<p id="offline-note" role="status" hidden data-i18n="vs.offline-note.text"></p>
 <div id="diag" hidden><pre id="diag-text"></pre></div>
 </main></template></div></div>
 <script type="module">

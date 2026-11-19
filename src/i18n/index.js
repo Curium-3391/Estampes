@@ -34,3 +34,25 @@ export function widgetI18nSource(locale = PINNED_LOCALE) {
   return "const { t, i18nLocale } = (() => {\n" + runtime +
     "\nconst i = createI18n(" + catalogs + ", " + JSON.stringify(locale) + ");\nreturn { t: i.t, i18nLocale: i.locale };\n})();";
 }
+
+// Static widget markup (docs/rfc/i18n §5). Markup outside <script>/<style>
+// names its text by key and the server fills it in when the widget is
+// served, so the page needs no script to show its chrome:
+//   <button data-i18n="k"></button>          leading text of the element
+//   <p data-i18n-html="k"></p>               trusted catalog HTML (our own catalog only)
+//   <input data-i18n-placeholder="k">        also title, aria-label, alt
+//   <html lang="__ESTAMPES_LANG__">          the locale's language tag
+// The markers stay in the output, so a later phase can re-apply another
+// locale in the browser.
+const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+const escHtml = (v) => String(v).replace(/[&<>"]/g, (c) => ESC[c]);
+const LANG_TAGS = { "zh-TW": "zh-Hant" };
+export const htmlLang = (locale = PINNED_LOCALE) => LANG_TAGS[locale] ?? locale;
+export function localizeHtml(html, locale = PINNED_LOCALE) {
+  const { t: tr } = i18nFor(locale);
+  return html.split(/(<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>)/i).map((part, i) => i % 2 ? part : part
+    .replace(/\bdata-i18n-(title|aria-label|placeholder|alt)="([^"]+)"/g, (m, attr, key) => attr + '="' + escHtml(tr(key)) + '" ' + m)
+    .replace(/<[a-zA-Z][^<>]*\bdata-i18n="([^"]+)"[^<>]*>/g, (tag, key) => tag + escHtml(tr(key)))
+    .replace(/<[a-zA-Z][^<>]*\bdata-i18n-html="([^"]+)"[^<>]*>/g, (tag, key) => tag + tr(key))
+    .replaceAll("__ESTAMPES_LANG__", htmlLang(locale))).join("");
+}

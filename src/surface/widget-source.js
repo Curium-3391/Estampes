@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { widgetI18nSource } from "../i18n/index.js";
+import { localizeHtml, widgetI18nSource } from "../i18n/index.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -24,7 +24,9 @@ export const documentStoreSource = () =>
     readFileSync(join(ROOT, "src", "surface", "document-store.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn { createDocumentStore, POLL_BATCH };\n})();";
 
-export const inlineWorkbench = (html) => html
+// Localize the static markup first, then inline the scripts: localizeHtml
+// never touches <script> content, and the inlined sources stay as they are.
+export const inlineWorkbench = (html) => localizeHtml(html)
   .replace("__ESTAMPES_WORKBENCH__", () => workbenchSource())
   .replace("__ESTAMPES_DOCSTORE__", () => documentStoreSource())
   .replace("__ESTAMPES_I18N__", () => widgetI18nSource());

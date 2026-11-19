@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import vm from "node:vm";
 import { createI18n, messageParams } from "../src/i18n/runtime.js";
-import { CATALOGS, PINNED_LOCALE, t, widgetI18nSource } from "../src/i18n/index.js";
+import { CATALOGS, PINNED_LOCALE, localizeHtml, t, widgetI18nSource } from "../src/i18n/index.js";
 import { inlineWorkbench } from "../src/surface/widget-source.js";
 
 const cats = {
@@ -63,4 +63,28 @@ test("widgets get the runtime and catalogs inlined, safe inside <script>", () =>
   const ctx = {};
   vm.runInNewContext(src + "\nthis.out = [t('store.subtitle', { version: '1.2.3' }), i18nLocale];", ctx);
   assert.deepEqual(JSON.parse(JSON.stringify(ctx.out)), ["模組商店 · 1.2.3", "zh-TW"]);
+});
+
+test("static markup is filled at serve time; scripts and styles are left alone", () => {
+  const src = '<html lang="__ESTAMPES_LANG__"><style>.a{content:"data-i18n=\\"x\\""}</style>' +
+    '<button data-i18n="calc.go" data-i18n-title="calc.stop.title"></button>' +
+    '<p data-i18n-html="vs.help.html"></p><label data-i18n="calc.defs.nameLabel"><input data-i18n-placeholder="calc.input.example"></label>' +
+    '<script>const s = \'<b data-i18n="calc.go"></b>\';</script>';
+  const out = localizeHtml(src);
+  assert.ok(out.startsWith('<html lang="zh-Hant">'));
+  assert.ok(out.includes('<button data-i18n="calc.go" title="停止這次計算" data-i18n-title="calc.stop.title">計算</button>'));
+  assert.ok(out.includes("<strong>金色＝AI</strong>"), "trusted catalog HTML is inserted as HTML");
+  assert.ok(out.includes('<label data-i18n="calc.defs.nameLabel">名稱<input placeholder="例如 " data-i18n-placeholder'), "leading text, then the existing children");
+  assert.ok(out.includes('<b data-i18n="calc.go"></b>'), "script content untouched");
+  assert.ok(out.includes('content:"data-i18n=\\"x\\""'), "style content untouched");
+  assert.equal(localizeHtml('<i data-i18n-title="x.y" title="a"></i>').includes('title="x.y"'), true, "a missing key shows the key");
+  assert.equal(localizeHtml('<i data-i18n="calc.chip.assumption"></i>'), '<i data-i18n="calc.chip.assumption">：</i>');
+});
+
+test("served widgets have no i18n placeholders left and every marker resolves", () => {
+  for (const f of ["visual-surface.html", "module-store.html"]) {
+    const html = inlineWorkbench(readFileSync(new URL("../public/" + f, import.meta.url), "utf8"));
+    assert.ok(!/__ESTAMPES_(I18N|LANG)__/.test(html), f);
+    for (const m of html.split("<script")[0].matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)) assert.ok(m[1] in CATALOGS["zh-TW"], f + ": " + m[1]);
+  }
 });
