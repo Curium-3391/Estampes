@@ -2538,6 +2538,8 @@ send.addEventListener("click",async()=>{
    status.textContent=t("vs.send.validating");
    const result=await request("tools/call",{
      name:"validate_visual_annotations",
+     // The server writes the sentence posted as the person in this language.
+     _meta:{"estampes/locale":i18nLocale()},
      arguments:{...(imageId?{imageId}:{scene:selectedScene}),...(pair?{pairImageId:pair.imageId}:{}),...(ws?{workspaceId:ws.id}:{}),annotations:marks,intent,note,replyQuote,hiddenLayers:[...hiddenLayers].map(serverLayer),
        gestureDecisions:gestureDecisions.filter(d=>d.memberIds.every(id=>marks.some(m=>m.id===id)))}
    });

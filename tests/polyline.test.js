@@ -34,7 +34,7 @@ test("user polylines become raster events GPT can follow", () => {
   assert.equal(event.annotations[0].type, "polyline");
   assert.deepEqual(event.annotations[0].geometry.points, trace);
   assert.equal(event.annotations[0].geometry.x2, 0.35);
-  assert.match(formatAnnotationChatMessage(event), /折線/);
+  assert.match(formatAnnotationChatMessage(event), /a polyline is a path the person drew or traced/);
 });
 
 test("smooth and closed flags survive for freehand curves and loops", () => {
@@ -60,8 +60,8 @@ test("submission separates the focus mark from earlier context marks", () => {
   });
   assert.deepEqual(event.annotations.map(m => m.role), ["context", "focus"]);
   const text = formatAnnotationChatMessage(event);
-  assert.match(text, /這次我問的是：YOU 2/);
-  assert.match(text, /YOU 1，role=context/);
+  assert.match(text, /This send is about: YOU 2 \(role=focus\)/);
+  assert.match(text, /Other marks \(YOU 1, role=context\)/);
   const allContext = buildAnnotationEvent({
     image: { imageId: "img:0123456789abcdef", width: 10, height: 10 },
     annotations: [{ id: "user-1", type: "point", x: 0.1, y: 0.1, role: "context" }],
@@ -92,5 +92,5 @@ test("pen style (colour, size, highlighter) is kept and validated", () => {
     annotations: [{ id: "user-1", type: "polyline", points: trace, color: "green", pen: "highlighter" }],
   });
   assert.equal(event.annotations[0].pen, "highlighter");
-  assert.match(formatAnnotationChatMessage(event), /螢光筆/);
+  assert.match(formatAnnotationChatMessage(event), /pen=highlighter is a translucent highlighter/);
 });

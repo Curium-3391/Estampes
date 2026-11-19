@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {PROTOCOL_VERSION,INTENTS,SCENE_META,buildAnnotationEvent,formatAnnotationChatMessage} from "../src/interaction-protocol.js";
+import {PROTOCOL_VERSION,INTENTS,SCENE_META,ASSISTANT_BLOCK_HEADER,annotationAssistantBlock,buildAnnotationEvent,formatAnnotationChatMessage} from "../src/interaction-protocol.js";
 
 const arrow={id:"user-5",type:"arrow",x:0.2045,y:0.5795,x2:0.7577,y2:0.5147,label:"YOU 1"};
 
@@ -29,8 +29,8 @@ test("v0.2 carries explicit user intent and optional quote without making up a m
   assert.equal(event.interaction.replyTo.provenance,"user-entered");
   assert.equal(event.interaction.replyTo.messageId,null);
   const message=formatAnnotationChatMessage(event);
-  assert.match(message,/我要更正你先前的指認/);
-  assert.match(message,/使用者親自輸入/);
+  assert.match(message,/^我在 Estampes 畫布上標了 1 個地方：我要更正你先前的指認。/);
+  assert.match(message,/were typed by the person/);
   assert.match(message,/semanticHint=unspecified/);
   assert.match(message,/svg-user-unit/);
   assert.match(message,/"schemaVersion":"0.2-draft"/);
@@ -42,7 +42,7 @@ test("without explicit context the message refuses to invent a prior question",(
   assert.equal(event.interaction.replyTo.quote,null);
   assert.equal(event.interaction.replyTo.provenance,"unavailable");
   assert.equal(event.interaction.userNote,null);
-  assert.match(formatAnnotationChatMessage(event),/不要捏造上一輪問題/);
+  assert.match(formatAnnotationChatMessage(event),/do not invent the previous question/);
 });
 
 test("invalid coordinates, unknown intent or duplicate IDs are rejected",()=>{
@@ -84,10 +84,10 @@ test("free annotation is the default and leaves arrow meaning unspecified",()=>{
   assert.equal(a.direction.heading,"left");
   assert.equal(a.direction.provenance,"computed-from-geometry");
   const message=formatAnnotationChatMessage(event);
-  assert.match(message,/由右往左/);
+  assert.match(message,/YOU 1: left \(\d+°\)/);
   assert.match(message,/semanticHint=unspecified/);
-  assert.match(message,/方向、流向/);
-  assert.doesNotMatch(message,/才是我指的對象/);
+  assert.match(message,/direction, flow, course or movement/);
+  assert.doesNotMatch(message,/each arrowhead \(x2,y2\) is the referent/);
   assert.match(message,/我覺得電流是往這個方向走的/);
 });
 
@@ -96,8 +96,8 @@ test("only an explicit point-out makes the arrowhead the target, and the note ca
   assert.equal(event.interaction.arrowMeaning,"arrowhead-is-target");
   assert.equal(event.annotations[0].semanticHint,"point-to-target");
   const message=formatAnnotationChatMessage(event);
-  assert.match(message,/箭頭尖端（x2,y2）是我指的對象/);
-  assert.match(message,/以我的文字為準/);
+  assert.match(message,/each arrowhead \(x2,y2\) is the referent/);
+  assert.match(message,/follow the note and tell the person the two disagree/);
   for(const intent of INTENTS.filter(i=>i!=="point-out")){
     const e=buildAnnotationEvent({image:photo,annotations:[leftArrow],intent});
     assert.equal(e.annotations[0].semanticHint,"unspecified",intent);
@@ -116,8 +116,8 @@ test("arrow direction uses image pixels, not stretched normalized units",()=>{
 
 test("without a note the message asks for several readings instead of assuming one",()=>{
   const message=formatAnnotationChatMessage(buildAnnotationEvent({image:photo,annotations:[leftArrow]}));
-  assert.match(message,/列出可能的解讀/);
-  assert.match(message,/只問一次/);
+  assert.match(message,/list the possible readings/);
+  assert.match(message,/ask at most once/);
 });
 
 test("per-mark notes survive both point and polyline submission events and chat",()=>{
@@ -128,4 +128,24 @@ test("per-mark notes survive both point and polyline submission events and chat"
   ]});
   for(const mark of event.annotations){assert.equal(mark.note,note);assert.equal(mark.author,"user");assert.equal(mark.grounding,"user-pointer");}
   const chat=formatAnnotationChatMessage(event);assert.ok(chat.includes(note));assert.ok(chat.includes(JSON.stringify(note)));
+});
+
+test("the message is the person's sentence in their language, then an English block that is the same in every language",()=>{
+  const event=buildAnnotationEvent({image:photo,annotations:[{...leftArrow,note:"這顆電容"}],intent:"ask-about-region",note:"這是什麼？",replyQuote:"上一張圖"});
+  const zh=formatAnnotationChatMessage(event,{locale:"zh-TW"}),en=formatAnnotationChatMessage(event,{locale:"en"});
+  const split=m=>{const i=m.indexOf("\n\n"+ASSISTANT_BLOCK_HEADER);assert.ok(i>0);return [m.slice(0,i),m.slice(i+2)];};
+  const [zhSentence,zhBlock]=split(zh),[enSentence,enBlock]=split(en);
+  assert.equal(zhSentence,"我在 Estampes 畫布上標了 1 個地方：請解釋我標記的區域。\nYOU 1：這顆電容\n補充：這是什麼？\n針對前文：上一張圖");
+  assert.equal(enSentence,"I marked 1 place on the Estampes canvas: please explain the area I marked.\nYOU 1: 這顆電容\nNote: 這是什麼？\nAbout this earlier message: 上一張圖");
+  assert.equal(zhBlock,enBlock);
+  assert.equal(zhBlock,annotationAssistantBlock(event));
+  // The block is the model contract: no localized text, only the person's own words inside the event JSON.
+  const outsideEvent=zhBlock.replace(JSON.stringify(event),"");
+  assert.doesNotMatch(outsideEvent,/[\u3000-\u9fff\uff00-\uffef]/);
+  assert.ok(zhBlock.includes(JSON.stringify(event)));
+  // Every intent has a sentence in both languages.
+  for(const intent of INTENTS)for(const locale of ["en","zh-TW"]){
+    const m=formatAnnotationChatMessage(buildAnnotationEvent({image:photo,annotations:[leftArrow],intent}),{locale});
+    assert.doesNotMatch(m.split("\n")[0],/msg\.intent\./,intent+" "+locale);
+  }
 });

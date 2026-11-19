@@ -57,7 +57,7 @@ test("gesture groups over MCP: candidate, user verdict stored, strokes untouched
     assert.equal(g.proposedMeaning, "direction-arrow");
     assert.equal(g.arrow.direction.heading, "left");
     assert.equal(g.confirmation, "unconfirmed");
-    assert.match(first.structuredContent.chatMessage, /YOU 1 \+ YOU 2 → 可能是一支方向箭頭（往左/);
+    assert.match(first.structuredContent.chatMessage, /YOU 1 \+ YOU 2 -> possibly a direction arrow \(left/);
 
     const review = await client.callTool({ name: "review_gesture_group", arguments: { imageId: id, memberIds: g.memberIds, verdict: "user-rejected" } });
     assert.notEqual(review.isError, true, review.content?.[0]?.text);

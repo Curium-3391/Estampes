@@ -3,23 +3,12 @@
 // content identity, crop transforms and a real raster pixel resolution.
 import { MARK_TYPES, polylineWithBounds, markStyle } from "./scene-catalog.js";
 import { gestureGroups } from "./gesture-groups.js";
+import { t } from "./i18n/index.js";
 export const PROTOCOL_VERSION = "0.2-draft";
 export const INTENTS = Object.freeze([
   "free-annotate", "point-out", "ask-about-region", "answer-question", "correct-assistant",
   "compare", "report-issue"
 ]);
-// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
-// splits it into a localized sentence plus an English structured block.
-export const INTENT_LABELS = Object.freeze({
-  "free-annotate": "自由標註（意思以我的補充說明和畫面為準）",
-  "point-out": "我想指出這個位置",
-  "ask-about-region": "請解釋我標記的區域",
-  "answer-question": "我正在回答你先前的問題",
-  "correct-assistant": "我要更正你先前的指認",
-  "compare": "請比較我標記的東西",
-  "report-issue": "我想指出這裡的問題",
-});
-// i18n-ignore-end
 export const SCENE_META = Object.freeze({
   landscape: Object.freeze({id:"demo:landscape",revision:"svg-v1",width:640,height:360}),
   shapes: Object.freeze({id:"demo:shapes",revision:"svg-v1",width:640,height:360}),
@@ -41,11 +30,6 @@ export const INTENT_ACTIONS = Object.freeze({
 export const ARROW_HINTS = Object.freeze(["unspecified", "point-to-target"]);
 export const arrowHintFor = (intent) => intent === "point-out" ? "point-to-target" : "unspecified";
 const HEADINGS = ["right", "up-right", "up", "up-left", "left", "down-left", "down", "down-right"];
-// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
-// splits it into a localized sentence plus an English structured block.
-const HEADINGS_ZH = { right: "由左往右", "up-right": "往右上", up: "由下往上", "up-left": "往左上",
-  left: "由右往左", "down-left": "往左下", down: "由上往下", "down-right": "往右下" };
-// i18n-ignore-end
 // Direction in image pixels (normalized coordinates stretch with the aspect
 // ratio). angleDeg: 0 = right, 90 = up, counter-clockwise.
 export function arrowDirection(g, width, height) {
@@ -165,94 +149,116 @@ export function buildAnnotationEvent({scene,image,pairImage,workspace,annotation
   };
 }
 
-// i18n-ignore-start: user-voice text sent to the AI (RFC class T2). Phase 3
-// splits it into a localized sentence plus an English structured block.
+// User-voice messages (RFC class T2). The chat shows the message as the
+// person's own words, so it opens with a short sentence in their language
+// (`locale`); the person's own text (notes, quote) is passed through as typed.
+// The block that follows is for the assistant: English and the same in every
+// language, so the model reads the same instructions and the same event
+// whatever language the person uses. Nothing in the block is translated.
+const MEANING_EN={"direction-arrow":"a direction arrow","connected-path":"a path drawn in pieces","unknown":"one gesture of unclear meaning"};
+const CONFIRM_EN={"unconfirmed":"inferred from geometry, not confirmed by the person","user-confirmed":"the person confirmed it is one gesture","user-rejected":"the person said these are not one gesture; read them separately"};
+export const ASSISTANT_BLOCK_HEADER="--- Estampes annotation, for the assistant ---";
+
 function arrowLines(event) {
   const arrows=event.annotations.filter(m=>m.type==="arrow"&&m.role!=="context");
   if(!arrows.length)return [];
-  const dir=arrows.map(m=>(m.label||m.id)+(m.direction?"："+(HEADINGS_ZH[m.direction.heading]||m.direction.heading)+"（"+m.direction.angleDeg+"°）":"")).join("、");
+  const dir=arrows.map(m=>(m.label||m.id)+(m.direction?": "+m.direction.heading+" ("+m.direction.angleDeg+"°)":"")).join("; ");
   if(event.interaction.intent==="point-out")return [
-    "箭頭："+dir+"。這次我選了「只是指出這裡」，所以箭頭尖端（x2,y2）是我指的對象，起點（x,y）表示從哪個方向指過去（semanticHint=point-to-target）。但如果我的補充說明表達了別的意思（例如方向、流向、移動），以我的文字為準，並告訴我兩者不一致。"
+    "Arrows: "+dir+". The person chose \"point out this position\", so each arrowhead (x2,y2) is the referent and the start (x,y) shows the direction it points from (semanticHint=point-to-target). If the person's note says something else (a direction, a flow, a movement), follow the note and tell the person the two disagree."
   ];
   return [
-    "箭頭："+dir+"。每支箭頭都保留起點（x,y）、尖端（x2,y2）與方向；semanticHint=unspecified，表示我沒有說它是「指向某個東西」還是「表示方向、流向、移動或關係」。",
-    "請依我的補充說明判斷：如果我說的是方向、流向、走向或移動，就把箭頭當成方向（起點到尖端），先討論這個方向的說法，尖端位置只用來判斷我大概在講哪一區；如果我問「指到的是什麼」，才以尖端位置為準。沒有文字又看不出來時，簡短列出可能的解讀，必要時只問一次，不要假設只有一種意思。",
+    "Arrows: "+dir+". Each keeps its start (x,y), tip (x2,y2) and direction; semanticHint=unspecified means the person did not say whether it points at something or shows a direction, flow, movement or relation.",
+    "Follow the person's note: if it talks about a direction, flow, course or movement, read the arrow as a direction (start to tip) and discuss that claim first, using the tip only to locate the area; only when the person asks what the arrow points at is the tip the referent. With no note and no clear reading, briefly list the possible readings and ask at most once; do not assume a single meaning.",
   ];
 }
 
-const MEANING_ZH={"direction-arrow":"一支方向箭頭","connected-path":"一條分段畫的連續路徑","unknown":"同一個手勢（意思不明）"};
-const CONFIRM_ZH={"unconfirmed":"系統依幾何推測，我沒有確認","user-confirmed":"我確認過是同一個手勢","user-rejected":"我說過它們不是同一個手勢，請分開看"};
 function gestureLines(event){
   const groups=event.gestureGroups??[];
   if(!groups.length)return [];
   const name=new Map(event.annotations.map(m=>[m.id,m.label||m.id]));
-  const HEAD={right:"往右",["up-right"]:"往右上",up:"往上",["up-left"]:"往左上",left:"往左",["down-left"]:"往左下",down:"往下",["down-right"]:"往右下"};
   return [
-    "下面幾筆可能屬於同一個手勢（gestureGroups）。每一筆仍是獨立的標註；分組只是候選，provenance=system-inferred 是 Estampes 依筆畫相接位置"+"與繪製時間推測的，不代表我的意思：",
-    ...groups.map(g=>"- "+g.id+"："+g.memberIds.map(id=>name.get(id)??id).join(" + ")+" → 可能是"+(MEANING_ZH[g.proposedMeaning]??g.proposedMeaning)+
-      (g.arrow?"（"+(HEAD[g.arrow.direction.heading]??g.arrow.direction.heading)+"，尖端約在 x="+g.arrow.tip.x+", y="+g.arrow.tip.y+"）":"")+
-      "；"+(CONFIRM_ZH[g.confirmation]??g.confirmation)+(g.evidence?.length?"；線索："+g.evidence.join("、"):"")+"。"),
-    "未確認的分組請當成可能性考慮，不要說成我確定的意思，也不要把每一筆都當成各自獨立的問題；只有在「是不是同一個手勢」會明顯改變答案時，才問我一次。",
+    "These strokes may belong to one gesture (gestureGroups). Each stroke is still its own annotation; a group is only a candidate, and provenance=system-inferred means Estampes inferred it from where the strokes meet and when they were drawn, not from what the person meant:",
+    ...groups.map(g=>"- "+g.id+": "+g.memberIds.map(id=>name.get(id)??id).join(" + ")+" -> possibly "+(MEANING_EN[g.proposedMeaning]??g.proposedMeaning)+
+      (g.arrow?" ("+g.arrow.direction.heading+", tip near x="+g.arrow.tip.x+", y="+g.arrow.tip.y+")":"")+
+      "; "+(CONFIRM_EN[g.confirmation]??g.confirmation)+(g.evidence?.length?"; cues: "+g.evidence.join(", "):"")+"."),
+    "Treat unconfirmed groups as possibilities: do not present them as what the person meant, and do not treat each stroke as a separate question. Ask once only when whether they are one gesture would clearly change the answer.",
   ];
 }
 
-export function formatAnnotationChatMessage(event) {
+const READ_GUIDE="Choose how to look by the question: for drawings, Graph or mixed canvases use render_canvas with the request in the event's canvasReads for that item or side (it carries expectedRevision and hiddenLayers); region can be the focus marks plus a margin. STALE_CANVAS means the canvas changed after this send: do not present the latest state as what the person saw. Use process_image only for small text and detail in photos (base image only, no strokes or objects); for formula questions read get_visual_state first. No fixed crop or filter is needed when the pixels already suffice.";
+const NO_RECOGNITION="Estampes provides pixels and coordinates only; it does not recognise objects. If you cannot see the returned image, say so instead of guessing from coordinates.";
+
+// The person's sentence, in their language. Only their own text and the
+// intent label appear; how to read the marks is in the assistant block.
+export function annotationSummary(event,locale){
+  const interaction=event.interaction;
+  const name=m=>m.label||m.id;
+  const focus=event.annotations.filter(m=>m.role!=="context");
+  const lines=[t("msg.annotate.summary",{count:focus.length,intent:t("msg.intent."+interaction.intent,undefined,locale)},locale)];
+  for(const m of focus)if(m.note)lines.push(t("msg.annotate.markNote",{name:name(m),note:m.note},locale));
+  if(interaction.userNote)lines.push(t("msg.annotate.note",{note:interaction.userNote},locale));
+  if(interaction.replyTo?.quote)lines.push(t("msg.annotate.quote",{quote:interaction.replyTo.quote},locale));
+  return lines.join("\n");
+}
+
+// The assistant block: English, locale-invariant.
+export function annotationAssistantBlock(event) {
   if(event?.schemaVersion!==PROTOCOL_VERSION)throw new Error("Unsupported protocol version");
   const interaction=event.interaction;
-  const lines=[
-    "我透過 Estampes 在同一張畫布上做了視覺指認。",
-    "這次的目的："+(INTENT_LABELS[interaction.intent]||"指出位置")+"。",
-    "希望你做的事："+interaction.requestedAssistantAction+"。",
-  ];
   const name=m=>m.label||m.id;
   const focus=event.annotations.filter(m=>m.role!=="context"),context=event.annotations.filter(m=>m.role==="context");
-  lines.push("這次我問的是："+focus.map(name).join("、")+"（role=focus）。"+
-    (context.length?"其他標記（"+context.map(name).join("、")+"，role=context）是之前畫的，只當背景，除非我提到否則不用分析。":""));
-  for(const m of focus)if(m.note)lines.push(name(m)+" 的備註（使用者親自輸入）："+m.note);
-  if(interaction.userNote)lines.push("我的補充說明（使用者親自輸入）："+interaction.userNote);
-  if(interaction.replyTo?.quote) {
-    lines.push("我提供的前文引述（使用者自行填寫，非外掛讀取的聊天紀錄）："+interaction.replyTo.quote);
-  }else{
-    lines.push("沒有附上前文的精確引述；請依你在目前對話中實際可見的脈絡理解，不要捏造上一輪問題。");
-  }
+  const lines=[
+    ASSISTANT_BLOCK_HEADER,
+    "The lines above are the person's own message, in their language. This block is the same in every language: read the marks from it.",
+    "The person made a visual annotation on a shared Estampes canvas. Intent: "+interaction.intent+". Requested action: "+interaction.requestedAssistantAction+".",
+    "This send is about: "+focus.map(name).join(", ")+" (role=focus)."+
+      (context.length?" Other marks ("+context.map(name).join(", ")+", role=context) were drawn earlier and are background only, unless the person mentions them.":""),
+    "Mark notes, the person's note (interaction.userNote) and the quote (interaction.replyTo.quote) were typed by the person. The quote is the person's own, not read from the chat history.",
+  ];
+  if(!interaction.replyTo?.quote)lines.push("No exact quote of an earlier turn was given: rely on what you can actually see in this conversation and do not invent the previous question.");
   lines.push(
-    "標註的 type 只描述我畫了什麼形狀，不代表我的意思；意思請綜合我的補充說明、這次的目的、畫面和對話判斷，不要讓形狀蓋過我寫的文字。",
+    "A mark's type only describes the shape that was drawn, not what it means. Combine the person's note, the intent, the image and the conversation; do not let the shape override what the person wrote.",
     ...arrowLines(event),
     ...gestureLines(event),
-    "點代表位置；框代表範圍；折線是我手繪或描的路徑（例如走線、圈選），依 points 順序連接（smooth=平滑曲線，closed=首尾相連的圈），x/y/x2/y2 是它的外框。pen=highlighter 是半透明螢光筆，代表「這一片區域」而不是精確的線；color 只是我選的顏色，不代表其他意思。",
+    "A point is a position; a box is an extent; a polyline is a path the person drew or traced (a route, a loop), joined in points order (smooth = curve, closed = loop), with x/y/x2/y2 as its bounding box. pen=highlighter is a translucent highlighter meaning \"this area\", not a precise line; color is only the colour the person picked.",
     ...(event.workspace?[
-      "底圖是一個工作區（workspaceId="+event.workspace.id+"），裡面有 "+event.workspace.items.length+" 張不同的圖片並排、不疊合："+
-        event.workspace.items.map(it=>it.id+" = imageId "+it.imageId+"（"+it.width+"×"+it.height+(it.label?"，"+it.label:"")+"）").join("；")+"。每個標註的 item 表示它在哪張圖上，座標以那張圖的左上角為原點正規化。",
-      "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
+      "The base is a workspace (workspaceId="+event.workspace.id+") of "+event.workspace.items.length+" separate images side by side, not overlaid: "+
+        event.workspace.items.map(it=>it.id+" = imageId "+it.imageId+" ("+it.width+"x"+it.height+(it.label?", "+it.label:"")+")").join("; ")+". Each mark's item names its image; coordinates are normalized to that image's top-left corner.",
+      "Estampes structured annotation event (schemaVersion=0.2-draft):",
       JSON.stringify(event),
-      "依問題選擇讀取方式：手繪、Graph 或混合畫布用 render_canvas，參數採事件 canvasReads 中對應 item／side 的 request（含 expectedRevision 與 hiddenLayers），region 可取整組 focus 加周圍留白。若回報 STALE_CANVAS，說明狀態已變更，不要把最新版當成送出時畫面。照片小字與細節才用 process_image（只有底圖，不含筆畫或物件）；公式問題可先讀 get_visual_state。已有足夠像素時不必固定裁切，也不必固定套濾鏡。",
-      "我的標記已存進這個工作區各自的圖片。回答後請用 present_visual（workspaceId="+event.workspace.id+"）的 findings（附 item）把 note 與 status 掛到我的標記 id 上，需要時用 links（fromItem/from、toItem/to）記錄不同圖上哪兩個標記是同一個東西，不要重畫我的標記。不要對我提工具名稱。",
-      "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
+      READ_GUIDE,
+      "The person's marks are stored on their images in this workspace. After answering, use present_visual (workspaceId="+event.workspace.id+") findings (with item) to attach note and status to the person's mark ids, and links (fromItem/from, toItem/to) when marks on different images are the same thing; do not redraw the person's marks. Do not mention tool names to the person.",
+      NO_RECOGNITION,
     ]:event.pair?[
-      "每個標記用它 side 對應的 imageId（left="+event.pair.left.id+"，right="+event.pair.right.id+"）。",
-      "底圖是左右對照畫布，兩張不同的畫布並排、不疊合：左圖 imageId="+event.pair.left.id+"（"+event.pair.left.width+"×"+event.pair.left.height+"），右圖 imageId="+event.pair.right.id+"（"+event.pair.right.width+"×"+event.pair.right.height+"）。每個標註的 side（left／right）表示它在哪張圖上，座標以那張圖的左上角為原點正規化。",
-      "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
+      "Each mark uses the imageId of its side (left="+event.pair.left.id+", right="+event.pair.right.id+").",
+      "The base is a side-by-side view of two separate canvases, not overlaid: left imageId="+event.pair.left.id+" ("+event.pair.left.width+"x"+event.pair.left.height+"), right imageId="+event.pair.right.id+" ("+event.pair.right.width+"x"+event.pair.right.height+"). Each mark's side (left or right) names its image; coordinates are normalized to that image's top-left corner.",
+      "Estampes structured annotation event (schemaVersion=0.2-draft):",
       JSON.stringify(event),
-      "依問題選擇讀取方式：手繪、Graph 或混合畫布用 render_canvas，參數採事件 canvasReads 中對應 item／side 的 request（含 expectedRevision 與 hiddenLayers），region 可取整組 focus 加周圍留白。若回報 STALE_CANVAS，說明狀態已變更，不要把最新版當成送出時畫面。照片小字與細節才用 process_image（只有底圖，不含筆畫或物件）；公式問題可先讀 get_visual_state。已有足夠像素時不必固定裁切，也不必固定套濾鏡。",
-      "我的標記已存進這組對照畫布。回答後請用 present_visual（imageId="+event.pair.left.id+"，pairImageId="+event.pair.right.id+"）的 findings 把 note 與 status 掛到我的標記 id 上，需要時用 links 記錄左右哪兩個標記是同一個東西，不要重畫我的標記。不要對我提工具名稱。",
-      "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
+      READ_GUIDE,
+      "The person's marks are stored in this pair. After answering, use present_visual (imageId="+event.pair.left.id+", pairImageId="+event.pair.right.id+") findings to attach note and status to the person's mark ids, and links when a left and a right mark are the same thing; do not redraw the person's marks. Do not mention tool names to the person.",
+      NO_RECOGNITION,
     ]:event.image.kind==="raster"?[
-      "這是可包含圖片、手繪與場景物件的畫布（imageId="+event.image.id+"，"+event.image.intrinsicSize.width+"×"+event.image.intrinsicSize.height+" 像素，已依 EXIF 轉正）。所有標註使用原圖左上角為原點的正規化座標。",
-      "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
+      "This canvas can hold an image, drawings and scene objects (imageId="+event.image.id+", "+event.image.intrinsicSize.width+"x"+event.image.intrinsicSize.height+" pixels, EXIF-rotated). All marks use coordinates normalized to the image's top-left corner.",
+      "Estampes structured annotation event (schemaVersion=0.2-draft):",
       JSON.stringify(event),
-      "依問題選擇讀取方式：手繪、Graph 或混合畫布用 render_canvas，參數採事件 canvasReads 中對應 item／side 的 request（含 expectedRevision 與 hiddenLayers），region 可取整組 focus 加周圍留白。若回報 STALE_CANVAS，說明狀態已變更，不要把最新版當成送出時畫面。照片小字與細節才用 process_image（只有底圖，不含筆畫或物件）；公式問題可先讀 get_visual_state。已有足夠像素時不必固定裁切，也不必固定套濾鏡。",
-      "我的標記已存進這張畫布（id 如上）。回答後請用 present_visual（imageId 同上）的 findings 把 note（例如讀到的型號）與 status 掛到我的標記 id 上，不要重畫我的標記。不要對我提工具名稱。",
-      "Estampes 只提供像素與座標，不會替你辨識物件。若你看不到回傳的圖片，請誠實告知，不要只靠座標猜測。",
+      READ_GUIDE,
+      "The person's marks are stored on this canvas (id above). After answering, use present_visual (same imageId) findings to attach a note (for example a part number you read) and status to the person's mark ids; do not redraw the person's marks. Do not mention tool names to the person.",
+      NO_RECOGNITION,
     ]:[
-      "底圖為內建 SVG 示範場景，尺寸是 SVG 座標單位而非照片像素解析度。所有標註使用原圖左上角為原點的正規化座標。",
-      "以下為 Estampes 的結構化標註事件（schemaVersion=0.2-draft）：",
+      "The base is a built-in SVG demo scene; sizes are SVG user units, not photo pixels. All marks use coordinates normalized to the top-left corner.",
+      "Estampes structured annotation event (schemaVersion=0.2-draft):",
       JSON.stringify(event),
-      "請先使用 Estampes 的 inspect_visual 工具檢視實際底圖與我標註的局部影像，再解釋我指的東西；參數：scene="+event.image.id.replace(/^demo:/,"")+", imageId="+event.image.id+", revision="+event.image.revision+"；focus 請使用各標註的 type 與 geometry.x/y/x2/y2，必要時每個標註分別呼叫一次。",
-      "Estampes 只提供像素、裁切與位置，不會替你辨識物件。若宿主無法將工具回傳的 image blocks 提供給視覺模型，請誠實告知，而不是只靠座標或場景名稱猜物件。",
-      "若使用者需要看圖或標註，請使用 present_visual 在同一張畫布切換標註／原圖／局部放大；不要再額外呼叫 present_visual_evidence（那是相容舊對話的獨立檢視器）。inspect_visual 只提供給模型像素，不開啟畫面。",
+      "First use Estampes inspect_visual to look at the base image and the marked areas before explaining what the person points at. Arguments: scene="+event.image.id.replace(/^demo:/,"")+", imageId="+event.image.id+", revision="+event.image.revision+"; focus from each mark's type and geometry.x/y/x2/y2, one call per mark when needed.",
+      "Estampes provides pixels, crops and positions only; it does not recognise objects. If the host cannot give the tool's image blocks to a vision model, say so instead of guessing from coordinates or the scene name.",
+      "If the person needs to see the image or marks, use present_visual on the same canvas to switch the annotated, original and zoom views; do not also call present_visual_evidence (a separate viewer kept for older chats). inspect_visual gives pixels to the model only and opens no view.",
     ]),
-    "請優先回應我所選的意圖與補充說明；若不能確認物件或對話所指，請指出不確定之處。"
+    "Answer the person's chosen intent and note first; if you cannot be sure of the object or of what the conversation refers to, say what is uncertain."
   );
   return lines.join("\n");
 }
-// i18n-ignore-end
+
+// The text posted as the person: their sentence, a blank line, the block.
+export function formatAnnotationChatMessage(event,{locale}={}) {
+  const block=annotationAssistantBlock(event);
+  return annotationSummary(event,locale)+"\n\n"+block;
+}

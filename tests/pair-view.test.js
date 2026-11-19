@@ -142,7 +142,7 @@ test("a user send on a paired view tells GPT which image each mark is on", async
   const json = JSON.parse(text.split("\n").find(l => l.startsWith("{")));
   assert.equal(json.annotations[1].side, "right");
   assert.ok(json.pair);
-  assert.match(text, /每個標記用它 side 對應的 imageId（left=img:aaaaaaaaaaaaaaaa，right=img:bbbbbbbbbbbbbbbb）/);
+  assert.match(text, /Each mark uses the imageId of its side \(left=img:aaaaaaaaaaaaaaaa, right=img:bbbbbbbbbbbbbbbb\)/);
   assert.match(text, /pairImageId=img:bbbbbbbbbbbbbbbb/);
   assert.doesNotMatch(text, /請先用 Estampes 的 process_image 檢視 focus 標記的位置：imageId=/);
 });
