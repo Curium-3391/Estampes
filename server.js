@@ -117,6 +117,10 @@ const LEGACY_VISUAL_URIS = ["v040","v041","v042","v043","v046","v047","v048","v0
 const LEGACY_EVIDENCE_URIS = ["v045","v047","v048","v050","v051","v052","v053","v054","v055","v056","v057","v058","v059","v060","v070","v071","v080","v090","v0100","v0101","v0110","v0120","v0130","v0140","v0150","v0160","v0170","v0180","v0190","v0191","v0192","v0193","v0194","v0195","v0196","v0197","v0198","v0200"]
   .map(tag => "ui://estampes/visual-evidence-" + tag + ".html")
   .filter(uri => uri !== EVIDENCE_URI);
+// Server icon (128px PNG). Advertised in serverInfo.icons as a data: URI so a host needs no
+// extra fetch or key, and also served at /icon.png and /favicon.ico for browsers and hosts that fetch.
+const ICON_PNG = readFileSync(join(ROOT, "public", "estampes-icon.png"));
+const SERVER_ICONS = [{ src: "data:image/png;base64," + ICON_PNG.toString("base64"), mimeType: "image/png", sizes: ["128x128"] }];
 const loadWidget = (file) =>
   inlineWorkbench(readFileSync(join(ROOT, "public", file), "utf8").replaceAll("__ESTAMPES_VERSION__", VERSION));
 const STORE_URI = "ui://estampes/module-store-" + URI_TAG + ".html";
@@ -738,7 +742,7 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
 // atomic). Module level on purpose: makeServer runs once per HTTP request, and the gate must be shared by all.
 const commandTurn = createCommandGate();
 function makeServer() {
-  const server = new McpServer({ name: "estampes", version: VERSION }, { instructions: SERVER_INSTRUCTIONS });
+  const server = new McpServer({ name: "estampes", title: "Estampes", version: VERSION, icons: SERVER_ICONS }, { instructions: SERVER_INSTRUCTIONS });
   // Every tool result goes through the host size cap (src/result-budget.js);
   // errors also say which tool replied (src/tool-guidance.js, #87).
   const register = server.registerTool.bind(server);
@@ -2957,6 +2961,12 @@ function rateLimited(req) {
 }
 const httpServer = createHttpServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
+
+  if ((url.pathname === "/icon.png" || url.pathname === "/favicon.ico") && req.method === "GET") {
+    res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff" });
+    res.end(ICON_PNG);
+    return;
+  }
 
   if (url.pathname === "/version" && req.method === "GET") {
     res.writeHead(200, {
