@@ -342,11 +342,11 @@
     },
     {
       "path": "public/number-line.html",
-      "sha256": "25c2236417cfa7ff37044c0ad47d596c81c39e05e8af06da82c255690b7d2026"
+      "sha256": "75a55af922736fae8e0d4d93776d3d25fdfecd5af25a55fbceed2cdcb4cc66cc"
     },
     {
       "path": "public/visual-evidence.html",
-      "sha256": "097d6a4a0d3bedbbae40106b3bd909c5e52ed21157afd326b035e0d5a999750d"
+      "sha256": "3574a7914592c186e04f92bcdc9e45f6d7be5e2acb731c97eb2a6d74cb08e88b"
     },
     {
       "path": "public/visual-surface.html",
@@ -536,6 +536,24 @@
         "src/surface/bundle-extras.js"
       ],
       "previousSha256": "f51c750ca9ba326e27458e76f56e2b1194bf0d91c1a66ae8add951392e2f754e"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d), including D9's phased string extraction, and started Phase 1 once UVA 4A was done (2026-11-19, \u300c4A\u5b8c\u6210\u300d)",
+      "reason": "i18n Phase 1-4b: the legacy number-line widget's text comes from the catalog (data-i18n markers and t()), lang from the served locale; the ui/message text sent as the user's words (class T2) is fenced for Phase 3; the zh-TW text shown is unchanged",
+      "files": [
+        "public/number-line.html"
+      ],
+      "previousSha256": "25c2236417cfa7ff37044c0ad47d596c81c39e05e8af06da82c255690b7d2026"
+    },
+    {
+      "date": "2026-11-19",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d), including D9's phased string extraction, and started Phase 1 once UVA 4A was done (2026-11-19, \u300c4A\u5b8c\u6210\u300d)",
+      "reason": "i18n Phase 1-4b: the legacy evidence viewer's text comes from the catalog (data-i18n markers and t()), lang from the served locale; the zh-TW text shown is unchanged",
+      "files": [
+        "public/visual-evidence.html"
+      ],
+      "previousSha256": "097d6a4a0d3bedbbae40106b3bd909c5e52ed21157afd326b035e0d5a999750d"
     }
   ]
 }

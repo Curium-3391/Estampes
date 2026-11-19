@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {Script} from "node:vm";
+import {t} from "../src/i18n/index.js";
 
 const html=readFileSync(new URL("../public/visual-evidence.html",import.meta.url),"utf8");
 const script=html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
@@ -28,8 +29,9 @@ test("evidence viewer actually renders the 3 PNG blocks for user",()=>{
 
 test("preview requires real png blocks and never claims to classify the subject",()=>{
  assert.match(script,/estampes\.visual_evidence_view/);
- assert.match(html,/原始完整圖片/);
- assert.match(html,/中性焦點全圖/);
- assert.match(html,/局部放大/);
+ assert.match(html,/data-i18n="ev\.view\.original"/);
+ assert.match(html,/data-i18n="ev\.view\.marked"/);
+ assert.match(html,/data-i18n="ev\.view\.crop"/);
+ assert.deepEqual(["original","marked","crop"].map(v=>t("ev.view."+v)),["原始完整圖片","中性焦點全圖","局部放大（無標記）"]);
  assert.doesNotMatch(script,/tree|house|mountain-right/);
 });
