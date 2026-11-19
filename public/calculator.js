@@ -64,9 +64,9 @@ function texToMathML(tex){
 }
 
 // ---------- scientific calculator panel ----------
-const OPS=[["evaluate","計算"],["simplify","化簡"],["expand","展開"],["factor","因式分解"],["differentiate","微分"],["integrate","積分"],["limit","極限"],["series","級數展開"],["solve","解方程式"],["solve_system","解方程組"],["nsolve","數值解"],["substitute","代入"],["matrix","矩陣"],["summation","求和"],["product","連乘"],["together","通分"],["apart","部分分式"],["cancel","約分"],["collect","依變數整理"],["trigsimp","三角化簡"]];
+const OPS=[["evaluate",t("calc.op.evaluate")],["simplify",t("calc.op.simplify")],["expand",t("calc.op.expand")],["factor",t("calc.op.factor")],["differentiate",t("calc.op.differentiate")],["integrate",t("calc.op.integrate")],["limit",t("calc.op.limit")],["series",t("calc.op.series")],["solve",t("calc.op.solve")],["solve_system",t("calc.op.solve_system")],["nsolve",t("calc.op.nsolve")],["substitute",t("calc.op.substitute")],["matrix",t("calc.op.matrix")],["summation",t("calc.op.summation")],["product",t("calc.op.product")],["together",t("calc.op.together")],["apart",t("calc.op.apart")],["cancel",t("calc.op.cancel")],["collect",t("calc.op.collect")],["trigsimp",t("calc.op.trigsimp")]];
 const OP_ZH=Object.fromEntries(OPS);
-const STATUS_ZH={exact:"精確",approximate:"近似",complex:"複數",conditional:"有條件",partial:"無封閉解",undefined:"未定義"};
+const STATUS_ZH={exact:t("calc.status.exact"),approximate:t("calc.status.approximate"),complex:t("calc.status.complex"),conditional:t("calc.status.conditional"),partial:t("calc.status.partial"),undefined:t("calc.status.undefined")};
 const PARAM_ROWS={differentiate:["variable","order"],integrate:["variable","lower","upper"],limit:["variable","point","direction"],series:["variable","point","n"],solve:["variable","domain"],solve_system:[],nsolve:["variable","guess"],
  substitute:["subs"],matrix:["mode","other"],summation:["variable","lower","upper"],product:["variable","lower","upper"],collect:["variable"],apart:["variable"]};
 const KEYS=[["π","pi"],["e","e"],["i","I"],["√","sqrt("],["^","^"],["( )","()"],["|x|","abs()"],["sin","sin("],["cos","cos("],["tan","tan("],["ln","ln("],["exp","exp("],["×","*"],["÷","/"],["∞","oo"],["!","!"]];
@@ -84,35 +84,35 @@ async function copyText(text){
 }
 function buildCalcUI(p){
  const st=calcState(p.panelId);
- const input=h("textarea",{class:"calc-input",rows:"2",maxlength:"4096",spellcheck:"false",autocomplete:"off",autocapitalize:"off",autocorrect:"off","aria-label":"算式",placeholder:"例如 sin(x^2)　或　x^2-4=0"});
- const op=h("select",{"aria-label":"運算"},OPS.map(([v,t])=>h("option",{value:v},t)));
- const mode=h("div",{class:"calc-mode",role:"group","aria-label":"輸入格式"},
-  h("button",{type:"button","data-m":"text","aria-pressed":"true"},"文字"),h("button",{type:"button","data-m":"latex","aria-pressed":"false",title:"直接貼上 LaTeX，例如 \\frac{1}{3}、\\sqrt{x}、x^{2}"},"LaTeX"));
+ const input=h("textarea",{class:"calc-input",rows:"2",maxlength:"4096",spellcheck:"false",autocomplete:"off",autocapitalize:"off",autocorrect:"off","aria-label":t("calc.input.label"),placeholder:t("calc.input.placeholder")});
+ const op=h("select",{"aria-label":t("calc.op.label")},OPS.map(([v,t])=>h("option",{value:v},t)));
+ const mode=h("div",{class:"calc-mode",role:"group","aria-label":t("calc.mode.label")},
+  h("button",{type:"button","data-m":"text","aria-pressed":"true"},t("calc.mode.text")),h("button",{type:"button","data-m":"latex","aria-pressed":"false",title:t("calc.mode.latexTitle",{a:"\\frac{1}{3}",b:"\\sqrt{x}",c:"x^{2}"})},"LaTeX"));
  const params=h("div",{class:"calc-params"});
- const angle=h("select",{"aria-label":"角度單位",title:"度：只有純數字的 sin/cos/tan 引數會當成度；sin(x) 不會被改寫"},h("option",{value:"rad"},"弧度"),h("option",{value:"deg"},"度"));
- const prec=h("input",{type:"number",min:"5",max:"100",value:"15","aria-label":"近似值位數",title:"近似值位數",style:"width:4.5em"});
- const go=h("button",{type:"button",class:"primary"},"計算");
- const stop=h("button",{type:"button",hidden:true,title:"停止這次計算","aria-label":"停止計算"},"停止");
- const hint=h("small",{class:"calc-hint"},"Enter 計算 · Shift+Enter 換行 · Ctrl/⌘+Enter 一律計算");
- const keysBtn=h("button",{type:"button","aria-expanded":"false",class:"wb-chip"},"符號鍵");
- const keys=h("div",{class:"calc-keys",hidden:true,role:"group","aria-label":"符號鍵（選用）"},KEYS.map(([label,ins])=>h("button",{type:"button",onpointerdown:e=>e.preventDefault(),onclick:()=>insertAtCaret(input,ins)},label)));
+ const angle=h("select",{"aria-label":t("calc.angle.label"),title:t("calc.angle.title")},h("option",{value:"rad"},t("calc.angle.rad")),h("option",{value:"deg"},t("calc.angle.deg")));
+ const prec=h("input",{type:"number",min:"5",max:"100",value:"15","aria-label":t("calc.prec.label"),title:t("calc.prec.label"),style:"width:4.5em"});
+ const go=h("button",{type:"button",class:"primary"},t("calc.go"));
+ const stop=h("button",{type:"button",hidden:true,title:t("calc.stop.title"),"aria-label":t("calc.stop.label")},t("calc.stop"));
+ const hint=h("small",{class:"calc-hint"},t("calc.hint"));
+ const keysBtn=h("button",{type:"button","aria-expanded":"false",class:"wb-chip"},t("calc.keys.button"));
+ const keys=h("div",{class:"calc-keys",hidden:true,role:"group","aria-label":t("calc.keys.label")},KEYS.map(([label,ins])=>h("button",{type:"button",onpointerdown:e=>e.preventDefault(),onclick:()=>insertAtCaret(input,ins)},label)));
  const msg=h("div",{class:"calc-msg",role:"status","aria-live":"polite"});
- const defsForm=h("details",{class:"calc-defs"},h("summary",null,"變數、函數與假設"),
-  h("div",{class:"calc-row"},h("input",{class:"d-name",maxlength:"24",placeholder:"名稱 f 或 a","aria-label":"名稱"}),h("input",{class:"d-params",maxlength:"60",placeholder:"參數 x,y（變數留空）","aria-label":"函數參數"}),h("input",{class:"d-body",maxlength:"200",placeholder:"內容 sin(x^2)+a","aria-label":"定義內容"}),h("button",{type:"button",class:"d-set"},"定義")),
-  h("div",{class:"calc-row"},h("input",{class:"a-name",maxlength:"24",placeholder:"符號 x","aria-label":"符號"}),h("select",{class:"a-flag","aria-label":"假設"},["","real","positive","negative","nonnegative","integer","rational","nonzero"].map(v=>h("option",{value:v},v||"（無假設）"))),h("button",{type:"button",class:"a-set"},"設定假設")),
+ const defsForm=h("details",{class:"calc-defs"},h("summary",null,t("calc.defs.summary")),
+  h("div",{class:"calc-row"},h("input",{class:"d-name",maxlength:"24",placeholder:t("calc.defs.namePlaceholder"),"aria-label":t("calc.defs.nameLabel")}),h("input",{class:"d-params",maxlength:"60",placeholder:t("calc.defs.paramsPlaceholder"),"aria-label":t("calc.defs.paramsLabel")}),h("input",{class:"d-body",maxlength:"200",placeholder:t("calc.defs.bodyPlaceholder"),"aria-label":t("calc.defs.bodyLabel")}),h("button",{type:"button",class:"d-set"},t("calc.defs.define"))),
+  h("div",{class:"calc-row"},h("input",{class:"a-name",maxlength:"24",placeholder:t("calc.assume.symbolPlaceholder"),"aria-label":t("calc.assume.symbolLabel")}),h("select",{class:"a-flag","aria-label":t("calc.assume.label")},["","real","positive","negative","nonnegative","integer","rational","nonzero"].map(v=>h("option",{value:v},v||t("calc.assume.none")))),h("button",{type:"button",class:"a-set"},t("calc.assume.set"))),
   h("div",{class:"calc-chips"}));
- const range=h("details",{class:"calc-range"},h("summary",null,"畫圖範圍"),h("div",{class:"calc-row"},"x ",h("input",{type:"number",class:"x0",value:"-10",step:"any","aria-label":"x 最小"}),"到",h("input",{type:"number",class:"x1",value:"10",step:"any","aria-label":"x 最大"})));
+ const range=h("details",{class:"calc-range"},h("summary",null,t("calc.range.summary")),h("div",{class:"calc-row"},"x ",h("input",{type:"number",class:"x0",value:"-10",step:"any","aria-label":t("calc.range.xmin")}),t("calc.range.to"),h("input",{type:"number",class:"x1",value:"10",step:"any","aria-label":t("calc.range.xmax")})));
  const auto=h("input",{type:"checkbox",class:"calc-auto"});
- const refreshBtn=h("button",{type:"button",hidden:true,title:"重算過期的格子並重畫連到它們的圖形"},"更新所有連結");
- const syncRow=h("div",{class:"calc-row calc-sync"},h("label",{title:"改了變數、函數或假設時，自動重算並重畫連結的 Graph 圖形"},auto," 自動更新 Graph"),refreshBtn);
- const list=h("div",{class:"calc-cells","aria-label":"計算紀錄"});
+ const refreshBtn=h("button",{type:"button",hidden:true,title:t("calc.sync.refreshTitle")},t("calc.sync.refreshAll"));
+ const syncRow=h("div",{class:"calc-row calc-sync"},h("label",{title:t("calc.sync.autoTitle")},auto,t("calc.sync.auto")),refreshBtn);
+ const list=h("div",{class:"calc-cells","aria-label":t("calc.cells.label")});
  const root=h("div",{class:"calc"},
   h("div",{class:"calc-row"},mode,op),input,params,
-  h("div",{class:"calc-row calc-go"},go,stop,angle,h("label",{class:"calc-prec"},"位數 ",prec),keysBtn),keys,hint,msg,defsForm,range,syncRow,list);
+  h("div",{class:"calc-row calc-go"},go,stop,angle,h("label",{class:"calc-prec"},t("calc.prec.digits"),prec),keysBtn),keys,hint,msg,defsForm,range,syncRow,list);
  const ui={root,input,op,mode,params,angle,prec,go,stop,auto,refreshBtn,keys,keysBtn,msg,list,defsForm,range};
  st.ui=ui;
  mode.addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;st.mode=b.dataset.m;for(const x of mode.children)x.setAttribute("aria-pressed",String(x===b));
-  input.placeholder=st.mode==="latex"?"例如 \\frac{x^{2}+1}{\\sqrt{x}}":"例如 sin(x^2)　或　x^2-4=0";});
+  input.placeholder=st.mode==="latex"?t("calc.input.example",{example:"\\frac{x^{2}+1}{\\sqrt{x}}"}):t("calc.input.placeholder");});
  op.addEventListener("change",()=>{st.op=op.value;buildParams(ui,st);});
  buildParams(ui,st);
  // Enter calculates a one-line expression; Shift+Enter is a newline; IME
@@ -140,32 +140,32 @@ function buildParams(ui,st){
  const want=PARAM_ROWS[st.op]??[];ui.params.replaceChildren();ui.fields={};
  const field=(name,label,el)=>{ui.fields[name]=el;ui.params.append(h("label",null,label,el));};
  const txt=(ph,w)=>h("input",{type:"text",maxlength:"256",placeholder:ph,style:w?"width:"+w:"",autocomplete:"off",spellcheck:"false"});
- if(st.op==="solve_system")ui.params.append(h("small",{class:"calc-hint"},"每行一個方程式，例如 x+y=3"));
- if(want.includes("variable"))field("variable","變數 ",txt("x","4.5em"));
- if(want.includes("order"))field("order","次數 ",h("input",{type:"number",min:"1",max:"10",value:"1",style:"width:4em"}));
- if(want.includes("lower"))field("lower","下限 ",txt("0（不填＝不定積分）","9em"));
- if(want.includes("upper"))field("upper","上限 ",txt("1","7em"));
- if(want.includes("point"))field("point","在 ",txt("0","6em"));
- if(want.includes("direction"))field("direction","方向 ",h("select",null,h("option",{value:"+-"},"雙邊"),h("option",{value:"+"},"右極限"),h("option",{value:"-"},"左極限")));
- if(want.includes("n"))field("n","項數 ",h("input",{type:"number",min:"1",max:"30",value:"6",style:"width:4em"}));
- if(want.includes("guess"))field("guess","起始猜測 ",txt("1","6em"));
- if(want.includes("domain"))field("domain","範圍 ",h("select",null,h("option",{value:"complex"},"複數"),h("option",{value:"real"},"實數")));
- if(want.includes("subs"))field("subs","代入 ",txt("x=3, y=2","12em"));
- if(want.includes("mode"))field("mode","矩陣運算 ",h("select",null,[["determinant","行列式"],["inverse","反矩陣"],["transpose","轉置"],["rank","秩"],["rref","列簡化"],["trace","跡"],["eigenvalues","特徵值"],["add","加"],["multiply","乘"]].map(([v,t])=>h("option",{value:v},t))));
- if(want.includes("other"))field("other","第二個矩陣 ",txt("[[1,0],[0,1]]（加／乘才需要）","14em"));
- ui.input.placeholder=st.op==="solve_system"?"x+y=3\nx-y=1":(st.mode==="latex"?"例如 \\frac{x^{2}+1}{\\sqrt{x}}":"例如 sin(x^2)　或　x^2-4=0");
+ if(st.op==="solve_system")ui.params.append(h("small",{class:"calc-hint"},t("calc.params.systemHint")));
+ if(want.includes("variable"))field("variable",t("calc.param.variable"),txt("x","4.5em"));
+ if(want.includes("order"))field("order",t("calc.param.order"),h("input",{type:"number",min:"1",max:"10",value:"1",style:"width:4em"}));
+ if(want.includes("lower"))field("lower",t("calc.param.lower"),txt(t("calc.param.lowerPlaceholder"),"9em"));
+ if(want.includes("upper"))field("upper",t("calc.param.upper"),txt("1","7em"));
+ if(want.includes("point"))field("point",t("calc.param.point"),txt("0","6em"));
+ if(want.includes("direction"))field("direction",t("calc.param.direction"),h("select",null,h("option",{value:"+-"},t("calc.direction.both")),h("option",{value:"+"},t("calc.direction.right")),h("option",{value:"-"},t("calc.direction.left"))));
+ if(want.includes("n"))field("n",t("calc.param.n"),h("input",{type:"number",min:"1",max:"30",value:"6",style:"width:4em"}));
+ if(want.includes("guess"))field("guess",t("calc.param.guess"),txt("1","6em"));
+ if(want.includes("domain"))field("domain",t("calc.param.domain"),h("select",null,h("option",{value:"complex"},t("calc.domain.complex")),h("option",{value:"real"},t("calc.domain.real"))));
+ if(want.includes("subs"))field("subs",t("calc.param.subs"),txt("x=3, y=2","12em"));
+ if(want.includes("mode"))field("mode",t("calc.param.mode"),h("select",null,[["determinant",t("calc.matrix.determinant")],["inverse",t("calc.matrix.inverse")],["transpose",t("calc.matrix.transpose")],["rank",t("calc.matrix.rank")],["rref",t("calc.matrix.rref")],["trace",t("calc.matrix.trace")],["eigenvalues",t("calc.matrix.eigenvalues")],["add",t("calc.matrix.add")],["multiply",t("calc.matrix.multiply")]].map(([v,t])=>h("option",{value:v},t))));
+ if(want.includes("other"))field("other",t("calc.param.other"),txt(t("calc.param.otherPlaceholder"),"14em"));
+ ui.input.placeholder=st.op==="solve_system"?"x+y=3\nx-y=1":(st.mode==="latex"?t("calc.input.example",{example:"\\frac{x^{2}+1}{\\sqrt{x}}"}):t("calc.input.placeholder"));
 }
 function calcParams(ui,st){
  const text=ui.input.value.trim(),p={operation:st.op,angle:ui.angle.value,precision:Math.max(5,Math.min(100,Math.round(Number(ui.prec.value))||15))};
- if(st.op==="solve_system"){p.equations=text.split(/\n|;/).map(s=>s.trim()).filter(Boolean).slice(0,8);if(!p.equations.length)throw Error("請輸入方程式，每行一個");}
- else{if(!text)throw Error("請先輸入算式");p[st.mode==="latex"?"latex":"text"]=text;}
+ if(st.op==="solve_system"){p.equations=text.split(/\n|;/).map(s=>s.trim()).filter(Boolean).slice(0,8);if(!p.equations.length)throw Error(t("calc.err.noEquations"));}
+ else{if(!text)throw Error(t("calc.err.noInput"));p[st.mode==="latex"?"latex":"text"]=text;}
  for(const [k,el] of Object.entries(ui.fields??{})){
   const v=el.value.trim();if(!v)continue;
   if(k==="order"||k==="n")p[k]=Number(v);
-  else if(k==="subs"){p.subs=v.split(/[,;]/).map(s=>s.trim()).filter(Boolean).map(s=>{const m=/^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.+)$/.exec(s);if(!m)throw Error("代入請寫成 x=3, y=2");return{name:m[1],value:m[2]};}).slice(0,8);}
+  else if(k==="subs"){p.subs=v.split(/[,;]/).map(s=>s.trim()).filter(Boolean).map(s=>{const m=/^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.+)$/.exec(s);if(!m)throw Error(t("calc.err.subsFormat"));return{name:m[1],value:m[2]};}).slice(0,8);}
   else p[k]=v;
  }
- if(st.op==="nsolve"&&!p.guess)throw Error("數值解需要起始猜測");
+ if(st.op==="nsolve"&&!p.guess)throw Error(t("calc.err.nsolveGuess"));
  return p;
 }
 async function runCalc(id){
@@ -174,43 +174,43 @@ async function runCalc(id){
  let params;try{params=calcParams(ui,st);}catch(err){setMsg(st,String(err.message),"error");return;}
  params.notebook=p.notebook;if(st.editing)params.cell=st.editing;
  params.job=newJob(st);
- st.busy=true;ui.go.disabled=true;ui.stop.hidden=false;ui.root.setAttribute("aria-busy","true");setMsg(st,"SymPy 計算中…","");
+ st.busy=true;ui.go.disabled=true;ui.stop.hidden=false;ui.root.setAttribute("aria-busy","true");setMsg(st,t("calc.msg.computing"),"");
  try{
   const r=await wbCall("surface_cas",{...(imageId?{imageId}:ws?{imageId:ws.items[0].imageId}:{}),capability:"calculate",params});
   const cell=r.data?.cell;
   if(cell?.state==="error")setMsg(st,ERR_ZH(cell.error),"error");
   else{setMsg(st,"","");st.editing=null;ui.input.value="";applyRefresh(st,r);}
   await wbRefresh();
- }catch(err){if(st.cancelled)setMsg(st,"已停止，沒有留下任何結果。","");else setMsg(st,String(err.message||err),"error");}
+ }catch(err){if(st.cancelled)setMsg(st,t("calc.msg.stoppedNoResult"),"");else setMsg(st,String(err.message||err),"error");}
  finally{st.busy=false;st.job=null;st.cancelled=false;ui.go.disabled=false;ui.stop.hidden=true;ui.root.removeAttribute("aria-busy");ui.input.focus();}
 }
 // A calculation carries an id so the Stop button can end it in the service.
 const newJob=st=>{st.job=uuid().replace(/[^0-9a-f]/g,"").padEnd(16,"0").slice(0,16);return st.job;};
 async function stopCalc(id){
  const st=calcState(id);if(!st.job)return;
- st.cancelled=true;setMsg(st,"正在停止…","");
+ st.cancelled=true;setMsg(st,t("calc.msg.stopping"),"");
  try{await wbCall("surface_cas_cancel",{job:st.job});}catch(err){st.cancelled=false;setMsg(st,String(err.message||err),"error");}
 }
 // Results of a calculation that also redrew linked plots.
 function applyRefresh(st,r){
  if(Array.isArray(r.objects)){setObjects(r.objects);render();}
  const f=r.refresh;if(!f)return;
- if(f.failed.length)setMsg(st,"已更新 "+f.updated.length+" 個圖形；"+f.failed.length+" 個沒有更新（"+f.failed[0].reason+"）","error");
- else if(f.updated.length)setMsg(st,"已重算並更新 "+f.updated.length+" 個 Graph 圖形。","");
+ if(f.failed.length)setMsg(st,t("calc.msg.refreshPartial",{updated:f.updated.length,failed:f.failed.length,reason:f.failed[0].reason}),"error");
+ else if(f.updated.length)setMsg(st,t("calc.msg.refreshed",{count:f.updated.length}),"");
 }
 async function setAuto(id,on){
  const p=wb.surface.panels.find(x=>x.panelId===id),st=calcState(id);
- try{await wbCall("surface_cas",{capability:"set_options",params:{notebook:p.notebook,autoRefresh:on}});await wbRefresh();setMsg(st,on?"之後改定義時會自動更新連結的圖形。":"改為手動更新連結。","");}
+ try{await wbCall("surface_cas",{capability:"set_options",params:{notebook:p.notebook,autoRefresh:on}});await wbRefresh();setMsg(st,on?t("calc.msg.autoOn"):t("calc.msg.autoOff"),"");}
  catch(err){setMsg(st,String(err.message||err),"error");await wbRefresh();}
 }
 async function refreshLinks(id){
  const p=wb.surface.panels.find(x=>x.panelId===id),st=calcState(id);if(st.busy||!imageId)return;
- st.busy=true;renderCalc(p);setMsg(st,"正在更新連結…","");
- try{const r=await wbCall("surface_cas",{imageId,capability:"refresh_links",params:{notebook:p.notebook}});applyRefresh(st,r);if(!r.refresh?.updated.length&&!r.refresh?.failed.length)setMsg(st,"連結都是最新的。","");await wbRefresh();}
+ st.busy=true;renderCalc(p);setMsg(st,t("calc.msg.refreshing"),"");
+ try{const r=await wbCall("surface_cas",{imageId,capability:"refresh_links",params:{notebook:p.notebook}});applyRefresh(st,r);if(!r.refresh?.updated.length&&!r.refresh?.failed.length)setMsg(st,t("calc.msg.upToDate"),"");await wbRefresh();}
  catch(err){setMsg(st,String(err.message||err),"error");}
  finally{st.busy=false;renderCalc(p);}
 }
-const ERR_ZH=e=>({syntax:"算式看不懂：",unsupported:"目前不支援：",domain:"數學上不成立：",timeout:"算太久，已停止：",resource_limit:"超過限制：",worker_unavailable:"計算服務沒有啟動：",cancelled:"已取消：",internal:"計算引擎發生錯誤："}[e?.code]??"")+(e?.message??"");
+const ERR_ZH=e=>({syntax:t("calc.err.code.syntax"),unsupported:t("calc.err.code.unsupported"),domain:t("calc.err.code.domain"),timeout:t("calc.err.code.timeout"),resource_limit:t("calc.err.code.resource_limit"),worker_unavailable:t("calc.err.code.worker_unavailable"),cancelled:t("calc.err.code.cancelled"),internal:t("calc.err.code.internal")}[e?.code]??"")+(e?.message??"");
 async function runDefine(id,d){
  const p=wb.surface.panels.find(x=>x.panelId===id),st=calcState(id);
  try{
@@ -218,7 +218,7 @@ async function runDefine(id,d){
   if(d.assumptions)params.assumptions=d.assumptions;
   else if(d.body){params.text=d.body;params.params=d.params?d.params.split(",").map(s=>s.trim()).filter(Boolean):[];}
   const r=await wbCall("surface_cas",{...(imageId?{imageId}:{}),capability:"define",params});
-  setMsg(st,"已更新 "+d.name+"；用到它的舊結果已標示為過期，可按「重算」。","");applyRefresh(st,r);await wbRefresh();
+  setMsg(st,t("calc.msg.defined",{name:d.name}),"");applyRefresh(st,r);await wbRefresh();
  }catch(err){setMsg(st,String(err.message||err),"error");}
 }
 function setMsg(st,text,kind){st.message=text;st.messageKind=kind;if(st.ui){st.ui.msg.textContent=text;st.ui.msg.dataset.kind=kind;}}
@@ -232,24 +232,24 @@ function renderCalc(p){
  ui.go.disabled=disabled||st.busy;
  ui.auto.checked=!!nb?.autoRefresh;ui.auto.disabled=disabled||st.busy;
  const staleLinks=(nb?.cells??[]).filter(c=>(c.links??[]).some(l=>l.status!=="fresh"&&l.status!=="removed")).length;
- ui.refreshBtn.hidden=!imageId||!staleLinks;ui.refreshBtn.disabled=disabled||st.busy;ui.refreshBtn.textContent="更新所有連結（"+staleLinks+"）";
- if(disabled)setMsg(st,"「科學計算機」模組已停用：舊結果仍可閱讀；請到 Store 重新啟用後再計算。","error");
+ ui.refreshBtn.hidden=!imageId||!staleLinks;ui.refreshBtn.disabled=disabled||st.busy;ui.refreshBtn.textContent=t("calc.sync.refreshAllCount",{count:staleLinks});
+ if(disabled)setMsg(st,t("calc.msg.moduleDisabled"),"error");
  else if(st.message==="" )ui.msg.textContent="";
  // definitions
  const chips=ui.defsForm.querySelector(".calc-chips");chips.replaceChildren();
- for(const d of nb?.definitions??[])chips.append(h("span",{class:"calc-chip"},d.name+(d.params.length?"("+d.params.join(",")+")":"")+" = "+d.text,h("button",{type:"button","aria-label":"移除 "+d.name,title:"移除",disabled,onclick:()=>runDefine(p.panelId,{name:d.name})},"×")));
- for(const [name,flags] of Object.entries(nb?.assumptions??{}))chips.append(h("span",{class:"calc-chip"},name+"："+flags.join(", "),h("button",{type:"button","aria-label":"移除 "+name+" 的假設",disabled,onclick:()=>runDefine(p.panelId,{name,assumptions:[]})},"×")));
+ for(const d of nb?.definitions??[])chips.append(h("span",{class:"calc-chip"},d.name+(d.params.length?"("+d.params.join(",")+")":"")+" = "+d.text,h("button",{type:"button","aria-label":t("calc.chip.removeNamed",{name:d.name}),title:t("calc.chip.remove"),disabled,onclick:()=>runDefine(p.panelId,{name:d.name})},"×")));
+ for(const [name,flags] of Object.entries(nb?.assumptions??{}))chips.append(h("span",{class:"calc-chip"},t("calc.chip.assumption",{name,flags:flags.join(", ")}),h("button",{type:"button","aria-label":t("calc.chip.removeAssumption",{name}),disabled,onclick:()=>runDefine(p.panelId,{name,assumptions:[]})},"×")));
  // cells, newest first
  ui.list.replaceChildren();
  const cells=[...(nb?.cells??[])].reverse();
- if(!cells.length)ui.list.append(h("p",{class:"calc-empty"},"還沒有計算。輸入算式後按「計算」；結果由 SymPy 算出，可以直接畫到 Graph。"));
+ if(!cells.length)ui.list.append(h("p",{class:"calc-empty"},t("calc.cells.empty")));
  for(const c of cells)ui.list.append(cellView(p,c,nb,disabled));
 }
 function cellView(p,c,nb,disabled){
  const st=calcState(p.panelId),r=c.result,src=c.input.text??c.input.latex??(c.input.equations??[]).join("; ");
  const art=h("article",{class:"cell","data-state":c.state});
  art.append(h("div",{class:"cell-in"},h("code",null,src.length>160?src.slice(0,160)+"…":src),h("span",{class:"calc-chip"},OP_ZH[c.operation]??c.operation),
-  c.state==="stale"?h("span",{class:"calc-chip warn",title:c.staleReason??""},"已過期"):null,
+  c.state==="stale"?h("span",{class:"calc-chip warn",title:c.staleReason??""},t("calc.cell.stale")):null,
   r&&c.state!=="error"?h("span",{class:"calc-chip st-"+r.status},STATUS_ZH[r.status]??r.status):null));
  if(c.state==="error"){art.append(h("p",{class:"cell-err",role:"alert"},ERR_ZH(c.error)));}
  else if(r){
@@ -257,26 +257,26 @@ function cellView(p,c,nb,disabled){
   art.append(mathBox,h("div",{class:"cell-plain"},h("code",null,r.plain)));
   if(r.approx)art.append(h("div",{class:"cell-approx"},"≈ ",h("code",null,r.approx.length>120?r.approx.slice(0,120)+"…":r.approx)));
   for(const w of r.warnings??[])art.append(h("p",{class:"cell-warn"},"⚠ "+w));
-  if(c.state==="stale")art.append(h("p",{class:"cell-warn"},"⚠ 這個結果和目前的定義不一致（"+(c.staleReason??"上游已變更")+"）。按「重算」更新。"));
+  if(c.state==="stale")art.append(h("p",{class:"cell-warn"},t("calc.cell.staleWarn",{reason:c.staleReason??t("calc.cell.upstreamChanged")})));
  }
  const here=(c.links??[]).filter(l=>l.canvas===imageId||ws?.items.some(i=>i.imageId===l.canvas));
- if(here.length)art.append(h("p",{class:"cell-link"},here.map(l=>"Graph 物件 "+l.object+"："+(l.status==="fresh"?"同步":l.status==="stale"?"已過期":l.status==="removed"?"圖形已刪除":l.status)).join("　")));
+ if(here.length)art.append(h("p",{class:"cell-link"},here.map(l=>t("calc.link.line",{object:l.object,status:l.status==="fresh"?t("calc.link.fresh"):l.status==="stale"?t("calc.link.stale"):l.status==="removed"?t("calc.link.removed"):l.status})).join(t("calc.link.sep"))));
  const plottable=r&&["exact","approximate"].includes(r.status)&&c.state==="fresh";
  const linkHere=here.find(l=>l.status!=="removed");
  const acts=h("div",{class:"cell-acts"},
-  h("button",{type:"button",class:"primary",disabled:disabled||!plottable||(!imageId&&!ws),title:plottable?"把這個結果畫成可編輯的函數圖":"只有精確或近似的實數單變數結果能畫圖；過期的結果要先重算",onclick:()=>plotCell(p,c,linkHere)},linkHere?"更新 Graph 圖形":"畫在 Graph"),
-  c.state==="stale"||c.state==="error"?h("button",{type:"button",disabled,onclick:()=>recompute(p,c)},"重算"):null,
-  h("button",{type:"button",onclick:()=>{st.editing=c.cellId;st.ui.input.value=src;st.ui.input.focus();setMsg(st,"正在修改這一格；按「計算」會覆蓋它的結果。","");}},"修改"),
-  r?h("button",{type:"button",onclick:async()=>setMsg(st,(await copyText(r.latex))?"已複製 LaTeX":"無法複製；請手動選取 LaTeX",""),title:r.latex},"複製 LaTeX"):null,
-  r?h("button",{type:"button",onclick:async()=>setMsg(st,(await copyText(r.plain))?"已複製文字":"無法複製",""),},"複製文字"):null);
+  h("button",{type:"button",class:"primary",disabled:disabled||!plottable||(!imageId&&!ws),title:plottable?t("calc.plot.title"):t("calc.plot.unplottable"),onclick:()=>plotCell(p,c,linkHere)},linkHere?t("calc.plot.update"):t("calc.plot.draw")),
+  c.state==="stale"||c.state==="error"?h("button",{type:"button",disabled,onclick:()=>recompute(p,c)},t("calc.cell.recompute")):null,
+  h("button",{type:"button",onclick:()=>{st.editing=c.cellId;st.ui.input.value=src;st.ui.input.focus();setMsg(st,t("calc.msg.editing"),"");}},t("calc.cell.edit")),
+  r?h("button",{type:"button",onclick:async()=>setMsg(st,(await copyText(r.latex))?t("calc.copy.latexDone"):t("calc.copy.latexFailed"),""),title:r.latex},t("calc.copy.latex")):null,
+  r?h("button",{type:"button",onclick:async()=>setMsg(st,(await copyText(r.plain))?t("calc.copy.textDone"):t("calc.copy.failed"),""),},t("calc.copy.text")):null);
  art.append(acts);
  return art;
 }
 async function recompute(p,c){
  const st=calcState(p.panelId);if(st.busy)return;
- st.busy=true;st.ui.stop.hidden=false;setMsg(st,"SymPy 重算中…","");
+ st.busy=true;st.ui.stop.hidden=false;setMsg(st,t("calc.msg.recomputing"),"");
  try{const r=await wbCall("surface_cas",{...(imageId?{imageId}:{}),capability:"recompute",params:{notebook:p.notebook,cell:c.cellId,job:newJob(st)}});setMsg(st,"","");applyRefresh(st,r);await wbRefresh();}
- catch(err){if(st.cancelled)setMsg(st,"已停止，原來的結果沒有改變。","");else setMsg(st,String(err.message||err),"error");}
+ catch(err){if(st.cancelled)setMsg(st,t("calc.msg.stoppedKept"),"");else setMsg(st,String(err.message||err),"error");}
  finally{st.busy=false;st.job=null;st.cancelled=false;st.ui.stop.hidden=true;renderCalc(p);}
 }
 async function plotCell(p,c,link){
@@ -286,8 +286,8 @@ async function plotCell(p,c,link){
   const params={notebook:p.notebook,cell:c.cellId,domain:wb.domain,...(link?{object:link.object}:{})};
   const r=await wbCall("surface_cas",{imageId:canvas,capability:"plot_result",params});
   if(Array.isArray(r.objects)){setObjects(r.objects);render();}
-  setMsg(st,link?"已更新 Graph 上的圖形 "+link.object+"。":"已畫在 Graph："+(r.data?.expression??""),"");
-  status.textContent="計算機的結果已畫成可編輯的函數圖；AI 下一次讀取畫布時會看到。";
+  setMsg(st,link?t("calc.msg.plotUpdated",{object:link.object}):t("calc.msg.plotted",{expression:r.data?.expression??""}),"");
+  status.textContent=t("calc.msg.plottedStatus");
   await wbRefresh();
- }catch(err){setMsg(st,"沒有畫出圖：" + String(err.message||err),"error");}
+ }catch(err){setMsg(st,t("calc.msg.plotFailed",{message:String(err.message||err)}),"error");}
 }
