@@ -7,6 +7,7 @@
 main{margin:auto;border:1px solid #8885;border-radius:14px;padding:16px}
 main:focus{outline:none}
 header{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.estampes-lang{margin-left:auto;font-size:.8rem;color:GrayText}.estampes-lang select{font:inherit}
 h2{font-size:1rem;margin:0}small,.help,#status{color:GrayText}
 small{font-size:.75rem}.help{font-size:.84rem;margin:9px 0}
 .toolbar,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
@@ -337,7 +338,6 @@ function createHost(){
 const host=createHost();
 // A new language (the host reported one, or the person picked one) redraws
 // the dynamic text; static markup is re-applied by the i18n runtime.
-i18nOnChange(()=>{try{render()}catch{}});
 // What this widget knows about where its marks came from and what it last sent, for bug reports:
 // tap the status line to show it. Times are local clock; it holds no image data.
 const diag={source:"",sourceAt:0,polls:0,pollAt:0,pollError:"",revision:"",applied:0,appliedAt:0,busy:0,stale:0,edit:null,hooks:new Set()};
@@ -391,15 +391,15 @@ const checkTab=scope.querySelector('[data-view="check"]'),undoBtn=scope.querySel
 const exportImageBtn=scope.querySelector("#export-image"),exportMarksBtn=scope.querySelector("#export-marks");
 let exportLinks=null;
 const zoomTools=scope.querySelector("#zoom-tools"),zoomLevel=scope.querySelector("#zoom-level");
-const INTENT_TEXT={
- "free-annotate":t("vs.intentText.free-annotate"),
- "point-out":t("vs.intentText.point-out"),
- "ask-about-region":t("vs.intentText.ask-about-region"),
- "answer-question":t("vs.intentText.answer-question"),
- "correct-assistant":t("vs.intentText.correct-assistant"),
- "compare":t("vs.intentText.compare"),
- "report-issue":t("vs.intentText.report-issue")
-};
+const INTENT_TEXT=i18nMap({
+ "free-annotate":"vs.intentText.free-annotate",
+ "point-out":"vs.intentText.point-out",
+ "ask-about-region":"vs.intentText.ask-about-region",
+ "answer-question":"vs.intentText.answer-question",
+ "correct-assistant":"vs.intentText.correct-assistant",
+ "compare":"vs.intentText.compare",
+ "report-issue":"vs.intentText.report-issue"
+});
 const SCENES={
  landscape:`<rect width="640" height="360" fill="#DBEAF0"/><rect y="230" width="640" height="130" fill="#A4C7A4"/>
  <circle cx="508" cy="73" r="39" fill="#F2C76F"/><path d="M0 255 L167 72 L324 255Z" fill="#90A9AE"/>
@@ -417,7 +417,7 @@ const SCENES={
  <text x="320" y="185" font-family="Georgia, serif" font-size="98" fill="#34424E" text-anchor="middle">E = mc²</text>
  <path d="M90 231H550" stroke="#D3CEC5" stroke-width="2"/><text x="320" y="278" text-anchor="middle" font-size="20" fill="#76818B">Example formula surface</text>`
 };
-const SCENE_NAMES={landscape:t("vs.scene.landscape"),shapes:t("vs.scene.shapes"),formula:t("vs.scene.formula")};
+const SCENE_NAMES=i18nMap({landscape:"vs.scene.landscape",shapes:"vs.scene.shapes",formula:"vs.scene.formula"});
 // Canvas units: 640×360 for demo scenes; real photos use width 1000 and
 // their own aspect ratio, so normalized coordinates map without distortion.
 let VW=640,VH=360,imageId=null,photo=null,views=[],check=null,checkImage=null;
@@ -463,7 +463,7 @@ function frameUV(f,X,Y){const x=X-f.x0,y=Y-f.y0;
  const [lx,ly]=f.rot===90?[y,f.h-x]:f.rot===180?[f.w-x,f.h-y]:f.rot===270?[f.w-y,x]:[x,y];return [lx/f.w,ly/f.h];}
 const firstSide=()=>ws?ws.items[0]?.id:"left";
 // What to call an image in the UI: 左/右, or a workspace item's label.
-const SIDE_ZH0={left:t("vs.side.left"),right:t("vs.side.right")};
+const SIDE_ZH0=i18nMap({left:"vs.side.left",right:"vs.side.right"});
 function sideTitle(side){
  if(ws){const i=ws.items.findIndex(it=>it.id===side);return i<0?"?":(ws.items[i].label||t("vs.side.item",{n:i+1}));}
  return SIDE_ZH0[side]??t("vs.side.left");
@@ -508,7 +508,7 @@ const rawOf=m=>m.rawId??m.id;
 const linksEl=scope.querySelector("#links"),linkEl=scope.querySelector("#link-annotations");
 let links=[],selectedLink=null,unsentReviews=[];
 const LINK_COLORS=["#E4572E","#2E86AB","#3BB273","#C03AA8","#E1A100","#00A6A6","#7D5BA6","#D1495B"];
-const CONFIDENCE_TEXT={high:t("vs.confidence.high"),medium:t("vs.confidence.medium"),low:t("vs.confidence.low")};
+const CONFIDENCE_TEXT=i18nMap({high:"vs.confidence.high",medium:"vs.confidence.medium",low:"vs.confidence.low"});
 const cleanLinks=list=>(Array.isArray(list)?list:[]).filter(l=>l&&typeof l.id==="string"&&typeof l.left==="string"&&typeof l.right==="string")
  .map(l=>({id:l.id.slice(0,64),left:l.left,right:l.right,label:String(l.label??"").slice(0,64),note:String(l.note??"").slice(0,200),
    confidence:["high","medium","low"].includes(l.confidence)?l.confidence:"medium",review:["confirmed","rejected"].includes(l.review)?l.review:null,
@@ -533,8 +533,8 @@ const cleanEvidence=list=>(Array.isArray(list)?list:[]).filter(e=>e&&typeof e.sa
   says:e.says.slice(0,160),region:Array.isArray(e.region)&&e.region.length===4&&e.region.every(v=>Number.isFinite(v)&&v>=0&&v<=1)?e.region:null})).slice(0,6);
 const stateOf=c=>c.verification??(c.review==="confirmed"?"user-confirmed":c.review==="rejected"?"user-rejected":
   cleanEvidence(c.evidence).some(e=>e.observer==="tool")?"independently-verified":"unverified");
-const STATE_ZH={"user-confirmed":t("vs.claimState.user-confirmed"),"stale-confirmation":t("vs.claimState.stale-confirmation"),"user-rejected":t("vs.claimState.user-rejected"),"independently-verified":t("vs.claimState.independently-verified")};
-const SIDE_ZH={left:t("vs.side.left"),right:t("vs.side.right")};
+const STATE_ZH=i18nMap({"user-confirmed":"vs.claimState.user-confirmed","stale-confirmation":"vs.claimState.stale-confirmation","user-rejected":"vs.claimState.user-rejected","independently-verified":"vs.claimState.independently-verified"});
+const SIDE_ZH=i18nMap({left:"vs.side.left",right:"vs.side.right"});
 function claimChip(c,cls){
  const state=stateOf(c),tool=cleanEvidence(c.evidence).some(e=>e.observer==="tool");
  const chip=el("span",{className:cls+(state==="unverified"||state==="stale-confirmation"?" ask":state==="independently-verified"?" tool":"")});
@@ -980,7 +980,7 @@ const markOptions=()=>[
  ...priorUserMarks.map((mark,i)=>({key:"prior-"+i,mark,author:"YOU"})),
  ...userMarks.map((mark,i)=>({key:"mine-"+i,mark,author:"YOU"}))
 ].filter(item=>shown(item.mark));
-const STATUS_TEXT={inspected:t("vs.markStatus.inspected"),uncertain:t("vs.markStatus.uncertain")};
+const STATUS_TEXT=i18nMap({inspected:"vs.markStatus.inspected",uncertain:"vs.markStatus.uncertain"});
 // Expansion is keyed by stable mark/layer identity, never array positions.
 let findingGroupsOpen=new Set(),focusedFinding=null,openFinding=null;
 const findingReasons=new Map();
@@ -1104,9 +1104,9 @@ findingsEl.addEventListener("click",async e=>{
 let gestures=[],gestureDecisions=[],selectedGesture=null,groupingFrom=null;
 const gesturesEl=scope.querySelector("#gestures"),gestureOutlineEl=scope.querySelector("#gesture-outline");
 const gkey=ids=>[...new Set(ids)].sort().join("+");
-const MEANING_TEXT={"direction-arrow":t("vs.gesture.meaning.direction-arrow"),"connected-path":t("vs.gesture.meaning.connected-path"),"unknown":t("vs.gesture.meaning.unknown")};
-const HEAD_TEXT={right:t("vs.gesture.heading.right"),"up-right":t("vs.gesture.heading.up-right"),up:t("vs.gesture.heading.up"),"up-left":t("vs.gesture.heading.up-left"),left:t("vs.gesture.heading.left"),"down-left":t("vs.gesture.heading.down-left"),down:t("vs.gesture.heading.down"),"down-right":t("vs.gesture.heading.down-right")};
-const CONFIRM_TEXT={unconfirmed:t("vs.gesture.confirm.unconfirmed"),"user-confirmed":t("vs.gesture.confirm.user-confirmed"),"user-rejected":t("vs.gesture.confirm.user-rejected")};
+const MEANING_TEXT=i18nMap({"direction-arrow":"vs.gesture.meaning.direction-arrow","connected-path":"vs.gesture.meaning.connected-path","unknown":"vs.gesture.meaning.unknown"});
+const HEAD_TEXT=i18nMap({right:"vs.gesture.heading.right","up-right":"vs.gesture.heading.up-right",up:"vs.gesture.heading.up","up-left":"vs.gesture.heading.up-left",left:"vs.gesture.heading.left","down-left":"vs.gesture.heading.down-left",down:"vs.gesture.heading.down","down-right":"vs.gesture.heading.down-right"});
+const CONFIRM_TEXT=i18nMap({unconfirmed:"vs.gesture.confirm.unconfirmed","user-confirmed":"vs.gesture.confirm.user-confirmed","user-rejected":"vs.gesture.confirm.user-rejected"});
 function setGestures(list,{merge=false}={}){
  const before=merge?gestures:[];
  // Verdicts given in this widget win until the server echoes them.
@@ -1310,7 +1310,7 @@ function restackLayers(){
  }
 }
 
-const OBJECT_KIND={"info-card":t("vs.objectKind.info-card"),image:t("vs.objectKind.image"),"function-plot":t("vs.objectKind.function-plot"),"axes-2d":t("vs.objectKind.axes-2d"),shape:t("vs.objectKind.shape")};
+const OBJECT_KIND=i18nMap({"info-card":"vs.objectKind.info-card",image:"vs.objectKind.image","function-plot":"vs.objectKind.function-plot","axes-2d":"vs.objectKind.axes-2d",shape:"vs.objectKind.shape"});
 const pair2=v=>Array.isArray(v)&&v.length===2&&v.every(num)?v:null;
 // Fact sheets (info-card objects) are grouped by module. Each card folds open
 // and closed, starts folded, and can be hidden; hidden cards are listed at the
@@ -2339,10 +2339,9 @@ exportMarksBtn.addEventListener("click",()=>{openLink(exportLinks?.marks);status
 // tells the model the new imageId.
 const uploadBtn=scope.querySelector("#upload"),uploadFile=scope.querySelector("#upload-file");
 const uploadBig=scope.querySelector("#upload-big");
-const libreChatUploadHelp=t("vs.upload.libreChatHelp");
 const isLibreChat=()=>host.name==="LibreChat";
 function pickUpload(){
- if(isLibreChat()){status.textContent=libreChatUploadHelp;return}
+ if(isLibreChat()){status.textContent=t("vs.upload.libreChatHelp");return}
  uploadFile.click();
 }
 uploadBtn.addEventListener("click",pickUpload);
@@ -2371,7 +2370,7 @@ function toBase64(bytes){let s="";for(let i=0;i<bytes.length;i+=0x8000)s+=String
 let uploading=false;
 async function uploadImage(file){
  if(uploading)return;
- if(isLibreChat()){status.textContent=libreChatUploadHelp;return}
+ if(isLibreChat()){status.textContent=t("vs.upload.libreChatHelp");return}
  if(!ready){status.textContent=t("vs.upload.notReady");return}
  if(!/^image\//.test(file.type||"image/")){status.textContent=t("vs.upload.notImage");return}
  uploading=true;uploadBtn.disabled=true;
@@ -2457,7 +2456,7 @@ if(receivesHost){
 }
 host.whenReady().then(()=>{
  if(isLibreChat()){
-   scope.querySelector("#upload-empty p").textContent=libreChatUploadHelp;
+   scope.querySelector("#upload-empty p").textContent=t("vs.upload.libreChatHelp");
    uploadBig.hidden=true;
    uploadBtn.textContent=t("vs.upload.libreChatButton");
    uploadBtn.title=t("vs.upload.libreChatTitle");
@@ -2465,6 +2464,8 @@ host.whenReady().then(()=>{
  ready=true;readyWaiters.splice(0).forEach(f=>f());render();if(!rootEl.classList.contains("awaiting-upload"))status.textContent=t("vs.host.ready");
  else if(isLibreChat())status.textContent="";
  if(imageId&&gotResult&&(!photo||pendingSync!==null))syncCanvas(!!pendingSync);pendingSync=null;});
+// A language change redraws every view that builds its text from code.
+own(i18nOnChange(()=>{if(!disposed)try{render()}catch{}}));
 own(host.on("failed",err=>{status.textContent=t("vs.host.failed",{message:String(err.message||err)})}));
 // The MCP server builds the canonical v0.2-draft event. The widget does
 // not invent the preceding conversation or silently infer user intent.
@@ -2667,7 +2668,7 @@ if(diagText){const draw=()=>{if(disposed)return;const e=diag.edit;
   t("vs.diag.poll",{polls:diag.polls,at:diagTime(diag.pollAt),result:diag.pollError?t("vs.diag.pollError",{error:diag.pollError}):t("vs.diag.pollOk"),applied:diag.applied,appliedAt:diagTime(diag.appliedAt),revision:diag.revision||"-",busy:diag.busy,stale:diag.stale}),
   e?t("vs.diag.edit",{id:e.id,state:e.state,command:String(e.commandId).slice(0,8),sentAt:diagTime(e.sentAt),ack:e.ackAt?t("vs.diag.ack",{ms:e.ackAt-e.sentAt}):"",sent:e.sent,returned:e.returned??"-"}):t("vs.diag.noEdit"),
   t("vs.diag.view",{selection:selected?selected+" "+(()=>{const m=findMark(selected);return m?.points?"("+m.points[0].x.toFixed(3)+","+m.points[0].y.toFixed(3)+")":m?"("+Number(m.x).toFixed(3)+","+Number(m.y).toFixed(3)+")":"-"})():t("vs.diag.noSelection")})].join("\n");};
- diag.hooks.add(draw);disposers.push(()=>diag.hooks.delete(draw));const box=scope.querySelector("#diag"),st=scope.querySelector("#status");
+ diag.hooks.add(draw);disposers.push(()=>diag.hooks.delete(draw));own(i18nOnChange(draw));const box=scope.querySelector("#diag"),st=scope.querySelector("#status");
  // Tap the status line to show or hide this block (hidden by default, so the layout is unchanged).
  st?.addEventListener("click",()=>{if(box){box.hidden=!box.hidden;draw();}});draw();}
 function setStale(on){
@@ -2689,6 +2690,8 @@ return {scope,rootEl,feed:applyHostResult,get editSerial(){return editSerial},do
 
 // ===== Page: the primary viewer sits where the workbench expects its canvas =====
 document.querySelector("#wb-area").append(document.querySelector("#viewer-tpl").content.cloneNode(true));
+// The person's own language choice (kept in this browser only).
+document.querySelector("#panel-canvas header")?.append(i18nPicker());
 const primary=createViewer(document,document.body,{host,receivesHost:true,workbench:true});
 host.start();
 

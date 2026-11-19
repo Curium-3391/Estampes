@@ -102,9 +102,13 @@ for (const loc of Object.keys(catalogs)) {
 }
 const MARKUP_KEY = /\bdata-i18n(?:-[a-z-]+)?="([^"]+)"/g;
 const KEY_USE = /\b(?:t|i18nT)\(\s*["']([a-z][\w.-]*)["']\s*[,)]/g;
+// i18nMap({ low: "store.risk.low", ... }): every value is a message key.
+const MAP_USE = /\bi18nMap\(\s*\{([^{}]*)\}\s*\)/g;
+const MAP_VALUE = /:\s*["']([a-z][\w.-]*)["']/g;
+const mapKeys = (src) => [...src.matchAll(MAP_USE)].flatMap((m) => [...m[1].matchAll(MAP_VALUE)]);
 for (const f of ROOTS.flatMap((r) => files(r)).sort()) {
   const src = fs.readFileSync(path.join(ROOT, f), "utf8");
-  for (const m of [...src.matchAll(KEY_USE), ...(f.endsWith(".html") ? src.matchAll(MARKUP_KEY) : [])]) {
+  for (const m of [...src.matchAll(KEY_USE), ...mapKeys(src), ...(f.endsWith(".html") ? src.matchAll(MARKUP_KEY) : [])]) {
     if (!(m[1] in catalogs[BASE])) catalogErrors.push(`${f}: t("${m[1]}") is not in ${BASE}`);
   }
 }

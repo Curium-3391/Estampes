@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import vm from "node:vm";
 import { createI18n, messageParams } from "../src/i18n/runtime.js";
-import { CATALOGS, DEFAULT_LOCALE, matchLocale, localizeHtml, t, widgetI18nSource } from "../src/i18n/index.js";
+import { CATALOGS, DEFAULT_LOCALE, matchLocale, localeFromAcceptLanguage, localizeHtml, t, widgetI18nSource } from "../src/i18n/index.js";
 import { widgetI18n, matchLocale as matchIn } from "../src/i18n/widget-runtime.js";
 import { inlineWorkbench } from "../src/surface/widget-source.js";
 
@@ -166,6 +166,8 @@ test("the widget resolves pick > host > instance default and re-applies static t
   assert.equal(button.firstChild.nodeValue, "計算");
   assert.equal(w.i18nHost("en"), "zh-TW");
   assert.equal(w.i18nPick(null), "en", "clearing the pick falls back to the host");
+  assert.equal(w.i18nHost(undefined), "en", "a host message without a locale keeps the host language");
+  assert.equal(w.i18nHost("fr"), "zh-TW", "an unsupported host language falls back to the instance default");
   assert.equal(saved.has("estampes.locale"), false);
   // A remembered pick and window.openai.locale apply before anything renders; fromHost: false ignores the host.
   saved.set("estampes.locale", "en");
@@ -176,4 +178,44 @@ test("the widget resolves pick > host > instance default and re-applies static t
   assert.equal(pinned.i18nLocale(), "zh-TW");
   assert.equal(pinned.i18nHost("en"), "zh-TW");
   assert.equal(pinned.i18nPick("en"), "en", "a pick still works when host detection is off");
+});
+
+test("start-up tables and the language menu follow a later language change", () => {
+  const { doc } = fakeDom("zh-Hant");
+  const made = [];
+  doc.createElement = (tag) => { const e = { tag, children: [], listeners: {}, value: "", textContent: "",
+    append(...k) { this.children.push(...k); }, addEventListener(type, fn) { this.listeners[type] = fn; } }; made.push(e); return e; };
+  const saved = new Map();
+  const w = vm.runInNewContext("(" + widgetI18n.toString().replace(/createI18n/g, "__create") + ")(catalogs, def, opts)",
+    { document: doc, localStorage: { getItem: (k) => saved.get(k) ?? null, setItem: (k, v) => saved.set(k, v), removeItem: (k) => saved.delete(k) },
+      catalogs: CATALOGS, def: "zh-TW", opts: { html: { "zh-TW": "zh-Hant" } }, __create: createI18n, matchLocale: matchIn });
+  const sides = w.i18nMap({ left: "vs.side.left" });
+  assert.equal(sides.left, CATALOGS["zh-TW"]["vs.side.left"]);
+  assert.equal(sides.nope, undefined);
+  assert.deepEqual(Object.keys(sides), ["left"]);
+  const label = w.i18nPicker();
+  const [caption, select] = label.children;
+  const options = select.children;
+  assert.deepEqual(options.map((o) => o.value), ["", "en", "zh-TW"]);
+  assert.deepEqual(options.slice(1).map((o) => [o.lang, o.textContent]), [["en", "English"], ["zh-Hant", "繁體中文"]], "each language under its own name");
+  assert.equal(caption.textContent, "語言 ");
+  select.value = "en"; select.listeners.change();
+  assert.equal(w.i18nLocale(), "en");
+  assert.equal(saved.get("estampes.locale"), "en");
+  assert.equal(sides.left, CATALOGS.en["vs.side.left"], "the table reads the new language");
+  assert.equal(caption.textContent, "Language ");
+  assert.equal(options[0].textContent, "Automatic (chat app)");
+  select.value = ""; select.listeners.change();
+  assert.equal(w.i18nLocale(), "zh-TW", "Automatic clears the pick");
+  assert.equal(saved.has("estampes.locale"), false);
+  assert.equal(select.value, "");
+});
+
+test("the sign-in page follows the browser's Accept-Language", () => {
+  assert.equal(localeFromAcceptLanguage("fr-CA,fr;q=0.9,en-US;q=0.8,en;q=0.7"), "en");
+  assert.equal(localeFromAcceptLanguage("zh-CN;q=0.9, zh-HK;q=0.5, en;q=0.4"), "zh-TW", "zh-CN is skipped, zh-HK is Traditional");
+  assert.equal(localeFromAcceptLanguage("en;q=0, zh-TW;q=0.1"), "zh-TW", "q=0 means not acceptable");
+  assert.equal(localeFromAcceptLanguage("*, fr"), null);
+  assert.equal(localeFromAcceptLanguage(undefined), null);
+  assert.equal(localeFromAcceptLanguage("fr,".repeat(30) + "en"), null, "only the first 20 entries are read");
 });

@@ -40,29 +40,36 @@ export function widgetI18n(catalogs, instanceDefault, options = {}) {
   const listeners = new Set();
   let current = def, inst = make(def);
 
-  // Re-apply the server's data-i18n markers. Only text that still shows the
-  // previous locale's message is replaced, so a status line the page has
-  // since rewritten is left alone.
+  // Re-apply the server's data-i18n markers in the page, in <template>
+  // contents (cloned later) and in open shadow roots. Only text that still
+  // shows the previous locale's message is replaced, so a status line the
+  // page has since rewritten is left alone.
   function apply(prev) {
     const doc = globalThis.document;
     if (!doc?.querySelectorAll) return;
     doc.documentElement.lang = htmlTags[current] ?? current;
     doc.documentElement.dir = "ltr";
-    for (const el of doc.querySelectorAll("[data-i18n]")) {
-      const key = el.getAttribute("data-i18n"), was = prev.t(key), now = inst.t(key);
-      const first = el.firstChild;
-      if (first && first.nodeType === 3) { if (first.nodeValue === was) first.nodeValue = now; }
-      else if (!was) el.insertBefore(doc.createTextNode(now), first);
-    }
-    for (const el of doc.querySelectorAll("[data-i18n-html]")) {
-      const key = el.getAttribute("data-i18n-html");
-      if (el.innerHTML === prev.t(key)) el.innerHTML = inst.t(key);
-    }
-    for (const attr of ["title", "aria-label", "placeholder", "alt"]) {
-      for (const el of doc.querySelectorAll("[data-i18n-" + attr + "]")) {
-        const key = el.getAttribute("data-i18n-" + attr);
-        if (el.getAttribute(attr) === prev.t(key)) el.setAttribute(attr, inst.t(key));
+    const roots = [doc];
+    for (let r = 0; r < roots.length && r < 200; r++) {
+      const root = roots[r];
+      for (const el of root.querySelectorAll("[data-i18n]")) {
+        const key = el.getAttribute("data-i18n"), was = prev.t(key), now = inst.t(key);
+        const first = el.firstChild;
+        if (first && first.nodeType === 3) { if (first.nodeValue === was) first.nodeValue = now; }
+        else if (!was) el.insertBefore(doc.createTextNode(now), first);
       }
+      for (const el of root.querySelectorAll("[data-i18n-html]")) {
+        const key = el.getAttribute("data-i18n-html");
+        if (el.innerHTML === prev.t(key)) el.innerHTML = inst.t(key);
+      }
+      for (const attr of ["title", "aria-label", "placeholder", "alt"]) {
+        for (const el of root.querySelectorAll("[data-i18n-" + attr + "]")) {
+          const key = el.getAttribute("data-i18n-" + attr);
+          if (el.getAttribute(attr) === prev.t(key)) el.setAttribute(attr, inst.t(key));
+        }
+      }
+      for (const tpl of root.querySelectorAll("template")) if (tpl.content) roots.push(tpl.content);
+      for (const el of root.querySelectorAll("*")) if (el.shadowRoot) roots.push(el.shadowRoot);
     }
   }
   function update() {
@@ -76,17 +83,57 @@ export function widgetI18n(catalogs, instanceDefault, options = {}) {
   update();
 
   const translate = (key, params) => inst.t(key, params);
+  function pick(tag) {
+    picked = tag == null || tag === "" ? null : matchLocale(tag, locales);
+    try { if (picked) store?.setItem(KEY, picked); else store?.removeItem(KEY); } catch { /* storage may be blocked */ }
+    update();
+    return current;
+  }
   return {
     t: translate,
     i18nT: translate,
     i18nLocale: () => current,
-    i18nHost(tag) { if (fromHost) { host = matchLocale(tag, locales) ?? host; update(); } return current; },
-    i18nPick(tag) {
-      picked = tag == null || tag === "" ? null : matchLocale(tag, locales);
-      try { if (picked) store?.setItem(KEY, picked); else store?.removeItem(KEY); } catch { /* storage may be blocked */ }
-      update();
-      return current;
-    },
+    // A host that sends no locale changes nothing; one we cannot match
+    // drops the earlier host language, so the instance default applies.
+    i18nHost(tag) { if (fromHost && typeof tag === "string" && tag) { host = matchLocale(tag, locales); update(); } return current; },
+    i18nPick: pick,
     i18nOnChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // A lookup table whose values are message keys, read in the current
+    // locale on every access: i18nMap({ low: "store.risk.low" }).low.
+    // Use it for tables built once at start-up, which would otherwise keep
+    // the first language.
+    i18nMap(keys) {
+      return new Proxy(keys, {
+        get: (o, k) => (typeof k === "string" && Object.hasOwn(o, k) ? inst.t(o[k]) : undefined),
+        getOwnPropertyDescriptor: (o, k) => (Object.hasOwn(o, k) ? { value: inst.t(o[k]), enumerable: true, configurable: true, writable: false } : undefined),
+      });
+    },
+    // A language menu: "Automatic" (host, then instance default) plus each
+    // shipped language under its own name. The choice stays in this browser.
+    i18nPicker() {
+      const doc = globalThis.document;
+      const label = doc.createElement("label");
+      label.className = "estampes-lang";
+      const caption = doc.createElement("span");
+      const select = doc.createElement("select");
+      const auto = doc.createElement("option");
+      auto.value = "";
+      select.append(auto);
+      for (const l of locales) {
+        const o = doc.createElement("option");
+        o.value = l; o.lang = htmlTags[l] ?? l; o.textContent = catalogs[l]["i18n.autonym"] ?? l;
+        select.append(o);
+      }
+      const sync = () => {
+        caption.textContent = inst.t("i18n.picker.label") + " ";
+        auto.textContent = inst.t("i18n.picker.auto");
+        select.value = picked ?? "";
+      };
+      select.addEventListener("change", () => { pick(select.value || null); sync(); });
+      listeners.add(sync);
+      sync();
+      label.append(caption, select);
+      return label;
+    },
   };
 }

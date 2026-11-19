@@ -14,7 +14,7 @@
 // authorization-code grant with PKCE S256 only, and refresh tokens.
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { sameSecret } from "./security.js";
-import { t } from "./i18n/index.js";
+import { t as translate, htmlLang } from "./i18n/index.js";
 
 const CODE_TTL_S = 300;
 const ACCESS_TTL_S = 3600;
@@ -139,13 +139,14 @@ export function createOAuth({ getKey, fetchClientDocument = null }) {
     return { client: c };
   }
 
-  function consentPage(params, { error = "", client: c = null } = {}) {
+  function consentPage(params, { error = "", client: c = null, locale } = {}) {
+    const t = (key, p) => translate(key, p, locale);
     const name = c?.n || "an AI app";
     const hidden = ["client_id", "redirect_uri", "response_type", "code_challenge", "code_challenge_method", "state", "scope", "resource"]
       .map((k) => params[k] == null ? "" : '<input type="hidden" name="' + k + '" value="' + esc(params[k]) + '">').join("");
     let host = "";
     try { host = new URL(params.redirect_uri).host; } catch {}
-    return "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
+    return "<!doctype html><html lang=\"" + htmlLang(locale) + "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
       "<title>" + t("oauth.title") + "</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 16px;color:#1d1d1f;background:#fafafa}" +
       "input[type=password]{width:100%;font:inherit;padding:.5rem;box-sizing:border-box}button{font:inherit;padding:.5rem 1rem;margin-top:1rem}" +
       ".err{color:#b00020}.small{color:#666;font-size:.9em}@media(prefers-color-scheme:dark){body{background:#111;color:#eee}.small{color:#aaa}}</style></head><body>" +
@@ -161,13 +162,13 @@ export function createOAuth({ getKey, fetchClientDocument = null }) {
   }
 
   /** Handles the consent form. Returns {redirect}, {status, html} (try again) or {page} (bad request). */
-  async function approve(params) {
+  async function approve(params, { locale } = {}) {
     const checked = await checkAuthorize(params);
     if (checked.page || checked.redirect) return checked;
     if (params.decision !== "allow") {
       return { redirect: withQuery(params.redirect_uri, { error: "access_denied", error_description: "the owner declined", state: params.state }) };
     }
-    if (!sameSecret(params.access_key, getKey())) return { status: 401, html: consentPage(params, { error: t("oauth.wrongKey"), client: checked.client }) };
+    if (!sameSecret(params.access_key, getKey())) return { status: 401, html: consentPage(params, { error: translate("oauth.wrongKey", undefined, locale), client: checked.client, locale }) };
     const code = sign("eac", { c: params.client_id, r: params.redirect_uri, ch: params.code_challenge, res: params.resource || undefined,
       n: b64u(randomBytes(9)), exp: now() + CODE_TTL_S });
     return { redirect: withQuery(params.redirect_uri, { code, state: params.state }) };

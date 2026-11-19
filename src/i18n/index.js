@@ -20,6 +20,19 @@ export const LOCALES = Object.freeze(Object.keys(CATALOGS));
 // Tag negotiation is shared with the browser (./widget-runtime.js).
 export const matchLocale = (tag) => matchIn(tag, LOCALES);
 
+// A server-rendered page (the OAuth sign-in) has no widget runtime: take the
+// first language in the browser's Accept-Language that we ship, else the
+// instance default. Quality values order the list; q=0 is skipped.
+export function localeFromAcceptLanguage(header) {
+  const tags = String(header ?? "").split(",").slice(0, 20).map((part, i) => {
+    const [tag, ...opts] = part.trim().split(";");
+    const q = opts.map((o) => o.trim()).find((o) => o.startsWith("q="));
+    return { tag: tag.trim(), q: q ? Number(q.slice(2)) : 1, i };
+  }).filter((x) => x.tag && x.tag !== "*" && x.q > 0).sort((a, b) => b.q - a.q || a.i - b.i);
+  for (const { tag } of tags) { const l = matchLocale(tag); if (l) return l; }
+  return null;
+}
+
 // The instance default (ESTAMPES_DEFAULT_LOCALE), else English.
 const configured = config.defaultLocale;
 export const DEFAULT_LOCALE = configured ? matchLocale(configured) ?? "en" : "en";
@@ -49,10 +62,12 @@ export const t = (key, params, locale = DEFAULT_LOCALE) => i18nFor(locale).t(key
 //   i18nHost(tag)            report the host's locale; re-applies if it changes
 //   i18nPick(tag | null)     the person's own choice; null clears it
 //   i18nOnChange(fn)         re-render dynamic text after a change
+//   i18nPicker()             a <label><select> language menu for the widget's header
+//   i18nMap({ left: "vs.side.left" }) a table translated on every read (for start-up constants)
 export function widgetI18nSource(locale = DEFAULT_LOCALE, { fromHost = config.localeFromHost } = {}) {
   const runtime = readFileSync(join(HERE, "runtime.js"), "utf8").replace(/^export\s+/gm, "");
   const safe = (v) => JSON.stringify(v).replace(/<\//g, "<\\/").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-  return "const { t, i18nT, i18nLocale, i18nHost, i18nPick, i18nOnChange } = (() => {\n" + runtime + "\n" +
+  return "const { t, i18nT, i18nLocale, i18nHost, i18nPick, i18nOnChange, i18nPicker, i18nMap } = (() => {\n" + runtime + "\n" +
     readFileSync(join(HERE, "widget-runtime.js"), "utf8").replace(/^export\s+/gm, "") +
     "\nreturn widgetI18n(" + safe(CATALOGS) + ", " + safe(locale) + ", " + safe({ fromHost, html: LANG_TAGS }) + ");\n})();";
 }
