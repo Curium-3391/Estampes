@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
+import { t } from "../src/i18n/index.js";
 
 // The workbench bar fills in after the canvas has drawn (its own
 // surface_get_state call) and pushes the canvas down. Coordinates taken
@@ -229,7 +230,8 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
       await settled(ui);await rendered.scrollIntoViewIfNeeded();const before=await rendered.boundingBox(),from={x:before.x+before.width/2,y:before.y+before.height/2};
       await ui.page.mouse.move(from.x,from.y);await ui.page.mouse.down();await ui.frame.locator("#text-editor").waitFor();
       await ui.page.mouse.move(from.x+40,from.y+30,{steps:4});await ui.page.mouse.up();
-      await ui.frame.locator("#status").filter({hasText:code}).waitFor();
+      // A known code is shown in the person's language, not as the raw code.
+      await ui.frame.locator("#status").filter({hasText:t("vs.err.code."+code)}).waitFor();
       const after=await rendered.boundingBox();assert.ok(Math.abs(after.x-before.x)<1&&Math.abs(after.y-before.y)<1,"failed drag restores the saved position: "+code);
       const saved=(await s.call("get_visual_state",{imageId})).structuredContent.objects[0];assert.equal(saved.props.x,.3);assert.equal(saved.props.y,.4);
     }
