@@ -1,0 +1,10 @@
+{
+  "oauth.allow": "Allow",
+  "oauth.asks": "<b>{name}</b> ({host}) wants to use this Estampes server.",
+  "oauth.deny": "Deny",
+  "oauth.explain": "Enter this server's access key to allow it. Only the server's owner has this key; it only confirms that it is you and is never given to the app.",
+  "oauth.findKey": "Finding the key: the part after <code>?key=</code> in the connect URL in the server's startup log, or the <code>access-key</code> file in the storage folder (with Docker: <code>docker compose exec estampes cat /data/access-key</code>).",
+  "oauth.onlyIfYou": "Enter it only if you just pressed connect yourself (for example Claude's Connect); after signing in you return to the address above. If you don't recognize it, press Deny.",
+  "oauth.title": "Connect Estampes",
+  "oauth.wrongKey": "The access key is not correct. Please try again."
+}

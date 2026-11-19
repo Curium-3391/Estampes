@@ -14,6 +14,7 @@
 // authorization-code grant with PKCE S256 only, and refresh tokens.
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { sameSecret } from "./security.js";
+import { t } from "./i18n/index.js";
 
 const CODE_TTL_S = 300;
 const ACCESS_TTL_S = 3600;
@@ -145,17 +146,17 @@ export function createOAuth({ getKey, fetchClientDocument = null }) {
     let host = "";
     try { host = new URL(params.redirect_uri).host; } catch {}
     return "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
-      "<title>連接 Estampes</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 16px;color:#1d1d1f;background:#fafafa}" +
+      "<title>" + t("oauth.title") + "</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 16px;color:#1d1d1f;background:#fafafa}" +
       "input[type=password]{width:100%;font:inherit;padding:.5rem;box-sizing:border-box}button{font:inherit;padding:.5rem 1rem;margin-top:1rem}" +
       ".err{color:#b00020}.small{color:#666;font-size:.9em}@media(prefers-color-scheme:dark){body{background:#111;color:#eee}.small{color:#aaa}}</style></head><body>" +
-      "<h1>連接 Estampes</h1><p><b>" + esc(name) + "</b>（" + esc(host) + "）想使用這台 Estampes 伺服器。</p>" +
-      "<p>請輸入這台伺服器的 access key 來允許。只有伺服器的擁有者有這把 key；它只用來確認是你，不會交給對方。</p>" +
-      "<p class=\"small\">只在你剛剛自己按下連接（例如 Claude 的 Connect）時才輸入；登入後會回到上面這個網址。不認得的話請按拒絕。</p>" +
+      "<h1>" + t("oauth.title") + "</h1><p>" + t("oauth.asks", { name: esc(name), host: esc(host) }) + "</p>" +
+      "<p>" + t("oauth.explain") + "</p>" +
+      "<p class=\"small\">" + t("oauth.onlyIfYou") + "</p>" +
       (error ? '<p class="err">' + esc(error) + "</p>" : "") +
       '<form method="post" action="/oauth/authorize">' + hidden +
       '<label>Access key<br><input type="password" name="access_key" autocomplete="current-password" required autofocus></label>' +
-      '<br><button type="submit" name="decision" value="allow">允許</button> <button type="submit" name="decision" value="deny">拒絕</button></form>' +
-      '<p class="small">找 key：伺服器啟動紀錄裡的連接網址 <code>?key=</code> 後面那段，或存放資料夾裡的 <code>access-key</code> 檔（Docker 用 <code>docker compose exec estampes cat /data/access-key</code>）。</p>' +
+      '<br><button type="submit" name="decision" value="allow">' + t("oauth.allow") + '</button> <button type="submit" name="decision" value="deny">' + t("oauth.deny") + "</button></form>" +
+      '<p class="small">' + t("oauth.findKey") + "</p>" +
       "</body></html>";
   }
 
@@ -166,7 +167,7 @@ export function createOAuth({ getKey, fetchClientDocument = null }) {
     if (params.decision !== "allow") {
       return { redirect: withQuery(params.redirect_uri, { error: "access_denied", error_description: "the owner declined", state: params.state }) };
     }
-    if (!sameSecret(params.access_key, getKey())) return { status: 401, html: consentPage(params, { error: "Access key 不正確，請再試一次。", client: checked.client }) };
+    if (!sameSecret(params.access_key, getKey())) return { status: 401, html: consentPage(params, { error: t("oauth.wrongKey"), client: checked.client }) };
     const code = sign("eac", { c: params.client_id, r: params.redirect_uri, ch: params.code_challenge, res: params.resource || undefined,
       n: b64u(randomBytes(9)), exp: now() + CODE_TTL_S });
     return { redirect: withQuery(params.redirect_uri, { code, state: params.state }) };

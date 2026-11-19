@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { widgetI18nSource } from "../i18n/index.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -25,4 +26,5 @@ export const documentStoreSource = () =>
 
 export const inlineWorkbench = (html) => html
   .replace("__ESTAMPES_WORKBENCH__", () => workbenchSource())
-  .replace("__ESTAMPES_DOCSTORE__", () => documentStoreSource());
+  .replace("__ESTAMPES_DOCSTORE__", () => documentStoreSource())
+  .replace("__ESTAMPES_I18N__", () => widgetI18nSource());

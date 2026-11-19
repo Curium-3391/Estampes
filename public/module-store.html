@@ -31,24 +31,29 @@ ol.events li{border-bottom:1px solid var(--line);padding-bottom:6px}
 code{font-size:.82rem;overflow-wrap:anywhere}
 </style></head>
 <body><main>
-<header><h2>Estampes Store</h2><small id="server">模組商店 · __ESTAMPES_VERSION__</small></header>
-<nav aria-label="分頁">
- <button data-tab="browse" aria-pressed="true">瀏覽</button>
- <button data-tab="installed" aria-pressed="false">已啟用／已安裝</button>
- <button data-tab="activity" aria-pressed="false">活動紀錄</button>
+<header><h2>Estampes Store</h2><small id="server"></small></header>
+<nav>
+ <button data-tab="browse" aria-pressed="true"></button>
+ <button data-tab="installed" aria-pressed="false"></button>
+ <button data-tab="activity" aria-pressed="false"></button>
 </nav>
 <section id="view" aria-live="polite"></section>
-<p id="status" role="status">正在連接對話…</p>
+<p id="status" role="status"></p>
 </main>
 <script type="module">
+__ESTAMPES_I18N__
+document.querySelector("#server").textContent=t("store.subtitle",{version:"__ESTAMPES_VERSION__"});
+document.querySelector("nav").setAttribute("aria-label",t("store.nav.label"));
+for(const b of document.querySelectorAll("[data-tab]"))b.textContent=t("store.tab."+b.dataset.tab);
+document.querySelector("#status").textContent=t("store.status.connecting");
 const view=document.querySelector("#view"),status=document.querySelector("#status");
 const tabs=[...document.querySelectorAll("[data-tab]")];
-const CATEGORY={math:"數學",diagram:"圖表",analysis:"分析",text:"文字",astronomy:"天文",electronics:"電子",utility:"工具",other:"其他"};
-const STATE={available:"未啟用",installed:"已安裝（未啟用）",enabled:"已啟用",disabled:"已停用",failed:"失敗"};
-const RISK={low:"低風險",medium:"中風險",high:"高風險"};
-const ACTION={enable:"啟用",disable:"停用",install:"安裝",update:"更新",rollback:"回滾到上一版",uninstall:"解除安裝",purge:"清除模組資料"};
-const KIND={run:"執行","run.failed":"執行失敗","run.rejected":"結果被拒絕","plan.created":"準備變更","plan.committed":"已套用","plan.refused":"拒絕（未授權）","plan.failed":"變更失敗",
- "package.staged":"已暫存套件","package.verified":"套件驗證通過","package.rejected":"套件驗證失敗","package.activated":"已切換版本","package.rolledback":"已回滾","admin.failed":"管理碼錯誤","job":"背景工作"};
+const tmap=(prefix,keys)=>Object.fromEntries(keys.map(k=>[k,t(prefix+k)]));
+const CATEGORY=tmap("store.category.",["math","diagram","analysis","text","astronomy","electronics","utility","other"]);
+const STATE=tmap("store.state.",["available","installed","enabled","disabled","failed"]);
+const RISK=tmap("store.risk.",["low","medium","high"]);
+const ACTION=tmap("store.action.",["enable","disable","install","update","rollback","uninstall","purge"]);
+const KIND=tmap("store.event.",["run", "run.failed", "run.rejected", "plan.created", "plan.committed", "plan.refused", "plan.failed", "package.staged", "package.verified", "package.rejected", "package.activated", "package.rolledback", "admin.failed", "job"]);
 let tab="browse",modules=[],available=[],actions=["enable","disable"],admin={configured:false},detail=null,plan=null,consents=new Map(),ready=false,rpcId=0,query="",category="";
 const pending=new Map();
 function el(tag,props={},...kids){const n=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="dataset")Object.assign(n.dataset,v);else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(k=>k!==null&&k!==undefined&&k!==false));return n;}
@@ -60,20 +65,20 @@ for(const b of tabs)b.addEventListener("click",()=>setTab(b.dataset.tab));
 function moduleCard(m){
  const li=el("li",{className:"card"});
  li.append(el("div",{className:"row"},el("h3",{textContent:m.name}),badge(STATE[m.state]??m.state,m.state==="enabled"?"enabled":""),badge(CATEGORY[m.category]??m.category),
-  badge(m.source==="builtin"?"內建":"套件"),badge(RISK[m.risk]??m.risk,m.risk)));
+  badge(m.source==="builtin"?t("store.source.builtin"):t("store.source.package")),badge(RISK[m.risk]??m.risk,m.risk)));
  li.append(el("p",{textContent:m.description,style:"margin:0;font-size:.9rem"}));
  li.append(el("small",{textContent:m.id+" · "+m.version+" · "+m.publisher}));
  const row=el("div",{className:"row"});
- row.append(el("button",{textContent:"詳情",onclick:()=>openDetail(m.id)}));
- if(m.state!=="enabled"&&actions.includes("enable"))row.append(el("button",{className:"primary",textContent:"啟用",disabled:!ready,onclick:()=>preparePlan("enable",m.id)}));
- if(m.state==="enabled")row.append(el("button",{textContent:"停用",disabled:!ready,onclick:()=>preparePlan("disable",m.id)}));
+ row.append(el("button",{textContent:t("store.button.details"),onclick:()=>openDetail(m.id)}));
+ if(m.state!=="enabled"&&actions.includes("enable"))row.append(el("button",{className:"primary",textContent:t("store.action.enable"),disabled:!ready,onclick:()=>preparePlan("enable",m.id)}));
+ if(m.state==="enabled")row.append(el("button",{textContent:t("store.action.disable"),disabled:!ready,onclick:()=>preparePlan("disable",m.id)}));
  li.append(row);return li;
 }
 function renderList(){
  const filters=el("div",{className:"filters"});
- const search=el("input",{type:"search",placeholder:"搜尋模組名稱、功能",value:query,"aria-label":"搜尋"});
+ const search=el("input",{type:"search",placeholder:t("store.search.placeholder"),value:query,"aria-label":t("store.search.label")});
  search.addEventListener("input",()=>{query=search.value;renderCards();});
- const cat=el("select",{"aria-label":"類別"},el("option",{value:"",textContent:"所有類別"}),...Object.entries(CATEGORY).map(([k,v])=>el("option",{value:k,textContent:v,selected:k===category})));
+ const cat=el("select",{"aria-label":t("store.category.label")},el("option",{value:"",textContent:t("store.category.all")}),...Object.entries(CATEGORY).map(([k,v])=>el("option",{value:k,textContent:v,selected:k===category})));
  cat.addEventListener("change",()=>{category=cat.value;renderCards();});
  filters.append(search,cat);
  const list=el("ul",{className:"cards"});
@@ -82,86 +87,86 @@ function renderList(){
   const shown=modules.filter(m=>(tab!=="installed"||m.state==="enabled"||m.state==="installed"||m.state==="disabled"||m.source==="package")&&(!category||m.category===category)&&
    (!q||[m.name,m.id,m.description,...m.capabilities.map(c=>c.title+" "+c.id)].join(" ").toLowerCase().includes(q)));
   list.replaceChildren(...shown.map(moduleCard));
-  if(!shown.length)list.append(el("li",{className:"muted",textContent:tab==="installed"?"還沒有啟用任何模組。":"沒有符合的模組。"}));
+  if(!shown.length)list.append(el("li",{className:"muted",textContent:tab==="installed"?t("store.list.noneEnabled"):t("store.list.noMatch")}));
  };
  renderCards();
  view.replaceChildren(filters,list);
  if(tab==="browse"&&available.length){
-  const box=el("div",{className:"box"},el("h3",{textContent:"可安裝的套件"}),el("small",{className:"muted",textContent:"管理員放在伺服器收件匣的套件；安裝前會驗證簽章與雜湊，並需要管理員在伺服器上核准。"}));
+  const box=el("div",{className:"box"},el("h3",{textContent:t("store.packages.title")}),el("small",{className:"muted",textContent:t("store.packages.note")}));
   const ul=el("ul",{className:"cards"});
   for(const p of available){
-   if(p.error){ul.append(el("li",{className:"card"},el("strong",{textContent:p.file}),el("small",{className:"muted",textContent:"無法安裝："+p.error})));continue;}
-   ul.append(el("li",{className:"card"},el("div",{className:"row"},el("strong",{textContent:p.name||p.id}),badge(p.version),badge(p.signed?"已簽章："+(p.signer||""):"未簽章")),
-   el("small",{textContent:p.id+(p.installed?" · 已安裝 "+p.installed:"")}),
-   el("div",{className:"row"},el("button",{className:"primary",disabled:!ready,textContent:p.installed?"更新到 "+p.version:"安裝",onclick:()=>preparePlan(p.installed?"update":"install",p.id,p.version)}))));}
+   if(p.error){ul.append(el("li",{className:"card"},el("strong",{textContent:p.file}),el("small",{className:"muted",textContent:t("store.packages.cannotInstall",{error:p.error})})));continue;}
+   ul.append(el("li",{className:"card"},el("div",{className:"row"},el("strong",{textContent:p.name||p.id}),badge(p.version),badge(p.signed?t("store.packages.signed",{signer:p.signer||""}):t("store.packages.unsigned"))),
+   el("small",{textContent:p.id+(p.installed?t("store.packages.installedVersion",{version:p.installed}):"")}),
+   el("div",{className:"row"},el("button",{className:"primary",disabled:!ready,textContent:p.installed?t("store.packages.updateTo",{version:p.version}):t("store.action.install"),onclick:()=>preparePlan(p.installed?"update":"install",p.id,p.version)}))));}
   box.append(ul);view.append(box);
  }
- if(!admin.configured)view.append(el("p",{className:"muted",style:"font-size:.8rem",textContent:"管理員金鑰未設定：只能啟用或停用內建的低風險模組。"}));
+ if(!admin.configured)view.append(el("p",{className:"muted",style:"font-size:.8rem",textContent:t("store.admin.notConfigured")}));
 }
-const LATENCY={instant:"即時",seconds:"數秒",minutes:"數分鐘",hours:"可能數小時"},RELIABILITY={exact:"精確計算",estimate:"估計值",heuristic:"啟發式判斷",external:"外部服務的判斷"};
+const LATENCY=tmap("store.latency.",["instant","seconds","minutes","hours"]),RELIABILITY=tmap("store.reliability.",["exact","estimate","heuristic","external"]);
 // One capability's "know before you use it" sheet; folded so the list stays short.
 function capProfile(c){
  const p=c.profile;if(!p)return el("span");
- const box=el("details",{className:"profile"},el("summary",{textContent:"適用條件、成本與資料流向"+(c.async?"（背景工作）":"")}));
- const row=(k,v)=>{if(v)box.append(el("div",{},el("strong",{textContent:k+"："}),el("span",{textContent:v})));};
- row("適用",p.whenToUse);row("不適用",p.whenNotToUse);row("輸入限制",p.inputLimits);
- if(p.cost)row("運算成本",LATENCY[p.cost.latency]+(p.cost.resource?"；"+p.cost.resource:"")+(p.cost.billable?"；可能計費":""));
- if(p.dataFlow)row("資料流向",(p.dataFlow.leavesServer?"會離開伺服器：":"留在伺服器：")+p.dataFlow.sends);
- if(p.reliability)row("結果可信度",RELIABILITY[p.reliability.kind]+"；"+p.reliability.note+(p.reliability.verify?" 驗證方式："+p.reliability.verify:""));
- for(const f of p.fallbacks??[])row("失敗時（"+f.when+"）",f.then);
+ const box=el("details",{className:"profile"},el("summary",{textContent:t("store.profile.summary")+(c.async?t("store.profile.async"):"")}));
+ const row=(k,v)=>{if(v)box.append(el("div",{},el("strong",{textContent:t("store.profile.labelSuffix",{label:k})}),el("span",{textContent:v})));};
+ row(t("store.profile.whenToUse"),p.whenToUse);row(t("store.profile.whenNotToUse"),p.whenNotToUse);row(t("store.profile.inputLimits"),p.inputLimits);
+ if(p.cost)row(t("store.profile.cost"),LATENCY[p.cost.latency]+(p.cost.resource?t("store.profile.sep")+p.cost.resource:"")+(p.cost.billable?t("store.profile.billable"):""));
+ if(p.dataFlow)row(t("store.profile.dataFlow"),(p.dataFlow.leavesServer?t("store.profile.leaves"):t("store.profile.stays"))+p.dataFlow.sends);
+ if(p.reliability)row(t("store.profile.reliability"),RELIABILITY[p.reliability.kind]+t("store.profile.sep")+p.reliability.note+(p.reliability.verify?t("store.profile.verify")+p.reliability.verify:""));
+ for(const f of p.fallbacks??[])row(t("store.profile.fallback",{when:f.when}),f.then);
  return box;
 }
 function renderDetail(){
  const {module:m,manifest:raw,activity=[]}=detail;
  const box=el("div");
- box.append(el("div",{className:"row"},el("button",{textContent:"← 返回",onclick:()=>{detail=null;render();}}),el("h3",{textContent:m.name}),badge(STATE[m.state]??m.state,m.state==="enabled"?"enabled":"")));
+ box.append(el("div",{className:"row"},el("button",{textContent:t("store.button.back"),onclick:()=>{detail=null;render();}}),el("h3",{textContent:m.name}),badge(STATE[m.state]??m.state,m.state==="enabled"?"enabled":"")));
  box.append(el("p",{textContent:m.description}));
  const dl=el("dl");
  const add=(k,v)=>{if(v!==undefined&&v!==null&&v!=="")dl.append(el("dt",{textContent:k}),el("dd",{textContent:text(v)}));};
- add("ID",m.id);add("版本",m.version);add("發布者",m.publisher);add("授權",m.license);add("執行方式",{builtin:"內建（隨 Estampes 審閱）",declarative:"宣告式（無程式碼）",wasm:"WASM 隔離執行"}[m.runtime]??m.runtime);
- add("相容 Estampes",raw?.coreCompatibility);add("原始碼",m.sourceUrl);add("套件雜湊",m.package?.sha256);add("簽章金鑰",m.package?.keyId);add("可回滾到",m.rollbackTo);
+ add(t("store.detail.id"),m.id);add(t("store.detail.version"),m.version);add(t("store.detail.publisher"),m.publisher);add(t("store.detail.license"),m.license);add(t("store.detail.runtime"),tmap("store.runtime.",["builtin","declarative","wasm"])[m.runtime]??m.runtime);
+ add(t("store.detail.compat"),raw?.coreCompatibility);add(t("store.detail.source"),m.sourceUrl);add(t("store.detail.hash"),m.package?.sha256);add(t("store.detail.key"),m.package?.keyId);add(t("store.detail.rollbackTo"),m.rollbackTo);
  box.append(dl);
- box.append(el("h3",{textContent:"能做什麼"}));
+ box.append(el("h3",{textContent:t("store.detail.capabilities")}));
  box.append(el("ul",{className:"caps"},...m.capabilities.map(c=>el("li",{},el("strong",{textContent:c.title+" "}),el("code",{textContent:c.id}),el("div",{className:"muted",textContent:c.description}),capProfile(c)))));
- box.append(el("h3",{textContent:"需要的權限"}));
+ box.append(el("h3",{textContent:t("store.detail.permissions")}));
  for(const p of m.permissions)box.append(el("div",{className:"perm"},badge(RISK[p.risk]??p.risk,p.risk),el("span",{textContent:p.zh}),el("code",{textContent:p.id})));
- if(m.network)box.append(el("div",{className:"box alert"},el("strong",{textContent:"資料流向："}),el("span",{textContent:" 會連線到 "+m.network.allow.join("、")+"。"+m.network.dataFlow})));
+ if(m.network)box.append(el("div",{className:"box alert"},el("strong",{textContent:t("store.dataFlow.label")}),el("span",{textContent:t("store.network.connects",{hosts:m.network.allow.join(t("store.list.sep")),dataFlow:m.network.dataFlow})})));
  const row=el("div",{className:"row",style:"margin-top:10px"});
  const can=a=>actions.includes(a);
- if(m.state!=="enabled"&&can("enable"))row.append(el("button",{className:"primary",textContent:"啟用",disabled:!ready,onclick:()=>preparePlan("enable",m.id)}));
- if(m.state==="enabled")row.append(el("button",{textContent:"停用",disabled:!ready,onclick:()=>preparePlan("disable",m.id)}));
+ if(m.state!=="enabled"&&can("enable"))row.append(el("button",{className:"primary",textContent:t("store.action.enable"),disabled:!ready,onclick:()=>preparePlan("enable",m.id)}));
+ if(m.state==="enabled")row.append(el("button",{textContent:t("store.action.disable"),disabled:!ready,onclick:()=>preparePlan("disable",m.id)}));
  if(m.source==="package"){
-  if(m.rollbackTo&&can("rollback"))row.append(el("button",{textContent:"回滾到 "+m.rollbackTo,disabled:!ready,onclick:()=>preparePlan("rollback",m.id)}));
-  if(can("uninstall"))row.append(el("button",{className:"danger",textContent:"解除安裝",disabled:!ready,onclick:()=>preparePlan("uninstall",m.id)}));
+  if(m.rollbackTo&&can("rollback"))row.append(el("button",{textContent:t("store.button.rollbackTo",{version:m.rollbackTo}),disabled:!ready,onclick:()=>preparePlan("rollback",m.id)}));
+  if(can("uninstall"))row.append(el("button",{className:"danger",textContent:t("store.action.uninstall"),disabled:!ready,onclick:()=>preparePlan("uninstall",m.id)}));
  }
- if(can("purge"))row.append(el("button",{className:"danger",textContent:"清除模組資料",disabled:!ready,onclick:()=>preparePlan("purge",m.id)}));
+ if(can("purge"))row.append(el("button",{className:"danger",textContent:t("store.action.purge"),disabled:!ready,onclick:()=>preparePlan("purge",m.id)}));
  box.append(row);
- if(activity.length){box.append(el("h3",{textContent:"最近活動",style:"margin-top:12px"}),eventList(activity));}
+ if(activity.length){box.append(el("h3",{textContent:t("store.detail.recent"),style:"margin-top:12px"}),eventList(activity));}
  view.replaceChildren(box);
 }
 function renderPlan(){
  const p=plan,box=el("div");
- box.append(el("div",{className:"row"},el("button",{textContent:"← 返回",onclick:()=>{plan=null;render();}}),el("h3",{textContent:"確認："+(ACTION[p.action]??p.action)+" "+(p.name||p.module)})));
+ box.append(el("div",{className:"row"},el("button",{textContent:t("store.button.back"),onclick:()=>{plan=null;render();}}),el("h3",{textContent:t("store.plan.confirmTitle",{action:ACTION[p.action]??p.action,name:p.name||p.module})})));
  const dl=el("dl");const add=(k,v)=>{if(v)dl.append(el("dt",{textContent:k}),el("dd",{textContent:text(v)}));};
- add("模組",p.module);add("版本",(p.fromVersion&&p.fromVersion!==p.toVersion?p.fromVersion+" → ":"")+(p.toVersion||""));add("風險",RISK[p.risk]);add("提出者",p.requestedBy==="model"?"AI 提出，等你決定":"你在商店按的");
- add("有效期限",new Date(p.expiresAt).toLocaleTimeString());box.append(dl);
- if(p.permissions.added.length){box.append(el("h3",{textContent:"新增的權限"}));for(const q of p.permissions.added)box.append(el("div",{className:"perm"},badge(RISK[q.risk]??q.risk,q.risk),el("span",{textContent:q.zh}),el("code",{textContent:q.id})));}
- if(p.permissions.removed.length)box.append(el("p",{className:"muted",textContent:"收回的權限："+p.permissions.removed.join("、")}));
- if(p.dataFlow)box.append(el("div",{className:"box alert"},el("strong",{textContent:"資料流向："}),el("span",{textContent:p.dataFlow})));
- for(const n of p.notes??[])box.append(el("p",{className:"muted",textContent:"・"+n}));
- if(p.status!=="pending"){box.append(el("p",{textContent:p.status==="committed"?"已套用。":"這個計畫已"+p.status+"。"}));view.replaceChildren(box);return;}
+ add(t("store.plan.module"),p.module);add(t("store.plan.version"),(p.fromVersion&&p.fromVersion!==p.toVersion?p.fromVersion+" → ":"")+(p.toVersion||""));add(t("store.plan.risk"),RISK[p.risk]);add(t("store.plan.requestedBy"),p.requestedBy==="model"?t("store.plan.byModel"):t("store.plan.byUser"));
+ add(t("store.plan.expires"),new Date(p.expiresAt).toLocaleTimeString());box.append(dl);
+ if(p.permissions.added.length){box.append(el("h3",{textContent:t("store.plan.addedPermissions")}));for(const q of p.permissions.added)box.append(el("div",{className:"perm"},badge(RISK[q.risk]??q.risk,q.risk),el("span",{textContent:q.zh}),el("code",{textContent:q.id})));}
+ if(p.permissions.removed.length)box.append(el("p",{className:"muted",textContent:t("store.plan.removedPermissions",{list:p.permissions.removed.join(t("store.list.sep"))})}));
+ if(p.dataFlow)box.append(el("div",{className:"box alert"},el("strong",{textContent:t("store.dataFlow.label")}),el("span",{textContent:p.dataFlow})));
+ for(const n of p.notes??[])box.append(el("p",{className:"muted",textContent:t("store.plan.note",{note:n})}));
+ if(p.status!=="pending"){box.append(el("p",{textContent:p.status==="committed"?t("store.plan.committed"):t("store.plan.otherStatus",{status:p.status})}));view.replaceChildren(box);return;}
  const consent=consents.get(p.planId);
  if(p.requiresAdmin){
   const cmd="node scripts/estampes-module.js approve "+p.planId;
-  box.append(el("div",{className:"box warn"},el("strong",{textContent:"需要管理員核准"}),
-   admin.configured?el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"在架設 Estampes 的伺服器上、專案資料夾內執行下面這行（管理金鑰不會經過聊天），再按確認。用 Docker 的話，前面加上 docker compose exec estampes 。核准只對這一個計畫有效；請保持這個視窗開著，若重新整理，請在商店重新按安裝（同一份變更會沿用同一個計畫）。"}):
-    el("p",{style:"margin:6px 0;font-size:.86rem",textContent:"這台伺服器沒有開啟儲存，無法核准這類變更。設定 ESTAMPES_STORAGE_DIR 後才能安裝套件。"}),
+  box.append(el("div",{className:"box warn"},el("strong",{textContent:t("store.admin.needed")}),
+   admin.configured?el("p",{style:"margin:6px 0;font-size:.86rem",textContent:t("store.admin.instructions")}):
+    el("p",{style:"margin:6px 0;font-size:.86rem",textContent:t("store.admin.noStorage")}),
    admin.configured?el("code",{textContent:cmd,style:"display:block;user-select:all"}):null));
  }
  const row=el("div",{className:"row"});
- row.append(el("button",{className:"primary",textContent:"確認"+(ACTION[p.action]??p.action),disabled:!ready||!consent,onclick:()=>commitPlan(p)}),
-  el("button",{textContent:"取消",onclick:()=>{plan=null;render();}}));
- if(!consent)box.append(el("p",{className:"muted",textContent:"這個計畫的確認碼不在這個視窗裡；請按上一步重新準備。"}));
+ row.append(el("button",{className:"primary",textContent:t("store.plan.confirmButton",{action:ACTION[p.action]??p.action}),disabled:!ready||!consent,onclick:()=>commitPlan(p)}),
+  el("button",{textContent:t("store.button.cancel"),onclick:()=>{plan=null;render();}}));
+ if(!consent)box.append(el("p",{className:"muted",textContent:t("store.plan.noConsent")}));
  box.append(row);view.replaceChildren(box);
 }
 function eventList(events){
@@ -171,9 +176,9 @@ function eventList(events){
 let activity=[],jobs=[];
 function renderActivity(){
  const box=el("div");
- if(jobs.length){box.append(el("h3",{textContent:"背景工作"}),el("ol",{className:"events"},...jobs.map(j=>el("li",{},el("div",{className:"row"},el("strong",{textContent:j.module+" "+j.capability}),badge(j.status)),el("small",{textContent:j.jobId+" · "+(j.message||"")})))));}
- box.append(el("h3",{textContent:"活動紀錄"}),activity.length?eventList(activity):el("p",{className:"muted",textContent:"還沒有紀錄。"}));
- box.append(el("button",{textContent:"重新整理",disabled:!ready,onclick:loadActivity}));
+ if(jobs.length){box.append(el("h3",{textContent:t("store.activity.jobs")}),el("ol",{className:"events"},...jobs.map(j=>el("li",{},el("div",{className:"row"},el("strong",{textContent:j.module+" "+j.capability}),badge(j.status)),el("small",{textContent:j.jobId+" · "+(j.message||"")})))));}
+ box.append(el("h3",{textContent:t("store.activity.title")}),activity.length?eventList(activity):el("p",{className:"muted",textContent:t("store.activity.empty")}));
+ box.append(el("button",{textContent:t("store.button.refresh"),disabled:!ready,onclick:loadActivity}));
  view.replaceChildren(box);
 }
 function render(){
@@ -184,41 +189,41 @@ function render(){
 }
 async function call(name,args){
  const result=await request("tools/call",{name,arguments:args});
- if(result?.isError)throw Error(result?.structuredContent?.message||result?.content?.[0]?.text||"失敗");
+ if(result?.isError)throw Error(result?.structuredContent?.message||result?.content?.[0]?.text||t("store.error.failed"));
  return result;
 }
 async function refresh(){
  try{const r=await call("store_get_catalog",{});const s=r.structuredContent;modules=s.modules??modules;available=s.available??[];actions=s.actions??actions;admin=s.admin??admin;render();}
- catch(e){status.textContent="讀取商店失敗："+e.message;}
+ catch(e){status.textContent=t("store.status.loadFailed",{message:e.message});}
 }
 async function openDetail(id){
- if(!ready){status.textContent="還在連線，稍候再試。";return;}
- try{status.textContent="讀取中…";const r=await call("store_get_detail",{module:id});detail=r.structuredContent;plan=null;status.textContent="";render();}
- catch(e){status.textContent="讀取失敗："+e.message;}
+ if(!ready){status.textContent=t("store.status.stillConnecting");return;}
+ try{status.textContent=t("store.status.loading");const r=await call("store_get_detail",{module:id});detail=r.structuredContent;plan=null;status.textContent="";render();}
+ catch(e){status.textContent=t("store.status.readFailed",{message:e.message});}
 }
 async function preparePlan(action,module,version){
- try{status.textContent="準備中…";const r=await call("store_get_plan",{action,module,...(version?{version}:{})});
-  const c=r._meta?.["estampes/consent"];if(c)consents.set(c.planId,c.consent);plan=r.structuredContent.plan;status.textContent="請確認下面的變更。";render();}
- catch(e){status.textContent="無法準備："+e.message;}
+ try{status.textContent=t("store.status.preparing");const r=await call("store_get_plan",{action,module,...(version?{version}:{})});
+  const c=r._meta?.["estampes/consent"];if(c)consents.set(c.planId,c.consent);plan=r.structuredContent.plan;status.textContent=t("store.status.confirmBelow");render();}
+ catch(e){status.textContent=t("store.status.cannotPrepare",{message:e.message});}
 }
 async function commitPlan(p){
- try{status.textContent="套用中…";
+ try{status.textContent=t("store.status.applying");
   const r=await call("store_commit_plan",{planId:p.planId,consent:consents.get(p.planId)});
   const s=r.structuredContent;
   modules=s.modules??modules;plan=s.plan;consents.delete(p.planId);
-  status.textContent=(ACTION[p.action]??p.action)+" "+(p.name||p.module)+" 完成。";render();tellModel(p);refresh();}
- catch(e){status.textContent="沒有套用："+e.message;}
+  status.textContent=t("store.status.done",{action:ACTION[p.action]??p.action,name:p.name||p.module});render();tellModel(p);refresh();}
+ catch(e){status.textContent=t("store.status.notApplied",{message:e.message});}
 }
 // The model learns about the change: as quiet context when the host
 // supports it, and the user can also say it in the chat.
 async function tellModel(p){
- const line="使用者剛在 Estampes Store "+(ACTION[p.action]??p.action)+"了 "+(p.name||p.module)+"（"+p.module+(p.toVersion?" "+p.toVersion:"")+"）。";
+ const line=t("store.modelContext.changed",{action:ACTION[p.action]??p.action,name:p.name||p.module,module:p.module,version:p.toVersion?" "+p.toVersion:""});
  try{await request("ui/update-model-context",{content:[{type:"text",text:line}]});}catch{}
 }
 async function loadActivity(){
  if(!ready)return;
  try{const r=await call("store_get_activity",{limit:60});activity=r.structuredContent.events??[];jobs=r.structuredContent.jobs??[];if(tab==="activity"&&!detail&&!plan)render();}
- catch(e){status.textContent="讀取活動失敗："+e.message;}
+ catch(e){status.textContent=t("store.status.activityFailed",{message:e.message});}
 }
 function applyResult(params){
  const s=params?.structuredContent,meta=params?._meta??{};
@@ -248,6 +253,6 @@ render();
  notify("ui/notifications/initialized",{});ready=true;status.textContent="";
  if(pendingDetail){openDetail(pendingDetail);pendingDetail=null;}else{await refresh();}
  if(tab==="activity")loadActivity();}
- catch(err){status.textContent="和對話程式連線失敗："+String(err.message||err);}})();
+ catch(err){status.textContent=t("store.status.hostFailed",{message:String(err.message||err)});}})();
 </script>
 </body></html>
