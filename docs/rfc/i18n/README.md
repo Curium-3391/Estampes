@@ -224,3 +224,7 @@ The maintainer asked what "zh-TW complete" means and whether it is native suppor
 | Migration cost | Phase 1 has to write English for about 630 existing zh lines | Phase 1 extraction is mechanical. English can follow later |
 
 Net: the difference is mostly about contributors, third-party modules and fallback for future partial locales, not about what Chinese users see. zh-TW base is cheaper for Phase 1 alone. English base is cheaper over time for an open, public module ecosystem. A middle path is possible: extract zh-TW first in Phase 1 (pinned locale, byte-identical) and write the English catalog in Phase 2, while keeping English as the base. The phase plan already does this.
+
+## Live verification (2026-11-20)
+
+Phases 2 to 4 were checked by a person on ChatGPT Web. The results and what is still unverified are in [docs/I18N.md](../../I18N.md) ("Verification status"). Module-created layer names are module runtime text (§6.3) and stay deferred with Phase 5.

@@ -23,6 +23,22 @@ test("a known code from structuredContent or a [CODE] tag is shown in the person
   for (const code of zh.ERR_CODES) for (const locale of ["en", "zh-TW"]) assert.notEqual(t("vs.err.code." + code, undefined, locale), "vs.err.code." + code);
 });
 
+test("every known code works through structuredContent and the [CODE] tag, in both languages, with its own sentence", () => {
+  const zh = load("zh-TW"), en = load("en");
+  for (const code of ["HISTORY_CONFLICT", "LAYER_LOCKED", "RECOVERY_REQUIRED", "SAVE_FAILED", "STALE_CANVAS", "STORAGE_UNAVAILABLE"]) assert.ok(zh.ERR_CODES.includes(code), code);
+  const seen = new Set();
+  for (const code of zh.ERR_CODES) {
+    const viaContent = (w) => w.errText(w.toolError({ isError: true, content: [{ type: "text", text: "server text" }], structuredContent: { code } }, "x"));
+    const viaTag = (w) => w.errText(Error("something failed [" + code + "]"));
+    assert.equal(viaContent(en), viaTag(en), code);
+    assert.equal(viaContent(zh), viaTag(zh), code);
+    assert.notEqual(viaContent(en), viaContent(zh), code + " differs by language");
+    assert.notEqual(viaContent(en), "server text", code);
+    assert.equal(seen.has(viaContent(en)), false, code + " has its own sentence");
+    seen.add(viaContent(en));
+  }
+});
+
 test("other errors keep the server's text", () => {
   const { toolError, errText } = load("zh-TW");
   assert.equal(errText(toolError({ isError: true, content: [{ type: "text", text: "Nope" }], structuredContent: { code: "INVALID_TEXT" } }, "x")), "Nope");
