@@ -813,5 +813,15 @@
   "wb.tab.moveBackTitle": "把這個分頁往前移",
   "wb.tab.moveForward": "往後移",
   "wb.tab.moveForwardTitle": "把這個分頁往後移",
-  "wb.tabs.label": "面板"
+  "wb.tabs.label": "面板",
+  "vs.anchor.choice": "標記固定方式",
+  "vs.anchor.toAxes": "固定在座標",
+  "vs.anchor.toAxesTitle": "座標範圍改變時，標記跟著資料移動",
+  "vs.anchor.toPage": "固定在畫面",
+  "vs.anchor.toPageTitle": "標記留在畫面上原來的位置",
+  "vs.anchor.attached": "已固定在座標：標記會跟著資料移動。",
+  "vs.anchor.detached": "已固定在畫面：標記留在原位。",
+  "vs.anchor.failed": "無法變更固定方式：{message}",
+  "vs.anchor.outside": "超出座標範圍",
+  "vs.anchor.outsideList": "{names}。目前不顯示；座標範圍再次包含它們時會重新出現。"
 }

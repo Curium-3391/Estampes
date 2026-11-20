@@ -813,5 +813,15 @@
   "wb.tab.moveBackTitle": "Move this tab earlier",
   "wb.tab.moveForward": "Move right",
   "wb.tab.moveForwardTitle": "Move this tab later",
-  "wb.tabs.label": "Panels"
+  "wb.tabs.label": "Panels",
+  "vs.anchor.choice": "Where this mark stays",
+  "vs.anchor.toAxes": "Pin to axes",
+  "vs.anchor.toAxesTitle": "The mark follows the data when the axes range changes",
+  "vs.anchor.toPage": "Pin to page",
+  "vs.anchor.toPageTitle": "The mark stays where it is on the page",
+  "vs.anchor.attached": "Pinned to the axes: it now follows the data.",
+  "vs.anchor.detached": "Pinned to the page: it stays where it is.",
+  "vs.anchor.failed": "Could not change where the mark stays: {message}",
+  "vs.anchor.outside": "Outside the axes range",
+  "vs.anchor.outsideList": "{names}. Not drawn now; they come back when the axes range includes them again."
 }

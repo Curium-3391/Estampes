@@ -122,3 +122,20 @@ test("model input: world coordinates outside the axes or with no axes are refuse
   assert.equal(neg.isError, true, "a negative canvas coordinate is still refused");
   assert.deepEqual((await state(s, id)).marks, []);
 });
+
+test("moving the axes region on the page moves a world mark with it; deleting the axes leaves it in place as invalid", { timeout: 120000 }, async (t) => {
+  const { s } = await graphServer(t);
+  const id = idIn(await s.call("execute_module", { module: GRAPH, capability: "set_axes", params: { xRange: [0, 10], yRange: [0, 10] }, newCanvas: { kind: "graph" }, present: false }));
+  await s.call("present_visual", { imageId: id, annotations: [{ id: "w", type: "point", x: 5, y: 5, anchor: { space: "world" } }] });
+  const axes = await axesOf(s, id);
+  await s.call("edit_scene_object", { imageId: id, id: axes.id, props: { region: { x: .2, y: .2, x2: .6, y2: .7 } } });
+  const moved = await axesOf(s, id), [cx, cy] = frameOf(moved).toCanvas(5, 5);
+  let w = await markOf(s, id, "w");
+  assert.ok(near(w.geometry.x, cx) && near(w.geometry.y, cy), "followed the region: " + JSON.stringify(w.geometry));
+  assert.ok(near(w.geometry.x, 0.4) && near(w.geometry.y, 0.45), JSON.stringify(w.geometry));
+
+  await s.call("edit_scene_object", { imageId: id, id: axes.id, remove: true });
+  w = await markOf(s, id, "w");
+  assert.equal(w.anchor.status, "invalid");
+  assert.ok(near(w.geometry.x, cx) && near(w.geometry.y, cy), "it stays where it was");
+});
