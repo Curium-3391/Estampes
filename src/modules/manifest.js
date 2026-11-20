@@ -97,6 +97,8 @@ const Capability = z.object({
   id: z.string().regex(CAPABILITY_ID),
   title: Text(60).optional(), titleI18n: I18n(60).optional(),
   description: Text(400),
+  // Search words for search_capabilities (issue #244): plain words, not instructions; they only affect ranking.
+  keywords: z.array(Text(30).refine((k) => k.trim().length > 0, "a keyword cannot be empty")).max(12).optional(),
   inputSchema: z.record(z.string(), z.unknown()),
   permissions: z.array(z.enum(PERMISSION_NAMES)).max(12).optional(),
   target: z.enum(TARGETS).default("canvas"),
