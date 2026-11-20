@@ -7,7 +7,7 @@ import { z } from "zod";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { localized } from "./manifest.js";
 import { JOB_ID } from "./jobs.js";
-import { buildIndex, searchCapabilities, SEARCH_DEFAULTS } from "./search.js";
+import { buildIndex, searchCapabilities, compactModules, schemaHash, SEARCH_DEFAULTS } from "./search.js";
 import { describePermission, riskOf, capabilityPermissions } from "./permissions.js";
 import { compactObject, renderedObjects, widgetObjects, applySceneOps, sceneRevision } from "../scene/scene-ops.js";
 import { renderPreview } from "../scene/preview.js";
@@ -80,10 +80,23 @@ export function registerModuleTools(server, deps) {
 
   server.registerTool("list_modules", {
     title: "List Estampes modules",
-    description: "List the modules on this Estampes server with their state (enabled or not) and capability ids. Read-only.",
-    inputSchema: z.object({ state: z.enum(["any", "enabled"]).default("any") }),
+    description: "List the modules on this Estampes server with their state (enabled or not) and capability ids. Read-only. With compact true the list is one short row per module (id, name, version, state, category, capability ids), at most 25 per page and 16 KB, with total, complete and nextCursor; use it on a server with many modules, or search_capabilities to find a capability by task.",
+    inputSchema: z.object({
+      state: z.enum(["any", "enabled"]).default("any"),
+      compact: z.boolean().optional().describe("true: short rows, paged. Without it the full catalog is returned as before"),
+      limit: z.number().int().min(1).max(SEARCH_DEFAULTS.maxLimit).optional().describe("compact only: rows per page (default 10)"),
+      cursor: z.string().max(200).optional().describe("compact only: nextCursor from the previous page"),
+    }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-  }, async ({ state }) => {
+  }, async ({ state, compact, limit, cursor }) => {
+    if (compact) {
+      try {
+        const page = compactModules(host.registry.list(), { state, limit, cursor });
+        const head = page.total + " module" + (page.total === 1 ? "" : "s") + ", " + page.returned + " shown" + (page.complete ? " (complete)" : " (more: pass nextCursor)") + (page.truncatedByBudget ? ", cut to fit the size limit" : "");
+        const lines = page.modules.map((m) => m.id + " " + m.version + " [" + (STATE_TEXT[m.state] ?? m.state) + "]: " + m.capabilities.join(", "));
+        return { content: [{ type: "text", text: [head, ...lines].join("\n") }], structuredContent: { kind: "estampes.modules_compact", ...page } };
+      } catch (error) { return fail(error); }
+    }
     const list = catalog().filter((m) => state === "any" || m.state === "enabled");
     return { content: [{ type: "text", text: catalogText(list) || "(no modules)" }], structuredContent: { kind: "estampes.modules", modules: list } };
   });
@@ -110,10 +123,10 @@ export function registerModuleTools(server, deps) {
 
   server.registerTool("get_module_capabilities", {
     title: "Read a module's capabilities",
-    description: "Return one module's capabilities with their exact input schemas, examples, target (none, canvas, canvas-or-new) and the permissions they need, plus whether the module is enabled. Each capability can carry a profile: when to use it and when not to, input limits, cost (latency, resources, billing), where data goes, how far to trust the result and how to check it, and what to do when it fails. Read it before the first execute_module call to a module, and follow its fallbacks when a run fails.",
-    inputSchema: z.object({ module: ModuleIdSchema }),
+    description: "Return one module's capabilities (or, with capability, just that one) with their exact input schemas, examples, target (none, canvas, canvas-or-new) and the permissions they need, plus whether the module is enabled. Each capability can carry a profile: when to use it and when not to, input limits, cost (latency, resources, billing), where data goes, how far to trust the result and how to check it, and what to do when it fails. Read it before the first execute_module call to a module, and follow its fallbacks when a run fails.",
+    inputSchema: z.object({ module: ModuleIdSchema, capability: z.string().min(1).max(48).optional().describe("Return only this capability's contract (schema, examples, profile, schemaHash) instead of the whole module's") }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-  }, async ({ module }) => {
+  }, async ({ module, capability }) => {
     try {
       const mod = host.registry.get(module);
       if (!mod) throw new Error("no module " + module + "; call list_modules");
@@ -121,6 +134,15 @@ export function registerModuleTools(server, deps) {
       const caps = m.capabilities.map((c) => ({ id: c.id, title: c.title, description: c.description, target: m.v2?.targets[c.id] ?? c.target,
         permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.async ? { async: true } : {}),
         ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples.map(({ description, params }) => ({ description, params })) } : {}) }));
+      if (capability !== undefined) {
+        const one = caps.find((c) => c.id === capability);
+        if (!one) throw new Error(m.id + " has no capability " + JSON.stringify(capability) + "; it has " + caps.map((c) => c.id).join(", "));
+        const contract = { ...one, schemaHash: schemaHash(m, m.capabilities.find((c) => c.id === capability)) };
+        return {
+          content: [{ type: "text", text: m.id + " " + m.version + " is " + STATE_TEXT[mod.record.state] + ". " + JSON.stringify([contract]) }],
+          structuredContent: { kind: "estampes.module_capabilities", module: m.id, version: m.version, state: mod.record.state, capabilities: [contract] },
+        };
+      }
       return {
         content: [{ type: "text", text: m.id + " " + m.version + " is " + STATE_TEXT[mod.record.state] + ". " + JSON.stringify(caps) }],
         structuredContent: { kind: "estampes.module_capabilities", module: m.id, version: m.version, state: mod.record.state, capabilities: caps },

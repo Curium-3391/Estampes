@@ -144,3 +144,33 @@ export function searchCapabilities(index, { query = "", category, state = "enabl
     ...(total === 0 ? { hint: state === "enabled" ? "no enabled capability matched; try other words, or state \"any\" to include modules that are not enabled yet" : "no capability matched; try other words, or list_modules for a compact catalog" } : {}),
   };
 }
+
+// A compact module list (issue #244, L0 listing): one small row per module,
+// bounded and paged the same way as search_capabilities. Ordered by id.
+export function compactModules(mods, { state = "any", limit = SEARCH_DEFAULTS.limit, cursor, maxBytes = SEARCH_DEFAULTS.maxBytes, lang = "zh-TW" } = {}) {
+  const cap = Math.min(Math.max(1, Math.floor(limit) || SEARCH_DEFAULTS.limit), SEARCH_DEFAULTS.maxLimit);
+  const list = mods.filter((m) => state === "any" || m.record.state === "enabled").sort((a, b) => a.manifest.id.localeCompare(b.manifest.id));
+  const fingerprint = sha(mods.map((x) => [x.manifest.id, x.manifest.version, x.record.state].join("|")).sort().join("\n") + "\n" + lang).slice(0, 12);
+  const key = sha("list|" + state).slice(0, 8);
+  let offset = 0;
+  if (cursor) {
+    const c = decodeCursor(cursor);
+    if (!c) throw new SearchError("this cursor is not valid; list again without one", "cursor");
+    if (c.fp !== fingerprint) throw new SearchError("the module catalog changed since that page was made; list again from the start", "stale-cursor");
+    if (c.key !== key) throw new SearchError("this cursor belongs to a different state filter; list again without it", "cursor");
+    offset = c.offset;
+  }
+  const rows = [];
+  let bytes = 0, byBudget = false;
+  for (const mod of list.slice(offset, offset + cap)) {
+    const m = mod.manifest;
+    const r = { id: m.id, name: cut(localized(m, "name", lang) ?? m.id, SEARCH_DEFAULTS.titleChars).text, version: m.version, state: mod.record.state, category: m.category,
+      capabilities: m.capabilities.map((c) => c.id) };
+    const size = Buffer.byteLength(JSON.stringify(r));
+    if (rows.length && bytes + size > maxBytes) { byBudget = true; break; }
+    rows.push(r); bytes += size;
+  }
+  const next = offset + rows.length, complete = next >= list.length;
+  return { state, total: list.length, returned: rows.length, offset, complete, ...(complete ? {} : { nextCursor: encodeCursor(next, fingerprint, key) }),
+    ...(byBudget ? { truncatedByBudget: true } : {}), modules: rows };
+}
