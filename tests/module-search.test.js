@@ -10,7 +10,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { buildIndex, searchCapabilities, schemaHash, SEARCH_DEFAULTS } from "../src/modules/search.js";
+import { createModuleHost } from "../src/modules/index.js";
+import { registerModuleTools } from "../src/modules/mcp-tools.js";
+import { createBlankCanvas } from "../src/scene/blank-canvas.js";
+import { ensureImage } from "../src/storage.js";
+import { buildIndex, searchCapabilities, compactModules, schemaHash, SEARCH_DEFAULTS } from "../src/modules/search.js";
 
 const TOPICS = ["astrometry", "histogram", "spectrum", "contour", "ocr", "perspective", "denoise", "vectorize", "gradient", "thermal", "polarity", "annotation",
   "mosaic", "calibration", "fourier", "segmentation", "histology", "cartography", "schematic", "waveform"];
@@ -173,4 +177,81 @@ test("over MCP: search finds a capability, one contract is read, and a hit still
     assert.equal(bad.isError, true);
     await client.close();
   } finally { handle.kill(); }
+});
+
+for (const n of [10, 100, 300]) {
+  test(`compact list of ${n} modules is paged, bounded and complete`, (t) => {
+    const mods = catalog(n, { enabledEvery: 2 });
+    let page = compactModules(mods, { limit: 25 }), pages = 0, worst = 0;
+    const ids = [];
+    for (;;) {
+      pages++;
+      worst = Math.max(worst, Buffer.byteLength(JSON.stringify(page)));
+      ids.push(...page.modules.map((m) => m.id));
+      assert.equal(page.total, n);
+      assert.equal(page.complete, !page.nextCursor);
+      if (page.complete) break;
+      page = compactModules(mods, { limit: 25, cursor: page.nextCursor });
+    }
+    t.diagnostic(`${n} modules: ${pages} pages, worst page ${worst} B (~${Math.round(worst / 4)} tokens)`);
+    assert.equal(pages, Math.ceil(n / 25));
+    assert.deepEqual(ids, [...ids].sort(), "stable id order");
+    assert.equal(new Set(ids).size, n);
+    assert.ok(worst <= SEARCH_DEFAULTS.maxBytes + 512);
+    assert.equal(compactModules(mods, { state: "enabled", limit: 25 }).total, Math.ceil(n / 2));
+    assert.throws(() => compactModules(mods, { limit: 25, cursor: compactModules(mods, { limit: 5 }).nextCursor, state: "enabled" }), (e) => e.code === "cursor");
+    assert.throws(() => compactModules(mods.slice(1), { limit: 5, cursor: compactModules(mods, { limit: 5 }).nextCursor }), (e) => e.code === "stale-cursor");
+  });
+}
+
+async function toolsOf() {
+  const dir = await mkdtemp(join(tmpdir(), "estampes-disc-"));
+  const h = await createModuleHost({ storageDir: dir, coreVersion: "0.10.0", canvases: { ensure: ensureImage, create: createBlankCanvas, save: async () => {} } });
+  const tools = new Map();
+  registerModuleTools({ registerTool: (name, spec, handler) => tools.set(name, handler), registerResource() {} },
+    { host: h, storeUri: "ui://s", storeHtml: "", visualUri: "ui://v", canvasPayload: async () => ({}), logSizes: (_n, r) => r, ensureImage: async () => ({}), saveCanvas: async () => {}, canvasLayers: () => [] });
+  return { h, call: (name, args) => tools.get(name)(args) };
+}
+
+test("one capability's contract: only that one, with schemaHash; the whole-module answer is unchanged; unknown ids list the real ones", async () => {
+  const { h, call } = await toolsOf();
+  const whole = await call("get_module_capabilities", { module: "org.estampes.graph" });
+  const one = await call("get_module_capabilities", { module: "org.estampes.graph", capability: "plot_function" });
+  assert.equal(one.structuredContent.capabilities.length, 1);
+  const { schemaHash: hash, ...rest } = one.structuredContent.capabilities[0];
+  assert.deepEqual(rest, whole.structuredContent.capabilities.find((c) => c.id === "plot_function"), "the same contract as in the whole-module answer");
+  const graph = h.registry.get("org.estampes.graph").manifest;
+  assert.equal(hash, schemaHash(graph, graph.capabilities.find((c) => c.id === "plot_function")));
+  assert.ok(whole.structuredContent.capabilities.every((c) => c.schemaHash === undefined), "the whole-module answer did not change shape");
+  assert.ok(Buffer.byteLength(JSON.stringify(one)) < Buffer.byteLength(JSON.stringify(whole)));
+  const bad = await call("get_module_capabilities", { module: "org.estampes.graph", capability: "nope" });
+  assert.equal(bad.isError, true);
+  assert.match(bad.content[0].text, /plot_function/);
+});
+
+test("discovery to execution across two modules without reading the catalog; a missed search falls back", async () => {
+  const { h, call } = await toolsOf();
+  for (const id of ["org.estampes.graph", "org.estampes.cas"]) { const plan = await h.lifecycle.prepare("enable", id); await h.lifecycle.commit(plan.planId, { consent: plan.consent }); }
+  // 1. a first search that misses (wrong words) says so and points at the fallback.
+  const miss = await call("search_capabilities", { query: "xylophone tuning" });
+  assert.equal(miss.structuredContent.total, 0);
+  assert.match(miss.structuredContent.hint, /try other words/);
+  // 2. fallback: the compact list names every module and capability id, still small.
+  const compact = await call("list_modules", { compact: true });
+  assert.ok(compact.structuredContent.modules.some((m) => m.id === "org.estampes.cas" && m.capabilities.includes("calculate")));
+  assert.ok(Buffer.byteLength(JSON.stringify(compact.structuredContent)) <= SEARCH_DEFAULTS.maxBytes + 512);
+  // 3. search finds the calculator, then the contract of exactly that capability is read, then it runs.
+  const calc = await call("search_capabilities", { query: "calculate expression" });
+  const hit = calc.structuredContent.results.find((r) => r.module === "org.estampes.cas" && r.capability === "calculate");
+  assert.ok(hit, "found by task");
+  const contract = (await call("get_module_capabilities", { module: hit.module, capability: hit.capability })).structuredContent.capabilities[0];
+  assert.equal(contract.schemaHash, hit.schemaHash, "the hash in the search row is the hash of the contract that was read");
+  // 4. and a second module: Graph's plot_function, found, inspected, executed on a canvas.
+  const plot = (await call("search_capabilities", { query: "plot function" })).structuredContent.results.find((r) => r.module === "org.estampes.graph" && r.capability === "plot_function");
+  assert.ok(plot);
+  const plotContract = (await call("get_module_capabilities", { module: plot.module, capability: plot.capability })).structuredContent.capabilities[0];
+  assert.ok(plotContract.inputSchema.required.includes("expression"));
+  const canvas = await createBlankCanvas({});
+  const run = await h.router.execute({ module: plot.module, capability: plot.capability, canvas: canvas.imageId, params: { expression: "sin(x)" } });
+  assert.ok(run.scene.created.length > 0);
 });
