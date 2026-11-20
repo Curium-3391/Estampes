@@ -28,6 +28,11 @@ test("ESTAMPES_GRAPH_DOCUMENTS=readonly: Graphs stay readable, every change and 
   const made = await s.call("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "sin(x)" }, newCanvas: { kind: "graph" }, present: false });
   const id = idIn(made, "gph");
   await s.call("present_visual", { imageId: id, annotations: [{ id: "peak", type: "point", x: 0.3, y: 0.25, label: "peak" }] });
+  // A second Graph, and a workspace that holds both.
+  const id2 = idIn(await s.call("execute_module", { module: GRAPH, capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "graph" }, present: false }), "gph");
+  await s.call("present_visual", { imageId: id2, annotations: [{ id: "q", type: "point", x: 0.6, y: 0.6, label: "q" }] });
+  const both = (await s.call("create_workspace", { canvases: [id, id2] })).structuredContent;
+  const wsBoth = both.workspaceId ?? both.workspace?.id;
   await s.stop();
 
   s = await startCanvasStoreServer(storage, beta, { idle: "0", env: { ESTAMPES_GRAPH_DOCUMENTS: "readonly" } });
@@ -44,6 +49,10 @@ test("ESTAMPES_GRAPH_DOCUMENTS=readonly: Graphs stay readable, every change and 
   refused(await s.raw("execute_module", { module: GRAPH, capability: "plot_function", canvas: id, params: { expression: "cos(x)" } }), "a module run on the Graph");
   const layers = (await s.call("get_visual_layers", { imageId: id })).structuredContent;
   refused(await s.raw("edit_visual_layers", { imageId: id, expectedRevision: layers.revision, layers: [{ id: layers.layers[0].id, opacity: 0.5 }] }), "a layer change");
+  // One edit across two Graphs: refused as a whole, neither Graph changes (not even in memory).
+  const before2 = (await s.call("get_visual_state", { imageId: id2 })).structuredContent;
+  refused(await s.raw("edit_visual_canvas", { imageId: id, workspaceId: wsBoth, marks: [{ id: "peak", item: "wi-1", x: 0.4 }, { id: "q", item: "wi-2", x: 0.7 }] }), "an edit across two Graphs");
+  assert.deepEqual((await s.call("get_visual_state", { imageId: id2 })).structuredContent.marks, before2.marks, "the second Graph is unchanged");
   refused(await s.raw("split_workspace", { source: ws0.workspaceId ?? ws0.workspace?.id, mode: "copy", commit: true }), "a copy of the Graph");
 
   // New Graphs: an explicit one is refused; the default new canvas is a blank image.
