@@ -15,7 +15,8 @@ import { createBlankCanvas } from "../src/scene/blank-canvas.js";
 import { ensureImage } from "../src/storage.js";
 
 const callout = JSON.parse(await readFile(new URL("../examples/modules/callout/module.json", import.meta.url), "utf8"));
-const canvases = { ensure: ensureImage, create: createBlankCanvas, save: async () => {} };
+let created = 0;
+const canvases = { ensure: ensureImage, create: async (o) => { created++; return createBlankCanvas(o); }, save: async () => {} };
 const keys = generateSigningKey();
 const sign = (manifest) => signBundle({ schema: "estampes.package/1", manifest: JSON.parse(JSON.stringify(manifest)), files: {} }, keys.privateKey, "pub1");
 const v1 = (version = "1.0.0") => ({ ...structuredClone(callout), version, permissions: ["canvas.read", "canvas.write"], capabilities: callout.capabilities.map(({ examples, ...c }) => ({ ...c, permissions: undefined })) });
@@ -100,6 +101,22 @@ test("a v2 module cannot name another document in its input; its own id and plai
   await s.put("one", sign({ ...v1(), id: "org.example.one" }));
   await s.commit(h, "install", "org.example.one", {}, true); await s.commit(h, "enable", "org.example.one");
   await h.router.execute({ module: "org.example.one", capability: "add_callout", canvas: own.imageId, params: params(other.imageId) });
+});
+
+test("a refused cross-document call creates no new document", async () => {
+  const s = await setup();
+  const m = v2("1.0.0", "org.example.fresh");
+  m.permissions = ["canvas.write", "workspace.write"];
+  m.capabilities = m.capabilities.map((c) => ({ ...c, target: "document-or-new", needs: ["canvas.write", "workspace.write"] }));
+  await s.put("fresh", sign(m));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.fresh", {}, true); await s.commit(h, "enable", "org.example.fresh");
+  const other = await createBlankCanvas({});
+  const before = created;
+  await assert.rejects(h.router.execute({ module: "org.example.fresh", capability: "add_callout", params: params(other.imageId) }), (e) => e.code === "cross-document");
+  assert.equal(created, before, "nothing was created for the refused call");
+  await h.router.execute({ module: "org.example.fresh", capability: "add_callout", params: params("fine") });
+  assert.equal(created, before + 1, "an accepted call still creates its document");
 });
 
 test("an update with the same ABI says so; with the flag off again an installed v2 module is not run", async () => {

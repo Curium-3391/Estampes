@@ -80,6 +80,11 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       try { input = validateValue(cap.inputSchema, params ?? {}, "params"); }
       catch (error) { throw new ModuleError(error.message + ". Call get_module_capabilities for the exact schema", "input"); }
 
+      // A v2 module may name only the document it is pointed at; checked before a new document is created, so a refused call leaves nothing behind.
+      if (manifest.v2) {
+        const stray = otherDocument(input, imageId ?? null);
+        if (stray) throw new ModuleError(capId + " may only work on the document it was pointed at; its input names " + stray, "cross-document");
+      }
       // Target canvas.
       let entry = null, createdCanvas = false;
       if (cap.target === "none") {
@@ -92,10 +97,6 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         createdCanvas = true;
       } else {
         throw new ModuleError(capId + " needs a canvas: pass canvas (an imageId)", "input");
-      }
-      if (manifest.v2) {
-        const stray = otherDocument(input, entry?.imageId ?? null);
-        if (stray) throw new ModuleError(capId + " may only work on the document it was pointed at; its input names " + stray, "cross-document");
       }
       const seen = entry ? sceneRevision(entry) : null;
       if (entry && expectedRevision !== undefined && expectedRevision !== seen) {
