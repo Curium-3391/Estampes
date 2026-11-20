@@ -85,6 +85,8 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         const stray = otherDocument(input, imageId ?? null);
         if (stray) throw new ModuleError(capId + " may only work on the document it was pointed at; its input names " + stray, "cross-document");
       }
+      // A v1 package module predates Graph documents (ADR-005): it is refused on a Graph and new canvases it creates are images. Built-in modules are unaffected.
+      const imagesOnly = mod.source === "package" && !manifest.v2;
       // Target canvas.
       let entry = null, createdCanvas = false;
       if (cap.target === "none") {
@@ -92,8 +94,9 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       } else if (imageId) {
         if (newCanvas) throw new ModuleError("give canvas or newCanvas, not both");
         entry = await canvases.ensure(imageId);
+        if (imagesOnly && entry.kind === "graph") throw new ModuleError(manifest.id + " is a v1 package module and works on images only; this is a Graph document. A module/2 package can declare it works on documents", "target-unsupported");
       } else if (cap.target === "canvas-or-new") {
-        entry = await canvases.create(newCanvas ?? {});
+        entry = await canvases.create(imagesOnly ? { ...(newCanvas ?? {}), kind: "image" } : (newCanvas ?? {}));
         createdCanvas = true;
       } else {
         throw new ModuleError(capId + " needs a canvas: pass canvas (an imageId)", "input");
@@ -138,6 +141,12 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         }
 
         if (stop.cancelled) throw new ModuleError("stopped before its result was applied", "timeout");
+        // A v2 module may not change or delete what the user has edited since (the guard's interface; resolution flow comes with CAS bindings).
+        if (manifest.v2 && entry) {
+          const edited = new Set(renderedObjects(entry).filter((r) => r.object.provenance?.editedByUser).map((r) => r.object.id));
+          const hit = output.operations.find((op) => op && (op.op === "object.update" || op.op === "object.delete") && edited.has(op.id));
+          if (hit) throw new ModuleError(capId + " tried to " + hit.op.split(".")[1] + " " + hit.id + ", which the user edited; leave it, or create a separate object", "user-edited");
+        }
         let scene = { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen };
         if (output.operations.length) {
           if (!entry) throw new ModuleError(capId + " returned scene operations but has no canvas", "output");

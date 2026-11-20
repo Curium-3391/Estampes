@@ -363,9 +363,12 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         if (compareVersions(v.manifest.version, mod.record.version) <= 0) throw new LifecycleError(v.manifest.id + " " + mod.record.version + " is already installed; the inbox has " + v.manifest.version, "noop");
         const was = mod.record.state === "enabled" ? mod.record.granted ?? [] : [];
         const requested = v.manifest.permissions, diff = permissionDiff(was, requested);
-        const risk = !v.signer ? "high" : riskOf(diff.added.length ? diff.added : []);
-        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff, risk, requiresAdmin: true, abi: abiChange(mod.manifest.v2?.abi, v.manifest.v2?.abi),
-          notes: [...(diff.added.length ? ["The new version asks for more permissions; approving this grants them."] : []), "Previous version " + mod.record.version + " stays available for rollback.",
+        // Signer lineage: an update signed by a different key than the installed one is a change of publisher, never silent.
+        const fromKey = mod.package?.keyId ?? null, toKey = v.signer?.keyId ?? null;
+        const signer = { from: fromKey, to: toKey, changed: fromKey !== toKey };
+        const risk = !v.signer || signer.changed ? "high" : riskOf(diff.added.length ? diff.added : []);
+        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff, risk, requiresAdmin: true, abi: abiChange(mod.manifest.v2?.abi, v.manifest.v2?.abi), signer,
+          notes: [...(signer.changed ? ["The signing key changed (" + (fromKey ?? "unsigned") + " → " + (toKey ?? "unsigned") + "): confirm you trust the new signer before approving."] : []), ...(diff.added.length ? ["The new version asks for more permissions; approving this grants them."] : []), "Previous version " + mod.record.version + " stays available for rollback.",
             "Package digest " + v.digest.slice(0, 16) + "…", ...v.warnings],
           dataFlow: v.manifest.network ? "Requests go to " + v.manifest.network.allow.join(", ") + ". " + v.manifest.network.dataFlow : null,
           options: { id: v.manifest.id, version: v.manifest.version, digest: v.digest } };
