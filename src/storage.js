@@ -51,6 +51,8 @@ export class GraphReadOnlyError extends Error {
   }
 }
 const graphWriteRefused = (imageId) => graphsReadOnly && isGraphId(String(imageId).split("#")[0]);
+// For a batch that changes several canvases before saving any: refuse up front.
+export function assertGraphWritable(entry) { if (graphWriteRefused(entry?.imageId)) throw new GraphReadOnlyError(); }
 const metaOf = (entry) => ({
   imageId: entry.imageId, sourceAssetId: entry.sourceAssetId, source: entry.source, fileName: entry.fileName,
   original: entry.original, sourceInfo: entry.sourceInfo, ...(entry.page ? { page: entry.page } : {}),
