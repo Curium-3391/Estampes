@@ -38,11 +38,13 @@ export function defaultAxes(entry) {
   return all.length === 1 ? all[0] : null;
 }
 
-function mapGeometry(g, f) {
-  if (Array.isArray(g.points)) return { points: g.points.map((p) => { const [x, y] = f(p.x, p.y); return { x: round(x), y: round(y) }; }) };
+// Canvas coordinates (0..1) are rounded like every stored mark; axis units
+// keep full precision (an axes range can be far smaller than 1e-9).
+function mapGeometry(g, f, r = round) {
+  if (Array.isArray(g.points)) return { points: g.points.map((p) => { const [x, y] = f(p.x, p.y); return { x: r(x), y: r(y) }; }) };
   const out = {};
-  if (g.x !== undefined) [out.x, out.y] = f(g.x, g.y).map(round);
-  if (g.x2 !== undefined) [out.x2, out.y2] = f(g.x2, g.y2).map(round);
+  if (g.x !== undefined) [out.x, out.y] = f(g.x, g.y).map(r);
+  if (g.x2 !== undefined) [out.x2, out.y2] = f(g.x2, g.y2).map(r);
   return out;
 }
 // Canvas geometry with a polyline's bounding box, as stored marks carry it.
@@ -66,7 +68,7 @@ export function worldToCanvas(world, axes) {
   if (!inCanvas(g)) throw new Error("the point(s) fall outside the canvas");
   return g;
 }
-export const canvasToWorld = (g, axes) => mapGeometry(g, frameOf(axes).toFrame);
+export const canvasToWorld = (g, axes) => mapGeometry(g, frameOf(axes).toFrame, (v) => v);
 
 // A world anchor record for a mark whose canvas geometry is `g`.
 export function anchorRecord(frame, g, axes, world = canvasToWorld(g, axes)) {
@@ -109,4 +111,23 @@ export function syncWorldAnchors(entry) {
 export function anchorInfo(m) {
   if (!isWorldAnchored(m)) return undefined;
   return { space: "world", frame: m.anchor.frame, ...(m.anchor.world ? { world: m.anchor.world } : {}), status: m.anchorStatus ?? "ok" };
+}
+
+// An anchor record from an untrusted file (bundle, marks file), checked field
+// by field: {anchor, anchorStatus?}, or {} when there is none or it is malformed.
+const finite = (v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 1e12;
+const unit = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1;
+function cleanGeometry(g, ok) {
+  if (!g || typeof g !== "object") return null;
+  if (Array.isArray(g.points)) return g.points.length >= 1 && g.points.length <= 2000 && g.points.every((p) => p && ok(p.x) && ok(p.y)) ? { points: g.points.map((p) => ({ x: p.x, y: p.y })) } : null;
+  if (!ok(g.x) || !ok(g.y)) return null;
+  if (g.x2 === undefined) return { x: g.x, y: g.y };
+  return ok(g.x2) && ok(g.y2) ? { x: g.x, y: g.y, x2: g.x2, y2: g.y2 } : null;
+}
+export function cleanAnchorFields(m) {
+  const a = m?.anchor;
+  if (!a || a.space !== "world" || typeof a.frame !== "string" || !/^o\d{1,6}$/.test(a.frame)) return {};
+  const world = cleanGeometry(a.world, finite), at = cleanGeometry(a.at, unit);
+  if (!world || !at || typeof a.basis !== "string" || a.basis.length > 400) return {};
+  return { anchor: { space: "world", frame: a.frame, world, at, basis: a.basis }, ...(["outside", "invalid"].includes(m.anchorStatus) ? { anchorStatus: m.anchorStatus } : {}) };
 }

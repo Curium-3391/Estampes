@@ -37,6 +37,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
+import { cleanAnchorFields } from "./src/visual/world-anchors.js";
 import { createGraphCanvas, useGraphPolicy, assertGraphWritable, readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
@@ -279,7 +280,7 @@ async function readMarksFile(entry, file) {
   const marks = data.marks.map((m) => {
     const parsed = VisualAnnotationSchema.safeParse(m);
     if (!parsed.success) throw new Error("Invalid mark in marks file: " + (m?.id ?? "?"));
-    return { ...parsed.data, author: m.author === "user" ? "user" : "assistant" };
+    return { ...parsed.data, ...cleanAnchorFields(m), author: m.author === "user" ? "user" : "assistant" };
   });
   const layers = fileLayers(data);
   return { marks, options: { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation } };

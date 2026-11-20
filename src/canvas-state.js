@@ -413,13 +413,15 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
     }
     return mapped.get(key);
   };
+  // A mark fixed to the axes keeps its (already checked) anchor record; the next save resolves it on this canvas.
+  const anchorOf = (mark) => mark.anchor ? { anchor: mark.anchor, ...(mark.anchorStatus ? { anchorStatus: mark.anchorStatus } : {}) } : {};
   for (const mark of marks) {
     if (mark.author === "user") {
       if (state.has(mark.id)) continue;
-      state.set(mark.id, { ...replayUser(mark), layer: into(mark) });
+      state.set(mark.id, { ...replayUser(mark), ...anchorOf(mark), layer: into(mark) });
     } else {
       if (state.get(mark.id)?.author === "user" || markLocked(entry, state.get(mark.id))) continue;
-      state.set(mark.id, { ...resolve(mark), layer: into(mark) });
+      state.set(mark.id, { ...resolve(mark), ...anchorOf(mark), layer: into(mark) });
     }
     added.push(mark.id);
   }
