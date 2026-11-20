@@ -22,6 +22,26 @@ export function matchLocale(tag, locales) {
   return locales.find((l) => l.toLowerCase() === parts[0]) ?? null;
 }
 
+// A record's default name in the viewer's language (RFC docs/rfc/i18n T5,
+// D6; src/i18n/names.js writes the fields). A record made from a catalog key
+// carries `nameKey` and `nameParams` next to its literal `name`; `render` is
+// a translator for the viewer's locale. Anything else (a name the person
+// typed, a record from before this existed, a key this build's catalog lacks)
+// shows its literal `name`. The record itself is never changed.
+export function localizedName(rec, render, depth = 0) {
+  if (!rec || typeof rec !== "object") return String(rec ?? "");
+  const key = rec.nameKey;
+  if (typeof key !== "string" || !key || depth > 1) return String(rec.name ?? "");
+  const params = {};
+  for (const [k, v] of Object.entries(rec.nameParams && typeof rec.nameParams === "object" ? rec.nameParams : {})) {
+    if (k === "author" && (v === "user" || v === "assistant")) params[k] = render("name.author." + v);
+    else if (v && typeof v === "object") params[k] = localizedName(v, render, depth + 1);
+    else params[k] = v;
+  }
+  const out = render(key, params);
+  return out === key ? String(rec.name ?? "") : out;
+}
+
 // The widget's translator. Resolution, first match wins: the person's own
 // pick (localStorage, this browser only; never written into a canvas
 // document, which is shared) → the host's locale → the instance default the
@@ -98,6 +118,8 @@ export function widgetI18n(catalogs, instanceDefault, options = {}) {
     i18nHost(tag) { if (fromHost && typeof tag === "string" && tag) { host = matchLocale(tag, locales); update(); } return current; },
     i18nPick: pick,
     i18nOnChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // A record's default name in the current locale (see localizedName).
+    i18nName: (rec) => localizedName(rec, translate),
     // A lookup table whose values are message keys, read in the current
     // locale on every access: i18nMap({ low: "store.risk.low" }).low.
     // Use it for tables built once at start-up, which would otherwise keep

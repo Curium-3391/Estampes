@@ -96,7 +96,7 @@ test("server-side default names and permission text are unchanged while pinned t
   assert.deepEqual(AUTHOR_NAME, { user: "你", assistant: "AI" });
   assert.equal(newLayerRecord([{ id: "L1", author: "assistant" }], "assistant").name, "AI · 第2次");
   assert.equal(t("name.layer.imported", { author: "你" }), "你 · 匯入");
-  assert.equal(t("name.copy.prefix", { source: "a.png" }) + t("name.copy.image"), "複本 a.png · 圖片");
+  assert.equal(t("name.copy.image", { source: "a.png" }), "複本 a.png · 圖片");
   assert.equal(t("name.workspace.pair", { left: "img:a", right: "img:b" }), "對照 img:a + img:b");
   assert.equal(t("name.workspace.split", { name: "工作區" }), "工作區（拆出）");
   assert.deepEqual(describePermission("cas.compute"), { id: "cas.compute", risk: "medium",

@@ -227,7 +227,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
     return [...new Map(out.map(a=>[a.assetId,a])).values()];
   }
   function legacyEntry(s,images=new Map(),imageId=s.background.asset?.legacyImageId){
-    const entry={imageId,width:s.extent.width,height:s.extent.height,sceneRevision:s.revision,objectSeq:0,layers:s.layers.map(l=>({id:l.id,name:l.name,author:l.author,opacity:l.opacity,visible:l.visible,locked:l.locked})),marks:new Map(s.annotations.map(a=>[a.id,{id:a.id,type:a.type,...a.geometry,...a.style,label:a.label,author:a.provenance.author,layer:a.layerId}])),baseAsObject:false};
+    const entry={imageId,width:s.extent.width,height:s.extent.height,sceneRevision:s.revision,objectSeq:0,layers:s.layers.map(l=>({id:l.id,name:l.name,...(l.nameKey===undefined?{}:{nameKey:l.nameKey,...(l.nameParams===undefined?{}:{nameParams:l.nameParams})}),author:l.author,opacity:l.opacity,visible:l.visible,locked:l.locked})),marks:new Map(s.annotations.map(a=>[a.id,{id:a.id,type:a.type,...a.geometry,...a.style,label:a.label,author:a.provenance.author,layer:a.layerId}])),baseAsObject:false};
     restoreObjects(entry,s.objects.map(o=>({id:o.id,type:o.type,revision:o.revision,props:o.type==='image'&&images.has(o.props.asset.assetId)?{png:PNG_URI+images.get(o.props.asset.assetId),region:o.props.region,...(o.props.source===undefined?{}:{source:o.props.source})}:o.props,layer:o.layerId,label:o.label,visibility:o.visibility,provenance:{author:o.provenance.author,module:o.provenance.createdBy.moduleId,moduleVersion:o.provenance.createdBy.version}})));
     if(entry.objects.size!==s.objects.length)fail('UNSUPPORTED_TARGET','Scene object cannot be projected into the existing module runtime without loss');
     entry.objectSeq=Math.max(0,...s.objects.map(o=>Number(o.id.slice(1))||0));return entry;
@@ -276,7 +276,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
       else if(op.type==='layer.create')scene.layers.push({id:allocated('layer',requestId),name:z.string().trim().min(1).max(40).parse(op.name),author,opacity:1,visible:true,locked:false,content:[]});
       else if(op.type==='layer.update'){
         const l=layer(op.id),patch=z.object({name:z.string().trim().min(1).max(40).optional(),visible:z.boolean().optional(),locked:z.boolean().optional(),opacity:z.number().min(0).max(1).optional()}).strict().parse(op.patch);
-        if(author!=='user'&&(l.locked||patch.locked===false))fail('FORBIDDEN','Only the user can unlock a layer');Object.assign(l,patch);
+        if(author!=='user'&&(l.locked||patch.locked===false))fail('FORBIDDEN','Only the user can unlock a layer');if(patch.name!==undefined&&patch.name!==l.name){delete l.nameKey;delete l.nameParams;}Object.assign(l,patch);
       }else if(['annotation.add','annotation.update','annotation.remove'].includes(op.type)){
         let a=scene.annotations.find(a=>a.id===op.id);
         if(op.type!=='annotation.add'&&!a)fail('NOT_FOUND','Unknown annotation');

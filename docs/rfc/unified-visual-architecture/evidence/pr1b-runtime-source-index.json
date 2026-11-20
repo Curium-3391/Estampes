@@ -19,7 +19,7 @@
     },
     {
       "path": "src/documents/legacy-shadow.js",
-      "sha256": "d3a60fee98b30cc528109c1d998dc1887322136d1242861244e78869acfc2ee5"
+      "sha256": "4e6e74f0e7d4fae19a0ec0372b6736e0d75039053e3048c974e86073f5a8da68"
     },
     {
       "path": "src/documents/provenance.js",
@@ -31,7 +31,7 @@
     },
     {
       "path": "src/documents/schema.js",
-      "sha256": "e7f1379a2be0fb33fe32a0b3455618454774a7a82b0ec80953f05d65751ede84"
+      "sha256": "f346a4354d481eae51338e2cf7892fa79dd2958340feae529bcce745df020f0a"
     },
     {
       "path": "src/documents/validation.js",
@@ -380,6 +380,23 @@
           "path": "src/documents/legacy-shadow.js",
           "from": "953493b67fc5b7b08ca4029a8ecda4645668cdc37ae975515a641216ed00e505",
           "to": "d3a60fee98b30cc528109c1d998dc1887322136d1242861244e78869acfc2ee5"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-20",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d), asked to continue to Phase 4 (2026-11-19, \u300c\u958b\u59cb\u300d), and chose to store the default-name key as layer fields with the document format kept at estampes.document/1 (2026-11-20, decision card: \u300c\u5716\u5c64\u6b04\u4f4d,\u683c\u5f0f\u7dad\u6301 /1\u300d)",
+      "reason": "i18n Phase 4: a layer may carry optional nameKey/nameParams next to its literal name so a viewer can show a server-made default name in their language. LayerSchema accepts the two optional bounded fields and legacy-shadow maps them; documents without them are unchanged and the literal name stays the name of record. An older build reads such a document as an unknown layer field and goes read-only (RECOVERY_REQUIRED); back up before downgrading",
+      "files": [
+        {
+          "path": "src/documents/legacy-shadow.js",
+          "from": "d3a60fee98b30cc528109c1d998dc1887322136d1242861244e78869acfc2ee5",
+          "to": "4e6e74f0e7d4fae19a0ec0372b6736e0d75039053e3048c974e86073f5a8da68"
+        },
+        {
+          "path": "src/documents/schema.js",
+          "from": "e7f1379a2be0fb33fe32a0b3455618454774a7a82b0ec80953f05d65751ede84",
+          "to": "f346a4354d481eae51338e2cf7892fa79dd2958340feae529bcce745df020f0a"
         }
       ]
     }
