@@ -195,6 +195,7 @@ All optional. Docker reads them from `.env` (see `.env.example`); Heroku and Ren
 | `ESTAMPES_DEFAULT_LOCALE` | `en` | Interface language when the person has not picked one and the chat app does not report one: `en` or `zh-TW` (`zh-Hant`, `zh-HK` and `zh-MO` also mean zh-TW). Also the language of default names the server gives new layers, copies and workspaces. An unsupported value falls back to `en` with a warning in the log. **A deployment that used to show Chinese should set `zh-TW`; otherwise a chat app that reports no language gets English.** |
 | `ESTAMPES_LOCALE_FROM_HOST` | `1` | `0` ignores the language the chat app reports, so every view starts in `ESTAMPES_DEFAULT_LOCALE`. A language the person picks in the widget still applies. |
 | `ESTAMPES_MODULE_ALLOW_UNSIGNED` | `0` | `1` allows installing module packages without a signature (always shown as high risk). |
+| `ESTAMPES_MODULE_V2` | `off` | `on` allows installing and running `estampes.module/2` packages (UVA Phase 5A). Off: such a package is refused with a reason, and an installed one is marked failed at startup and not run. |
 | `ESTAMPES_MAX_RESULT_CHARS` | `145000` | Largest tool result in characters; model-facing images shrink to fit (Claude drops results above about 150,000). `0` turns it off. |
 | `ESTAMPES_LOG_FORMAT` | `text` | `json` for one JSON object per log line. |
 

@@ -23,7 +23,7 @@ import { createHash, createPublicKey, createPrivateKey, sign as edSign, verify a
 import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { validateManifest, ManifestError, MODULE_ID } from "./manifest.js";
+import { validateManifest, runtimeManifest, abiChange, ManifestError, MODULE_ID } from "./manifest.js";
 import { riskOf, permissionDiff } from "./permissions.js";
 import { LifecycleError } from "./lifecycle.js";
 import { applySceneOps } from "../scene/scene-ops.js";
@@ -83,9 +83,9 @@ export function signBundle(bundle, privateKeyPem, keyId) {
 
 // Checks everything about a package that can be checked without installing.
 // Returns { bundle, manifest, digest, signer, warnings } or throws.
-export function verifyBundle(bytes, { trusted = new Map(), allowUnsigned = false, coreVersion, reserved = new Set() } = {}) {
+export function verifyBundle(bytes, { trusted = new Map(), allowUnsigned = false, coreVersion, reserved = new Set(), v2 = false } = {}) {
   const bundle = parseBundle(bytes);
-  const manifest = validateManifest(bundle.manifest, { coreVersion });
+  const manifest = validateManifest(bundle.manifest, { coreVersion, v2 });
   if (reserved.has(manifest.id)) throw new ManifestError(manifest.id + " is a built-in module and cannot be replaced by a package");
   if (manifest.runtime.kind === "builtin") throw new ManifestError("packages cannot use the builtin runtime");
   if (manifest.runtime.kind === "wasm") {
@@ -108,7 +108,7 @@ export function verifyBundle(bytes, { trusted = new Map(), allowUnsigned = false
   } else {
     throw new ManifestError("the package is not signed, and this server only installs packages signed by a trusted key");
   }
-  return { bundle, manifest, digest, signer, warnings };
+  return { bundle, manifest: runtimeManifest(manifest), digest, signer, warnings };
 }
 
 async function atomicWrite(path, data, mode) {
@@ -194,7 +194,7 @@ export function firstMismatch(want, got, at) {
   return want === got ? null : at + ": expected " + show(want) + ", got " + show(got);
 }
 
-export function createPackages({ dir, registry, audit, runtimes, coreVersion, trustedKeys = [], allowUnsigned = false, reserved = new Set() }) {
+export function createPackages({ dir, registry, audit, runtimes, coreVersion, trustedKeys = [], allowUnsigned = false, reserved = new Set(), moduleV2 }) {
   const inbox = join(dir, "inbox"), store = join(dir, "packages"), lockFile = join(dir, "lock.json"), keysFile = join(dir, "trusted-keys.json");
   const trusted = new Map();
   const loadKeys = async () => {
@@ -207,7 +207,9 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         scopes: (Array.isArray(k.scopes) && k.scopes.length ? k.scopes : []).map(String).slice(0, 8) });
     }
   };
-  const verifyOptions = () => ({ trusted, allowUnsigned, coreVersion, reserved });
+  // ESTAMPES_MODULE_V2=on allows estampes.module/2 packages (UVA Phase 5A). It is read each time a
+  // package is checked, so it applies to a running host; `moduleV2` overrides it (tests).
+  const verifyOptions = () => ({ trusted, allowUnsigned, coreVersion, reserved, v2: moduleV2 ?? String(process.env.ESTAMPES_MODULE_V2 ?? "").toLowerCase() === "on" });
   const lock = { async read() { return readJson(lockFile, { schema: "estampes.module-lock/1", modules: {} }); },
     async write(data) { await mkdir(dir, { recursive: true }); await atomicWrite(lockFile, JSON.stringify(data, null, 2)); } };
   const versionDir = (id, version) => join(store, id, version);
@@ -334,7 +336,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const v = await findInInbox(id, options.version);
         const requested = v.manifest.permissions;
         const risk = !v.signer ? "high" : riskOf(requested);
-        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff: permissionDiff([], requested), risk, requiresAdmin: true,
+        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff: permissionDiff([], requested), risk, requiresAdmin: true, abi: abiChange(undefined, v.manifest.v2?.abi),
           notes: ["Package digest " + v.digest.slice(0, 16) + "…", ...(v.signer ? ["Signed by " + v.signer.publisher + " (" + v.signer.keyId + ")"] : []), ...v.warnings],
           dataFlow: v.manifest.network ? "Requests go to " + v.manifest.network.allow.join(", ") + ". " + v.manifest.network.dataFlow : null,
           options: { id, version: v.manifest.version, digest: v.digest } };
@@ -362,7 +364,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const was = mod.record.state === "enabled" ? mod.record.granted ?? [] : [];
         const requested = v.manifest.permissions, diff = permissionDiff(was, requested);
         const risk = !v.signer ? "high" : riskOf(diff.added.length ? diff.added : []);
-        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff, risk, requiresAdmin: true,
+        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff, risk, requiresAdmin: true, abi: abiChange(mod.manifest.v2?.abi, v.manifest.v2?.abi),
           notes: [...(diff.added.length ? ["The new version asks for more permissions; approving this grants them."] : []), "Previous version " + mod.record.version + " stays available for rollback.",
             "Package digest " + v.digest.slice(0, 16) + "…", ...v.warnings],
           dataFlow: v.manifest.network ? "Requests go to " + v.manifest.network.allow.join(", ") + ". " + v.manifest.network.dataFlow : null,

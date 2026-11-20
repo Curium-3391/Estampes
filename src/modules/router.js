@@ -11,6 +11,17 @@ import { applySceneOps, renderedObjects, sceneRevision, SceneOpsError, VISIBILIT
 import { localized } from "./manifest.js";
 import { plotContext } from "./plot-context.js";
 
+// A string in a v2 module's input that names a document (an image, a Graph
+// or a copy of either) other than the one it was pointed at.
+const DOCUMENT_ID = /^(img|gph):[0-9a-f]{16}(#c[0-9a-f]+)?$/;
+function otherDocument(value, own, depth = 0) {
+  if (depth > 8) return null;
+  if (typeof value === "string") return DOCUMENT_ID.test(value) && value !== own ? value : null;
+  if (Array.isArray(value)) { for (const v of value) { const found = otherDocument(v, own, depth + 1); if (found) return found; } return null; }
+  if (value && typeof value === "object") { for (const v of Object.values(value)) { const found = otherDocument(v, own, depth + 1); if (found) return found; } }
+  return null;
+}
+
 export class ModuleError extends Error {
   constructor(message, code = "invalid") { super(message); this.code = code; }
 }
@@ -27,9 +38,11 @@ const OutputSchema = z.object({
 // image), size, revision and (with canvas.read) the public objects plus its
 // own scratch objects, and the plot context (axes and function plots) built
 // from them (plot-context.js), which is the same for both kinds.
-function canvasContext(entry, moduleId, granted) {
+// A v2 module (ADR-005) is told what kind of document it works on, never an
+// image id: it gets this one document and nothing that names another.
+function canvasContext(entry, moduleId, granted, v2 = false) {
   const kind = entry.kind === "graph" ? "graph" : "image";
-  const base = { imageId: entry.imageId, kind, width: entry.width, height: entry.height, revision: sceneRevision(entry) };
+  const base = { ...(v2 ? {} : { imageId: entry.imageId }), kind, width: entry.width, height: entry.height, revision: sceneRevision(entry) };
   if (!granted.includes("canvas.read")) return base;
   const objects = renderedObjects(entry)
     .filter((r) => r.object.visibility === "public" || r.object.provenance?.module === moduleId)
@@ -67,6 +80,11 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       try { input = validateValue(cap.inputSchema, params ?? {}, "params"); }
       catch (error) { throw new ModuleError(error.message + ". Call get_module_capabilities for the exact schema", "input"); }
 
+      // A v2 module may name only the document it is pointed at; checked before a new document is created, so a refused call leaves nothing behind.
+      if (manifest.v2) {
+        const stray = otherDocument(input, imageId ?? null);
+        if (stray) throw new ModuleError(capId + " may only work on the document it was pointed at; its input names " + stray, "cross-document");
+      }
       // Target canvas.
       let entry = null, createdCanvas = false;
       if (cap.target === "none") {
@@ -85,21 +103,23 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         throw new ModuleError("the canvas changed since revision " + expectedRevision + " (now " + seen + "); read it again and retry", "conflict");
       }
 
+      // What this call may use: for a v2 capability only what it needs (granted ∩ needs), otherwise all that was granted.
+      const effective = manifest.v2 ? granted.filter((p) => capabilityPermissions(manifest, cap).includes(p)) : granted;
       const runtime = runtimes[mod.runtime.kind];
       if (!runtime) throw new ModuleError("runtime " + mod.runtime.kind + " is not available on this server", "runtime");
       const ctx = {
         module: { id: manifest.id, version: manifest.version },
-        capability: capId, permissions: granted, limits: manifest.limits ?? {},
-        canvas: entry ? canvasContext(entry, manifest.id, granted) : null,
-        entry: granted.includes("asset.read.selected") ? entry : null,
+        capability: capId, permissions: effective, limits: manifest.limits ?? {},
+        canvas: entry ? canvasContext(entry, manifest.id, effective, !!manifest.v2) : null,
+        entry: effective.includes("asset.read.selected") ? entry : null,
       };
       const builtin = mod.runtime.kind === "builtin";
-      if (builtin && granted.includes("network.request.approved") && egress) {
-        ctx.http = (request) => egress.call({ manifest, granted, request, limits: ctx.limits, capability: capId });
+      if (builtin && effective.includes("network.request.approved") && egress) {
+        ctx.http = (request) => egress.call({ manifest, granted: effective, request, limits: ctx.limits, capability: capId });
       }
       // The original image of the target canvas, for built-in modules and for
       // http modules that declare a multipart file (sent only through egress).
-      if ((builtin || mod.runtime.kind === "http") && granted.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
+      if ((builtin || mod.runtime.kind === "http") && effective.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
 
       // Runs the capability and lands its result on the canvas. A background
       // job calls it without a revision check: it was started on purpose and
