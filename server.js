@@ -2098,6 +2098,8 @@ function makeServer() {
           remove: remove.filter((m) => (m.side ?? "left") === side).map((m) => m.id),
           resolveUser,
         });
+        // Both sides are changed before either is saved: a refused Graph must stop the edit before it starts.
+        if (!replayed) { if (!sideDone("left")) assertGraphWritable(left); if (right && !sideDone("right")) assertGraphWritable(right); }
         const undoLeft = snapshotCanvas(left), leftEdits = [...(left.userEdits ?? [])];
         const edits = editCanvas(left, pick("left"));
         let rightEdits = [];
