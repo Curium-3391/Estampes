@@ -82,7 +82,7 @@ export function createLifecycle({ registry, audit, admin = null, actions = {} })
         planId: "plan_" + randomBytes(9).toString("base64url"), action, module: moduleId,
         name: details.name ?? mod?.manifest.name, fromVersion: mod?.record?.version ?? null, toVersion: details.toVersion ?? null,
         permissions: { requested: details.requested ?? [], added: added.map(describePermission), removed: details.diff?.removed ?? [] },
-        risk, requiresAdmin, notes: details.notes ?? [], dataFlow: details.dataFlow ?? null, ...(details.abi && details.abi.kind !== "none" ? { abi: details.abi } : {}),
+        risk, requiresAdmin, notes: details.notes ?? [], dataFlow: details.dataFlow ?? null, ...(details.abi && details.abi.kind !== "none" ? { abi: details.abi } : {}), ...(details.signer ? { signer: details.signer } : {}),
         status: "pending", createdAt: new Date(now).toISOString(), expiresAt: new Date(now + PLAN_TTL_MS).toISOString(),
         expiresAtMs: now + PLAN_TTL_MS, consent: randomBytes(18).toString("base64url"), requestedBy: by,
         options: details.options ?? options,

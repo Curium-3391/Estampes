@@ -12,12 +12,14 @@ import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { generateSigningKey, signBundle } from "../src/modules/packages.js";
 import { catalogEntry } from "../src/modules/mcp-tools.js";
 import { createBlankCanvas } from "../src/scene/blank-canvas.js";
+import { applySceneOps } from "../src/scene/scene-ops.js";
 import { ensureImage } from "../src/storage.js";
 
 const callout = JSON.parse(await readFile(new URL("../examples/modules/callout/module.json", import.meta.url), "utf8"));
 let created = 0;
-const canvases = { ensure: ensureImage, create: async (o) => { created++; return createBlankCanvas(o); }, save: async () => {} };
-const keys = generateSigningKey();
+const kinds = [];
+const canvases = { ensure: ensureImage, create: async (o) => { created++; kinds.push(o.kind); return createBlankCanvas(o); }, save: async () => {} };
+const keys = generateSigningKey(), keys2 = generateSigningKey();
 const sign = (manifest) => signBundle({ schema: "estampes.package/1", manifest: JSON.parse(JSON.stringify(manifest)), files: {} }, keys.privateKey, "pub1");
 const v1 = (version = "1.0.0") => ({ ...structuredClone(callout), version, permissions: ["canvas.read", "canvas.write"], capabilities: callout.capabilities.map(({ examples, ...c }) => ({ ...c, permissions: undefined })) });
 const v2 = (version = "1.0.0", id = "org.example.callout2") => {
@@ -30,11 +32,12 @@ async function setup({ moduleV2 = true } = {}) {
   const storage = await mkdtemp(join(tmpdir(), "estampes-v2-"));
   const mods = join(storage, "modules");
   await mkdir(join(mods, "inbox"), { recursive: true });
-  await writeFile(join(mods, "trusted-keys.json"), JSON.stringify([{ keyId: "pub1", publisher: "P", publicKey: keys.publicKey, scopes: ["org.example"] }]));
+  await writeFile(join(mods, "trusted-keys.json"), JSON.stringify([{ keyId: "pub1", publisher: "P", publicKey: keys.publicKey, scopes: ["org.example"] }, { keyId: "pub2", publisher: "P2", publicKey: keys2.publicKey, scopes: ["org.example"] }]));
   const { key } = await resolveAdminKey({ storageDir: storage });
   const seen = [];
   // The declarative runtime is replaced by one that records what the module is given.
-  const recorder = { async run(_mod, capability, _input, ctx) { seen.push({ capability, ctx }); return { operations: [] }; } };
+  const out = { operations: [] };
+  const recorder = { async run(_mod, capability, _input, ctx) { seen.push({ capability, ctx }); return structuredClone(out); } };
   // The flag is the server's ESTAMPES_MODULE_V2, read when a package is checked.
   const boot = ({ moduleV2: on = moduleV2 } = {}) => {
     process.env.ESTAMPES_MODULE_V2 = on ? "on" : "off";
@@ -47,7 +50,7 @@ async function setup({ moduleV2 = true } = {}) {
     await h.lifecycle.commit(plan.planId, { consent: plan.consent });
     return plan;
   };
-  return { boot, put, commit, seen };
+  return { boot, put, commit, seen, out };
 }
 after(() => { delete process.env.ESTAMPES_MODULE_V2; });
 const params = (text) => ({ x: 0.1, y: 0.1, x2: 0.4, y2: 0.2, text });
@@ -136,4 +139,58 @@ test("an update with the same ABI says so; with the flag off again an installed 
   h = await s.boot();
   assert.ok(h.registry.get("org.example.callout2"));
   assert.equal(h.registry.record("org.example.callout2").state, "failed");
+});
+
+test("a v1 package module is refused on a Graph and makes images when it creates a document; v2 and built-ins are not held back", async () => {
+  const s = await setup();
+  const m = { ...v1(), id: "org.example.one" };
+  m.permissions = ["canvas.read", "canvas.write", "workspace.write"];
+  m.capabilities = m.capabilities.map((c) => ({ ...c, target: "canvas-or-new" }));
+  await s.put("one", sign(m)); await s.put("two", sign(v2()));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.one", {}, true); await s.commit(h, "enable", "org.example.one");
+  await s.commit(h, "install", "org.example.callout2", {}, true); await s.commit(h, "enable", "org.example.callout2");
+  const graph = await createBlankCanvas({}); graph.kind = "graph";
+  await assert.rejects(h.router.execute({ module: "org.example.one", capability: "add_callout", canvas: graph.imageId, params: params("t") }), (e) => e.code === "target-unsupported");
+  await h.router.execute({ module: "org.example.callout2", capability: "add_callout", canvas: graph.imageId, params: params("t") });
+  assert.equal(s.seen.at(-1).ctx.canvas.kind, "graph", "a v2 module is given the Graph");
+  await h.router.execute({ module: "org.example.one", capability: "add_callout", params: params("t"), newCanvas: { kind: "graph" } });
+  assert.equal(kinds.at(-1), "image", "a v1 package module asking for a Graph gets an image");
+  await h.router.execute({ module: "org.example.one", capability: "add_callout", params: params("t") });
+  assert.equal(kinds.at(-1), "image");
+});
+
+test("a v2 module cannot change or delete what the user edited, but can still touch its own untouched objects", async () => {
+  const s = await setup();
+  await s.put("two", sign(v2()));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.callout2", {}, true); await s.commit(h, "enable", "org.example.callout2");
+  const canvas = await createBlankCanvas({});
+  const make = () => h.router.execute({ module: "org.example.callout2", capability: "add_callout", canvas: canvas.imageId, params: params("t") });
+  s.out.operations = [{ op: "object.create", type: "shape", props: { space: "canvas", kind: "text", x: 0.1, y: 0.1, text: "a" } }, { op: "object.create", type: "shape", props: { space: "canvas", kind: "text", x: 0.5, y: 0.5, text: "b" } }];
+  const r = await make();
+  const [a, b] = r.scene.created;
+  applySceneOps(canvas, [{ op: "object.update", id: a, props: { text: "edited" } }], { author: "user" });
+  s.out.operations = [{ op: "object.update", id: a, props: { text: "mine" } }];
+  await assert.rejects(make(), (e) => e.code === "user-edited" && e.message.includes(a));
+  s.out.operations = [{ op: "object.delete", id: a }];
+  await assert.rejects(make(), (e) => e.code === "user-edited");
+  s.out.operations = [{ op: "object.update", id: b, props: { text: "fine" } }];
+  await make();
+});
+
+test("an update signed by a different key is shown as a signer change with high risk", async () => {
+  const s = await setup();
+  await s.put("two", sign(v2("1.0.0")));
+  const h = await s.boot();
+  await s.commit(h, "install", "org.example.callout2", {}, true); await s.commit(h, "enable", "org.example.callout2");
+  await s.put("same", sign(v2("1.1.0")));
+  const same = await h.lifecycle.prepare("update", "org.example.callout2");
+  assert.deepEqual(same.signer, { from: "pub1", to: "pub1", changed: false });
+  assert.notEqual(same.risk, "high");
+  await s.put("other", signBundle({ schema: "estampes.package/1", manifest: JSON.parse(JSON.stringify(v2("1.2.0"))), files: {} }, keys2.privateKey, "pub2"));
+  const changed = await h.lifecycle.prepare("update", "org.example.callout2", { version: "1.2.0" });
+  assert.deepEqual(changed.signer, { from: "pub1", to: "pub2", changed: true });
+  assert.equal(changed.risk, "high");
+  assert.match(changed.notes.join(" "), /signing key changed/);
 });
