@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { validateManifest } from "../src/modules/manifest.js";
 import { createModuleHost } from "../src/modules/index.js";
 import { registerModuleTools } from "../src/modules/mcp-tools.js";
 import { createBlankCanvas } from "../src/scene/blank-canvas.js";
@@ -254,4 +255,29 @@ test("discovery to execution across two modules without reading the catalog; a m
   const canvas = await createBlankCanvas({});
   const run = await h.router.execute({ module: plot.module, capability: plot.capability, canvas: canvas.imageId, params: { expression: "sin(x)" } });
   assert.ok(run.scene.created.length > 0);
+});
+
+test("keywords: accepted in v1 and v2 manifests, bounded, and they make a capability findable", async () => {
+  const demo = JSON.parse(await (await import("node:fs/promises")).readFile(new URL("../examples/modules/callout/module.json", import.meta.url), "utf8"));
+  const withKeywords = (keywords, extra = {}) => ({ ...structuredClone(demo), ...extra, capabilities: demo.capabilities.map((c) => ({ ...c, keywords })) });
+  assert.deepEqual(validateManifest(withKeywords(["label", "speech bubble"]), { coreVersion: "0.10.0" }).capabilities[0].keywords, ["label", "speech bubble"]);
+  const v2 = withKeywords(["label"], { schema: "estampes.module/2", runtime: { ...demo.runtime, abi: 1 } });
+  v2.capabilities = v2.capabilities.map(({ permissions, target, ...c }) => ({ ...c, target: "document", needs: ["canvas.write"] }));
+  assert.ok(validateManifest(v2, { coreVersion: "0.10.0", v2: true }).capabilities[0].keywords);
+  assert.throws(() => validateManifest(withKeywords(Array.from({ length: 13 }, (_, i) => "k" + i)), { coreVersion: "0.10.0" }), /keywords/);
+  assert.throws(() => validateManifest(withKeywords(["x".repeat(31)]), { coreVersion: "0.10.0" }), /keywords/);
+  assert.throws(() => validateManifest(withKeywords(["  "]), { coreVersion: "0.10.0" }), /keywords/);
+  assert.throws(() => validateManifest(withKeywords([5]), { coreVersion: "0.10.0" }), /keywords/);
+  // Search: a word that appears nowhere else finds the capability; without the keyword it does not.
+  const mods = catalog(5, { enabledEvery: 1 });
+  assert.equal(searchCapabilities(buildIndex(mods), { query: "kazoo" }).total, 0);
+  mods[2].manifest.capabilities[1].keywords = ["kazoo", "buzzing"];
+  const hit = searchCapabilities(buildIndex(mods), { query: "kazoo" });
+  assert.equal(hit.total, 1);
+  assert.equal(hit.results[0].module, mods[2].manifest.id);
+  // A keyword outweighs a mention in the description alone.
+  mods[3].manifest.capabilities[0].description += " mentions buzzing once";
+  const ranked = searchCapabilities(buildIndex(mods), { query: "buzzing" });
+  assert.equal(ranked.results[0].module, mods[2].manifest.id);
+  assert.ok(ranked.total >= 2);
 });

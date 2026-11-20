@@ -49,7 +49,7 @@ export function buildIndex(mods, lang = "zh-TW") {
       const title = localized(c, "title", lang) ?? c.id;
       const fields = {
         id: tokens(m.id + " " + c.id.replace(/_/g, " ")), title: tokens(title), module: tokens(localized(m, "name", lang) ?? ""),
-        category: tokens(m.category ?? ""), description: tokens((c.description ?? "") + " " + (localized(m, "description", lang) ?? "")),
+        category: tokens(m.category ?? ""), keywords: tokens((c.keywords ?? []).join(" ")), description: tokens((c.description ?? "") + " " + (localized(m, "description", lang) ?? "")),
       };
       docs.push({ mod, cap: c, title, fields });
     }
@@ -60,7 +60,7 @@ export function buildIndex(mods, lang = "zh-TW") {
   return { docs, df, n: docs.length, fingerprint };
 }
 
-const WEIGHT = { id: 6, title: 5, module: 3, category: 2, description: 1 };
+const WEIGHT = { id: 6, title: 5, keywords: 4, module: 3, category: 2, description: 1 };
 
 function score(index, doc, words, query) {
   const q = clean(query).toLowerCase();
