@@ -310,7 +310,7 @@
     },
     {
       "path": "src/surface/service.js",
-      "sha256": "0e89fd01ba14a444d88e09718e3340e661404574e21da1f9c1a27f718ced7d1b"
+      "sha256": "607da44d030b7d284fd2cc2f232ce8337d139a8cd98b8df27cff86b389c32b1b"
     },
     {
       "path": "src/surface/store.js",
@@ -590,6 +590,15 @@
         "public/number-line.html"
       ],
       "previousSha256": "530f110b3acdd86cc33a66d50ba02af8b28ab840d48b40935e787027b37a0abf"
+    },
+    {
+      "date": "2026-11-20",
+      "authorizedBy": "User asked to close #228 and do the Graph panel work in UVA Phase 4B in this thread (2026-11-20, \u300c\u4e0d\u7136\u5148\u544a\u8a34\u8ca0\u8cac\uff03228\u7684agent\u95dc\u9589\u5206\u652f \u7531\u4f60\u9019\u908a4b\u5be6\u4f5c\u300d), after asking whether 4B could start (\u300ci18n\u5b8c\u6210\u6aa2\u67e5\u662f\u5426\u80fd\u9032\u51654b\u300d)",
+      "reason": "UVA Phase 4B-1 (from #228): opening the Graph module's graph panel brings the canvas panel forward instead of adding an empty window; empty graph windows saved by older versions are dropped",
+      "files": [
+        "src/surface/service.js"
+      ],
+      "previousSha256": "0e89fd01ba14a444d88e09718e3340e661404574e21da1f9c1a27f718ced7d1b"
     }
   ]
 }

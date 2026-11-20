@@ -119,6 +119,11 @@ function renderBar(open,lay,mobile,solo){
  // Launcher: panels the enabled modules offer.
  const launch=h("div",{class:"wb-launch",role:"group","aria-label":t("wb.launch.label")});
  for(const a of wb.surface.available){
+  if(a.kind==="graph"){
+   // Graph is the canvas panel's own view: this brings the canvas forward (also from minimized or under a maximized window).
+   launch.append(h("button",{class:"wb-graph","data-graph":"show",title:t("wb.graph.showTitle"),onclick:()=>wbApply([{op:"open-panel",module:a.module,panel:a.panel}])},t("wb.graph.show")));
+   continue;
+  }
   if(a.kind!=="calculator")continue;
   const openCount=wb.surface.panels.filter(p=>p.module===a.module&&p.panel===a.panel&&p.open).length;
   const full=openCount>=a.maxInstances,off=!a.enabled;

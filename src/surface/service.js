@@ -22,10 +22,27 @@ export function createSurfaceService({ store, registry, notebooks }) {
     }
     return out;
   };
+  // The "graph" panel is the Graph view of the canvas panel (the canvas is a
+  // photo or a gph: document and is always open), not a window of its own.
+  // Older surfaces may hold an empty "graph" window from before; it is dropped.
+  const dropAlias = (doc) => { doc.panels = doc.panels.filter((p) => p.kind !== "graph"); };
   const openIds = (doc) => doc.panels.filter((p) => p.open).map((p) => p.panelId);
+  // Bring the canvas forward in every profile: raise it, and put back any
+  // window that was maximized over it.
+  const showCanvas = (doc) => {
+    const ids = openIds(doc);
+    const layouts = reconcile(doc.layouts, ids);
+    for (const profile of Object.keys(layouts)) {
+      let l = layouts[profile];
+      for (const id of ids) if (id !== "p:canvas" && l.placements[id]?.mode === "maximized") l = applyLayoutOp(l, { op: "restore", panelId: id }, ids);
+      layouts[profile] = applyLayoutOp(l, { op: "focus", panelId: "p:canvas" }, ids);
+    }
+    doc.layouts = layouts;
+  };
 
   // Everything a client needs to draw the surface.
   function view(doc) {
+    doc = { ...doc, panels: doc.panels.filter((p) => p.kind !== "graph") };
     const available = offered().map(({ module, moduleName, moduleState, panel }) => ({
       module, moduleName, enabled: moduleState === "enabled", panel: panel.id, kind: panel.kind, title: localized(panel, "title"),
       maxInstances: panel.maxInstances, instances: doc.panels.filter((p) => p.module === module && p.panel === panel.id).length,
@@ -46,11 +63,13 @@ export function createSurfaceService({ store, registry, notebooks }) {
       const parsed = ApplySchema.safeParse({ ops });
       if (!parsed.success) throw new SurfaceError("surface ops: " + parsed.error.issues[0].path.join(".") + " " + parsed.error.issues[0].message);
       const result = await store.mutate(canvasKey, { expectedRevision, idempotencyKey }, async (doc) => {
+        dropAlias(doc);
         for (const op of parsed.data.ops) {
           if (op.op === "open-panel") {
             const mod = registry.get(op.module);
             const desc = mod?.manifest.panels?.find((p) => p.id === op.panel);
             if (!desc) throw new SurfaceError("no panel " + op.module + "/" + op.panel);
+            if (desc.kind === "graph") { showCanvas(doc); continue; }
             const existing = doc.panels.filter((p) => p.module === op.module && p.panel === op.panel);
             const closed = existing.find((p) => !p.open);
             if (closed) { closed.open = true; if (op.notebook && closed.notebook) closed.notebook = (await notebooks.get(op.notebook)).id; continue; }

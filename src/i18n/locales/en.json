@@ -788,6 +788,8 @@
   "wb.grip.title": "Drag to move",
   "wb.height.title": "Drag to change the canvas height (shared by single and side-by-side views); double-click to reset; keyboard: up and down arrows",
   "wb.launch.alreadyOpen": "Already open",
+  "wb.graph.show": "Graph",
+  "wb.graph.showTitle": "Show the Graph canvas (brings it to the front)",
   "wb.launch.button": "+ {title}",
   "wb.launch.disabled": "Enable “{module}” in the Store to use it",
   "wb.launch.label": "Open a panel",
