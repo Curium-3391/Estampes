@@ -1503,7 +1503,7 @@ function applyInput(args){
    const items=cleanItems(wsArg.items),same=ws?.id===wsArg.id;
    if(!same){photo=null;exportLinks=null;views=[];cam=null;detail=null;layers=[];hiddenLayers=new Set();links=[];selectedLink=null;selectedEvidence=null;unsentReviews=[];unsentEdits=[];selected=null;resetFindings();renderViewTabs();}
    const old=new Map((ws?.items??[]).map(it=>[it.imageId,it.photo]));
-   pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||t("vs.workspace.defaultName"),revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
+   pair=null;ws={id:wsArg.id,name:String(wsArg.name??"").slice(0,60)||t("vs.workspace.defaultName"),...(typeof wsArg.nameKey==="string"&&String(wsArg.name??"")?{nameKey:wsArg.nameKey,nameParams:wsArg.nameParams&&typeof wsArg.nameParams==="object"?wsArg.nameParams:{}}:{}),revision:Number(wsArg.revision)||0,items:items.map(it=>({...it,photo:old.get(it.imageId)??null}))};
    imageId=items[0].imageId;layoutWorkspace(ws.items);
  }else if(typeof args.imageId==="string"&&CANVAS_ID.test(args.imageId)){
    if(ws){ws=null;frames=null;photo=null;}

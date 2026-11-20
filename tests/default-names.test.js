@@ -185,3 +185,13 @@ test("workspace default names keep a key; typed, renamed and split ones behave",
   assert.deepEqual(cleanNameFields(sp), { nameKey: sp.nameKey, nameParams: sp.nameParams });
   assert.ok(shown(sp, "en").endsWith("(split)"));
 });
+
+test("every workspace object the server hands the widget carries the name fields, and the widget keeps them", async () => {
+  const { readFileSync } = await import("node:fs");
+  const server = readFileSync(new URL("../server.js", import.meta.url), "utf8");
+  const sites = server.match(/name: doc\.name, \.\.\.cleanNameFields\(doc\)/g) ?? [];
+  assert.equal(sites.length, 3, "presentWorkspace, load_visual_canvas and the document-change snapshot");
+  assert.equal(/name: doc\.name, revision/.test(server), false, "no workspace object is built from the literal alone");
+  const widget = readFileSync(new URL("../public/visual-surface.html", import.meta.url), "utf8");
+  assert.match(widget, /nameKey:wsArg\.nameKey/);
+});

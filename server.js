@@ -26,6 +26,7 @@ import {
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
 import { exportMarksSvg, parseMarksFile, fileLayers } from "./src/marks-file.js";
+import { cleanNameFields } from "./src/i18n/names.js";
 import { downloadImage, entrySharp, MAX_DOWNLOAD_BYTES } from "./src/image-store.js";
 import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
@@ -730,7 +731,7 @@ async function presentWorkspace(workspaceId, { annotations, findings, remove, re
     content: [{ type: "text", text }, ...checks.map(({ check }) => pixelsBlock(check))],
     structuredContent: {
       kind: "estampes.visual_surface", protocol: VISUAL_PROTOCOL, imageId: first.imageId, width: first.width, height: first.height, views: [],
-      workspace: { id: workspaceId, name: doc.name, revision: doc.revision, items: info },
+      workspace: { id: workspaceId, name: doc.name, ...cleanNameFields(doc), revision: doc.revision, items: info },
       marks: marks.map(compactMark), layers: layerList, links: linkList.map((l) => ({ ...compactLink({ ...l, left: l.from, right: l.to }), fromItem: l.fromItem, toItem: l.toItem })),
       coordinateSystem: "normalized-top-left",
     },
@@ -1243,7 +1244,7 @@ function makeServer() {
             content: [{ type: "text", text: "Workspace data for " + workspaceId + " sent to the widget." }],
             structuredContent: {
               kind: "estampes.visual_canvas", imageId: items[0]?.entry.imageId ?? imageId, part, workspaceId,
-              workspace: { id: workspaceId, name: doc.name, revision: doc.revision, items: items.map(wsItemInfo) },
+              workspace: { id: workspaceId, name: doc.name, ...cleanNameFields(doc), revision: doc.revision, items: items.map(wsItemInfo) },
               annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink), views: [],
             },
           }, { appOnly: true });
@@ -1328,7 +1329,7 @@ function makeServer() {
             const { doc } = await resolveRef(documentId);
             const items = await workspaceItems(doc);
             hash = "ws:" + createHash("sha256").update(JSON.stringify([doc.revision, items.map(({ id, entry }) => [id, canvasRevision(entry)]), workspaceLinks(items)])).digest("hex").slice(0, 24);
-            body = () => ({ workspace: { id: documentId, name: doc.name, revision: doc.revision, items: items.map((it) => ({ ...wsItemInfo(it), objects: widgetObjects(it.entry), baseAsObject: !!it.entry.baseAsObject })) },
+            body = () => ({ workspace: { id: documentId, name: doc.name, ...cleanNameFields(doc), revision: doc.revision, items: items.map((it) => ({ ...wsItemInfo(it), objects: widgetObjects(it.entry), baseAsObject: !!it.entry.baseAsObject })) },
               annotations: wsMarks(items), layers: wsLayers(items), links: workspaceLinks(items).map(wsWidgetLink) });
           } else {
             const entry = await ensureSet(documentId);
