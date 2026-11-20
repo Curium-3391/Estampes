@@ -39,6 +39,23 @@ Below the tools you choose a colour, a line width (極細 is for fine lines when
 - **上一步 / 下一步** (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y) undo and redo your drawing before you send, and also edits you already sent (move, resize, reshape, restyle, relabel, delete). A step is refused, with the reason, if the mark has changed since or its layer is now locked. The AI hears about it on its next call. Layer edits are not part of this history, which is kept in memory for up to 50 steps per image.
 - **清除我的標註** clears what you have drawn but not sent yet.
 
+## Anchors on a Graph
+
+On a Graph canvas (one made by the Graph module, id `gph:`), each mark also says what it belongs to. That decides what happens to it when the axes, the formula or the domain change. Select a mark and use the buttons at the end of the selection bar:
+
+| Button | The mark… | Use it for |
+| --- | --- | --- |
+| **Pin to page** (固定在畫面, the default) | stays where it is on the canvas | titles, callouts, comments beside the plot |
+| **Pin to axes** (固定在座標) | follows the data: it is kept in axis units | a data point, an interval, a box around a cluster |
+| **Pin to curve** (固定在曲線, when the Graph has a curve) | follows the curve nearest to it at its x | a root, a maximum, a value of f at some x |
+
+Switching never moves the mark. The AI picks an anchor for each mark it draws, and you can change it; the AI is told when you do. Two notices can appear under the canvas:
+
+- **Outside the axes range** (超出座標範圍): the mark's place is out of view. It is kept, not drawn, and comes back when the range includes it again.
+- **Anchor lost** (錨點失效): its axes or curve was deleted, or the curve is no longer defined at its x. The mark stays where it was and is still drawn. Select it and pin it to a curve again, or pin it to the page.
+
+A mark pinned to the axes cannot be dragged out of their range, and one pinned to a curve cannot be dragged to where the curve is not drawn; pin it to the page first. If the curve under a note you confirmed is re-defined, the note asks you to confirm it again. Images have no anchors: their marks always stay on the picture. Details for the AI and developers: [Modules](MODULES.md#marks-fixed-to-the-axes-graph-documents).
+
 ## Zoom and pan
 
 Pinch, Ctrl+wheel or the ＋／－ buttons zoom, and 整張 shows the whole image again. Drag with 移動 (or hold Space, or drag with the middle mouse button) to move the image. Three kinds of pixels can be on screen while you zoom:
