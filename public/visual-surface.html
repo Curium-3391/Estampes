@@ -1827,7 +1827,7 @@ svg.addEventListener("gesturechange",e=>{e.preventDefault();if(!zoomable())retur
 const pointers=new Map();
 let pinch=null,panning=null,gestureLock=false,spaceDown=false;
 const pinchState=()=>{const [a,b]=[...pointers.values()];return {d:Math.hypot(a.x-b.x,a.y-b.y)||1,m:{clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2}};};
-function cancelStroke(){cancelTextDrag();start=null;stroke=[];previewEl.replaceChildren();}
+function cancelStroke(){cancelTextDrag();erasing=null;start=null;stroke=[];previewEl.replaceChildren();}
 svg.addEventListener("pointerdown",e=>{
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(!zoomable())return;
