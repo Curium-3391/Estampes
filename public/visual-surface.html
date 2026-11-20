@@ -76,7 +76,7 @@ body.fullscreen #surface{max-height:calc(100vh - 280px)}
 #layers input[type=range]{width:72px}#layers .pct{width:2.6em;color:GrayText;font-size:.75rem;font-variant-numeric:tabular-nums}
 #layers button{padding:2px 7px;font-size:.78rem}
 #selection{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;margin:8px 0 0;padding:7px 10px;border:1px solid #356BD6;border-radius:9px;font-size:.85rem}
-#selection[hidden]{display:none}#selection .who{font-weight:700}#selection .meta{color:GrayText;font-size:.8rem}
+#selection[hidden]{display:none}#anchor-notice{margin:6px 0 0;font-size:.8rem;color:GrayText}#anchor-notice[hidden]{display:none}#anchor-notice .badge{display:inline-block;padding:1px 7px;margin-right:6px;border-radius:9px;border:1px solid #C98A2E;color:#9A6418;font-weight:600}#selection .anchor-choice{display:inline-flex;gap:0}#selection .anchor-choice button[aria-pressed=true]{background:#356BD6;color:#fff}#selection .who{font-weight:700}#selection .meta{color:GrayText;font-size:.8rem}
 #selection input{font:inherit;font-size:.85rem;padding:3px 7px;border-radius:7px;border:1px solid #8887;background:Canvas;color:CanvasText;width:11em}
 #selection button{padding:3px 9px;font-size:.8rem}#selection .note{flex-basis:100%;overflow-wrap:anywhere}
 #links{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
@@ -241,7 +241,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 <button id="text-undo" data-i18n="vs.text-undo.text"></button><button id="text-redo" data-i18n="vs.text-redo.text"></button><button id="text-refresh" data-i18n="vs.text-refresh.text"></button><button id="text-close" data-i18n="vs.text-close.text"></button>
 <p data-i18n="vs.textEditor.hint"></p>
 </section>
-<div id="selection" hidden role="group" data-i18n-aria-label="vs.selection.aria-label"></div>
+<div id="selection" hidden role="group" data-i18n-aria-label="vs.selection.aria-label"></div><div id="anchor-notice" hidden role="status"></div>
 <div id="layers" hidden role="group" data-i18n-aria-label="vs.layers.aria-label"></div>
 <div id="objects" hidden role="group" data-i18n-aria-label="vs.objects.aria-label"></div>
 <ol id="links" data-i18n-aria-label="vs.links.aria-label"></ol>
@@ -282,7 +282,7 @@ __ESTAMPES_I18N__
 __ESTAMPES_USERVOICE__
 // Server errors with a known code are shown as a sentence in the person's
 // language (RFC docs/rfc/i18n Phase 3); any other error keeps the server's text.
-const ERR_CODES=["GRAPH_READ_ONLY","LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
+const ERR_CODES=["GRAPH_READ_ONLY","OUTSIDE_AXES","LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
 function toolError(result,fallback){const e=Error(result?.content?.[0]?.text||fallback);const c=result?.structuredContent?.code;if(typeof c==="string")e.code=c;return e;}
 function errText(err){const m=String(err?.message||err);const c=typeof err?.code==="string"?err.code:/\[([A-Z_]+)\]/.exec(m)?.[1];return ERR_CODES.includes(c)?i18nT("vs.err.code."+c):m;}
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
@@ -588,7 +588,9 @@ function reviewControls(li,c){
 // can additionally hide a layer.
 const layersEl=scope.querySelector("#layers");
 let layers=[],hiddenLayers=new Set(),renamingLayer=null;
-const shown=m=>!m.layer||(!hiddenLayers.has(m.layer)&&layerOf(m.layer)?.visible!==false);
+// A mark fixed to the axes whose place is outside the axes range is kept but not drawn (listed in #anchor-notice).
+const outside=m=>m?.anchorStatus==="outside";
+const shown=m=>m?.anchorStatus!=="outside"&&(!m.layer||(!hiddenLayers.has(m.layer)&&layerOf(m.layer)?.visible!==false));
 const LAYER_ID=/^(R|W\d{1,2}_)?L\d{1,6}$/;
 const cleanLayers=list=>(Array.isArray(list)?list:[]).filter(l=>LAYER_ID.test(l?.id)&&(l.author==="user"||l.author==="assistant"))
  .map(l=>({id:l.id,author:l.author,name:String(l.name??l.id).slice(0,40),...(typeof l.nameKey==="string"&&l.nameParams&&typeof l.nameParams==="object"?{nameKey:l.nameKey,nameParams:l.nameParams}:{}),...(l.visible===false?{visible:false}:{}),...(l.locked===true?{locked:true}:{}),
@@ -910,7 +912,7 @@ function renderCanvasMarks(){
    renderMarks(node("g",{opacity:.55},g),items.filter(m=>m.author==="user"),"#579DF6","YOU",{keep:true});
  }
  renderMarks(freshEl,userMarks.filter(m=>!sentIds.has(m.id)),"#579DF6","YOU");
- renderSelection();
+ renderSelection();renderAnchorNotice();
 }
 function linkAnchor(m){
  const x=Math.min(px(m.x),px(m.x2??m.x)),y=Math.min(py(m.y),py(m.y2??m.y));
@@ -1890,7 +1892,7 @@ async function loadDetail(){
 // buttons; the AI's style stays its own. Any unlocked mark can be deleted;
 // locked layers refuse all of that.
 // Unsent marks change locally (with undo); sent ones go to the server.
-const selectionEl=scope.querySelector("#selection");
+const selectionEl=scope.querySelector("#selection"),anchorNoticeEl=scope.querySelector("#anchor-notice");
 let selected=null,dragMove=null,dragHandle=null,nudge=null,findingPointer=null;
 const allMarks=()=>[...assistantMarks,...priorUserMarks,...userMarks];
 const findMark=id=>allMarks().find(m=>m.id===id);
@@ -2074,8 +2076,9 @@ function renderSelection(){
    node(h.k==="rot"?"circle":"rect",h.k==="rot"?{cx:px(h.x),cy:py(h.y),r,fill:"white",stroke:"#356BD6","stroke-width":2*U(),"data-handle":h.k}:
      {x:px(h.x)-r,y:py(h.y)-r,width:2*r,height:2*r,fill:"white",stroke:"#356BD6","stroke-width":2*U(),"data-handle":h.k},outlineEl);}
  // Keep the label field alive while the user is typing in it.
- if(selectionEl.contains(scope.activeElement)&&selectionEl.dataset.mark===m.id&&selectionEl.dataset.locked===String(isLocked(m)))return;
- selectionEl.dataset.locked=String(isLocked(m));
+ const anchorKey=m.anchor?.space==="world"?"world":"document";
+ if(selectionEl.contains(scope.activeElement)&&selectionEl.dataset.mark===m.id&&selectionEl.dataset.locked===String(isLocked(m))&&selectionEl.dataset.anchor===anchorKey)return;
+ selectionEl.dataset.locked=String(isLocked(m));selectionEl.dataset.anchor=anchorKey;
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
  const mine=isUser(m),layer=layerOf(m.layer);
  selectionEl.append(el("span",{className:"who",style:"color:"+(mine?"#3C7FE0":"#C98A2E"),textContent:sideTag(m.side)+(m.label||(mine?"YOU":"AI"))}),
@@ -2102,7 +2105,29 @@ function renderSelection(){
    selectionEl.append(el("button",{textContent:groupingFrom===m.id?t("vs.selection.groupCancel"):t("vs.selection.group"),dataset:{act:"group"},title:t("vs.selection.groupTitle")}));
    if(inGroup)selectionEl.append(el("button",{textContent:t("vs.selection.ungroup"),dataset:{act:"ungroup"}}));
  }
+ if(canAnchor(m)){
+   const world=m.anchor?.space==="world",choice=el("span",{className:"anchor-choice",role:"group","aria-label":t("vs.anchor.choice")});
+   choice.append(el("button",{textContent:t("vs.anchor.toAxes"),title:t("vs.anchor.toAxesTitle"),"aria-pressed":String(world),dataset:{act:"anchor",space:"world"}}),
+     el("button",{textContent:t("vs.anchor.toPage"),title:t("vs.anchor.toPageTitle"),"aria-pressed":String(!world),dataset:{act:"anchor",space:"document"}}));
+   selectionEl.append(choice);
+ }
  selectionEl.append(el("button",{textContent:t("vs.selection.deselect"),dataset:{act:"deselect"}}));
+}
+// A Graph's marks can follow the axes (固定在座標) or stay on the page (固定在畫面, the default).
+const hasAxes=()=>objects.some(o=>o?.type==="axes-2d");
+const canAnchor=m=>!!m&&!ws&&!pair&&String(imageId).startsWith("gph:")&&hasAxes()&&!isFresh(m)&&canMove(m);
+async function setAnchor(m,space){
+ if(!canAnchor(m)||(m.anchor?.space==="world")===(space==="world"))return;
+ try{await editOnServer({marks:[{id:rawOf(m),anchor:{space}}]});status.textContent=t(space==="world"?"vs.anchor.attached":"vs.anchor.detached");}
+ catch(err){status.textContent=t("vs.anchor.failed",{message:errText(err)});}
+ render();
+}
+function renderAnchorNotice(){
+ const away=allMarks().filter(outside);
+ anchorNoticeEl.hidden=!away.length;anchorNoticeEl.replaceChildren();
+ if(!away.length)return;
+ anchorNoticeEl.append(el("span",{className:"badge",textContent:t("vs.anchor.outside")}),
+   t("vs.anchor.outsideList",{names:away.slice(0,8).map(m=>m.label||m.id).join(", ")+(away.length>8?" …":"")}));
 }
 selectionEl.addEventListener("click",e=>{
  const act=e.target.closest("button")?.dataset.act;
@@ -2110,6 +2135,7 @@ selectionEl.addEventListener("click",e=>{
  if(act==="group"){groupingFrom=groupingFrom===selected?null:selected;status.textContent=groupingFrom?t("vs.selection.groupNext"):t("vs.selection.groupCancelled");render();}
  if(act==="ungroup"){const g=liveGestures().find(g=>g.memberIds.includes(selected)&&g.confirmation==="user-confirmed");if(g)decideGesture(g.memberIds,g.provenance==="user-created"?"unreviewed":"user-rejected");}
  if(act==="deselect"){selected=null;render();}
+ if(act==="anchor")setAnchor(findMark(selected),e.target.closest("button").dataset.space);
 });
 function nudgeSelected(dx,dy){
  const m=findMark(selected);if(!canMove(m))return;

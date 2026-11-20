@@ -33,10 +33,12 @@ export function exportMarksSvg(entry, marks, layers = []) {
       return `<g id="mark-${xml(m.id)}">${markSvg(m, map, toPx)}${label}</g>`;
     }).join("") + "</g>";
   const known = new Set(layers.map((l) => l.id));
+  // A mark fixed to the axes whose place is outside their range is not drawn; it stays in the metadata.
+  const drawn = marks.filter((m) => m.anchorStatus !== "outside");
   const groups = [
-    ...layers.map((l) => layer("estampes-" + l.id, l.name, marks.filter((m) => m.layer === l.id), l.opacity, l.id, l.visible)),
-    layer("estampes-user", t("name.marksFile.user"), marks.filter((m) => m.author === "user" && !known.has(m.layer))),
-    layer("estampes-gpt", "AI", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
+    ...layers.map((l) => layer("estampes-" + l.id, l.name, drawn.filter((m) => m.layer === l.id), l.opacity, l.id, l.visible)),
+    layer("estampes-user", t("name.marksFile.user"), drawn.filter((m) => m.author === "user" && !known.has(m.layer))),
+    layer("estampes-gpt", "AI", drawn.filter((m) => m.author !== "user" && !known.has(m.layer))),
   ].filter(Boolean).join("\n");
   const payload = JSON.stringify({ format: MARKS_FORMAT, version: 2, imageId: entry.imageId, width: W, height: H,
     layers: layers.map(({ id, author, name, nameKey, nameParams, locked, opacity, visible }) => ({ id, author, name, ...(nameKey ? { nameKey, nameParams } : {}),

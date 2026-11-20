@@ -14,6 +14,7 @@
 // the cache evicts it or the container restarts. Without a storage dir every
 // function here is a no-op and Estampes behaves as before.
 import { canvasBackground, isSolid } from "./visual/background.js";
+import { syncWorldAnchors } from "./visual/world-anchors.js";
 import { isGraphId, newGraphId, graphSpec, graphEntry, rememberGraph, cachedGraph, GRAPH_COLOR } from "./visual/graph-docs.js";
 import { mkdir, readFile, writeFile, rename, appendFile, readdir, stat, rm } from "node:fs/promises";
 import { join, dirname } from "node:path";
@@ -358,6 +359,8 @@ async function rollbackCanvas(entry, key, state, seq) {
 
 // After a change: rewrite canvas.json and marks.svg, append one history line.
 export function saveCanvas(entry, { tool, author = "assistant", changed = [], removed = [], note, commandId, argsHash, group } = {}) {
+  // World-anchored marks follow their axes (UVA Phase 4B-3): bring them up to date before writing.
+  syncWorldAnchors(entry);
   if (commandId && !canvases) rememberCommand(entry, { at: new Date().toISOString(), tool, author, changed, commandId, argsHash, ...(group?.length ? { group } : {}) });
   if (canvases) {
     // Acknowledged only once durable in the store: a failure rejects.

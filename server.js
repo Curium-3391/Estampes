@@ -37,6 +37,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
+import { cleanAnchorFields } from "./src/visual/world-anchors.js";
 import { createGraphCanvas, useGraphPolicy, assertGraphWritable, readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
@@ -207,7 +208,13 @@ const ClaimFields = {
 // never exposed as an object-position catalog to the model.
 // Model coordinates may be crop pixels when coordinateFrame is given; they
 // are converted and then checked against 0..1 of the full image.
-const ModelCoord = z.number().finite().min(0).max(100000);
+// Negative only in axis units (anchor world, UVA Phase 4B-3); a canvas mark is
+// checked against 0..1 after conversion as before.
+const ModelCoord = z.number().finite().min(-1e6).max(1e6);
+const AnchorInput = z.object({
+  space: z.enum(["world", "document"]).describe("world = follow the axes: x/y (and x2/y2, points) are in AXIS UNITS, e.g. the point (2, 4) on y = x^2, and the mark moves with the data when the axes range changes. document (default) = stay at this place on the canvas, coordinates 0..1"),
+  frame: z.string().min(1).max(64).optional().describe("Id of the axes-2d object (default: the canvas's only axes)"),
+}).strict();
 const ModelAnnotationSchema = z.object({
   id: z.string().min(1).max(64).describe("Stable id; re-using an id edits that mark"),
   type: z.enum(MARK_TYPES),
@@ -226,6 +233,7 @@ const ModelAnnotationSchema = z.object({
   side: z.enum(["left", "right"]).optional().describe("Paired view only: the image this mark is on (default left); coordinates are normalized to that image"),
   item: WorkspaceItemId.optional().describe("Workspace only: the item (image) this mark is on (default the first); coordinates are normalized to that image"),
   ifMatch: z.string().regex(/^[0-9a-f]{12}$/).optional().describe("The mark's etag from your last read (get_visual_state / get_workspace_state / a previous result). If the mark changed since then (another conversation or the user edited it), the whole call is refused with CONFLICT instead of overwriting; read again and retry. Recommended whenever you edit an existing mark."),
+  anchor: AnchorInput.optional().describe("Graph only: what the mark is attached to. Omit to keep it as it is (new marks: document)"),
   ...ClaimFields,
 }).strict().superRefine(checkGeometry);
 const ModelAnnotationsSchema=z.array(ModelAnnotationSchema).max(12);
@@ -272,7 +280,7 @@ async function readMarksFile(entry, file) {
   const marks = data.marks.map((m) => {
     const parsed = VisualAnnotationSchema.safeParse(m);
     if (!parsed.success) throw new Error("Invalid mark in marks file: " + (m?.id ?? "?"));
-    return { ...parsed.data, author: m.author === "user" ? "user" : "assistant" };
+    return { ...parsed.data, ...cleanAnchorFields(m), author: m.author === "user" ? "user" : "assistant" };
   });
   const layers = fileLayers(data);
   return { marks, options: { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation } };
@@ -447,6 +455,8 @@ const EDIT_TEXT = {
     (e.before.note !== e.after.note ? ", note " + JSON.stringify(e.before.note) + " -> " + JSON.stringify(e.after.note) : "") : "") +
     " (the user's wording now stands; do not overwrite it with your old text unless they ask)",
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
+  "anchor-mark": (e) => (e.anchor === "world" ? "attached " : "detached ") + (e.author === "assistant" ? "YOUR" : "their") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") +
+    (e.anchor === "world" ? " to the axes (it now follows the data when the axes range changes)" : " from the axes (it now stays at its place on the canvas)"),
   "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
   "redo-edit": (e) => "redid their change to mark " + e.id + " (" + e.steps.join("+") + ")",
   "edit-object": (e) => "edited object " + e.id + (e.props ? " to " + JSON.stringify(e.props) : ""),
@@ -1973,6 +1983,8 @@ function makeServer() {
     x: Point01.optional(), y: Point01.optional(), x2: Point01.optional(), y2: Point01.optional(),
     points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
     label: z.string().max(64).optional(), note: z.string().max(200).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
+    // Follow the axes (world) or stay on the page (document); the mark keeps its place (UVA Phase 4B-3).
+    anchor: z.object({ space: z.enum(["world", "document"]), frame: z.string().min(1).max(64).optional() }).strict().optional(),
   }).strict();
   const LayerIds = z.array(z.string().regex(/^L\d{1,6}$/)).max(200);
   registerAppTool(

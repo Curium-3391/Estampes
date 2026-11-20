@@ -18,6 +18,7 @@
 // the bundle. Import checks the format, every hash and size, rejects unsafe
 // paths and oversized content, validates each mark, and never overwrites:
 // canvases that already have different marks get an independent copy.
+import { cleanAnchorFields } from "./visual/world-anchors.js";
 import { canvasBackground, isSolid } from "./visual/background.js";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
@@ -138,6 +139,8 @@ function cleanMark(m) {
   out.author = m.author === "user" ? "user" : "assistant";
   if (typeof m.layer === "string" && /^L\d{1,6}$/.test(m.layer)) out.layer = m.layer;
   for (const k of PASS) if (m[k] !== undefined && !(k in out)) out[k] = m[k];
+  // A mark fixed to a Graph's axes (UVA Phase 4B-3) keeps its checked anchor record.
+  Object.assign(out, cleanAnchorFields(m));
   return { mark: out };
 }
 
