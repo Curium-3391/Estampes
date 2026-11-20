@@ -1227,7 +1227,7 @@ function renderView(){
  svg.classList.toggle("panning",mode==="pan"&&zoomable());
  const title=processed?t("vs.caption.processed",{label:processed.label}):
    {annotated:t("vs.caption.annotated"),original:t("vs.caption.original"),zoom:t("vs.caption.zoom"),check:t("vs.caption.check")}[viewMode];
- scope.querySelector("#caption").textContent=t("vs.caption.line",{subject:ws?t("vs.caption.workspace",{name:i18nName(ws),count:ws.items.length}):pair?t("vs.caption.pair",{left:imageId,right:pair.imageId}):imageId?t("vs.caption.photo",{id:imageId}):SCENE_NAMES[selectedScene],title});
+ scope.querySelector("#caption").textContent=t("vs.caption.line",{subject:ws?t("vs.caption.workspace",{name:i18nName(ws),count:ws.items.length}):pair?t("vs.caption.pair",{left:imageId,right:pair.imageId}):imageId?t(imageId.startsWith("gph:")?"vs.caption.graph":"vs.caption.photo",{id:imageId}):SCENE_NAMES[selectedScene],title});
 }
 // ---- Scene objects (function plots, axes, shapes from modules) -----------
 // The server's trusted renderer sends drawing primitives in 0..1 canvas
@@ -1377,7 +1377,9 @@ function renderObjectsPanel(){
      if(result?.isError)throw toolError(result,t("vs.err.failed"));const r=result.structuredContent;
      baseAsObject=!!r.baseAsObject;setObjects(r.objects);if(typeof r.baseAsObject==="boolean")baseAsObject=r.baseAsObject;setLayers(r.layers);applyServerCanvas(r.annotations,r.layers);render();
    }catch(error){status.textContent=errText(error);add.disabled=false;}
- });objectsPanel.append(sourceInput,add);
+ });
+ // A Graph (gph:) has no image to turn into a layer, and add_image_layer refuses it.
+ if(!imageId.startsWith("gph:"))objectsPanel.append(sourceInput,add);
  if(canRestoreObjects){const undo=el("button",{textContent:t("vs.objects.restore"),disabled:!ready||!!editingObject});undo.addEventListener("click",()=>editObject(null,{restore:true}));objectsPanel.append(undo);}
  renderCards();
  for(const o of editable){

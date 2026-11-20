@@ -6,6 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
+import { CANVAS_KINDS, makeCanvas } from "./helpers/canvases.js";
 
 const settled = (ui) => ui.frame.locator("#wb-bar:not(:empty)").waitFor();
 async function point(ui, x, y) {
@@ -42,12 +43,12 @@ const drawn = (ui) => ui.frame.locator("#surface").evaluate((svg) => {
     d.replace(/Z$/, "").slice(1).split("L").map((s) => s.trim().split(/\s+/).map(Number)).map(([x, y]) => ({ x: x / vb[2], y: y / vb[3] })));
 });
 
-for (const touch of [false, true]) test("a closed shape stays where it is dropped: " + (touch ? "mobile touch" : "desktop"), { skip: noBrowser, timeout: 150000 }, async () => {
+for (const kind of CANVAS_KINDS) for (const touch of [false, true]) test("a closed shape stays where it is dropped: " + (touch ? "mobile touch" : "desktop") + ", " + kind, { skip: noBrowser, timeout: 150000 }, async () => {
   const s = await startStack({ cas: false });
   try {
     const ok = async (name, args) => { const r = await s.call(name, args); assert.ok(!r.isError, JSON.stringify(r.content)); return r.structuredContent; };
     const data = (await sharp({ create: { width: 800, height: 600, channels: 3, background: "#ddd" } }).png().toBuffer()).toString("base64");
-    const imageId = (await ok("upload_visual_image", { total: data.length, offset: 0, data })).imageId;
+    const imageId = await makeCanvas(s, kind);
     const ui = await s.open({ imageId, touch, viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 900 } });
     await ui.page.waitForFunction(() => window.hostLog.includes("ui/notifications/initialized"));
     await settled(ui);
@@ -74,6 +75,9 @@ for (const touch of [false, true]) test("a closed shape stays where it is droppe
     for (let i = 0; i < 40 && !quad; i++) { quad = (await ok("get_visual_state", { imageId })).marks.find((m) => m.type === "polyline"); if (!quad) await ui.page.waitForTimeout(150); }
     assert.ok(quad);
     let [cx, cy] = centre(quad.geometry.points);
+    // Sending scrolls the page; bring the canvas back before tapping (a Graph
+    // has its axes editor below the canvas, so the page is longer).
+    await ui.frame.locator("#surface").evaluate((el) => el.scrollIntoView({ block: "center" }));
     await tap(ui, await point(ui, cx, cy), touch);
     await ui.frame.locator('#selection-outline [data-handle="rot"]').waitFor();
     await dragCanvas(ui, [cx, cy], [cx + 0.1, cy + 0.1], touch);

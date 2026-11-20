@@ -82,6 +82,7 @@ test("workbench in a browser: Graph + calculator side by side, drag, mobile tabs
     await w.locator(".wb-open").first().waitFor({ timeout: 20000 });
     assert.equal(await w.locator("#wb.solo").count(), 1);
     assert.equal(await w.locator(".wb-open").first().isEnabled(), true);
+    assert.equal(await w.locator(".wb-graph").count(), 1, "the launcher offers Graph beside the calculator");
     await shot("1-solo");
 
     // 2. Opening the calculator puts both panels on screen at once.

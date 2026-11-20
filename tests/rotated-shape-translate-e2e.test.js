@@ -6,6 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
+import { CANVAS_KINDS, makeCanvas } from "./helpers/canvases.js";
 
 const settled = (ui) => ui.frame.locator("#wb-bar:not(:empty)").waitFor();
 async function point(ui, x, y) {
@@ -37,12 +38,12 @@ const tap = async (ui, p, touch) => (touch ? ui.page.touchscreen.tap(p.x, p.y) :
 const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
 const centre = (pts) => [pts.reduce((s, p) => s + p.x, 0) / pts.length, pts.reduce((s, p) => s + p.y, 0) / pts.length];
 
-for (const touch of [false, true]) test("a turned box can still be dragged by its body: " + (touch ? "mobile touch" : "desktop"), { skip: noBrowser, timeout: 150000 }, async () => {
+for (const kind of CANVAS_KINDS) for (const touch of [false, true]) test("a turned box can still be dragged by its body: " + (touch ? "mobile touch" : "desktop") + ", " + kind, { skip: noBrowser, timeout: 150000 }, async () => {
   const s = await startStack({ cas: false });
   try {
     const ok = async (name, args) => { const r = await s.call(name, args); assert.ok(!r.isError, JSON.stringify(r.content)); return r.structuredContent; };
     const data = (await sharp({ create: { width: 800, height: 600, channels: 3, background: "#ddd" } }).png().toBuffer()).toString("base64");
-    const imageId = (await ok("upload_visual_image", { total: data.length, offset: 0, data })).imageId;
+    const imageId = await makeCanvas(s, kind);
     await ok("present_visual", { imageId, annotations: [
       { id: "box", type: "rect", x: 0.2, y: 0.2, x2: 0.4, y2: 0.4, label: "R70", note: "旋轉後平移" },
       { id: "quad", type: "polyline", closed: true, points: [{ x: 0.6, y: 0.55 }, { x: 0.8, y: 0.6 }, { x: 0.78, y: 0.8 }, { x: 0.62, y: 0.75 }], label: "Q", note: "四邊形" },

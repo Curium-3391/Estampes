@@ -6,16 +6,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { startStack, noPython, noBrowser } from "./helpers/widget-host.js";
 
-const plot = async (s, expression) => {
-  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind: "image" } });
-  return (JSON.stringify(r.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+const plot = async (s, expression, kind = "image") => {
+  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind } });
+  return (JSON.stringify(r.structuredContent).match(/(img|gph):[0-9a-f]{16}/) ?? [])[0];
 };
 const asResult = (r) => ({ structuredContent: r.structuredContent, _meta: r._meta, content: r.content });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function setup(s) {
+async function setup(s, kind = "image") {
   await s.enable(["org.estampes.graph"]);
-  const a = await plot(s, "x^2"), b = await plot(s, "sin(x)");
+  const a = await plot(s, "x^2", kind), b = await plot(s, "sin(x)", kind);
   const ui = await s.open({ imageId: a });
   await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
   const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
@@ -79,10 +79,11 @@ test("two viewers: independent zoom, tool and keyboard; dispose leaves nothing b
   } finally { await s.close(); }
 });
 
-test("the same image in two viewers: separate cameras, close and reopen", { skip: noPython || noBrowser, timeout: 150000 }, async () => {
+for (const kind of ["image", "graph"]) test("the same canvas in two viewers: separate cameras, close and reopen: " + kind, { skip: noPython || noBrowser, timeout: 150000 }, async () => {
   const s = await startStack();
   try {
-    const t = await setup(s);
+    const t = await setup(s, kind);
+    assert.match(t.a, kind === "graph" ? /^gph:/ : /^img:/);
     await t.second(t.a);
     await t.host.locator("#surface").waitFor({ timeout: 20000 });
     await wait(1500);
@@ -90,7 +91,7 @@ test("the same image in two viewers: separate cameras, close and reopen", { skip
     await t.host.locator("#zoom-in").click();
     await wait(400);
     assert.notEqual(await t.vb("extra"), fitted);
-    assert.equal(await t.vb("primary"), fitted, "the page viewer shows the same image at its own fitted camera");
+    assert.equal(await t.vb("primary"), fitted, "the page viewer shows the same canvas at its own fitted camera");
     await t.inner.evaluate(() => window.__extra.dispose());
     assert.equal(await t.host.count(), 0);
     await t.second(t.a);
