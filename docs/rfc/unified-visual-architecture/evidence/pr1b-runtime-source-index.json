@@ -15,7 +15,7 @@
     },
     {
       "path": "src/documents/integrity.js",
-      "sha256": "627a9e1f884472fc95222bb329edf5182920a2a5c5b3816138b3f14224262452"
+      "sha256": "039abd6a36cb6c40f1480a27d5ecbc19390b61fa73ae871685c3c5c694988eb6"
     },
     {
       "path": "src/documents/legacy-shadow.js",
@@ -31,7 +31,7 @@
     },
     {
       "path": "src/documents/schema.js",
-      "sha256": "f346a4354d481eae51338e2cf7892fa79dd2958340feae529bcce745df020f0a"
+      "sha256": "e269e58ec1322a23086ce28b59e93df83a241ad65a767b4b04fe25aa9a893b7e"
     },
     {
       "path": "src/documents/validation.js",
@@ -385,7 +385,7 @@
     },
     {
       "date": "2026-11-20",
-      "authorizedBy": "User accepted the i18n RFC recommendations D1\u2013D10 (2026-11-18, \u300c\u7167\u5efa\u8b70\u300d), asked to continue to Phase 4 (2026-11-19, \u300c\u958b\u59cb\u300d), and chose to store the default-name key as layer fields with the document format kept at estampes.document/1 (2026-11-20, decision card: \u300c\u5716\u5c64\u6b04\u4f4d,\u683c\u5f0f\u7dad\u6301 /1\u300d)",
+      "authorizedBy": "User accepted the i18n RFC recommendations D1–D10 (2026-11-18, 「照建議」), asked to continue to Phase 4 (2026-11-19, 「開始」), and chose to store the default-name key as layer fields with the document format kept at estampes.document/1 (2026-11-20, decision card: 「圖層欄位,格式維持 /1」)",
       "reason": "i18n Phase 4: a layer may carry optional nameKey/nameParams next to its literal name so a viewer can show a server-made default name in their language. LayerSchema accepts the two optional bounded fields and legacy-shadow maps them; documents without them are unchanged and the literal name stays the name of record. An older build reads such a document as an unknown layer field and goes read-only (RECOVERY_REQUIRED); back up before downgrading",
       "files": [
         {
@@ -397,6 +397,23 @@
           "path": "src/documents/schema.js",
           "from": "e7f1379a2be0fb33fe32a0b3455618454774a7a82b0ec80953f05d65751ede84",
           "to": "f346a4354d481eae51338e2cf7892fa79dd2958340feae529bcce745df020f0a"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-21",
+      "authorizedBy": "User approved the 5B design on a decision card (2026-11-21, 「批准,CAS→Graph 記技術債」): generalise the CAS-only cas-plot binding into a module-agnostic derived binding, with generality and stability as hard acceptance criteria (plans/uva-phase5b-cas-bindings-plan.md section 6). Earlier: OD-05 approved (pause on user edit).",
+      "reason": "UVA 5B-1: the reference-binding union takes a derived binding (src/documents/derived-binding.js) in place of cas-plot, and integrity validation treats it generically (a live binding needs its target object to exist, any object type; a removed/unavailable/unresolved one may dangle explicitly). No code anywhere wrote a cas-plot binding, so no stored document is affected. A document that contains a derived binding is not readable by an older build (unknown binding kind, read-only recovery); nothing writes one until 5B-2.",
+      "files": [
+        {
+          "path": "src/documents/integrity.js",
+          "from": "627a9e1f884472fc95222bb329edf5182920a2a5c5b3816138b3f14224262452",
+          "to": "039abd6a36cb6c40f1480a27d5ecbc19390b61fa73ae871685c3c5c694988eb6"
+        },
+        {
+          "path": "src/documents/schema.js",
+          "from": "f346a4354d481eae51338e2cf7892fa79dd2958340feae529bcce745df020f0a",
+          "to": "e269e58ec1322a23086ce28b59e93df83a241ad65a767b4b04fe25aa9a893b7e"
         }
       ]
     }

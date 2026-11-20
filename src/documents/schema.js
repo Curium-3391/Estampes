@@ -7,6 +7,7 @@ import { DocumentIdSchema, SceneIdSchema, AnnotationIdSchema, ObjectIdSchema, La
 import { RefSchema, ObjectRefSchema } from "./references.js";
 import { AnnotationProvenanceSchema, PrincipalSchema } from "./provenance.js";
 import { AffineMatrixSchema, EmbeddedDocumentObjectSchema, EmbedBindingSchema } from "./embed-schema.js";
+import { DerivedBindingSchema } from "./derived-binding.js";
 import { bounded, jsonSchema, RevisionSchema, TimestampSchema, ContentHashSchema, FiniteSchema as n, issue, parse, canonicalJson, DocumentValidationError } from "./validation.js";
 
 export const ColorSchema = z.union([z.enum(Object.keys(COLOR_NAMES)), z.string().regex(/^#[0-9a-fA-F]{6}$/)]);
@@ -102,11 +103,7 @@ export const RelationBindingSchema = z.object({ id: BindingIdSchema, kind: z.lit
   label: z.string().max(64).optional(), finding: FindingSchema.optional(), original: jsonSchema({ maxBytes: 4*1024*1024 }).optional(),
   status: z.enum(["fresh","unresolved","unavailable","removed"]).optional(),
 }).strict();
-export const CasPlotBindingSchema = z.object({ id: BindingIdSchema, kind: z.literal("cas-plot"), source: z.object({ notebookId: z.string().regex(/^nb:[0-9a-f]{12}$/), cellId: z.string().regex(/^cell:[0-9a-f]{12}$/), resultId: z.string().min(1).max(80), cellRevision: RevisionSchema, environmentHash: ContentHashSchema }).strict(),
-  target: ObjectRefSchema, lastApplied: z.object({ objectRevision: RevisionSchema, expressionHash: ContentHashSchema, domainHash: ContentHashSchema, resultId: z.string().min(1).max(80) }).strict(),
-  policy: z.literal("pause-on-user-edit"), state: z.enum(["fresh","stale","recomputing","conflict","removed","unavailable","unresolved","error"]), reason: z.string().max(300).optional(),
-}).strict();
-export const ReferenceBindingSchema = z.union([RelationBindingSchema, CasPlotBindingSchema, EmbedBindingSchema]);
+export const ReferenceBindingSchema = z.union([RelationBindingSchema, DerivedBindingSchema, EmbedBindingSchema]);
 const HistoryEntrySchema = z.object({ commandId: CommandIdSchema, actor: PrincipalSchema, affectedRefs: z.array(RefSchema).max(5200),
   beforeAfterHashes: z.array(z.object({ ref: RefSchema, before: ContentHashSchema.nullable(), after: ContentHashSchema.nullable() }).strict()).max(5200),
   inverse: jsonSchema(), forward: jsonSchema(), baseRevision: RevisionSchema, appliedRevision: RevisionSchema,

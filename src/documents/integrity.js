@@ -89,11 +89,8 @@ function analyzeReferences(input, mode) {
         requireRef(b.from, active, active ? "active" : "explicitly-unresolved");
         requireRef(b.to, active, active ? "active" : "explicitly-unresolved");
       }
-      if (b.kind === "cas-plot" && ["fresh","stale","recomputing","conflict"].includes(b.state)) {
-        const target = requireRef(b.target);
-        if (target && target.type !== "function-plot") throw new DocumentValidationError("INTEGRITY_ERROR", "CAS target is not a function plot");
-      }
-      if (b.kind === "cas-plot" && !["fresh","stale","recomputing","conflict"].includes(b.state)) requireRef(b.target, false, "explicitly-unresolved");
+      // A derived binding names an object some module made. While it is live the object must exist; once it is removed, unavailable or unresolved the reference may dangle, explicitly. The core does not look at what kind of object it is.
+      if (b.kind === "derived") requireRef(b.target, ["fresh", "stale", "recomputing", "conflict"].includes(b.state), ["fresh", "stale", "recomputing", "conflict"].includes(b.state) ? "active" : "explicitly-unresolved");
       if (b.kind === "embed") {
         const parent = requireRef(b.parentObject);
         if (parent) assertEmbedBinding(parent,b);
