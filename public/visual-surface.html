@@ -2325,14 +2325,16 @@ function strokeFacts(){
    ...(["mouse","pen","touch"].includes(strokePointer)?{pointerType:strokePointer}:{})};
 }
 // Eraser: touch or drag over a mark to delete the whole mark. A mark in a locked
-// layer stays. Marks go one at a time, in the order they are touched, and a
-// sent mark can be brought back with 上一步 like any other delete.
-let erasing=null,erasePrev=null,eraseQueue=Promise.resolve();
+// layer stays. Each delete is asked for when the mark is touched, so editOnServer
+// fixes its document then and keeps the edits in order (a viewer that moves to
+// another canvas meanwhile does not redirect it), and a sent mark can be
+// brought back with 上一步 like any other delete.
+let erasing=null,erasePrev=null;
 function eraseAt(p){
  const m=pickMark(p);if(!m||erasing.has(m.id))return;
  erasing.add(m.id);
  if(!canDelete(m)){status.textContent=t("vs.erase.locked");return;}
- eraseQueue=eraseQueue.then(()=>deleteMark(m));
+ deleteMark(m);
 }
 // A fast drag skips samples: look at every few pixels between two of them.
 function eraseSweep(a,b){
