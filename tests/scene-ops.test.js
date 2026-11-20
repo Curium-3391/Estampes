@@ -157,3 +157,20 @@ test("deleted axes and plots restore together with original IDs, labels and lock
   assert.equal(e.deletedObjectBatches.length,0);
   assert.ok(widgetObjects(e).find(o=>o.id==="o2").primitives.length);
 });
+
+test("scene ops: an update keeps how the object was created (provenance) and only moves updatedAt", () => {
+  const e = canvas();
+  const made = { ...mod, capability: "plot_result", method: "SymPy result cr:1 drawn by the Graph renderer" };
+  applySceneOps(e, [axes, plot("x")], made, { now: "2026-01-01T00:00:00.000Z" });
+  const before = canvasObjects(e)[1].provenance;
+  assert.equal(before.method, made.method);
+  // A refresh redraws the plot from a newer result, as the module, with a new method text.
+  applySceneOps(e, [{ op: "object.update", id: "o2", props: { expression: "2*x" } }],
+    { ...mod, capability: "refresh", method: "SymPy result cr:2 drawn by the Graph renderer" }, { now: "2026-01-02T00:00:00.000Z" });
+  const o = canvasObjects(e)[1], after = o.provenance;
+  assert.equal(o.props.expression, "2*x");
+  assert.equal(after.method, before.method, "method still names the result it was created from");
+  assert.equal(after.capability, "plot_result");
+  assert.equal(after.createdAt, before.createdAt);
+  assert.notEqual(after.updatedAt, before.updatedAt, "updatedAt moves");
+});
