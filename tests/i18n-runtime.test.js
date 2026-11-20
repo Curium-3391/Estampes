@@ -219,3 +219,12 @@ test("the sign-in page follows the browser's Accept-Language", () => {
   assert.equal(localeFromAcceptLanguage(undefined), null);
   assert.equal(localeFromAcceptLanguage("fr,".repeat(30) + "en"), null, "only the first 20 entries are read");
 });
+
+test("English count messages use the singular for one (no \"1 images\")", () => {
+  assert.equal(t("vs.caption.workspace", { name: "W", count: 1 }, "en"), "Workspace “W” · 1 image side by side, not overlaid");
+  assert.equal(t("vs.caption.workspace", { name: "W", count: 3 }, "en"), "Workspace “W” · 3 images side by side, not overlaid");
+  assert.equal(t("calc.msg.refreshed", { count: 1 }, "en"), "Recomputed and updated 1 Graph plot.");
+  assert.equal(t("vs.cards.group", { module: "M", count: 1 }, "en"), "M · 1 info card");
+  assert.equal(t("vs.cards.group", { module: "M", count: 2 }, "en"), "M · 2 info cards");
+  assert.equal(t("vs.caption.workspace", { name: "工", count: 1 }, "zh-TW"), "工作區「工」· 1 張圖並排，不疊合");
+});
