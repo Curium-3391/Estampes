@@ -122,6 +122,21 @@ test("a deleted curve leaves its marks invalid in place; pinning again or to the
   const p0 = await at(s, id, 1, 1), p1 = await at(s, id, 1, 2);
   assert.ok(near(a.geometry.x, p0.x) && near(a.geometry.y, before.y + (p1.y - p0.y)), "follows the curve by its offset: " + JSON.stringify(a.geometry));
 
+  // Pinned again to the same plot after its domain left x out: undo brings back the lost anchor.
+  const c0 = (await markOf(s, id, "a")).anchor;
+  await updatePlot(s, id, { object: upper.id, domain: [-0.5, 0.5] });
+  assert.equal((await markOf(s, id, "a")).anchor.status, "invalid");
+  await ok(s, "execute_module", { module: GRAPH, capability: "set_axes", canvas: id, params: { xRange: [-0.5, 0.5] }, present: false });
+  await s.call("edit_visual_canvas", { imageId: id, marks: [{ id: "a", anchor: { space: "function-x", plot: upper.id } }] });
+  const repinned = await markOf(s, id, "a");
+  assert.equal(repinned.anchor.status, "ok", JSON.stringify(repinned.anchor));
+  assert.notEqual(repinned.anchor.x, c0.x);
+  r = await s.call("edit_visual_canvas", { imageId: id, history: { action: "undo" } });
+  const back = await markOf(s, id, "a");
+  assert.equal(back.anchor.status, "invalid", "undo restores the lost anchor");
+  assert.equal(back.anchor.x, c0.x);
+  await ok(s, "execute_module", { module: GRAPH, capability: "set_axes", canvas: id, params: { xRange: [-10, 10] }, present: false });
+
   // Detach: a page mark at its current place.
   const placeB = (await markOf(s, id, "b")).geometry;
   r = await s.call("edit_visual_canvas", { imageId: id, marks: [{ id: "b", anchor: { space: "document" } }] });
