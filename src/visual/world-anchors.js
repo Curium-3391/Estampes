@@ -113,8 +113,9 @@ const curveBasis = (plot, axes) => JSON.stringify([targetOf(plot), axes ? basisO
 export function curveAt(entry, plot, x) {
   const axes = axesFor(entry, plot.props.frame);
   if (!axes || !Number.isFinite(x)) return { status: "invalid" };
-  const [d0, d1] = plot.props.domain ?? axes.props.xRange;
-  if (!within(x, d0, d1)) return { status: "invalid" };
+  // Only an explicit domain makes the curve undefined at x; without one, an x
+  // outside the axes range is only out of view ("outside" below).
+  if (plot.props.domain && !within(x, ...plot.props.domain)) return { status: "invalid" };
   let y;
   try { y = compileExpression(plot.props.expression)(x); } catch { return { status: "invalid" }; }
   if (!Number.isFinite(y)) return { status: "invalid" };

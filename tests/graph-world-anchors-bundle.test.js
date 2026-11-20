@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import sharp from "sharp";
 import { clearImages, registerImage } from "../src/image-store.js";
 import { useStorageDir } from "../src/storage.js";
-import { applyCanvasChanges } from "../src/canvas-state.js";
+import { applyCanvasChanges, reviewFinding } from "../src/canvas-state.js";
+import { verificationOf } from "../src/assessment.js";
 import { resolveCoordinateAnnotation as resolve, replayUserAnnotation } from "../src/scene-catalog.js";
 import { clearWorkspaces, getWorkspace, workspaceItems } from "../src/workspace.js";
 import { exportBundle, importBundle } from "../src/bundle.js";
@@ -115,4 +116,25 @@ test("export and import keep a curve anchor (UVA Phase 4B-4), its invalid status
   }
   assert.equal(imported.marks.get("c").stale, true, "a stale confirmation stays stale");
   assert.equal(imported.marks.get("c").review, "confirmed");
+});
+
+test("a stale claim backed by a tool stays stale until the person confirms it; withdrawing or rejecting does not revive the old evidence", async () => {
+  const entry = await registerImage(await sharp({ create: { width: 320, height: 200, channels: 3, background: "#eee" } }).png().toBuffer(), { source: "chat-file", fileName: "any.png" });
+  applySceneOps(entry, [{ op: "object.create", ref: "ax", type: "axes-2d", props: { xRange: [-10, 10], yRange: [-10, 10] } },
+    { op: "object.create", type: "function-plot", props: { expression: "x", frame: "$ax" } }], mod);
+  const plot = canvasObjects(entry).find((o) => o.type === "function-plot");
+  applyCanvasChanges(entry, { annotations: [{ id: "t", type: "point", x: 1, y: 0, note: "a root", anchor: { space: "function-x" } }], resolve });
+  entry.marks.set("t", { ...entry.marks.get("t"), evidence: [{ id: "e1", kind: "tool-result", observer: "tool", image: entry.imageId, says: "solver" }] });
+  assert.equal(verificationOf(entry.marks.get("t")), "independently-verified");
+  applySceneOps(entry, [{ op: "object.update", id: plot.id, props: { expression: "x - 1" } }], mod);
+  syncWorldAnchors(entry);
+  assert.equal(verificationOf(entry.marks.get("t")), "unverified");
+  for (const review of ["unreviewed", "rejected", "unreviewed"]) {
+    reviewFinding(entry, "t", review);
+    assert.equal(entry.marks.get("t").stale, true, review + " keeps it stale");
+    assert.notEqual(verificationOf(entry.marks.get("t")), "independently-verified", review);
+  }
+  reviewFinding(entry, "t", "confirmed");
+  assert.equal(entry.marks.get("t").stale, undefined);
+  assert.equal(verificationOf(entry.marks.get("t")), "user-confirmed");
 });

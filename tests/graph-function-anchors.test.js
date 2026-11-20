@@ -68,6 +68,12 @@ test("a mark pinned to a curve follows the formula, the domain and the axes", { 
   assert.equal((await s.call("render_canvas", { imageId: id })).structuredContent.included.marks.includes("p"), false);
   await ok(s, "execute_module", { module: GRAPH, capability: "set_axes", canvas: id, params: { yRange: [-5, 5] }, present: false });
 
+  // Without an explicit domain, an axes x range that leaves x = 2 out only hides it.
+  await ok(s, "execute_module", { module: GRAPH, capability: "set_axes", canvas: id, params: { xRange: [-1, 1] }, present: false });
+  assert.equal((await markOf(s, id, "p")).anchor.status, "outside", "out of view, not a lost anchor");
+  await ok(s, "execute_module", { module: GRAPH, capability: "set_axes", canvas: id, params: { xRange: [-5, 5] }, present: false });
+  assert.equal((await markOf(s, id, "p")).anchor.status, "ok");
+
   // A domain that leaves x = 2 out: invalid, kept where it was, still drawn.
   const before = (await markOf(s, id, "p")).geometry;
   await updatePlot(s, id, { object: plot.id, domain: [-1, 1] });

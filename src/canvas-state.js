@@ -607,7 +607,7 @@ export function applyPairChanges(left, right, { annotations = [], findings = [],
 // remembered apart from the link (see assessment.js), so it outlives the
 // link and its marks; confirming or withdrawing the verdict forgets it.
 export const linkRef = (rightId, id) => "link:" + rightId + ":" + id;
-const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete c.reviewReason; delete c.confirmedGeometry; delete c.stale; return c; };
+const clearReview = (claim) => { const c = { ...claim }; delete c.review; delete c.reviewReason; delete c.confirmedGeometry; return c; };
 
 // A confirmation is about the marks as they were: the geometry of both ends is
 // remembered (rounded to 0.001 of the image), and a confirmed link whose end
@@ -654,6 +654,8 @@ export function reviewFinding(entry, id, review, reason) {
   const ref = "note:" + id;
   dropRejections(entry, ref);
   const next = { ...clearReview(mark), ...(review === "unreviewed" ? {} : { review }) };
+  // Only confirming the changed claim makes it current again; withdrawing or rejecting keeps old evidence stale.
+  if (review === "confirmed") delete next.stale;
   if (review === "rejected") {
     if (reason?.trim()) next.reviewReason = reason.trim().slice(0, 200);
     addRejection(entry, rejectionOf("note", mark, { from: { image: entry.imageId, region: markRegion(mark), text: mark.note }, reason, ref }));
