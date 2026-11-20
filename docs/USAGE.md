@@ -22,6 +22,7 @@ Pick a tool, draw on the image, optionally write a short note, and press send. Y
 | 四邊形 | A quadrilateral: drag a box, then in 選取 move each corner on its own (for something seen in perspective) or turn the whole shape with its round handle (for something tilted) |
 | 手繪 | A freehand line; mouse, touch, graphics tablet or stylus |
 | 文字 | A standalone text label (up to 80 characters) with its own size and colour, which you can drag and edit later |
+| 橡皮擦 | Not a mark: touch a mark, or drag across several, and each whole mark is deleted, the AI's as well as yours. A mark in a locked layer stays, with a notice. A delete you already sent can be undone with 上一步 |
 
 Below the tools you choose a colour, a line width (極細 is for fine lines when zoomed in) and 筆 or 螢光筆 (translucent, does not hide what is underneath).
 
