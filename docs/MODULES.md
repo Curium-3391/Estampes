@@ -126,6 +126,14 @@ A mark on a Graph can also follow a function plot: `anchor: {space: "function-x"
 
 `provenance.method`, `capability`, `module` and `createdAt` record how an object was first made and are written once, when it is created. A later `object.update` changes only `updatedAt` and `editedByUser`. So a Graph plot made by the calculator's `plot_result` keeps the method text naming the first result (`SymPy result cr:… drawn by the Graph renderer`) even after auto-refresh redraws it from a newer result. The result a plot currently follows is the `resultId` of the graph link in its notebook cell (`get_notebook`, `get_surface_state`), not the object's provenance.
 
+## Manifest v2 (format only, not yet usable)
+
+`estampes.module/2` is the manifest format planned for modules that work on documents (images and Graphs) rather than on an image id (UVA Phase 5A, ADR-005). It exists as a checked format only: no module can be installed or run with it yet, and the server refuses a v2 manifest unless a caller asks for it explicitly. v1 manifests, their signatures and their behaviour on images do not change.
+
+A v2 manifest differs from v1 in four fields. `schema` is `estampes.module/2`. `runtime.abi` is a required integer (this server supports ABI 1). Each capability's `target` is `none`, `document` or `document-or-new` (v1: `none`, `canvas`, `canvas-or-new`). Each capability lists the permissions it really `needs` (v1: an optional `permissions` subset). The rules that follow are the same as for v1: `needs` stays inside the module's `permissions`, a document target needs `canvas.write`, `document-or-new` also needs `workspace.write`, and a capability that uses the network says what it sends. The `wasm` and `builtin` runtimes are not available for v2. Unknown fields are refused.
+
+What is still to come: the target context a module sees and the intersection of granted and needed permissions (5A-2), the v1 image adapter and Graph refusal (5A-3).
+
 ## Storage and audit
 
 With `ESTAMPES_STORAGE_DIR`, module data lives in `<storage>/modules/`: `registry.json` (state and grants) and `audit.jsonl` (plans, approvals, refusals, runs and failures; secrets never appear). Without storage, state lives in memory and modules start disabled again after a restart. Objects belong to the canvas (with the default UVA store they are saved in the canvas document inside the UVA store; the legacy store keeps them in the canvas's `canvas.json`; see [Architecture](ARCHITECTURE.md#state-and-persistence)), so they survive a restart even if a module is later disabled; disabling stops new runs but does not delete anything.

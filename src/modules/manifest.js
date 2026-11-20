@@ -12,6 +12,18 @@ export const RUNTIME_KINDS = ["builtin", "declarative", "wasm", "http"];
 export const CATEGORIES = ["math", "diagram", "analysis", "text", "astronomy", "electronics", "utility", "other"];
 export const TARGETS = ["none", "canvas", "canvas-or-new"];
 
+// estampes.module/2 (UVA Phase 5A, ADR-005): the same module concepts with a
+// strict manifest of its own. A capability names the document it works on
+// (`none`, `document` or `document-or-new`, never an image id) and the
+// permissions it really `needs`; the module declares an integer ABI. v1
+// manifests, their signatures and their image behaviour are not changed.
+// 5A-1 only defines and checks the format; nothing runs a v2 module yet, so
+// a v2 manifest is refused unless the caller asks for it (`v2: true`).
+export const MODULE_SCHEMA_V2 = "estampes.module/2";
+export const TARGETS_V2 = ["none", "document", "document-or-new"];
+export const SUPPORTED_ABI = 1;
+const V1_TARGET = { none: "none", document: "canvas", "document-or-new": "canvas-or-new" };
+
 // Reverse-DNS style ids. They are names, not proof that the publisher owns
 // that domain; trust comes from the package signature (see packages.js).
 export const MODULE_ID = /^[a-z][a-z0-9-]{0,30}(\.[a-z0-9][a-z0-9-]{0,30}){2,5}$/;
@@ -156,16 +168,56 @@ export const ManifestSchema = z.object({
   panels: z.array(Panel).max(8).optional(),
 }).strict();
 
+// v2 differs from v1 in four fields: the schema string, `runtime.abi` (a
+// required integer), and per capability a document `target` and an explicit
+// `needs` (v1's optional `permissions` subset).
+const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend({
+  target: z.enum(TARGETS_V2),
+  needs: z.array(z.enum(PERMISSION_NAMES)).max(12),
+});
+export const ManifestSchemaV2 = ManifestSchema.omit({ schema: true, runtime: true, capabilities: true }).extend({
+  schema: z.literal(MODULE_SCHEMA_V2),
+  runtime: z.object({
+    kind: z.enum(RUNTIME_KINDS),
+    entry: z.string().max(120).regex(/^[A-Za-z0-9._/-]+$/),
+    abi: z.number().int().min(1).max(1000),
+  }).strict(),
+  capabilities: z.array(CapabilityV2).min(1).max(32),
+});
+
+// The v1-shaped view the shared checks run on: the same permissions, the
+// same capabilities, with the document target mapped to its canvas meaning.
+const v1View = (m) => ({
+  ...m, schema: MODULE_SCHEMA, runtime: { kind: m.runtime.kind, entry: m.runtime.entry },
+  capabilities: m.capabilities.map(({ needs, target, ...c }) => ({ ...c, permissions: needs, target: V1_TARGET[target] })),
+});
+
+// What changed between two ABI versions of a module, for the Store.
+export function abiChange(was, now) {
+  if (was === undefined || was === null) return { from: null, to: now ?? null, kind: now === undefined ? "none" : "new" };
+  if (now === undefined || now === null) return { from: was, to: null, kind: "removed" };
+  if (was === now) return { from: was, to: now, kind: "same" };
+  return { from: was, to: now, kind: now > was ? "upgrade" : "downgrade" };
+}
+
 export class ManifestError extends Error {}
 
 // Returns the parsed manifest or throws a ManifestError naming the field.
-export function validateManifest(raw, { coreVersion } = {}) {
-  const parsed = ManifestSchema.safeParse(raw);
+export function validateManifest(raw, { coreVersion, v2 = false } = {}) {
+  const isV2 = raw?.schema === MODULE_SCHEMA_V2;
+  if (isV2 && !v2) throw new ManifestError("manifest.schema: " + MODULE_SCHEMA_V2 + " is not enabled on this server yet; use " + MODULE_SCHEMA);
+  const parsed = (isV2 ? ManifestSchemaV2 : ManifestSchema).safeParse(raw);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw new ManifestError("manifest" + (issue.path.length ? "." + issue.path.join(".") : "") + ": " + issue.message);
   }
-  const m = parsed.data;
+  const original = parsed.data;
+  if (isV2) {
+    if (original.runtime.abi > SUPPORTED_ABI) throw new ManifestError("manifest.runtime.abi: ABI " + original.runtime.abi + " is newer than this server supports (" + SUPPORTED_ABI + ")");
+    if (original.runtime.kind === "wasm") throw new ManifestError("manifest.runtime.kind: the wasm runtime is not available for " + MODULE_SCHEMA_V2 + " yet");
+    if (original.runtime.kind === "builtin") throw new ManifestError("manifest.runtime.kind: built-in modules use " + MODULE_SCHEMA);
+  }
+  const m = isV2 ? v1View(original) : original;
   try { parseRange(m.coreCompatibility); } catch (error) { throw new ManifestError("manifest.coreCompatibility: " + error.message); }
   for (const d of m.dependencies ?? []) { try { parseRange(d.version); } catch (error) { throw new ManifestError("manifest.dependencies." + d.id + ": " + error.message); } }
   if (coreVersion && !satisfies(coreVersion, m.coreCompatibility)) {
@@ -234,7 +286,7 @@ export function validateManifest(raw, { coreVersion } = {}) {
   if (m.network && !m.permissions.includes("network.request.approved")) throw new ManifestError("manifest.network: needs the network.request.approved permission");
   if (m.permissions.includes("network.request.approved") && !m.network) throw new ManifestError("manifest.permissions: network.request.approved needs manifest.network (hosts and data flow)");
   if (m.secrets?.length && !m.permissions.includes("module.secrets")) throw new ManifestError("manifest.secrets: needs the module.secrets permission");
-  return m;
+  return original;
 }
 
 // Display text in the user's language when the manifest has it.
