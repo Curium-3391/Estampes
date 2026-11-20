@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
+import { CANVAS_KINDS, makeCanvas } from "./helpers/canvases.js";
 import { t } from "../src/i18n/index.js";
 
 // The workbench bar fills in after the canvas has drawn (its own
@@ -13,12 +14,12 @@ async function point(ui,x,y) {
   return ui.frame.locator("#surface").evaluate((svg,[x,y])=>{const p=svg.createSVGPoint();p.x=x*Number(svg.getAttribute("viewBox").split(" ")[2]);p.y=y*Number(svg.getAttribute("viewBox").split(" ")[3]);const q=p.matrixTransform(svg.getScreenCTM());return {x:q.x,y:q.y};},[x,y]);
 }
 const tap=async(ui,p,touch)=>touch?ui.page.touchscreen.tap(p.x,p.y):ui.page.mouse.click(p.x,p.y);
-for(const touch of [false,true])test("type, drag, undo and reopen vector text and annotation notes: "+(touch?"mobile touch":"desktop"),{skip:noBrowser,timeout:120000},async()=>{
+for(const kind of CANVAS_KINDS)for(const touch of [false,true])test("type, drag, undo and reopen vector text and annotation notes: "+(touch?"mobile touch":"desktop")+", "+kind,{skip:noBrowser,timeout:120000},async()=>{
   const s=await startStack({cas:false});
   try{
     const ok=async(name,args)=>{const r=await s.call(name,args);assert.ok(!r.isError,JSON.stringify(r.content));return r.structuredContent;};
     const data=(await sharp({create:{width:800,height:600,channels:3,background:"#ddd"}}).png().toBuffer()).toString("base64");
-    const imageId=(await ok("upload_visual_image",{total:data.length,offset:0,data})).imageId;
+    const imageId=await makeCanvas(s,kind);
     const ui=await s.open({imageId,touch,viewport:touch?{width:390,height:844}:{width:1280,height:900}});
     await ui.page.waitForFunction(()=>window.hostLog.includes("ui/notifications/initialized"));
     await ui.frame.locator('[data-mode="text"]').click();
@@ -35,11 +36,11 @@ for(const touch of [false,true])test("type, drag, undo and reopen vector text an
     assert.ok(obj);assert.equal(obj.props.text,wording);assert.equal(obj.provenance.author,"user");
     const rendered=ui.frame.locator('#unified-layers g[data-object="'+obj.id+'"] text');
     assert.equal(await rendered.count(),2);
-    await ui.shot("annotation-text-created-"+(touch?"mobile":"desktop"));
+    await ui.shot("annotation-text-created-"+(touch?"mobile":"desktop")+"-"+kind);
     assert.equal(await ui.frame.locator("#surface script").count(),0);
     await ui.frame.locator("#text-undo").click();
     await ui.page.waitForTimeout(250);
-    assert.equal((await ok("get_visual_state",{imageId})).objects?.length??0,0);
+    assert.equal((await ok("get_visual_state",{imageId})).objects?.filter(o=>o.type==="shape").length??0,0);
     await ui.frame.locator("#text-redo").click();
     await rendered.first().waitFor();
     await ui.frame.locator('[data-mode="select"]').click();
@@ -75,7 +76,7 @@ for(const touch of [false,true])test("type, drag, undo and reopen vector text an
     await ui.frame.getByRole("button",{name:"儲存標籤與備註",exact:true}).click();
     await ui.frame.locator("#status").filter({hasText:"已儲存標籤與備註"}).waitFor();
     state=await ok("get_visual_state",{imageId});let mark=state.marks.find(m=>m.id==="user-note");
-    await ui.shot("annotation-note-editor-"+(touch?"mobile":"desktop"));
+    await ui.shot("annotation-note-editor-"+(touch?"mobile":"desktop")+"-"+kind);
     assert.equal(mark.label,"標籤中文");assert.equal(mark.finding.note,"第一行\n第二行🙂 <img>");
     assert.deepEqual(mark.geometry,{x:.82,y:.82});
     await ui.frame.getByRole("textbox",{name:"標籤",exact:true}).fill("");
@@ -95,7 +96,7 @@ for(const touch of [false,true])test("type, drag, undo and reopen vector text an
     await ui.reload();await ui.frame.locator("#unified-layers circle").waitFor();
     assert.equal(await rendered.count(),0,"hidden text stays hidden after reload");
     assert.deepEqual(ui.errors,[]);
-    await ui.shot("annotation-text-"+(touch?"mobile":"desktop"));
+    await ui.shot("annotation-text-"+(touch?"mobile":"desktop")+"-"+kind);
   }finally{await s.close();}
 });
 
@@ -249,12 +250,12 @@ test("rejected text drags redraw the last accepted position",{skip:noBrowser,tim
 // #82 live failure: the AI's label/note fields were read-only in the widget,
 // so a user could not change the text of AI-created marks. A tap on the drawn
 // label selects its mark, and a tap (even a jittery finger) never moves it.
-for(const touch of [false,true])test("#82: the user rewrites the label and note of AI-created marks: "+(touch?"mobile touch":"desktop"),{skip:noBrowser,timeout:90000},async()=>{
+for(const kind of CANVAS_KINDS)for(const touch of [false,true])test("#82: the user rewrites the label and note of AI-created marks: "+(touch?"mobile touch":"desktop")+", "+kind,{skip:noBrowser,timeout:90000},async()=>{
   const s=await startStack({cas:false});
   try{
     const ok=async(name,args)=>{const r=await s.call(name,args);assert.ok(!r.isError,JSON.stringify(r.content));return r.structuredContent;};
     const data=(await sharp({create:{width:900,height:1200,channels:3,background:"#ccc"}}).png().toBuffer()).toString("base64");
-    const imageId=(await ok("upload_visual_image",{total:data.length,offset:0,data})).imageId;
+    const imageId=await makeCanvas(s,kind);
     const annotations=[{id:"t82-A",type:"rect",x:.1,y:.15,x2:.4,y2:.35,label:"A",note:"AI note A"},
       {id:"t82-B",type:"point",x:.7,y:.5,label:"B",note:"AI note B"},{id:"t82-C",type:"arrow",x:.2,y:.7,x2:.5,y2:.85,label:"C"}];
     await ok("present_visual",{imageId,annotations});
@@ -299,6 +300,6 @@ for(const touch of [false,true])test("#82: the user rewrites the label and note 
     assert.match(next.content.map(c=>c.text).join("\n"),/rewrote the text of YOUR mark t82-A: label "A" -> "甲 晶片 Ω🙂"/);
     await ui.reload();await ui.frame.locator("#unified-layers text").filter({hasText:"甲 晶片 Ω🙂"}).waitFor();
     assert.deepEqual(ui.errors,[]);
-    await ui.shot("ai-label-edit-"+(touch?"mobile":"desktop"));
+    await ui.shot("ai-label-edit-"+(touch?"mobile":"desktop")+"-"+kind);
   }finally{await s.close();}
 });

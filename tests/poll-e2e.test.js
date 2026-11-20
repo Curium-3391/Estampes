@@ -6,16 +6,17 @@ import assert from "node:assert/strict";
 import { startStack, noPython, noBrowser } from "./helpers/widget-host.js";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const plot = async (s, expression) => {
-  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind: "image" } });
-  return (JSON.stringify(r.structuredContent).match(/img:[0-9a-f]{16}/) ?? [])[0];
+const plot = async (s, expression, kind = "image") => {
+  const r = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression }, newCanvas: { kind } });
+  return (JSON.stringify(r.structuredContent).match(/(img|gph):[0-9a-f]{16}/) ?? [])[0];
 };
 
-test("polling shows another author's change; unsent marks and the camera stay", { skip: noPython || noBrowser, timeout: 60000 }, async () => {
+for (const kind of ["image", "graph"]) test("polling shows another author's change; unsent marks and the camera stay: " + kind, { skip: noPython || noBrowser, timeout: 60000 }, async () => {
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph"]);
-    const id = await plot(s, "x^2");
+    const id = await plot(s, "x^2", kind);
+    assert.match(id, kind === "graph" ? /^gph:/ : /^img:/);
     const ui = await s.open({ imageId: id });
     await ui.frame.locator("#surface").first().waitFor({ timeout: 20000 });
     const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());

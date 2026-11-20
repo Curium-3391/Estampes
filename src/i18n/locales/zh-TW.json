@@ -395,6 +395,7 @@
   "vs.caption.original": "完整原圖 · 不包含標註",
   "vs.caption.pair": "左 {left} ｜ 右 {right} · 左右對照，不疊合",
   "vs.caption.photo": "照片 {id}",
+  "vs.caption.graph": "函數圖 {id}",
   "vs.caption.processed": "{label} · 處理後檢視（不含標註）",
   "vs.caption.text": "示範底圖 · 原始內容與 SVG 標註分開",
   "vs.caption.workspace": "工作區「{name}」· {count} 張圖並排，不疊合",

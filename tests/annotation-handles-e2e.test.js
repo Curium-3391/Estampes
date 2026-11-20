@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
+import { CANVAS_KINDS, makeCanvas } from "./helpers/canvases.js";
 
 const settled = (ui) => ui.frame.locator("#wb-bar:not(:empty)").waitFor();
 async function point(ui, x, y) {
@@ -36,12 +37,12 @@ async function dragCanvas(ui, a, b, touch) {
 const tap = async (ui, p, touch) => (touch ? ui.page.touchscreen.tap(p.x, p.y) : ui.page.mouse.click(p.x, p.y));
 const near = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
 
-for (const touch of [false, true]) test("drag, resize and reshape the AI's marks: " + (touch ? "mobile touch" : "desktop"), { skip: noBrowser, timeout: 120000 }, async () => {
+for (const kind of CANVAS_KINDS) for (const touch of [false, true]) test("drag, resize and reshape the AI's marks: " + (touch ? "mobile touch" : "desktop") + ", " + kind, { skip: noBrowser, timeout: 120000 }, async () => {
   const s = await startStack({ cas: false });
   try {
     const ok = async (name, args) => { const r = await s.call(name, args); assert.ok(!r.isError, JSON.stringify(r.content)); return r.structuredContent; };
     const data = (await sharp({ create: { width: 800, height: 600, channels: 3, background: "#ddd" } }).png().toBuffer()).toString("base64");
-    const imageId = (await ok("upload_visual_image", { total: data.length, offset: 0, data })).imageId;
+    const imageId = await makeCanvas(s, kind);
     await ok("present_visual", { imageId, annotations: [
       { id: "box", type: "rect", x: 0.2, y: 0.2, x2: 0.4, y2: 0.4, label: "晶片", note: "AI 的說明" },
       { id: "arr", type: "arrow", x: 0.6, y: 0.7, x2: 0.8, y2: 0.8 },
@@ -71,7 +72,7 @@ for (const touch of [false, true]) test("drag, resize and reshape the AI's marks
     assert.ok(near(m.geometry.x, g.x, 0.002) && near(m.geometry.y, g.y, 0.002), "the opposite corner stays");
     assert.equal(m.id, "box"); assert.equal(m.provenance.author, "assistant"); assert.equal(m.provenance.editedByUser, true);
     assert.equal(m.finding.note, "AI 的說明");
-    await ui.shot("annotation-handles-resized-" + (touch ? "mobile" : "desktop"));
+    await ui.shot("annotation-handles-resized-" + (touch ? "mobile" : "desktop") + "-" + kind);
 
     // Reshape: an arrow's end.
     await tap(ui, await point(ui, 0.7, 0.75), touch);
@@ -119,12 +120,12 @@ for (const touch of [false, true]) test("drag, resize and reshape the AI's marks
 
 // #70: a quadrilateral for tilted or perspective objects: drawn as a box,
 // then each corner moved on its own, or the whole shape turned.
-for (const touch of [false, true]) test("draw a quadrilateral, move one corner, rotate it and reopen: " + (touch ? "mobile touch" : "desktop"), { skip: noBrowser, timeout: 120000 }, async () => {
+for (const kind of CANVAS_KINDS) for (const touch of [false, true]) test("draw a quadrilateral, move one corner, rotate it and reopen: " + (touch ? "mobile touch" : "desktop") + ", " + kind, { skip: noBrowser, timeout: 120000 }, async () => {
   const s = await startStack({ cas: false });
   try {
     const ok = async (name, args) => { const r = await s.call(name, args); assert.ok(!r.isError, JSON.stringify(r.content)); return r.structuredContent; };
     const data = (await sharp({ create: { width: 800, height: 600, channels: 3, background: "#ddd" } }).png().toBuffer()).toString("base64");
-    const imageId = (await ok("upload_visual_image", { total: data.length, offset: 0, data })).imageId;
+    const imageId = await makeCanvas(s, kind);
     const ui = await s.open({ imageId, touch, viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 900 } });
     await ui.page.waitForFunction(() => window.hostLog.includes("ui/notifications/initialized"));
     await settled(ui);
@@ -160,7 +161,7 @@ for (const touch of [false, true]) test("draw a quadrilateral, move one corner, 
     // Side lengths in pixels are kept by a turn.
     const side = (pts, i) => Math.hypot((pts[(i + 1) % 4].x - pts[i].x) * 800, (pts[(i + 1) % 4].y - pts[i].y) * 600);
     for (let i = 0; i < 4; i++) assert.ok(Math.abs(side(q.geometry.points, i) - side(before, i)) < 2, "side " + i);
-    await ui.shot("annotation-quad-" + (touch ? "mobile" : "desktop"));
+    await ui.shot("annotation-quad-" + (touch ? "mobile" : "desktop") + "-" + kind);
     // The AI reads exact corners, not only a bounding box.
     const r = await s.call("present_visual", { imageId });
     const mark = r.structuredContent.marks.find((m) => m.id === quad.id);

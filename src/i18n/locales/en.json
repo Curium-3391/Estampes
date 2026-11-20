@@ -395,6 +395,7 @@
   "vs.caption.original": "Full original · without marks",
   "vs.caption.pair": "Left {left} | Right {right} · side by side, not overlaid",
   "vs.caption.photo": "Photo {id}",
+  "vs.caption.graph": "Graph {id}",
   "vs.caption.processed": "{label} · processed view (without marks)",
   "vs.caption.text": "Demo image · original content and SVG marks kept apart",
   "vs.caption.workspace": "Workspace “{name}” · {count} images side by side, not overlaid",
