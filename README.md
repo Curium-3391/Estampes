@@ -78,6 +78,7 @@ npm start          # http://localhost:8787/mcp
 | [UVA power-loss simulation](docs/UVA-POWERLOSS.md) | How the store is tested against power cuts, and what is still unqualified |
 | [Workspaces](docs/WORKSPACES.md) | Several images in one place; merge, split, copy, link; `.estampes` bundles |
 | [Modules](docs/MODULES.md) | The module system, the Store, packages, WebAssembly and http modules, background jobs, plate solving |
+| [Interface languages](docs/I18N.md) | How the language is chosen, what is translated, how to add a language |
 | [Scientific calculator](docs/CAS.md) | The SymPy calculator module and its isolated container |
 | [Surfaces](docs/SURFACES.md) | Panels and per-device layouts (`estampes.surface/1`) |
 | [Workbench](docs/WORKBENCH.md) | The canvas and the calculator as windows inside one widget |
