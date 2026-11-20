@@ -198,6 +198,7 @@ body.estampes-background #wb-bar,body.estampes-background #wb-help{display:none!
 <button data-mode="arrow" aria-pressed="false" data-i18n="vs.mode.arrow.text"></button>
 <button data-mode="quad" aria-pressed="false" data-i18n-title="vs.mode.quad.title" data-i18n="vs.mode.quad.text"></button>
 <button data-mode="polyline" aria-pressed="false" data-i18n-title="vs.mode.polyline.title" data-i18n="vs.mode.polyline.text"></button>
+<button data-mode="erase" aria-pressed="false" data-i18n-title="vs.mode.erase.title" data-i18n="vs.mode.erase.text"></button>
 <button id="undo" title="Ctrl+Z" data-i18n="vs.undo.text"></button><button id="redo" title="Ctrl+Shift+Z / Ctrl+Y" data-i18n="vs.redo.text"></button><button id="clear" data-i18n="vs.clear.text"></button>
 </div>
 <div id="style-tools" role="group" data-i18n-aria-label="vs.style-tools.aria-label">
@@ -1826,7 +1827,7 @@ svg.addEventListener("gesturechange",e=>{e.preventDefault();if(!zoomable())retur
 const pointers=new Map();
 let pinch=null,panning=null,gestureLock=false,spaceDown=false;
 const pinchState=()=>{const [a,b]=[...pointers.values()];return {d:Math.hypot(a.x-b.x,a.y-b.y)||1,m:{clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2}};};
-function cancelStroke(){cancelTextDrag();start=null;stroke=[];previewEl.replaceChildren();}
+function cancelStroke(){cancelTextDrag();erasing=null;start=null;stroke=[];previewEl.replaceChildren();}
 svg.addEventListener("pointerdown",e=>{
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(!zoomable())return;
@@ -2323,9 +2324,36 @@ function strokeFacts(){
  return {strokeOrder:++strokeCount,relativeStartMs:ms(strokeStart),relativeEndMs:ms(now),
    ...(["mouse","pen","touch"].includes(strokePointer)?{pointerType:strokePointer}:{})};
 }
-hit.addEventListener("pointerdown",e=>{if(mode==="select"||mode==="text"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];
+// Eraser: touch or drag over a mark to delete the whole mark. A mark in a locked
+// layer stays. Each delete is asked for when the mark is touched, so editOnServer
+// fixes its document then and keeps the edits in order (a viewer that moves to
+// another canvas meanwhile does not redirect it), and a sent mark can be
+// brought back with 上一步 like any other delete.
+let erasing=null,erasePrev=null;
+function eraseAt(p){
+ const m=pickMark(p);if(!m||erasing.has(m.id))return;
+ erasing.add(m.id);
+ if(!canDelete(m)){status.textContent=t("vs.erase.locked");return;}
+ deleteMark(m);
+}
+// A fast drag skips samples: look at every few pixels between two of them.
+function eraseSweep(a,b){
+ const n=Math.max(1,Math.ceil(Math.hypot(px(b.x-a.x),py(b.y-a.y))/(6*U())));
+ for(let i=1;i<=n;i++)eraseAt({...b,x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n});
+}
+hit.addEventListener("pointerdown",e=>{
+ if(mode!=="erase"||!ready||!imageId||viewMode!=="annotated")return;
+ const p=fromPointer(e);if(!p)return;
+ e.preventDefault();erasing=new Set();erasePrev=p;hit.setPointerCapture(e.pointerId);eraseAt(p);
+});
+hit.addEventListener("pointermove",e=>{
+ if(mode!=="erase"||!erasing)return;
+ for(const ev of e.getCoalescedEvents?.()??[e]){const q=fromPointer(ev);if(!q)continue;eraseSweep(erasePrev,q);erasePrev=q;}
+});
+for(const type of ["pointerup","pointercancel"])hit.addEventListener(type,()=>{erasing=null;});
+hit.addEventListener("pointerdown",e=>{if(mode==="select"||mode==="text"||mode==="erase"||!ready||userMarks.length>=MAX_MARKS)return;start=fromPointer(e);if(!start)return;stroke=[start];
  strokeStart=performance.now();batchStart??=strokeStart;strokePointer=e.pointerType;hit.setPointerCapture(e.pointerId);});
-hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select"||mode==="text")return;const p=fromPointer(e);if(!p)return;
+hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select"||mode==="text"||mode==="erase")return;const p=fromPointer(e);if(!p)return;
  if(mode==="polyline"){
    // Pens and tablets report more samples than pointermove fires; use them all.
    for(const ev of e.getCoalescedEvents?.()??[e]){
@@ -2336,7 +2364,7 @@ hit.addEventListener("pointermove",e=>{if(!start||mode==="point"||mode==="select
    return;
  }
  renderMarks(previewEl,[{...draft(start,p),label:""}],"#579DF6","YOU");});
-hit.addEventListener("pointerup",e=>{if(!start||mode==="select"||mode==="text")return;const p=fromPointer(e);if(p){
+hit.addEventListener("pointerup",e=>{if(!start||mode==="select"||mode==="text"||mode==="erase")return;const p=fromPointer(e);if(p){
  if(mode==="polyline")stroke.push(p);
  let mark=mode==="polyline"
    ?{...freehandMark(thin(stroke)),id:ID_PREFIX+(++seq),label:nextLabel(),...styleFields()}
