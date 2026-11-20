@@ -2,6 +2,7 @@
 // vector editor, and attach to a later chat to restore the canvas. The
 // marks travel as JSON inside <metadata>; nothing else in the file is read
 // back, so an edited drawing never turns into unvalidated marks.
+import { cleanNameFields } from "./i18n/names.js";
 import { markSvg } from "./mark-render.js";
 import { READABLE_PROTOCOLS, marksFromDocument } from "./protocol.js";
 import { renderedObjects } from "./scene/scene-ops.js";
@@ -38,7 +39,7 @@ export function exportMarksSvg(entry, marks, layers = []) {
     layer("estampes-gpt", "AI", marks.filter((m) => m.author !== "user" && !known.has(m.layer))),
   ].filter(Boolean).join("\n");
   const payload = JSON.stringify({ format: MARKS_FORMAT, version: 2, imageId: entry.imageId, width: W, height: H,
-    layers: layers.map(({ id, author, name, locked, opacity, visible }) => ({ id, author, name,
+    layers: layers.map(({ id, author, name, nameKey, nameParams, locked, opacity, visible }) => ({ id, author, name, ...(nameKey ? { nameKey, nameParams } : {}),
       ...(locked ? { locked: true } : {}), ...(visible === false ? { visible: false } : {}), ...(opacity < 1 ? { opacity } : {}) })), marks })
     .replace(/]]>/g, "]]\\u003e");
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -68,3 +69,8 @@ export function parseMarksFile(bytes, image = {}) {
     layers: Array.isArray(data.layers) ? data.layers.slice(0, 60) : [] };
 }
 
+
+// The layers a parsed marks file may add: well-formed ids and authors, a short
+// literal name, and the default-name key only when it matches the catalog.
+export const fileLayers = (data) => (data.layers ?? []).filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author))
+  .map((l) => ({ id: l.id, author: l.author, name: String(l.name ?? "").slice(0, 40), ...(String(l.name ?? "") ? cleanNameFields(l) : {}) }));

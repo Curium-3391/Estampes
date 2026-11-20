@@ -10,7 +10,7 @@ import { createI18n } from "../src/i18n/runtime.js";
 import { localizedName } from "../src/i18n/widget-runtime.js";
 import { defaultName, cleanNameFields, NAME_KEYS } from "../src/i18n/names.js";
 import { registerImage, clearImages } from "../src/image-store.js";
-import { applyCanvasChanges, storeUserMarks, editCanvas, canvasLayers } from "../src/canvas-state.js";
+import { applyCanvasChanges, storeUserMarks, editCanvas, canvasLayers, canvasMarks } from "../src/canvas-state.js";
 import { resolveCoordinateAnnotation as resolve, replayUserAnnotation } from "../src/scene-catalog.js";
 import { serializeCanvas, useStorageDir } from "../src/storage.js";
 import { LayerSchema } from "../src/documents/schema.js";
@@ -21,6 +21,8 @@ import { context } from "./fixtures/uva-pr1a.mjs";
 import { clearWorkspaces, commitTransfer } from "../src/workspace.js";
 import { exportBundle, importBundle } from "../src/bundle.js";
 import { unzipFiles } from "../src/zip.js";
+import { exportMarksSvg, parseMarksFile, fileLayers } from "../src/marks-file.js";
+import { canvasDocument } from "../src/protocol.js";
 import { threeImageFixture } from "./fixtures/three-images.js";
 
 beforeEach(() => { clearImages(); clearWorkspaces(); useStorageDir(""); });
@@ -135,4 +137,16 @@ test("a bundle carries the keys and an import keeps them; bundle layers with a b
   const again = [...unzipFiles(after.buffer)].filter(([n]) => /^sets\/\d+\.json$/.test(n)).flatMap(([, d]) => JSON.parse(d.toString()).layers);
   const pick = (ls) => ls.map((l) => [l.id, l.name, l.nameKey, JSON.stringify(l.nameParams)]).sort();
   assert.deepEqual(pick(again), pick(sets.flatMap((s) => s.layers)));
+});
+
+test("a marks file (SVG or visual document) keeps the key through the public import mapping", async () => {
+  const entry = await photo();
+  applyCanvasChanges(entry, { annotations: [box("a", 0.1)], resolve });
+  const layers = canvasLayers(entry), marks = canvasMarks(entry);
+  const viaSvg = fileLayers(parseMarksFile(Buffer.from(exportMarksSvg(entry, marks, layers))));
+  assert.deepEqual(viaSvg.map((l) => [l.name, l.nameKey, l.nameParams]), layers.map((l) => [l.name, l.nameKey, l.nameParams]));
+  const doc = JSON.stringify(canvasDocument(entry));
+  const viaDoc = fileLayers(parseMarksFile(Buffer.from(doc)));
+  assert.deepEqual(viaDoc.map((l) => [l.name, l.nameKey]), layers.map((l) => [l.name, l.nameKey]));
+  assert.ok(viaDoc.every((l) => l.nameKey), "keys survive");
 });

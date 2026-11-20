@@ -25,7 +25,7 @@ import {
 } from "./src/canvas-state.js";
 import { CONFIDENCE, EVIDENCE_KINDS, evidenceCount, verificationOf, needsReview, rejectionText } from "./src/assessment.js";
 import { renderVerification, inkReport } from "./src/mark-render.js";
-import { exportMarksSvg, parseMarksFile } from "./src/marks-file.js";
+import { exportMarksSvg, parseMarksFile, fileLayers } from "./src/marks-file.js";
 import { downloadImage, entrySharp, MAX_DOWNLOAD_BYTES } from "./src/image-store.js";
 import { exportBundle, importBundle } from "./src/bundle.js";
 import { config, configWarnings, log } from "./src/config.js";
@@ -273,8 +273,7 @@ async function readMarksFile(entry, file) {
     if (!parsed.success) throw new Error("Invalid mark in marks file: " + (m?.id ?? "?"));
     return { ...parsed.data, author: m.author === "user" ? "user" : "assistant" };
   });
-  const layers = data.layers.filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author))
-    .map((l) => ({ id: l.id, author: l.author, name: String(l.name ?? "").slice(0, 40) }));
+  const layers = fileLayers(data);
   return { marks, options: { layers, replayUser: replayUserAnnotation, resolve: resolveCoordinateAnnotation } };
 }
 
