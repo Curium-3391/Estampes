@@ -14,7 +14,7 @@ import {
   LAYER_NAME_MAX, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
 import { defaultName, cleanNameFields, asNamed } from "./i18n/names.js";
-import { axesFor, defaultAxes, worldToCanvas, anchorRecord, isWorldAnchored, canvasInsideRange } from "./visual/world-anchors.js";
+import { axesFor, defaultAxes, worldToCanvas, anchorRecord, isWorldAnchored, canvasInsideRange, isFunctionAnchored, plotFor, functionRecord, nearestPlot, curveAt } from "./visual/world-anchors.js";
 export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
@@ -176,6 +176,8 @@ const checkIfMatch = (stage, i, id, stored, ifMatch) => {
 
 // ---- World anchors (UVA Phase 4B-3) ----------------------------------------
 const OUTSIDE_AXES = "[OUTSIDE_AXES] a mark fixed to the axes must stay inside the axes range; fix it to the page first to place it elsewhere";
+const OFF_CURVE = "[OFF_CURVE] a mark pinned to a curve must stay where the curve is drawn (inside its domain and the axes range); pin it to the page first to place it elsewhere";
+const NO_CURVE = "[NO_CURVE] no function plot passes at this mark's x; pin it to the axes or the page instead";
 const withoutAnchor = (m) => { const { anchor: _a, anchorStatus: _s, ...rest } = m; return rest; };
 function axesOrFail(entry, frame) {
   const axes = frame ? axesFor(entry, frame) : defaultAxes(entry);
@@ -189,6 +191,29 @@ function worldPlace(entry, raw, frame) {
   const world = Array.isArray(raw.points) ? { points: raw.points.map((p) => ({ x: p.x, y: p.y })) }
     : { x: raw.x, y: raw.y, ...(raw.x2 !== undefined ? { x2: raw.x2, y2: raw.y2 } : {}) };
   return { axes, world, canvas: worldToCanvas(world, axes) };
+}
+
+// A model mark following a function plot (UVA Phase 4B-4): given in axis units
+// like a world mark, then moved so its first point sits on the curve at x.
+function plotOrFail(entry, id) {
+  if (id) { const plot = plotFor(entry, id); if (plot) return plot; throw new Error("anchor plot " + JSON.stringify(id) + " is not a function plot on this canvas"); }
+  const all = [...(entry.objects?.values() ?? [])].filter((o) => o.type === "function-plot");
+  if (all.length === 1) return all[0];
+  throw new Error("a function anchor needs a plot: name it with anchor.plot (this canvas has " + (all.length ? all.map((o) => o.id).join(", ") : "no function plots") + ")");
+}
+function functionPlace(entry, raw, frame) {
+  if (frame) throw new Error("give coordinates either in axis units (a function anchor) or in a coordinateFrame, not both");
+  const plot = plotOrFail(entry, raw.anchor.plot), axes = axesFor(entry, plot.props.frame);
+  if (!axes) throw new Error("plot " + plot.id + " has no axes");
+  const world = Array.isArray(raw.points) ? { points: raw.points.map((p) => ({ x: p.x, y: p.y })) }
+    : { x: raw.x, y: raw.y, ...(raw.x2 !== undefined ? { x2: raw.x2, y2: raw.y2 } : {}) };
+  const first = Array.isArray(world.points) ? world.points[0] : world, x = raw.anchor.x ?? first.x;
+  const c = curveAt(entry, plot, x);
+  if (!c.point) throw new Error("the curve " + plot.id + " is " + (c.status === "outside" ? "outside the axes range" : "not defined") + " at x = " + x);
+  // Its shape in axis units, its first point on the curve.
+  const shifted = (q) => ({ x: q.x - first.x + x, y: q.y - first.y + c.y });
+  const onCurve = Array.isArray(world.points) ? { points: world.points.map(shifted) } : { ...shifted(world), ...(world.x2 !== undefined ? (({ x, y }) => ({ x2: x, y2: y }))(shifted({ x: world.x2, y: world.y2 })) : {}) };
+  return { plot, x, canvas: worldToCanvas(onCurve, axes) };
 }
 
 export function applyCanvasChanges(entry, changes) {
@@ -225,12 +250,13 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
       throw stageError("annotations", i, raw.id, "field id is a mark the user drew; comment on it with findings instead of replacing it");
     }
     if (markLocked(entry, state.get(raw.id))) throw stageError("annotations", i, raw.id, "mark " + lockedText(entry, state.get(raw.id)), "LAYER_LOCKED");
-    let mark, world = null;
+    let mark, world = null, onCurve = null;
     try {
-      // A mark anchored to the axes (UVA Phase 4B-3) is given in axis units.
+      // A mark anchored to the axes (UVA Phase 4B-3) or to a curve (4B-4) is given in axis units.
       if (raw.anchor?.space === "world") world = worldPlace(entry, raw, frame);
+      if (raw.anchor?.space === "function-x") onCurve = functionPlace(entry, raw, frame);
       const { anchor: _anchor, ...plain } = raw;
-      mark = resolve(world ? { ...plain, ...world.canvas } : fromFrame(plain, frame));
+      mark = resolve(world ? { ...plain, ...world.canvas } : onCurve ? { ...plain, ...onCurve.canvas } : fromFrame(plain, frame));
     } catch (error) { throw stageError("annotations", i, raw.id, error); }
     // Re-using an id edits that mark; its old note survives unless replaced.
     const old = state.get(mark.id);
@@ -245,6 +271,7 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
       next = settleClaim(entry, old, { ...kept, ...given, layer: into }, raw, { images, refused, where: "annotations[" + i + "]" });
       // The anchor: as given, or as it was (a canvas edit of a world mark moves its world place too, see world-anchors.js).
       if (world) next = { ...withoutAnchor(next), anchor: anchorRecord(world.axes.id, next, world.axes, world.world) };
+      else if (onCurve) next = { ...withoutAnchor(next), anchor: functionRecord(entry, onCurve.plot, next, onCurve.x) };
       else if (raw.anchor?.space === "document") next = withoutAnchor(next);
       else if (old?.anchor) next = { ...next, anchor: old.anchor, ...(old.anchorStatus ? { anchorStatus: old.anchorStatus } : {}) };
     } catch (error) { throw stageError("annotations", i, raw.id, error); }
@@ -338,14 +365,22 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       // Follow the axes, or stay on the page (UVA Phase 4B-3). The mark keeps its place either way.
       let anchored = null;
       if (edit.anchor !== undefined) {
-        const was = old.anchor?.space === "world" ? "world" : "document";
-        if (edit.anchor.space === "world") {
+        const was = old.anchor?.space ?? "document";
+        if (edit.anchor.space === "function-x") {
+          // Pin to a curve, or pin again after the anchor was lost: the named plot, or the nearest at the mark's x.
+          const plot = edit.anchor.plot ? plotFor(entry, edit.anchor.plot) : nearestPlot(entry, stored);
+          if (edit.anchor.plot && !plot) throw fail("marks", i, edit.id, "anchor plot " + JSON.stringify(edit.anchor.plot) + " is not a function plot on this canvas");
+          if (!plot) throw fail("marks", i, edit.id, NO_CURVE);
+          const rec = functionRecord(entry, plot, stored);
+          if (!rec) throw fail("marks", i, edit.id, OFF_CURVE);
+          stored = { ...withoutAnchor(stored), anchor: rec };
+        } else if (edit.anchor.space === "world") {
           let axes;
           try { axes = axesOrFail(entry, edit.anchor.frame); } catch (error) { throw fail("marks", i, edit.id, error.message); }
           if (!canvasInsideRange(stored, axes)) throw fail("marks", i, edit.id, OUTSIDE_AXES);
           stored = { ...withoutAnchor(stored), anchor: anchorRecord(axes.id, stored, axes) };
         } else stored = withoutAnchor(stored);
-        if (was !== edit.anchor.space) anchored = edit.anchor.space;
+        if (was !== edit.anchor.space || (old.anchorStatus === "invalid" && edit.anchor.space !== "document") || (was === "function-x" && old.anchor.frame !== stored.anchor?.frame)) anchored = edit.anchor.space;
       } else if (old.anchor && !stored.anchor) stored = { ...stored, anchor: old.anchor, ...(old.anchorStatus ? { anchorStatus: old.anchorStatus } : {}) };
       // Moved on the canvas: its place in axis units follows now, so the history keeps the mark as it is saved.
       if (moved && edit.anchor === undefined && isWorldAnchored(stored)) {
@@ -353,10 +388,18 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
         if (axes && !canvasInsideRange(stored, axes)) throw fail("marks", i, edit.id, OUTSIDE_AXES);
         if (axes) stored = { ...withoutAnchor(stored), anchor: anchorRecord(axes.id, stored, axes) };
       }
+      if (moved && edit.anchor === undefined && isFunctionAnchored(stored)) {
+        const plot = plotFor(entry, stored.anchor.frame);
+        if (plot) {
+          const rec = functionRecord(entry, plot, stored);
+          if (!rec) throw fail("marks", i, edit.id, OFF_CURVE);
+          stored = { ...withoutAnchor(stored), anchor: rec };
+        }
+      }
       state.set(edit.id, stored);
       changes.push({ before: old, after: stored });
       const change = geometryChange(old, stored);
-      if (anchored && !moved && !noteChanged && !labelChanged) { edits.push({ kind: "anchor-mark", id: edit.id, author: old.author, anchor: anchored, ...(stored.label ? { label: stored.label } : {}) }); return; }
+      if (anchored && !moved && !noteChanged && !labelChanged) { edits.push({ kind: "anchor-mark", id: edit.id, author: old.author, anchor: anchored, ...(anchored === "function-x" ? { plot: stored.anchor.frame } : {}), ...(stored.label ? { label: stored.label } : {}) }); return; }
       edits.push({
         kind: moved ? "move-mark" : old.author !== "user" && (noteChanged || labelChanged) ? "edit-text" : noteChanged ? "edit-note" : "restyle-mark", id: edit.id,
         ...(stored.label ? { label: stored.label } : {}),
@@ -611,6 +654,8 @@ export function reviewFinding(entry, id, review, reason) {
   const ref = "note:" + id;
   dropRejections(entry, ref);
   const next = { ...clearReview(mark), ...(review === "unreviewed" ? {} : { review }) };
+  // Only confirming the changed claim makes it current again; withdrawing or rejecting keeps old evidence stale.
+  if (review === "confirmed") delete next.stale;
   if (review === "rejected") {
     if (reason?.trim()) next.reviewReason = reason.trim().slice(0, 200);
     addRejection(entry, rejectionOf("note", mark, { from: { image: entry.imageId, region: markRegion(mark), text: mark.note }, reason, ref }));

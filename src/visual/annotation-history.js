@@ -37,8 +37,10 @@ export function classifyChange(before, after) {
   if (before.label !== after.label) kinds.push("relabel");
   if (before.note !== after.note) kinds.push("note");
   if (before.layer !== after.layer) kinds.push("relayer");
-  // Fixed to the axes or to the page (UVA Phase 4B-3).
-  const anchorOf = (m) => m.anchor?.space === "world" ? "world:" + m.anchor.frame : "document";
+  // Fixed to the axes, to a curve (UVA Phase 4B-3, 4B-4) or to the page.
+  // A curve anchor pinned again to the same plot can change its x and status alone.
+  const anchorOf = (m) => !m.anchor ? "document" : m.anchor.space + ":" + m.anchor.frame +
+    (m.anchor.space === "function-x" ? ":" + m.anchor.x + ":" + (m.anchorStatus ?? "ok") : "");
   if (anchorOf(before) !== anchorOf(after)) kinds.push("anchor");
   return kinds;
 }

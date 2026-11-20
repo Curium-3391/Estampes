@@ -16,7 +16,7 @@ export const ANNOTATION_FIELDS = Object.freeze({
   geometry: Object.freeze(["x", "y", "x2", "y2", "points", "smooth", "closed"]),
   style: Object.freeze(["color", "size", "pen"]),
   // A shared note, its evidence and the user's verdict on it.
-  claim: Object.freeze(["note", "status", "confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected", "findingUpdatedAt"]),
+  claim: Object.freeze(["note", "status", "confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected", "stale", "findingUpdatedAt"]),
   // Who made it and how it was placed.
   provenance: Object.freeze(["author", "grounding", "edited"]),
   placement: Object.freeze(["layer"]),
@@ -26,7 +26,9 @@ export const ANNOTATION_FIELD_NAMES = Object.freeze(new Set(Object.values(ANNOTA
 
 // Fields that only change when the claim (the note) changes: a changed note is
 // a new claim and does not inherit the old evidence or review.
-export const CLAIM_FIELDS = Object.freeze(["confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected"]);
+// stale: the thing a claim was about changed under it (a curve a mark is
+// pinned to was re-defined, UVA Phase 4B-4); the user checks it again.
+export const CLAIM_FIELDS = Object.freeze(["confidence", "evidence", "ambiguities", "review", "reviewReason", "previouslyRejected", "stale"]);
 export const claimOf = (m) => Object.fromEntries(CLAIM_FIELDS.filter((k) => m?.[k] !== undefined).map((k) => [k, m[k]]));
 export const withoutClaim = (m) => { const c = { ...m }; for (const k of CLAIM_FIELDS) delete c[k]; return c; };
 

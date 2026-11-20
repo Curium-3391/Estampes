@@ -79,3 +79,42 @@ test("an image canvas offers no axes choice", { skip: noBrowser, timeout: 120000
     assert.equal(await ui.frame.locator('#selection button[data-act="anchor"]').count(), 0);
   } finally { await s.close(); }
 });
+
+// UVA Phase 4B-4: 固定在曲線 in the selection bar; a mark whose curve is gone is
+// still drawn and listed under 錨點失效.
+test("a Graph mark can be pinned to a curve; when the curve is deleted it is listed as 錨點失效 and still drawn", { skip: noBrowser, timeout: 180000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const ok = async (name, args) => { const r = await s.call(name, args); assert.ok(!r.isError, name + ": " + JSON.stringify(r.content)); return r.structuredContent; };
+    const imageId = await makeCanvas(s, "graph", { width: 1000, height: 750 });
+    await ok("execute_module", { module: "org.estampes.graph", capability: "plot_function", canvas: imageId, params: { expression: "x" }, present: false });
+    await ok("present_visual", { imageId, annotations: [{ id: "c", type: "rect", x: 0.2, y: 0.2, x2: 0.4, y2: 0.4, label: "曲線框" }] });
+    let ui = await s.open({ imageId });
+    await ui.page.waitForFunction(() => window.hostLog.includes("ui/notifications/initialized"));
+    await ui.frame.locator("#stored-annotations rect, #unified-layers rect").first().waitFor();
+    await ui.frame.locator('[data-mode="select"]').click();
+    const at = await point(ui, 0.2, 0.3);
+    await ui.page.mouse.click(at.x, at.y);
+    const toCurve = ui.frame.locator('#selection button[data-act="anchor"][data-space="function-x"]');
+    await toCurve.waitFor();
+    assert.equal(await toCurve.innerText(), "固定在曲線");
+    assert.equal(await toCurve.getAttribute("aria-pressed"), "false");
+    await toCurve.click();
+    await ui.frame.locator("#status").filter({ hasText: "已固定在曲線" }).waitFor();
+    let c = (await ok("get_visual_state", { imageId })).marks.find((m) => m.id === "c");
+    assert.equal(c.anchor?.space, "function-x", JSON.stringify(c));
+    assert.deepEqual([c.geometry.x, c.geometry.y, c.geometry.x2, c.geometry.y2], [0.2, 0.2, 0.4, 0.4], "pinning did not move it");
+    await ui.frame.locator('#selection button[data-space="function-x"][aria-pressed="true"]').waitFor();
+
+    const plot = (await ok("get_visual_state", { imageId })).objects.find((o) => o.type === "function-plot");
+    await ok("edit_scene_object", { imageId, id: plot.id, remove: true });
+    c = (await ok("get_visual_state", { imageId })).marks.find((m) => m.id === "c");
+    assert.equal(c.anchor.status, "invalid");
+    ui = await s.open({ imageId });
+    await ui.page.waitForFunction(() => window.hostLog.includes("ui/notifications/initialized"));
+    const notice = ui.frame.locator('#anchor-notice [data-status="invalid"]');
+    await notice.filter({ hasText: "錨點失效" }).waitFor();
+    assert.match(await notice.innerText(), /曲線框/);
+    assert.ok((await markText(ui)).some((x) => x.includes("曲線框")), "an invalid mark is still drawn");
+  } finally { await s.close(); }
+});

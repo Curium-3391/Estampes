@@ -824,5 +824,12 @@
   "vs.anchor.failed": "無法變更固定方式：{message}",
   "vs.anchor.outside": "超出座標範圍",
   "vs.anchor.outsideList": "{names}。目前不顯示；座標範圍再次包含它們時會重新出現。",
+  "vs.anchor.toCurve": "固定在曲線",
+  "vs.anchor.toCurveTitle": "公式、定義域或座標改變時，標記跟著它所在 x 上最近的曲線移動",
+  "vs.anchor.attachedCurve": "已固定在曲線：標記會跟著曲線移動。",
+  "vs.anchor.invalid": "錨點失效",
+  "vs.anchor.invalidList": "{names}。原本固定的曲線已刪除，或在它們的 x 沒有定義；標記留在原位。選取後可重新固定在曲線，或改成固定在畫面。",
+  "vs.err.code.OFF_CURVE": "固定在曲線的標記要留在曲線畫得到的地方；要放到別處，請先改成固定在畫面。",
+  "vs.err.code.NO_CURVE": "這個標記的 x 上沒有曲線經過；請改成固定在座標或固定在畫面。",
   "vs.err.code.OUTSIDE_AXES": "固定在座標的標記要留在座標範圍內；要放到別處，請先改成固定在畫面。"
 }

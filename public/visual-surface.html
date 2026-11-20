@@ -282,7 +282,7 @@ __ESTAMPES_I18N__
 __ESTAMPES_USERVOICE__
 // Server errors with a known code are shown as a sentence in the person's
 // language (RFC docs/rfc/i18n Phase 3); any other error keeps the server's text.
-const ERR_CODES=["GRAPH_READ_ONLY","OUTSIDE_AXES","LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
+const ERR_CODES=["GRAPH_READ_ONLY","OUTSIDE_AXES","OFF_CURVE","NO_CURVE","LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
 function toolError(result,fallback){const e=Error(result?.content?.[0]?.text||fallback);const c=result?.structuredContent?.code;if(typeof c==="string")e.code=c;return e;}
 function errText(err){const m=String(err?.message||err);const c=typeof err?.code==="string"?err.code:/\[([A-Z_]+)\]/.exec(m)?.[1];return ERR_CODES.includes(c)?i18nT("vs.err.code."+c):m;}
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====
@@ -2076,7 +2076,7 @@ function renderSelection(){
    node(h.k==="rot"?"circle":"rect",h.k==="rot"?{cx:px(h.x),cy:py(h.y),r,fill:"white",stroke:"#356BD6","stroke-width":2*U(),"data-handle":h.k}:
      {x:px(h.x)-r,y:py(h.y)-r,width:2*r,height:2*r,fill:"white",stroke:"#356BD6","stroke-width":2*U(),"data-handle":h.k},outlineEl);}
  // Keep the label field alive while the user is typing in it.
- const anchorKey=m.anchor?.space==="world"?"world":"document";
+ const anchorKey=(m.anchor?(m.anchor.space+":"+m.anchor.frame):"document")+":"+(m.anchorStatus??"ok");
  if(selectionEl.contains(scope.activeElement)&&selectionEl.dataset.mark===m.id&&selectionEl.dataset.locked===String(isLocked(m))&&selectionEl.dataset.anchor===anchorKey)return;
  selectionEl.dataset.locked=String(isLocked(m));selectionEl.dataset.anchor=anchorKey;
  selectionEl.dataset.mark=m.id;selectionEl.hidden=false;selectionEl.replaceChildren();
@@ -2106,28 +2106,32 @@ function renderSelection(){
    if(inGroup)selectionEl.append(el("button",{textContent:t("vs.selection.ungroup"),dataset:{act:"ungroup"}}));
  }
  if(canAnchor(m)){
-   const world=m.anchor?.space==="world",choice=el("span",{className:"anchor-choice",role:"group","aria-label":t("vs.anchor.choice")});
-   choice.append(el("button",{textContent:t("vs.anchor.toAxes"),title:t("vs.anchor.toAxesTitle"),"aria-pressed":String(world),dataset:{act:"anchor",space:"world"}}),
-     el("button",{textContent:t("vs.anchor.toPage"),title:t("vs.anchor.toPageTitle"),"aria-pressed":String(!world),dataset:{act:"anchor",space:"document"}}));
+   const space=m.anchor?.space??"document",choice=el("span",{className:"anchor-choice",role:"group","aria-label":t("vs.anchor.choice")});
+   choice.append(el("button",{textContent:t("vs.anchor.toAxes"),title:t("vs.anchor.toAxesTitle"),"aria-pressed":String(space==="world"),dataset:{act:"anchor",space:"world"}}));
+   // 固定在曲線: follow a function plot; pressing it again on a mark whose anchor was lost pins it again.
+   if(hasPlots()||space==="function-x")choice.append(el("button",{textContent:t("vs.anchor.toCurve"),title:t("vs.anchor.toCurveTitle"),"aria-pressed":String(space==="function-x"),dataset:{act:"anchor",space:"function-x"}}));
+   choice.append(el("button",{textContent:t("vs.anchor.toPage"),title:t("vs.anchor.toPageTitle"),"aria-pressed":String(space==="document"),dataset:{act:"anchor",space:"document"}}));
    selectionEl.append(choice);
  }
  selectionEl.append(el("button",{textContent:t("vs.selection.deselect"),dataset:{act:"deselect"}}));
 }
-// A Graph's marks can follow the axes (固定在座標) or stay on the page (固定在畫面, the default).
+// A Graph's marks can follow the axes (固定在座標), a curve (固定在曲線) or stay on the page (固定在畫面, the default).
 const hasAxes=()=>objects.some(o=>o?.type==="axes-2d");
+const hasPlots=()=>objects.some(o=>o?.type==="function-plot");
+const lost=m=>m?.anchorStatus==="invalid";
 const canAnchor=m=>!!m&&!ws&&!pair&&String(imageId).startsWith("gph:")&&hasAxes()&&!isFresh(m)&&canMove(m);
 async function setAnchor(m,space){
- if(!canAnchor(m)||(m.anchor?.space==="world")===(space==="world"))return;
- try{await editOnServer({marks:[{id:rawOf(m),anchor:{space}}]});status.textContent=t(space==="world"?"vs.anchor.attached":"vs.anchor.detached");}
+ if(!canAnchor(m)||((m.anchor?.space??"document")===space&&!lost(m)))return;
+ try{await editOnServer({marks:[{id:rawOf(m),anchor:{space}}]});status.textContent=t(space==="world"?"vs.anchor.attached":space==="function-x"?"vs.anchor.attachedCurve":"vs.anchor.detached");}
  catch(err){status.textContent=t("vs.anchor.failed",{message:errText(err)});}
  render();
 }
 function renderAnchorNotice(){
- const away=allMarks().filter(outside);
- anchorNoticeEl.hidden=!away.length;anchorNoticeEl.replaceChildren();
- if(!away.length)return;
- anchorNoticeEl.append(el("span",{className:"badge",textContent:t("vs.anchor.outside")}),
-   t("vs.anchor.outsideList",{names:away.slice(0,8).map(m=>m.label||m.id).join(", ")+(away.length>8?" …":"")}));
+ const away=allMarks().filter(outside),broken=allMarks().filter(lost),names=l=>l.slice(0,8).map(m=>m.label||m.id).join(", ")+(l.length>8?" …":"");
+ anchorNoticeEl.hidden=!away.length&&!broken.length;anchorNoticeEl.replaceChildren();
+ if(away.length)anchorNoticeEl.append(el("div",{dataset:{status:"outside"}},el("span",{className:"badge",textContent:t("vs.anchor.outside")}),t("vs.anchor.outsideList",{names:names(away)})));
+ // A mark whose curve is gone (or no longer defined at its x) stays where it was, drawn, until it is pinned again or to the page.
+ if(broken.length)anchorNoticeEl.append(el("div",{dataset:{status:"invalid"}},el("span",{className:"badge",textContent:t("vs.anchor.invalid")}),t("vs.anchor.invalidList",{names:names(broken)})));
 }
 selectionEl.addEventListener("click",e=>{
  const act=e.target.closest("button")?.dataset.act;

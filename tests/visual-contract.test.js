@@ -48,7 +48,7 @@ test("a rich mark (style, note, evidence, review) loses no field through add, ed
 });
 
 test("claim helpers split a mark into claim and the rest without loss", () => {
-  const m = { id: "a", type: "point", x: 0.5, y: 0.5, note: "n", confidence: "low", evidence: [1], review: "confirmed", reviewReason: "ok", ambiguities: ["x"], previouslyRejected: { at: "t" } };
+  const m = { id: "a", type: "point", x: 0.5, y: 0.5, note: "n", confidence: "low", evidence: [1], review: "confirmed", reviewReason: "ok", ambiguities: ["x"], previouslyRejected: { at: "t" }, stale: true };
   assert.deepEqual(Object.keys(claimOf(m)).sort(), [...CLAIM_FIELDS].sort());
   assert.deepEqual({ ...withoutClaim(m), ...claimOf(m) }, m);
   assert.deepEqual(claimOf(null), {});
