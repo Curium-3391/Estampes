@@ -23,11 +23,14 @@ export const NAME_KEYS = Object.freeze([
   "name.layer.numbered", "name.layer.imported", "name.layer.replay", "name.layer.module",
   "name.copy.original", "name.copy.image", "name.copy.marks", "name.copy.object", "name.copy.layer",
   "name.text", "name.textDup",
+  "name.workspace.canvas", "name.workspace.default", "name.workspace.pair", "name.workspace.split",
 ]);
 export const NAME_FIELDS = Object.freeze(["nameKey", "nameParams"]);
 export const NAME_TEXT_MAX = 120;
 
 const AUTHORS = ["user", "assistant"];
+// Parameters that may hold another record's name: the layer a copy came from, the workspace a split came from.
+const NESTED = ["layer", "name"];
 const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const scalar = (v) => (typeof v === "string" && v.length <= NAME_TEXT_MAX) || (typeof v === "number" && Number.isFinite(v));
 
@@ -69,7 +72,7 @@ export function cleanNameFields(rec, depth = 0) {
     const v = params[k];
     if (k === "author") { if (!AUTHORS.includes(v)) return {}; clean.author = v; }
     else if (scalar(v)) clean[k] = v;
-    else if (k === "layer" && isRecord(v) && depth < 1 && typeof v.name === "string" && v.name.length <= NAME_TEXT_MAX) clean[k] = { name: v.name, ...cleanNameFields(v, depth + 1) };
+    else if (NESTED.includes(k) && isRecord(v) && depth < 1 && typeof v.name === "string" && v.name.length <= NAME_TEXT_MAX) clean[k] = { name: v.name, ...cleanNameFields(v, depth + 1) };
     else return {};
   }
   return { nameKey: key, nameParams: clean };

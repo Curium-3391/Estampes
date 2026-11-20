@@ -32,7 +32,7 @@ import { serializeObjects, restoreObjects } from "./scene/scene-ops.js";
 import { protocolMark } from "./protocol.js";
 import { isGraphId } from "./visual/graph-docs.js";
 import { verificationOf } from "./assessment.js";
-import { t } from "./i18n/index.js";
+import { defaultName, asNamed, cleanNameFields } from "./i18n/names.js";
 
 export const WORKSPACE_PROTOCOL = "estampes.workspace/1";
 export const MAX_ITEMS = 24;
@@ -152,7 +152,7 @@ export async function legacyWorkspace(imageId, pairImageId) {
   if (pairImageId) items.push({ id: "wi-2", asset: pairImageId, set: pairImageId });
   for (const it of items) await ensureSet(it.set);
   const doc = { protocol: WORKSPACE_PROTOCOL, id: null, legacy: { imageId, ...(pairImageId ? { pairImageId } : {}) },
-    name: pairImageId ? t("name.workspace.pair", { left: imageId, right: pairImageId }) : t("name.workspace.canvas", { imageId }), revision: 0, layout: "auto", items, nextItem: items.length + 1 };
+    ...(pairImageId ? defaultName("name.workspace.pair", { left: imageId, right: pairImageId }) : defaultName("name.workspace.canvas", { imageId })), revision: 0, layout: "auto", items, nextItem: items.length + 1 };
   await layoutAll(doc);
   return doc;
 }
@@ -215,10 +215,16 @@ export async function inspectWorkspace(doc) {
 const strip = (doc) => { const { undo: _u, keys: _k, ...rest } = doc; return clone(rest); };
 
 function newDoc(name) {
-  return { protocol: WORKSPACE_PROTOCOL, id: "ws:" + hex(8), name: cleanName(name) || t("name.workspace.default"), revision: 0, layout: "auto",
+  return { protocol: WORKSPACE_PROTOCOL, id: "ws:" + hex(8), ...workspaceName(name), revision: 0, layout: "auto",
     createdAt: now(), updatedAt: now(), items: [], nextItem: 1, undo: [], keys: [] };
 }
 const cleanName = (s) => String(s ?? "").trim().slice(0, NAME_MAX);
+// A workspace name: typed text, or a default name record (text plus key) that is kept whole.
+function workspaceName(name) {
+  const named = asNamed(name), text = cleanName(named.name);
+  if (!text) return defaultName("name.workspace.default");
+  return text === named.name ? { name: text, ...cleanNameFields(named) } : { name: text };
+}
 const cleanLabel = (s) => String(s ?? "").trim().slice(0, LABEL_MAX);
 
 function addItem(doc, { asset, set, label, placement }) {
@@ -349,7 +355,7 @@ export function editWorkspace(id, { add = [], remove = [], arrange = [], order, 
       }
       next.items = order.map((o) => next.items.find((it) => it.id === o));
     }
-    if (name !== undefined) next.name = cleanName(name) || next.name;
+    if (name !== undefined) { const typed = cleanName(name); if (typed && typed !== next.name) { next.name = typed; delete next.nameKey; delete next.nameParams; } }
     if (autoLayout) next.layout = "auto";
     if (next.layout === "auto") await layoutAll(next);
     const result = { workspaceId: id, added, removed: remove, skipped };
@@ -486,7 +492,7 @@ export function commitTransfer({ previewId, key, ...direct }) {
     // Work on copies: the live documents change only when everything worked.
     if (tgt && !tgt.legacy) { before.set(tgt.doc.id, strip(tgt.doc)); target = clone(tgt.doc); }
     else {
-      target = newDoc(args.name || (tgt ? tgt.doc.name : t("name.workspace.split", { name: src.doc.name })));
+      target = newDoc(args.name || (tgt ? { name: tgt.doc.name, ...cleanNameFields(tgt.doc) } : defaultName("name.workspace.split", { name: { name: src.doc.name, ...cleanNameFields(src.doc) } })));
       before.set(target.id, null);
       for (const it of tgt?.doc.items ?? []) addItem(target, { asset: it.asset, set: it.set, label: it.label });
     }
@@ -623,7 +629,7 @@ export async function workspaceDocument(doc, { history = 0 } = {}) {
   }));
   return defined({
     protocol: WORKSPACE_PROTOCOL, coordinateSystem: "normalized-top-left", id: doc.id ?? undefined, legacy: doc.legacy,
-    name: doc.name, revision: doc.revision, layout: doc.layout, createdAt: doc.createdAt, updatedAt: doc.updatedAt,
+    name: doc.name, nameKey: doc.nameKey, nameParams: doc.nameParams, revision: doc.revision, layout: doc.layout, createdAt: doc.createdAt, updatedAt: doc.updatedAt,
     items: doc.items.map((it) => defined({ id: it.id, asset: it.asset, set: it.set, label: it.label, placement: it.placement })),
     assets: [...assets.values()], sets, links,
     layerBindings: items.map(({ item, entry }) => ({ item: item.id, set: item.set, layers: canvasLayers(entry).map((l) => l.id) })),

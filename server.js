@@ -955,7 +955,7 @@ function makeServer() {
         exports: z.object({ image: z.string(), marks: z.string() }).optional(),
         pair: z.object({ imageId: z.string(), width: z.number(), height: z.number(),
           exports: z.object({ image: z.string(), marks: z.string() }).optional() }).optional(),
-        workspace: z.object({ id: z.string(), name: z.string(), revision: z.number(), items: z.array(z.record(z.string(), z.unknown())) }).optional(),
+        workspace: z.object({ id: z.string(), name: z.string(), nameKey: z.string().optional(), nameParams: z.record(z.string(), z.unknown()).optional(), revision: z.number(), items: z.array(z.record(z.string(), z.unknown())) }).optional(),
         links: z.array(z.record(z.string(), z.unknown())).optional(),
         awaitingUpload: z.boolean().optional(),
         coordinateSystem: z.literal("normalized-top-left"),

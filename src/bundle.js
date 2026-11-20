@@ -82,7 +82,7 @@ export async function exportBundle(ref, { version = "dev", fileNames = true, ext
     sets.push({ key, file: "sets/" + (n + 1) + ".json", asset: entry.imageId, marks: body.marks.length });
   }
   const workspace = defined({
-    protocol: WORKSPACE_PROTOCOL, name: doc.name, layout: doc.layout, legacy: doc.legacy,
+    protocol: WORKSPACE_PROTOCOL, name: doc.name, nameKey: doc.nameKey, nameParams: doc.nameParams, layout: doc.layout, legacy: doc.legacy,
     items: doc.items.map((it) => defined({ id: it.id, asset: it.asset, set: it.set, label: it.label, placement: it.placement })),
   });
   add("workspace.json", json(workspace));
@@ -370,7 +370,7 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
   for (const it of items) if (!it.asset || !it.set) throw new Error("Bundle workspace item points at something that is not in the bundle");
   const sets = touched.filter((t) => t.how !== "reused" || false).map((t) => t.target);
   for (const id of madeGraphs) await persistGraphCanvas(await ensureImage(id));
-  const adopted = await adoptWorkspace({ name: name || text(ws.name, 60), items, layout: ws.layout, provenance: { bundleId: manifest.bundleId, importedAt: new Date().toISOString(), format: manifest.format, generator: text(manifest.generator, 60) }, sets });
+  const adopted = await adoptWorkspace({ name: name || { name: text(ws.name, 60), ...cleanNameFields(ws) }, items, layout: ws.layout, provenance: { bundleId: manifest.bundleId, importedAt: new Date().toISOString(), format: manifest.format, generator: text(manifest.generator, 60) }, sets });
   if (adopted.repeated !== undefined || adopted.created === undefined) return { ...adopted, repeated: true, warnings, summary, manifest: { bundleId: manifest.bundleId } };
   for (const t of touched) if (t.how === "restored") await saveCanvas(t.target, { tool: "import_workspace_bundle", changed: [], note: "restored from bundle " + manifest.bundleId });
   const expected = manifest.workspace ?? {};

@@ -135,6 +135,13 @@ test("a bundle carries the keys and an import keeps them; bundle layers with a b
   assert.equal(back.verified, true, JSON.stringify({ m: back.mismatch, u: back.unsupported, w: back.warnings }));
   const after = await exportBundle(back.workspace.id, { version: "test" });
   const again = [...unzipFiles(after.buffer)].filter(([n]) => /^sets\/\d+\.json$/.test(n)).flatMap(([, d]) => JSON.parse(d.toString()).layers);
+  const wsOf = (b) => JSON.parse([...unzipFiles(b.buffer)].find(([n]) => n === "workspace.json")[1].toString());
+  assert.equal(wsOf(built).nameKey, "name.workspace.canvas", "the workspace name carries its key");
+  assert.deepEqual([wsOf(after).name, "nameKey" in wsOf(after)], ["carried", false], "a name given on import is the person's own");
+  clearImages(); clearWorkspaces();
+  const unnamed = await importBundle(built.buffer);
+  const kept = wsOf(await exportBundle(unnamed.workspace.id, { version: "test" }));
+  assert.deepEqual([kept.name, kept.nameKey], [wsOf(built).name, wsOf(built).nameKey], "without a name the keyed one is kept");
   const pick = (ls) => ls.map((l) => [l.id, l.name, l.nameKey, JSON.stringify(l.nameParams)]).sort();
   assert.deepEqual(pick(again), pick(sets.flatMap((s) => s.layers)));
 });
@@ -149,4 +156,32 @@ test("a marks file (SVG or visual document) keeps the key through the public imp
   const viaDoc = fileLayers(parseMarksFile(Buffer.from(doc)));
   assert.deepEqual(viaDoc.map((l) => [l.name, l.nameKey]), layers.map((l) => [l.name, l.nameKey]));
   assert.ok(viaDoc.every((l) => l.nameKey), "keys survive");
+});
+
+test("workspace default names keep a key; typed, renamed and split ones behave", async () => {
+  const { a, b1, b2 } = await threeImageFixture(registerImage);
+  const { getWorkspace, legacyWorkspace, createWorkspace, editWorkspace, commitTransfer: transfer } = await import("../src/workspace.js");
+  const legacy = await legacyWorkspace(a.imageId);
+  assert.equal(legacy.nameKey, "name.workspace.canvas");
+  assert.equal(shown(legacy, "en"), "Canvas " + a.imageId);
+  assert.ok(legacy.name.includes(a.imageId), "the literal is the name of record");
+  const made = await createWorkspace({ items: [{ asset: a.imageId, set: a.imageId }] });
+  const plain = (await getWorkspace(made.workspaceId));
+  assert.deepEqual([plain.name, plain.nameKey], ["工作區", "name.workspace.default"]);
+  assert.equal(shown(plain, "en"), "Workspace");
+  const typed = (await getWorkspace((await createWorkspace({ name: "我的", items: [] })).workspaceId));
+  assert.deepEqual(["nameKey" in typed, typed.name], [false, "我的"]);
+  // Same text keeps the key; other text drops it.
+  await editWorkspace(plain.id, { name: plain.name });
+  assert.equal((await getWorkspace(plain.id)).nameKey, "name.workspace.default");
+  await editWorkspace(plain.id, { name: "新名稱" });
+  const renamed = (await getWorkspace(plain.id));
+  assert.deepEqual([renamed.name, "nameKey" in renamed, "nameParams" in renamed], ["新名稱", false, false]);
+  // A split with no name is born keyed, with the source's name nested.
+  const merged = await transfer({ source: b1.imageId + "+" + b2.imageId, target: a.imageId, mode: "link" });
+  const split = await transfer({ source: merged.workspaceId, target: "new", items: ["wi-2"], mode: "copy" });
+  const sp = (await getWorkspace(split.workspaceId));
+  assert.equal(sp.nameKey, "name.workspace.split");
+  assert.deepEqual(cleanNameFields(sp), { nameKey: sp.nameKey, nameParams: sp.nameParams });
+  assert.ok(shown(sp, "en").endsWith("(split)"));
 });
