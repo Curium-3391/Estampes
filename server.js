@@ -37,7 +37,7 @@ import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed 
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
 } from "./src/workspace.js";
-import { createGraphCanvas, readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
+import { createGraphCanvas, useGraphPolicy, assertGraphWritable, readSource, intakeImage as intakeImageFile, ensureImage as ensureImageFile, saveCanvas as saveCanvasFile, saveDerived, saveDocument, loadDocument, checkStorage, flushStorage, sweepStorage, readHistory, readCommandLog, useRecords, useCanvasStore } from "./src/storage.js";
 import { renderView, analysisFor, rememberView, findView, frameFromView, SAMPLING_MODES, OUTPUT_FORMATS, VIEW_API, MAX_DELIVERY_SIDE } from "./src/image/view.js";
 import { scale as scaleMatrix, roundMatrix, apply as applyMatrix } from "./src/image/transform.js";
 import { registerPair, compareView, MODELS as REGISTER_MODELS } from "./src/image/register.js";
@@ -2056,6 +2056,8 @@ function makeServer() {
               if (!pick.layers.length && !pick.order && !pick.marks.length && !pick.remove.length) continue;
               touchedKeys.push(setKeyOf(it.entry));
               if (done.has(setKeyOf(it.entry))) { skipped++; continue; }
+              // Every item is changed before any is saved: a refused Graph must undo the whole batch.
+              assertGraphWritable(it.entry);
               const restore = snapshotCanvas(it.entry), savedEdits = [...(it.entry.userEdits ?? [])];
               undo.push(() => { restore(); it.entry.userEdits = savedEdits; });
               all.push({ it, edits: editCanvas(it.entry, pick) });
@@ -2096,6 +2098,8 @@ function makeServer() {
           remove: remove.filter((m) => (m.side ?? "left") === side).map((m) => m.id),
           resolveUser,
         });
+        // Both sides are changed before either is saved: a refused Graph must stop the edit before it starts.
+        if (!replayed) { if (!sideDone("left")) assertGraphWritable(left); if (right && !sideDone("right")) assertGraphWritable(right); }
         const undoLeft = snapshotCanvas(left), leftEdits = [...(left.userEdits ?? [])];
         const edits = editCanvas(left, pick("left"));
         let rightEdits = [];
@@ -3222,8 +3226,10 @@ if (adminInfo.source === "generated") log("warn", "[modules] made an administrat
 // (kind "image", or an image background preset), it is a Graph document:
 // a plain colour with vector objects and no image behind it. A server without
 // the UVA store, or with ESTAMPES_NEW_CANVAS=image, makes the older blank image.
+useGraphPolicy({ readOnly: config.graphDocuments === "readonly" });
 function newCanvas({ kind, color, ...options } = {}) {
-  const graph = kind === "graph" || (kind === undefined && options.background === undefined && config.newCanvasKind === "graph" && !!canvasStore);
+  // With ESTAMPES_GRAPH_DOCUMENTS=readonly the default is a blank image; an explicit Graph is refused (by storage).
+  const graph = kind === "graph" || (kind === undefined && options.background === undefined && config.newCanvasKind === "graph" && config.graphDocuments !== "readonly" && !!canvasStore);
   return graph ? createGraphCanvas({ ...options, ...(color ? { color } : {}) }) : createBlankCanvas(options);
 }
 const casClientInstance = createCasClient({ socketPath: config.casSocket });

@@ -468,6 +468,7 @@
   "vs.edit.resized": "Mark resized.",
   "vs.edit.restyled": "Mark style changed.",
   "vs.edit.rotated": "Mark rotated.",
+  "vs.err.code.GRAPH_READ_ONLY": "Graphs are read-only on this server. You can look at this Graph but not change it.",
   "vs.err.code.HISTORY_CONFLICT": "It changed since that step, so it cannot be undone or redone.",
   "vs.err.code.LAYER_LOCKED": "That layer is locked. Unlock it in the layer list first.",
   "vs.err.code.RECOVERY_REQUIRED": "The server's storage needs recovery; changes cannot be saved now.",

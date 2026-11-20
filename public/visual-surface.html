@@ -282,7 +282,7 @@ __ESTAMPES_I18N__
 __ESTAMPES_USERVOICE__
 // Server errors with a known code are shown as a sentence in the person's
 // language (RFC docs/rfc/i18n Phase 3); any other error keeps the server's text.
-const ERR_CODES=["LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
+const ERR_CODES=["GRAPH_READ_ONLY","LAYER_LOCKED","HISTORY_CONFLICT","STALE_CANVAS","SAVE_FAILED","RECOVERY_REQUIRED","STORAGE_UNAVAILABLE"];
 function toolError(result,fallback){const e=Error(result?.content?.[0]?.text||fallback);const c=result?.structuredContent?.code;if(typeof c==="string")e.code=c;return e;}
 function errText(err){const m=String(err?.message||err);const c=typeof err?.code==="string"?err.code:/\[([A-Z_]+)\]/.exec(m)?.[1];return ERR_CODES.includes(c)?i18nT("vs.err.code."+c):m;}
 // ===== HostBridge: the one conversation with the host (MCP Apps / window.openai) =====

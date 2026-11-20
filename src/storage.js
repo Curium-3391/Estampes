@@ -37,6 +37,22 @@ export function useStorageDir(dir) { root = dir; }
 let records = null, canvases = null;
 export function useRecords(store) { records = store; }
 export function useCanvasStore(store) { canvases = store; }
+
+// ESTAMPES_GRAPH_DOCUMENTS=readonly (UVA Phase 4B-2, the rollback for Graph
+// documents): no new Graph, and no change to a Graph or a copy of one is
+// stored. Reading, rendering and exporting still work.
+let graphsReadOnly = false;
+export function useGraphPolicy({ readOnly = false } = {}) { graphsReadOnly = !!readOnly; }
+export const graphsAreReadOnly = () => graphsReadOnly;
+export class GraphReadOnlyError extends Error {
+  constructor(what = "Graph documents") {
+    super("[GRAPH_READ_ONLY] " + what + " are read-only on this server (ESTAMPES_GRAPH_DOCUMENTS=readonly). Reading, render_canvas and export still work; ask the administrator to set ESTAMPES_GRAPH_DOCUMENTS=on to edit Graphs again.");
+    this.name = "GraphReadOnlyError"; this.code = "GRAPH_READ_ONLY";
+  }
+}
+const graphWriteRefused = (imageId) => graphsReadOnly && isGraphId(String(imageId).split("#")[0]);
+// For a batch that changes several canvases before saving any: refuse up front.
+export function assertGraphWritable(entry) { if (graphWriteRefused(entry?.imageId)) throw new GraphReadOnlyError(); }
 const metaOf = (entry) => ({
   imageId: entry.imageId, sourceAssetId: entry.sourceAssetId, source: entry.source, fileName: entry.fileName,
   original: entry.original, sourceInfo: entry.sourceInfo, ...(entry.page ? { page: entry.page } : {}),
@@ -229,6 +245,7 @@ export async function createGraphCanvas(options = {}) {
 // it, or drops it with forgetGraph, so a failure leaves no stored Graph.
 export function draftGraphCanvas(options = {}) {
   if (!canvases) throw new Error(GRAPH_NEEDS_STORE);
+  if (graphsReadOnly) throw new GraphReadOnlyError("New Graph documents");
   const spec = graphSpec(options), imageId = newGraphId(), entry = graphEntry(imageId, spec);
   restoreCanvas(entry, { imageId, width: spec.width, height: spec.height, background: { kind: "solid", color: spec.color }, marks: [], layers: [] });
   return rememberGraph(entry);
@@ -236,6 +253,7 @@ export function draftGraphCanvas(options = {}) {
 // Writes a Graph's record (its canvas as it is now, and its metadata). Resolves once durable.
 export async function persistGraphCanvas(entry) {
   if (!canvases) throw new Error(GRAPH_NEEDS_STORE);
+  if (graphWriteRefused(entry.imageId)) throw new GraphReadOnlyError("New Graph documents");
   await canvases.write(entry.imageId, { canvas: serializeCanvas(entry), meta: graphMeta(entry), log: [] });
   log("info", "[storage] graph created", { imageId: entry.imageId });
   return rememberGraph(entry);
@@ -356,7 +374,9 @@ export function saveCanvas(entry, { tool, author = "assistant", changed = [], re
     // Marks are shared objects that later edits change in place, so the
     // durable copy kept for a rollback is taken now.
     const snapshot = structuredClone(canvas);
-    const write = canvases.write(key, { canvas, line }).then(() => {
+    // A refused Graph write takes the failure path below: the canvas in
+    // memory goes back to its last durable state and the caller gets the error.
+    const write = (graphWriteRefused(key) ? Promise.reject(new GraphReadOnlyError()) : canvases.write(key, { canvas, line })).then(() => {
       if (seq > state.durableSeq) { state.durable = snapshot; state.durableSeq = seq; }
       for (const id of listed) state.outstanding.delete(id);
     });
