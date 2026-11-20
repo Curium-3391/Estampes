@@ -14,7 +14,7 @@ user ─ Store / canvas ─▶ lifecycle        ▼
                                      revision, provenance, render ──▶ canvas
 ```
 
-- The model sees a fixed set of module tools: `open_module_store`, `list_modules`, `get_module_capabilities`, `execute_module`, `get_module_job` and `prepare_module_change`. Enabling or installing a module never changes the tool list, so there is nothing to reconnect.
+- The model sees a fixed set of module tools: `open_module_store`, `list_modules`, `search_capabilities`, `get_module_capabilities`, `execute_module`, `get_module_job` and `prepare_module_change`. Enabling or installing a module never changes the tool list, so there is nothing to reconnect.
 - A module never touches canvas state. It returns scene operations; the core validates them, assigns ids and draws with its own renderer. Modules cannot ship HTML, scripts or SVG.
 - Changing what is enabled takes a **plan** the user confirms in the Store. The model can prepare a plan but cannot approve it: committing needs a one-time consent token delivered only to the Store widget.
 
@@ -125,6 +125,10 @@ A mark on a Graph can also follow a function plot: `anchor: {space: "function-x"
 ### Provenance of an object
 
 `provenance.method`, `capability`, `module` and `createdAt` record how an object was first made and are written once, when it is created. A later `object.update` changes only `updatedAt` and `editedByUser`. So a Graph plot made by the calculator's `plot_result` keeps the method text naming the first result (`SymPy result cr:… drawn by the Graph renderer`) even after auto-refresh redraws it from a newer result. The result a plot currently follows is the `resultId` of the graph link in its notebook cell (`get_notebook`, `get_surface_state`), not the object's provenance.
+
+## Finding a capability (search_capabilities)
+
+`search_capabilities({query, category?, state?, limit?, cursor?})` finds capabilities by task without reading the whole catalog (issue #244, level L0). It is a deterministic keyword search over module and capability ids, titles, descriptions and categories (CJK text is matched by character and adjacent pair), built from the installed manifests on each call. `state` is `enabled` (default) or `any`; a module that is installed but not enabled is marked, not hidden, and a search hit never lets a module run: `execute_module` still checks the enabled state, the granted permissions and the schema. A page has at most 25 rows (10 by default) and at most 16 KB of rows; when the size limit cuts a page it says `truncatedByBudget`. Every page reports `total`, `returned`, `complete` and, when there is more, `nextCursor`; a cursor is refused if the module catalog changed since (`stale-cursor`) or if it belongs to another query. Each row carries `schemaHash`, a short hash of the capability's input schema, target and permissions, so a caller can tell that a contract it read earlier has changed. Titles and summaries are written by module authors and are cut and stripped of control characters; treat them as data. Reading one capability's full schema (L1) and a compact `list_modules` follow in later changes; `list_modules` and `get_module_capabilities` behave as before.
 
 ## Manifest v2 (opt-in)
 
