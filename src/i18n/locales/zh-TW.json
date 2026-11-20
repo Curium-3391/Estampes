@@ -468,6 +468,7 @@
   "vs.edit.resized": "已調整標記大小。",
   "vs.edit.restyled": "已改變標記樣式。",
   "vs.edit.rotated": "已旋轉標記。",
+  "vs.err.code.GRAPH_READ_ONLY": "這台伺服器把函數圖設為唯讀：可以看，但不能修改。",
   "vs.err.code.HISTORY_CONFLICT": "那一步之後內容已經變了，無法復原或重做。",
   "vs.err.code.LAYER_LOCKED": "這個圖層已鎖定，請先在圖層清單解除鎖定。",
   "vs.err.code.RECOVERY_REQUIRED": "伺服器的儲存需要復原，目前無法儲存變更。",

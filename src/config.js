@@ -77,6 +77,9 @@ export const config = Object.freeze({
   moduleAllowUnsigned: str("ESTAMPES_MODULE_ALLOW_UNSIGNED") === "1",
   // What a new blank canvas is (execute_module newCanvas, a calculator with no canvas):
   // "graph" (default) a Graph document (gph:) when the UVA store is on; "image" the older blank PNG.
+  // UVA Phase 4B-2: "readonly" stops new Graph documents and refuses changes
+  // to existing ones (reading, render_canvas and export still work).
+  graphDocuments: str("ESTAMPES_GRAPH_DOCUMENTS", "on").toLowerCase() === "readonly" ? "readonly" : "on",
   newCanvasKind: str("ESTAMPES_NEW_CANVAS", "graph") === "image" ? "image" : "graph",
   // Interface language (docs/rfc/i18n §5): the instance default when neither
   // the person nor the host names one. A BCP 47 tag such as en or zh-TW; an
