@@ -66,6 +66,10 @@ test("ESTAMPES_GRAPH_DOCUMENTS=readonly: Graphs stay readable, every change and 
   assert.deepEqual(after.objects, before.objects);
   assert.equal(after.revision ?? null, before.revision ?? null);
   await s.call("present_visual", { imageId: idIn(plain, "img"), annotations: [{ id: "ok", type: "point", x: 0.5, y: 0.5 }] });
+  // A Graph on the left of a paired edit, an image on the right: refused before either side changes.
+  const imgBefore = (await s.call("get_visual_state", { imageId: idIn(plain, "img") })).structuredContent.marks;
+  refused(await s.raw("edit_visual_canvas", { imageId: id, pairImageId: idIn(plain, "img"), marks: [{ id: "peak", x: 0.4 }, { id: "ok", side: "right", x: 0.7 }] }), "a paired edit with a Graph");
+  assert.deepEqual((await s.call("get_visual_state", { imageId: idIn(plain, "img") })).structuredContent.marks, imgBefore, "the image on the right is unchanged");
   await s.stop();
 
   // On again: the Graph takes edits.
