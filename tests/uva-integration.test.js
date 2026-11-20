@@ -114,3 +114,15 @@ test('Beta caps are exercised through real commits; locked edits, missing assets
  await assert.rejects(f.call({action:'render',documentId:d.id}),e=>e.code==='STORAGE_UNAVAILABLE');
  assert.deepEqual(await readSavedExport(f.root,out.exportId),bytes);
 });
+
+test('a layer.update rename drops the default-name key; a same-name update keeps it',async t=>{
+ const f=await fixture(t);
+ f.canvas.layers=[{id:'L1',author:'assistant',name:'AI · 第1次',nameKey:'name.layer.numbered',nameParams:{author:'assistant',n:1}}];
+ let d=(await f.edit(null,{type:'import',sourceRef:f.canvas.imageId,title:'Names'})).document;
+ const layer=d.scenes[0].layers.find(l=>l.nameKey);assert.ok(layer,'the key survives the import');
+ d=(await f.edit(d,{type:'layer.update',id:layer.id,patch:{name:layer.name,visible:false}},'user')).document;
+ assert.equal(d.scenes[0].layers.find(l=>l.id===layer.id).nameKey,'name.layer.numbered');
+ d=(await f.edit(d,{type:'layer.update',id:layer.id,patch:{name:'外框'}},'user')).document;
+ const after=d.scenes[0].layers.find(l=>l.id===layer.id);
+ assert.deepEqual([after.name,'nameKey' in after,'nameParams' in after],['外框',false,false]);
+});

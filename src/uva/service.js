@@ -276,7 +276,7 @@ export async function createUvaService({enabled=false,directory:root='',profile=
       else if(op.type==='layer.create')scene.layers.push({id:allocated('layer',requestId),name:z.string().trim().min(1).max(40).parse(op.name),author,opacity:1,visible:true,locked:false,content:[]});
       else if(op.type==='layer.update'){
         const l=layer(op.id),patch=z.object({name:z.string().trim().min(1).max(40).optional(),visible:z.boolean().optional(),locked:z.boolean().optional(),opacity:z.number().min(0).max(1).optional()}).strict().parse(op.patch);
-        if(author!=='user'&&(l.locked||patch.locked===false))fail('FORBIDDEN','Only the user can unlock a layer');Object.assign(l,patch);
+        if(author!=='user'&&(l.locked||patch.locked===false))fail('FORBIDDEN','Only the user can unlock a layer');if(patch.name!==undefined&&patch.name!==l.name){delete l.nameKey;delete l.nameParams;}Object.assign(l,patch);
       }else if(['annotation.add','annotation.update','annotation.remove'].includes(op.type)){
         let a=scene.annotations.find(a=>a.id===op.id);
         if(op.type!=='annotation.add'&&!a)fail('NOT_FOUND','Unknown annotation');
