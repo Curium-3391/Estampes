@@ -126,13 +126,19 @@ A mark on a Graph can also follow a function plot: `anchor: {space: "function-x"
 
 `provenance.method`, `capability`, `module` and `createdAt` record how an object was first made and are written once, when it is created. A later `object.update` changes only `updatedAt` and `editedByUser`. So a Graph plot made by the calculator's `plot_result` keeps the method text naming the first result (`SymPy result cr:… drawn by the Graph renderer`) even after auto-refresh redraws it from a newer result. The result a plot currently follows is the `resultId` of the graph link in its notebook cell (`get_notebook`, `get_surface_state`), not the object's provenance.
 
-## Manifest v2 (format only, not yet usable)
+## Manifest v2 (opt-in)
 
-`estampes.module/2` is the manifest format planned for modules that work on documents (images and Graphs) rather than on an image id (UVA Phase 5A, ADR-005). It exists as a checked format only: no module can be installed or run with it yet, and the server refuses a v2 manifest unless a caller asks for it explicitly. v1 manifests, their signatures and their behaviour on images do not change.
+`estampes.module/2` is the manifest format for modules that work on documents (images and Graphs) rather than on an image id (UVA Phase 5A, ADR-005). It is off by default: set `ESTAMPES_MODULE_V2=on` to allow v2 packages to be installed and run. With it off a v2 package is refused with a reason, and a v2 package that was installed earlier is marked failed at startup and is not run (turn the flag back on and enable it again to use it). v1 manifests, their signatures and their behaviour on images do not change either way, and built-in modules stay v1.
 
 A v2 manifest differs from v1 in four fields. `schema` is `estampes.module/2`. `runtime.abi` is a required integer (this server supports ABI 1). Each capability's `target` is `none`, `document` or `document-or-new` (v1: `none`, `canvas`, `canvas-or-new`). Each capability lists the permissions it really `needs` (v1: an optional `permissions` subset). The rules that follow are the same as for v1: `needs` stays inside the module's `permissions`, a document target needs `canvas.write`, `document-or-new` also needs `workspace.write`, and a capability that uses the network says what it sends. The `wasm` and `builtin` runtimes are not available for v2. Unknown fields are refused.
 
-What is still to come: the target context a module sees and the intersection of granted and needed permissions (5A-2), the v1 image adapter and Graph refusal (5A-3).
+What a v2 module gets when it runs:
+
+- **Only what the capability needs.** The permissions it may use for that call are the ones granted to the module that the capability lists in `needs` (so a module granted `canvas.read` and `canvas.write` whose capability needs only `canvas.write` does not see the document's objects). A v1 module still gets everything granted to it.
+- **A document, not an image id.** Its context says what kind of document it works on (`canvas.kind`, `image` or `graph`), the size and the revision, and has no `imageId`.
+- **Only that document.** If its input contains the id of any other document (`img:…`, `gph:…` or a copy), the call is refused with the code `cross-document` before the module runs. Its own document's id and ordinary text are fine.
+
+The Store shows the module's ABI (`abi`: `new`, `same`, `upgrade`, `downgrade` or `removed`) in an install or update plan. Packages that come through a module source index are still checked as v1 only. Still to come: the v1 image adapter and Graph refusal, signer lineage and the guard for the person's own edits (5A-3).
 
 ## Storage and audit
 

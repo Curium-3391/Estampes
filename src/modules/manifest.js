@@ -192,6 +192,16 @@ const v1View = (m) => ({
   capabilities: m.capabilities.map(({ needs, target, ...c }) => ({ ...c, permissions: needs, target: V1_TARGET[target] })),
 });
 
+// The manifest the rest of the server works with. A v1 manifest is used as it
+// is. A v2 manifest becomes the v1-shaped view (a capability's `permissions`
+// are what it `needs`, its target is the canvas meaning of the document
+// target) plus `v2: { abi, targets }`, which keeps what the view cannot say.
+// The package bytes, digest and signature stay those of the original.
+export function runtimeManifest(m) {
+  if (m.schema !== MODULE_SCHEMA_V2) return m;
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])) } };
+}
+
 // What changed between two ABI versions of a module, for the Store.
 export function abiChange(was, now) {
   if (was === undefined || was === null) return { from: null, to: now ?? null, kind: now === undefined ? "none" : "new" };

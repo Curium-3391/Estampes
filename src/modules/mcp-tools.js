@@ -31,12 +31,12 @@ export function catalogEntry(mod, lang = "zh-TW") {
   const m = mod.manifest;
   return {
     id: m.id, name: localized(m, "name", lang), description: localized(m, "description", lang), version: m.version,
-    publisher: m.publisher.name, license: m.license, category: m.category, source: mod.source, runtime: m.runtime.kind,
+    publisher: m.publisher.name, ...(m.v2 ? { abi: m.v2.abi } : {}), license: m.license, category: m.category, source: mod.source, runtime: m.runtime.kind,
     ...(m.homepage ? { homepage: m.homepage } : {}), ...(m.source ? { sourceUrl: m.source } : {}),
     state: mod.record.state, granted: mod.record.granted ?? [],
     permissions: m.permissions.map(describePermission), risk: riskOf(m.permissions),
     ...(m.network ? { network: m.network } : {}),
-    capabilities: m.capabilities.map((c) => ({ id: c.id, title: localized(c, "title", lang) ?? c.id, description: c.description, target: c.target,
+    capabilities: m.capabilities.map((c) => ({ id: c.id, title: localized(c, "title", lang) ?? c.id, description: c.description, target: m.v2?.targets[c.id] ?? c.target,
       ...(c.async ? { async: true } : {}), ...(localized(c, "profile", lang) ? { profile: localized(c, "profile", lang) } : {}) })),
     ...(m.panels?.length ? { panels: m.panels.map((p) => ({ id: p.id, title: localized(p, "title", lang), kind: p.kind, maxInstances: p.maxInstances })) } : {}),
     ...(mod.package ? { package: { sha256: mod.package.sha256, keyId: mod.package.keyId, installedAt: mod.package.installedAt } } : {}),
@@ -97,7 +97,7 @@ export function registerModuleTools(server, deps) {
       const mod = host.registry.get(module);
       if (!mod) throw new Error("no module " + module + "; call list_modules");
       const m = mod.manifest;
-      const caps = m.capabilities.map((c) => ({ id: c.id, title: c.title, description: c.description, target: c.target,
+      const caps = m.capabilities.map((c) => ({ id: c.id, title: c.title, description: c.description, target: m.v2?.targets[c.id] ?? c.target,
         permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.async ? { async: true } : {}),
         ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples.map(({ description, params }) => ({ description, params })) } : {}) }));
       return {
