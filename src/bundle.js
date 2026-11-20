@@ -113,6 +113,22 @@ const MARK_TEXT = { label: 64, note: 200, reviewReason: 200 };
 const PASS = ["confidence", "evidence", "ambiguities", "review", "previouslyRejected", "derivedFrom", "object", "edited", "grounding",
   "strokeOrder", "relativeStartMs", "relativeEndMs", "pointerType", "role"];
 
+// A mark fixed to a Graph's axes (UVA Phase 4B-3): the anchor record, checked field by field.
+const finite = (v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 1e9;
+function cleanGeometry(g, ok) {
+  if (!g || typeof g !== "object") return null;
+  if (Array.isArray(g.points)) return g.points.length >= 1 && g.points.length <= MAX_POLYLINE_POINTS && g.points.every((p) => p && ok(p.x) && ok(p.y)) ? { points: g.points.map((p) => ({ x: p.x, y: p.y })) } : null;
+  if (!ok(g.x) || !ok(g.y)) return null;
+  if (g.x2 === undefined) return { x: g.x, y: g.y };
+  return ok(g.x2) && ok(g.y2) ? { x: g.x, y: g.y, x2: g.x2, y2: g.y2 } : null;
+}
+function cleanAnchor(a) {
+  if (!a || a.space !== "world" || typeof a.frame !== "string" || !/^o\d{1,6}$/.test(a.frame)) return null;
+  const world = cleanGeometry(a.world, finite), at = cleanGeometry(a.at, num01);
+  if (!world || !at || typeof a.basis !== "string" || a.basis.length > 400) return null;
+  return { space: "world", frame: a.frame, world, at, basis: a.basis };
+}
+
 // One mark, whitelisted and checked; null with a reason when it cannot be kept.
 function cleanMark(m) {
   if (!m || typeof m !== "object" || typeof m.id !== "string" || !m.id || m.id.length > 64) return { why: "missing id" };
@@ -138,6 +154,8 @@ function cleanMark(m) {
   out.author = m.author === "user" ? "user" : "assistant";
   if (typeof m.layer === "string" && /^L\d{1,6}$/.test(m.layer)) out.layer = m.layer;
   for (const k of PASS) if (m[k] !== undefined && !(k in out)) out[k] = m[k];
+  const anchor = cleanAnchor(m.anchor);
+  if (anchor) { out.anchor = anchor; if (["outside", "invalid"].includes(m.anchorStatus)) out.anchorStatus = m.anchorStatus; }
   return { mark: out };
 }
 

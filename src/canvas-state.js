@@ -14,7 +14,7 @@ import {
   LAYER_NAME_MAX, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
 import { defaultName, cleanNameFields, asNamed } from "./i18n/names.js";
-import { axesFor, defaultAxes, worldToCanvas, anchorRecord } from "./visual/world-anchors.js";
+import { axesFor, defaultAxes, worldToCanvas, anchorRecord, isWorldAnchored } from "./visual/world-anchors.js";
 export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
@@ -345,6 +345,11 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
         } else stored = withoutAnchor(stored);
         if (was !== edit.anchor.space) anchored = edit.anchor.space;
       } else if (old.anchor && !stored.anchor) stored = { ...stored, anchor: old.anchor, ...(old.anchorStatus ? { anchorStatus: old.anchorStatus } : {}) };
+      // Moved on the canvas: its place in axis units follows now, so the history keeps the mark as it is saved.
+      if (moved && edit.anchor === undefined && isWorldAnchored(stored)) {
+        const axes = axesFor(entry, stored.anchor.frame);
+        if (axes) stored = { ...withoutAnchor(stored), anchor: anchorRecord(axes.id, stored, axes) };
+      }
       state.set(edit.id, stored);
       changes.push({ before: old, after: stored });
       const change = geometryChange(old, stored);

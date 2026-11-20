@@ -139,3 +139,25 @@ test("moving the axes region on the page moves a world mark with it; deleting th
   assert.equal(w.anchor.status, "invalid");
   assert.ok(near(w.geometry.x, cx) && near(w.geometry.y, cy), "it stays where it was");
 });
+
+test("undo: moving a world mark and switching its anchor are both undone exactly", { timeout: 120000 }, async (t) => {
+  const { s } = await graphServer(t);
+  const id = idIn(await s.call("execute_module", { module: GRAPH, capability: "set_axes", params: { xRange: [0, 10], yRange: [0, 10] }, newCanvas: { kind: "graph" }, present: false }));
+  await s.call("present_visual", { imageId: id, annotations: [{ id: "w", type: "point", x: 5, y: 5, anchor: { space: "world" } }, { id: "d", type: "point", x: 0.3, y: 0.3 }] });
+  const f = frameOf(await axesOf(s, id)), [tx, ty] = f.toCanvas(8, 2);
+  const w0 = await markOf(s, id, "w");
+  await s.call("edit_visual_canvas", { imageId: id, marks: [{ id: "w", x: tx, y: ty }] });
+  const undo = () => s.raw("edit_visual_canvas", { imageId: id, history: { action: "undo" } });
+  let r = await undo();
+  assert.ok(!r.isError, "undo right after a move: " + JSON.stringify(r.content));
+  let w = await markOf(s, id, "w");
+  assert.deepEqual(w.anchor, w0.anchor, "back at (5, 5) in axis units");
+  assert.deepEqual(w.geometry, w0.geometry);
+
+  // Pin the page mark to the axes, then undo it: back on the page.
+  await s.call("edit_visual_canvas", { imageId: id, marks: [{ id: "d", anchor: { space: "world" } }] });
+  assert.equal((await markOf(s, id, "d")).anchor?.space, "world");
+  r = await undo();
+  assert.ok(!r.isError, "undo an anchor switch: " + JSON.stringify(r.content));
+  assert.equal((await markOf(s, id, "d")).anchor, undefined, "on the page again");
+});

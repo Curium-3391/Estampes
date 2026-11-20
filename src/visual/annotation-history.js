@@ -3,7 +3,7 @@
 // refuse (instead of overwriting) when the mark is not as the entry expects:
 // someone, the assistant included, changed it since.
 //
-// Kinds: move, resize, restyle, relabel, note, relayer, delete, create. One edit
+// Kinds: move, resize, restyle, relabel, note, relayer, anchor, delete, create. One edit
 // can be several kinds (e.g. move + restyle); `kinds` is for reporting.
 import { markPoints } from "./coordinates.js";
 import { ANNOTATION_FIELDS } from "./annotation-contract.js";
@@ -37,6 +37,9 @@ export function classifyChange(before, after) {
   if (before.label !== after.label) kinds.push("relabel");
   if (before.note !== after.note) kinds.push("note");
   if (before.layer !== after.layer) kinds.push("relayer");
+  // Fixed to the axes or to the page (UVA Phase 4B-3).
+  const anchorOf = (m) => m.anchor?.space === "world" ? "world:" + m.anchor.frame : "document";
+  if (anchorOf(before) !== anchorOf(after)) kinds.push("anchor");
   return kinds;
 }
 
