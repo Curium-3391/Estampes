@@ -166,8 +166,8 @@ Each phase is one or a few PRs. Phases 0–2 change no persisted format.
 | **2. Locale selection + English UI** | Enable host locale and `ESTAMPES_DEFAULT_LOCALE` in widgets. Language picker. `<html lang/dir>`. `Intl` formatting. Store and permission text localized | Yes: English for non-zh hosts | Set `ESTAMPES_DEFAULT_LOCALE=zh-TW` and disable host detection with the flag. Revert is safe |
 | **3. User-voice split (T2) + errors** | `ui/message` becomes a localized sentence plus an English structured block. Error `code` mapping. `HEDGES` per locale | Chat messages the person posts change wording. The model sees the same block in every locale | Flag to restore the current all-zh message. Model-behaviour regression check: compare the model's reading on recorded interactions (manual, labelled) |
 | **4. Persisted names (T5)** | Default names stored as `nameKey`/`nameParams` beside the literal `name` (new records only; format stays `/1`, no migration) | Default names follow the viewer's locale for new records; old ones show their literal | Revert; older builds open documents carrying the fields read-only, so back up first |
-| **5. Module runtime strings** | `locales/` in packages and `{key, params}` outputs, **designed inside module system v2** | Module output localized | Optional fields. Modules without them keep working |
-| **6. More locales + RTL** | Contributor guide for adding a locale. zh-CN/ja/… on request. RTL polish when the first RTL locale is requested. Font image variant if D7 says so | Per locale | Remove the locale file |
+| **5. Module runtime strings** | `locales/` in packages and `{key, params}` outputs, **designed inside module system v2** | Module output localized (requirement recorded in docs/MODULES.md; implementation waits for v2) | Optional fields. Modules without them keep working |
+| **6. More locales + RTL** | Contributor guide ([docs/I18N.md](../../I18N.md), written 2026-11-20) for adding a locale. zh-CN/ja/… on request. RTL polish when the first RTL locale is requested. Font image variant if D7 says so | Per locale | Remove the locale file |
 
 ## 10. Interaction with the UVA roadmap (P4–P7)
 

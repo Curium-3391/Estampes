@@ -268,3 +268,7 @@ Each phase is its own change and keeps the rules above.
 The object panel exposes function label modes (`auto` follows the expression, `custom` preserves the supplied label), custom label text, and the axes title as separate fields. Existing titles are user-supplied text and do not automatically change when a function changes.
 
 The widget can restore the last deletion with `edit_scene_object {imageId, restore:true}`. Up to ten deletion batches are saved with the canvas; deleting axes and their dependent objects forms one batch. Restoration preserves object IDs, frame references and creation order, validates props and capacity, and refuses locked layers or ID conflicts atomically. It uses Core only and works with Graph disabled. The recovery button remains visible after the last object is deleted, and recovery history survives storage reload. Deletions predating this history cannot be reconstructed by this mechanism.
+
+## Planned: module translations
+
+Text a module writes (result summaries, info cards) is shown as written today and is not translated. The multilingual RFC (`docs/rfc/i18n/README.md`, §6.3 and D8) makes module locales a required part of the module system v2 design: a `locales/` folder in the package, `{key, params}` outputs, namespaced keys, and module text rendered as untrusted data. Until v2 freezes the view and output contracts, new module output should keep user-visible text in one place so it can move to `locales/` without a contract change. Nothing here changes `estampes.module/1`.
