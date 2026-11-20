@@ -139,6 +139,7 @@ function cleanMark(m) {
   out.author = m.author === "user" ? "user" : "assistant";
   if (typeof m.layer === "string" && /^L\d{1,6}$/.test(m.layer)) out.layer = m.layer;
   for (const k of PASS) if (m[k] !== undefined && !(k in out)) out[k] = m[k];
+  if (m.stale === true) out.stale = true;
   // A mark fixed to a Graph's axes (UVA Phase 4B-3) keeps its checked anchor record.
   Object.assign(out, cleanAnchorFields(m));
   return { mark: out };

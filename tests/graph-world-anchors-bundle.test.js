@@ -86,3 +86,33 @@ test("axis units keep full precision on a tiny range", async () => {
   const w = canvasToWorld({ x: 0.52, y: 0.485 }, axes);
   assert.ok(w.x > 1e-11 && w.x < 1e-10 && w.y > 1e-11 && w.y < 1e-10, JSON.stringify(w));
 });
+
+test("export and import keep a curve anchor (UVA Phase 4B-4), its invalid status and a stale confirmation", async () => {
+  const entry = await registerImage(await sharp({ create: { width: 320, height: 200, channels: 3, background: "#eee" } }).png().toBuffer(), { source: "chat-file", fileName: "any.png" });
+  applySceneOps(entry, [{ op: "object.create", ref: "ax", type: "axes-2d", props: { xRange: [-10, 10], yRange: [-10, 10] } },
+    { op: "object.create", type: "function-plot", props: { expression: "x", frame: "$ax" } }], mod);
+  const plot = canvasObjects(entry).find((o) => o.type === "function-plot");
+  applyCanvasChanges(entry, { annotations: [
+    { id: "c", type: "point", x: 2, y: 0, note: "on the line", anchor: { space: "function-x" } },
+    { id: "gone", type: "point", x: 3, y: 0, anchor: { space: "function-x" } },
+  ], resolve });
+  entry.marks.set("c", { ...entry.marks.get("c"), review: "confirmed" });
+  applySceneOps(entry, [{ op: "object.update", id: plot.id, props: { expression: "2*x" } }], mod);
+  syncWorldAnchors(entry);
+  assert.equal(entry.marks.get("c").stale, true);
+  applySceneOps(entry, [{ op: "object.update", id: plot.id, props: { domain: [-2.5, 2.5] } }], mod);
+  syncWorldAnchors(entry);
+  const before = new Map([...entry.marks].map(([k, m]) => [k, m]));
+  assert.equal(before.get("gone").anchorStatus, "invalid");
+
+  const { buffer } = await exportBundle(entry.imageId);
+  const r = await importBundle(buffer, { collision: "copy" });
+  const [imported] = (await workspaceItems(await getWorkspace(r.workspace.id))).map((it) => it.entry);
+  for (const id of ["c", "gone"]) {
+    const m = imported.marks.get(id);
+    assert.deepEqual(m.anchor, before.get(id).anchor, id + " keeps its anchor");
+    assert.equal(m.anchorStatus, before.get(id).anchorStatus);
+  }
+  assert.equal(imported.marks.get("c").stale, true, "a stale confirmation stays stale");
+  assert.equal(imported.marks.get("c").review, "confirmed");
+});

@@ -30,6 +30,9 @@ test("confidence never verifies a claim: every unverified link waits for review"
   // Only a tool's evidence (never the model's) makes a claim independently verified.
   assert.equal(verificationOf({ ...link, evidence: [...link.evidence, { observer: "tool", kind: "tool-result", image: right.imageId, says: "OCR IC502" }] }), "independently-verified");
   assert.equal(verificationOf({ ...link, review: "confirmed" }), "user-confirmed");
+  // What the claim was about changed since (a mark's curve was re-defined): the user checks it again.
+  assert.equal(verificationOf({ ...link, stale: true, evidence: [{ observer: "tool", kind: "tool-result", image: right.imageId, says: "OCR IC502" }] }), "unverified");
+  assert.equal(verificationOf({ ...link, stale: true, review: "confirmed" }), "stale-confirmation");
   const doc = canvasDocument(left, right);
   assert.equal(doc.links[0].verification.state, "unverified");
   assert.deepEqual(doc.links[0].ambiguities, ["part number unclear"]);

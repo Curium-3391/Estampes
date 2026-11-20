@@ -69,7 +69,8 @@ export function verificationOf(claim) {
   // A confirmed link whose end moved since (see linkIsStale in canvas-state.js).
   if (claim.review === "confirmed") return claim.stale ? "stale-confirmation" : "user-confirmed";
   if (claim.review === "rejected") return "user-rejected";
-  return hasTool(claim) ? "independently-verified" : "unverified";
+  // A tool's evidence about something that changed since (a mark's curve was re-defined) no longer verifies it.
+  return hasTool(claim) && !claim.stale ? "independently-verified" : "unverified";
 }
 
 export const needsReview = (claim) => ["unverified", "stale-confirmation"].includes(verificationOf(claim));

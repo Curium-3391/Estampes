@@ -212,8 +212,10 @@ const ClaimFields = {
 // checked against 0..1 after conversion as before.
 const ModelCoord = z.number().finite().min(-1e6).max(1e6);
 const AnchorInput = z.object({
-  space: z.enum(["world", "document"]).describe("world = follow the axes: x/y (and x2/y2, points) are in AXIS UNITS, e.g. the point (2, 4) on y = x^2, and the mark moves with the data when the axes range changes. document (default) = stay at this place on the canvas, coordinates 0..1"),
-  frame: z.string().min(1).max(64).optional().describe("Id of the axes-2d object (default: the canvas's only axes)"),
+  space: z.enum(["world", "function-x", "document"]).describe("world = follow the axes: x/y (and x2/y2, points) are in AXIS UNITS, e.g. the point (2, 4) on y = x^2, and the mark moves with the data when the axes range changes. function-x = follow a function plot: coordinates in AXIS UNITS too, the mark's first point is put ON the curve at x (y is ignored for it), and the mark moves along when the formula, domain or axes change. document (default) = stay at this place on the canvas, coordinates 0..1"),
+  frame: z.string().min(1).max(64).optional().describe("world: id of the axes-2d object (default: the canvas's only axes)"),
+  plot: z.string().min(1).max(64).optional().describe("function-x: id of the function-plot object (default: the canvas's only plot)"),
+  x: z.number().finite().optional().describe("function-x: the x on the curve to follow (default: the first point's x)"),
 }).strict();
 const ModelAnnotationSchema = z.object({
   id: z.string().min(1).max(64).describe("Stable id; re-using an id edits that mark"),
@@ -411,7 +413,7 @@ const widgetLink = (l) => ({ ...compactLink(l), evidence: l.evidence ?? [], ambi
 const STATE_TEXT = {
   "user-confirmed": "USER CONFIRMED", "user-rejected": "USER REJECTED (do not rely on it)",
   "independently-verified": "VERIFIED by a tool", unverified: "UNVERIFIED",
-  "stale-confirmation": "STALE CONFIRMATION (an end was moved after the user confirmed; do not rely on it until they confirm again)",
+  "stale-confirmation": "STALE CONFIRMATION (what it is about changed after the user confirmed: an end was moved, or the curve the mark is pinned to was re-defined; do not rely on it until they confirm again)",
 };
 const claimTag = (c) => {
   const n = evidenceCount(c), state = verificationOf(c);
@@ -455,8 +457,8 @@ const EDIT_TEXT = {
     (e.before.note !== e.after.note ? ", note " + JSON.stringify(e.before.note) + " -> " + JSON.stringify(e.after.note) : "") : "") +
     " (the user's wording now stands; do not overwrite it with your old text unless they ask)",
   "restyle-mark": (e) => "restyled or relabelled their mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : ""),
-  "anchor-mark": (e) => (e.anchor === "world" ? "attached " : "detached ") + (e.author === "assistant" ? "YOUR" : "their") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") +
-    (e.anchor === "world" ? " to the axes (it now follows the data when the axes range changes)" : " from the axes (it now stays at its place on the canvas)"),
+  "anchor-mark": (e) => (e.anchor === "document" ? "detached " : "attached ") + (e.author === "assistant" ? "YOUR" : "their") + " mark " + e.id + (e.label ? " " + JSON.stringify(e.label) : "") +
+    (e.anchor === "world" ? " to the axes (it now follows the data when the axes range changes)" : e.anchor === "function-x" ? " to the curve " + e.plot + " (it now follows that function when its formula, domain or axes change)" : " from the axes (it now stays at its place on the canvas)"),
   "undo-edit": (e) => "undid their last change to mark " + e.id + " (" + e.steps.join("+") + "); it is back as it was before",
   "redo-edit": (e) => "redid their change to mark " + e.id + " (" + e.steps.join("+") + ")",
   "edit-object": (e) => "edited object " + e.id + (e.props ? " to " + JSON.stringify(e.props) : ""),
@@ -1984,7 +1986,7 @@ function makeServer() {
     points: PolylinePointsSchema.optional(), smooth: z.boolean().optional(), closed: z.boolean().optional(),
     label: z.string().max(64).optional(), note: z.string().max(200).optional(), color: z.enum(MARK_COLORS).optional(), size: z.enum(MARK_SIZES).optional(), pen: z.enum(MARK_PENS).optional(),
     // Follow the axes (world) or stay on the page (document); the mark keeps its place (UVA Phase 4B-3).
-    anchor: z.object({ space: z.enum(["world", "document"]), frame: z.string().min(1).max(64).optional() }).strict().optional(),
+    anchor: z.object({ space: z.enum(["world", "function-x", "document"]), frame: z.string().min(1).max(64).optional(), plot: z.string().min(1).max(64).optional().describe("function-x: the plot id to attach to (default: the nearest plot)") }).strict().optional(),
   }).strict();
   const LayerIds = z.array(z.string().regex(/^L\d{1,6}$/)).max(200);
   registerAppTool(
