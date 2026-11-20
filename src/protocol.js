@@ -18,6 +18,7 @@ export const VISUAL_PROTOCOL = "estampes.visual/2";
 export const READABLE_PROTOCOLS = ["estampes.visual/1", VISUAL_PROTOCOL];
 export const COORDINATES = "normalized-top-left";
 
+import { anchorInfo } from "./visual/world-anchors.js";
 const geometryOf = (m) => m.type === "point" ? { x: m.x, y: m.y }
   : m.type === "polyline" ? { points: m.points, ...(m.smooth ? { smooth: true } : {}), ...(m.closed ? { closed: true } : {}), bbox: [m.x, m.y, m.x2, m.y2] }
   : { x: m.x, y: m.y, x2: m.x2, y2: m.y2 };
@@ -48,6 +49,8 @@ export function protocolMark(m, image) {
     // re-sent without proof; scene-anchor = a known demo landmark).
     provenance: defined({ author: m.author, grounding: m.grounding, editedByUser: m.edited ? true : undefined }),
     stroke: strokeOf(m),
+    // A mark that follows the axes (UVA Phase 4B-3): its place in axis units and whether it resolves now.
+    anchor: anchorInfo(m),
     // Pass back as ifMatch when editing this mark, to refuse stale edits.
     etag: markEtag(m),
   });

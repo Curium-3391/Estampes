@@ -14,6 +14,7 @@ import {
   LAYER_NAME_MAX, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
 import { defaultName, cleanNameFields, asNamed } from "./i18n/names.js";
+import { axesFor, defaultAxes, worldToCanvas, anchorRecord } from "./visual/world-anchors.js";
 export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
@@ -173,6 +174,22 @@ const checkIfMatch = (stage, i, id, stored, ifMatch) => {
   if (markEtag(stored) !== ifMatch) throw stageError(stage, i, id, "the mark changed since you read it (ifMatch " + ifMatch + ", now " + markEtag(stored) + "). It is now " + currentText(stored) + ". Decide whether your edit still applies and, if so, repeat it with ifMatch " + markEtag(stored), "CONFLICT");
 };
 
+// ---- World anchors (UVA Phase 4B-3) ----------------------------------------
+const withoutAnchor = (m) => { const { anchor: _a, anchorStatus: _s, ...rest } = m; return rest; };
+function axesOrFail(entry, frame) {
+  const axes = frame ? axesFor(entry, frame) : defaultAxes(entry);
+  if (axes) return axes;
+  throw new Error(frame ? "anchor frame " + JSON.stringify(frame) + " is not an axes object on this canvas" : "a world anchor needs axes: name them with anchor.frame (this canvas has " + ([...(entry.objects?.values() ?? [])].filter((o) => o.type === "axes-2d").length || "no") + " axes objects)");
+}
+// A model mark given in axis units: its world geometry, its canvas geometry and the axes.
+function worldPlace(entry, raw, frame) {
+  if (frame) throw new Error("give coordinates either in axis units (anchor world) or in a coordinateFrame, not both");
+  const axes = axesOrFail(entry, raw.anchor.frame);
+  const world = Array.isArray(raw.points) ? { points: raw.points.map((p) => ({ x: p.x, y: p.y })) }
+    : { x: raw.x, y: raw.y, ...(raw.x2 !== undefined ? { x2: raw.x2, y2: raw.y2 } : {}) };
+  return { axes, world, canvas: worldToCanvas(world, axes) };
+}
+
 export function applyCanvasChanges(entry, changes) {
   const restore = snapshotCanvas(entry);
   try { return applyChanges(entry, changes); } catch (error) { restore(); throw error; }
@@ -207,8 +224,13 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
       throw stageError("annotations", i, raw.id, "field id is a mark the user drew; comment on it with findings instead of replacing it");
     }
     if (markLocked(entry, state.get(raw.id))) throw stageError("annotations", i, raw.id, "mark " + lockedText(entry, state.get(raw.id)), "LAYER_LOCKED");
-    let mark;
-    try { mark = resolve(fromFrame(raw, frame)); } catch (error) { throw stageError("annotations", i, raw.id, error); }
+    let mark, world = null;
+    try {
+      // A mark anchored to the axes (UVA Phase 4B-3) is given in axis units.
+      if (raw.anchor?.space === "world") world = worldPlace(entry, raw, frame);
+      const { anchor: _anchor, ...plain } = raw;
+      mark = resolve(world ? { ...plain, ...world.canvas } : fromFrame(plain, frame));
+    } catch (error) { throw stageError("annotations", i, raw.id, error); }
     // Re-using an id edits that mark; its old note survives unless replaced.
     const old = state.get(mark.id);
     const into = old?.layer && !layerName ? old.layer : (layer ??= layerFor(entry, "assistant", layerName)).id;
@@ -220,6 +242,10 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
       const kept = old ? { ...markFindings(old), ...Object.fromEntries(["label", "color", "size", "pen"].filter((k) => old[k] !== undefined).map((k) => [k, old[k]])) } : {};
       if (mark.label === "") delete kept.label;
       next = settleClaim(entry, old, { ...kept, ...given, layer: into }, raw, { images, refused, where: "annotations[" + i + "]" });
+      // The anchor: as given, or as it was (a canvas edit of a world mark moves its world place too, see world-anchors.js).
+      if (world) next = { ...withoutAnchor(next), anchor: anchorRecord(world.axes.id, next, world.axes, world.world) };
+      else if (raw.anchor?.space === "document") next = withoutAnchor(next);
+      else if (old?.anchor) next = { ...next, anchor: old.anchor, ...(old.anchorStatus ? { anchorStatus: old.anchorStatus } : {}) };
     } catch (error) { throw stageError("annotations", i, raw.id, error); }
     state.set(mark.id, next);
     changed.push(mark.id);
@@ -308,9 +334,21 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       }
       if (edit.note !== undefined && !next.note) delete stored.note;
       const labelChanged = (stored.label ?? "") !== (old.label ?? "");
+      // Follow the axes, or stay on the page (UVA Phase 4B-3). The mark keeps its place either way.
+      let anchored = null;
+      if (edit.anchor !== undefined) {
+        const was = old.anchor?.space === "world" ? "world" : "document";
+        if (edit.anchor.space === "world") {
+          let axes;
+          try { axes = axesOrFail(entry, edit.anchor.frame); } catch (error) { throw fail("marks", i, edit.id, error.message); }
+          stored = { ...withoutAnchor(stored), anchor: anchorRecord(axes.id, stored, axes) };
+        } else stored = withoutAnchor(stored);
+        if (was !== edit.anchor.space) anchored = edit.anchor.space;
+      } else if (old.anchor && !stored.anchor) stored = { ...stored, anchor: old.anchor, ...(old.anchorStatus ? { anchorStatus: old.anchorStatus } : {}) };
       state.set(edit.id, stored);
       changes.push({ before: old, after: stored });
       const change = geometryChange(old, stored);
+      if (anchored && !moved && !noteChanged && !labelChanged) { edits.push({ kind: "anchor-mark", id: edit.id, author: old.author, anchor: anchored, ...(stored.label ? { label: stored.label } : {}) }); return; }
       edits.push({
         kind: moved ? "move-mark" : old.author !== "user" && (noteChanged || labelChanged) ? "edit-text" : noteChanged ? "edit-note" : "restyle-mark", id: edit.id,
         ...(stored.label ? { label: stored.label } : {}),

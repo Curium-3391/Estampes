@@ -65,6 +65,7 @@ const EDIT_EN = {
     (e.author === "assistant" ? "your" : "their") + " mark " + markName(e) +
     (e.author === "assistant" ? " (they corrected its position; your note is kept, check that it still applies)" : " (your earlier note on it may no longer apply)"),
   "restyle-mark": (e) => "changed the style or label of their mark " + markName(e),
+  "anchor-mark": (e) => (e.anchor === "world" ? "attached " : "detached ") + (e.author === "assistant" ? "your" : "their") + " mark " + markName(e) + (e.anchor === "world" ? " to the axes (it follows the data)" : " from the axes (it stays on the page)"),
   "edit-text": (e) => "rewrote the text of your mark " + e.id +
     (e.before && e.after ? ": label " + q(e.before.label) + " -> " + q(e.after.label) + (e.before.note !== e.after.note ? ", note " + q(e.before.note) + " -> " + q(e.after.note) : "") : "") +
     " (their text is what counts)",

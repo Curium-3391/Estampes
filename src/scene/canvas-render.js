@@ -43,7 +43,8 @@ export async function renderCanvas(entry, { region, maxSide = 1600, format = "pn
   // mix a new annotation state into an older revision's pixels.
   const layers = canvasLayers(entry), hidden = new Set([...hiddenLayers, ...layers.filter(l => l.visible === false).map(l => l.id)]);
   const objects = renderedObjects(entry).filter((r) => (scratch || r.object.visibility === "public") && !hidden.has(r.object.layer));
-  const marks = canvasMarks(entry).filter((m) => !hidden.has(m.layer));
+  // A world-anchored mark whose place is outside the axes range is kept but not drawn.
+  const marks = canvasMarks(entry).filter((m) => !hidden.has(m.layer) && m.anchorStatus !== "outside");
   const px = regionToPixels(region, entry.width, entry.height);
   const scale = maxSide / Math.max(px.width, px.height);
   const width = Math.max(1, Math.round(px.width * scale)), height = Math.max(1, Math.round(px.height * scale));
