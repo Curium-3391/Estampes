@@ -84,7 +84,17 @@ export const CoordinateFrameSchema = z.discriminatedUnion("kind", [
   z.object({ id: FrameIdSchema, kind: z.literal("axes"), ownerObjectId: ObjectIdSchema }).strict(),
   z.object({ id: FrameIdSchema, kind: z.literal("affine"), parentFrameId: z.string().min(1).max(80), localToParent: AffineMatrixSchema }).strict(),
 ]);
+// A default name the server made up, kept as a catalog key and its parameters
+// next to the literal `name` (RFC docs/rfc/i18n T5, D6). The literal stays the
+// name of record; these only let a viewer say it in their own language. The
+// schema bounds the shape; which keys exist is the i18n catalog's business.
+const NameKeySchema = z.string().regex(/^name\.[A-Za-z0-9.]{1,60}$/);
+const NameParamKeySchema = z.string().regex(/^[A-Za-z][A-Za-z0-9]{0,23}$/);
+const NameScalarSchema = z.union([z.string().max(120), n]);
+const NameParamsSchema = z.record(NameParamKeySchema, z.union([NameScalarSchema,
+  z.object({ name: z.string().max(120), nameKey: NameKeySchema.optional(), nameParams: z.record(NameParamKeySchema, NameScalarSchema).optional() }).strict()]));
 export const LayerSchema = z.object({ id: LayerIdSchema, author: z.enum(["user","assistant","module","unknown"]), name: z.string().min(1).max(40).refine(s => s === s.trim(), "Layer name must be trimmed"),
+  nameKey: NameKeySchema.optional(), nameParams: NameParamsSchema.optional(),
   module: z.string().min(1).max(160).optional(), opacity: n.min(0).max(1), visible: z.boolean(), locked: z.boolean(),
   content: z.array(z.discriminatedUnion("kind", [z.object({ kind: z.literal("object"), id: ObjectIdSchema }).strict(), z.object({ kind: z.literal("annotation"), id: AnnotationIdSchema }).strict()])),
 }).strict();

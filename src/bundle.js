@@ -28,6 +28,7 @@ import { entrySharp } from "./image-store.js";
 import { serializeCanvas, intakeImage, ensureImage, readSource, saveCanvas, restoreCanvas, draftGraphCanvas, persistGraphCanvas } from "./storage.js";
 import { isGraphId, graphSpec, forgetGraph } from "./visual/graph-docs.js";
 import { MODULE_ID } from "./modules/manifest.js";
+import { cleanNameFields } from "./i18n/names.js";
 import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, bundleWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
 
 export const BUNDLE_FORMAT = "estampes.bundle/1";
@@ -151,7 +152,7 @@ function cleanSet(raw, where, warnings) {
   }
   if (unsupported.length) warnings.push(where + ": " + unsupported.length + " mark(s) were not imported (" + unsupported.slice(0, 3).map((u) => u.id + ": " + u.why).join("; ") + ")");
   const layers = (Array.isArray(raw.layers) ? raw.layers : []).filter((l) => /^L\d{1,6}$/.test(l?.id) && ["user", "assistant"].includes(l.author)).slice(0, MAX_LAYERS)
-    .map((l) => defined({ id: l.id, author: l.author, name: text(l.name, 40) || l.id, locked: l.locked === true ? true : undefined,
+    .map((l) => defined({ id: l.id, author: l.author, name: text(l.name, 40) || l.id, ...(text(l.name, 40) ? cleanNameFields(l) : {}), locked: l.locked === true ? true : undefined,
       visible: l.visible === false ? false : undefined,
       opacity: typeof l.opacity === "number" && l.opacity >= 0 && l.opacity <= 1 ? l.opacity : undefined,
       // The module a layer belongs to (scene objects a module made live in

@@ -6,6 +6,7 @@ import { AnnotationRefSchema, IdentityMappingSchema, lookupIdentity } from "./re
 import { ModuleIdSchema } from "./provenance.js";
 import { AffineMatrixSchema } from "./embed-schema.js";
 import { VisualDocumentSchema } from "./schema.js";
+import { cleanNameFields } from "../i18n/names.js";
 import { bounded, TimestampSchema, parse, assertJson, hashJson, cloneJson, DocumentValidationError, issue } from "./validation.js";
 
 export const LegacyShadowContextSchema = bounded(z.object({ documentId: DocumentIdSchema, sceneId: SceneIdSchema, sourceStoreId: UUIDSchema,
@@ -23,7 +24,7 @@ export const LegacyShadowContextSchema = bounded(z.object({ documentId: Document
 const rootFields = new Set(["version","imageId","width","height","marks","layers","links","savedAt","setId","derivedFrom","baseAsObject","userEdits","rejections","gestureDecisions","objects","sceneRevision","objectSeq","deletedObjectBatches","layerHistory","textHistory"]);
 const markFields = new Set(["id","author","grounding","type","x","y","x2","y2","points","smooth","closed","layer","label","color","size","pen","note","status","confidence","evidence","ambiguities","review","reviewReason","previouslyRejected","findingUpdatedAt","strokeOrder","relativeStartMs","relativeEndMs","pointerType","role","edited","object","derivedFrom"]);
 const objectFields = new Set(["id","type","props","layer","visibility","label","provenance","evidence","revision"]);
-const layerFields = new Set(["id","author","name","module","opacity","visible","locked"]);
+const layerFields = new Set(["id","author","name","nameKey","nameParams","module","opacity","visible","locked"]);
 const findingFields = ["note","status","confidence","ambiguities","review","reviewReason","previouslyRejected","findingUpdatedAt"];
 const present = (source, fields) => Object.fromEntries(fields.filter(k => Object.hasOwn(source, k)).map(k => [k, cloneJson(source[k])]));
 const validTime = value => TimestampSchema.safeParse(value).success ? value : null;
@@ -125,7 +126,7 @@ export function mapLegacyCanvas(input, contextInput) {
   try {
     const layers = source.layers.map((l,i) => {
       unknown(l, layerFields, ["layers",i]);
-      return { ...present(l,["id","name","module"]), author: ["user","assistant","module"].includes(l.author) ? l.author : "unknown",
+      return { ...present(l,["id","name","module"]), ...cleanNameFields(l), author: ["user","assistant","module"].includes(l.author) ? l.author : "unknown",
         opacity: l.opacity ?? 1, visible: l.visible ?? true, locked: l.locked ?? false, content: [] };
     });
     const layerIds = new Set(layers.map(l => l.id));

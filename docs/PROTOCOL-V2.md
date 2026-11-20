@@ -44,6 +44,8 @@ Attaching a document back as `marksFile` restores the marks of the image with th
 }
 ```
 
+A layer the server named by default also carries optional `nameKey` and `nameParams` (a catalog key under `name.` and its parameters). `name` is always present and is the name of record; a reader that does not know the key shows `name`. Renaming a layer removes both fields.
+
 Fields that do not apply are left out (no `null`s).
 
 ## Images

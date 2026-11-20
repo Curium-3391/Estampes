@@ -11,9 +11,9 @@ import {
 import { claimOf, withoutClaim, geometryChanged, geometryChange, geometryOf } from "./visual/annotation-contract.js";
 import { recordChange, undoChange, redoChange, historyState } from "./visual/annotation-history.js";
 import {
-  LAYER_NAME_MAX, AUTHOR_NAME, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
+  LAYER_NAME_MAX, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
-import { t } from "./i18n/index.js";
+import { defaultName, cleanNameFields, asNamed } from "./i18n/names.js";
 export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
@@ -33,13 +33,15 @@ function newLayer(entry, author, name) {
 }
 
 function layerFor(entry, author, name) {
-  return (name && layersOf(entry).find((l) => l.author === author && l.name === name)) || newLayer(entry, author, name);
+  const text = asNamed(name).name;
+  return (text && layersOf(entry).find((l) => l.author === author && l.name === text)) || newLayer(entry, author, name);
 }
 
 // Objects a module adds go into a layer of their own, named after the
 // module (or what the caller asked for); the same name re-uses the layer.
 export function moduleLayer(entry, name, module) {
-  const found = layersOf(entry).find((l) => l.author === "assistant" && l.name === name && (l.module ?? null) === (module ?? null));
+  const text = asNamed(name).name;
+  const found = layersOf(entry).find((l) => l.author === "assistant" && l.name === text && (l.module ?? null) === (module ?? null));
   if (found) return found;
   const layer = newLayer(entry, "assistant", name);
   if (module) layer.module = module;
@@ -196,7 +198,7 @@ function applyChanges(entry, { annotations = [], findings = [], remove = [], res
   const changed = [];
   let replay = null, layer = null;
   for (const mark of priorUser) {
-    if (!state.has(mark.id)) state.set(mark.id, { ...mark, layer: (replay ??= newLayer(entry, "user", t("name.layer.replay", { author: AUTHOR_NAME.user }))).id });
+    if (!state.has(mark.id)) state.set(mark.id, { ...mark, layer: (replay ??= newLayer(entry, "user", defaultName("name.layer.replay", { author: "user" }))).id });
   }
   const before = new Map(annotations.concat(findings).map((x) => [x.id, state.get(x.id)]));
   annotations.forEach(({ ifMatch, ...raw }, i) => {
@@ -358,7 +360,7 @@ export function importMarks(entry, marks, { layers = [], replayUser, resolve }) 
     const key = mark.author + "\u0000" + (mark.layer ?? "");
     if (!mapped.has(key)) {
       const from = layers.find((l) => l.id === mark.layer && l.author === mark.author);
-      const created = newLayer(entry, mark.author, from?.name || t("name.layer.imported", { author: AUTHOR_NAME[mark.author] }));
+      const created = newLayer(entry, mark.author, from?.name ? { name: from.name, ...cleanNameFields(from) } : defaultName("name.layer.imported", { author: mark.author }));
       if (from) applyLayerEdit(created, {
         opacity: typeof from.opacity === "number" && Number.isFinite(from.opacity) && from.opacity >= 0 && from.opacity <= 1 ? from.opacity : undefined,
         visible: typeof from.visible === "boolean" ? from.visible : undefined,

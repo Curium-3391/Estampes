@@ -393,7 +393,7 @@ function compactMark(m) {
     ...(m.color ? { color: m.color } : {}), ...(m.size ? { size: m.size } : {}), ...(m.pen ? { pen: m.pen } : {}),
   };
 }
-const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), count: z.number().int(),
+const LayerSchema = z.object({ id: z.string(), author: z.enum(["user", "assistant"]), name: z.string(), nameKey: z.string().optional(), nameParams: z.record(z.string(), z.unknown()).optional(), count: z.number().int(),
   module: z.string().optional(), visible: z.boolean().optional(), locked: z.boolean().optional(), opacity: z.number().optional(), side: z.string().regex(/^(left|right|wi-\d{1,4})$/).optional() });
 const compactLink = (l) => ({ id: l.id, left: l.left, right: l.right, ...(l.label ? { label: l.label } : {}),
   ...(l.note ? { note: l.note } : {}), confidence: l.confidence, ...(l.review ? { review: l.review } : {}), claim: claimSummary(l) });

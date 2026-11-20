@@ -43,7 +43,7 @@ export function projectCanvas(document, { canvasKey, unlayeredLayerId, images = 
   };
   const layerOf = (id) => (id === unlayeredLayerId ? {} : { layer: id });
   const layers = scene.layers.filter((l) => l.id !== unlayeredLayerId).map((l) => ({
-    id: l.id, ...(l.author === "unknown" ? {} : { author: l.author }), ...(l.name === undefined ? {} : { name: l.name }),
+    id: l.id, ...(l.author === "unknown" ? {} : { author: l.author }), ...(l.name === undefined ? {} : { name: l.name }), ...(l.nameKey === undefined ? {} : { nameKey: l.nameKey, ...(l.nameParams === undefined ? {} : { nameParams: l.nameParams }) }),
     ...(l.module === undefined ? {} : { module: l.module }),
     // The canvas code only writes these once they are changed.
     ...(l.opacity === 1 ? {} : { opacity: l.opacity }), ...(l.visible ? {} : { visible: false }), ...(l.locked ? { locked: true } : {}),

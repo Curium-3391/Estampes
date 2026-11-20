@@ -6,7 +6,7 @@ import { applySceneOps, widgetObjects, MAX_OBJECTS } from "../scene/scene-ops.js
 import { validateProps } from "../scene/objects.js";
 import { canvasLayers } from "../canvas-state.js";
 import { canvasRevision } from "../scene/canvas-render.js";
-import { t } from "../i18n/index.js";
+import { defaultName } from "../i18n/names.js";
 
 const clone = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === "object"
@@ -52,9 +52,9 @@ export function editText(entry, { action, expectedRevision, id, props }) {
     if (before && entry.layers?.find(l => l.id === before.layer)?.locked) fail("LAYER_LOCKED", "Text layer is locked.");
     let result;
     if (action === "create") {
-      const base = t("name.text", { n: (entry.objectSeq ?? 0) + 1 });
-      let name = base;
-      for (let suffix = 1; entry.layers?.some(l => l.name === name); suffix++) name = base + " · " + suffix;
+      const n = (entry.objectSeq ?? 0) + 1;
+      let name = defaultName("name.text", { n });
+      for (let k = 1; entry.layers?.some(l => l.name === name.name); k++) name = defaultName("name.textDup", { n, k });
       result = applySceneOps(entry, [{ op: "object.create", type: "shape", props: { kind: "text", space: "canvas", ...props } }], { author: "user" }, { layer: name });
       id = result.created[0];
       entry.layers.find(l => l.id === entry.objects.get(id).layer).author = "user";
