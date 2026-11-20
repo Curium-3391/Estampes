@@ -161,3 +161,33 @@ test("undo: moving a world mark and switching its anchor are both undone exactly
   assert.ok(!r.isError, "undo an anchor switch: " + JSON.stringify(r.content));
   assert.equal((await markOf(s, id, "d")).anchor, undefined, "on the page again");
 });
+
+test("a world mark cannot be dragged or pinned outside the axes range; tiny ranges are compared at their own scale", { timeout: 120000 }, async (t) => {
+  const { s } = await graphServer(t);
+  const id = idIn(await s.call("execute_module", { module: GRAPH, capability: "set_axes", params: { xRange: [0, 10], yRange: [0, 10] }, newCanvas: { kind: "graph" }, present: false }));
+  await s.call("present_visual", { imageId: id, annotations: [{ id: "w", type: "point", x: 5, y: 5, anchor: { space: "world" } }, { id: "d", type: "point", x: 0.99, y: 0.5 }] });
+  const before = await markOf(s, id, "w");
+  // Canvas x 0.99 is right of the axes region (x up to 0.96): about x = 10.3 in axis units.
+  const drag = await s.raw("edit_visual_canvas", { imageId: id, marks: [{ id: "w", x: 0.99, y: 0.5 }] });
+  assert.equal(drag.isError, true); assert.match(JSON.stringify(drag.content), /OUTSIDE_AXES/);
+  assert.deepEqual(await markOf(s, id, "w"), before, "the refused drag changed nothing");
+  const pin = await s.raw("edit_visual_canvas", { imageId: id, marks: [{ id: "d", anchor: { space: "world" } }] });
+  assert.equal(pin.isError, true); assert.match(JSON.stringify(pin.content), /OUTSIDE_AXES/);
+  assert.equal((await markOf(s, id, "d")).anchor, undefined);
+  // The assistant re-places its world mark there in canvas units: kept, flagged outside, not drawn.
+  await s.call("present_visual", { imageId: id, annotations: [{ id: "w", type: "point", x: 0.99, y: 0.5 }] });
+  assert.equal((await markOf(s, id, "w")).anchor.status, "outside");
+  assert.equal((await s.call("render_canvas", { imageId: id })).structuredContent.included.marks.includes("w"), false);
+
+  // Tiny ranges: a point at 5e-11 is outside [0, 1e-11], not "inside within 1e-9".
+  await setAxes(s, id, [0, 1e-10], [0, 1e-10]);
+  await s.call("present_visual", { imageId: id, annotations: [{ id: "tiny", type: "point", x: 5e-11, y: 5e-11, anchor: { space: "world" } },
+    // Just past 1e-11: it would still fall inside the canvas, so only a range-relative tolerance tells it is outside.
+    { id: "edge", type: "point", x: 1.02e-11, y: 5e-12, anchor: { space: "world" } }] });
+  const placed = await markOf(s, id, "tiny");
+  await setAxes(s, id, [0, 1e-11], [0, 1e-11]);
+  const tiny = await markOf(s, id, "tiny");
+  assert.equal(tiny.anchor.status, "outside");
+  assert.deepEqual(tiny.geometry, placed.geometry, "kept where it was, inside the canvas");
+  assert.equal((await markOf(s, id, "edge")).anchor.status, "outside", "just past the range is outside");
+});

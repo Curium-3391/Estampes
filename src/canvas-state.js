@@ -14,7 +14,7 @@ import {
   LAYER_NAME_MAX, newLayerRecord, findLayer as findLayerIn, layerLocked, applyLayerEdit, reorderLayers,
 } from "./visual/layer-contract.js";
 import { defaultName, cleanNameFields, asNamed } from "./i18n/names.js";
-import { axesFor, defaultAxes, worldToCanvas, anchorRecord, isWorldAnchored } from "./visual/world-anchors.js";
+import { axesFor, defaultAxes, worldToCanvas, anchorRecord, isWorldAnchored, canvasInsideRange } from "./visual/world-anchors.js";
 export { claimOf, LAYER_NAME_MAX };
 
 const marksOf = (entry) => (entry.marks ??= new Map());
@@ -175,6 +175,7 @@ const checkIfMatch = (stage, i, id, stored, ifMatch) => {
 };
 
 // ---- World anchors (UVA Phase 4B-3) ----------------------------------------
+const OUTSIDE_AXES = "[OUTSIDE_AXES] a mark fixed to the axes must stay inside the axes range; fix it to the page first to place it elsewhere";
 const withoutAnchor = (m) => { const { anchor: _a, anchorStatus: _s, ...rest } = m; return rest; };
 function axesOrFail(entry, frame) {
   const axes = frame ? axesFor(entry, frame) : defaultAxes(entry);
@@ -341,6 +342,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
         if (edit.anchor.space === "world") {
           let axes;
           try { axes = axesOrFail(entry, edit.anchor.frame); } catch (error) { throw fail("marks", i, edit.id, error.message); }
+          if (!canvasInsideRange(stored, axes)) throw fail("marks", i, edit.id, OUTSIDE_AXES);
           stored = { ...withoutAnchor(stored), anchor: anchorRecord(axes.id, stored, axes) };
         } else stored = withoutAnchor(stored);
         if (was !== edit.anchor.space) anchored = edit.anchor.space;
@@ -348,6 +350,7 @@ export function editCanvas(entry, { layers = [], order, marks = [], remove = [],
       // Moved on the canvas: its place in axis units follows now, so the history keeps the mark as it is saved.
       if (moved && edit.anchor === undefined && isWorldAnchored(stored)) {
         const axes = axesFor(entry, stored.anchor.frame);
+        if (axes && !canvasInsideRange(stored, axes)) throw fail("marks", i, edit.id, OUTSIDE_AXES);
         if (axes) stored = { ...withoutAnchor(stored), anchor: anchorRecord(axes.id, stored, axes) };
       }
       state.set(edit.id, stored);

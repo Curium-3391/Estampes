@@ -823,5 +823,6 @@
   "vs.anchor.detached": "Pinned to the page: it stays where it is.",
   "vs.anchor.failed": "Could not change where the mark stays: {message}",
   "vs.anchor.outside": "Outside the axes range",
-  "vs.anchor.outsideList": "{names}. Not drawn now; they come back when the axes range includes them again."
+  "vs.anchor.outsideList": "{names}. Not drawn now; they come back when the axes range includes them again.",
+  "vs.err.code.OUTSIDE_AXES": "A mark pinned to the axes has to stay inside the axes range. Pin it to the page first to put it somewhere else."
 }

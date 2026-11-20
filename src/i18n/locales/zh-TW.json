@@ -823,5 +823,6 @@
   "vs.anchor.detached": "已固定在畫面：標記留在原位。",
   "vs.anchor.failed": "無法變更固定方式：{message}",
   "vs.anchor.outside": "超出座標範圍",
-  "vs.anchor.outsideList": "{names}。目前不顯示；座標範圍再次包含它們時會重新出現。"
+  "vs.anchor.outsideList": "{names}。目前不顯示；座標範圍再次包含它們時會重新出現。",
+  "vs.err.code.OUTSIDE_AXES": "固定在座標的標記要留在座標範圍內；要放到別處，請先改成固定在畫面。"
 }

@@ -54,11 +54,21 @@ function withBounds(g) {
   return { points: g.points, x: Math.min(...xs), y: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) };
 }
 const coords = (g) => Array.isArray(g.points) ? g.points : [{ x: g.x, y: g.y }, ...(g.x2 !== undefined ? [{ x: g.x2, y: g.y2 }] : [])];
+// Inside the axes range, with a tolerance relative to the range (axes can span far less than 1e-9).
+const within = (v, a, b) => { const lo = Math.min(a, b), hi = Math.max(a, b), eps = (hi - lo) * 1e-9; return v >= lo - eps && v <= hi + eps; };
 const insideRange = (world, axes) => {
-  const [x0, x1] = axes.props.xRange, [y0, y1] = axes.props.yRange, lo = (a, b) => Math.min(a, b), hi = (a, b) => Math.max(a, b), eps = 1e-9;
-  return coords(world).every((p) => p.x >= lo(x0, x1) - eps && p.x <= hi(x0, x1) + eps && p.y >= lo(y0, y1) - eps && p.y <= hi(y0, y1) + eps);
+  const [x0, x1] = axes.props.xRange, [y0, y1] = axes.props.yRange;
+  return coords(world).every((p) => within(p.x, x0, x1) && within(p.y, y0, y1));
 };
 const inCanvas = (g) => coords(g).every((p) => p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
+// The canvas geometry for `world` on `axes` now, or null when it is not drawable (outside the range or the canvas).
+function placed(world, axes) {
+  if (!insideRange(world, axes)) return null;
+  const g = mapGeometry(world, frameOf(axes).toCanvas);
+  return inCanvas(g) ? g : null;
+}
+// Whether a mark's canvas geometry `g` lies inside the axes range (a person pinning or dragging a mark).
+export const canvasInsideRange = (g, axes) => insideRange(canvasToWorld(g, axes), axes);
 
 // Canvas geometry (0..1) of a mark given in axis units on `axes`. Throws when
 // it falls outside the axes range (a model mark must be visible when drawn).
@@ -88,14 +98,16 @@ export function syncWorldAnchors(entry) {
     if (!axes) {
       if (m.anchorStatus !== "invalid") next = { ...m, anchorStatus: "invalid" };
     } else if (!m.anchor.world || !same(m.anchor.at, now)) {
-      // Moved or reshaped on the canvas (or a new anchor): the world place follows.
+      // Moved or reshaped on the canvas (or a new anchor): the world place follows, and is checked against the range.
       next = { ...m, anchor: anchorRecord(m.anchor.frame, now, axes) };
       delete next.anchorStatus;
+      if (!insideRange(next.anchor.world, axes)) next.anchorStatus = "outside";
     } else if (m.anchor.basis !== basisOf(axes) || m.anchorStatus) {
-      if (!insideRange(m.anchor.world, axes)) {
+      const at = placed(m.anchor.world, axes);
+      if (!at) {
         next = m.anchorStatus === "outside" && m.anchor.basis === basisOf(axes) ? null : { ...m, anchor: { ...m.anchor, basis: basisOf(axes) }, anchorStatus: "outside" };
       } else {
-        const g = withBounds(mapGeometry(m.anchor.world, frameOf(axes).toCanvas));
+        const g = withBounds(at);
         next = { ...m, ...g, anchor: { ...m.anchor, at: canvasGeometry(g), basis: basisOf(axes) } };
         delete next.anchorStatus;
       }
