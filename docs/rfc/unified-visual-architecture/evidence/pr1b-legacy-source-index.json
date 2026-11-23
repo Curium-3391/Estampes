@@ -286,7 +286,7 @@
     },
     {
       "path": "src/storage.js",
-      "sha256": "a788a68aad9b857f5af440975e22fdea118fe65aad6d10ae0f1f1914954fe8a8"
+      "sha256": "dc7469bd1dd00333a54b72459cfa07a763d56aa195cb4f2bd9e89e75d41cb88f"
     },
     {
       "path": "src/surface/bundle-extras.js",
@@ -330,7 +330,7 @@
     },
     {
       "path": "src/workspace.js",
-      "sha256": "ef67c9153159eb4acd9be0eff776b1593062422a541bbd94a44d71bbfec23fb4"
+      "sha256": "1ec0bf3f23405dfd396ff40d81d2e04db76aab9acf741da1d1febecf635ff574"
     },
     {
       "path": "src/zip.js",
@@ -599,6 +599,15 @@
         "src/surface/service.js"
       ],
       "previousSha256": "0e89fd01ba14a444d88e09718e3340e661404574e21da1f9c1a27f718ced7d1b"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose document-resident derived bindings by decision card on 2026-11-23 (\u300c\u5b58\u9032 UVA \u6587\u4ef6,\u540c\u6b65\u6642\u4fdd\u7559\u300d), in the 5B thread",
+      "reason": "UVA 5B-2a: a canvas carries derived bindings next to its links; a copy starts without them",
+      "files": [
+        "src/storage.js",
+        "src/workspace.js"
+      ]
     }
   ]
 }

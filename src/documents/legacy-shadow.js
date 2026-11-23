@@ -7,6 +7,7 @@ import { ModuleIdSchema } from "./provenance.js";
 import { AffineMatrixSchema } from "./embed-schema.js";
 import { VisualDocumentSchema } from "./schema.js";
 import { cleanNameFields } from "../i18n/names.js";
+import { derivedFromCanvas } from "./derived-binding.js";
 import { bounded, TimestampSchema, parse, assertJson, hashJson, cloneJson, DocumentValidationError, issue } from "./validation.js";
 
 export const LegacyShadowContextSchema = bounded(z.object({ documentId: DocumentIdSchema, sceneId: SceneIdSchema, sourceStoreId: UUIDSchema,
@@ -21,7 +22,7 @@ export const LegacyShadowContextSchema = bounded(z.object({ documentId: Document
     issue(refinement, "INTEGRITY_ERROR", "Identity mapping belongs to another source namespace");
   }
 }));
-const rootFields = new Set(["version","imageId","width","height","marks","layers","links","savedAt","setId","derivedFrom","baseAsObject","userEdits","rejections","gestureDecisions","objects","sceneRevision","objectSeq","deletedObjectBatches","layerHistory","textHistory"]);
+const rootFields = new Set(["version","imageId","width","height","marks","layers","links","savedAt","setId","derivedFrom","baseAsObject","userEdits","rejections","gestureDecisions","derived","objects","sceneRevision","objectSeq","deletedObjectBatches","layerHistory","textHistory"]);
 const markFields = new Set(["id","author","grounding","type","x","y","x2","y2","points","smooth","closed","layer","label","color","size","pen","note","status","confidence","evidence","ambiguities","review","reviewReason","previouslyRejected","findingUpdatedAt","strokeOrder","relativeStartMs","relativeEndMs","pointerType","role","edited","object","derivedFrom"]);
 const objectFields = new Set(["id","type","props","layer","visibility","label","provenance","evidence","revision"]);
 const layerFields = new Set(["id","author","name","nameKey","nameParams","module","opacity","visible","locked"]);
@@ -59,7 +60,7 @@ export function mapLegacyCanvas(input, contextInput) {
     add("INTEGRITY_ERROR", [], "Canvas dimensions or explicit asset alias differ", true); return finish(null);
   }
   if ((source.links !== undefined && (!source.links || typeof source.links !== "object" || Array.isArray(source.links))) ||
-    ["gestureDecisions","rejections","userEdits","deletedObjectBatches"].some(k => source[k] !== undefined && !Array.isArray(source[k])) ||
+    ["gestureDecisions","rejections","userEdits","deletedObjectBatches","derived"].some(k => source[k] !== undefined && !Array.isArray(source[k])) ||
     (source.baseAsObject !== undefined && typeof source.baseAsObject !== "boolean")) {
     add("INVALID_INPUT", [], "Malformed legacy metadata container", true); return finish(null);
   }
@@ -195,6 +196,14 @@ export function mapLegacyCanvas(input, contextInput) {
         }
         bindings.push(b); add("UNRESOLVED_REFERENCE", ["links",otherSetKey,link.id], "External endpoint is explicitly typed but not resolved by this single-canvas projection");
       }
+    }
+    // Bindings that say "a module made this object from a source that can change". The canvas holds them next to its links; one that cannot be read, or whose live object is gone, stays in the raw sidecar instead of blocking the canvas.
+    for (const [i, local] of (source.derived ?? []).entries()) {
+      const b = derivedFromCanvas(local, { documentId: ctx.documentId, sceneId: ctx.sceneId });
+      if (!b || bindings.some(x => x.id === b.id)) { archive(["derived", i], "Unreadable derived binding retained verbatim"); continue; }
+      const live = ["fresh", "stale", "recomputing", "conflict"].includes(b.state);
+      if (live && !objects.some(o => o.id === b.target.id)) { archive(["derived", i], "Derived binding names an object that is not on the canvas; retained verbatim"); continue; }
+      bindings.push(b);
     }
     const gestureDecisions = [];
     for (const [i,g] of (source.gestureDecisions ?? []).entries()) {

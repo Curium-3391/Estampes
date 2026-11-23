@@ -152,6 +152,7 @@ export function serializeCanvas(entry) {
     ...(entry.userEdits?.length ? { userEdits: entry.userEdits } : {}),
     ...(entry.rejections?.length ? { rejections: entry.rejections } : {}),
     ...(entry.gestureDecisions?.length ? { gestureDecisions: entry.gestureDecisions } : {}),
+    ...(entry.derived?.length ? { derived: entry.derived } : {}),
     ...((entry.objects?.size || entry.deletedObjectBatches?.length) ? { objects: serializeObjects(entry), sceneRevision: entry.sceneRevision ?? 0, objectSeq: entry.objectSeq ?? 0 } : {}),
     ...(entry.deletedObjectBatches?.length ? { deletedObjectBatches: entry.deletedObjectBatches } : {}),
     savedAt: new Date().toISOString(),
@@ -168,6 +169,7 @@ export function restoreCanvas(entry, data) {
   entry.rejections = Array.isArray(data.rejections) ? data.rejections.filter((r) => r && typeof r.kind === "string" && r.from) : [];
   entry.gestureDecisions = Array.isArray(data.gestureDecisions)
     ? data.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string") : [];
+  entry.derived = Array.isArray(data.derived) ? data.derived.filter((d) => d && typeof d === "object" && !Array.isArray(d)) : [];
   entry.pairLinks = new Map(Object.entries(data.links ?? {}).filter(([id]) => setKeyOk(id))
     .map(([id, list]) => [id, new Map(list.map((l) => [l.id, l]))]));
   entry.baseAsObject = !!data.baseAsObject;

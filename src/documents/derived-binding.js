@@ -132,3 +132,20 @@ export function evaluateRefresh(binding, target) {
   }
   return { proceed: true };
 }
+
+// ---- canvas-local form -------------------------------------------------------
+
+// A canvas record names its own objects by id only; the document form adds the
+// document and scene the object lives in. These two functions are the whole
+// difference, so a binding round-trips through the canvas unchanged.
+export function derivedFromCanvas(local, { documentId, sceneId }) {
+  if (!local || typeof local !== "object" || Array.isArray(local) || !local.target || typeof local.target !== "object") return null;
+  const candidate = { ...local, target: { documentId, sceneId, kind: "object", id: local.target.id } };
+  const parsed = DerivedBindingSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
+
+export function derivedToCanvas(binding) {
+  const { target, ...rest } = structuredClone(binding);
+  return { ...rest, target: { id: target.id } };
+}

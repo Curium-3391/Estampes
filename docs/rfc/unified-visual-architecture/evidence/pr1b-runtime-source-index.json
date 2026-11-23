@@ -19,7 +19,7 @@
     },
     {
       "path": "src/documents/legacy-shadow.js",
-      "sha256": "4e6e74f0e7d4fae19a0ec0372b6736e0d75039053e3048c974e86073f5a8da68"
+      "sha256": "f3e9656c13716d3adfa1876f513f8afb5946f53dc4176b6569a51131b421ca7f"
     },
     {
       "path": "src/documents/provenance.js",
@@ -414,6 +414,18 @@
           "path": "src/documents/schema.js",
           "from": "f346a4354d481eae51338e2cf7892fa79dd2958340feae529bcce745df020f0a",
           "to": "e269e58ec1322a23086ce28b59e93df83a241ad65a767b4b04fe25aa9a893b7e"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose document-resident derived bindings by decision card on 2026-11-23 (「存進 UVA 文件,同步時保留」), in the 5B thread",
+      "reason": "UVA 5B-2a: a canvas carries derived bindings (module-made objects and the source they refresh from) next to its links; they map into document.bindings and project back, and a copy starts without them",
+      "files": [
+        {
+          "path": "src/documents/legacy-shadow.js",
+          "from": "4e6e74f0e7d4fae19a0ec0372b6736e0d75039053e3048c974e86073f5a8da68",
+          "to": "f3e9656c13716d3adfa1876f513f8afb5946f53dc4176b6569a51131b421ca7f"
         }
       ]
     }

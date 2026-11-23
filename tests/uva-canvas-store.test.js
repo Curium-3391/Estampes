@@ -406,3 +406,57 @@ test("a canvas record from before metadata, views and history moved into the sto
   assert.equal((await s.raw("get_derived_view", { imageId, derivedViewId: view })).isError, undefined);
   await s.stop();
 });
+
+test("a derived binding on a canvas moves into its document, survives edits, a kill and a restart, and is not left behind in the legacy file", { timeout: 180000 }, async (t) => {
+  const { storage, beta } = await folders(t);
+  let s = await start(storage, beta, { mode: "legacy" });
+  const imageId = await upload(s, "#336699");
+  await s.call("present_visual", { imageId, annotations: [{ id: "a1", type: "point", x: .5, y: .5, label: "first" }] });
+  await s.stop();
+  // Put a module-made object and the binding that refreshes it into the canvas record, as 5B-2b will.
+  const file = canvasJson(storage, imageId), canvas = JSON.parse(await readFile(file, "utf8"));
+  const hash = "b".repeat(64);
+  canvas.objects = [{ id: "o1", type: "axes-2d", props: { xRange: [-1, 1], yRange: [-1, 1] }, revision: 1, visibility: "public", provenance: { author: "module", module: "com.example.demo.producer", moduleVersion: "1.0.0" } }];
+  canvas.sceneRevision = 1; canvas.objectSeq = 1;
+  const binding = { id: "bind:22222222-2222-4222-8222-222222222222", kind: "derived", version: 1,
+    source: { module: "com.example.demo.producer", capability: "make", sourceRef: "opaque to the core", sourceRevision: 1, inputsHash: hash },
+    target: { id: "o1" }, lastApplied: { objectRevision: 1, contentHash: hash, sourceRevision: 1 }, policy: "pause-on-user-edit", state: "fresh" };
+  canvas.derived = [binding];
+  await writeFile(file, JSON.stringify(canvas));
+
+  const derivedOf = async () => {
+    await rm(join(storage, "legacy-out"), { recursive: true, force: true });
+    const run = spawn(process.execPath, ["scripts/uva-to-legacy.mjs", storage, beta], { cwd: process.cwd(), stdio: ["ignore", "pipe", "inherit"] });
+    let out = ""; run.stdout.on("data", (d) => { out += d; });
+    assert.equal(await new Promise((r) => run.once("exit", r)), 0, out);
+    return JSON.parse(await readFile(canvasJson(storage, imageId), "utf8")).derived;
+  };
+
+  // Moves in once, committed to a document.
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["first"]);
+  await committed(s, storage);
+  // An edit made through the server must not wash the binding out of the document.
+  await s.call("present_visual", { imageId, annotations: [{ id: "a2", type: "point", x: .2, y: .2, label: "second" }] });
+  await committed(s, storage);
+  // The document itself, not only the canvas record, holds the binding.
+  const docs = await s.documents(), doc = docs.find((w) => JSON.stringify(w).includes(imageId.slice(4, 12))) ?? docs[0];
+  const opened = (await s.call("uva_store", { action: "open", documentId: doc.documentId ?? doc.id })).structuredContent.document;
+  const held = opened.bindings.filter((b) => b.kind === "derived");
+  assert.equal(held.length, 1, JSON.stringify({ b: opened.bindings.map((b) => b.kind), o: opened.scenes[0].objects.map((o) => o.id), a: JSON.stringify(opened.extensions).slice(0, 600) }));
+  assert.deepEqual([held[0].id, held[0].target.kind, held[0].target.id, held[0].state], [binding.id, "object", "o1", "fresh"]);
+  await s.stop();
+  await rm(join(storage, "images"), { recursive: true });
+  assert.deepEqual(await derivedOf(), [binding], "the committed document holds the binding");
+
+  // An edit killed before its commit is recovered with the binding from the pending copy.
+  s = await start(storage, beta, { idle: "3600" });
+  await s.call("present_visual", { imageId, annotations: [{ id: "a3", type: "point", x: .8, y: .8, label: "third" }] });
+  await s.kill();
+  s = await start(storage, beta);
+  assert.deepEqual(await s.labels(imageId), ["first", "second", "third"]);
+  await committed(s, storage);
+  await s.stop();
+  await rm(join(storage, "images"), { recursive: true, force: true });
+  assert.deepEqual(await derivedOf(), [binding]);
+});

@@ -28,6 +28,14 @@ Every other combination is refused with `ILLEGAL_ACTION`, and an action needs th
 
 A refresh may overwrite the target only if it is exactly what the module last wrote: the object's `provenance.editedByUser` is not set, its revision equals `lastApplied.objectRevision`, and the hash of its type and props equals `lastApplied.contentHash`. Moving an object between layers does not count as an edit.
 
+## Where a binding lives
+
+A canvas (image or Graph) is saved as a record that the UVA store keeps as a document. Its `derived` list sits next to its `links`, and each entry is the binding with a shortened target (`{ "id": "o1" }`, the object on that canvas). When the canvas is mapped into its document, each entry becomes a `derived` binding in `document.bindings`, with the document and scene filled in, and projecting the document back gives the same entry. A save that does not touch the binding therefore never loses it.
+
+- An entry that cannot be read (unknown version, extra fields, wrong shape), or one that is live but names an object that is not on the canvas, is not dropped and does not block the canvas. It stays in the raw record, the canvas is reported as not fully editable, and nothing refreshes it. A later step is responsible for turning a live binding whose object was deleted into `removed`.
+- A copy of a canvas starts with no derived bindings: its objects are ordinary objects, and refreshing the original never touches the copy.
+- Workspace bundles do not carry derived bindings yet (planned with the resolution flow, 5B-3). Importing a bundle gives plain objects.
+
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.
