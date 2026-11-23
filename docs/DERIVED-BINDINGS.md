@@ -36,6 +36,18 @@ A canvas (image or Graph) is saved as a record that the UVA store keeps as a doc
 - A copy of a canvas starts with no derived bindings: its objects are ordinary objects, and refreshing the original never touches the copy.
 - Workspace bundles do not carry derived bindings yet (planned with the resolution flow, 5B-3). Importing a bundle gives plain objects.
 
+## The coordinator
+
+`src/documents/derived-coordinator.js` applies these rules to one canvas. It works on the canvas's `derived` list and on what is on the canvas now, and it never runs a module: whatever recomputes an object is handed in as a function that writes the object and returns the new source revision. So any module that can write an object can be a producer, and the file names no module and no object type (a test checks this).
+
+- `register` records a binding as fresh after a module made an object. A canvas holds at most 100; an object has at most one live binding.
+- `sourceChanged` marks the matching bindings stale (same module, and the same `sourceRef` when given).
+- `reconcile` turns a live binding whose object is gone into `removed`.
+- `refreshStale` refreshes stale bindings, at most 20 per call; the rest are reported in `remaining`, never dropped. A binding whose object was edited by a person, or changed by any other route, is paused (`conflict`) and the module is not even asked. A producer that fails leaves the binding in `error` with a short reason and the object as it was.
+- `act` carries out the person's choice (refresh, overwrite, fork, detach, reattach) after checking `expectedBindingHash` and the state table.
+
+Nothing saves the canvas inside it; the caller does that. Nothing calls it yet outside tests: connecting a real producer is the next step (5B-2b-2), then the calculator (5B-2b-3).
+
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.
