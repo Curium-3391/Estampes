@@ -13,6 +13,7 @@
 // the size of the patch is reported.
 
 const FINDING = ["note", "status", "confidence", "ambiguities", "review", "reviewReason", "previouslyRejected", "findingUpdatedAt"];
+import { derivedToCanvas } from "../documents/derived-binding.js";
 const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 const define = (o, k, v) => Object.defineProperty(o, k, { value: v, enumerable: true, writable: true, configurable: true });
@@ -82,10 +83,12 @@ export function projectCanvas(document, { canvasKey, unlayeredLayerId, images = 
     if (!Object.hasOwn(links, key)) define(links, key, []);
     links[key].push(clone(b.original));
   }
+  const derived = document.bindings.filter((b) => b.kind === "derived").map(derivedToCanvas);
   return {
     ...(scene.background.kind === "transparent" ? { baseAsObject: true } : {}),
     ...(scene.background.kind === "solid" ? { background: { kind: "solid", color: scene.background.color } } : {}),
     version: 1, imageId, width: scene.extent.width, height: scene.extent.height, marks, layers, links,
+    ...(derived.length ? { derived } : {}),
     ...(scene.rejections.length ? { rejections: clone(scene.rejections) } : {}),
     ...(scene.gestureDecisions.length ? { gestureDecisions: scene.gestureDecisions.map((g) => clone(g.original)) } : {}),
     ...(objects.length ? { objects } : {}),
