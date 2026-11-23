@@ -170,7 +170,7 @@
     },
     {
       "path": "src/modules/index.js",
-      "sha256": "08b55952315c301fd00e758979c2bf340ab11727a6d9bdce4ea0ba07f72cfe67"
+      "sha256": "09413fa4ca0b1775dbcb63ccaf98c6cdec9a8877c475bfa5572f8a48674603cc"
     },
     {
       "path": "src/modules/jobs.js",
@@ -186,11 +186,11 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "229bbde310dbc727ec7dab482caed6dec4af7e7b5f8ec486f4bbdd5818a95f2b"
+      "sha256": "a18de91cb0dfacec1dc15f498824de7a558d08bb345ec79dc110bc82c9191a7f"
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "f65c69916f64281197f57b975f87ceafdc133a83ac5a154038751373eaeeeeb6"
+      "sha256": "06d1616cc3f2a2bdd3c7374581879f9cbf3cfefdd4b47d5a62b6824d6bc4b041"
     },
     {
       "path": "src/modules/packages.js",
@@ -202,11 +202,11 @@
     },
     {
       "path": "src/modules/registry.js",
-      "sha256": "2fb874493212bbc110bb6449f31c5c741c94899e40bae0359cad747ac6f23111"
+      "sha256": "e4ebef4f3be3ec7319b6b3a8a17fa41945f741201e669b3c9305658436cf3280"
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "9013e1481dafdcc8cb9bb67ed1313ad44a59f3a903907e48e8d1962bbddd1806"
+      "sha256": "ac88ac77be60daed0951581b52fa12213dc869c68937fe233b4f7968407b6ea5"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -616,6 +616,18 @@
       "files": [
         "src/modules/manifest.js",
         "src/modules/mcp-tools.js",
+        "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose module/2 for built-in modules by decision card on 2026-11-23 (\u300cA \u8a08\u7b97\u6a5f\u5347\u7d1a\u6210 v2 \u6a21\u7d44(\u5efa\u8b70)\u300d) and the core index for broadcasts (\u300cA \u6838\u5fc3\u8a18\u7d22\u5f15(\u5efa\u8b70)\u300d), in the 5B thread",
+      "reason": "5B-2b-3a: built-in modules may use a module/2 manifest; a broadcast reaches every document the core's index lists for that module",
+      "files": [
+        "src/modules/index.js",
+        "src/modules/manifest.js",
+        "src/modules/mcp-tools.js",
+        "src/modules/registry.js",
         "src/modules/router.js"
       ]
     }

@@ -11,6 +11,7 @@ import { applySceneOps, renderedObjects, sceneRevision, SceneOpsError, VISIBILIT
 import { localized } from "./manifest.js";
 import { plotContext } from "./plot-context.js";
 import { register, sourceChanged, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
+import { deliverBroadcast } from "../documents/derived-broadcast.js";
 
 // A string in a v2 module's input that names a document (an image, a Graph
 // or a copy of either) other than the one it was pointed at.
@@ -64,7 +65,7 @@ function canvasContext(entry, moduleId, granted, v2 = false) {
 // canvases: { ensure(imageId), create(options), save(entry, history) }
 // jobs: from jobs.js. egress / readSource are optional host services handed to
 // built-in modules (never to other runtimes) when their grant allows.
-export function createRouter({ registry, audit, canvases, runtimes, jobs = null, egress = null, readSource = null }) {
+export function createRouter({ registry, audit, canvases, runtimes, jobs = null, egress = null, readSource = null, derivedIndex = null }) {
   const DEFAULT_JOB_MS = 10 * 60 * 1000;
   return {
     jobs,
@@ -154,7 +155,7 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         const wantsDerived = output.derived?.length > 0, wantsBroadcast = output.broadcast?.length > 0;
         if ((wantsDerived || wantsBroadcast) && !manifest.v2) throw new ModuleError(capId + " returned derived or broadcast, which only module/2 modules may", "output");
         if (wantsDerived && !manifest.v2.derives?.[capId]) throw new ModuleError(capId + " returned derived objects but does not declare derives in its manifest", "output");
-        if ((wantsDerived || wantsBroadcast) && !entry) throw new ModuleError(capId + " returned derived or broadcast but has no document", "output");
+        if (wantsDerived && !entry) throw new ModuleError(capId + " returned derived objects but has no document", "output");
         if (wantsDerived) {
           const made = new Set(output.operations.filter((op) => op?.op === "object.create" && typeof op.ref === "string").map((op) => "$" + op.ref));
           const named = output.derived.map((d) => d.object);
@@ -188,6 +189,7 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         }
         // Registered together with the objects, saved together with them.
         let derivedResult = null;
+        if (entry && wantsDerived) derivedIndex?.add(manifest.id, entry.imageId);
         if (entry && (wantsDerived || wantsBroadcast)) {
           const registered = [], staled = new Set();
           for (const d of output.derived ?? []) {
@@ -200,6 +202,12 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
             note: manifest.id + "/" + capId });
         }
+        // The same broadcast reaches the other documents that hold this module's bindings (and, with no document at all, all of them).
+        if (wantsBroadcast && derivedIndex) {
+          const others = await deliverBroadcast({ index: derivedIndex, canvases, module: manifest.id, events: output.broadcast, except: entry?.imageId ?? null, note: manifest.id + "/" + capId });
+          derivedResult = { registered: derivedResult?.registered ?? [], staled: derivedResult?.staled ?? [], ...(others.staled.length ? { staledElsewhere: others.staled.length, documents: others.documents } : {}),
+            ...(others.remaining ? { remainingDocuments: others.remaining } : {}), ...(others.failed.length ? { failedDocuments: others.failed.length } : {}) };
+        } else if (wantsBroadcast && !derivedResult) derivedResult = { registered: [], staled: [] };
         if (runtime.after) {
           try { await runtime.after(mod, capId, input, ctx, { output, scene, entry }); }
           catch (error) { audit.record({ kind: "run.after-failed", module: manifest.id, capability: capId, error: String(error?.message || error).slice(0, 300) }); }

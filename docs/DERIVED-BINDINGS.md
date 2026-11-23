@@ -60,6 +60,12 @@ A refresh is a call to the declared capability with `{sourceRef, object}`. It ma
 
 Tested in process with stand-in modules and over the router; not tried on a real ChatGPT or Claude host.
 
+### Broadcasts across documents
+
+A module's broadcast also reaches the other documents that hold its bindings. The core keeps a small index (`derived-index.json` in the modules folder: module id to document ids; the id is only a key, the core names no module). A document is added when a binding is registered or when it is listed, and dropped when it holds no live binding of that module. At most 8 other documents are changed per call; the rest are reported as `remainingDocuments`, and a capability that works on no document at all (`target: none`) can still broadcast. The index is only a hint: if the file is lost, broadcasts reach the current document until the others are opened or listed again. A document that cannot be read is reported in `failedDocuments`, not silently skipped.
+
+Built-in modules may use a `estampes.module/2` manifest (a package may not name the `builtin` runtime); they go through the same derived path as a package module.
+
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.

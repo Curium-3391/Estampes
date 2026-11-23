@@ -15,7 +15,7 @@ export class DerivedFlowError extends Error {
 }
 
 // router: from createRouter; registry: the module registry; canvases: { ensure, save }.
-export function createDerivedFlow({ router, registry, canvases }) {
+export function createDerivedFlow({ router, registry, canvases, index = null }) {
   const running = new Set();      // canvases with a refresh in progress
   const queue = new Map();        // one change at a time per canvas
   const serial = (key, job) => {
@@ -31,6 +31,7 @@ export function createDerivedFlow({ router, registry, canvases }) {
   async function open(imageId) {
     const entry = await canvases.ensure(imageId);
     reconcile(entry, { available, interrupted: !running.has(imageId) });
+    for (const b of bindingsOf(entry)) if (b.state !== "removed") index?.add(b.source.module, imageId);
     return entry;
   }
   // Bindings that need attention first; at most MAX_ROWS rows, with the count of those left out.

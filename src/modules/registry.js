@@ -5,7 +5,7 @@
 // every module starts disabled again after a restart.
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { validateManifest } from "./manifest.js";
+import { validateManifest, runtimeManifest } from "./manifest.js";
 
 export const REGISTRY_STATE = "estampes.module-registry/1";
 export const STATES = ["available", "installed", "enabled", "disabled", "failed"];
@@ -26,7 +26,7 @@ export function createRegistry({ dir = "", coreVersion, builtins = [] } = {}) {
   const catalog = new Map(); // id -> { manifest, runtime, source }
   const records = new Map(); // id -> persisted record
   for (const b of builtins) {
-    const manifest = validateManifest(b.manifest, { coreVersion });
+    const manifest = runtimeManifest(validateManifest(b.manifest, { coreVersion, v2: true, builtin: true }));
     if (manifest.runtime.kind !== "builtin") throw new Error(manifest.id + ": built-in modules use runtime builtin");
     catalog.set(manifest.id, { manifest, runtime: { kind: "builtin", run: b.run, ...(b.after ? { after: b.after } : {}) }, source: "builtin" });
   }
