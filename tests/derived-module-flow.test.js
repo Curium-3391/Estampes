@@ -11,6 +11,7 @@ import { resolveAdminKey, writeApproval } from "../src/modules/admin.js";
 import { generateSigningKey, signBundle } from "../src/modules/packages.js";
 import { validateManifest, ManifestError } from "../src/modules/manifest.js";
 import { createDerivedFlow } from "../src/modules/derived-flow.js";
+import { createDerivedIndex } from "../src/documents/derived-index.js";
 import { createBlankCanvas } from "../src/scene/blank-canvas.js";
 import { applySceneOps } from "../src/scene/scene-ops.js";
 import { ensureImage } from "../src/storage.js";
@@ -25,13 +26,13 @@ const cap = (id, extra = {}) => ({ id, title: id, description: "stand-in " + id,
 const REFRESH_IN = { inputSchema: { type: "object", properties: { sourceRef: { type: "string", maxLength: 200 }, object: { type: "string", maxLength: 64 } }, additionalProperties: false } };
 const manifest = (id, caps) => ({ schema: "estampes.module/2", id, name: "Stand-in", description: "A stand-in producer for tests.", version: "1.0.0", publisher: { name: "Example" },
   license: "MPL-2.0", category: "diagram", coreCompatibility: ">=0.10.0 <1.0.0", runtime: { kind: "declarative", entry: "operations", abi: 1 }, permissions: ["canvas.write"], capabilities: caps });
-const CAPS = () => [cap("make", { derives: { refresh: "remake" } }), cap("remake", REFRESH_IN), cap("announce"), cap("plain")];
+const CAPS = () => [cap("make", { derives: { refresh: "remake" } }), cap("remake", REFRESH_IN), cap("announce"), cap("plain"), cap("ping", { target: "none", needs: [], operations: [] })];
 const sign = (m) => signBundle({ schema: "estampes.package/1", manifest: structuredClone(m), files: {} }, keys.privateKey, "pub1");
 after(() => { delete process.env.ESTAMPES_MODULE_V2; });
 
 // What each capability of the stand-in answers, by module and capability.
 const answers = {};
-async function setup() {
+async function setup({ builtins } = {}) {
   for (const k of Object.keys(answers)) delete answers[k];
   const storage = await mkdtemp(join(tmpdir(), "estampes-derived-"));
   const mods = join(storage, "modules");
@@ -42,7 +43,7 @@ async function setup() {
   const runtime = { async run(mod, capability, input, ctx) { calls.push({ module: mod.manifest.id, capability, input }); return structuredClone(await (answers[mod.manifest.id + "/" + capability] ?? (() => ({ operations: OPS })))(input, ctx)); } };
   const canvases = { ensure: ensureImage, create: async (o) => createBlankCanvas(o), save: async (entry, h) => { saves.push(h); } };
   process.env.ESTAMPES_MODULE_V2 = "on";
-  const h = await createModuleHost({ storageDir: storage, coreVersion: "0.10.0", canvases, adminKey: key, extraRuntimes: { declarative: runtime } });
+  const h = await createModuleHost({ storageDir: storage, coreVersion: "0.10.0", canvases, adminKey: key, extraRuntimes: { declarative: runtime }, ...(builtins ? { builtins } : {}) });
   const install = async (id, m = manifest(id, CAPS())) => {
     await writeFile(join(mods, "inbox", id + ".estpkg.json"), JSON.stringify(sign(m)));
     for (const action of ["install", "enable"]) {
@@ -51,7 +52,7 @@ async function setup() {
       await h.lifecycle.commit(plan.planId, { consent: plan.consent });
     }
   };
-  const flow = createDerivedFlow({ router: h.router, registry: h.registry, canvases });
+  const flow = createDerivedFlow({ router: h.router, registry: h.registry, canvases, index: h.derivedIndex });
   return { h, install, calls, saves, flow, canvases };
 }
 const MAKER = "org.example.maker", OTHER = "org.example.other";
@@ -242,4 +243,65 @@ test("a refresh that was cut off (the binding was left recomputing) is reported 
   const [row] = (await s.flow.list(canvas.imageId)).bindings;
   assert.equal(row.state, "error");
   assert.match(row.reason, /interrupted/);
+});
+
+test("a broadcast with no document reaches every document that holds that module's bindings, through the core's index", async () => {
+  const s = await setup();
+  await s.install(MAKER); await s.install(OTHER);
+  const [a, b, c] = [await createBlankCanvas({}), await createBlankCanvas({}), await createBlankCanvas({})];
+  answers[MAKER + "/make"] = make(1, "ref-1"); await run(s, MAKER, "make", a.imageId); await run(s, MAKER, "make", b.imageId);
+  answers[OTHER + "/make"] = make(1, "ref-1"); await run(s, OTHER, "make", c.imageId);
+  assert.deepEqual(s.h.derivedIndex.list(MAKER).sort(), [a.imageId, b.imageId].sort());
+  answers[MAKER + "/ping"] = announce("ref-1");
+  const out = await run(s, MAKER, "ping");
+  assert.equal(out.derived.staledElsewhere, 2);
+  assert.deepEqual([a, b, c].map((x) => bindingsOf(x)[0].state), ["stale", "stale", "fresh"]);
+  // Only the module's own: another module's ping touches none of them.
+  answers[OTHER + "/ping"] = announce();
+  assert.equal((await run(s, OTHER, "ping")).derived.staledElsewhere, 1);
+  assert.equal(bindingsOf(c)[0].state, "stale");
+  // The index is kept in the storage folder and read again by a new host.
+  await s.h.derivedIndex.flush();
+  const again = createDerivedIndex({ file: join(s.h.dir, "derived-index.json") }); await again.load();
+  assert.deepEqual(again.list(MAKER).sort(), [a.imageId, b.imageId].sort());
+});
+
+test("a document with no live binding of a module is dropped from the index; opening one with bindings adds it back", async () => {
+  const s = await setup();
+  await s.install(MAKER);
+  const a = await createBlankCanvas({});
+  answers[MAKER + "/make"] = make(1, "ref-1");
+  await run(s, MAKER, "make", a.imageId);
+  const b0 = bindingsOf(a)[0];
+  await s.flow.update({ canvas: a.imageId, action: "detach", binding: b0.id, expectedBindingHash: (await s.flow.list(a.imageId)).bindings[0].bindingHash });
+  answers[MAKER + "/ping"] = announce();
+  await run(s, MAKER, "ping");
+  assert.deepEqual(s.h.derivedIndex.list(MAKER), [], "nothing left to reach");
+  // A new binding is registered again, and listing a document re-adds what an empty index lost.
+  await run(s, MAKER, "make", a.imageId);
+  s.h.derivedIndex.remove(MAKER, a.imageId);
+  await s.flow.list(a.imageId);
+  assert.deepEqual(s.h.derivedIndex.list(MAKER), [a.imageId]);
+});
+
+test("a built-in module may use module/2 and goes through the same derived path; a package may not name the builtin runtime", async () => {
+  const BUILTIN = "org.example.inbuilt";
+  const caps = CAPS().map(({ operations, ...c }) => c);
+  const m = { ...manifest(BUILTIN, caps), runtime: { kind: "builtin", entry: "inbuilt", abi: 1 } };
+  const builtin = { manifest: m, run: async (capability, params) => (answers[BUILTIN + "/" + capability] ?? (() => ({})))(params) };
+  const s = await setup({ builtins: [builtin] });
+  assert.equal(s.h.registry.get(BUILTIN).manifest.v2.abi, 1);
+  assert.equal(s.h.registry.get(BUILTIN).manifest.v2.derives.make, "remake");
+  const plan = await s.h.lifecycle.prepare("enable", BUILTIN, {});
+  await s.h.lifecycle.commit(plan.planId, { consent: plan.consent });
+  const canvas = await createBlankCanvas({});
+  answers[BUILTIN + "/make"] = make(1, "ref-1", 1);
+  assert.equal((await run(s, BUILTIN, "make", canvas.imageId)).derived.registered.length, 1);
+  answers[BUILTIN + "/announce"] = announce();
+  await run(s, BUILTIN, "announce", canvas.imageId);
+  answers[BUILTIN + "/remake"] = remake(4, 2);
+  assert.equal((await s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" })).result.refreshed.length, 1);
+  assert.deepEqual(bindingsOf(canvas)[0].source.sourceRevision, 2);
+  // Only the server's own list may do this; a package, or any other caller, may not.
+  assert.throws(() => validateManifest(m, { v2: true }), (e) => e instanceof ManifestError && /built-in modules use/.test(e.message));
 });

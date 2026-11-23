@@ -223,7 +223,7 @@ export function registerModuleTools(server, deps) {
   });
 
   // Derived objects (UVA 5B-2b-2): the objects a module made from a source that can change, and what to do when it does.
-  const derivedFlow = createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases });
+  const derivedFlow = createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases, index: host.derivedIndex });
   const derivedText = (r) => r.total + " derived object" + (r.total === 1 ? "" : "s") + (r.total ? " (" + Object.entries(r.counts ?? {}).map(([k, v]) => v + " " + k).join(", ") + ")" : "") + (r.omitted ? "; " + r.omitted + " more not listed" : "");
   server.registerTool("get_derived_bindings", {
     title: "List derived objects",

@@ -220,7 +220,8 @@ export function abiChange(was, now) {
 export class ManifestError extends Error {}
 
 // Returns the parsed manifest or throws a ManifestError naming the field.
-export function validateManifest(raw, { coreVersion, v2 = false } = {}) {
+// `builtin`: the caller is the server's own list of built-in modules, the only place a v2 manifest may name the builtin runtime.
+export function validateManifest(raw, { coreVersion, v2 = false, builtin = false } = {}) {
   const isV2 = raw?.schema === MODULE_SCHEMA_V2;
   if (isV2 && !v2) throw new ManifestError("manifest.schema: " + MODULE_SCHEMA_V2 + " is not enabled on this server yet; use " + MODULE_SCHEMA);
   const parsed = (isV2 ? ManifestSchemaV2 : ManifestSchema).safeParse(raw);
@@ -232,7 +233,7 @@ export function validateManifest(raw, { coreVersion, v2 = false } = {}) {
   if (isV2) {
     if (original.runtime.abi > SUPPORTED_ABI) throw new ManifestError("manifest.runtime.abi: ABI " + original.runtime.abi + " is newer than this server supports (" + SUPPORTED_ABI + ")");
     if (original.runtime.kind === "wasm") throw new ManifestError("manifest.runtime.kind: the wasm runtime is not available for " + MODULE_SCHEMA_V2 + " yet");
-    if (original.runtime.kind === "builtin") throw new ManifestError("manifest.runtime.kind: built-in modules use " + MODULE_SCHEMA);
+    if (original.runtime.kind === "builtin" && !builtin) throw new ManifestError("manifest.runtime.kind: built-in modules use " + MODULE_SCHEMA);
   }
   const m = isV2 ? v1View(original) : original;
   try { parseRange(m.coreCompatibility); } catch (error) { throw new ManifestError("manifest.coreCompatibility: " + error.message); }

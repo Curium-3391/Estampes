@@ -6,6 +6,7 @@ import { createAudit } from "./audit.js";
 import { createRegistry } from "./registry.js";
 import { createLifecycle } from "./lifecycle.js";
 import { createRouter } from "./router.js";
+import { createDerivedIndex } from "../documents/derived-index.js";
 import { builtinRuntime } from "./runtimes/builtin.js";
 import { declarativeRuntime } from "./runtimes/declarative.js";
 import { wasmRuntime } from "./runtimes/wasm.js";
@@ -42,6 +43,9 @@ export async function createModuleHost({ storageDir = "", coreVersion, canvases,
   }
   host.packages = packages;
   host.lifecycle = createLifecycle({ registry, audit, admin, actions: packages?.actions ?? {} });
-  host.router = createRouter({ registry, audit, canvases, runtimes, jobs, egress, readSource });
+  const derivedIndex = createDerivedIndex({ file: dir ? join(dir, "derived-index.json") : "" });
+  await derivedIndex.load();
+  host.derivedIndex = derivedIndex;
+  host.router = createRouter({ registry, audit, canvases, runtimes, jobs, egress, readSource, derivedIndex });
   return host;
 }
