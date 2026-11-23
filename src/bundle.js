@@ -18,6 +18,7 @@
 // the bundle. Import checks the format, every hash and size, rejects unsafe
 // paths and oversized content, validates each mark, and never overwrites:
 // canvases that already have different marks get an independent copy.
+import { importBindings } from "./documents/derived-coordinator.js";
 import { cleanAnchorFields } from "./visual/world-anchors.js";
 import { canvasBackground, isSolid } from "./visual/background.js";
 import { createHash } from "node:crypto";
@@ -181,6 +182,8 @@ function cleanSet(raw, where, warnings) {
     rejections: Array.isArray(raw.rejections) ? raw.rejections.filter((r) => r && typeof r.kind === "string" && r.from).slice(0, 200) : [],
     gestureDecisions: Array.isArray(raw.gestureDecisions) ? raw.gestureDecisions.filter((d) => d && Array.isArray(d.memberIds) && typeof d.verdict === "string").slice(0, 100) : [],
     objects: Array.isArray(raw.objects) ? raw.objects.slice(0, 500) : undefined,
+    // Derived bindings (UVA 5B-3b). Kept raw here; they are checked against the objects when applied.
+    derived: Array.isArray(raw.derived) ? raw.derived.slice(0, 100) : undefined,
     sceneRevision: Number.isInteger(raw.sceneRevision) ? raw.sceneRevision : undefined, objectSeq: Number.isInteger(raw.objectSeq) ? raw.objectSeq : undefined, derivedFrom: raw.derivedFrom && typeof raw.derivedFrom === "object" ? raw.derivedFrom : undefined, unsupported,
   };
 }
@@ -349,6 +352,12 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
     const data = { imageId: image, marks: def.marks, layers: def.layers, rejections: def.rejections, gestureDecisions: def.gestureDecisions,
       ...(def.objects !== undefined ? { objects: def.objects, sceneRevision: def.sceneRevision, objectSeq: def.objectSeq } : {}),
       ...(def.background ? { background: def.background } : {}), links: {}, derivedFrom: def.derivedFrom };
+    if (def.derived?.length) {
+      const got = importBindings(def.derived, new Set((def.objects ?? []).map((o) => o?.id)));
+      if (got.bindings.length) data.derived = got.bindings;
+      if (got.dropped.length) warnings.push("Set " + key + ": " + got.dropped.length + " derived binding(s) were not imported (" + got.dropped.slice(0, 3).map((d) => d.id + ": " + d.why).join("; ") + ")");
+      if (got.bindings.length) warnings.push("Set " + key + ": " + got.bindings.length + " derived binding(s) came in as unresolved; reattach them once their source exists here.");
+    }
     let target;
     if (how === "restored") { restoreCanvas(base, data); target = base; }
     else if (how === "reused") target = base;

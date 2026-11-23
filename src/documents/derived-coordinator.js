@@ -91,6 +91,30 @@ const PLACE = { documentId: "doc:00000000-0000-4000-8000-000000000000", sceneId:
 const withDoc = (b) => ({ ...b, target: { ...PLACE, id: b.target.id } });
 const stripDoc = (b) => ({ ...b, target: { id: b.target.id } });
 
+// Bindings that arrive from outside (a bundle). Each one is checked like a
+// local binding, must name an object that arrives with it, and comes in as
+// `unresolved`: the module's `sourceRef` points at a source (a notebook, a
+// file...) that may not exist here under that name, and only the module can
+// say. A person or the model reattaches it, and the next refresh then reads
+// the real source. Returns { bindings, dropped } and never throws.
+export function importBindings(list, objectIds) {
+  const bindings = [], dropped = [], seen = new Set();
+  for (const raw of (Array.isArray(list) ? list : []).slice(0, MAX_DERIVED_PER_CANVAS)) {
+    const id = typeof raw?.id === "string" ? raw.id.slice(0, 80) : "?";
+    try {
+      const objectId = raw?.target?.id;
+      if (!objectIds.has(objectId)) throw new Error("its object is not in the bundle");
+      if (seen.has(id)) throw new Error("duplicate id");
+      const ok = DerivedBindingSchema.parse({ ...raw, target: { ...PLACE, id: objectId } });
+      if (ok.state === "removed") throw new Error("it was already removed");
+      seen.add(id);
+      const { reason: _r, ...rest } = ok;
+      bindings.push(stripDoc({ ...rest, state: "unresolved", reason: "imported from a bundle; the source has to be checked here" }));
+    } catch (error) { dropped.push({ id, why: String(error?.message || error).slice(0, 120) }); }
+  }
+  return { bindings, dropped };
+}
+
 // Recomputes one binding's object. `produce(binding)` writes the object and
 // returns { sourceRevision, sourceRef?, inputsHash? }; when it throws, the
 // binding is left in `error` and the object as the module left it.

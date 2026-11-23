@@ -34,7 +34,7 @@ A canvas (image or Graph) is saved as a record that the UVA store keeps as a doc
 
 - An entry that cannot be read (unknown version, extra fields, wrong shape), or one that is live but names an object that is not on the canvas, is not dropped and does not block the canvas. It stays in the raw record, the canvas is reported as not fully editable, and nothing refreshes it. A later step is responsible for turning a live binding whose object was deleted into `removed`.
 - A copy of a canvas starts with no derived bindings: its objects are ordinary objects, and refreshing the original never touches the copy.
-- Workspace bundles do not carry derived bindings yet (planned with the resolution flow, 5B-3). Importing a bundle gives plain objects.
+- A workspace bundle carries a canvas's bindings in its set file, and an import brings them in as `unresolved` (see below).
 
 ## The coordinator
 
@@ -75,6 +75,10 @@ One visible change: a plot the person edited by hand is no longer redrawn by an 
 ## Overwriting a person's edit
 
 `overwrite` replaces an object the person edited with what the module writes now, so it cannot be done blind. `preview` (for a stale, conflict or error binding) asks the module for what it would write, without applying or saving anything, and returns that (`wouldWrite`), the object as it is (`current`), whether the person edited it, and a one-time `previewToken`. `overwrite` must carry that token. The token is kept in the server's memory for 10 minutes, belongs to one binding as it was read (its `bindingHash`) and to the object's revision, and is spent by the first attempt, so any change after the preview, a restart, or a second try needs a new preview. What it proves is that a preview was made for this state; it does not prove who asked, and what is written is what the module produces when the overwrite runs. A preview may make the module recompute its own source (the calculator recomputes a stale cell); it never changes the document. The widget's buttons come later and will tighten this further.
+
+## Bundles
+
+Export writes each set's bindings next to its objects. Import checks each one like a local binding and keeps it only if the object it names arrives in the same set; others, repeats and malformed entries are left out and named in the import warnings. Every kept binding comes in as `unresolved`, whatever its state was: the module's `sourceRef` names a source (a notebook, a file) that is usually not here under that name, and the core cannot tell, so only the module can. `reattach` moves it to `stale`, and the next refresh reads the real source. Until then nothing refreshes it and the object is an ordinary one. Bindings of a canvas that an import reuses (same content already here) are not touched. A bundle with bindings is not readable as bindings by an older build, which ignores the extra field and gives plain objects. Tested in process (round trip, restart, malformed entries); real ChatGPT/Claude not verified.
 
 ## Compatibility and downgrades
 
