@@ -223,7 +223,7 @@ export function registerModuleTools(server, deps) {
   });
 
   // Derived objects (UVA 5B-2b-2): the objects a module made from a source that can change, and what to do when it does.
-  const derivedFlow = createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases, index: host.derivedIndex });
+  const derivedFlow = createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases, index: host.derivedIndex, state: host.derivedState });
   const derivedText = (r) => r.total + " derived object" + (r.total === 1 ? "" : "s") + (r.total ? " (" + Object.entries(r.counts ?? {}).map(([k, v]) => v + " " + k).join(", ") + ")" : "") + (r.omitted ? "; " + r.omitted + " more not listed" : "");
   server.registerTool("get_derived_bindings", {
     title: "List derived objects",
@@ -238,18 +238,19 @@ export function registerModuleTools(server, deps) {
   });
   server.registerTool("update_derived", {
     title: "Refresh or resolve derived objects",
-    description: "Act on derived objects (see get_derived_bindings). refresh-stale: refresh every stale object, at most 20 per call (the rest are reported as remaining); an object the person edited is never overwritten, it becomes a conflict. On one binding: refresh (stale or error), overwrite (conflict: replace the person's edits with the latest result; only when the person asked for it), fork (keep the object as it is and stop updating it; also for stale or error), detach (stop updating it; the object stays), reattach (point a removed or unresolved binding at another object, give target). Quote the binding's bindingHash from get_derived_bindings; an old hash is refused. Do not overwrite or detach on your own initiative.",
+    description: "Act on derived objects (see get_derived_bindings). refresh-stale: refresh every stale object, at most 20 per call (the rest are reported as remaining); an object the person edited is never overwritten, it becomes a conflict. On one binding: refresh (stale or error), preview (stale, conflict or error: shows what the module would write and the object as it is now, changes nothing, and returns a one-time previewToken; show it to the person), overwrite (conflict: replace the person's edits with the latest result; needs the previewToken of a preview made just before, and only when the person asked for it), fork (keep the object as it is and stop updating it; also for stale or error), detach (stop updating it; the object stays), reattach (point a removed or unresolved binding at another object, give target). Quote the binding's bindingHash from get_derived_bindings; an old hash is refused. Do not overwrite or detach on your own initiative.",
     inputSchema: z.object({
       canvas: ImageIdSchema.describe("imageId of the document"),
-      action: z.enum(["refresh-stale", ...DERIVED_ACTIONS]),
+      action: z.enum(["refresh-stale", "preview", ...DERIVED_ACTIONS]),
       binding: BindingIdSchema.optional().describe("the binding id; not needed for refresh-stale"),
       expectedBindingHash: z.string().regex(/^[0-9a-f]{64}$/).optional().describe("bindingHash from get_derived_bindings"),
       target: z.string().regex(/^o\d{1,6}$/).optional().describe("reattach only: the object id to attach to"),
+      previewToken: z.string().regex(/^[0-9a-f]{32}$/).optional().describe("overwrite only: the token from a preview of this binding"),
     }).strict(),
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
-  }, async ({ canvas, action, binding, expectedBindingHash, target }) => {
+  }, async ({ canvas, action, binding, expectedBindingHash, target, previewToken }) => {
     try {
-      const r = await derivedFlow.update({ canvas, action, binding, expectedBindingHash, target });
+      const r = await derivedFlow.update({ canvas, action, binding, expectedBindingHash, target, previewToken });
       return { content: [{ type: "text", text: action + ": " + JSON.stringify(r.result) + ". " + derivedText(r) + ". " + JSON.stringify(r.bindings) }], structuredContent: { kind: "estampes.derived_update", ...r } };
     } catch (error) { return fail(error); }
   });

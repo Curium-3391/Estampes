@@ -69,7 +69,7 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
   const DEFAULT_JOB_MS = 10 * 60 * 1000;
   return {
     jobs,
-    // `internal` is for the core's own refresh of a derived object: { refreshObject }. It is never reachable from a tool.
+    // `internal` is for the core's own refresh of a derived object: { refreshObject, dryRun? } (a dry run reports what would be written and applies nothing). It is never reachable from a tool.
     async execute({ module: moduleId, capability: capId, params = {}, canvas: imageId, newCanvas, expectedRevision, visibility = "public", layer, internal }) {
       const started = Date.now();
       const mod = registry.get(moduleId);
@@ -166,6 +166,12 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           if (wantsDerived || wantsBroadcast) throw new ModuleError("a refresh may not create derived objects or broadcast", "output");
           const stray = output.operations.find((op) => !(op?.op === "object.update" && op.id === internal.refreshObject));
           if (stray) throw new ModuleError("a refresh may only update " + internal.refreshObject, "output");
+        }
+        // A preview: the module has said what it would write; nothing is applied, saved or linked.
+        if (internal?.dryRun === true) {
+          if (internal.refreshObject === undefined) throw new ModuleError("a preview is only for a refresh", "invalid");
+          audit.record({ kind: "run.preview", module: manifest.id, capability: capId, canvas: entry?.imageId, ms: Date.now() - started });
+          return { module: manifest, capability: cap, entry, createdCanvas, scene: { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen }, summary: output.summary, data: output.data, preview: { operations: output.operations }, ms: Date.now() - started };
         }
         // A v2 module may not change or delete what the user has edited since. The core's own refresh of a derived object is exempt: the coordinator has already decided whether that object may be rewritten (it pauses on an edit, and the person's overwrite lifts it).
         if (manifest.v2 && entry && internal?.refreshObject === undefined) {
