@@ -170,7 +170,7 @@
     },
     {
       "path": "src/modules/index.js",
-      "sha256": "09413fa4ca0b1775dbcb63ccaf98c6cdec9a8877c475bfa5572f8a48674603cc"
+      "sha256": "c865e07f0cdb23396d8e3d3afb0654efee239d474e486cc7e2fee8a491e1e740"
     },
     {
       "path": "src/modules/jobs.js",
@@ -190,7 +190,7 @@
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "06d1616cc3f2a2bdd3c7374581879f9cbf3cfefdd4b47d5a62b6824d6bc4b041"
+      "sha256": "fc30bc8c42d322f32a62f2739f76a7ad35fd82bc5e8cea5863c70f511436071f"
     },
     {
       "path": "src/modules/packages.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "ac88ac77be60daed0951581b52fa12213dc869c68937fe233b4f7968407b6ea5"
+      "sha256": "c1e40a5da1419d1244e7fa4afdb01e9a94519101030a58f62112e04e83d60f06"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -638,6 +638,16 @@
       "files": [
         "src/builtin-modules/cas/index.js",
         "src/modules/manifest.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose preview plus one-time token for overwriting a person's edit by decision card on 2026-11-24 (\u300cA \u9810\u89bd\u52a0\u6191\u8b49(\u5efa\u8b70)\u300d), in the 5B thread",
+      "reason": "5B-3a: a preview (dry run) of a derived refresh and a one-time token that overwrite must carry; the derived flow state lives on the host",
+      "files": [
+        "src/modules/index.js",
+        "src/modules/mcp-tools.js",
+        "src/modules/router.js"
       ]
     }
   ]

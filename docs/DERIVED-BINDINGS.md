@@ -72,6 +72,10 @@ The calculator (`org.estampes.cas`) is a built-in `estampes.module/2` module and
 
 One visible change: a plot the person edited by hand is no longer redrawn by an automatic refresh. The refresh reports it as failed with the reason, the hand edit stays, and the plot's link does not claim to be fresh (before this, the edit was silently lost). The `update_derived` tool shows such a plot as a conflict. Choosing overwrite, fork or detach from the widget comes with 5B-3.
 
+## Overwriting a person's edit
+
+`overwrite` replaces an object the person edited with what the module writes now, so it cannot be done blind. `preview` (for a stale, conflict or error binding) asks the module for what it would write, without applying or saving anything, and returns that (`wouldWrite`), the object as it is (`current`), whether the person edited it, and a one-time `previewToken`. `overwrite` must carry that token. The token is kept in the server's memory for 10 minutes, belongs to one binding as it was read (its `bindingHash`) and to the object's revision, and is spent by the first attempt, so any change after the preview, a restart, or a second try needs a new preview. What it proves is that a preview was made for this state; it does not prove who asked, and what is written is what the module produces when the overwrite runs. A preview may make the module recompute its own source (the calculator recomputes a stale cell); it never changes the document. The widget's buttons come later and will tighten this further.
+
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.

@@ -175,7 +175,11 @@ test("a refresh may only update its own object and may not make derived objects 
     // Back to a good state for the next case.
     answers[MAKER + "/remake"] = remake(1, 2 + Object.keys(cases).indexOf(name));
     const list = await s.flow.list(canvas.imageId);
-    const act = async (action) => { const l = await s.flow.list(canvas.imageId); await s.flow.update({ canvas: canvas.imageId, action, binding: l.bindings[0].id, expectedBindingHash: l.bindings[0].bindingHash }); };
+    const act = async (action) => {
+      const l = await s.flow.list(canvas.imageId), b = l.bindings[0];
+      const previewToken = action === "overwrite" ? (await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: b.id })).result.previewToken : undefined;
+      await s.flow.update({ canvas: canvas.imageId, action, binding: b.id, expectedBindingHash: b.bindingHash, previewToken });
+    };
     await act("refresh");
     // An object the module changed without reporting a revision no longer matches what was applied: that is a conflict, and a person resolves it.
     if (bindingsOf(canvas)[0].state === "conflict") await act("overwrite");
@@ -200,9 +204,11 @@ test("an object the person edited is not rewritten; overwrite is the person's ch
   assert.deepEqual(canvas.objects.get(id).props.xRange, [-7, 7]);
   let [row] = (await s.flow.list(canvas.imageId)).bindings;
   assert.equal(row.state, "conflict");
-  await assert.rejects(s.flow.update({ canvas: canvas.imageId, action: "overwrite", binding: row.id, expectedBindingHash: "0".repeat(64) }), { code: "STALE_BINDING" });
+  const pv = await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: row.id });
+  await assert.rejects(s.flow.update({ canvas: canvas.imageId, action: "overwrite", binding: row.id, expectedBindingHash: "0".repeat(64), previewToken: pv.result.previewToken }), { code: "STALE_BINDING" });
+  const pv2 = await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: row.id });
   await assert.rejects(s.flow.update({ canvas: canvas.imageId, action: "refresh", binding: row.id, expectedBindingHash: row.bindingHash }), { code: "ILLEGAL_ACTION" });
-  const done = await s.flow.update({ canvas: canvas.imageId, action: "overwrite", binding: row.id, expectedBindingHash: row.bindingHash });
+  const done = await s.flow.update({ canvas: canvas.imageId, action: "overwrite", binding: row.id, expectedBindingHash: row.bindingHash, previewToken: pv2.result.previewToken });
   assert.equal(done.result.outcome, "refreshed");
   assert.deepEqual(canvas.objects.get(id).props.xRange, [-5, 5]);
   // The flag that a person once edited it stays on the object, but it is not an edit made after the module's last write.
@@ -304,4 +310,62 @@ test("a built-in module may use module/2 and goes through the same derived path;
   assert.deepEqual(bindingsOf(canvas)[0].source.sourceRevision, 2);
   // Only the server's own list may do this; a package, or any other caller, may not.
   assert.throws(() => validateManifest(m, { v2: true }), (e) => e instanceof ManifestError && /built-in modules use/.test(e.message));
+});
+
+test("overwrite needs a preview of the binding as it is now; a preview changes nothing and a token works once", async () => {
+  const s = await setup();
+  await s.install(MAKER);
+  const canvas = await createBlankCanvas({});
+  answers[MAKER + "/make"] = make(1);
+  const id = (await run(s, MAKER, "make", canvas.imageId)).scene.created[0];
+  applySceneOps(canvas, [{ op: "object.update", id, props: range(7) }], { author: "user" });
+  answers[MAKER + "/announce"] = announce();
+  await run(s, MAKER, "announce", canvas.imageId);
+  answers[MAKER + "/remake"] = remake(5, 2);
+  await s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });           // becomes a conflict
+  const f = async () => (await s.flow.list(canvas.imageId)).bindings[0];
+  const args = async (extra = {}) => { const row = await f(); return { canvas: canvas.imageId, action: "overwrite", binding: row.id, expectedBindingHash: row.bindingHash, ...extra }; };
+
+  // No token, a made-up token: refused, and nothing changes.
+  await assert.rejects(s.flow.update(await args()), { code: "preview-required" });
+  await assert.rejects(s.flow.update(await args({ previewToken: "a".repeat(32) })), { code: "preview-required" });
+  assert.deepEqual(canvas.objects.get(id).props.xRange, [-7, 7]);
+
+  // A preview shows what would be written and what is there, and changes nothing.
+  const revision = canvas.objects.get(id).revision, savesBefore = s.saves.length;
+  const pv = await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id });
+  assert.match(pv.result.wouldWrite, /-5/);
+  assert.match(pv.result.current, /-7/);
+  assert.equal(pv.result.editedByPerson, true);
+  assert.equal(canvas.objects.get(id).revision, revision, "the object is untouched");
+  assert.equal(s.saves.length, savesBefore, "nothing was saved");
+  assert.equal((await f()).state, "conflict");
+
+  // The token works for the same binding and object once; the object changing after the preview voids it.
+  applySceneOps(canvas, [{ op: "object.update", id, props: range(8) }], { author: "user" });
+  await assert.rejects(s.flow.update(await args({ previewToken: pv.result.previewToken })), { code: "preview-required" });
+  const pv2 = await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id });
+  const ok = await s.flow.update(await args({ previewToken: pv2.result.previewToken }));
+  assert.equal(ok.result.outcome, "refreshed");
+  assert.deepEqual(canvas.objects.get(id).props.xRange, [-5, 5]);
+  await assert.rejects(s.flow.update(await args({ previewToken: pv2.result.previewToken })), { code: "preview-required" });
+
+  // A token is spent by the first attempt, even a refused one; and a preview of an earlier state of the binding does not carry over.
+  applySceneOps(canvas, [{ op: "object.update", id, props: range(2) }], { author: "user" });
+  await run(s, MAKER, "announce", canvas.imageId);
+  const stalePv = await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id });
+  assert.equal((await f()).state, "stale");
+  await s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });             // the binding is now a conflict, with the object as the person left it
+  assert.equal((await f()).state, "conflict");
+  const rev = canvas.objects.get(id).revision;
+  await assert.rejects(s.flow.update(await args({ previewToken: stalePv.result.previewToken })), { code: "preview-required" });
+  assert.equal(canvas.objects.get(id).revision, rev);
+  const spent = await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id });
+  await assert.rejects(s.flow.update({ ...(await args({ previewToken: spent.result.previewToken })), expectedBindingHash: "0".repeat(64) }), { code: "STALE_BINDING" });
+  await assert.rejects(s.flow.update(await args({ previewToken: spent.result.previewToken })), { code: "preview-required" });
+
+  // A preview is only for what can be refreshed.
+  const done = await s.flow.update(await args({ previewToken: (await s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id })).result.previewToken }));
+  assert.equal(done.result.outcome, "refreshed");
+  await assert.rejects(s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id }), /nothing to preview/);
 });

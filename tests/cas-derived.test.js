@@ -49,5 +49,20 @@ test("a calculator plot is recorded as derived, goes stale when its cell changes
     const kept = (await s.call("get_visual_state", { imageId })).structuredContent.objects.find((o) => o.id === objectId);
     assert.equal(kept.props.expression, "99*x");
     assert.equal((await list()).bindings[0].state, "conflict");
+
+    // Overwriting that edit needs a preview first; the preview changes nothing.
+    const row = (await list()).bindings[0];
+    const blind = await s.call("update_derived", { canvas: imageId, action: "overwrite", binding: row.id, expectedBindingHash: row.bindingHash });
+    assert.equal(blind.isError, true, "no overwrite without a preview");
+    const pv = await s.call("update_derived", { canvas: imageId, action: "preview", binding: row.id });
+    assert.ok(!pv.isError, JSON.stringify(pv.content));
+    const shown = pv.structuredContent.result;
+    assert.match(shown.wouldWrite, /3\*x\^2|6\*x/);
+    assert.match(shown.current, /99\*x/);
+    assert.equal((await s.call("get_visual_state", { imageId })).structuredContent.objects.find((o) => o.id === objectId).props.expression, "99*x");
+    const over = await s.call("update_derived", { canvas: imageId, action: "overwrite", binding: row.id, expectedBindingHash: row.bindingHash, previewToken: shown.previewToken });
+    assert.ok(!over.isError, JSON.stringify(over.content));
+    assert.equal((await s.call("get_visual_state", { imageId })).structuredContent.objects.find((o) => o.id === objectId).props.expression, "6*x");
+    assert.equal((await list()).bindings[0].state, "fresh");
   } finally { await s.close(); }
 });
