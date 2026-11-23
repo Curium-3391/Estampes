@@ -186,11 +186,11 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "086b5e66bad4447bab5bc43d71a9f9e19709fad04151ce5adcacea0ee1f701ee"
+      "sha256": "229bbde310dbc727ec7dab482caed6dec4af7e7b5f8ec486f4bbdd5818a95f2b"
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "836675156ca0de942262365b9df1dbba3952ecc14729ee9dd450e2a39ed4d598"
+      "sha256": "f65c69916f64281197f57b975f87ceafdc133a83ac5a154038751373eaeeeeb6"
     },
     {
       "path": "src/modules/packages.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "7fb6bbca21b8a789c5edb5c48111b96418067ab72636e3ad31b538c5b3f7aeba"
+      "sha256": "9013e1481dafdcc8cb9bb67ed1313ad44a59f3a903907e48e8d1962bbddd1806"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -607,6 +607,16 @@
       "files": [
         "src/storage.js",
         "src/workspace.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose the producer contract (v2 manifest derives.refresh, output fields, two tools) by decision card on 2026-11-23 (\u300cA \u6e05\u55ae\u6b04\u4f4d\u52a0\u5169\u500b\u5de5\u5177(\u5efa\u8b70)\u300d), and agreed that modules broadcast source changes, in the 5B thread",
+      "reason": "5B-2b-2: modules declare derives.refresh and may report derived objects and broadcasts",
+      "files": [
+        "src/modules/manifest.js",
+        "src/modules/mcp-tools.js",
+        "src/modules/router.js"
       ]
     }
   ]

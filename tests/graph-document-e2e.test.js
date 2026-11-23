@@ -98,7 +98,7 @@ test("pixel tools refuse a Graph and point to render_canvas; two Graphs stay apa
 // a Graph (gph:) or not. A new tool, or a changed pattern, fails this test until
 // it is classified: a tool that reads pixels must not quietly take a Graph, and
 // a canvas tool must not quietly refuse one.
-const TAKES_GRAPH = ["commands_get_status.documentId", "create_workspace.canvases", "edit_workspace.canvases", "documents_get_changes.documents", "edit_canvas_text.imageId", "edit_scene_object.imageId",
+const TAKES_GRAPH = ["get_derived_bindings.canvas", "update_derived.canvas", "commands_get_status.documentId", "create_workspace.canvases", "edit_workspace.canvases", "documents_get_changes.documents", "edit_canvas_text.imageId", "edit_scene_object.imageId",
   "edit_visual_canvas.imageId", "edit_visual_layers.imageId", "execute_module.canvas", "get_visual_layers.imageId", "get_visual_state.imageId",
   "get_surface_state.imageId", "manage_surface_panels.imageId", "surface_apply.imageId", "surface_cas.imageId", "surface_get_state.imageId",
   "load_visual_canvas.imageId", "present_visual.imageId", "render_canvas.imageId", "review_gesture_group.imageId", "review_visual_finding.imageId",

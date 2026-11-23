@@ -10,6 +10,7 @@ import { capabilityPermissions, missingPermissions } from "./permissions.js";
 import { applySceneOps, renderedObjects, sceneRevision, SceneOpsError, VISIBILITY } from "../scene/scene-ops.js";
 import { localized } from "./manifest.js";
 import { plotContext } from "./plot-context.js";
+import { register, sourceChanged, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
 
 // A string in a v2 module's input that names a document (an image, a Graph
 // or a copy of either) other than the one it was pointed at.
@@ -32,6 +33,13 @@ const OutputSchema = z.object({
   method: z.string().max(120).optional(),
   // Free-form structured result for capabilities with target "none".
   data: z.unknown().optional(),
+  // module/2 only (UVA 5B-2b-2). `derived`: objects this run creates (named by the $ref
+  // of their object.create) that the core should keep up to date from a source;
+  // sourceRef is opaque to the core. `broadcast`: the module says a source of its own
+  // changed, so bindings made from it become stale.
+  derived: z.array(z.object({ object: z.string().regex(/^\$[A-Za-z][A-Za-z0-9_-]{0,31}$/), sourceRef: z.string().min(1).max(200),
+    sourceRevision: z.number().int().positive(), inputsHash: z.string().regex(/^[0-9a-f]{64}$/) }).strict()).max(50).optional(),
+  broadcast: z.array(z.object({ event: z.literal("source-changed"), sourceRef: z.string().min(1).max(200).optional() }).strict()).max(50).optional(),
 }).strict();
 
 // What a module sees of its target canvas: its kind (a Graph document or an
@@ -60,7 +68,8 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
   const DEFAULT_JOB_MS = 10 * 60 * 1000;
   return {
     jobs,
-    async execute({ module: moduleId, capability: capId, params = {}, canvas: imageId, newCanvas, expectedRevision, visibility = "public", layer }) {
+    // `internal` is for the core's own refresh of a derived object: { refreshObject }. It is never reachable from a tool.
+    async execute({ module: moduleId, capability: capId, params = {}, canvas: imageId, newCanvas, expectedRevision, visibility = "public", layer, internal }) {
       const started = Date.now();
       const mod = registry.get(moduleId);
       if (!mod) {
@@ -141,8 +150,24 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         }
 
         if (stop.cancelled) throw new ModuleError("stopped before its result was applied", "timeout");
-        // A v2 module may not change or delete what the user has edited since (the guard's interface; resolution flow comes with CAS bindings).
-        if (manifest.v2 && entry) {
+        // Derived objects and broadcasts: module/2 only, declared in the manifest, checked before anything is applied.
+        const wantsDerived = output.derived?.length > 0, wantsBroadcast = output.broadcast?.length > 0;
+        if ((wantsDerived || wantsBroadcast) && !manifest.v2) throw new ModuleError(capId + " returned derived or broadcast, which only module/2 modules may", "output");
+        if (wantsDerived && !manifest.v2.derives?.[capId]) throw new ModuleError(capId + " returned derived objects but does not declare derives in its manifest", "output");
+        if ((wantsDerived || wantsBroadcast) && !entry) throw new ModuleError(capId + " returned derived or broadcast but has no document", "output");
+        if (wantsDerived) {
+          const made = new Set(output.operations.filter((op) => op?.op === "object.create" && typeof op.ref === "string").map((op) => "$" + op.ref));
+          const named = output.derived.map((d) => d.object);
+          if (named.some((n) => !made.has(n)) || new Set(named).size !== named.length) throw new ModuleError("derived.object must name, once each, an object this run creates with a ref", "output");
+          if (bindingsOf(entry).length + named.length > MAX_DERIVED_PER_CANVAS) throw new ModuleError("a document holds at most " + MAX_DERIVED_PER_CANVAS + " derived objects", "output");
+        }
+        if (internal?.refreshObject !== undefined) {
+          if (wantsDerived || wantsBroadcast) throw new ModuleError("a refresh may not create derived objects or broadcast", "output");
+          const stray = output.operations.find((op) => !(op?.op === "object.update" && op.id === internal.refreshObject));
+          if (stray) throw new ModuleError("a refresh may only update " + internal.refreshObject, "output");
+        }
+        // A v2 module may not change or delete what the user has edited since. The core's own refresh of a derived object is exempt: the coordinator has already decided whether that object may be rewritten (it pauses on an edit, and the person's overwrite lifts it).
+        if (manifest.v2 && entry && internal?.refreshObject === undefined) {
           const edited = new Set(renderedObjects(entry).filter((r) => r.object.provenance?.editedByUser).map((r) => r.object.id));
           const hit = output.operations.find((op) => op && (op.op === "object.update" || op.op === "object.delete") && edited.has(op.id));
           if (hit) throw new ModuleError(capId + " tried to " + hit.op.split(".")[1] + " " + hit.id + ", which the user edited; leave it, or create a separate object", "user-edited");
@@ -160,6 +185,18 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
             if (error instanceof SceneOpsError) throw new ModuleError("the module's result was refused: " + error.message, error.code === "conflict" ? "conflict" : "output");
             throw error;
           }
+        }
+        // Registered together with the objects, saved together with them.
+        let derivedResult = null;
+        if (entry && (wantsDerived || wantsBroadcast)) {
+          const registered = [], staled = new Set();
+          for (const d of output.derived ?? []) {
+            registered.push(register(entry, { source: { module: manifest.id, capability: capId, sourceRef: d.sourceRef, sourceRevision: d.sourceRevision, inputsHash: d.inputsHash }, objectId: scene.refs[d.object.slice(1)] }).id);
+          }
+          for (const e of output.broadcast ?? []) for (const id of sourceChanged(entry, { module: manifest.id, ...(e.sourceRef !== undefined ? { sourceRef: e.sourceRef } : {}) })) staled.add(id);
+          derivedResult = { registered, staled: [...staled] };
+        }
+        if (output.operations.length || derivedResult?.registered.length || derivedResult?.staled.length) {
           await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
             note: manifest.id + "/" + capId });
         }
@@ -170,7 +207,7 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         const ms = Date.now() - started;
         audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,
           created: scene.created.length, updated: scene.updated.length, deleted: scene.deleted.length, ms, ...(jobId ? { job: jobId } : {}) });
-        return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ms };
+        return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ...(derivedResult ? { derived: derivedResult } : {}), ms };
       };
 
       if (!cap.async) return work(true, null);

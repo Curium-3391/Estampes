@@ -176,6 +176,10 @@ export const ManifestSchema = z.object({
 const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend({
   target: z.enum(TARGETS_V2),
   needs: z.array(z.enum(PERMISSION_NAMES)).max(12),
+  // UVA 5B-2b-2: the objects this capability creates may be recorded as derived
+  // bindings, and `refresh` names the capability of the same module that
+  // recomputes one of them (input: { sourceRef, object }).
+  derives: z.object({ refresh: z.string().regex(CAPABILITY_ID) }).strict().optional(),
 });
 export const ManifestSchemaV2 = ManifestSchema.omit({ schema: true, runtime: true, capabilities: true }).extend({
   schema: z.literal(MODULE_SCHEMA_V2),
@@ -201,7 +205,8 @@ const v1View = (m) => ({
 // The package bytes, digest and signature stay those of the original.
 export function runtimeManifest(m) {
   if (m.schema !== MODULE_SCHEMA_V2) return m;
-  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])) } };
+  const derives = Object.fromEntries(m.capabilities.filter((c) => c.derives).map((c) => [c.id, c.derives.refresh]));
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}) } };
 }
 
 // What changed between two ABI versions of a module, for the Store.
@@ -285,6 +290,18 @@ export function validateManifest(raw, { coreVersion, v2 = false } = {}) {
       throw new ManifestError(where + (c.operations ? ": operations are only for the declarative runtime" : ": the declarative runtime needs operations"));
     }
     if (c.operations && JSON.stringify(c.operations).length > 64 * 1024) throw new ManifestError(where + ".operations: larger than 64 KB");
+  });
+  m.capabilities.forEach((c, i) => {
+    if (!c.derives) return;
+    const where = "manifest.capabilities[" + i + "] (" + c.id + ").derives";
+    const refresh = m.capabilities.find((x) => x.id === c.derives.refresh);
+    if (!refresh) throw new ManifestError(where + ".refresh: no capability " + c.derives.refresh + " in this module");
+    if (refresh.id === c.id) throw new ManifestError(where + ".refresh: the refresh capability must be a different one");
+    if (refresh.derives) throw new ManifestError(where + ".refresh: " + refresh.id + " is a refresh capability and cannot create derived objects itself");
+    if (c.target !== "canvas" || refresh.target !== "canvas") throw new ManifestError(where + ": a capability that derives objects, and its refresh capability, both work on the document (target document)");
+    const rp = refresh.inputSchema?.properties ?? {};
+    if (rp.sourceRef?.type !== "string" || rp.object?.type !== "string") throw new ManifestError(where + ".refresh: " + refresh.id + " must accept the string fields sourceRef and object in its inputSchema");
+    if (c.async || refresh.async) throw new ManifestError(where + ": derived objects are made and refreshed by capabilities that answer at once (not async)");
   });
   const panelIds = new Set();
   (m.panels ?? []).forEach((pn, i) => {
