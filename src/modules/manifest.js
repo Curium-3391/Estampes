@@ -299,7 +299,7 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
     if (!refresh) throw new ManifestError(where + ".refresh: no capability " + c.derives.refresh + " in this module");
     if (refresh.id === c.id) throw new ManifestError(where + ".refresh: the refresh capability must be a different one");
     if (refresh.derives) throw new ManifestError(where + ".refresh: " + refresh.id + " is a refresh capability and cannot create derived objects itself");
-    if (c.target !== "canvas" || refresh.target !== "canvas") throw new ManifestError(where + ": a capability that derives objects, and its refresh capability, both work on the document (target document)");
+    if (!["canvas", "canvas-or-new"].includes(c.target) || refresh.target !== "canvas") throw new ManifestError(where + ": a capability that derives objects, and its refresh capability, both work on the document (target document)");
     const rp = refresh.inputSchema?.properties ?? {};
     if (rp.sourceRef?.type !== "string" || rp.object?.type !== "string") throw new ManifestError(where + ".refresh: " + refresh.id + " must accept the string fields sourceRef and object in its inputSchema");
     if (c.async || refresh.async) throw new ManifestError(where + ": derived objects are made and refreshed by capabilities that answer at once (not async)");

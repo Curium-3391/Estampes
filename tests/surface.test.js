@@ -64,15 +64,15 @@ test("layout: a stored layout is reconciled with the panel list and profiles do 
 
 test("panel descriptors: strict, bound to real capabilities, inert when the kind is unknown", () => {
   const base = clone(casManifest);
-  assert.ok(validateManifest(base, { coreVersion: "0.18.0" }));
-  const bad = (edit, re) => { const m = clone(casManifest); edit(m); assert.throws(() => validateManifest(m, { coreVersion: "0.18.0" }), re); };
+  assert.ok(validateManifest(base, { coreVersion: "0.18.0", v2: true, builtin: true }));
+  const bad = (edit, re) => { const m = clone(casManifest); edit(m); assert.throws(() => validateManifest(m, { coreVersion: "0.18.0", v2: true, builtin: true }), re); };
   bad((m) => { m.panels[0].html = "<script>alert(1)</script>"; }, /panels/);
   bad((m) => { m.panels[0].capabilityBindings = ["format_disk"]; }, /no capability/);
   bad((m) => { m.panels[0].permissions = ["network.request.approved"]; }, /not in the module's permissions|panels/);
   bad((m) => { m.panels.push(clone(m.panels[0])); }, /duplicate/);
   bad((m) => { m.panels[0].schema = "estampes.panel/2"; }, /panels/);
   const odd = clone(casManifest); odd.panels[0].kind = "hologram";
-  assert.equal(validateManifest(odd, { coreVersion: "0.18.0" }).panels[0].kind, "hologram");
+  assert.equal(validateManifest(odd, { coreVersion: "0.18.0", v2: true, builtin: true }).panels[0].kind, "hologram");
 });
 
 // ---- over MCP, with the real server and the real SymPy service -------------

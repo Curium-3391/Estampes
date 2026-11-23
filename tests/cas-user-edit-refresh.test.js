@@ -1,12 +1,13 @@
-// UVA Phase 5B-0: pins what a CAS refresh does today to a plot the person has
-// edited by hand. OD-05 (approved) says a refresh must pause on a user-edited
-// plot; until 5B-2 lands it does not, and this file records that, so that the
-// change in 5B-2 is a visible, deliberate flip of the assertions marked GAP.
+// UVA Phase 5B-0 pinned that a CAS refresh overwrote a plot the person had
+// edited by hand (a gap against OD-05, which says a refresh pauses on a
+// user-edited plot). 5B-2b-3b flipped it: the calculator is a module/2
+// built-in, so the core refuses to rewrite what the person edited and the
+// refresh reports it. Resolving it (overwrite, fork, detach) comes with 5B-3.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { startStack, noPython } from "./helpers/widget-host.js";
 
-test("GAP (OD-05): an automatic refresh overwrites a plot the person edited by hand", { skip: noPython, timeout: 120000 }, async () => {
+test("OD-05: an automatic refresh does not overwrite a plot the person edited by hand", { skip: noPython, timeout: 120000 }, async () => {
   const s = await startStack();
   try {
     await s.enable(["org.estampes.graph", "org.estampes.cas"]);
@@ -32,12 +33,14 @@ test("GAP (OD-05): an automatic refresh overwrites a plot the person edited by h
     const seen = (await s.call("get_visual_state", { imageId })).structuredContent.objects.find((o) => o.id === objectId);
     assert.equal(seen.provenance.editedByUser, true, "and the object says the person edited it");
 
-    // A definition change makes the cell stale and auto-refresh redraws it.
+    // A definition change makes the cell stale and auto-refresh tries to redraw it: the person's edit is not overwritten.
     const auto = await cas("define", { name: "f", params: ["x"], text: "5*x^2" });
-    assert.equal(auto.structuredContent.refresh.failed.length, 0, "GAP: nothing is reported as paused");
-    assert.equal(auto.structuredContent.refresh.updated.length, 1, "GAP: the edited plot was redrawn");
-    assert.equal(casPlot(auto).editable.expression, "10*x", "GAP: the hand edit is gone");
+    assert.equal(auto.structuredContent.refresh.updated.length, 0, "the edited plot was not redrawn");
+    assert.equal(auto.structuredContent.refresh.failed.length, 1, "and the refresh says so");
+    assert.match(auto.structuredContent.refresh.failed[0].reason, /user edited/, "with the reason");
+    const after = (await s.call("get_visual_state", { imageId })).structuredContent.objects.find((o) => o.id === objectId);
+    assert.equal(after.props.expression, "99*x", "the hand edit is still there");
     const book = (await cas("get_notebook", { full: true })).structuredContent.data;
-    assert.equal(book.cells.find((c) => c.cellId === cellId).links[0].status, "fresh", "GAP: the link says fresh, with no sign of a conflict");
+    assert.notEqual(book.cells.find((c) => c.cellId === cellId).links[0].status, "fresh", "the link does not claim to be fresh");
   } finally { await s.close(); }
 });

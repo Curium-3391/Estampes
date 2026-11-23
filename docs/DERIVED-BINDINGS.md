@@ -66,6 +66,12 @@ A module's broadcast also reaches the other documents that hold its bindings. Th
 
 Built-in modules may use a `estampes.module/2` manifest (a package may not name the `builtin` runtime); they go through the same derived path as a package module.
 
+## The calculator
+
+The calculator (`org.estampes.cas`) is a built-in `estampes.module/2` module and uses exactly the contract above; nothing in the core names it. `plot_result` declares `derives.refresh: refresh_plot` and returns the plot it made as `derived` (`sourceRef` is `<notebook>/<cell>`, `sourceRevision` the cell's revision); `calculate` on an existing cell, `define` and `recompute` broadcast the cells whose result changed; `refresh_plot` recomputes a stale cell and redraws only that plot. The notebook's own graph links are still written beside this (the old path keeps working until its readers move, UVA 5B-4).
+
+One visible change: a plot the person edited by hand is no longer redrawn by an automatic refresh. The refresh reports it as failed with the reason, the hand edit stays, and the plot's link does not claim to be fresh (before this, the edit was silently lost). The `update_derived` tool shows such a plot as a conflict. Choosing overwrite, fork or detach from the widget comes with 5B-3.
+
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.

@@ -3,6 +3,7 @@
 // Graph operations; it never evaluates anything itself. Computation, the
 // closed expression parser and all limits live in cas-service/.
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import * as graph from "../graph/index.js";
 import { CasClientError } from "../../cas/client.js";
 import { cellSummary } from "../../cas/notebooks.js";
@@ -56,6 +57,9 @@ async function compute(nb, p) {
 
 const inputOf = (p) => (p.latex !== undefined ? { latex: p.latex } : p.text !== undefined ? { text: p.text } : p.equations ? { equations: p.equations } : {});
 const paramsOf = (p) => { const o = {}; for (const k of ["variable", "variables", "order", "lower", "upper", "point", "direction", "n", "guess", "domain", "mode", "other", "subs"]) if (p[k] !== undefined) o[k] = p[k]; return o; };
+// A source of this module changed: the cells named here are what the core marks stale in every document that holds a plot made from them.
+const sourceRefOf = (nb, cellId) => nb.id + "/" + cellId;
+const changedCells = (nb, ids) => ({ broadcast: [...new Set(ids)].slice(0, 50).map((id) => ({ event: "source-changed", sourceRef: sourceRefOf(nb, id) })) });
 const staleLinks = (cell) => { for (const l of cell.links ?? []) if (l.status === "fresh") l.status = "stale"; };
 
 // What a result depends on besides its own input: the notebook's
@@ -138,7 +142,8 @@ async function calculateOnce(p) {
     if (p.idempotencyKey) { draft.idem = { ...(draft.idem ?? {}), [p.idempotencyKey]: cell.id }; const keys = Object.keys(draft.idem); for (const k of keys.slice(0, Math.max(0, keys.length - 50))) delete draft.idem[k]; }
     return draft;
   });
-  return reply(nb, nb.cells.find((c) => c.id === cellId), replayed);
+  const out = reply(nb, nb.cells.find((c) => c.id === cellId), replayed);
+  return p.cell && !replayed ? { ...out, ...changedCells(nb, [cellId]) } : out;
 }
 
 function reply(nb, cell, replayed) {
@@ -163,17 +168,19 @@ async function define(p) {
     if (free.has(p.name)) throw new Error(p.name + " cannot be defined in terms of itself");
   }
   const nb = p.notebook ? await notebooks.get(p.notebook) : await notebooks.create();
+  let newlyStale = [];
   const out = await notebooks.mutate(nb.id, { expectedRevision: p.expectedRevision }, (d) => {
+    newlyStale = [];
     if (hasBody) {
       if (Object.keys(d.definitions).length >= 64 && !d.definitions[p.name]) throw new Error("at most 64 definitions per notebook");
       d.definitions[p.name] = { params: p.params ?? [], text: body.text, body: body.ast };
     } else if (p.assumptions) {
       if (p.assumptions.length) d.assumptions[p.name] = p.assumptions; else delete d.assumptions[p.name];
     } else { delete d.definitions[p.name]; delete d.assumptions[p.name]; }
-    for (const c of d.cells) if (c.result && !c.stale) { c.stale = true; c.staleReason = "the definition of " + p.name + " changed"; staleLinks(c); }
+    for (const c of d.cells) if (c.result && !c.stale) { c.stale = true; c.staleReason = "the definition of " + p.name + " changed"; staleLinks(c); newlyStale.push(c.id); }
     return d;
   });
-  return { data: notebooks.summary(out), summary: (hasBody ? "defined " + p.name : p.assumptions ? "assumptions for " + p.name : "removed " + p.name) + "; " + out.cells.filter((c) => c.stale).length + " cell(s) are stale" };
+  return { ...changedCells(out, newlyStale), data: notebooks.summary(out), summary: (hasBody ? "defined " + p.name : p.assumptions ? "assumptions for " + p.name : "removed " + p.name) + "; " + out.cells.filter((c) => c.stale).length + " cell(s) are stale" };
 }
 
 async function getNotebook(p) {
@@ -209,7 +216,7 @@ async function recompute(p) {
     done.push(c.id);
   }
   const out = await notebooks.get(nb.id);
-  return { data: notebooks.summary(out), summary: "recomputed " + done.length + " cell(s)" };
+  return { ...changedCells(out, done), data: notebooks.summary(out), summary: "recomputed " + done.length + " cell(s)" };
 }
 
 async function plotResult(p, ctx) {
@@ -230,8 +237,28 @@ async function plotResult(p, ctx) {
   } else {
     built = graph.run("plot_function", { expression: g.expression, domain, label, labelMode: "custom", ...(p.color ? { color: p.color } : {}), ...(p.frame ? { frame: p.frame } : {}) }, ctx);
   }
-  return { operations: built.operations, method: "SymPy result " + cell.result.resultId + " drawn by the Graph renderer", summary: built.summary,
+  // A new plot is named, so the core can record that it was made from this cell; a redraw (object given) makes no new object.
+  const operations = p.object ? built.operations : built.operations.map((op) => (op?.op === "object.create" && op.type === "function-plot" ? { ...op, ref: "plot" } : op));
+  const derived = p.object ? undefined : [{ object: "$plot", sourceRef: sourceRefOf(nb, cell.id), sourceRevision: Math.max(1, cell.revision ?? 1),
+    inputsHash: createHash("sha256").update(JSON.stringify({ result: cell.result.resultId, expression: g.expression, domain })).digest("hex") }];
+  return { operations, ...(derived ? { derived } : {}), method: "SymPy result " + cell.result.resultId + " drawn by the Graph renderer", summary: built.summary,
     data: { notebookId: nb.id, cellId: cell.id, resultId: cell.result.resultId, expression: g.expression, domain, refreshed: !!p.object } };
+}
+
+// Estampes calls this to redraw one derived plot: the cell is recomputed first if it is stale, and only that plot is updated.
+async function refreshPlot(p, ctx) {
+  needBackend();
+  const [notebook, cellId] = String(p.sourceRef).split("/");
+  let nb = await deps.notebooks.get(notebook);
+  let cell = nb.cells.find((c) => c.id === cellId);
+  if (!cell) throw new Error("no cell " + cellId + " in " + notebook);
+  if (cell.stale || cell.error) {
+    await recompute({ notebook, cell: cellId });
+    nb = await deps.notebooks.get(notebook);
+    cell = nb.cells.find((c) => c.id === cellId);
+  }
+  const out = await plotResult({ notebook, cell: cellId, object: p.object }, ctx);
+  return { ...out, data: { ...out.data, sourceRevision: Math.max(1, cell.revision ?? 1) } };
 }
 
 async function setOptions(p) {
@@ -249,6 +276,7 @@ export async function run(capability, params, ctx) {
   if (capability === "get_notebook") return getNotebook(params);
   if (capability === "recompute") return recompute(params);
   if (capability === "plot_result") return plotResult(params, ctx);
+  if (capability === "refresh_plot") return refreshPlot(params, ctx);
   if (capability === "set_options") return setOptions(params);
   throw new Error("unknown capability " + capability);
 }
@@ -257,7 +285,7 @@ export async function run(capability, params, ctx) {
 // link from the result to the object exists only for plots that really
 // landed on the canvas.
 export async function after(capability, params, ctx, { output, scene, entry }) {
-  if (capability !== "plot_result" || !deps.notebooks) return;
+  if ((capability !== "plot_result" && capability !== "refresh_plot") || !deps.notebooks) return;
   const d = output.data;
   const plots = new Set(canvasObjects(entry).filter((o) => o.type === "function-plot").map((o) => o.id));
   const objectId = params.object ?? scene.created.find((id) => plots.has(id));
@@ -265,8 +293,9 @@ export async function after(capability, params, ctx, { output, scene, entry }) {
   const link = (nb) => {
     const cell = nb.cells.find((c) => c.id === d.cellId);
     if (!cell) return nb;
+    const was = (cell.links ?? []).find((l) => l.canvas === entry.imageId && l.object === objectId);
     cell.links = (cell.links ?? []).filter((l) => !(l.canvas === entry.imageId && l.object === objectId));
-    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: d.domain, status: "fresh", at: new Date().toISOString() });
+    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: capability === "refresh_plot" ? (was?.domain ?? d.domain) : d.domain, status: "fresh", at: new Date().toISOString() });
     return nb;
   };
   // The plot is already saved; a link lost to a passing storage error would

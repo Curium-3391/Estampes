@@ -1,5 +1,5 @@
 {
-  "schema": "estampes.module/1",
+  "schema": "estampes.module/2",
   "id": "org.estampes.cas",
   "name": "Scientific CAS",
   "nameI18n": {
@@ -20,7 +20,8 @@
   "coreCompatibility": ">=0.10.0 <1.0.0",
   "runtime": {
     "kind": "builtin",
-    "entry": "cas"
+    "entry": "cas",
+    "abi": 1
   },
   "permissions": [
     "cas.compute",
@@ -39,7 +40,7 @@
         "zh-TW": "計算"
       },
       "target": "none",
-      "permissions": [
+      "needs": [
         "cas.compute"
       ],
       "description": "Run one SymPy operation on an expression (text or LaTeX) and keep it as a cell of a notebook. Returns the exact result (plain text, LaTeX, typed AST), an approximation when numeric, and a status: exact, approximate, complex, conditional, partial (no closed form) or undefined. Never invent a result: only what this returns is verified by SymPy.",
@@ -291,7 +292,7 @@
         "zh-TW": "定義變數或函數"
       },
       "target": "none",
-      "permissions": [
+      "needs": [
         "cas.compute"
       ],
       "description": "Define a variable or function for the whole notebook (f(x) = x^2 + a, a = 3), or give a symbol assumptions (positive, real ...). Cells that used older definitions become stale until recomputed.",
@@ -399,7 +400,7 @@
         "zh-TW": "讀取筆記本"
       },
       "target": "none",
-      "permissions": [
+      "needs": [
         "cas.compute"
       ],
       "description": "Read a notebook's definitions, cells, results, freshness and plot links. Without a notebook id, lists notebooks.",
@@ -430,7 +431,7 @@
         "zh-TW": "重新計算過期的格子"
       },
       "target": "none",
-      "permissions": [
+      "needs": [
         "cas.compute"
       ],
       "description": "Recompute one cell, or every stale cell of a notebook (at most 20), so results match the current definitions.",
@@ -472,8 +473,8 @@
       "titleI18n": {
         "zh-TW": "把結果畫在 Graph"
       },
-      "target": "canvas-or-new",
-      "permissions": [
+      "target": "document-or-new",
+      "needs": [
         "canvas.read",
         "canvas.write",
         "workspace.write"
@@ -547,7 +548,44 @@
             ]
           }
         }
-      ]
+      ],
+      "derives": {
+        "refresh": "refresh_plot"
+      }
+    },
+    {
+      "id": "refresh_plot",
+      "title": "Refresh plot",
+      "titleI18n": {
+        "zh-TW": "更新函數圖"
+      },
+      "target": "document",
+      "needs": [
+        "canvas.read",
+        "canvas.write",
+        "cas.compute"
+      ],
+      "description": "Redraw one plot made from a calculator cell, from the cell's current result (recomputing the cell first if it is stale). Called by Estampes itself when a derived plot is refreshed; it only updates that plot.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceRef",
+          "object"
+        ],
+        "properties": {
+          "sourceRef": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "notebook id and cell id, as given when the plot was made"
+          },
+          "object": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "the plot's object id"
+          }
+        }
+      }
     },
     {
       "id": "set_options",
@@ -556,7 +594,7 @@
         "zh-TW": "筆記本選項"
       },
       "target": "none",
-      "permissions": [
+      "needs": [
         "cas.compute"
       ],
       "description": "Change notebook options. autoRefresh: when on, a change to a definition or assumption (from the calculator panel or from you) recomputes the stale cells and redraws their linked Graph plots on every canvas they are plotted on; turning it on also redraws plots that are already stale.",
