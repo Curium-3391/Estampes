@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "a9bca23fffdb421eeb0d0311ffb1c65858276f4a6b56be9e733efc4aa72dd2bd"
+      "sha256": "eb7a9392b5bd0c95d19dde1219431abbdb2023b2386a54453b90e05b27b0bf09"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "a18de91cb0dfacec1dc15f498824de7a558d08bb345ec79dc110bc82c9191a7f"
+      "sha256": "6308f2c2cde247697ac5e99678eec2024feb16bc798d5224c4982cb16dbbc577"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -629,6 +629,15 @@
         "src/modules/mcp-tools.js",
         "src/modules/registry.js",
         "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose to upgrade the calculator to a module/2 module by decision card on 2026-11-23 (\u300cA \u8a08\u7b97\u6a5f\u5347\u7d1a\u6210 v2 \u6a21\u7d44(\u5efa\u8b70)\u300d), in the 5B thread",
+      "reason": "5B-2b-3b: the calculator is a module/2 built-in with derives.refresh (refresh_plot), derived output and broadcast; the derives check allows a canvas-or-new maker",
+      "files": [
+        "src/builtin-modules/cas/index.js",
+        "src/modules/manifest.js"
       ]
     }
   ]
