@@ -24,7 +24,8 @@ const clean = (s, n = 200) => String(s ?? "").replace(/[\u0000-\u001f\u007f-\u00
 // What a refresh needs to know about the object a binding names.
 export function targetInfo(entry, binding) {
   const o = objectOf(entry, binding.target.id);
-  return o ? { revision: o.revision, contentHash: objectContentHash(o), editedByUser: o.provenance?.editedByUser === true } : null;
+  // The flag is sticky (it records that a person ever edited the object), so it only counts as an edit made after the module's last write.
+  return o ? { revision: o.revision, contentHash: objectContentHash(o), editedByUser: o.provenance?.editedByUser === true && o.revision !== binding.lastApplied.objectRevision } : null;
 }
 
 function replace(entry, next) {
@@ -63,13 +64,24 @@ export function sourceChanged(entry, { module, sourceRef }) {
   return touched;
 }
 
-// Brings the list in line with the canvas: a live binding whose object is gone becomes `removed`.
-export function reconcile(entry) {
+// Brings the list in line with the canvas and with the modules:
+//  - a binding whose object is gone becomes `removed`;
+//  - one whose module is not available becomes `unavailable` (and comes back as
+//    `stale` once the module is available again), when `available(moduleId)` is given;
+//  - one left `recomputing` by a refresh that never finished (a restart, a kill) becomes
+//    `error`, unless `interrupted` is false because a refresh may still be running.
+export function reconcile(entry, { available, interrupted = true } = {}) {
   const changed = [];
   entry.derived = bindingsOf(entry).map((b) => {
-    if (!LIVE.includes(b.state) || objectOf(entry, b.target.id)) return b;
+    const gone = !objectOf(entry, b.target.id);
+    let next = null;
+    if ((LIVE.includes(b.state) || b.state === "unavailable") && gone) next = reduce(withDoc(b), "targetRemoved", { reason: "the object no longer exists" });
+    else if (b.state === "unavailable") { if (available?.(b.source.module)) next = reduce(withDoc(b), "moduleAvailable"); }
+    else if (LIVE.includes(b.state) && available && !available(b.source.module)) next = reduce(withDoc(b), "moduleUnavailable", { reason: "the module is not available" });
+    else if (b.state === "recomputing" && interrupted) next = reduce(withDoc(b), "refreshFailed", { reason: "the refresh was interrupted" });
+    if (!next) return b;
     changed.push(b.id);
-    return stripDoc(reduce(withDoc(b), "targetRemoved", { reason: "the object no longer exists" }));
+    return stripDoc(next);
   });
   return changed;
 }
@@ -148,4 +160,6 @@ export async function act(entry, bindingId, action, { expectedBindingHash, produ
   return recompute(entry, binding, produce, { force: action === "overwrite" });
 }
 
+// The hash a person must quote to act on a binding.
+export const bindingHashOf = (binding) => bindingHash(withDoc(binding));
 export { bindingHash };

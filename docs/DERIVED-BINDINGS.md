@@ -48,6 +48,18 @@ A canvas (image or Graph) is saved as a record that the UVA store keeps as a doc
 
 Nothing saves the canvas inside it; the caller does that. Nothing calls it yet outside tests: connecting a real producer is the next step (5B-2b-2), then the calculator (5B-2b-3).
 
+## How a module becomes a producer
+
+A `estampes.module/2` module needs no change in the core to make derived objects. Three things in its own manifest and output:
+
+- **`derives.refresh`** on a capability names the capability of the same module that recomputes what the first one makes. Both must work on the document, answer at once (not async), differ from each other, and the refresh capability must accept the string fields `sourceRef` and `object`. The manifest is refused otherwise.
+- **`derived`** in a capability's output lists `{object: "$ref", sourceRef, sourceRevision, inputsHash}` for objects it just created with `ref`. The core records a binding in the same save. Only a capability that declared `derives` may do this, and at most 50 per call.
+- **`broadcast`** in a capability's output (`{event: "source-changed", sourceRef?}`) says that a source of this module changed. It marks only this module's own bindings stale (all of them, or those with that `sourceRef`). It is a hint: `sourceRevision` stays the truth, and a refresh may not broadcast.
+
+A refresh is a call to the declared capability with `{sourceRef, object}`. It may update only that object, must not create objects, make `derived` or broadcast, and must return `data.sourceRevision`; otherwise the binding becomes `error`. If the person edited the object, the refresh is paused as a conflict and the module is not called. The two tools `get_derived_bindings` and `update_derived` read and act on bindings; the core names no module. A module that is disabled shows its bindings as `unavailable` and they return as `stale` when it is enabled; a refresh cut off by a restart is reported as `error`. Subscriptions between modules are not part of this (issues #86 and #174).
+
+Tested in process with stand-in modules and over the router; not tried on a real ChatGPT or Claude host.
+
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.
