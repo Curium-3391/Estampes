@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "20437bc64aa19d89406b618419dde9761463410109f8b6c24911e3812e849485"
+      "sha256": "0700b2799fd0c0b319a809ca938bdbfcf7f7f59fe5e0a4685f19ebd18ad27c4c"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -840,6 +840,15 @@
         "src/modules/router.js"
       ],
       "previousSha256": "006cbc2fac29796c8ae53c2ae2af18fda2ea97c388543bb50283ab2489deff57"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (\u300c\u597d\u300d 5C; keep going unless a question)",
+      "reason": "5C-2: a recompute whose cell changed while it ran does not write its late answer",
+      "files": [
+        "src/builtin-modules/cas/index.js"
+      ],
+      "previousSha256": "20437bc64aa19d89406b618419dde9761463410109f8b6c24911e3812e849485"
     }
   ]
 }

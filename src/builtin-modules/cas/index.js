@@ -197,7 +197,7 @@ async function recompute(p) {
   const nb = await notebooks.get(p.notebook);
   const todo = nb.cells.filter((c) => (p.cell ? c.id === p.cell : c.stale || c.error)).slice(0, 20);
   if (p.cell && !todo.length) throw new Error("no cell " + p.cell);
-  const done = [];
+  const done = [], discarded = [];
   for (const c of todo) {
     const params = { operation: c.operation, ...c.input, ...c.params, angle: c.angle, precision: c.precision };
     if (params.subs && !Array.isArray(params.subs)) params.subs = Object.entries(params.subs).map(([name, value]) => ({ name, value }));
@@ -205,16 +205,21 @@ async function recompute(p) {
     const envKey = envKeyOf(current);
     const outcome = await compute(current, { ...params, ...(p.job ? { job: p.job } : {}) });
     const resultId = notebooks.newResultId();
-    await notebooks.mutate(nb.id, { expectedRevision: p.expectedRevision !== undefined && !done.length ? p.expectedRevision : undefined }, (d) => {
+    // The cell was worked out from its input as read above. If it was changed meanwhile (another call edited or recomputed it), this answer is
+    // about an older input: it is dropped, not written over the newer one (5C-2).
+    let late = false;
+    await notebooks.mutate(nb.id, { expectedRevision: p.expectedRevision !== undefined && !done.length && !discarded.length ? p.expectedRevision : undefined }, (d) => {
       const cell = d.cells.find((x) => x.id === c.id);
       if (!cell) return d;
+      if ((cell.revision ?? 0) !== (c.revision ?? 0)) { late = true; return d; }
       writeCell(d, cell, params, outcome, resultId, "model", envKey);
       return d;
     });
-    done.push(c.id);
+    (late ? discarded : done).push(c.id);
   }
   const out = await notebooks.get(nb.id);
-  return { ...changedCells(out, done), data: notebooks.summary(out), summary: "recomputed " + done.length + " cell(s)" };
+  return { ...changedCells(out, done), data: { ...notebooks.summary(out), ...(discarded.length ? { discarded } : {}) },
+    summary: "recomputed " + done.length + " cell(s)" + (discarded.length ? "; " + discarded.length + " changed while being computed, so its late answer was not written" : "") };
 }
 
 async function plotResult(p, ctx) {

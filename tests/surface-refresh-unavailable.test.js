@@ -18,12 +18,13 @@ import { refreshLinks } from "../src/surface/refresh.js";
 import { bindingsOf, sourceChanged } from "../src/documents/derived-coordinator.js";
 
 const CAS = "org.estampes.cas";
-let host, notebooks, readable = true, computeDown = false;
+let host, notebooks, readable = true, computeDown = false, gate = null;
 const client = {
   async health() { return { engine: { name: "fake", version: "0" }, operations: [], limits: {} }; },
   async parse(input) { return { text: input.text, ast: { node: "number", value: "1" } }; },
   async compute(input) {
     if (computeDown) throw new Error("the calculator is not reachable");
+    if (gate) { const g = gate; gate = null; await g; }
     if (JSON.stringify(input ?? {}).includes("root")) return { status: "exact", exact: { plain: "sqrt(x - 100)", latex: "", ast: { node: "call", fn: "sqrt", args: [{ node: "add", args: [{ node: "symbol", name: "x" }, { node: "integer", value: "-100" }] }] } }, engine: { name: "fake", version: "0" } };
     return { status: "exact", exact: { plain: "2*x", latex: "2x", ast: { node: "mul", args: [{ node: "integer", value: "2" }, { node: "symbol", name: "x" }] } }, engine: { name: "fake", version: "0" } };
   },
@@ -199,4 +200,24 @@ test("links carry no status of their own: a plot out of broadcast reach is still
   assert.ok((await links()).every((l) => l.cellRevision === cellNow.revision), "every link is at the cell's current revision");
   const again = await refreshLinks({ host, notebooks, notebookId: nb });
   assert.equal(again.updated.length, 0, "nothing left waiting");
+});
+
+test("a recompute whose cell was changed while it ran does not write its late answer over the newer one", async () => {
+  const made = await host.router.execute({ module: CAS, capability: "define", params: { name: "z", text: "1" } });
+  const nb = made.data.notebookId;
+  const cell = (await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, operation: "evaluate", text: "z+1" } })).data.cell.cellId;
+  await host.router.execute({ module: CAS, capability: "define", params: { notebook: nb, name: "z", text: "2" } });
+  assert.equal((await notebooks.get(nb)).cells[0].stale, true);
+  let open; gate = new Promise((r) => { open = r; });
+  const pending = host.router.execute({ module: CAS, capability: "recompute", params: { notebook: nb, cell } });
+  await new Promise((r) => setTimeout(r, 50));
+  // Meanwhile the person edits the same cell.
+  await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, cell, operation: "evaluate", text: "z+5" } });
+  const revisionAfterEdit = (await notebooks.get(nb)).cells[0].revision;
+  open();
+  const out = await pending;
+  assert.deepEqual(out.data.discarded, [cell]);
+  const now = (await notebooks.get(nb)).cells[0];
+  assert.equal(now.input.text, "z+5", "the newer input stays");
+  assert.equal(now.revision, revisionAfterEdit, "nothing was written over it");
 });

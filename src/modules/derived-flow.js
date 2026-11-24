@@ -147,7 +147,10 @@ export function createDerivedFlow({ router, registry, canvases, index = null, st
             if (b) consume(previewToken, { canvas: imageId, binding: b.id, hash: bindingHashOf(b), revision: entry.objects?.get?.(b.target.id)?.revision });
           }
           if (action === "refresh-stale") {
-            result = await refreshStale(entry, { produce: producer(imageId) });
+            result = await refreshStale(entry, { produce: producer(imageId), persist: () => canvases.save(entry, { tool: "update_derived", author: "assistant", note: action }) });
+            // The per-target saves already tried; if the disk still refuses, the result is returned with `saveError`, not lost.
+            if (!result.saveError) await canvases.save(entry, { tool: "update_derived", author: "assistant", note: action }).catch((e) => { result.saveError = String(e?.message ?? e).slice(0, 300); });
+            return { canvas: imageId, action, result, total: bindingsOf(entry).length, ...rows(bindingsOf(entry)) };
           } else {
             if (!binding) throw new DerivedFlowError(action + " needs a binding id");
             result = await act(entry, binding, action, { expectedBindingHash, target, produce: producer(imageId) });

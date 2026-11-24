@@ -32,6 +32,7 @@ after(() => { delete process.env.ESTAMPES_MODULE_V2; });
 
 // What each capability of the stand-in answers, by module and capability.
 const answers = {};
+const saveFault = { on: false, after: 0 };
 async function setup({ builtins } = {}) {
   for (const k of Object.keys(answers)) delete answers[k];
   const storage = await mkdtemp(join(tmpdir(), "estampes-derived-"));
@@ -41,7 +42,7 @@ async function setup({ builtins } = {}) {
   const { key } = await resolveAdminKey({ storageDir: storage });
   const calls = [], saves = [];
   const runtime = { async run(mod, capability, input, ctx) { calls.push({ module: mod.manifest.id, capability, input }); return structuredClone(await (answers[mod.manifest.id + "/" + capability] ?? (() => ({ operations: OPS })))(input, ctx)); } };
-  const canvases = { ensure: ensureImage, create: async (o) => createBlankCanvas(o), save: async (entry, h) => { saves.push(h); } };
+  const canvases = { ensure: ensureImage, create: async (o) => createBlankCanvas(o), save: async (entry, h) => { if (saveFault.on && saveFault.after-- <= 0) throw new Error("disk full"); saves.push(h); } };
   process.env.ESTAMPES_MODULE_V2 = "on";
   const h = await createModuleHost({ storageDir: storage, coreVersion: "0.10.0", canvases, adminKey: key, extraRuntimes: { declarative: runtime }, ...(builtins ? { builtins } : {}) });
   const install = async (id, m = manifest(id, CAPS())) => {
@@ -447,4 +448,37 @@ test("late effects: after a discarded late result and the module coming back, th
   assert.equal(out.result.outcome, "refreshed");
   assert.deepEqual(rangeOf(canvas, object), [-9, 9]);
   assert.equal(bindingsOf(canvas)[0].state, "fresh");
+});
+
+test("5C-3: a fault between two targets of one refresh leaves each target consistent, and the next refresh finishes", async () => {
+  const s = await setup();
+  await s.install(MAKER);
+  const canvas = await createBlankCanvas({});
+  answers[MAKER + "/make"] = make(1, "a", 1);
+  const first = (await run(s, MAKER, "make", canvas.imageId)).scene.created[0];
+  answers[MAKER + "/make"] = make(2, "b", 1);
+  const second = (await run(s, MAKER, "make", canvas.imageId)).scene.created[0];
+  answers[MAKER + "/ping"] = announce();
+  await run(s, MAKER, "ping");
+  assert.deepEqual(bindingsOf(canvas).map((b) => b.state), ["stale", "stale"]);
+  answers[MAKER + "/remake"] = (input) => remake(input.object === first ? 5 : 6, 2)(input);
+  // The first target is saved; the disk refuses the second target's save.
+  saveFault.on = true; saveFault.after = 2; // refreshStarted + first target's result
+  const savesBefore = s.saves.length;
+  let out;
+  try { out = await s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" }); } finally { saveFault.on = false; }
+  assert.equal(out.result.refreshed.length, 1, "the first target finished");
+  assert.equal(out.result.failed.length, 1, "the target whose save failed is reported, not hidden");
+  assert.match(out.result.saveError, /disk full/, "the answer says the disk refused, instead of losing the result");
+  assert.ok(s.saves.length >= savesBefore + 2, "the first target and its binding were saved before the second started");
+  const states = Object.fromEntries(bindingsOf(canvas).map((b) => [b.target.id, b.state]));
+  assert.notEqual(states[second], "fresh", "a target whose save failed is never claimed fresh");
+  // The next refresh finishes what is left.
+  for (const b of bindingsOf(canvas).filter((x) => x.state === "error")) {
+    const row = (await s.flow.list(canvas.imageId)).bindings.find((r) => r.id === b.id);
+    await s.flow.update({ canvas: canvas.imageId, action: "refresh", binding: b.id, expectedBindingHash: row.bindingHash });
+  }
+  await s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });
+  assert.deepEqual(bindingsOf(canvas).map((b) => b.state), ["fresh", "fresh"]);
+  assert.deepEqual([rangeOf(canvas, first), rangeOf(canvas, second)], [[-5, 5], [-6, 6]]);
 });
