@@ -78,3 +78,25 @@ test("opening a document twice, or from two flows, makes one binding per plot", 
   await flowOf().list(canvas.imageId);
   assert.equal(bindingsOf(canvas).length, 2);
 });
+
+test("a stop-following choice survives a notebook export and import", { timeout: 60000 }, async () => {
+  const { nb } = await legacy(["fresh"]);
+  await notebooks.mutate(nb, {}, (d) => { d.cells.flatMap((c) => c.links)[0].bound = true; return d; });
+  const copy = await notebooks.importOne(JSON.parse(JSON.stringify(notebooks.exportOne(await notebooks.get(nb)))));
+  assert.deepEqual((await links(copy.id)).map((l) => l.bound), [true]);
+});
+
+test("an adoption that could not be saved leaves no binding in the cached document, and the next open adopts again", { timeout: 60000 }, async () => {
+  const { nb, canvas } = await legacy(["fresh"]);
+  let fail = true;
+  const real = canvases.save;
+  canvases.save = async (...a) => { if (fail) throw new Error("disk full"); return real(...a); };
+  try {
+    await flowOf().list(canvas.imageId);
+    assert.equal(bindingsOf(canvas).length, 0, "rolled back");
+    assert.notEqual((await links(nb))[0].bound, true, "link not marked");
+    fail = false;
+    assert.equal((await flowOf().list(canvas.imageId)).total, 1);
+    assert.equal((await links(nb))[0].bound, true);
+  } finally { canvases.save = real; }
+});

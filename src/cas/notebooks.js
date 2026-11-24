@@ -169,7 +169,7 @@ function cleanImported(raw) {
     }
     for (const l of (Array.isArray(c.links) ? c.links : []).slice(0, 50)) {
       if (!plainObject(l) || typeof l.canvas !== "string" || typeof l.object !== "string") continue;
-      cell.links.push({ canvas: l.canvas.slice(0, 80), object: l.object.slice(0, 64), resultId: str(l.resultId, 40), expression: str(l.expression, 300), ...(Array.isArray(l.domain) && l.domain.length === 2 && l.domain.every(Number.isFinite) ? { domain: l.domain } : {}), status: "stale", at: str(l.at, 40) ?? now });
+      cell.links.push({ canvas: l.canvas.slice(0, 80), object: l.object.slice(0, 64), resultId: str(l.resultId, 40), expression: str(l.expression, 300), ...(Array.isArray(l.domain) && l.domain.length === 2 && l.domain.every(Number.isFinite) ? { domain: l.domain } : {}), status: "stale", ...(l.bound === true ? { bound: true } : {}), at: str(l.at, 40) ?? now });
     }
     nb.cells.push(cell);
   }

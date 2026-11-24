@@ -86,7 +86,7 @@
     },
     {
       "path": "src/cas/notebooks.js",
-      "sha256": "326846a4eead7a5fbe5638a7178ac777739fd2b78ddb28b147366e21de60867c"
+      "sha256": "e2102d83a853a7c3ff55da9a1d565b665cf0b14de087ecd94403a6cc148a852d"
     },
     {
       "path": "src/config.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "c5a5d01d573a4b1fc9e6fd8b836099af22afd069ca274023b6cd4db456ca32e8"
+      "sha256": "efa038a1ed9ff2c0270379939878d326626d5fba973783ff88e27a4ded3d3b34"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -711,6 +711,15 @@
       "files": [
         "src/builtin-modules/cas/index.js",
         "src/modules/manifest.js",
+        "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4 (\u300c\u7e7c\u7e8c\u300d)",
+      "reason": "5B-4a review: roll back an unsaved adoption; keep bound through notebook import",
+      "files": [
+        "src/cas/notebooks.js",
         "src/modules/router.js"
       ]
     }

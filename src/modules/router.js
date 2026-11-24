@@ -204,10 +204,11 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           }
         }
         // Registered together with the objects, saved together with them.
-        let derivedResult = null;
+        let derivedResult = null, adoptBackup;
         if (entry && wantsDerived) derivedIndex?.add(manifest.id, entry.imageId);
         if (entry && (wantsDerived || wantsBroadcast)) {
           const registered = [], staled = new Set();
+          if (adopting) adoptBackup = entry.derived;
           for (const d of output.derived ?? []) {
             if (adopting) {
               // Idempotent: an object that already has a live binding, or is no longer on the canvas, is skipped.
@@ -224,8 +225,14 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           derivedResult = { registered, staled: [...staled] };
         }
         if (output.operations.length || derivedResult?.registered.length || derivedResult?.staled.length) {
-          await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
-            note: manifest.id + "/" + capId });
+          try {
+            await canvases.save(entry, { tool: "execute_module", author: "module", changed: [...scene.created, ...scene.updated], removed: scene.deleted,
+              note: manifest.id + "/" + capId });
+          } catch (error) {
+            // An adoption that was not saved must not stay in the cached document: the next open would see the bindings and skip it.
+            if (adopting) { if (adoptBackup === undefined) delete entry.derived; else entry.derived = adoptBackup; }
+            throw error;
+          }
         }
         // The same broadcast reaches the other documents that hold this module's bindings (and, with no document at all, all of them).
         if (wantsBroadcast && derivedIndex) {
