@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import { startStack, noPython, noBrowser } from "./helpers/widget-host.js";
 
 const CAS = "org.estampes.cas";
+// Longer than the old 300-character cut: the preview must still end with the part that differs.
+const LONG = "99*x" + "+x".repeat(90) + "+88";
 test("the widget updates a stale plot, and overwrites a hand edit only after a preview", { skip: noPython || noBrowser, timeout: 240000 }, async () => {
   const s = await startStack();
   try {
@@ -49,7 +51,7 @@ test("the widget updates a stale plot, and overwrites a hand edit only after a p
     assert.equal(await expr(), "10*x");
 
     // A hand edit, then the source changes again: conflict, with no overwrite button until a preview.
-    await s.call("edit_scene_object", { imageId, id: objectId, props: { expression: "99*x" } });
+    await s.call("edit_scene_object", { imageId, id: objectId, props: { expression: LONG, labelMode: "custom", label: "y".repeat(70) + "END" } });
     await cas("define", { name: "f", params: ["x"], text: "3*x^2" });
     await s.call("update_derived", { canvas: imageId, action: "refresh-stale" });
     assert.equal(await state(), "conflict");
@@ -58,8 +60,8 @@ test("the widget updates a stale plot, and overwrites a hand edit only after a p
     await ui.frame.locator("#objects [data-derived] button", { hasText: "預覽變更" }).click();
     const overwrite = ui.frame.locator("#objects [data-derived] button", { hasText: "覆蓋" });
     await overwrite.waitFor();
-    assert.match(await ui.frame.locator("#objects [data-derived] code").first().innerText(), /99\*x/, "it shows the object as it is");
-    assert.equal(await expr(), "99*x", "the preview changed nothing");
+    assert.match(await ui.frame.locator("#objects [data-derived] code").first().innerText(), /END/, "it shows the object as it is, to the end of its properties (more than 300 characters)");
+    assert.equal(await expr(), LONG, "the preview changed nothing");
     await overwrite.click();
     await ui.frame.locator('#objects [data-derived][data-state="fresh"]').waitFor();
     assert.equal(await expr(), "6*x");

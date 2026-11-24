@@ -1269,7 +1269,7 @@ async function loadDerived(){
  // The rebuild replaces the editors, so it waits while the person has typed something not yet applied; the next render shows it.
  finally{derivedLoading=false;if(id===imageId&&derivedKey(derivedList)!==before&&!objectsEdited)renderObjectsPanel();}
 }
-setInterval(()=>{if((derivedList.length||derivedRetry)&&!derivedBusy&&!document.hidden&&ready&&imageId&&derivedFor===imageId)loadDerived();},5000);
+{const tick=setInterval(()=>{if(!disposed&&(derivedList.length||derivedRetry)&&!derivedBusy&&!document.hidden&&ready&&imageId&&derivedFor===imageId)loadDerived();},5000);disposers.push(()=>clearInterval(tick));}
 async function derivedAct(b,action,extra){
  if(!ready||!imageId||derivedBusy)return;
  derivedBusy=b.id;derivedNote[b.id]="";renderObjectsPanel();
@@ -1279,7 +1279,7 @@ async function derivedAct(b,action,extra){
    if(result?.isError||r?.kind!=="estampes.derived_update")throw Error(r?.message||result?.content?.[0]?.text||t("vs.err.failed"));
    if(action==="preview"){
      const p=r.result??{};
-     derivedPreview=p.previewToken?{binding:b.id,token:p.previewToken,hash:b.bindingHash,wouldWrite:String(p.wouldWrite??"").slice(0,300),current:String(p.current??"").slice(0,300),edited:!!p.editedByPerson}:null;
+     derivedPreview=p.previewToken?{binding:b.id,token:p.previewToken,hash:b.bindingHash,wouldWrite:String(p.wouldWrite??"").slice(0,3000),current:String(p.current??"").slice(0,1500),edited:!!p.editedByPerson}:null;
      if(!derivedPreview)derivedNote[b.id]=t("vs.derived.noPreview");
    }else{
      derivedPreview=null;
@@ -1290,6 +1290,8 @@ async function derivedAct(b,action,extra){
  }catch(error){derivedNote[b.id]=t("wb.err.notApplied",{message:errText(error)});derivedDirty=true;}
  finally{derivedBusy=null;renderObjectsPanel();}
 }
+// The whole text the server returned (bounded there), in a box that scrolls: what is confirmed is what is shown.
+const scrollCode=text=>{const c=el("code",{textContent:text||"-"});c.style.cssText="display:block;max-height:7em;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere";return c;};
 function derivedBlock(b){
  const box=el("div",{className:"obj",dataset:{derived:b.id,state:b.state}});
  box.append(el("span",{className:"kind",textContent:t("vs.derived.state."+b.state)}));
@@ -1300,8 +1302,8 @@ function derivedBlock(b){
  if(b.state==="stale"||b.state==="error")btn(t("vs.derived.act.refresh"),()=>derivedAct(b,"refresh"));
  if(b.state==="stale"||b.state==="conflict"||b.state==="error")btn(t("vs.derived.act.preview"),()=>derivedAct(b,"preview"),t("vs.derived.previewTitle"));
  if(pv){
-   box.append(el("span",{className:"kind",textContent:t("vs.derived.previewNow")}),el("code",{textContent:pv.current||"-"}),
-     el("span",{className:"kind",textContent:pv.edited?t("vs.derived.previewEdited"):t("vs.derived.previewHeading")}),el("code",{textContent:pv.wouldWrite||"-"}));
+   box.append(el("span",{className:"kind",textContent:t("vs.derived.previewNow")}),scrollCode(pv.current),
+     el("span",{className:"kind",textContent:pv.edited?t("vs.derived.previewEdited"):t("vs.derived.previewHeading")}),scrollCode(pv.wouldWrite));
    // Overwrite is only for a conflict; a stale or failed one has its normal refresh.
    if(b.state==="conflict")btn(t("vs.derived.act.overwrite"),()=>derivedAct(b,"overwrite",{previewToken:pv.token}),t("vs.derived.overwriteTitle"));
  }

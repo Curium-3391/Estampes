@@ -350,7 +350,7 @@
     },
     {
       "path": "public/visual-surface.html",
-      "sha256": "5b0f9d7738cce20acde795299250877b8bf00bf68146521bf2e14a836881e1cf"
+      "sha256": "73a78142c53bd0012338c38f7850c869caa679521a43ccc691afdd57db2b0276"
     },
     {
       "path": "public/workbench.js",
@@ -685,6 +685,15 @@
         "public/visual-surface.html"
       ],
       "previousSha256": "5c26a623c701aa2ae74f535c11b59317b2c734196fcb5f7ffb66ba1b28f7eda1"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User said \u300c\u597d\u300d to the widget buttons as the next step (2026-11-24); Codex review findings fixed",
+      "reason": "UVA 5B-3c: review fixes (clear the refresh timer on dispose; show the whole preview the server returned)",
+      "files": [
+        "public/visual-surface.html"
+      ],
+      "previousSha256": "5b0f9d7738cce20acde795299250877b8bf00bf68146521bf2e14a836881e1cf"
     }
   ]
 }
