@@ -46,7 +46,7 @@
   "files": [
     {
       "path": "server.js",
-      "sha256": "d8e02ddddd43c6f47e46dfba6b1fc5cf48756715ad6fe1e6e405c61613b46cc0"
+      "sha256": "5d8caf93cc6b7701d917c11e97b752df84284b652b0b624da16846147b9a4bff"
     },
     {
       "path": "src/assessment.js",
@@ -306,7 +306,7 @@
     },
     {
       "path": "src/surface/refresh.js",
-      "sha256": "55dfd51f978d2f03543e8386312602817496888b4c3874251cb0c93e41cd160a"
+      "sha256": "e24dea3a813373637f1bbe1f83d67a7fcb9207c53aba5e2d7e373f93b2fd7b6b"
     },
     {
       "path": "src/surface/service.js",
@@ -820,6 +820,15 @@
       "reason": "5B-4b-2: calculator links drop their own status (read from the cell)",
       "files": [
         "src/cas/notebooks.js",
+        "src/surface/refresh.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (\u300c\u53ef\u4ee5\u7e7c\u7e8c\u505a\u6709\u554f\u984c\u518d\u554f\u6211\u6c92\u6709\u5c31\u7e7c\u7e8c\u300d)",
+      "reason": "5B-4b-3: server.js no longer names the calculator module (afterRunNote moved to surface/refresh.js)",
+      "files": [
+        "server.js",
         "src/surface/refresh.js"
       ]
     }

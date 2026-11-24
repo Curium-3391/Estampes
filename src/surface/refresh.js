@@ -106,3 +106,11 @@ export async function autoRefresh({ host, notebooks, capability, notebookId, ima
   if (!nb.autoRefresh) return null;
   return refreshLinks({ host, notebooks, notebookId, imageId });
 }
+
+// What the model is told after it ran a module through execute_module: modules whose derived plots follow a notebook of their own
+// (the calculator) redraw them here, so server.js does not name the module. Returns a sentence, or null when nothing applies.
+export async function afterRunNote({ host, notebooks, module, capability, params, run }) {
+  if (module !== CAS) return null;
+  const r = await autoRefresh({ host, notebooks, capability, notebookId: params.notebook ?? run.data?.notebookId });
+  return r ? "Auto-refresh: recomputed " + r.recomputed.length + " cell(s), redrew " + r.updated.length + " Graph plot(s)" + (r.failed.length ? ", " + r.failed.length + " could not be updated (" + r.failed.map((f) => f.reason).slice(0, 2).join("; ") + ")" : "") + (r.remaining ? ", " + r.remaining + " cell(s) still stale" : "") + "." : null;
+}
