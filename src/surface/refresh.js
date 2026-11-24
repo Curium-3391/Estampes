@@ -6,6 +6,7 @@
 // checks (a disabled module or a missing permission stops a refresh). Plots on
 // every canvas the notebook is linked to are redrawn, not only the one on screen.
 import { createDerivedFlow } from "../modules/derived-flow.js";
+import { sourceChanged, bindingHashOf } from "../documents/derived-coordinator.js";
 
 const CAS = "org.estampes.cas";
 const PASS = 20;      // cells recomputed per router call
@@ -43,7 +44,20 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
   for (const canvas of order) {
     let r;
     // A plot that was deleted is noticed when the document is opened, before the refresh: say so once, for the ones that were live until now.
-    const live = new Set(((await host.canvases.ensure(canvas).catch(() => null))?.derived ?? []).filter((b) => b.state !== "removed").map((b) => b.id));
+    const before = await host.canvases.ensure(canvas).catch(() => null);
+    const live = new Set((before?.derived ?? []).filter((b) => b.state !== "removed").map((b) => b.id));
+    if (before) {
+      // A change the document was never told about (a broadcast reaches only some documents): the notebook's own record says these cells' plots are waiting.
+      for (const c of nb.cells) for (const l of c.links ?? []) if (l.canvas === canvas && l.status !== "fresh" && l.status !== "removed") sourceChanged(before, { module: CAS, sourceRef: notebookId + "/" + c.id });
+      // A redraw that failed earlier (the calculator was unreachable) left its plot in error; the refresh is asked for again, one plot at a time.
+      for (const b of (before.derived ?? []).filter((x) => x.state === "error" && x.source.module === CAS && String(x.source.sourceRef).startsWith(notebookId + "/")).slice(0, 10)) {
+        try {
+          const one = await flow.update({ canvas, action: "refresh", binding: b.id, expectedBindingHash: bindingHashOf(b) });
+          if (one.result?.outcome === "refreshed") out.updated.push({ object: b.target?.id, canvas });
+          else out.failed.push({ object: b.target?.id, canvas, reason: String(one.result?.reason ?? one.result?.binding?.reason ?? "the plot could not be updated").slice(0, 200) });
+        } catch (e) { out.failed.push({ object: b.target?.id, canvas, reason: reasonOf(e) }); }
+      }
+    }
     try { r = await flow.update({ canvas, action: "refresh-stale" }); }
     catch (e) { out.failed.push({ canvas, reason: "the canvas " + canvas + " could not be updated (" + reasonOf(e) + "); the plots were left as they are and will be retried" }); continue; }
     // The answer lists at most 50 rows; the document's own list is complete.

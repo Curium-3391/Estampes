@@ -18,11 +18,12 @@ import { refreshLinks } from "../src/surface/refresh.js";
 import { bindingsOf, sourceChanged } from "../src/documents/derived-coordinator.js";
 
 const CAS = "org.estampes.cas";
-let host, notebooks, readable = true;
+let host, notebooks, readable = true, computeDown = false;
 const client = {
   async health() { return { engine: { name: "fake", version: "0" }, operations: [], limits: {} }; },
   async parse(input) { return { text: input.text, ast: { node: "number", value: "1" } }; },
   async compute(input) {
+    if (computeDown) throw new Error("the calculator is not reachable");
     if (JSON.stringify(input ?? {}).includes("root")) return { status: "exact", exact: { plain: "sqrt(x - 100)", latex: "", ast: { node: "call", fn: "sqrt", args: [{ node: "add", args: [{ node: "symbol", name: "x" }, { node: "integer", value: "-100" }] }] } }, engine: { name: "fake", version: "0" } };
     return { status: "exact", exact: { plain: "2*x", latex: "2x", ast: { node: "mul", args: [{ node: "integer", value: "2" }, { node: "symbol", name: "x" }] } }, engine: { name: "fake", version: "0" } };
   },
@@ -103,10 +104,24 @@ test("more than eight canvases are all reached by repeated refreshes", async () 
   }
   // The cell changed: every link and binding is stale.
   await notebooks.mutate(nb, {}, (d) => { for (const x of d.cells) for (const l of x.links ?? []) l.status = "stale"; return d; });
-  for (const c of canvases) sourceChanged(c, { module: CAS });
+  // No broadcast reached these documents: only the notebook's link record says their plots are waiting.
   const first = await refreshLinks({ host, notebooks, notebookId: nb });
   assert.equal(first.updated.length, 8);
   const second = await refreshLinks({ host, notebooks, notebookId: nb });
   assert.equal(second.updated.length, 2, "the ones left out the first time are reached now");
   assert.ok(canvases.every((c) => bindingsOf(c)[0].state === "fresh"));
+});
+
+test("a plot whose redraw failed is tried again by the next refresh", async () => {
+  const { nb, canvas } = await plotted();
+  await notebooks.mutate(nb, {}, (d) => { for (const c of d.cells) { c.stale = true; for (const l of c.links ?? []) l.status = "stale"; } return d; });
+  computeDown = true;
+  let first;
+  try { first = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId }); } finally { computeDown = false; }
+  assert.equal(first.updated.length, 0);
+  assert.ok(first.failed.length >= 1);
+  assert.notEqual(bindingsOf(canvas)[0].state, "fresh");
+  const second = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
+  assert.equal(second.updated.length, 1, "the plot is redrawn once the calculator is back");
+  assert.equal(bindingsOf(canvas)[0].state, "fresh");
 });
