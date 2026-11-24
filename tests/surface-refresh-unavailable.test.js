@@ -72,7 +72,7 @@ test("a plot the person deleted is reported once, not recreated, and its link is
   const r = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
   assert.equal(r.updated.length, 0);
   assert.match(r.failed[0].reason, /was removed/);
-  assert.equal((await linkOf(nb)).status, "removed");
+  assert.equal(await linkOf(nb), undefined, "the deleted plot's link is dropped");
   assert.equal(canvas.objects.has(object), false, "not recreated");
   const again = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
   assert.equal(again.failed.length, 0, "said once");
@@ -135,7 +135,7 @@ test("a deletion the document already noticed is still reported once, from the n
   assert.equal(bindingsOf(canvas)[0].state, "removed", "the document noticed first");
   const r = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
   assert.match(r.failed[0]?.reason ?? "", /was removed/);
-  assert.equal((await linkOf(nb)).status, "removed");
+  assert.equal(await linkOf(nb), undefined, "the deleted plot's link is dropped");
   assert.equal((await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId })).failed.length, 0, "said once");
 });
 
@@ -174,4 +174,29 @@ test("documents whose waiting plots were edited by hand do not use up the eight 
   assert.equal(first.updated.length + second.updated.length, 2, "the two plots nobody edited were redrawn");
   assert.ok(canvases.slice(10).every((c) => bindingsOf(c)[0].state === "fresh"));
   assert.ok(canvases.slice(0, 10).every((c) => c.objects.get(bindingsOf(c)[0].target.id).props.expression === "99*x"), "the edits stand");
+});
+
+test("links carry no status of their own: a plot out of broadcast reach is still found by the cell's revision", async () => {
+  const made = await host.router.execute({ module: CAS, capability: "define", params: { name: "q", text: "1" } });
+  const nb = made.data.notebookId;
+  const cell = (await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, operation: "evaluate", text: "q+1" } })).data.cell.cellId;
+  const canvases = [];
+  for (let i = 0; i < 10; i++) {
+    const c = await createBlankCanvas({});
+    applySceneOps(c, [{ op: "object.create", type: "axes-2d", props: { xRange: [-3, 3], yRange: [-3, 3] } }], { author: "module", module: "org.estampes.graph", capability: "plot_function" });
+    await host.router.execute({ module: CAS, capability: "plot_result", canvas: c.imageId, params: { notebook: nb, cell } });
+    canvases.push(c);
+  }
+  const links = async () => (await notebooks.get(nb)).cells.flatMap((c) => c.links ?? []);
+  assert.ok((await links()).every((l) => l.status === undefined && l.cellRevision >= 1), "new links have a revision, not a status");
+  // A real change through the module: the broadcast reaches only some of the documents.
+  await host.router.execute({ module: CAS, capability: "define", params: { notebook: nb, name: "q", text: "2" } });
+  assert.ok((await links()).every((l) => l.status === undefined), "a change writes no status either");
+  for (let i = 0; i < 3; i++) await refreshLinks({ host, notebooks, notebookId: nb });
+  assert.ok(canvases.every((c) => bindingsOf(c)[0].state === "fresh"), "every document was reached");
+  assert.ok((await links()).every((l) => l.status === undefined), "a redraw writes no status");
+  const cellNow = (await notebooks.get(nb)).cells[0];
+  assert.ok((await links()).every((l) => l.cellRevision === cellNow.revision), "every link is at the cell's current revision");
+  const again = await refreshLinks({ host, notebooks, notebookId: nb });
+  assert.equal(again.updated.length, 0, "nothing left waiting");
 });

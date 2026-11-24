@@ -60,7 +60,6 @@ const paramsOf = (p) => { const o = {}; for (const k of ["variable", "variables"
 // A source of this module changed: the cells named here are what the core marks stale in every document that holds a plot made from them.
 const sourceRefOf = (nb, cellId) => nb.id + "/" + cellId;
 const changedCells = (nb, ids) => ({ broadcast: [...new Set(ids)].slice(0, 50).map((id) => ({ event: "source-changed", sourceRef: sourceRefOf(nb, id) })) });
-const staleLinks = (cell) => { for (const l of cell.links ?? []) if (l.status === "fresh") l.status = "stale"; };
 
 // What a result depends on besides its own input: the notebook's
 // definitions and assumptions, and its default angle and precision.
@@ -86,7 +85,6 @@ function writeCell(nb, cell, p, outcome, resultId, author, envKey) {
   } else {
     cell.error = outcome.error; // the input stays, so it can be fixed and retried
   }
-  staleLinks(cell);
 }
 
 // Calculations under way, by notebook and idempotency key: a second call
@@ -177,7 +175,7 @@ async function define(p) {
     } else if (p.assumptions) {
       if (p.assumptions.length) d.assumptions[p.name] = p.assumptions; else delete d.assumptions[p.name];
     } else { delete d.definitions[p.name]; delete d.assumptions[p.name]; }
-    for (const c of d.cells) if (c.result && !c.stale) { c.stale = true; c.staleReason = "the definition of " + p.name + " changed"; staleLinks(c); newlyStale.push(c.id); }
+    for (const c of d.cells) if (c.result && !c.stale) { c.stale = true; c.staleReason = "the definition of " + p.name + " changed"; newlyStale.push(c.id); }
     return d;
   });
   return { ...changedCells(out, newlyStale), data: notebooks.summary(out), summary: (hasBody ? "defined " + p.name : p.assumptions ? "assumptions for " + p.name : "removed " + p.name) + "; " + out.cells.filter((c) => c.stale).length + " cell(s) are stale" };
@@ -282,7 +280,7 @@ async function adoptPlots(p, ctx) {
   const derived = [...best.entries()].slice(0, 50).map(([object, { nb, cell, l }]) => ({
     object, sourceRef: sourceRefOf(nb, cell.id), sourceRevision: Math.max(1, cell.revision ?? 1),
     inputsHash: createHash("sha256").update(JSON.stringify({ result: l.resultId, expression: l.expression, domain: l.domain ?? [-10, 10] })).digest("hex"),
-    ...(l.status === "fresh" && !cell.stale ? {} : { stale: true }) }));
+    ...(!cell.stale && l.status !== "stale" && l.status !== "error" && !(Number.isInteger(l.cellRevision) && l.cellRevision < Math.max(1, cell.revision ?? 1)) ? {} : { stale: true }) }));
   return { ...(derived.length ? { derived } : {}), data: { adopted: derived.length }, summary: derived.length + " earlier plot(s) found" };
 }
 
@@ -331,7 +329,7 @@ export async function after(capability, params, ctx, { output, scene, entry }) {
     if (!cell) return nb;
     const was = (cell.links ?? []).find((l) => l.canvas === entry.imageId && l.object === objectId);
     cell.links = (cell.links ?? []).filter((l) => !(l.canvas === entry.imageId && l.object === objectId));
-    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: capability === "refresh_plot" ? (was?.domain ?? d.domain) : d.domain, status: "fresh", at: new Date().toISOString(),
+    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: capability === "refresh_plot" ? (was?.domain ?? d.domain) : d.domain, cellRevision: Math.max(1, cell.revision ?? 1), at: new Date().toISOString(),
       // Made or redrawn through a binding: never adopted. A redraw by the older path (object given to plot_result) keeps what the link said before.
       ...(capability === "refresh_plot" || !params.object || was?.bound === true ? { bound: true } : {}) });
     return nb;

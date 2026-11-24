@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "e68305f5c437bcf17f69299a71072853a6ac3e6adbd9f37e71e81568713a78b2"
+      "sha256": "20437bc64aa19d89406b618419dde9761463410109f8b6c24911e3812e849485"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -86,7 +86,7 @@
     },
     {
       "path": "src/cas/notebooks.js",
-      "sha256": "e2102d83a853a7c3ff55da9a1d565b665cf0b14de087ecd94403a6cc148a852d"
+      "sha256": "13aafc63dfed68d21b6763586b4cabfd54816231fba88eb856c9fcce3824606b"
     },
     {
       "path": "src/config.js",
@@ -306,7 +306,7 @@
     },
     {
       "path": "src/surface/refresh.js",
-      "sha256": "97cfe1458817a6f1fa0b95dfa7eda7338d972b5378a55d643c08abdc09191b00"
+      "sha256": "55dfd51f978d2f03543e8386312602817496888b4c3874251cb0c93e41cd160a"
     },
     {
       "path": "src/surface/service.js",
@@ -803,6 +803,25 @@
         "src/surface/refresh.js"
       ],
       "previousSha256": "228822219de0b0b56e4c7152d7d19b2c428d6929bb4a3732c31a4a8bf50735ac"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (\u300c\u958b\u59cb\u300d 5B-4b-2, \u300c\u597d\u300d)",
+      "reason": "5B-4b-2: calculator links drop their own status",
+      "files": [
+        "src/builtin-modules/cas/index.js",
+        "src/cas/notebooks.js",
+        "src/surface/refresh.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (\u300c\u597d\u300d 5B-4b-2)",
+      "reason": "5B-4b-2: calculator links drop their own status (read from the cell)",
+      "files": [
+        "src/cas/notebooks.js",
+        "src/surface/refresh.js"
+      ]
     }
   ]
 }
