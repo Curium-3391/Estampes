@@ -125,6 +125,11 @@ test("an adopt run that draws, broadcasts, names a $ref or runs outside the core
   await assert.rejects(adopt({ adopt: "make" }), (e) => e.code === "output" && /by id/.test(e.message));
   await assert.rejects(adopt({ adopt: "plain" }), (e) => e.code === "output" && /not declared as the adopt capability/.test(e.message));
   assert.equal(bindingsOf(canvas).length, 0);
+  // Another module's object cannot be adopted.
+  applySceneOps(canvas, [{ op: "object.create", type: "axes-2d", props: range(5) }], { author: "module", module: OTHER, capability: "make" });
+  answers[MAKER + "/adopt"] = adoptAnswer([{ object: "o2", sourceRef: "x" }]);
+  await assert.rejects(adopt({ adopt: "make" }), (e) => e.code === "output" && /only name objects this module made/.test(e.message));
+  assert.equal(bindingsOf(canvas).length, 0);
   // A module that is not module/2 cannot name derived objects at all (an adopt run is not a way around it).
   answers[MAKER + "/adopt"] = adoptAnswer([{ object: "o1", sourceRef: "x" }]);
   assert.equal((await adopt({ adopt: "make" })).derived.registered.length, 1);

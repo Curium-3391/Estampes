@@ -165,6 +165,11 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         if (wantsDerived && !adopting && !manifest.v2.derives?.[capId]) throw new ModuleError(capId + " returned derived objects but does not declare derives in its manifest", "output");
         if (wantsDerived && !entry) throw new ModuleError(capId + " returned derived objects but has no document", "output");
         if (wantsDerived && adopting) {
+          // A module may only adopt what it made itself.
+          for (const d of output.derived) {
+            const o = entry.objects instanceof Map ? entry.objects.get(d.object) : undefined;
+            if (o && o.provenance?.module !== manifest.id) throw new ModuleError("an adopt run may only name objects this module made (" + d.object + ")", "output");
+          }
           // Only objects that would really be added count: ones already bound or gone are skipped below.
           const added = output.derived.filter((d) => entry.objects instanceof Map && entry.objects.has(d.object) && !bindingsOf(entry).some((b) => b.target.id === d.object && b.state !== "removed"));
           if (bindingsOf(entry).length + added.length > MAX_DERIVED_PER_CANVAS) throw new ModuleError("a document holds at most " + MAX_DERIVED_PER_CANVAS + " derived objects", "output");
