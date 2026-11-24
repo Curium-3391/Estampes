@@ -33,10 +33,9 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
     nb = await notebooks.get(notebookId);
   }
   out.remaining = nb.cells.filter((x) => x.stale).length;
-  // The canvases to look at: the one on screen, the ones this notebook's cells were drawn on, and the ones the core knows hold this module's plots.
+  // The canvases to look at: the one on screen, the ones with plots of this notebook that are waiting.
   const canvases = new Set();
-  for (const c of nb.cells) for (const l of c.links ?? []) if (l.status !== "removed") canvases.add(l.canvas);
-  for (const id of host.derivedIndex?.list?.(CAS) ?? []) canvases.add(id);
+  for (const c of nb.cells) for (const l of c.links ?? []) if (l.status !== "fresh" && l.status !== "removed") canvases.add(l.canvas);
   if (imageId) canvases.delete(imageId);
   const order = [...(imageId ? [imageId] : []), ...canvases].slice(0, MAX_CANVASES);
   const flow = createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases, index: host.derivedIndex, state: host.derivedState });
@@ -47,11 +46,13 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
     const live = new Set(((await host.canvases.ensure(canvas).catch(() => null))?.derived ?? []).filter((b) => b.state !== "removed").map((b) => b.id));
     try { r = await flow.update({ canvas, action: "refresh-stale" }); }
     catch (e) { out.failed.push({ canvas, reason: "the canvas " + canvas + " could not be updated (" + reasonOf(e) + "); the plots were left as they are and will be retried" }); continue; }
-    const row = (id) => r.bindings?.find((b) => b.id === id);
+    // The answer lists at most 50 rows; the document's own list is complete.
+    const all = (await host.canvases.ensure(canvas).catch(() => null))?.derived ?? [];
+    const row = (id) => { const b = all.find((x) => x.id === id); return b ? { object: b.target?.id } : undefined; };
     for (const x of r.result.refreshed) out.updated.push({ object: row(x.id)?.object, canvas });
     for (const x of r.result.paused) out.failed.push({ object: row(x.id)?.object, canvas, reason: x.reason ?? "the plot was edited by hand; refresh paused" });
     for (const x of r.result.failed) out.failed.push({ object: row(x.id)?.object, canvas, reason: x.reason ?? "the plot could not be updated" });
-    const gone = new Set([...r.result.removed.map((x) => x.id), ...(r.bindings ?? []).filter((b) => b.state === "removed" && live.has(b.id)).map((b) => b.id)]);
+    const gone = new Set([...r.result.removed.map((x) => x.id), ...all.filter((b) => b.state === "removed" && live.has(b.id)).map((b) => b.id)]);
     for (const id of gone) {
       const object = row(id)?.object;
       out.failed.push({ object, canvas, reason: "the plot " + (object ?? "") + " was removed from the canvas" });

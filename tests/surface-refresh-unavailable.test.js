@@ -22,7 +22,10 @@ let host, notebooks, readable = true;
 const client = {
   async health() { return { engine: { name: "fake", version: "0" }, operations: [], limits: {} }; },
   async parse(input) { return { text: input.text, ast: { node: "number", value: "1" } }; },
-  async compute() { return { status: "exact", exact: { plain: "2*x", latex: "2x", ast: { node: "mul", args: [{ node: "integer", value: "2" }, { node: "symbol", name: "x" }] } }, engine: { name: "fake", version: "0" } }; },
+  async compute(input) {
+    if (JSON.stringify(input ?? {}).includes("root")) return { status: "exact", exact: { plain: "sqrt(x - 100)", latex: "", ast: { node: "call", fn: "sqrt", args: [{ node: "add", args: [{ node: "symbol", name: "x" }, { node: "integer", value: "-100" }] }] } }, engine: { name: "fake", version: "0" } };
+    return { status: "exact", exact: { plain: "2*x", latex: "2x", ast: { node: "mul", args: [{ node: "integer", value: "2" }, { node: "symbol", name: "x" }] } }, engine: { name: "fake", version: "0" } };
+  },
 };
 before(async () => {
   const dir = await mkdtemp(join(tmpdir(), "estampes-refresh-"));
@@ -71,4 +74,39 @@ test("a plot the person deleted is reported once, not recreated, and its link is
   assert.equal(canvas.objects.has(object), false, "not recreated");
   const again = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
   assert.equal(again.failed.length, 0, "said once");
+});
+
+test("a plot keeps its domain through a refresh, even one far from the default", async () => {
+  const made = await host.router.execute({ module: CAS, capability: "define", params: { name: "r", text: "1" } });
+  const nb = made.data.notebookId;
+  const cell = (await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, operation: "evaluate", text: "root" } })).data.cell.cellId;
+  const canvas = await createBlankCanvas({});
+  applySceneOps(canvas, [{ op: "object.create", type: "axes-2d", props: { xRange: [90, 120], yRange: [-3, 3] } }], { author: "module", module: "org.estampes.graph", capability: "plot_function" });
+  await host.router.execute({ module: CAS, capability: "plot_result", canvas: canvas.imageId, params: { notebook: nb, cell, domain: [100, 110] } });
+  sourceChanged(canvas, { module: CAS });
+  const r = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
+  assert.deepEqual(r.failed, []);
+  assert.equal(r.updated.length, 1);
+  assert.deepEqual(canvas.objects.get(bindingsOf(canvas)[0].target.id).props.domain, [100, 110]);
+});
+
+test("more than eight canvases are all reached by repeated refreshes", async () => {
+  const made = await host.router.execute({ module: CAS, capability: "define", params: { name: "m", text: "1" } });
+  const nb = made.data.notebookId;
+  const cell = (await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, operation: "evaluate", text: "m+1" } })).data.cell.cellId;
+  const canvases = [];
+  for (let i = 0; i < 10; i++) {
+    const c = await createBlankCanvas({});
+    applySceneOps(c, [{ op: "object.create", type: "axes-2d", props: { xRange: [-3, 3], yRange: [-3, 3] } }], { author: "module", module: "org.estampes.graph", capability: "plot_function" });
+    await host.router.execute({ module: CAS, capability: "plot_result", canvas: c.imageId, params: { notebook: nb, cell } });
+    canvases.push(c);
+  }
+  // The cell changed: every link and binding is stale.
+  await notebooks.mutate(nb, {}, (d) => { for (const x of d.cells) for (const l of x.links ?? []) l.status = "stale"; return d; });
+  for (const c of canvases) sourceChanged(c, { module: CAS });
+  const first = await refreshLinks({ host, notebooks, notebookId: nb });
+  assert.equal(first.updated.length, 8);
+  const second = await refreshLinks({ host, notebooks, notebookId: nb });
+  assert.equal(second.updated.length, 2, "the ones left out the first time are reached now");
+  assert.ok(canvases.every((c) => bindingsOf(c)[0].state === "fresh"));
 });
