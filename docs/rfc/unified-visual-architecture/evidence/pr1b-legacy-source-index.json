@@ -350,7 +350,7 @@
     },
     {
       "path": "public/visual-surface.html",
-      "sha256": "73a78142c53bd0012338c38f7850c869caa679521a43ccc691afdd57db2b0276"
+      "sha256": "dfc9050779859a4b61a07ba56329eb2575dd95a672fca5d30c50d79d544bb072"
     },
     {
       "path": "public/workbench.js",
@@ -694,6 +694,15 @@
         "public/visual-surface.html"
       ],
       "previousSha256": "5b0f9d7738cce20acde795299250877b8bf00bf68146521bf2e14a836881e1cf"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User said \u300c\u597d\u300d to the widget buttons as the next step (2026-11-24); Codex review finding fixed",
+      "reason": "UVA 5B-3c: review fix (a removed binding shows again when its object is restored, so it can be linked again)",
+      "files": [
+        "public/visual-surface.html"
+      ],
+      "previousSha256": "73a78142c53bd0012338c38f7850c869caa679521a43ccc691afdd57db2b0276"
     }
   ]
 }

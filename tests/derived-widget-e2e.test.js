@@ -66,6 +66,16 @@ test("the widget updates a stale plot, and overwrites a hand edit only after a p
     await ui.frame.locator('#objects [data-derived][data-state="fresh"]').waitFor();
     assert.equal(await expr(), "6*x");
 
+    // Delete the plot, then restore it: the binding was marked removed, and "重新連結" is offered on the restored object.
+    await s.call("edit_scene_object", { imageId, id: objectId, remove: true });
+    assert.equal(await state(), "removed");
+    await s.call("edit_scene_object", { imageId, restore: true });
+    await ui.reload();
+    await ui.frame.locator('#objects [data-derived][data-state="removed"]').waitFor();
+    await ui.frame.locator("#objects [data-derived] button", { hasText: "重新連結" }).click();
+    await ui.frame.locator('#objects [data-derived][data-state="stale"], #objects [data-derived][data-state="fresh"]').waitFor();
+    assert.notEqual(await state(), "removed");
+
     // Stop following: the object stays, the block goes away.
     await ui.frame.locator("#objects [data-derived] button", { hasText: "停止連動" }).click();
     await ui.frame.locator("#objects [data-derived]").waitFor({ state: "detached" });

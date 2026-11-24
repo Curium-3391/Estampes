@@ -1491,7 +1491,8 @@ function renderObjectsPanel(){
    });
    del.addEventListener("click",()=>editObject(o.id,{remove:true}));
    row.append(apply,del);objectsPanel.append(row);
-   const bound=derivedFor===imageId?derivedList.find(b=>b.object===o.id&&b.state!=="removed"):null;
+   // A removed binding shows too while its object is on the canvas again (restored): that is how it is linked again.
+   const bound=derivedFor===imageId?(derivedList.find(b=>b.object===o.id&&b.state!=="removed")??derivedList.find(b=>b.object===o.id)):null;
    if(bound)objectsPanel.append(derivedBlock(bound));
  }
 }
