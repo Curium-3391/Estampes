@@ -37,7 +37,7 @@ test("OD-05: an automatic refresh does not overwrite a plot the person edited by
     const auto = await cas("define", { name: "f", params: ["x"], text: "5*x^2" });
     assert.equal(auto.structuredContent.refresh.updated.length, 0, "the edited plot was not redrawn");
     assert.equal(auto.structuredContent.refresh.failed.length, 1, "and the refresh says so");
-    assert.match(auto.structuredContent.refresh.failed[0].reason, /user edited/, "with the reason");
+    assert.match(auto.structuredContent.refresh.failed[0].reason, /edited by a person/, "with the reason");
     const after = (await s.call("get_visual_state", { imageId })).structuredContent.objects.find((o) => o.id === objectId);
     assert.equal(after.props.expression, "99*x", "the hand edit is still there");
     const book = (await cas("get_notebook", { full: true })).structuredContent.data;
