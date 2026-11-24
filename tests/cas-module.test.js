@@ -72,7 +72,8 @@ test("cas: plot_result draws a semantic function plot and links it to the cell",
   const nb = await call("get_notebook", { notebook: notebookId });
   const link = nb.data.cells.find((c) => c.cellId === cellId).links[0];
   assert.equal(link.object, plot.id);
-  assert.equal(link.status, "fresh");
+  assert.equal(link.status, "fresh", "the status is read from the cell, not stored");
+  assert.ok(link.cellRevision >= 1, "the link remembers which revision of the cell it was drawn from");
   assert.equal(link.canvas, plotted.entry.imageId);
 });
 
@@ -94,7 +95,9 @@ test("cas: editing upstream makes results and links stale, and a stale result is
   const again = await call("plot_result", { notebook: nbId, cell: stale.cellId, object: plotId }, { canvas: plotted.entry.imageId });
   assert.equal(canvasObjects(again.entry).find((o) => o.id === plotId).props.expression, "2*cos(2*x)");
   assert.equal(canvasObjects(again.entry).filter((o) => o.type === "function-plot").length, 1);
-  assert.equal((await call("get_notebook", { notebook: nbId })).data.cells[0].links[0].status, "fresh");
+  const after = (await call("get_notebook", { notebook: nbId })).data.cells[0];
+  assert.equal(after.links[0].status, "fresh");
+  assert.equal(after.links[0].cellRevision, after.revision, "redrawn at the cell's current revision");
 });
 
 test("cas: conditional, partial and complex results are never plotted as ordinary functions", { skip }, async () => {

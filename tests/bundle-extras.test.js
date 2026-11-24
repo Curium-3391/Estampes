@@ -55,7 +55,7 @@ test("export writes surface.json and notebooks; install rebuilds them under new 
     const cell = imported.cells[0];
     assert.equal(cell.stale, true, "imported results are stale until recomputed");
     assert.equal(cell.links[0].canvas, "img:aaaaaaaaaaaaaaaa");
-    assert.equal(cell.links[0].status, "stale");
+    assert.equal(cell.links[0].cellRevision, 0, "an imported link counts as out of date");
     assert.ok(doc.layouts.desktop, "layouts came along");
 
     // Nothing is overwritten: a second install leaves the existing surface alone.

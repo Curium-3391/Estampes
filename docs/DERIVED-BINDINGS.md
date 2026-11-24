@@ -95,3 +95,5 @@ Export writes each set's bindings next to its objects. Import checks each one li
 ## Compatibility and downgrades
 
 `cas-plot`, the earlier binding kind, was never written by any code, so no stored document contains one and none is migrated. A document that contains a derived binding is not readable by a build that predates the kind: it fails validation and opens read-only. Back up before downgrading once a build starts writing them (5B-2). Format version stays `estampes.document/1`. This is checked at schema level; an older build was not run against such a document.
+
+The notebook's own link records (`cells[].links`) keep only what adoption and the refresh button need: the canvas, the plot's object id, the expression and domain, and `cellRevision` (the revision of the cell the plot was last drawn from). They no longer carry a status; a plot is waiting when its cell has moved past that revision, and the binding on the document holds the real state. Links written by older builds may still have a `status`; it is read, never written.

@@ -119,6 +119,13 @@ export function createNotebooks({ dir = "", records = () => null } = {}) {
   return api;
 }
 
+// What a link says about its plot, read from the cell: links no longer store a status. Older links that still carry one are honoured.
+export function linkStatus(cell, l) {
+  if (l.status === "removed" || l.status === "stale" || l.status === "error") return l.status;
+  if (cell.stale || (Number.isInteger(l.cellRevision) && l.cellRevision < Math.max(1, cell.revision ?? 1))) return "stale";
+  return "fresh";
+}
+
 export function cellSummary(c, full = false) {
   const r = c.result;
   return {
@@ -129,7 +136,7 @@ export function cellSummary(c, full = false) {
     ...(r ? { result: { resultId: r.resultId, status: r.status, plain: r.display?.plain ?? r.exact?.plain, latex: r.display?.latex ?? r.exact?.latex,
       ...(r.approx ? { approx: r.approx.plain } : {}), warnings: r.warnings, engine: r.engine, computedAt: r.computedAt, author: r.author,
       ...(full ? { ast: r.exact?.ast, items: r.items } : {}) } } : {}),
-    links: (c.links ?? []).map((l) => ({ ...l })),
+    links: (c.links ?? []).map((l) => ({ ...l, status: linkStatus(c, l) })),
   };
 }
 
@@ -169,7 +176,7 @@ function cleanImported(raw) {
     }
     for (const l of (Array.isArray(c.links) ? c.links : []).slice(0, 50)) {
       if (!plainObject(l) || typeof l.canvas !== "string" || typeof l.object !== "string") continue;
-      cell.links.push({ canvas: l.canvas.slice(0, 80), object: l.object.slice(0, 64), resultId: str(l.resultId, 40), expression: str(l.expression, 300), ...(Array.isArray(l.domain) && l.domain.length === 2 && l.domain.every(Number.isFinite) ? { domain: l.domain } : {}), status: "stale", ...(l.bound === true ? { bound: true } : {}), at: str(l.at, 40) ?? now });
+      cell.links.push({ canvas: l.canvas.slice(0, 80), object: l.object.slice(0, 64), resultId: str(l.resultId, 40), expression: str(l.expression, 300), ...(Array.isArray(l.domain) && l.domain.length === 2 && l.domain.every(Number.isFinite) ? { domain: l.domain } : {}), cellRevision: 0, ...(l.bound === true ? { bound: true } : {}), at: str(l.at, 40) ?? now });
     }
     nb.cells.push(cell);
   }

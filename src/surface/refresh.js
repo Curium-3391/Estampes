@@ -5,6 +5,7 @@
 // paused, a plot they deleted is reported, never recreated), the same router
 // checks (a disabled module or a missing permission stops a refresh). Plots on
 // every canvas the notebook is linked to are redrawn, not only the one on screen.
+import { linkStatus } from "../cas/notebooks.js";
 import { createDerivedFlow } from "../modules/derived-flow.js";
 import { markStale, bindingHashOf } from "../documents/derived-coordinator.js";
 
@@ -19,6 +20,9 @@ const MAX_SCANNED = 200;   // documents looked at to find those MAX_CANVASES wit
 export const AUTO_REFRESH_AFTER = new Set(["calculate", "define", "recompute", "set_options"]);
 
 const reasonOf = (e) => String(e?.message ?? e).slice(0, 200);
+
+// A plot of the notebook is waiting when its cell has moved on from the revision the plot was drawn at (see linkStatus).
+const isWaiting = (cell, l) => { const st = linkStatus(cell, l); return st !== "fresh" && st !== "removed"; };
 
 export async function refreshLinks({ host, notebooks, notebookId, imageId = null }) {
   const out = { recomputed: [], updated: [], failed: [], remaining: 0 };
@@ -37,7 +41,7 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
   out.remaining = nb.cells.filter((x) => x.stale).length;
   // The canvases to look at: the one on screen, the ones with plots of this notebook that are waiting.
   const canvases = new Set();
-  for (const c of nb.cells) for (const l of c.links ?? []) if (l.status !== "fresh" && l.status !== "removed") canvases.add(l.canvas);
+  for (const c of nb.cells) for (const l of c.links ?? []) if (isWaiting(c, l)) canvases.add(l.canvas);
   if (imageId) canvases.delete(imageId);
   // Walk the candidates, the one on screen first; a document whose waiting plots can only be paused (the person's edit) or are gone does not use up one of the MAX_CANVASES.
   const order = [...(imageId ? [imageId] : []), ...canvases].slice(0, MAX_SCANNED);
@@ -50,7 +54,7 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
     const before = await host.canvases.ensure(canvas).catch(() => null);
     // The plots of this notebook that its own record says are waiting on this document (object id -> link).
     const waiting = new Map();
-    for (const c of nb.cells) for (const l of c.links ?? []) if (l.canvas === canvas && l.status !== "fresh" && l.status !== "removed") waiting.set(l.object, c.id);
+    for (const c of nb.cells) for (const l of c.links ?? []) if (l.canvas === canvas && isWaiting(c, l)) waiting.set(l.object, c.id);
     // Nothing here can be redrawn without overwriting the person's edit or recreating a deleted plot: not this document's turn.
     if (before && canvas !== imageId && waiting.size && ![...waiting.keys()].some((id) => {
       const b = (before.derived ?? []).find((x) => x.source.module === CAS && x.target?.id === id && x.source.sourceRef === notebookId + "/" + waiting.get(id));
@@ -84,8 +88,8 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
     for (const id of gone) {
       const object = row(id)?.object;
       out.failed.push({ object, canvas, reason: "the plot " + (object ?? "") + " was removed from the canvas" });
-      // The notebook's own link record follows (until it is retired): a deleted plot is not retried.
-      if (object) await notebooks.mutate(notebookId, {}, (d) => { for (const c of d.cells) for (const l of c.links ?? []) if (l.canvas === canvas && l.object === object) l.status = "removed"; return d; }).catch(() => {});
+      // The notebook's own link record follows: a deleted plot's link is dropped, so it is not reported or retried again.
+      if (object) await notebooks.mutate(notebookId, {}, (d) => { for (const c of d.cells) c.links = (c.links ?? []).filter((l) => !(l.canvas === canvas && l.object === object)); return d; }).catch(() => {});
     }
     out.remaining += r.result.remaining ?? 0;
     if (canvas === imageId || !shown) shown = await host.canvases.ensure(canvas).catch(() => shown);
