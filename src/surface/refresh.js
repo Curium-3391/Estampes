@@ -6,7 +6,7 @@
 // checks (a disabled module or a missing permission stops a refresh). Plots on
 // every canvas the notebook is linked to are redrawn, not only the one on screen.
 import { createDerivedFlow } from "../modules/derived-flow.js";
-import { sourceChanged, bindingHashOf } from "../documents/derived-coordinator.js";
+import { markStale, bindingHashOf } from "../documents/derived-coordinator.js";
 
 const CAS = "org.estampes.cas";
 const PASS = 20;      // cells recomputed per router call
@@ -43,12 +43,15 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
   let shown = null;
   for (const canvas of order) {
     let r;
-    // A plot that was deleted is noticed when the document is opened, before the refresh: say so once, for the ones that were live until now.
     const before = await host.canvases.ensure(canvas).catch(() => null);
-    const live = new Set((before?.derived ?? []).filter((b) => b.state !== "removed").map((b) => b.id));
+    // The plots of this notebook that its own record says are waiting on this document (object id -> link).
+    const waiting = new Map();
+    for (const c of nb.cells) for (const l of c.links ?? []) if (l.canvas === canvas && l.status !== "fresh" && l.status !== "removed") waiting.set(l.object, c.id);
     if (before) {
-      // A change the document was never told about (a broadcast reaches only some documents): the notebook's own record says these cells' plots are waiting.
-      for (const c of nb.cells) for (const l of c.links ?? []) if (l.canvas === canvas && l.status !== "fresh" && l.status !== "removed") sourceChanged(before, { module: CAS, sourceRef: notebookId + "/" + c.id });
+      // A change the document was never told about (a broadcast reaches only some documents): mark the plots the notebook says are waiting, and only those.
+      for (const b of before.derived ?? []) {
+        if (b.state === "fresh" && b.source.module === CAS && waiting.get(b.target?.id) !== undefined && b.source.sourceRef === notebookId + "/" + waiting.get(b.target.id)) markStale(before, b.id);
+      }
       // A redraw that failed earlier (the calculator was unreachable) left its plot in error; the refresh is asked for again, one plot at a time.
       for (const b of (before.derived ?? []).filter((x) => x.state === "error" && x.source.module === CAS && String(x.source.sourceRef).startsWith(notebookId + "/")).slice(0, 10)) {
         try {
@@ -66,7 +69,8 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
     for (const x of r.result.refreshed) out.updated.push({ object: row(x.id)?.object, canvas });
     for (const x of r.result.paused) out.failed.push({ object: row(x.id)?.object, canvas, reason: x.reason ?? "the plot was edited by hand; refresh paused" });
     for (const x of r.result.failed) out.failed.push({ object: row(x.id)?.object, canvas, reason: x.reason ?? "the plot could not be updated" });
-    const gone = new Set([...r.result.removed.map((x) => x.id), ...all.filter((b) => b.state === "removed" && live.has(b.id)).map((b) => b.id)]);
+    // A deleted plot is reported once: while the notebook still lists it as waiting (the document may have noticed the deletion before this call).
+    const gone = new Set([...r.result.removed.map((x) => x.id), ...all.filter((b) => b.state === "removed" && waiting.has(b.target?.id)).map((b) => b.id)]);
     for (const id of gone) {
       const object = row(id)?.object;
       out.failed.push({ object, canvas, reason: "the plot " + (object ?? "") + " was removed from the canvas" });

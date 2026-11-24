@@ -48,6 +48,7 @@ async function plotted() {
   await host.router.execute({ module: CAS, capability: "plot_result", canvas: canvas.imageId, params: { notebook: nb, cell } });
   assert.equal(bindingsOf(canvas).length, 1);
   sourceChanged(canvas, { module: CAS });
+  await notebooks.mutate(nb, {}, (d) => { for (const c of d.cells) for (const l of c.links ?? []) l.status = "stale"; return d; });
   return { nb, canvas, object: bindingsOf(canvas)[0].target.id };
 }
 const linkOf = async (nb) => (await notebooks.get(nb)).cells.flatMap((c) => c.links ?? [])[0];
@@ -124,4 +125,32 @@ test("a plot whose redraw failed is tried again by the next refresh", async () =
   const second = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
   assert.equal(second.updated.length, 1, "the plot is redrawn once the calculator is back");
   assert.equal(bindingsOf(canvas)[0].state, "fresh");
+});
+
+test("a deletion the document already noticed is still reported once, from the notebook's record", async () => {
+  const { nb, canvas, object } = await plotted();
+  applySceneOps(canvas, [{ op: "object.delete", id: object }], { author: "user" });
+  const { createDerivedFlow } = await import("../src/modules/derived-flow.js");
+  await createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases, index: host.derivedIndex, state: host.derivedState }).list(canvas.imageId);
+  assert.equal(bindingsOf(canvas)[0].state, "removed", "the document noticed first");
+  const r = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
+  assert.match(r.failed[0]?.reason ?? "", /was removed/);
+  assert.equal((await linkOf(nb)).status, "removed");
+  assert.equal((await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId })).failed.length, 0, "said once");
+});
+
+test("more plots of one cell than one pass refreshes are all reached by repeated refreshes", async () => {
+  const made = await host.router.execute({ module: CAS, capability: "define", params: { name: "p", text: "1" } });
+  const nb = made.data.notebookId;
+  const cell = (await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, operation: "evaluate", text: "p+1" } })).data.cell.cellId;
+  const canvas = await createBlankCanvas({});
+  applySceneOps(canvas, [{ op: "object.create", type: "axes-2d", props: { xRange: [-3, 3], yRange: [-3, 3] } }], { author: "module", module: "org.estampes.graph", capability: "plot_function" });
+  for (let i = 0; i < 25; i++) await host.router.execute({ module: CAS, capability: "plot_result", canvas: canvas.imageId, params: { notebook: nb, cell } });
+  assert.equal(bindingsOf(canvas).length, 25);
+  await notebooks.mutate(nb, {}, (d) => { for (const c of d.cells) for (const l of c.links ?? []) l.status = "stale"; return d; });
+  const first = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
+  const second = await refreshLinks({ host, notebooks, notebookId: nb, imageId: canvas.imageId });
+  assert.equal(first.updated.length + second.updated.length, 25);
+  assert.ok(first.updated.length < 25 && second.updated.length > 0, "needed two passes");
+  assert.ok(bindingsOf(canvas).every((b) => b.state === "fresh"));
 });

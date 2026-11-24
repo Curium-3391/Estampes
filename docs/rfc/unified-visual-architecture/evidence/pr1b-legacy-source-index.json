@@ -306,7 +306,7 @@
     },
     {
       "path": "src/surface/refresh.js",
-      "sha256": "6c9b6a7a4fe38512af280afe50660469be0486f95a036d523cb7c912bb840133"
+      "sha256": "228822219de0b0b56e4c7152d7d19b2c428d6929bb4a3732c31a4a8bf50735ac"
     },
     {
       "path": "src/surface/service.js",
@@ -785,6 +785,15 @@
         "src/surface/refresh.js"
       ],
       "previousSha256": "dde911e0d7bc37c707dbb0ebbf0f6e438bd687b66fb17a385537b0788ec69334"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1 review: waiting plots only; deletion from notebook record",
+      "files": [
+        "src/surface/refresh.js"
+      ],
+      "previousSha256": "6c9b6a7a4fe38512af280afe50660469be0486f95a036d523cb7c912bb840133"
     }
   ]
 }
