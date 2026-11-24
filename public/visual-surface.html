@@ -1247,12 +1247,13 @@ const cleanObjects=list=>(Array.isArray(list)?list:[]).filter(o=>o&&/^o\d{1,6}$/
      rows:o.card.rows.slice(0,24).filter(r=>r&&typeof r==="object").map(r=>({label:String(r.label??"").slice(0,40),value:String(r.value??"").slice(0,240),
        href:/^https:\/\//.test(String(r.href??""))?String(r.href).slice(0,300):""}))}:null,
    primitives:o.primitives.slice(0,4000)}));
+objectsPanel.addEventListener("input",()=>{objectsEdited=true;});
 function setObjects(list){objects=cleanObjects(list);fullLayers(objects,imageId,null);derivedDirty=true;}
 // ===== Derived objects (UVA 5B-3c) =====
 // Objects a module made from a source that can change. The server owns the state; this only shows it
 // and sends the person's choice with the hash it was shown. An overwrite goes through a preview first.
 const DERIVED_STATES=["fresh","stale","recomputing","conflict","removed","unavailable","unresolved","error"];
-let derivedList=[],derivedFor=null,derivedDirty=true,derivedLoading=false,derivedBusy=null,derivedPreview=null,derivedNote={};
+let derivedList=[],derivedFor=null,derivedRetry=false,objectsEdited=false,derivedDirty=true,derivedLoading=false,derivedBusy=null,derivedPreview=null,derivedNote={};
 // The server may mark a binding stale (a calculator cell changed) without the objects changing, and
 // the document poll does not carry bindings, so the list is read again now and then.
 const derivedKey=l=>JSON.stringify(l.map(b=>[b.id,b.state,b.bindingHash,b.reason??""]));
@@ -1263,11 +1264,12 @@ async function loadDerived(){
    const result=await request("tools/call",{name:"get_derived_bindings",arguments:{canvas:id}});
    const r=result?.structuredContent;
    if(result?.isError||r?.kind!=="estampes.derived_bindings")throw Error(r?.message||"tool error");
-   if(id===imageId){derivedList=(Array.isArray(r.bindings)?r.bindings:[]).filter(b=>b&&typeof b.object==="string"&&typeof b.id==="string"&&DERIVED_STATES.includes(b.state)).slice(0,100);derivedFor=id;}
- }catch(error){if(id===imageId){derivedList=[];derivedFor=id;}}
- finally{derivedLoading=false;if(id===imageId&&derivedKey(derivedList)!==before)renderObjectsPanel();}
+   if(id===imageId){derivedList=(Array.isArray(r.bindings)?r.bindings:[]).filter(b=>b&&typeof b.object==="string"&&typeof b.id==="string"&&DERIVED_STATES.includes(b.state)).slice(0,100);derivedFor=id;derivedRetry=false;}
+ }catch(error){if(id===imageId){derivedFor=id;derivedRetry=true;}} // keep the last list and try again on the next tick
+ // The rebuild replaces the editors, so it waits while the person has typed something not yet applied; the next render shows it.
+ finally{derivedLoading=false;if(id===imageId&&derivedKey(derivedList)!==before&&!objectsEdited)renderObjectsPanel();}
 }
-setInterval(()=>{if(derivedList.length&&!derivedBusy&&!document.hidden&&ready&&imageId&&derivedFor===imageId)loadDerived();},5000);
+setInterval(()=>{if((derivedList.length||derivedRetry)&&!derivedBusy&&!document.hidden&&ready&&imageId&&derivedFor===imageId)loadDerived();},5000);
 async function derivedAct(b,action,extra){
  if(!ready||!imageId||derivedBusy)return;
  derivedBusy=b.id;derivedNote[b.id]="";renderObjectsPanel();
@@ -1431,6 +1433,7 @@ function renderObjectsPanel(){
  const editable=objects.filter(o=>o.editable&&o.type!=="shape");
  objectsPanel.hidden=!imageId||!!pair||!!ws;objectsPanel.replaceChildren();
  if(objectsPanel.hidden)return;
+ objectsEdited=false;
  objectsPanel.append(el("div",{className:"kind",textContent:t("vs.objects.heading")}));
  const sourceInput=el("input",{placeholder:t("vs.objects.sourcePlaceholder"),"aria-label":t("vs.objects.sourceLabel")});
  const add=el("button",{textContent:t("vs.objects.addLayer"),disabled:!ready});

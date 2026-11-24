@@ -29,6 +29,13 @@ test("the widget updates a stale plot, and overwrites a hand edit only after a p
     await block.waitFor();
     assert.equal(await block.getAttribute("data-state"), "fresh");
 
+    // Someone is typing in the plot's editor when the source changes: the page keeps the typing.
+    const typing = ui.frame.locator("#objects .obj[data-object] input.expr").first();
+    await typing.fill("77*x");
+    await cas("define", { name: "f", params: ["x"], text: "4*x^2" });
+    await ui.page.waitForTimeout(6500);
+    assert.equal(await typing.inputValue(), "77*x", "an unapplied edit survives the background refresh");
+    await ui.reload();
     // The cell changes: the page shows it, and "更新" redraws the plot.
     await cas("define", { name: "f", params: ["x"], text: "5*x^2" });
     // The page is not reloaded: it reads the bindings again by itself.
