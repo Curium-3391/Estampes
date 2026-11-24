@@ -100,3 +100,28 @@ test("an adoption that could not be saved leaves no binding in the cached docume
     assert.equal((await links(nb))[0].bound, true);
   } finally { canvases.save = real; }
 });
+
+test("more earlier plots than one batch are all adopted in one open", { timeout: 120000 }, async () => {
+  const { nb, canvas } = await legacy(Array(60).fill("fresh"));
+  const flow = flowOf();
+  assert.equal((await flow.list(canvas.imageId)).total, 60);
+  assert.equal((await links(nb)).filter((l) => l.bound === true).length, 60);
+  await flow.list(canvas.imageId);
+  assert.equal(bindingsOf(canvas).length, 60);
+});
+
+test("if marking the links fails, adoption is tried again on the next open until it is marked", { timeout: 60000 }, async () => {
+  const { nb, canvas } = await legacy(["fresh"]);
+  const real = notebooks.mutate;
+  let fail = true;
+  notebooks.mutate = async (...a) => { if (fail) throw new Error("disk full"); return real.apply(notebooks, a); };
+  const flow = flowOf();
+  try {
+    await flow.list(canvas.imageId);
+    assert.notEqual((await links(nb))[0].bound, true);
+    fail = false;
+    await flow.list(canvas.imageId);
+    assert.equal((await links(nb))[0].bound, true);
+    assert.equal(bindingsOf(canvas).length, 1);
+  } finally { notebooks.mutate = real; }
+});

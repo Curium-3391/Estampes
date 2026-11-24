@@ -165,7 +165,9 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         if (wantsDerived && !adopting && !manifest.v2.derives?.[capId]) throw new ModuleError(capId + " returned derived objects but does not declare derives in its manifest", "output");
         if (wantsDerived && !entry) throw new ModuleError(capId + " returned derived objects but has no document", "output");
         if (wantsDerived && adopting) {
-          if (bindingsOf(entry).length + output.derived.length > MAX_DERIVED_PER_CANVAS) throw new ModuleError("a document holds at most " + MAX_DERIVED_PER_CANVAS + " derived objects", "output");
+          // Only objects that would really be added count: ones already bound or gone are skipped below.
+          const added = output.derived.filter((d) => entry.objects instanceof Map && entry.objects.has(d.object) && !bindingsOf(entry).some((b) => b.target.id === d.object && b.state !== "removed"));
+          if (bindingsOf(entry).length + added.length > MAX_DERIVED_PER_CANVAS) throw new ModuleError("a document holds at most " + MAX_DERIVED_PER_CANVAS + " derived objects", "output");
         } else if (wantsDerived) {
           const made = new Set(output.operations.filter((op) => op?.op === "object.create" && typeof op.ref === "string").map((op) => "$" + op.ref));
           const named = output.derived.map((d) => d.object);
@@ -242,7 +244,11 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         } else if (wantsBroadcast && !derivedResult) derivedResult = { registered: [], staled: [] };
         if (runtime.after) {
           try { await runtime.after(mod, capId, input, ctx, { output, scene, entry }); }
-          catch (error) { audit.record({ kind: "run.after-failed", module: manifest.id, capability: capId, error: String(error?.message || error).slice(0, 300) }); }
+          catch (error) {
+            audit.record({ kind: "run.after-failed", module: manifest.id, capability: capId, error: String(error?.message || error).slice(0, 300) });
+            // An adoption is only complete once its finalization is: the caller must try again.
+            if (adopting) throw new ModuleError("the adoption could not be finished: " + String(error?.message || error).slice(0, 200), "internal");
+          }
         }
         const ms = Date.now() - started;
         audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,

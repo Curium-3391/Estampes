@@ -89,11 +89,11 @@ test("opening a document adopts the objects the module names, once, and records 
   const by = Object.fromEntries(listed.bindings.map((b) => [b.object, b.state]));
   assert.deepEqual(by, { o1: "fresh", o2: "stale", o3: "fresh" });
   assert.deepEqual(bindingsOf(canvas).map((b) => [b.source.capability, b.source.sourceRef]), [["make", "book/1"], ["make", "book/2"], ["make", "book/3"]], "recorded under the capability that made them");
-  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 1);
+  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 2, "asked again once to see that nothing is left");
   assert.deepEqual(s.calls.find((c) => c.capability === "adopt").input, { canvas: canvas.imageId }, "the module is told which document");
   // Asked once per document: listing again does not run it again.
   await s.flow.list(canvas.imageId);
-  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 1);
+  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 2);
 });
 
 test("adoption is idempotent: objects that already have a binding, or are gone, are skipped, and a repeat adds nothing", async () => {
@@ -107,7 +107,7 @@ test("adoption is idempotent: objects that already have a binding, or are gone, 
   // A second flow (a restart) asks again; nothing is duplicated.
   const again = createDerivedFlow({ router: s.h.router, registry: s.h.registry, canvases: s.canvases, index: s.h.derivedIndex });
   await again.list(canvas.imageId);
-  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 2);
+  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 3, "a restart asks once more, and adds nothing");
   assert.equal(bindingsOf(canvas).length, 2);
 });
 
