@@ -88,7 +88,7 @@ import { createSurfaceStore } from "./src/surface/store.js";
 import { createSurfaceService } from "./src/surface/service.js";
 import { inlineWorkbench } from "./src/surface/widget-source.js";
 import { collectBundleExtras, installBundleExtras } from "./src/surface/bundle-extras.js";
-import { autoRefresh } from "./src/surface/refresh.js";
+import { afterRunNote } from "./src/surface/refresh.js";
 import { registerSurfaceTools } from "./src/surface/mcp-tools.js";
 import { configure as configureCas, casStatus, notebookStore } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
@@ -2822,11 +2822,7 @@ function makeServer() {
     host: moduleHost, storeUri: STORE_URI, storeHtml, visualUri: VISUAL_URI, canvasPayload, logSizes,
     ensureImage, saveCanvas, canvasLayers,
     // The model changed a calculator notebook that has auto-refresh on: redraw its linked plots, like the panel does for the user.
-    afterRun: async ({ module, capability, params, run }) => {
-      if (module !== "org.estampes.cas") return null;
-      const r = await autoRefresh({ host: moduleHost, notebooks: notebookStore(), capability, notebookId: params.notebook ?? run.data?.notebookId });
-      return r ? "Auto-refresh: recomputed " + r.recomputed.length + " cell(s), redrew " + r.updated.length + " Graph plot(s)" + (r.failed.length ? ", " + r.failed.length + " could not be updated (" + r.failed.map((f) => f.reason).slice(0, 2).join("; ") + ")" : "") + (r.remaining ? ", " + r.remaining + " cell(s) still stale" : "") + "." : null;
-    },
+    afterRun: (a) => afterRunNote({ host: moduleHost, notebooks: notebookStore(), ...a }),
   });
   registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
