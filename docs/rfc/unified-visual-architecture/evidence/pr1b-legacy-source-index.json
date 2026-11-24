@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "006cbc2fac29796c8ae53c2ae2af18fda2ea97c388543bb50283ab2489deff57"
+      "sha256": "5859cbe904e361c013588968ce901ed8b99c0d48f1b697ff71edf6b3f5a7810a"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -831,6 +831,15 @@
         "server.js",
         "src/surface/refresh.js"
       ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (\u300c\u597d\u300d 5C, 5C-1 starts without a decision)",
+      "reason": "5C-1: router discards a module's answer that arrives after the module or the refreshed object changed",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "006cbc2fac29796c8ae53c2ae2af18fda2ea97c388543bb50283ab2489deff57"
     }
   ]
 }
