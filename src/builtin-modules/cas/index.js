@@ -261,6 +261,29 @@ async function refreshPlot(p, ctx) {
   return { ...out, data: { ...out.data, sourceRevision: Math.max(1, cell.revision ?? 1) } };
 }
 
+// Estampes asks this when a document is opened: which plots on it were drawn from a cell before plots were tracked (their notebook link
+// has no `bound` mark). Each is named once, with the cell it came from and whether the link says it is out of date. Nothing is changed here.
+async function adoptPlots(p, ctx) {
+  if (!deps.notebooks) return { data: { adopted: 0 } };
+  const here = new Set((ctx.canvas?.objects ?? []).filter((o) => o.type === "function-plot").map((o) => o.id));
+  // An object can carry links from more than one cell (it was drawn from one and redrawn from another): the latest draw is the one it shows.
+  const best = new Map();
+  for (const nb of await deps.notebooks.list()) {
+    for (const cell of nb.cells) {
+      for (const l of cell.links ?? []) {
+        if (l.canvas !== p.canvas || l.bound === true || l.status === "removed" || !here.has(l.object)) continue;
+        const prev = best.get(l.object);
+        if (!prev || String(l.at ?? "") > String(prev.l.at ?? "")) best.set(l.object, { nb, cell, l });
+      }
+    }
+  }
+  const derived = [...best.entries()].slice(0, 50).map(([object, { nb, cell, l }]) => ({
+    object, sourceRef: sourceRefOf(nb, cell.id), sourceRevision: Math.max(1, cell.revision ?? 1),
+    inputsHash: createHash("sha256").update(JSON.stringify({ result: l.resultId, expression: l.expression, domain: l.domain ?? [-10, 10] })).digest("hex"),
+    ...(l.status === "fresh" && !cell.stale ? {} : { stale: true }) }));
+  return { ...(derived.length ? { derived } : {}), data: { adopted: derived.length }, summary: derived.length + " earlier plot(s) found" };
+}
+
 async function setOptions(p) {
   needBackend();
   const nb = await deps.notebooks.mutate(p.notebook, { expectedRevision: p.expectedRevision }, (d) => {
@@ -277,6 +300,7 @@ export async function run(capability, params, ctx) {
   if (capability === "recompute") return recompute(params);
   if (capability === "plot_result") return plotResult(params, ctx);
   if (capability === "refresh_plot") return refreshPlot(params, ctx);
+  if (capability === "adopt_plots") return adoptPlots(params, ctx);
   if (capability === "set_options") return setOptions(params);
   throw new Error("unknown capability " + capability);
 }
@@ -285,6 +309,16 @@ export async function run(capability, params, ctx) {
 // link from the result to the object exists only for plots that really
 // landed on the canvas.
 export async function after(capability, params, ctx, { output, scene, entry }) {
+  // Plots the core has just recorded as derived: their links are marked so they are never adopted a second time (a plot the person later detaches stays detached).
+  if (capability === "adopt_plots" && deps.notebooks) {
+    const names = new Set((output.derived ?? []).map((d) => d.object));
+    if (!names.size) return;
+    for (const nb of await deps.notebooks.list()) {
+      if (!nb.cells.some((c) => (c.links ?? []).some((l) => l.canvas === entry.imageId && names.has(l.object) && l.bound !== true))) continue;
+      await deps.notebooks.mutate(nb.id, {}, (d) => { for (const c of d.cells) for (const l of c.links ?? []) if (l.canvas === entry.imageId && names.has(l.object)) l.bound = true; return d; });
+    }
+    return;
+  }
   if ((capability !== "plot_result" && capability !== "refresh_plot") || !deps.notebooks) return;
   const d = output.data;
   const plots = new Set(canvasObjects(entry).filter((o) => o.type === "function-plot").map((o) => o.id));
@@ -295,7 +329,9 @@ export async function after(capability, params, ctx, { output, scene, entry }) {
     if (!cell) return nb;
     const was = (cell.links ?? []).find((l) => l.canvas === entry.imageId && l.object === objectId);
     cell.links = (cell.links ?? []).filter((l) => !(l.canvas === entry.imageId && l.object === objectId));
-    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: capability === "refresh_plot" ? (was?.domain ?? d.domain) : d.domain, status: "fresh", at: new Date().toISOString() });
+    cell.links.push({ canvas: entry.imageId, object: objectId, resultId: d.resultId, expression: d.expression, domain: capability === "refresh_plot" ? (was?.domain ?? d.domain) : d.domain, status: "fresh", at: new Date().toISOString(),
+      // Made or redrawn through a binding: never adopted. A redraw by the older path (object given to plot_result) keeps what the link said before.
+      ...(capability === "refresh_plot" || !params.object || was?.bound === true ? { bound: true } : {}) });
     return nb;
   };
   // The plot is already saved; a link lost to a passing storage error would

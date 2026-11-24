@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "eb7a9392b5bd0c95d19dde1219431abbdb2023b2386a54453b90e05b27b0bf09"
+      "sha256": "f59447afa0a6bc55b14c8a580edcac455199f947b987607ed550fd71efd589f8"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -86,7 +86,7 @@
     },
     {
       "path": "src/cas/notebooks.js",
-      "sha256": "326846a4eead7a5fbe5638a7178ac777739fd2b78ddb28b147366e21de60867c"
+      "sha256": "e2102d83a853a7c3ff55da9a1d565b665cf0b14de087ecd94403a6cc148a852d"
     },
     {
       "path": "src/config.js",
@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "6308f2c2cde247697ac5e99678eec2024feb16bc798d5224c4982cb16dbbc577"
+      "sha256": "5b6870609131f50a68ccb8fee90dc41d1627da70703109e8da9e46b5fc69709a"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "c1e40a5da1419d1244e7fa4afdb01e9a94519101030a58f62112e04e83d60f06"
+      "sha256": "006cbc2fac29796c8ae53c2ae2af18fda2ea97c388543bb50283ab2489deff57"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -703,6 +703,61 @@
         "public/visual-surface.html"
       ],
       "previousSha256": "73a78142c53bd0012338c38f7850c869caa679521a43ccc691afdd57db2b0276"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose option A (adopt when opened) on a decision card on 2026-11-24, after approving the 5B design on 2026-11-21",
+      "reason": "UVA 5B-4a: derives.adopt lets a module name objects it made before bindings existed; the core records them as bindings when the document is opened",
+      "files": [
+        "src/builtin-modules/cas/index.js",
+        "src/modules/manifest.js",
+        "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4 (\u300c\u7e7c\u7e8c\u300d)",
+      "reason": "5B-4a review: roll back an unsaved adoption; keep bound through notebook import",
+      "files": [
+        "src/cas/notebooks.js",
+        "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4",
+      "reason": "5B-4a review: capacity counts only new bindings; adoption finalization failure propagates",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "efa038a1ed9ff2c0270379939878d326626d5fba973783ff88e27a4ded3d3b34"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4",
+      "reason": "5B-4a review: adoption only of objects the module made",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "a5f3e40b01e89ac595107051499ff7cd1e16c9c7e04958f3dfe164d658faefaa"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4",
+      "reason": "5B-4a review: adoption batches drain after a finalization retry",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "bd2edcbadd09eea004abffd469381e0d5e39fa67893ec9cdeb5002caf0b0be0d"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4",
+      "reason": "5B-4a review: adopt a plot for its latest draw",
+      "files": [
+        "src/builtin-modules/cas/index.js"
+      ],
+      "previousSha256": "c6d6ccf3258c02f3f1d5fdc2f029b597836243becdd628945090a5ba0014d4f2"
     }
   ]
 }
