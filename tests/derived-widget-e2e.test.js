@@ -31,8 +31,12 @@ test("the widget updates a stale plot, and overwrites a hand edit only after a p
 
     // The cell changes: the page shows it, and "更新" redraws the plot.
     await cas("define", { name: "f", params: ["x"], text: "5*x^2" });
-    await ui.reload();
+    // The page is not reloaded: it reads the bindings again by itself.
     await ui.frame.locator('#objects [data-derived][data-state="stale"]').waitFor();
+    // A preview of a stale object offers no overwrite (that is for a conflict); the normal update stays.
+    await ui.frame.locator("#objects [data-derived] button", { hasText: "預覽變更" }).click();
+    await ui.frame.locator("#objects [data-derived] code").first().waitFor();
+    assert.equal(await ui.frame.locator("#objects [data-derived] button", { hasText: "覆蓋" }).count(), 0);
     await ui.frame.locator("#objects [data-derived] button", { hasText: "更新" }).click();
     await ui.frame.locator('#objects [data-derived][data-state="fresh"]').waitFor();
     assert.equal(await expr(), "10*x");
@@ -42,7 +46,6 @@ test("the widget updates a stale plot, and overwrites a hand edit only after a p
     await cas("define", { name: "f", params: ["x"], text: "3*x^2" });
     await s.call("update_derived", { canvas: imageId, action: "refresh-stale" });
     assert.equal(await state(), "conflict");
-    await ui.reload();
     await ui.frame.locator('#objects [data-derived][data-state="conflict"]').waitFor();
     assert.equal(await ui.frame.locator("#objects [data-derived] button", { hasText: "覆蓋" }).count(), 0, "no overwrite before a preview");
     await ui.frame.locator("#objects [data-derived] button", { hasText: "預覽變更" }).click();

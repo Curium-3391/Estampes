@@ -350,7 +350,7 @@
     },
     {
       "path": "public/visual-surface.html",
-      "sha256": "5d8c7457e0a8c6da477d4dae34ebb30fa4ab49fce7786833bc7d525701e1d9e9"
+      "sha256": "5c26a623c701aa2ae74f535c11b59317b2c734196fcb5f7ffb66ba1b28f7eda1"
     },
     {
       "path": "public/workbench.js",
@@ -667,6 +667,15 @@
         "public/visual-surface.html"
       ],
       "previousSha256": "472c9783aff17eb8fbee2f3b20a25d8e68fd3f1287cb58343a16cb18cb8bd5a7"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User said \u300c\u597d\u300d to the widget buttons as the next step (2026-11-24); Codex review findings fixed",
+      "reason": "UVA 5B-3c: review fixes (overwrite only for a conflict; bindings read again by the page)",
+      "files": [
+        "public/visual-surface.html"
+      ],
+      "previousSha256": "5d8c7457e0a8c6da477d4dae34ebb30fa4ab49fce7786833bc7d525701e1d9e9"
     }
   ]
 }

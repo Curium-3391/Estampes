@@ -1253,17 +1253,21 @@ function setObjects(list){objects=cleanObjects(list);fullLayers(objects,imageId,
 // and sends the person's choice with the hash it was shown. An overwrite goes through a preview first.
 const DERIVED_STATES=["fresh","stale","recomputing","conflict","removed","unavailable","unresolved","error"];
 let derivedList=[],derivedFor=null,derivedDirty=true,derivedLoading=false,derivedBusy=null,derivedPreview=null,derivedNote={};
+// The server may mark a binding stale (a calculator cell changed) without the objects changing, and
+// the document poll does not carry bindings, so the list is read again now and then.
+const derivedKey=l=>JSON.stringify(l.map(b=>[b.id,b.state,b.bindingHash,b.reason??""]));
 async function loadDerived(){
  if(derivedLoading||!ready||!imageId||pair||ws)return;
- derivedLoading=true;derivedDirty=false;const id=imageId;
+ derivedLoading=true;derivedDirty=false;const id=imageId,before=derivedFor===id?derivedKey(derivedList):null;
  try{
    const result=await request("tools/call",{name:"get_derived_bindings",arguments:{canvas:id}});
    const r=result?.structuredContent;
    if(result?.isError||r?.kind!=="estampes.derived_bindings")throw Error(r?.message||"tool error");
    if(id===imageId){derivedList=(Array.isArray(r.bindings)?r.bindings:[]).filter(b=>b&&typeof b.object==="string"&&typeof b.id==="string"&&DERIVED_STATES.includes(b.state)).slice(0,100);derivedFor=id;}
  }catch(error){if(id===imageId){derivedList=[];derivedFor=id;}}
- finally{derivedLoading=false;if(id===imageId)renderObjectsPanel();}
+ finally{derivedLoading=false;if(id===imageId&&derivedKey(derivedList)!==before)renderObjectsPanel();}
 }
+setInterval(()=>{if(derivedList.length&&!derivedBusy&&!document.hidden&&ready&&imageId&&derivedFor===imageId)loadDerived();},5000);
 async function derivedAct(b,action,extra){
  if(!ready||!imageId||derivedBusy)return;
  derivedBusy=b.id;derivedNote[b.id]="";renderObjectsPanel();
@@ -1296,7 +1300,8 @@ function derivedBlock(b){
  if(pv){
    box.append(el("span",{className:"kind",textContent:t("vs.derived.previewNow")}),el("code",{textContent:pv.current||"-"}),
      el("span",{className:"kind",textContent:pv.edited?t("vs.derived.previewEdited"):t("vs.derived.previewHeading")}),el("code",{textContent:pv.wouldWrite||"-"}));
-   btn(t("vs.derived.act.overwrite"),()=>derivedAct(b,"overwrite",{previewToken:pv.token}),t("vs.derived.overwriteTitle"));
+   // Overwrite is only for a conflict; a stale or failed one has its normal refresh.
+   if(b.state==="conflict")btn(t("vs.derived.act.overwrite"),()=>derivedAct(b,"overwrite",{previewToken:pv.token}),t("vs.derived.overwriteTitle"));
  }
  if(b.state==="unresolved"||b.state==="removed")btn(t("vs.derived.act.reattach"),()=>derivedAct(b,"reattach",{target:b.object}),t("vs.derived.reattachTitle"));
  if(b.state!=="removed")btn(t("vs.derived.act.detach"),()=>derivedAct(b,"detach"),t("vs.derived.detachTitle"));
