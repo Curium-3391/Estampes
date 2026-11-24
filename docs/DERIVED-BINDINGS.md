@@ -122,3 +122,7 @@ The notebook's own link records (`cells[].links`) keep only what adoption and th
 ## Late answers
 
 The router remembers, when a call begins, the module's state (enabled, version, granted permissions) and, for a refresh of one object, that object's revision, content and edited mark. If any of them differs when the module answers, the answer is dropped (`revoked` when the module changed, `conflict` when the object changed): nothing is drawn, saved or linked, and the audit log records `run.late`. A binding whose refresh was dropped this way is in `error` with the reason; refreshing it again retries. Every module is covered, not only producers; background jobs too.
+
+## Saving and partial failure
+
+`refresh-stale` saves the document after each target, not once at the end. Every target has its own result (refreshed, paused, failed or removed, with a reason). If saving fails the loop stops: the answer carries `saveError`, `remaining` counts the targets not tried, and what finished stays in the document and is written by the next successful save. A failed save never makes a binding `fresh` on disk; a binding whose module write happened but was not saved is in `error`, and refreshing it again is not treated as a conflict.

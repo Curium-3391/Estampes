@@ -138,9 +138,17 @@ async function recompute(entry, binding, produce, { force }) {
   current = reduce(current, "refreshStarted");
   replace(entry, stripDoc(current));
   let made;
+  const seen = objectOf(entry, binding.target.id);
+  const seenHash = seen ? objectContentHash(seen) : null, seenRevision = seen?.revision;
   try { made = await produce(stripDoc(current)); }
   catch (e) {
     current = reduce(current, "refreshFailed", { reason: clean(e?.message ?? e, 300) });
+    // The module's own write may be in the document although the save after it failed. That is not an edit by a person: take it as what was last
+    // applied, so the retry is not mistaken for a conflict (a person's edit sets editedByUser and is never adopted this way).
+    const o = objectOf(entry, binding.target.id);
+    if (o && seen && !["conflict", "revoked"].includes(e?.code) && o.provenance?.editedByUser !== true && (o.revision !== seenRevision || objectContentHash(o) !== seenHash)) {
+      current = { ...current, lastApplied: { ...current.lastApplied, objectRevision: o.revision, contentHash: objectContentHash(o) } };
+    }
     replace(entry, stripDoc(current));
     return { outcome: "failed", binding: stripDoc(current), reason: current.reason };
   }
@@ -160,16 +168,24 @@ async function recompute(entry, binding, produce, { force }) {
 }
 
 // Refreshes the stale bindings, a bounded number per call.
-export async function refreshStale(entry, { produce, budget = REFRESH_BUDGET }) {
+// `persist` (optional) saves the document after each target, so a target that finished is on disk before the next one starts (5C-3). If saving
+// fails the loop stops, `saveError` says so and `remaining` counts what was not tried; what was done stays in the document for the next save.
+export async function refreshStale(entry, { produce, budget = REFRESH_BUDGET, persist } = {}) {
   const out = { refreshed: [], paused: [], failed: [], removed: [], remaining: 0 };
   const todo = bindingsOf(entry).filter((b) => b.state === "stale");
+  let tried = 0;
   for (const b of todo.slice(0, budget)) {
+    tried++;
     const fresh = bindingsOf(entry).find((x) => x.id === b.id);
     if (!fresh || fresh.state !== "stale") continue;
     const r = await recompute(entry, fresh, produce, { force: false });
     ({ refreshed: out.refreshed, paused: out.paused, failed: out.failed, removed: out.removed })[r.outcome].push({ id: b.id, ...(r.reason ? { reason: r.reason } : {}) });
+    if (persist) {
+      try { await persist(); }
+      catch (e) { out.saveError = clean(e?.message ?? e, 300); break; }
+    }
   }
-  out.remaining = Math.max(0, todo.length - budget);
+  out.remaining = Math.max(0, todo.length - tried);
   return out;
 }
 
