@@ -70,7 +70,7 @@
     },
     {
       "path": "src/bundle.js",
-      "sha256": "42c26061e3d1e60086185a2c5fce4dedc2371e650e85b0d3548e5b9bfeb5b73c"
+      "sha256": "34d5a94352e0027c364211c55f2c04f721bbf36c8697239c33755e52b4de9505"
     },
     {
       "path": "src/canvas-state.js",
@@ -649,6 +649,15 @@
         "src/modules/mcp-tools.js",
         "src/modules/router.js"
       ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User approved the 5B design on a decision card (2026-11-21) and told the 5B thread to continue with 5B-3 on 2026-11-24 (\u300c\u7e7c\u7e8c\u300d); the unresolved-on-import default was announced to the user, who did not object",
+      "reason": "UVA 5B-3b: bundle import reads each set's derived bindings, keeps those whose object arrives with them, and brings them in as unresolved",
+      "files": [
+        "src/bundle.js"
+      ],
+      "previousSha256": "42c26061e3d1e60086185a2c5fce4dedc2371e650e85b0d3548e5b9bfeb5b73c"
     }
   ]
 }
