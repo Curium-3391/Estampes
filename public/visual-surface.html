@@ -1247,7 +1247,62 @@ const cleanObjects=list=>(Array.isArray(list)?list:[]).filter(o=>o&&/^o\d{1,6}$/
      rows:o.card.rows.slice(0,24).filter(r=>r&&typeof r==="object").map(r=>({label:String(r.label??"").slice(0,40),value:String(r.value??"").slice(0,240),
        href:/^https:\/\//.test(String(r.href??""))?String(r.href).slice(0,300):""}))}:null,
    primitives:o.primitives.slice(0,4000)}));
-function setObjects(list){objects=cleanObjects(list);fullLayers(objects,imageId,null);}
+function setObjects(list){objects=cleanObjects(list);fullLayers(objects,imageId,null);derivedDirty=true;}
+// ===== Derived objects (UVA 5B-3c) =====
+// Objects a module made from a source that can change. The server owns the state; this only shows it
+// and sends the person's choice with the hash it was shown. An overwrite goes through a preview first.
+const DERIVED_STATES=["fresh","stale","recomputing","conflict","removed","unavailable","unresolved","error"];
+let derivedList=[],derivedFor=null,derivedDirty=true,derivedLoading=false,derivedBusy=null,derivedPreview=null,derivedNote={};
+async function loadDerived(){
+ if(derivedLoading||!ready||!imageId||pair||ws)return;
+ derivedLoading=true;derivedDirty=false;const id=imageId;
+ try{
+   const result=await request("tools/call",{name:"get_derived_bindings",arguments:{canvas:id}});
+   const r=result?.structuredContent;
+   if(result?.isError||r?.kind!=="estampes.derived_bindings")throw Error(r?.message||"tool error");
+   if(id===imageId){derivedList=(Array.isArray(r.bindings)?r.bindings:[]).filter(b=>b&&typeof b.object==="string"&&typeof b.id==="string"&&DERIVED_STATES.includes(b.state)).slice(0,100);derivedFor=id;}
+ }catch(error){if(id===imageId){derivedList=[];derivedFor=id;}}
+ finally{derivedLoading=false;if(id===imageId)renderObjectsPanel();}
+}
+async function derivedAct(b,action,extra){
+ if(!ready||!imageId||derivedBusy)return;
+ derivedBusy=b.id;derivedNote[b.id]="";renderObjectsPanel();
+ try{
+   const result=await request("tools/call",{name:"update_derived",arguments:{canvas:imageId,action,binding:b.id,expectedBindingHash:b.bindingHash,...(extra??{})}});
+   const r=result?.structuredContent;
+   if(result?.isError||r?.kind!=="estampes.derived_update")throw Error(r?.message||result?.content?.[0]?.text||t("vs.err.failed"));
+   if(action==="preview"){
+     const p=r.result??{};
+     derivedPreview=p.previewToken?{binding:b.id,token:p.previewToken,hash:b.bindingHash,wouldWrite:String(p.wouldWrite??"").slice(0,300),current:String(p.current??"").slice(0,300),edited:!!p.editedByPerson}:null;
+     if(!derivedPreview)derivedNote[b.id]=t("vs.derived.noPreview");
+   }else{
+     derivedPreview=null;
+     status.textContent=t("vs.derived.done",{action:t("vs.derived.act."+action)});
+   }
+   if(Array.isArray(r.bindings))derivedList=r.bindings.filter(x=>x&&typeof x.id==="string"&&DERIVED_STATES.includes(x.state)).slice(0,100);
+   derivedDirty=true;
+ }catch(error){derivedNote[b.id]=t("wb.err.notApplied",{message:errText(error)});derivedDirty=true;}
+ finally{derivedBusy=null;renderObjectsPanel();}
+}
+function derivedBlock(b){
+ const box=el("div",{className:"obj",dataset:{derived:b.id,state:b.state}});
+ box.append(el("span",{className:"kind",textContent:t("vs.derived.state."+b.state)}));
+ if(b.reason)box.append(el("span",{textContent:b.reason}));
+ const busy=!ready||derivedBusy!==null;
+ const btn=(label,fn,title)=>{const x=el("button",{textContent:label,disabled:busy,...(title?{title}:{})});x.addEventListener("click",fn);box.append(x);return x;};
+ const pv=derivedPreview&&derivedPreview.binding===b.id&&derivedPreview.hash===b.bindingHash?derivedPreview:null;
+ if(b.state==="stale"||b.state==="error")btn(t("vs.derived.act.refresh"),()=>derivedAct(b,"refresh"));
+ if(b.state==="stale"||b.state==="conflict"||b.state==="error")btn(t("vs.derived.act.preview"),()=>derivedAct(b,"preview"),t("vs.derived.previewTitle"));
+ if(pv){
+   box.append(el("span",{className:"kind",textContent:t("vs.derived.previewNow")}),el("code",{textContent:pv.current||"-"}),
+     el("span",{className:"kind",textContent:pv.edited?t("vs.derived.previewEdited"):t("vs.derived.previewHeading")}),el("code",{textContent:pv.wouldWrite||"-"}));
+   btn(t("vs.derived.act.overwrite"),()=>derivedAct(b,"overwrite",{previewToken:pv.token}),t("vs.derived.overwriteTitle"));
+ }
+ if(b.state==="unresolved"||b.state==="removed")btn(t("vs.derived.act.reattach"),()=>derivedAct(b,"reattach",{target:b.object}),t("vs.derived.reattachTitle"));
+ if(b.state!=="removed")btn(t("vs.derived.act.detach"),()=>derivedAct(b,"detach"),t("vs.derived.detachTitle"));
+ if(derivedNote[b.id])box.append(el("span",{className:"kind",textContent:derivedNote[b.id]}));
+ return box;
+}
 // Image layers arrive as small previews (full:false, ref) so a result stays
 // under the host cap; the full PNG follows from load_visual_pixels {object}.
 const layerPixels=new Map(),layerLoading=new Set();
@@ -1385,6 +1440,8 @@ function renderObjectsPanel(){
  if(!imageId.startsWith("gph:"))objectsPanel.append(sourceInput,add);
  if(canRestoreObjects){const undo=el("button",{textContent:t("vs.objects.restore"),disabled:!ready||!!editingObject});undo.addEventListener("click",()=>editObject(null,{restore:true}));objectsPanel.append(undo);}
  renderCards();
+ if(derivedFor!==imageId){derivedList=[];derivedDirty=true;}
+ if(derivedDirty&&!derivedLoading&&ready)Promise.resolve().then(loadDerived);
  for(const o of editable){
    const row=el("div",{className:"obj",dataset:{object:o.id}});
    row.append(el("strong",{textContent:o.id}),el("span",{className:"kind",textContent:OBJECT_KIND[o.type]??o.type}));
@@ -1424,6 +1481,8 @@ function renderObjectsPanel(){
    });
    del.addEventListener("click",()=>editObject(o.id,{remove:true}));
    row.append(apply,del);objectsPanel.append(row);
+   const bound=derivedFor===imageId?derivedList.find(b=>b.object===o.id&&b.state!=="removed"):null;
+   if(bound)objectsPanel.append(derivedBlock(bound));
  }
 }
 async function editObject(id,args){

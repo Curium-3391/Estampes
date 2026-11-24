@@ -350,7 +350,7 @@
     },
     {
       "path": "public/visual-surface.html",
-      "sha256": "472c9783aff17eb8fbee2f3b20a25d8e68fd3f1287cb58343a16cb18cb8bd5a7"
+      "sha256": "5d8c7457e0a8c6da477d4dae34ebb30fa4ab49fce7786833bc7d525701e1d9e9"
     },
     {
       "path": "public/workbench.js",
@@ -658,6 +658,15 @@
         "src/bundle.js"
       ],
       "previousSha256": "42c26061e3d1e60086185a2c5fce4dedc2371e650e85b0d3548e5b9bfeb5b73c"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User approved the 5B design on a decision card (2026-11-21), chose preview plus one-time token for overwrite (2026-11-24), and said \u300c\u597d\u300d to the widget buttons as the next step (2026-11-24)",
+      "reason": "UVA 5B-3c: the objects panel shows a derived object's state and offers update, preview, overwrite (after a preview), reattach and stop-following",
+      "files": [
+        "public/visual-surface.html"
+      ],
+      "previousSha256": "472c9783aff17eb8fbee2f3b20a25d8e68fd3f1287cb58343a16cb18cb8bd5a7"
     }
   ]
 }
