@@ -46,7 +46,7 @@ A canvas (image or Graph) is saved as a record that the UVA store keeps as a doc
 - `refreshStale` refreshes stale bindings, at most 20 per call; the rest are reported in `remaining`, never dropped. A binding whose object was edited by a person, or changed by any other route, is paused (`conflict`) and the module is not even asked. A producer that fails leaves the binding in `error` with a short reason and the object as it was.
 - `act` carries out the person's choice (refresh, overwrite, fork, detach, reattach) after checking `expectedBindingHash` and the state table.
 
-Nothing saves the canvas inside it; the caller does that. Nothing calls it yet outside tests: connecting a real producer is the next step (5B-2b-2), then the calculator (5B-2b-3).
+Nothing saves the canvas inside it; the caller does that.
 
 ## How a module becomes a producer
 
@@ -60,6 +60,27 @@ A refresh is a call to the declared capability with `{sourceRef, object}`. It ma
 
 Tested in process with stand-in modules and over the router; not tried on a real ChatGPT or Claude host.
 
+### A minimal producer
+
+The manifest of a module that shows a value and can redraw it (any runtime that answers the router's JSON; this stand-in is exercised in `tests/derived-module-flow.test.js`):
+
+```json
+{ "schema": "estampes.module/2", "id": "org.example.readout", "runtime": { "kind": "wasm", "entry": "m.wasm", "abi": 1 },
+  "capabilities": [
+    { "id": "show", "target": "document", "derives": { "refresh": "reshow" }, "needs": ["canvas.write"], "inputSchema": { "type": "object" } },
+    { "id": "reshow", "target": "document", "needs": ["canvas.write"],
+      "inputSchema": { "type": "object", "required": ["sourceRef", "object"], "properties": { "sourceRef": { "type": "string", "maxLength": 200 }, "object": { "type": "string", "maxLength": 64 } } } } ] }
+```
+
+`show` answers the operations that draw the object, with a `ref`, and says what it was made from:
+
+```json
+{ "operations": [{ "op": "object.create", "ref": "card", "type": "info-card", "props": { "title": "Readout", "rows": [{ "label": "value", "value": "42" }] } }],
+  "derived": [{ "object": "$card", "sourceRef": "meter-7", "sourceRevision": 3, "inputsHash": "<sha-256 of what it was computed from>" }] }
+```
+
+`reshow` gets `{sourceRef: "meter-7", object: "o2"}`, updates that one object, and answers `{"operations": [{"op": "object.update", "id": "o2", "props": {…}}], "data": {"sourceRevision": 4}}`. When the module's own source changes it answers `"broadcast": [{"event": "source-changed", "sourceRef": "meter-7"}]` from whatever capability noticed. `sourceRef` means whatever the module wants; the core never reads it.
+
 ### Broadcasts across documents
 
 A module's broadcast also reaches the other documents that hold its bindings. The core keeps a small index (`derived-index.json` in the modules folder: module id to document ids; the id is only a key, the core names no module). A document is added when a binding is registered or when it is listed, and dropped when it holds no live binding of that module. At most 8 other documents are changed per call; the rest are reported as `remainingDocuments`, and a capability that works on no document at all (`target: none`) can still broadcast. The index is only a hint: if the file is lost, broadcasts reach the current document until the others are opened or listed again. A document that cannot be read is reported in `failedDocuments`, not silently skipped.
@@ -68,13 +89,13 @@ Built-in modules may use a `estampes.module/2` manifest (a package may not name 
 
 ## The calculator
 
-The calculator (`org.estampes.cas`) is a built-in `estampes.module/2` module and uses exactly the contract above; nothing in the core names it. `plot_result` declares `derives.refresh: refresh_plot` and returns the plot it made as `derived` (`sourceRef` is `<notebook>/<cell>`, `sourceRevision` the cell's revision); `calculate` on an existing cell, `define` and `recompute` broadcast the cells whose result changed; `refresh_plot` recomputes a stale cell and redraws only that plot. The notebook's own graph links are still written beside this (the old path keeps working until its readers move, UVA 5B-4).
+The calculator (`org.estampes.cas`) is a built-in `estampes.module/2` module and uses exactly the contract above; nothing in the core names it. `plot_result` declares `derives.refresh: refresh_plot` and returns the plot it made as `derived` (`sourceRef` is `<notebook>/<cell>`, `sourceRevision` the cell's revision); `calculate` on an existing cell, `define` and `recompute` broadcast the cells whose result changed; `refresh_plot` recomputes a stale cell and redraws only that plot. The notebook's own graph links are still written beside this.
 
 One visible change: a plot the person edited by hand is no longer redrawn by an automatic refresh. The refresh reports it as failed with the reason, the hand edit stays, and the plot's link does not claim to be fresh (before this, the edit was silently lost). The `update_derived` tool shows such a plot as a conflict. Choosing overwrite, fork or detach from the widget comes with 5B-3.
 
 ## Earlier objects (adoption)
 
-Objects a module made before bindings existed (a calculator plot with a notebook link and no binding) are adopted the first time their document is opened on a server run. The module opts in with `derives.adopt` on the capability that made them: an adopt capability that takes `{ canvas }` (the document id, as the module's own records name it), is not async, draws nothing and answers `derived` entries that name existing objects by id (`{ object: "o3", sourceRef, sourceRevision, inputsHash, stale? }`; `stale: true` when the module knows the source has changed since). The core registers each one under the capability that made it, skips objects that already have a live binding or are no longer on the document, and counts an object the person had already edited as edited, so the first refresh pauses instead of overwriting it. The module marks what it adopted (the calculator sets `bound` on the link, after the binding is saved), so a plot the person later stops following is not adopted again. A failure leaves the document as it was and is tried again the next time it is opened. Old links are still written beside the bindings; moving the surface refresh and removing them is the next step.
+Objects a module made before bindings existed (a calculator plot with a notebook link and no binding) are adopted the first time their document is opened on a server run. The module opts in with `derives.adopt` on the capability that made them: an adopt capability that takes `{ canvas }` (the document id, as the module's own records name it), is not async, draws nothing and answers `derived` entries that name existing objects by id (`{ object: "o3", sourceRef, sourceRevision, inputsHash, stale? }`; `stale: true` when the module knows the source has changed since). The core registers each one under the capability that made it, skips objects that already have a live binding or are no longer on the document, and counts an object the person had already edited as edited, so the first refresh pauses instead of overwriting it. The module marks what it adopted (the calculator sets `bound` on the link, after the binding is saved), so a plot the person later stops following is not adopted again. A failure leaves the document as it was and is tried again the next time it is opened. The notebook's link records are still written beside the bindings, without a status of their own (see the end of this page).
 
 ## The calculator's refresh buttons
 
