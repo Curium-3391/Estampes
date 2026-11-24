@@ -369,3 +369,82 @@ test("overwrite needs a preview of the binding as it is now; a preview changes n
   assert.equal(done.result.outcome, "refreshed");
   await assert.rejects(s.flow.update({ canvas: canvas.imageId, action: "preview", binding: (await f()).id }), /nothing to preview/);
 });
+
+// 5C-1: late effects. A module that answers after it was disabled or given other permissions, or after the person edited the object being
+// refreshed, changes nothing. The stand-in's refresh waits on a gate so the test can act while it "runs".
+function gated(n, rev) {
+  let open; const gate = new Promise((r) => { open = r; }); let started; const began = new Promise((r) => { started = r; });
+  return { open, began, answer: async (input) => { started(); await gate; return remake(n, rev)(input); } };
+}
+async function madeAndStale() {
+  const s = await setup();
+  await s.install(MAKER);
+  answers[MAKER + "/make"] = make(1, "ref-1", 1);
+  const canvas = await createBlankCanvas({});
+  const r = await run(s, MAKER, "make", canvas.imageId);
+  answers[MAKER + "/ping"] = announce("ref-1");
+  await run(s, MAKER, "ping");
+  return { s, canvas, object: r.scene.created[0], binding: bindingsOf(canvas)[0] };
+}
+const rangeOf = (canvas, id) => canvas.objects.get(id).props.xRange;
+
+test("late effects: a module disabled while its refresh runs changes nothing", async () => {
+  const { s, canvas, object } = await madeAndStale();
+  const g = gated(7, 2); answers[MAKER + "/remake"] = g.answer;
+  const pending = s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });
+  await g.began;
+  const plan = await s.h.lifecycle.prepare("disable", MAKER, {});
+  await s.h.lifecycle.commit(plan.planId, { consent: plan.consent });
+  g.open();
+  const out = await pending;
+  assert.equal(out.result.failed.length, 1);
+  assert.match(out.result.failed[0].reason, /disabled, updated or given other permissions/);
+  assert.deepEqual(rangeOf(canvas, object), [-1, 1], "the object is as it was");
+  assert.notEqual(bindingsOf(canvas)[0].state, "fresh");
+});
+
+test("late effects: permissions taken away while a refresh runs change nothing", async () => {
+  const { s, canvas, object } = await madeAndStale();
+  const g = gated(7, 2); answers[MAKER + "/remake"] = g.answer;
+  const pending = s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });
+  await g.began;
+  s.h.registry.get(MAKER).record.granted = [];
+  g.open();
+  const out = await pending;
+  assert.equal(out.result.refreshed.length, 0);
+  assert.deepEqual(rangeOf(canvas, object), [-1, 1]);
+});
+
+test("late effects: an object the person edits while its refresh runs is not overwritten", async () => {
+  const { s, canvas, object } = await madeAndStale();
+  const g = gated(7, 2); answers[MAKER + "/remake"] = g.answer;
+  const pending = s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });
+  await g.began;
+  applySceneOps(canvas, [{ op: "object.update", id: object, props: { xRange: [-5, 5] } }], { author: "user" });
+  g.open();
+  const out = await pending;
+  assert.equal(out.result.refreshed.length, 0);
+  assert.match(out.result.failed[0].reason, /changed while it was being updated/);
+  assert.deepEqual(rangeOf(canvas, object), [-5, 5], "the person's edit stays");
+});
+
+test("late effects: after a discarded late result and the module coming back, the next refresh applies", async () => {
+  const { s, canvas, object } = await madeAndStale();
+  const g = gated(7, 2); answers[MAKER + "/remake"] = g.answer;
+  const pending = s.flow.update({ canvas: canvas.imageId, action: "refresh-stale" });
+  await g.began;
+  const off = await s.h.lifecycle.prepare("disable", MAKER, {});
+  await s.h.lifecycle.commit(off.planId, { consent: off.consent });
+  g.open(); await pending;
+  assert.deepEqual(rangeOf(canvas, object), [-1, 1]);
+  const on = await s.h.lifecycle.prepare("enable", MAKER, {});
+  await s.h.lifecycle.commit(on.planId, { consent: on.consent });
+  answers[MAKER + "/remake"] = remake(9, 2);
+  const [row] = (await s.flow.list(canvas.imageId)).bindings;
+  assert.equal(row.state, "error", "a discarded late result leaves the binding in error with the reason, to be retried");
+  assert.match(row.reason, /not applied/);
+  const out = await s.flow.update({ canvas: canvas.imageId, action: "refresh", binding: row.id, expectedBindingHash: row.bindingHash });
+  assert.equal(out.result.outcome, "refreshed");
+  assert.deepEqual(rangeOf(canvas, object), [-9, 9]);
+  assert.equal(bindingsOf(canvas)[0].state, "fresh");
+});

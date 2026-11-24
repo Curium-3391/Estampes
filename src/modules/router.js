@@ -138,6 +138,16 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       // job calls it without a revision check: it was started on purpose and
       // may finish long after the canvas moved on.
       const stop = { cancelled: false };
+      // What must still be true when the module answers (5C-1, "late effects 0"): the module is still the same enabled module with the same grants,
+      // and, for a refresh of one object, that object is as it was when the call began. Compared by value; a module that was disabled, updated or
+      // given other permissions, or an object the person edited meanwhile, makes the answer stale: nothing is applied.
+      const moduleStateKey = () => { const m = registry.get(moduleId); return m ? JSON.stringify([m.record.state, m.record.version, [...(m.record.granted ?? [])].sort()]) : "gone"; };
+      const targetKey = () => {
+        if (internal?.refreshObject === undefined || !(entry?.objects instanceof Map)) return null;
+        const o = entry.objects.get(internal.refreshObject);
+        return o ? JSON.stringify([o.revision, o.provenance?.editedByUser === true, o.props]) : "gone";
+      };
+      const stateAtStart = moduleStateKey(), targetAtStart = targetKey();
       const work = async (checkRevision, jobId) => {
         let output;
         try {
@@ -151,6 +161,14 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         }
 
         if (stop.cancelled) throw new ModuleError("stopped before its result was applied", "timeout");
+        if (moduleStateKey() !== stateAtStart) {
+          audit.record({ kind: "run.late", module: manifest.id, capability: capId, canvas: entry?.imageId, why: "module changed", ms: Date.now() - started });
+          throw new ModuleError(manifest.id + " was disabled, updated or given other permissions while " + capId + " ran; its result was not applied", "revoked");
+        }
+        if (targetKey() !== targetAtStart) {
+          audit.record({ kind: "run.late", module: manifest.id, capability: capId, canvas: entry?.imageId, why: "target changed", ms: Date.now() - started });
+          throw new ModuleError("the object changed while it was being updated; its result was not applied", "conflict");
+        }
         // Derived objects and broadcasts: module/2 only, declared in the manifest, checked before anything is applied.
         const wantsDerived = output.derived?.length > 0, wantsBroadcast = output.broadcast?.length > 0;
         if ((wantsDerived || wantsBroadcast) && !manifest.v2) throw new ModuleError(capId + " returned derived or broadcast, which only module/2 modules may", "output");
