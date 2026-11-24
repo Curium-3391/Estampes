@@ -257,7 +257,9 @@ async function refreshPlot(p, ctx) {
     nb = await deps.notebooks.get(notebook);
     cell = nb.cells.find((c) => c.id === cellId);
   }
-  const out = await plotResult({ notebook, cell: cellId, object: p.object }, ctx);
+  // The plot keeps the domain it was drawn with (the check that it can be drawn there uses it too).
+  const domain = canvasObjects(ctx.canvas).find((o) => o.id === p.object)?.props?.domain;
+  const out = await plotResult({ notebook, cell: cellId, object: p.object, ...(Array.isArray(domain) && domain.length === 2 ? { domain } : {}) }, ctx);
   return { ...out, data: { ...out.data, sourceRevision: Math.max(1, cell.revision ?? 1) } };
 }
 

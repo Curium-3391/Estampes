@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "f59447afa0a6bc55b14c8a580edcac455199f947b987607ed550fd71efd589f8"
+      "sha256": "e68305f5c437bcf17f69299a71072853a6ac3e6adbd9f37e71e81568713a78b2"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -306,7 +306,7 @@
     },
     {
       "path": "src/surface/refresh.js",
-      "sha256": "f7f1290c4e8b59a690c439259767ebf9a536182c8ab42d781877be58137f9c11"
+      "sha256": "97cfe1458817a6f1fa0b95dfa7eda7338d972b5378a55d643c08abdc09191b00"
     },
     {
       "path": "src/surface/service.js",
@@ -758,6 +758,51 @@
         "src/builtin-modules/cas/index.js"
       ],
       "previousSha256": "c6d6ccf3258c02f3f1d5fdc2f029b597836243becdd628945090a5ba0014d4f2"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1: refresh_links/autoRefresh redraw plots through the core's derived refresh",
+      "files": [
+        "src/surface/refresh.js"
+      ],
+      "previousSha256": "f7f1290c4e8b59a690c439259767ebf9a536182c8ab42d781877be58137f9c11"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1 review: keep plot domain, no starvation, complete binding list",
+      "files": [
+        "src/builtin-modules/cas/index.js",
+        "src/surface/refresh.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1 review: reconcile stale links into bindings; retry error bindings",
+      "files": [
+        "src/surface/refresh.js"
+      ],
+      "previousSha256": "dde911e0d7bc37c707dbb0ebbf0f6e438bd687b66fb17a385537b0788ec69334"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1 review: waiting plots only; deletion from notebook record",
+      "files": [
+        "src/surface/refresh.js"
+      ],
+      "previousSha256": "6c9b6a7a4fe38512af280afe50660469be0486f95a036d523cb7c912bb840133"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1 review: paused documents do not use the refresh budget",
+      "files": [
+        "src/surface/refresh.js"
+      ],
+      "previousSha256": "228822219de0b0b56e4c7152d7d19b2c428d6929bb4a3732c31a4a8bf50735ac"
     }
   ]
 }
