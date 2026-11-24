@@ -19,7 +19,7 @@ const MOD = "org.example.producer";
 const hash = "a".repeat(64);
 async function open(t) {
   const storage = await mkdtemp(join(tmpdir(), "derived-bundle-l-")), beta = await mkdtemp(join(tmpdir(), "derived-bundle-u-"));
-  t.after(() => Promise.all([rm(storage, { recursive: true, force: true }), rm(beta, { recursive: true, force: true })]));
+  t.after(() => Promise.all([rm(storage, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 }), rm(beta, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 })]));
   const boot = async () => {
     const service = await createUvaService({ enabled: true, canvasStore: true, directory: beta, profile: "linux-process-crash-test", legacyDirectory: storage });
     const store = await createCanvasStore({ service, storageDir: storage, idleMs: 0 });
