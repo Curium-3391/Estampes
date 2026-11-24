@@ -125,3 +125,18 @@ test("if marking the links fails, adoption is tried again on the next open until
     assert.equal(bindingsOf(canvas).length, 1);
   } finally { notebooks.mutate = real; }
 });
+
+test("if the links of the first batch were left unmarked, the later batches are still adopted", { timeout: 120000 }, async () => {
+  const { nb, canvas } = await legacy(Array(60).fill("fresh"));
+  // The bindings of the first batch were saved but their links never marked.
+  const real = notebooks.mutate;
+  let fail = true;
+  notebooks.mutate = async (...a) => { if (fail) throw new Error("disk full"); return real.apply(notebooks, a); };
+  try {
+    await flowOf().list(canvas.imageId);
+    assert.equal(bindingsOf(canvas).length, 50);
+    fail = false;
+    assert.equal((await flowOf().list(canvas.imageId)).total, 60);
+    assert.equal((await links(nb)).filter((l) => l.bound === true).length, 60);
+  } finally { notebooks.mutate = real; }
+});

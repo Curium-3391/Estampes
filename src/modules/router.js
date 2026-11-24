@@ -229,7 +229,7 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
             registered.push(register(entry, { source: { module: manifest.id, capability: capId, sourceRef: d.sourceRef, sourceRevision: d.sourceRevision, inputsHash: d.inputsHash }, objectId: scene.refs[d.object.slice(1)] }).id);
           }
           for (const e of output.broadcast ?? []) for (const id of sourceChanged(entry, { module: manifest.id, ...(e.sourceRef !== undefined ? { sourceRef: e.sourceRef } : {}) })) staled.add(id);
-          derivedResult = { registered, staled: [...staled] };
+          derivedResult = { registered, staled: [...staled], ...(adopting ? { named: output.derived.map((d) => d.object) } : {}) };
         }
         if (output.operations.length || derivedResult?.registered.length || derivedResult?.staled.length) {
           try {

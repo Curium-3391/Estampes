@@ -107,7 +107,7 @@ test("adoption is idempotent: objects that already have a binding, or are gone, 
   // A second flow (a restart) asks again; nothing is duplicated.
   const again = createDerivedFlow({ router: s.h.router, registry: s.h.registry, canvases: s.canvases, index: s.h.derivedIndex });
   await again.list(canvas.imageId);
-  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 3, "a restart asks once more, and adds nothing");
+  assert.equal(s.calls.filter((c) => c.capability === "adopt").length, 4, "a restart asks again (twice, to see nothing is left), and adds nothing");
   assert.equal(bindingsOf(canvas).length, 2);
 });
 

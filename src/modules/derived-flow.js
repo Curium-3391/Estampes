@@ -64,11 +64,13 @@ export function createDerivedFlow({ router, registry, canvases, index = null, st
         const key = imageId + "|" + mod.manifest.id + "|" + mod.manifest.version + "|" + producer;
         if (state.adopted.has(key)) continue;
         try {
-          // A module names a bounded batch at a time: ask again until a run adds nothing new.
-          let drained = false;
+          // A module names a bounded batch at a time: ask again until a run names nothing, or names exactly what the run before named (no progress).
+          let drained = false, before = "";
           for (let round = 0; round < 8 && !drained; round++) {
             const r = await router.execute({ module: mod.manifest.id, capability, canvas: imageId, params: { canvas: imageId }, internal: { adopt: producer } });
-            drained = !(r.derived?.registered?.length > 0);
+            const named = (r.derived?.named ?? []).join(",");
+            drained = named === "" || named === before;
+            before = named;
           }
           if (drained) state.adopted.add(key);
         } catch { /* tried again the next time the document is opened */ }

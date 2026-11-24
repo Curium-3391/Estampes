@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "bd2edcbadd09eea004abffd469381e0d5e39fa67893ec9cdeb5002caf0b0be0d"
+      "sha256": "006cbc2fac29796c8ae53c2ae2af18fda2ea97c388543bb50283ab2489deff57"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -740,6 +740,15 @@
         "src/modules/router.js"
       ],
       "previousSha256": "a5f3e40b01e89ac595107051499ff7cd1e16c9c7e04958f3dfe164d658faefaa"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4",
+      "reason": "5B-4a review: adoption batches drain after a finalization retry",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "bd2edcbadd09eea004abffd469381e0d5e39fa67893ec9cdeb5002caf0b0be0d"
     }
   ]
 }
