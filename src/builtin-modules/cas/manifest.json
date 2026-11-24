@@ -550,7 +550,8 @@
         }
       ],
       "derives": {
-        "refresh": "refresh_plot"
+        "refresh": "refresh_plot",
+        "adopt": "adopt_plots"
       }
     },
     {
@@ -583,6 +584,33 @@
             "type": "string",
             "maxLength": 64,
             "description": "the plot's object id"
+          }
+        }
+      }
+    },
+    {
+      "id": "adopt_plots",
+      "title": "Adopt earlier plots",
+      "titleI18n": {
+        "zh-TW": "認領先前的函數圖"
+      },
+      "target": "document",
+      "needs": [
+        "canvas.read",
+        "canvas.write"
+      ],
+      "description": "Called by Estampes itself when a document is opened: names the plots on that document that were drawn from a calculator cell before plots were tracked, so they can be kept up to date like newer ones. It changes nothing by itself.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canvas"
+        ],
+        "properties": {
+          "canvas": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "the document id"
           }
         }
       }

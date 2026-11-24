@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "eb7a9392b5bd0c95d19dde1219431abbdb2023b2386a54453b90e05b27b0bf09"
+      "sha256": "c6d6ccf3258c02f3f1d5fdc2f029b597836243becdd628945090a5ba0014d4f2"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "6308f2c2cde247697ac5e99678eec2024feb16bc798d5224c4982cb16dbbc577"
+      "sha256": "5b6870609131f50a68ccb8fee90dc41d1627da70703109e8da9e46b5fc69709a"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "c1e40a5da1419d1244e7fa4afdb01e9a94519101030a58f62112e04e83d60f06"
+      "sha256": "c5a5d01d573a4b1fc9e6fd8b836099af22afd069ca274023b6cd4db456ca32e8"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -703,6 +703,16 @@
         "public/visual-surface.html"
       ],
       "previousSha256": "73a78142c53bd0012338c38f7850c869caa679521a43ccc691afdd57db2b0276"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "User chose option A (adopt when opened) on a decision card on 2026-11-24, after approving the 5B design on 2026-11-21",
+      "reason": "UVA 5B-4a: derives.adopt lets a module name objects it made before bindings existed; the core records them as bindings when the document is opened",
+      "files": [
+        "src/builtin-modules/cas/index.js",
+        "src/modules/manifest.js",
+        "src/modules/router.js"
+      ]
     }
   ]
 }

@@ -24,7 +24,7 @@ export class DerivedFlowError extends Error {
 // router: from createRouter; registry: the module registry; canvases: { ensure, save }.
 // state: the previews, running refreshes and queues. One server may build this flow
 // again for every connection, so the host keeps the state and hands the same one in.
-export const newDerivedState = () => ({ previews: new Map(), running: new Set(), queue: new Map() });
+export const newDerivedState = () => ({ previews: new Map(), running: new Set(), queue: new Map(), adopted: new Set() });
 export function createDerivedFlow({ router, registry, canvases, index = null, state = newDerivedState() }) {
   const { running, queue } = state;   // running: canvases with a refresh in progress; queue: one change at a time per canvas
   const serial = (key, job) => {
@@ -53,7 +53,25 @@ export function createDerivedFlow({ router, registry, canvases, index = null, st
     module: b.source.module, capability: b.source.capability, sourceRevision: b.source.sourceRevision, bindingHash: bindingHashOf(b) });
 
   // Brings the bindings in line with the canvas and the modules. Reading does not save: the next save carries it, and a reopen recomputes it.
+  // Objects a module made before bindings existed: the first time a document is opened here, each enabled module that declares an
+  // adopt capability is asked which of its objects on the document should be bound (5B-4). It is idempotent, so a repeat or a crash
+  // in the middle costs nothing; a failure leaves the document as it is and is tried again next time.
+  async function adopt(imageId) {
+    for (const mod of registry.list?.() ?? []) {
+      const adoptions = mod?.manifest?.v2?.adopt;
+      if (!adoptions || mod.record?.state !== "enabled") continue;
+      for (const [producer, capability] of Object.entries(adoptions)) {
+        const key = imageId + "|" + mod.manifest.id + "|" + mod.manifest.version + "|" + producer;
+        if (state.adopted.has(key)) continue;
+        try {
+          await router.execute({ module: mod.manifest.id, capability, canvas: imageId, params: { canvas: imageId }, internal: { adopt: producer } });
+          state.adopted.add(key);
+        } catch { /* tried again the next time the document is opened */ }
+      }
+    }
+  }
   async function open(imageId) {
+    await adopt(imageId);
     const entry = await canvases.ensure(imageId);
     reconcile(entry, { available, interrupted: !running.has(imageId) });
     for (const b of bindingsOf(entry)) if (b.state !== "removed") index?.add(b.source.module, imageId);

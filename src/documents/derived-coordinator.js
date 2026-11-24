@@ -34,7 +34,7 @@ function replace(entry, next) {
 }
 
 // A module made object `objectId` from `source`. Records the binding as fresh.
-export function register(entry, { source, objectId, sourceRevision = source.sourceRevision }) {
+export function register(entry, { source, objectId, sourceRevision = source.sourceRevision, objectEdited = false }) {
   const o = objectOf(entry, objectId);
   if (!o) throw new DerivedBindingError("INVALID", "The object " + objectId + " is not on this canvas");
   if (bindingsOf(entry).some((b) => b.target.id === objectId && LIVE.includes(b.state))) throw new DerivedBindingError("INVALID", "The object " + objectId + " already has a binding");
@@ -43,13 +43,19 @@ export function register(entry, { source, objectId, sourceRevision = source.sour
     id: "bind:" + randomUUID(), kind: "derived", version: 1,
     source: { ...source, sourceRef: clean(source.sourceRef), sourceRevision },
     target: { documentId: "doc:00000000-0000-4000-8000-000000000000", sceneId: "scene:00000000-0000-4000-8000-000000000000", kind: "object", id: objectId },
-    lastApplied: { objectRevision: o.revision, contentHash: objectContentHash(o), sourceRevision },
+    // An object a person had already edited when it was adopted must still count as edited, so a refresh pauses instead of overwriting it.
+    lastApplied: { objectRevision: objectEdited && o.revision > 1 ? o.revision - 1 : o.revision, contentHash: objectContentHash(o), sourceRevision },
     policy: "pause-on-user-edit", state: "fresh",
   });
   // A canvas names its objects by id only; the placeholders above only satisfy the document schema.
   const local = { ...binding, target: { id: objectId } };
   entry.derived = [...bindingsOf(entry), local];
   return local;
+}
+
+// One binding's source is already known to have changed (an adopted binding whose old link was stale).
+export function markStale(entry, bindingId) {
+  entry.derived = bindingsOf(entry).map((b) => (b.id === bindingId ? stripDoc(reduce(withDoc(b), "sourceChanged")) : b));
 }
 
 // The source of some bindings changed (same module, and the same sourceRef when one is given).

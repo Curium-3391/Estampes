@@ -10,7 +10,7 @@ import { capabilityPermissions, missingPermissions } from "./permissions.js";
 import { applySceneOps, renderedObjects, sceneRevision, SceneOpsError, VISIBILITY } from "../scene/scene-ops.js";
 import { localized } from "./manifest.js";
 import { plotContext } from "./plot-context.js";
-import { register, sourceChanged, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
+import { register, sourceChanged, markStale, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
 import { deliverBroadcast } from "../documents/derived-broadcast.js";
 
 // A string in a v2 module's input that names a document (an image, a Graph
@@ -38,8 +38,8 @@ const OutputSchema = z.object({
   // of their object.create) that the core should keep up to date from a source;
   // sourceRef is opaque to the core. `broadcast`: the module says a source of its own
   // changed, so bindings made from it become stale.
-  derived: z.array(z.object({ object: z.string().regex(/^\$[A-Za-z][A-Za-z0-9_-]{0,31}$/), sourceRef: z.string().min(1).max(200),
-    sourceRevision: z.number().int().positive(), inputsHash: z.string().regex(/^[0-9a-f]{64}$/) }).strict()).max(50).optional(),
+  derived: z.array(z.object({ object: z.string().regex(/^(\$[A-Za-z][A-Za-z0-9_-]{0,31}|o\d{1,6})$/), sourceRef: z.string().min(1).max(200),
+    sourceRevision: z.number().int().positive(), inputsHash: z.string().regex(/^[0-9a-f]{64}$/), stale: z.boolean().optional() }).strict()).max(50).optional(),
   broadcast: z.array(z.object({ event: z.literal("source-changed"), sourceRef: z.string().min(1).max(200).optional() }).strict()).max(50).optional(),
 }).strict();
 
@@ -154,9 +154,19 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         // Derived objects and broadcasts: module/2 only, declared in the manifest, checked before anything is applied.
         const wantsDerived = output.derived?.length > 0, wantsBroadcast = output.broadcast?.length > 0;
         if ((wantsDerived || wantsBroadcast) && !manifest.v2) throw new ModuleError(capId + " returned derived or broadcast, which only module/2 modules may", "output");
-        if (wantsDerived && !manifest.v2.derives?.[capId]) throw new ModuleError(capId + " returned derived objects but does not declare derives in its manifest", "output");
+        // An adopt run (5B-4): the module names objects that already exist and were made by the producer capability it was declared for; nothing is drawn.
+        const adopting = internal?.adopt !== undefined;
+        if (adopting) {
+          if (manifest.v2?.adopt?.[internal.adopt] !== capId) throw new ModuleError(capId + " is not declared as the adopt capability of " + internal.adopt, "output");
+          if (output.operations.length || wantsBroadcast) throw new ModuleError("an adopt run may only name existing objects", "output");
+          const ids = (output.derived ?? []).map((d) => d.object);
+          if (ids.some((n) => n.startsWith("$")) || new Set(ids).size !== ids.length) throw new ModuleError("an adopt run must name each existing object once, by id", "output");
+        } else if (output.derived?.some((d) => !d.object.startsWith("$") || d.stale !== undefined)) throw new ModuleError("derived.object must name an object this run creates, by its $ref", "output");
+        if (wantsDerived && !adopting && !manifest.v2.derives?.[capId]) throw new ModuleError(capId + " returned derived objects but does not declare derives in its manifest", "output");
         if (wantsDerived && !entry) throw new ModuleError(capId + " returned derived objects but has no document", "output");
-        if (wantsDerived) {
+        if (wantsDerived && adopting) {
+          if (bindingsOf(entry).length + output.derived.length > MAX_DERIVED_PER_CANVAS) throw new ModuleError("a document holds at most " + MAX_DERIVED_PER_CANVAS + " derived objects", "output");
+        } else if (wantsDerived) {
           const made = new Set(output.operations.filter((op) => op?.op === "object.create" && typeof op.ref === "string").map((op) => "$" + op.ref));
           const named = output.derived.map((d) => d.object);
           if (named.some((n) => !made.has(n)) || new Set(named).size !== named.length) throw new ModuleError("derived.object must name, once each, an object this run creates with a ref", "output");
@@ -199,6 +209,15 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         if (entry && (wantsDerived || wantsBroadcast)) {
           const registered = [], staled = new Set();
           for (const d of output.derived ?? []) {
+            if (adopting) {
+              // Idempotent: an object that already has a live binding, or is no longer on the canvas, is skipped.
+              const o = entry.objects instanceof Map ? entry.objects.get(d.object) : undefined;
+              if (!o || bindingsOf(entry).some((b) => b.target.id === d.object && b.state !== "removed")) continue;
+              const b = register(entry, { source: { module: manifest.id, capability: internal.adopt, sourceRef: d.sourceRef, sourceRevision: d.sourceRevision, inputsHash: d.inputsHash }, objectId: d.object, objectEdited: o.provenance?.editedByUser === true });
+              if (d.stale) markStale(entry, b.id);
+              registered.push(b.id);
+              continue;
+            }
             registered.push(register(entry, { source: { module: manifest.id, capability: capId, sourceRef: d.sourceRef, sourceRevision: d.sourceRevision, inputsHash: d.inputsHash }, objectId: scene.refs[d.object.slice(1)] }).id);
           }
           for (const e of output.broadcast ?? []) for (const id of sourceChanged(entry, { module: manifest.id, ...(e.sourceRef !== undefined ? { sourceRef: e.sourceRef } : {}) })) staled.add(id);

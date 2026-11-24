@@ -178,8 +178,10 @@ const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend
   needs: z.array(z.enum(PERMISSION_NAMES)).max(12),
   // UVA 5B-2b-2: the objects this capability creates may be recorded as derived
   // bindings, and `refresh` names the capability of the same module that
-  // recomputes one of them (input: { sourceRef, object }).
-  derives: z.object({ refresh: z.string().regex(CAPABILITY_ID) }).strict().optional(),
+  // recomputes one of them (input: { sourceRef, object }). `adopt` (5B-4) names a capability that
+  // lists, for one document (input: { canvas }), the objects this capability made before bindings
+  // existed, so the core can record them as bindings.
+  derives: z.object({ refresh: z.string().regex(CAPABILITY_ID), adopt: z.string().regex(CAPABILITY_ID).optional() }).strict().optional(),
 });
 export const ManifestSchemaV2 = ManifestSchema.omit({ schema: true, runtime: true, capabilities: true }).extend({
   schema: z.literal(MODULE_SCHEMA_V2),
@@ -206,7 +208,8 @@ const v1View = (m) => ({
 export function runtimeManifest(m) {
   if (m.schema !== MODULE_SCHEMA_V2) return m;
   const derives = Object.fromEntries(m.capabilities.filter((c) => c.derives).map((c) => [c.id, c.derives.refresh]));
-  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}) } };
+  const adopt = Object.fromEntries(m.capabilities.filter((c) => c.derives?.adopt).map((c) => [c.id, c.derives.adopt]));
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}) } };
 }
 
 // What changed between two ABI versions of a module, for the Store.
@@ -303,6 +306,14 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
     const rp = refresh.inputSchema?.properties ?? {};
     if (rp.sourceRef?.type !== "string" || rp.object?.type !== "string") throw new ManifestError(where + ".refresh: " + refresh.id + " must accept the string fields sourceRef and object in its inputSchema");
     if (c.async || refresh.async) throw new ManifestError(where + ": derived objects are made and refreshed by capabilities that answer at once (not async)");
+    if (c.derives.adopt) {
+      const adopt = m.capabilities.find((x) => x.id === c.derives.adopt);
+      if (!adopt) throw new ManifestError(where + ".adopt: no capability " + c.derives.adopt + " in this module");
+      if (adopt.id === c.id || adopt.id === refresh.id) throw new ManifestError(where + ".adopt: the adopt capability must be a different one");
+      if (adopt.derives) throw new ManifestError(where + ".adopt: " + adopt.id + " is an adopt capability and cannot create derived objects itself");
+      if (adopt.target !== "canvas" || adopt.async) throw new ManifestError(where + ".adopt: " + adopt.id + " must work on the document and answer at once (not async)");
+      if (adopt.inputSchema?.properties?.canvas?.type !== "string") throw new ManifestError(where + ".adopt: " + adopt.id + " must accept the string field canvas in its inputSchema");
+    }
   });
   const panelIds = new Set();
   (m.panels ?? []).forEach((pn, i) => {
