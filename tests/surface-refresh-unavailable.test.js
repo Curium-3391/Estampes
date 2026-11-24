@@ -154,3 +154,24 @@ test("more plots of one cell than one pass refreshes are all reached by repeated
   assert.ok(first.updated.length < 25 && second.updated.length > 0, "needed two passes");
   assert.ok(bindingsOf(canvas).every((b) => b.state === "fresh"));
 });
+
+test("documents whose waiting plots were edited by hand do not use up the eight a refresh looks at", async () => {
+  const made = await host.router.execute({ module: CAS, capability: "define", params: { name: "w", text: "1" } });
+  const nb = made.data.notebookId;
+  const cell = (await host.router.execute({ module: CAS, capability: "calculate", params: { notebook: nb, operation: "evaluate", text: "w+1" } })).data.cell.cellId;
+  const canvases = [];
+  for (let i = 0; i < 12; i++) {
+    const c = await createBlankCanvas({});
+    applySceneOps(c, [{ op: "object.create", type: "axes-2d", props: { xRange: [-3, 3], yRange: [-3, 3] } }], { author: "module", module: "org.estampes.graph", capability: "plot_function" });
+    await host.router.execute({ module: CAS, capability: "plot_result", canvas: c.imageId, params: { notebook: nb, cell } });
+    canvases.push(c);
+  }
+  // The first ten were edited by hand after they were drawn; the last two were not.
+  for (const c of canvases.slice(0, 10)) applySceneOps(c, [{ op: "object.update", id: bindingsOf(c)[0].target.id, props: { expression: "99*x" } }], { author: "user" });
+  await notebooks.mutate(nb, {}, (d) => { for (const x of d.cells) for (const l of x.links ?? []) l.status = "stale"; return d; });
+  const first = await refreshLinks({ host, notebooks, notebookId: nb });
+  const second = await refreshLinks({ host, notebooks, notebookId: nb });
+  assert.equal(first.updated.length + second.updated.length, 2, "the two plots nobody edited were redrawn");
+  assert.ok(canvases.slice(10).every((c) => bindingsOf(c)[0].state === "fresh"));
+  assert.ok(canvases.slice(0, 10).every((c) => c.objects.get(bindingsOf(c)[0].target.id).props.expression === "99*x"), "the edits stand");
+});

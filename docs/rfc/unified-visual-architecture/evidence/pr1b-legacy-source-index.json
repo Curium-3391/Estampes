@@ -306,7 +306,7 @@
     },
     {
       "path": "src/surface/refresh.js",
-      "sha256": "228822219de0b0b56e4c7152d7d19b2c428d6929bb4a3732c31a4a8bf50735ac"
+      "sha256": "97cfe1458817a6f1fa0b95dfa7eda7338d972b5378a55d643c08abdc09191b00"
     },
     {
       "path": "src/surface/service.js",
@@ -794,6 +794,15 @@
         "src/surface/refresh.js"
       ],
       "previousSha256": "6c9b6a7a4fe38512af280afe50660469be0486f95a036d523cb7c912bb840133"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u300c\u958b\u59cb\u300d 5B-4b, \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75",
+      "reason": "5B-4b-1 review: paused documents do not use the refresh budget",
+      "files": [
+        "src/surface/refresh.js"
+      ],
+      "previousSha256": "228822219de0b0b56e4c7152d7d19b2c428d6929bb4a3732c31a4a8bf50735ac"
     }
   ]
 }

@@ -12,6 +12,7 @@ const CAS = "org.estampes.cas";
 const PASS = 20;      // cells recomputed per router call
 const ROUNDS = 5;     // so at most 100 stale cells per refresh; `remaining` reports the rest
 const MAX_CANVASES = 8;
+const MAX_SCANNED = 200;   // documents looked at to find those MAX_CANVASES with work
 
 // Capabilities after which a notebook with autoRefresh redraws its linked
 // plots. Turning autoRefresh on counts: stale plots already waiting get redrawn.
@@ -38,15 +39,24 @@ export async function refreshLinks({ host, notebooks, notebookId, imageId = null
   const canvases = new Set();
   for (const c of nb.cells) for (const l of c.links ?? []) if (l.status !== "fresh" && l.status !== "removed") canvases.add(l.canvas);
   if (imageId) canvases.delete(imageId);
-  const order = [...(imageId ? [imageId] : []), ...canvases].slice(0, MAX_CANVASES);
+  // Walk the candidates, the one on screen first; a document whose waiting plots can only be paused (the person's edit) or are gone does not use up one of the MAX_CANVASES.
+  const order = [...(imageId ? [imageId] : []), ...canvases].slice(0, MAX_SCANNED);
+  let visited = 0;
   const flow = createDerivedFlow({ router: host.router, registry: host.registry, canvases: host.canvases, index: host.derivedIndex, state: host.derivedState });
   let shown = null;
   for (const canvas of order) {
+    if (visited >= MAX_CANVASES) break;
     let r;
     const before = await host.canvases.ensure(canvas).catch(() => null);
     // The plots of this notebook that its own record says are waiting on this document (object id -> link).
     const waiting = new Map();
     for (const c of nb.cells) for (const l of c.links ?? []) if (l.canvas === canvas && l.status !== "fresh" && l.status !== "removed") waiting.set(l.object, c.id);
+    // Nothing here can be redrawn without overwriting the person's edit or recreating a deleted plot: not this document's turn.
+    if (before && canvas !== imageId && waiting.size && ![...waiting.keys()].some((id) => {
+      const b = (before.derived ?? []).find((x) => x.source.module === CAS && x.target?.id === id && x.source.sourceRef === notebookId + "/" + waiting.get(id));
+      return !b || ["fresh", "stale", "error", "recomputing", "unavailable"].includes(b.state);
+    })) continue;
+    visited++;
     if (before) {
       // A change the document was never told about (a broadcast reaches only some documents): mark the plots the notebook says are waiting, and only those.
       for (const b of before.derived ?? []) {
