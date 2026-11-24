@@ -140,3 +140,19 @@ test("if the links of the first batch were left unmarked, the later batches are 
     assert.equal((await links(nb)).filter((l) => l.bound === true).length, 60);
   } finally { notebooks.mutate = real; }
 });
+
+test("a plot drawn from one cell and redrawn from another is adopted for the later draw", { timeout: 60000 }, async () => {
+  const { nb, cells, canvas } = await legacy(["fresh", "fresh"]);
+  // Both cells now link o2; the second draw is the later one.
+  await notebooks.mutate(nb, {}, (d) => {
+    const [a, b] = cells.map((id) => d.cells.find((c) => c.id === id));
+    a.links = [{ ...a.links[0], object: "o2", at: "2026-01-01T00:00:00Z" }];
+    b.links = [{ ...b.links[0], object: "o2", at: "2026-02-01T00:00:00Z" }];
+    return d;
+  });
+  const [b] = (await flowOf().list(canvas.imageId)).bindings;
+  assert.equal(bindingsOf(canvas).length, 1);
+  assert.match(bindingsOf(canvas)[0].source.sourceRef, new RegExp(cells[1]));
+  assert.ok(b);
+  assert.deepEqual((await links(nb)).map((l) => l.bound), [true, true], "both links are marked");
+});

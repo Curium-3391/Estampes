@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "c6d6ccf3258c02f3f1d5fdc2f029b597836243becdd628945090a5ba0014d4f2"
+      "sha256": "f59447afa0a6bc55b14c8a580edcac455199f947b987607ed550fd71efd589f8"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -749,6 +749,15 @@
         "src/modules/router.js"
       ],
       "previousSha256": "bd2edcbadd09eea004abffd469381e0d5e39fa67893ec9cdeb5002caf0b0be0d"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user \u6388\u6b0a\u5168\u57df\u81ea\u52d5\u5408\u4f75 / UVA 5B-4",
+      "reason": "5B-4a review: adopt a plot for its latest draw",
+      "files": [
+        "src/builtin-modules/cas/index.js"
+      ],
+      "previousSha256": "c6d6ccf3258c02f3f1d5fdc2f029b597836243becdd628945090a5ba0014d4f2"
     }
   ]
 }

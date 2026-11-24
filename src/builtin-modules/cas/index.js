@@ -266,18 +266,21 @@ async function refreshPlot(p, ctx) {
 async function adoptPlots(p, ctx) {
   if (!deps.notebooks) return { data: { adopted: 0 } };
   const here = new Set((ctx.canvas?.objects ?? []).filter((o) => o.type === "function-plot").map((o) => o.id));
-  const derived = [], seen = new Set();
+  // An object can carry links from more than one cell (it was drawn from one and redrawn from another): the latest draw is the one it shows.
+  const best = new Map();
   for (const nb of await deps.notebooks.list()) {
     for (const cell of nb.cells) {
       for (const l of cell.links ?? []) {
-        if (l.canvas !== p.canvas || l.bound === true || l.status === "removed" || !here.has(l.object) || seen.has(l.object) || derived.length >= 50) continue;
-        seen.add(l.object);
-        derived.push({ object: l.object, sourceRef: sourceRefOf(nb, cell.id), sourceRevision: Math.max(1, cell.revision ?? 1),
-          inputsHash: createHash("sha256").update(JSON.stringify({ result: l.resultId, expression: l.expression, domain: l.domain ?? [-10, 10] })).digest("hex"),
-          ...(l.status === "fresh" && !cell.stale ? {} : { stale: true }) });
+        if (l.canvas !== p.canvas || l.bound === true || l.status === "removed" || !here.has(l.object)) continue;
+        const prev = best.get(l.object);
+        if (!prev || String(l.at ?? "") > String(prev.l.at ?? "")) best.set(l.object, { nb, cell, l });
       }
     }
   }
+  const derived = [...best.entries()].slice(0, 50).map(([object, { nb, cell, l }]) => ({
+    object, sourceRef: sourceRefOf(nb, cell.id), sourceRevision: Math.max(1, cell.revision ?? 1),
+    inputsHash: createHash("sha256").update(JSON.stringify({ result: l.resultId, expression: l.expression, domain: l.domain ?? [-10, 10] })).digest("hex"),
+    ...(l.status === "fresh" && !cell.stale ? {} : { stale: true }) }));
   return { ...(derived.length ? { derived } : {}), data: { adopted: derived.length }, summary: derived.length + " earlier plot(s) found" };
 }
 
