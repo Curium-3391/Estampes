@@ -251,7 +251,8 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           if (!manifest.v2) throw new ModuleError(capId + " returned models, which only module/2 modules may", "output");
           const allowed = manifest.v2.writes?.[capId];
           if (!allowed?.length) throw new ModuleError(capId + " returned models but does not declare writes in its manifest", "output");
-          if (output.operations.length || output.derived?.length || output.broadcast?.length) throw new ModuleError(capId + " returned models together with scene operations, derived or broadcast; a result is one or the other", "output");
+          // A broadcast is allowed beside models (#85 V3-A): it is only a hint that marks this module's own bindings stale, so a model change can reach the objects drawn from it.
+          if (output.operations.length || output.derived?.length) throw new ModuleError(capId + " returned models together with scene operations or derived objects; a result is one or the other (a broadcast may accompany models)", "output");
           if (internal) throw new ModuleError(capId + " returned models in a refresh, preview or adoption", "output");
           for (const c of output.models) if (!allowed.includes(c.model)) throw new ModuleError(capId + " may not write model " + c.model + " (writes: " + allowed.join(", ") + ")", "output");
           const creates = output.models.filter((c) => c.ref), updates = output.models.filter((c) => c.id);
