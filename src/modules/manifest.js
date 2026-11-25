@@ -191,6 +191,10 @@ const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend
   // #85 V1: the model types (manifest `models`) this capability may write. It returns `models` in its output instead of `operations`; the two
   // cannot be mixed in one answer. A capability that writes needs module.storage.write.
   writes: z.array(z.string().regex(MODEL_ID)).max(8).optional(),
+  // #86 F1: the shape of `data` in this capability's result, in the same bounded schema subset as inputSchema (an object schema, closed, strings
+  // and arrays bounded). It is what lets a Flow connect one capability's output to another's input with a type check. A capability that does
+  // not declare it cannot be an upstream node. Declared, it is enforced: a result whose data does not fit is refused as an `output` error.
+  outputSchema: z.record(z.string(), z.unknown()).optional(),
 });
 
 // #85 V1: the data a module owns, declared as types. An instance (md:<hex>) is made at run time and lives in its own UVA record,
@@ -246,7 +250,8 @@ export function runtimeManifest(m) {
   const uses = Object.fromEntries(m.capabilities.filter((c) => c.uses?.length).map((c) => [c.id, c.uses]));
   const writes = Object.fromEntries(m.capabilities.filter((c) => c.writes?.length).map((c) => [c.id, c.writes]));
   const models = Object.fromEntries((m.models ?? []).map((t) => [t.id, t]));
-  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}), ...(Object.keys(writes).length ? { writes } : {}), ...(Object.keys(models).length ? { models } : {}) } };
+  const outputs = Object.fromEntries(m.capabilities.filter((c) => c.outputSchema).map((c) => [c.id, c.outputSchema]));
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}), ...(Object.keys(writes).length ? { writes } : {}), ...(Object.keys(models).length ? { models } : {}), ...(Object.keys(outputs).length ? { outputs } : {}) } };
 }
 
 // What changed between two ABI versions of a module, for the Store.
@@ -288,6 +293,11 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
     ids.add(c.id);
     try { checkSchema(c.inputSchema, where + ".inputSchema"); } catch (error) { throw new ManifestError(error.message); }
     if (c.inputSchema.type !== "object") throw new ManifestError(where + ".inputSchema: must be an object schema");
+    if (c.outputSchema !== undefined) {
+      try { checkSchema(c.outputSchema, where + ".outputSchema"); } catch (error) { throw new ManifestError(error.message); }
+      if (c.outputSchema.type !== "object") throw new ManifestError(where + ".outputSchema: must be an object schema (it describes the result's data)");
+      if (c.async) throw new ManifestError(where + ".outputSchema: a background job's result is not checked against it yet; declare it on a capability that answers at once");
+    }
     const extra = (c.permissions ?? []).filter((p) => !m.permissions.includes(p));
     if (extra.length) throw new ManifestError(where + ".permissions: " + extra.join(", ") + " not in the module's permissions");
     if (c.target !== "none" && !(c.permissions ?? m.permissions).includes("canvas.write")) {
