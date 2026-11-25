@@ -2,7 +2,7 @@
 
 A Flow connects module capabilities into a small graph: the typed result of one capability feeds an input of another, and a change upstream marks what depends on it stale. It builds on what exists: capability manifests ([Modules](MODULES.md)), the derived-binding vocabulary ([Derived bindings](DERIVED-BINDINGS.md)) and the router that runs every capability with its permission checks. It does **not** replace derived bindings (those keep tying a drawn object to its source); they stay separate.
 
-Status: the graph format, its static checks and a runner exist (F1-1 to F1-3), as a library. Storing a flow and the MCP tools to edit one (F1-4) do not yet; there is no Flow view.
+Status: the graph format, its static checks, a runner, storage and two MCP tools (`get_flow`, `edit_flow`) exist (F1). There is no Flow view yet. Everything is tested in-process with invented modules; it has not been tried on a real ChatGPT or Claude host.
 
 ## What exists
 
@@ -14,6 +14,15 @@ Nothing in it names a module (the runner does not either): all it knows about a 
 
 - **Running, `runFlow` / `plan`** (`src/flow/run.js`). One `router.execute` per node in dependency order, so each node keeps the router's checks (module enabled and granted, input validation, the declared `outputSchema`, audit). The runner stores nothing: it is given the flow and the earlier per-node results (`state`) and returns the new state. Each result is kept with the hash of exactly what it was computed from (module version, capability, literal and fed inputs), a revision, and the time. A run recomputes only nodes whose inputs changed; a node whose new result is identical keeps its revision, so what follows it is not recomputed (early cutoff). A node that fails keeps its last good data and the nodes that need it are `blocked`, not wrong; going back to inputs it already has an answer for needs no run. A cancelled run (an `AbortSignal`, checked between nodes) keeps what it finished and lists the rest as `cancelled`. `plan` says what a run would do (`fresh`, `stale`, `blocked`) without running anything; a node behind a stale one shows `stale` with `pending`, since it may still turn out unchanged.
 
+## Storing and editing (F1-4)
+
+A flow is a UVA record of kind `flow` (`fl:<12 hex>`, `src/flow/store.js`), so it has the durability, restart recovery and backup coverage of every other record and no storage of its own. The record holds the graph, the results of the last runs and a bounded history (the last 20 changes, within 256 KB, each with the graph it replaced). It shares its revision, locking and command-id rules with model instances (`src/records/revisioned.js`).
+
+- **Edits** are named operations (`src/flow/edit.js`): `add_node`, `remove_node` (its connections go with it), `set_params`, `connect`, `disconnect`. An edit names the revision it was made against; if the flow changed since, nothing is applied and the caller reads it again. The same command id again answers with the first result and changes nothing. An undo restores what an edit replaced, only while that edit is still the latest change.
+- **A flow may be incomplete while it is built.** The store checks the shape and size (64 nodes, 256 edges, 64 KB), not that modules exist or types fit; `get_flow` reports what `validateFlow` finds. Only a valid flow runs.
+- **Run** (`edit_flow` with `action: "run"`) recomputes the stale nodes through the router and keeps the results in the record, but only if the graph is still the revision the run started from. One run per flow at a time. Results of one flow are limited to 256 KB; a larger set is not kept and the run says so.
+- Limits: at most 32 flows; a flow cannot be deleted yet (there is no record delete in the store). Flows need the UVA store; without it the tools say so and change nothing.
+
 ## Not yet
 
-Storing a flow as a document and its results, the `get_flow` / `edit_flow` tools, running a node mid-flight from a person's edit, a Flow view on the module-view contract, background-job nodes, nodes that work on a document (drawing), and loops. a Flow view on the module-view contract, and loops. See issue #86.
+Deleting a flow, running a node as soon as a person edits it, a Flow view on the module-view contract (F2), background-job nodes, nodes that work on a document (drawing), streaming, and loops. See issue #86.
