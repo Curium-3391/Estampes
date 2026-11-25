@@ -350,7 +350,7 @@
     },
     {
       "path": "public/visual-surface.html",
-      "sha256": "764e23ce9f0bc1c2e78c7b2dbe61e2f1bf224a252f6cc8775faa4fe8238f11b7"
+      "sha256": "00fd92d074a789dcdf7feb4cba6ac689594a5a934b509040e5e061c84bcc868b"
     },
     {
       "path": "public/workbench.js",
@@ -940,6 +940,15 @@
         "server.js"
       ],
       "previousSha256": "de203389f7af26d1f1b872824e1e14fa1b8b0b22b51a87615ffb3cca0ad3f41a"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user: \u7e7c\u7e8c (#85 V3; option C recommended, card pending)",
+      "reason": "#85 V3-C: module-view focus ring, touch targets, narrow-screen layout",
+      "files": [
+        "public/visual-surface.html"
+      ],
+      "previousSha256": "764e23ce9f0bc1c2e78c7b2dbe61e2f1bf224a252f6cc8775faa4fe8238f11b7"
     }
   ]
 }
