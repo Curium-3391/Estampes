@@ -4,7 +4,6 @@
 // closed expression parser and all limits live in cas-service/.
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import * as graph from "../graph/index.js";
 import { CasClientError } from "../../cas/client.js";
 import { cellSummary } from "../../cas/notebooks.js";
 import { BridgeError, checkPlottable } from "../../cas/bridge.js";
@@ -234,11 +233,14 @@ async function plotResult(p, ctx) {
   try { g = checkPlottable(cell.result, domain); }
   catch (e) { if (e instanceof BridgeError) throw new Error(e.message); throw e; }
   const label = "y = " + (cell.result.exact.plain.length <= 48 ? cell.result.exact.plain.replace(new RegExp("\\b" + g.variable + "\\b", "g"), "x") : g.expression);
+  // The drawing itself is the Graph module's; it is called through the contract this capability declares (manifest `uses`), not imported.
+  if (typeof ctx.use !== "function") throw new Error("drawing needs the Graph module, which is not available to this call");
+  const use = (capability, params) => ctx.use("org.estampes.graph", capability, params);
   let built;
   if (p.object) {
-    built = graph.run("update_plot", { object: p.object, expression: g.expression, ...(p.domain ? { domain: p.domain } : {}), label, labelMode: "custom", ...(p.color ? { color: p.color } : {}) }, ctx);
+    built = await use("update_plot", { object: p.object, expression: g.expression, ...(p.domain ? { domain: p.domain } : {}), label, labelMode: "custom", ...(p.color ? { color: p.color } : {}) }, ctx);
   } else {
-    built = graph.run("plot_function", { expression: g.expression, domain, label, labelMode: "custom", ...(p.color ? { color: p.color } : {}), ...(p.frame ? { frame: p.frame } : {}) }, ctx);
+    built = await use("plot_function", { expression: g.expression, domain, label, labelMode: "custom", ...(p.color ? { color: p.color } : {}), ...(p.frame ? { frame: p.frame } : {}) }, ctx);
   }
   // A new plot is named, so the core can record that it was made from this cell; a redraw (object given) makes no new object.
   const operations = p.object ? built.operations : built.operations.map((op) => (op?.op === "object.create" && op.type === "function-plot" ? { ...op, ref: "plot" } : op));

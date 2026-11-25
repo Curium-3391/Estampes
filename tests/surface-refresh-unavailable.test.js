@@ -35,8 +35,11 @@ before(async () => {
   configure({ client, notebooks });
   const canvases = { ensure: async (id) => { if (!readable) throw Object.assign(new Error("EIO: i/o error"), { code: "EIO" }); return ensureImage(id); }, create: createBlankCanvas, save: async () => {} };
   host = await createModuleHost({ storageDir: dir, coreVersion: "0.18.0", canvases });
-  const plan = await host.lifecycle.prepare("enable", CAS);
-  await host.lifecycle.commit(plan.planId, { consent: plan.consent });
+  // The calculator draws through Graph (its declared `uses`), so both are enabled.
+  for (const id of [CAS, "org.estampes.graph"]) {
+    const plan = await host.lifecycle.prepare("enable", id);
+    await host.lifecycle.commit(plan.planId, { consent: plan.consent });
+  }
 });
 
 // A canvas with one plot drawn from a calculator cell, then made stale.

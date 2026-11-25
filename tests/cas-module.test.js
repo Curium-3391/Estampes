@@ -31,7 +31,9 @@ before(async () => {
 });
 after(() => { proc?.kill("SIGKILL"); });
 
-const enable = async () => { const plan = await h.lifecycle.prepare("enable", CAS); return h.lifecycle.commit(plan.planId, { consent: plan.consent }); };
+const enableModule = async (id) => { const plan = await h.lifecycle.prepare("enable", id); return h.lifecycle.commit(plan.planId, { consent: plan.consent }); };
+// Drawing is the Graph module's job (CAS calls it through its declared `uses`), so Graph is enabled too.
+const enable = async () => { const r = await enableModule(CAS); await enableModule("org.estampes.graph"); return r; };
 const call = (capability, params, extra = {}) => h.router.execute({ module: CAS, capability, params, ...extra });
 
 test("cas: disabled until the user enables it", { skip }, async () => {

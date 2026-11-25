@@ -130,6 +130,44 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       if (builtin && effective.includes("network.request.approved") && egress) {
         ctx.http = (request) => egress.call({ manifest, granted: effective, request, limits: ctx.limits, capability: capId });
       }
+      // #174: a built-in module may call a capability of another module that its manifest names under `uses`. The call returns only what that
+      // capability computes (scene operations, summary); nothing is applied here: the caller returns it as its own result and the core applies it
+      // under the caller's checks. The other module must be enabled and both modules must hold every permission the used capability needs.
+      const usedKeys = new Map();
+      const declaredUses = manifest.v2?.uses?.[capId];
+      if (builtin && declaredUses?.length) {
+        ctx.use = async (useModule, useCapability, useParams = {}) => {
+          if (!declaredUses.some((u) => u.module === useModule && u.capability === useCapability)) {
+            throw new ModuleError(capId + " did not declare that it uses " + useModule + " " + useCapability + " (manifest uses)", "permission");
+          }
+          const used = registry.get(useModule);
+          if (!used || used.record.state !== "enabled") throw new ModuleError(capId + " needs " + useModule + ", which is " + (used ? used.record.state : "not installed") + (used ? ". Only the user can enable it, in the Store" : ""), "unavailable");
+          const ucap = used.manifest.capabilities.find((c) => c.id === useCapability);
+          if (!ucap) throw new ModuleError(useModule + " has no capability " + useCapability, "not-found");
+          if (ucap.async) throw new ModuleError(useCapability + " runs as a background job and cannot be used from another capability", "run");
+          const needs = capabilityPermissions(used.manifest, ucap);
+          const lacking = missingPermissions(used.record.granted ?? [], needs);
+          if (lacking.length) throw new ModuleError(useModule + " was not granted " + lacking.join(", "), "permission");
+          const callerLacks = missingPermissions(granted, needs);
+          if (callerLacks.length) throw new ModuleError(manifest.id + " was not granted " + callerLacks.join(", ") + ", which " + useCapability + " needs", "permission");
+          let usedInput;
+          try { usedInput = validateValue(ucap.inputSchema, useParams ?? {}, "params"); }
+          catch (error) { throw new ModuleError(error.message, "input"); }
+          if (ucap.target !== "none" && !entry) throw new ModuleError(useCapability + " needs a document", "input");
+          const usedRuntime = runtimes[used.runtime.kind];
+          if (!usedRuntime) throw new ModuleError("runtime " + used.runtime.kind + " is not available on this server", "runtime");
+          const usedPerms = needs.filter((p) => granted.includes(p));
+          const raw = await usedRuntime.run(used, useCapability, usedInput, { module: { id: used.manifest.id, version: used.manifest.version }, capability: useCapability,
+            permissions: usedPerms, limits: used.manifest.limits ?? {}, canvas: entry && ucap.target !== "none" ? canvasContext(entry, used.manifest.id, usedPerms, !!used.manifest.v2) : null,
+            entry: usedPerms.includes("asset.read.selected") ? entry : null });
+          const parsed = OutputSchema.safeParse(raw ?? {});
+          if (!parsed.success) throw new ModuleError(useModule + " " + useCapability + " returned invalid output: " + parsed.error.issues[0].message, "output");
+          if (parsed.data.derived?.length || parsed.data.broadcast?.length) throw new ModuleError(useCapability + " returned derived or broadcast, which cannot be used from another module", "output");
+          usedKeys.set(useModule, JSON.stringify([used.record.state, used.record.version, [...(used.record.granted ?? [])].sort()]));
+          audit.record({ kind: "run.use", module: manifest.id, capability: capId, used: useModule + " " + useCapability, canvas: entry?.imageId });
+          return { operations: parsed.data.operations, ...(parsed.data.summary ? { summary: parsed.data.summary } : {}), ...(parsed.data.method ? { method: parsed.data.method } : {}) };
+        };
+      }
       // The original image of the target canvas, for built-in modules and for
       // http modules that declare a multipart file (sent only through egress).
       if ((builtin || mod.runtime.kind === "http") && effective.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
@@ -164,6 +202,13 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         if (moduleStateKey() !== stateAtStart) {
           audit.record({ kind: "run.late", module: manifest.id, capability: capId, canvas: entry?.imageId, why: "module changed", ms: Date.now() - started });
           throw new ModuleError(manifest.id + " was disabled, updated or given other permissions while " + capId + " ran; its result was not applied", "revoked");
+        }
+        for (const [id, key] of usedKeys) {
+          const m = registry.get(id);
+          if ((m ? JSON.stringify([m.record.state, m.record.version, [...(m.record.granted ?? [])].sort()]) : "gone") !== key) {
+            audit.record({ kind: "run.late", module: manifest.id, capability: capId, canvas: entry?.imageId, why: "used module changed", ms: Date.now() - started });
+            throw new ModuleError(id + " was disabled, updated or given other permissions while " + capId + " ran; its result was not applied", "revoked");
+          }
         }
         if (targetKey() !== targetAtStart) {
           audit.record({ kind: "run.late", module: manifest.id, capability: capId, canvas: entry?.imageId, why: "target changed", ms: Date.now() - started });
