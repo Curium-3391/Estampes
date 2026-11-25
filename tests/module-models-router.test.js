@@ -170,3 +170,44 @@ test("the instance index lists every instance without values and says what state
   assert.equal(rows.length, 1);
   assert.deepEqual(Object.keys(rows[0]).sort(), ["bytes", "dataVersion", "id", "model", "module", "revision", "updatedAt"]);
 });
+
+// ---- V1-4: retention and a model-only export that does not run any module ----
+import { exportModels, EXPORT_SCHEMA } from "../src/models/export.js";
+
+test("disabling a module keeps its instances: the index says so, the host reads are refused, enabling brings them back untouched", async (t) => {
+  const s = await setup(t, (c) => (c === "save" ? create(1, 1) : {}));
+  const id = (await s.call("save")).models.created[0].id;
+  const before = JSON.stringify(await s.records.read("model", id));
+  const plan = await s.h.lifecycle.prepare("disable", MOD); await s.h.lifecycle.commit(plan.planId, { consent: plan.consent });
+  await assert.rejects(s.call("models.get", { model: "adder", id }), (e) => e.code === "disabled");
+  await assert.rejects(s.call("save"), (e) => e.code === "disabled");
+  assert.equal(JSON.stringify(await s.records.read("model", id)), before, "nothing was changed");
+  assert.equal((await s.h.models.index())[0].id, id, "still listed");
+  const again = await s.h.lifecycle.prepare("enable", MOD); await s.h.lifecycle.commit(again.planId, { consent: again.consent });
+  assert.deepEqual((await s.call("models.get", { model: "adder", id })).data.instance.value, { a: 1, b: 1 });
+});
+
+test("a newer module that no longer reads the stored data version neither opens nor changes it, and the export still has it", async (t) => {
+  const s = await setup(t, (c) => (c === "save" ? create(0, 0) : {}));
+  const id = (await s.call("save")).models.created[0].id;
+  const before = JSON.stringify(await s.records.read("model", id));
+  const v2 = { ...MODELS[0], dataVersion: 2 };
+  await assert.rejects(s.h.models.read({ module: MOD, type: v2, id }), (e) => e.code === "incompatible");
+  await assert.rejects(s.h.models.commit({ module: MOD, commandId: "c1", changes: [{ id, type: v2, expectedRevision: 1, value: { a: 1, b: 1 } }] }), (e) => e.code === "incompatible");
+  assert.equal(JSON.stringify(await s.records.read("model", id)), before);
+  assert.equal((await exportModels({ records: s.records })).instances[0].value.a, 0);
+});
+
+test("the export reads records only: a module need not be loaded, enabled or even installed, and it filters by owner", async (t) => {
+  const s = await setup(t, (c) => (c === "save" ? create(1, 0) : {}));
+  await s.call("save");
+  await s.h.models.create({ module: "org.example.removed", type: { id: "thing", dataVersion: 1, schema: objectSchema({}) }, value: {}, commandId: "x" });
+  const all = await exportModels({ records: s.records, now: () => "2026-01-01T00:00:00.000Z" });
+  assert.equal(all.schema, EXPORT_SCHEMA);
+  assert.equal(all.count, 2);
+  assert.deepEqual(all.instances.map((i) => i.module).sort(), ["org.example.logic", "org.example.removed"]);
+  assert.equal(all.instances.every((i) => i.history === undefined), true, "no history in the export");
+  const one = await exportModels({ records: s.records, module: "org.example.removed" });
+  assert.equal(one.count, 1);
+  assert.equal((await s.h.models.index()).find((r) => r.module === "org.example.removed").id, one.instances[0].id);
+});
