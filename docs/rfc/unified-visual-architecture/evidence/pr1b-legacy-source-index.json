@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "cf11a61d514eb8d4823e5ce2e4edbc40789c5216d2426c79904ea0c16d879288"
+      "sha256": "5caf97897abebff8be2ad9122002b6576b275c7c1a73c0408a89fb1e7b495918"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -949,6 +949,15 @@
         "public/visual-surface.html"
       ],
       "previousSha256": "764e23ce9f0bc1c2e78c7b2dbe61e2f1bf224a252f6cc8775faa4fe8238f11b7"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user: \u90fd\u505a (#85 V3 A+B+C)",
+      "reason": "#85 V3-A: broadcast may accompany models",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "cf11a61d514eb8d4823e5ce2e4edbc40789c5216d2426c79904ea0c16d879288"
     }
   ]
 }
