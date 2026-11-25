@@ -920,25 +920,26 @@
     },
     {
       "date": "2026-11-23",
-      "authorizedBy": "Curium (2026-11-25 17:21 Taipei: '\u597d\u7e7c\u7e8c' to V2)",
-      "reason": "#85 V2-2: module views offered and opened as surface panels, surface state carries the view contract",
+      "authorizedBy": "user: \u597d\u7e7c\u7e8c (#85 V2)",
+      "reason": "#85 V2-2/V2-3: module views offered and drawn on the surface",
       "files": [
-        "server.js",
         "src/modules/manifest.js",
         "src/surface/mcp-tools.js",
         "src/surface/service.js",
-        "src/surface/store.js"
+        "src/surface/store.js",
+        "src/surface/widget-source.js",
+        "public/visual-surface.html",
+        "public/workbench.js"
       ]
     },
     {
       "date": "2026-11-23",
       "authorizedBy": "user: \u597d\u7e7c\u7e8c (#85 V2)",
-      "reason": "#85 V2-3: module-view renderer inlined in the widget; ci tier for public/module-view.js",
+      "reason": "#85 V2-2: surface service reads module model instances",
       "files": [
-        "src/surface/widget-source.js",
-        "public/visual-surface.html",
-        "public/workbench.js"
-      ]
+        "server.js"
+      ],
+      "previousSha256": "de203389f7af26d1f1b872824e1e14fa1b8b0b22b51a87615ffb3cca0ad3f41a"
     }
   ]
 }
