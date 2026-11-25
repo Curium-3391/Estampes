@@ -4,6 +4,7 @@
 //               change log (the last LOG_LINES lines) kept beside it
 //   surface     panels and layouts (src/surface/store.js)
 //   notebook    calculator notebooks (src/cas/notebooks.js)
+//   model       instances of module-owned data (src/models/store.js)
 // Each record is one UVA document (src/uva/service.js syncRecord), keyed
 // "<kind>/<id>".
 //
@@ -42,11 +43,13 @@ import { createMirror } from "./mirror.js";
 const RECORD = "estampes.record-pending/1";
 const INTENT = "estampes.record-intent/1";
 export const LOG_LINES = 200;
-const WS = /^ws:[0-9a-f]{16}$/, SF = /^sf:[0-9a-f]{16}$/, NB = /^nb:[0-9a-f]{12}$/;
+const WS = /^ws:[0-9a-f]{16}$/, SF = /^sf:[0-9a-f]{16}$/, NB = /^nb:[0-9a-f]{12}$/, MD = /^md:[0-9a-f]{12}$/;
 const jsonl = (text) => text.trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 export const KINDS = Object.freeze({
   workspace: { dir: ["workspaces"], file: /^([0-9a-f]{16})\.json$/, id: (m) => "ws:" + m, name: (id) => id.slice(3) + ".json", logName: (id) => id.slice(3) + ".history.jsonl", idOk: (id) => WS.test(id), valid: (v, id) => v?.id === id && Array.isArray(v.items) },
   surface: { dir: ["surfaces"], file: /^sf_([0-9a-f]{16})\.json$/, id: (m) => "sf:" + m, name: (id) => "sf_" + id.slice(3) + ".json", idOk: (id) => SF.test(id), valid: (v, id) => v?.surfaceId === id && typeof v.schema === "string" },
+  // #85 V1-2: an instance of a module-owned model (src/models/store.js). Never a legacy file: `dir` only names where none exists.
+  model: { dir: ["models"], file: /^md_([0-9a-f]{12})\.json$/, id: (m) => "md:" + m, name: (id) => "md_" + id.slice(3) + ".json", idOk: (id) => MD.test(id), valid: (v, id) => v?.id === id && v.schema === "estampes.model/1" },
   notebook: { dir: ["cas", "notebooks"], file: /^nb_([0-9a-f]{12})\.json$/, id: (m) => "nb:" + m, name: (id) => "nb_" + id.slice(3) + ".json", idOk: (id) => NB.test(id), valid: (v, id) => v?.id === id && typeof v.schema === "string" },
 });
 const keyOf = (kind, id) => KINDS[kind]?.idOk(id) ? kind + "/" + id : null;
