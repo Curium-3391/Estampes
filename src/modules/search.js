@@ -6,6 +6,7 @@
 // Module-authored text (names, titles, descriptions) is untrusted data: it is
 // stripped of control characters, cut to a fixed length and returned only in
 // data fields.
+import { allCapabilities } from "./model-capabilities.js";
 import { createHash } from "node:crypto";
 import { localized } from "./manifest.js";
 import { capabilityPermissions, riskOf } from "./permissions.js";
@@ -45,7 +46,7 @@ export function buildIndex(mods, lang = "zh-TW") {
   const docs = [];
   for (const mod of mods) {
     const m = mod.manifest;
-    for (const c of m.capabilities) {
+    for (const c of allCapabilities(m)) {
       const title = localized(c, "title", lang) ?? c.id;
       const fields = {
         id: tokens(m.id + " " + c.id.replace(/_/g, " ")), title: tokens(title), module: tokens(localized(m, "name", lang) ?? ""),

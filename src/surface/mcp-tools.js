@@ -128,6 +128,14 @@ export function registerSurfaceTools(server, deps) {
     } catch (error) { return fail(error); }
   });
 
+  const modelIndex = async () => {
+    const store = host.models;
+    if (!store) return {};
+    const rows = await store.index({ limit: 100 }).catch(() => []);
+    if (!rows.length) return {};
+    return { models: rows.map((r) => ({ ...r, moduleState: host.registry.get(r.module)?.record.state ?? "removed" })) };
+  };
+
   server.registerTool("get_surface_state", {
     title: "Read the Visual Surface state",
     description: "What the user has open on the Estampes Visual Surface: panels (canvas/Graph, scientific calculator), which are open, and every calculator cell with its exact result, status (exact, approximate, complex, conditional, partial, undefined), freshness (fresh/stale/error) and the Graph objects drawn from it. Read this instead of asking the user what they typed into the calculator. Results here were computed by SymPy; do not restate them differently.",
@@ -139,7 +147,9 @@ export function registerSurfaceTools(server, deps) {
       const view = await service.state(keyOf(args));
       const notebooks = await notebooksOf(view, { cells: args.cells });
       const compact = { surfaceId: view.surfaceId, revision: view.revision, panels: view.panels.map((p) => ({ panelId: p.panelId, kind: p.kind, module: p.module, open: p.open, moduleState: p.moduleState, ...(p.notebook ? { notebook: p.notebook } : {}) })),
-        available: view.available, notebooks };
+        available: view.available, notebooks,
+        // #85: instances of module-owned data (no values; read one with the module's models.get through execute_module).
+        ...(await modelIndex()) };
       return { content: [{ type: "text", text: JSON.stringify(compact) }], structuredContent: { kind: "estampes.surface_state", ...compact } };
     } catch (error) { return fail(error); }
   });

@@ -13,6 +13,7 @@ import { plotContext } from "./plot-context.js";
 import { register, sourceChanged, markStale, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
 import { deliverBroadcast } from "../documents/derived-broadcast.js";
 import { ModelError } from "../models/store.js";
+import { allCapabilities, runHostCapability } from "./model-capabilities.js";
 import { randomBytes } from "node:crypto";
 
 // A string in a v2 module's input that names a document (an image, a Graph
@@ -77,6 +78,7 @@ function canvasContext(entry, moduleId, granted, v2 = false) {
 // built-in modules (never to other runtimes) when their grant allows.
 export function createRouter({ registry, audit, canvases, runtimes, jobs = null, egress = null, readSource = null, derivedIndex = null, models = null }) {
   const DEFAULT_JOB_MS = 10 * 60 * 1000;
+  const modelStore = () => { const store = models?.(); if (!store) throw new ModuleError("model storage is not available on this server", "unavailable"); return store; };
   return {
     jobs,
     // `internal` is for the core's own refresh of a derived object: { refreshObject, dryRun? } (a dry run reports what would be written and applies nothing). It is never reachable from a tool.
@@ -90,8 +92,8 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       if (record.state !== "enabled") {
         throw new ModuleError(manifest.id + " is " + record.state + ". Only the user can enable it: call open_module_store (or prepare_module_change with action enable) so they can approve it in the Store", "disabled");
       }
-      const cap = manifest.capabilities.find((c) => c.id === capId);
-      if (!cap) throw new ModuleError(manifest.id + " has no capability " + JSON.stringify(capId) + "; it has " + manifest.capabilities.map((c) => c.id).join(", "), "not-found");
+      const cap = allCapabilities(manifest).find((c) => c.id === capId);
+      if (!cap) throw new ModuleError(manifest.id + " has no capability " + JSON.stringify(capId) + "; it has " + allCapabilities(manifest).map((c) => c.id).join(", "), "not-found");
       const granted = record.granted ?? [];
       const missing = missingPermissions(granted, capabilityPermissions(manifest, cap));
       if (missing.length) throw new ModuleError(manifest.id + " was not granted " + missing.join(", ") + "; the user must approve it again in the Store", "permission");
@@ -100,6 +102,14 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       try { input = validateValue(cap.inputSchema, params ?? {}, "params"); }
       catch (error) { throw new ModuleError(error.message + ". Call get_module_capabilities for the exact schema", "input"); }
 
+      // The host's own read capabilities (models.list, models.get): answered here, never by the module's runtime, after the same checks.
+      if (cap.host === "models") {
+        if (imageId || newCanvas) throw new ModuleError(capId + " does not work on a canvas; leave canvas and newCanvas out");
+        let out;
+        try { out = await runHostCapability({ store: modelStore(), manifest, capability: capId, input }); } catch (error) { throw asModuleError(error); }
+        audit.record({ kind: "run.host", module: manifest.id, capability: capId, ms: Date.now() - started });
+        return { module: manifest, capability: cap, entry: null, createdCanvas: false, scene: { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: null }, summary: out.summary, data: out.data, ms: Date.now() - started };
+      }
       // A v2 module may name only the document it is pointed at; checked before a new document is created, so a refused call leaves nothing behind.
       if (manifest.v2) {
         const stray = otherDocument(input, imageId ?? null);
@@ -180,7 +190,6 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
       }
       // #85 V1-3: a module reads its own model instances (never another module's). Needs module.storage.write, which declaring models requires.
       const modelTypes = manifest.v2?.models;
-      const modelStore = () => { const store = models?.(); if (!store) throw new ModuleError("model storage is not available on this server", "unavailable"); return store; };
       if (modelTypes && effective.includes("module.storage.write")) {
         const typeOf = (name) => modelTypes[name] ?? (() => { throw new ModuleError(manifest.id + " declares no model " + JSON.stringify(name), "input"); })();
         ctx.models = {

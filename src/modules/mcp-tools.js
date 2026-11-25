@@ -3,6 +3,7 @@
 // enabling a module never adds tools, so no reconnect is needed. The Store
 // widget uses app-only tools for browsing and for committing a change,
 // which needs the plan's consent nonce that only the widget receives.
+import { allCapabilities } from "./model-capabilities.js";
 import { z } from "zod";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { localized } from "./manifest.js";
@@ -134,13 +135,13 @@ export function registerModuleTools(server, deps) {
       const mod = host.registry.get(module);
       if (!mod) throw new Error("no module " + module + "; call list_modules");
       const m = mod.manifest;
-      const caps = m.capabilities.map((c) => ({ id: c.id, title: c.title, description: c.description, target: m.v2?.targets[c.id] ?? c.target,
+      const caps = allCapabilities(m).map((c) => ({ id: c.id, title: c.title, description: c.description, target: m.v2?.targets[c.id] ?? c.target,
         permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.async ? { async: true } : {}),
         ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples.map(({ description, params }) => ({ description, params })) } : {}) }));
       if (capability !== undefined) {
         const one = caps.find((c) => c.id === capability);
         if (!one) throw new Error(m.id + " has no capability " + JSON.stringify(capability) + "; it has " + caps.map((c) => c.id).join(", "));
-        const contract = { ...one, schemaHash: schemaHash(m, m.capabilities.find((c) => c.id === capability)) };
+        const contract = { ...one, schemaHash: schemaHash(m, allCapabilities(m).find((c) => c.id === capability)) };
         return {
           content: [{ type: "text", text: m.id + " " + m.version + " is " + STATE_TEXT[mod.record.state] + ". " + JSON.stringify([contract]) }],
           structuredContent: { kind: "estampes.module_capabilities", module: m.id, version: m.version, state: mod.record.state, capabilities: [contract] },
