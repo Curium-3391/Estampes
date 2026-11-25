@@ -1,6 +1,6 @@
 # The calculator's boundary with the core (decision record, issue #174)
 
-Status: **proposed**. The target below is waiting for the maintainer's confirmation; nothing in this page changes behaviour.
+Status: **accepted** (the maintainer chose "removable built-in module" on 2026-11-25). Steps 174-1 to 174-4 are done; what stays in host code on purpose is listed below.
 
 ## Target
 
@@ -24,7 +24,7 @@ The SymPy service (`cas-service/`) stays a separate, network-disabled process re
 
 - `src/builtin-modules/cas/index.js` imports `../graph/index.js` and calls `graph.run("plot_function" | "update_plot")`. **A private dependency; replaced in 174-2:** the calculator now declares `uses` for Graph's `plot_function` and `update_plot` in its manifest and calls them through `ctx.use`. Graph must be enabled for plotting.
 - `src/modules/index.js`: static list of built-in modules. Intended; built-ins are registered this way.
-- `server.js`: builds the SymPy client and the notebook store, passes them to the module (`configureCas`), reports `casStatus` in health, includes notebooks in bundle export/import, and gives the calculator's surface tool the client. Calculator-specific wiring; candidate for module-declared initialization (174-4).
+- `server.js`: **start-up and health moved (174-4)**: the calculator's `init` builds its SymPy client and notebook store, and its `health` is reported under `cas` in `/healthz`, both through the optional built-in hooks `init(context)` and `health()`/`healthKey` that the module host calls (a hook that throws stops nothing). Still named in `server.js` on purpose: `notebookStore` and `casClient` handed to the surface tools and bundle export/import, because notebooks travel in workspace bundles and the calculator panel's own tool needs the client. Moving those means a bundle-extras contract that other modules could use; not done.
 - `src/surface/refresh.js`, `src/surface/mcp-tools.js`: the calculator panel's own tool (`surface_cas`) and refresh button. First-party panel code; allowed to name the module.
 - `src/uva/record-store.js`: reads notebooks as a record kind, never changes them.
 - `public/calculator.js`: the panel's front end.
@@ -39,4 +39,4 @@ Notebook ids and revisions, link records (`cellRevision`), stale and recompute s
 1. This page (174-1).
 2. The calculator asks the host for Graph's drawing operations through a declared use of a capability instead of importing Graph (174-2).
 3. Tests for the calculator being absent: disabled, removed, service down, re-enabled (174-3, `tests/cas-absence.test.js`; done). They cover the module host; the wiring still in `server.js` is not exercised there.
-4. Moving the calculator's server wiring behind module-declared hooks, only if 174-2 and 174-3 show it is worth it (174-4).
+4. Moving the calculator's start-up and health wiring behind optional built-in module hooks (174-4; done, `tests/builtin-hooks.test.js`). Bundle extras and the surface tool's client stay as described above.

@@ -83,15 +83,13 @@ import { COMMAND_ID, commandHash, judgeCommand, commandRecords, createCommandGat
 import { composeCanvas } from "./src/scene/compose.js";
 import { createBlankCanvas } from "./src/scene/blank-canvas.js";
 import { backgroundPayload, visibleEntry } from "./src/visual/background.js";
-import { createCasClient } from "./src/cas/client.js";
-import { createNotebooks } from "./src/cas/notebooks.js";
 import { createSurfaceStore } from "./src/surface/store.js";
 import { createSurfaceService } from "./src/surface/service.js";
 import { inlineWorkbench } from "./src/surface/widget-source.js";
 import { collectBundleExtras, installBundleExtras } from "./src/surface/bundle-extras.js";
 import { afterRunNote } from "./src/surface/refresh.js";
 import { registerSurfaceTools } from "./src/surface/mcp-tools.js";
-import { configure as configureCas, casStatus, notebookStore } from "./src/builtin-modules/cas/index.js";
+import { casClient, notebookStore } from "./src/builtin-modules/cas/index.js";
 import { widgetObjects, renderedObjects, compactObject } from "./src/scene/scene-ops.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -2825,7 +2823,7 @@ function makeServer() {
     // The model changed a calculator notebook that has auto-refresh on: redraw its linked plots, like the panel does for the user.
     afterRun: (a) => afterRunNote({ host: moduleHost, notebooks: notebookStore(), ...a }),
   });
-  registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient: () => casClientInstance, ensureImage, visualUri: VISUAL_URI, canvasPayload });
+  registerSurfaceTools(server, { service: surfaceService, host: moduleHost, notebooks: notebookStore, casClient, ensureImage, visualUri: VISUAL_URI, canvasPayload });
 
   registerUvaTools(server, { service: uvaService, visualUri: VISUAL_URI, maxResultChars: config.maxResultChars, exportLink: (id) => publicUrl() + "/export/uva/" + id + ".zip" + (ACCESS_KEY ? "?sig=" + exportSignature(ACCESS_KEY, id, "uva.zip") : "") });
   return server;
@@ -3132,12 +3130,12 @@ const httpServer = createHttpServer((req, res) => {
   // For Docker/compose health checks and uptime monitors: 200 while the
   // server answers and, when storage is on, the storage folder is writable.
   if (url.pathname === "/healthz" && req.method === "GET") {
-    Promise.all([storageHealth(), casStatus()]).then(([storage, cas]) => {
+    Promise.all([storageHealth(), moduleHost?.health?.() ?? {}]).then(([storage, hooks]) => {
       const ok = !storage.enabled || storage.writable;
       res.writeHead(ok ? 200 : 503, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       res.end(JSON.stringify({ ok, version: BUILD_VERSION, uptimeSeconds: Math.round(process.uptime()), storage,
-        // A stopped calculator degrades only the calculator; everything else keeps working.
-        cas: cas.available ? { available: true, engine: cas.engine } : { available: false, reason: cas.reason } }));
+        // Built-in modules report under their own key (the calculator as `cas`); a stopped one degrades only itself.
+        ...hooks }));
     });
     return;
   }
@@ -3244,13 +3242,12 @@ function newCanvas({ kind, color, ...options } = {}) {
   const graph = kind === "graph" || (kind === undefined && options.background === undefined && config.newCanvasKind === "graph" && config.graphDocuments !== "readonly" && !!canvasStore);
   return graph ? createGraphCanvas({ ...options, ...(color ? { color } : {}) }) : createBlankCanvas(options);
 }
-const casClientInstance = createCasClient({ socketPath: config.casSocket });
-configureCas({ client: casClientInstance, notebooks: createNotebooks({ dir: modulesDir ? join(config.storageDir, "cas", "notebooks") : "", records: () => recordStore }) });
 const surfaceStore = createSurfaceStore({ dir: modulesDir ? join(config.storageDir, "surfaces") : "", records: () => recordStore });
 moduleHost = await createModuleHost({
   storageDir: modulesDir, coreVersion: VERSION, adminKey: adminInfo.key, allowUnsigned: config.moduleAllowUnsigned,
   canvases: { ensure: ensureImage, create: newCanvas, save: saveCanvas }, readSource,
 });
+await moduleHost.initBuiltins({ config, persistent: !!modulesDir, records: () => recordStore });
 surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
 // A UVA store that cannot start (for example a history too long to open within
 // the engine's startup limit) must never keep the whole server down: the legacy
