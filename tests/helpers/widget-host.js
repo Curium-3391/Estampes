@@ -68,7 +68,7 @@ export async function startStack({ cas = true, env = {} } = {}) {
     },
     // Opens the widget on `imageId` the way present_visual would deliver it.
     // globals: deliver the result the way ChatGPT does (window.openai first).
-    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false, hostName = "fake-host", quietPoll = false }) {
+    async open({ imageId, viewport = { width: 1280, height: 900 }, result = null, globals = false, touch = false, hostName = "fake-host", quietPoll = false, intercept = null }) {
       const widget = await this.widgetHtml();
       browser ??= await chromium.launch(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : { args: ["--no-sandbox"] });
       const page = await browser.newPage({ viewport, hasTouch: touch, isMobile: touch });
@@ -84,6 +84,8 @@ export async function startStack({ cas = true, env = {} } = {}) {
         // quietPoll: for a test whose result carries things the server does not have (it edits the
         // host result by hand), the widget's poll hears "no news" instead of the server's state.
         if (quietPoll && params?.name === "documents_get_changes") return { content: [], structuredContent: { kind: "estampes.documents_changes", documents: [] } };
+        // intercept(params, call): a test that scripts what the host answers (a module the server does not run); undefined = the server answers.
+        if (intercept) { const o = await intercept(params, (p) => client.callTool(p)); if (o !== undefined) return { content: o.content ?? [], structuredContent: o.structuredContent, _meta: o._meta, isError: o.isError }; }
         const r = await client.callTool(params);
         // hold: keep this tool's answer back until the test releases it (a slow reply).
         if (net.hold && params?.name === net.hold.name) { const h = net.hold; net.hold = null; h.reached(); await h.released; }

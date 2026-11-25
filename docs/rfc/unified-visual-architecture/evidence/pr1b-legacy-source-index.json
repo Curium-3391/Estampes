@@ -318,7 +318,7 @@
     },
     {
       "path": "src/surface/widget-source.js",
-      "sha256": "d44ac1a2ebb79fe65b851264a7b704865e129d2dbf8def2dbe77e4101de7928e"
+      "sha256": "79789a77142f97856eb4263dbde2ade26916c1bb115fa1e1814715b9f7f67dd4"
     },
     {
       "path": "src/tunnel.js",
@@ -350,11 +350,11 @@
     },
     {
       "path": "public/visual-surface.html",
-      "sha256": "dfc9050779859a4b61a07ba56329eb2575dd95a672fca5d30c50d79d544bb072"
+      "sha256": "764e23ce9f0bc1c2e78c7b2dbe61e2f1bf224a252f6cc8775faa4fe8238f11b7"
     },
     {
       "path": "public/workbench.js",
-      "sha256": "daa982b5d83552f5f653e9876852fb748aab5a0440ce79d21f10f2e40f293983"
+      "sha256": "39d10849bc6fca935a888b1db6a6258df2f459f2d620a2d4cbef33c4862c5d20"
     },
     {
       "path": "cas-service/estampes_cas/__init__.py",
@@ -928,6 +928,16 @@
         "src/surface/mcp-tools.js",
         "src/surface/service.js",
         "src/surface/store.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user: \u597d\u7e7c\u7e8c (#85 V2)",
+      "reason": "#85 V2-3: module-view renderer inlined in the widget; ci tier for public/module-view.js",
+      "files": [
+        "src/surface/widget-source.js",
+        "public/visual-surface.html",
+        "public/workbench.js"
       ]
     }
   ]
