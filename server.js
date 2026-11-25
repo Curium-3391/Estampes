@@ -3248,7 +3248,7 @@ moduleHost = await createModuleHost({
   canvases: { ensure: ensureImage, create: newCanvas, save: saveCanvas }, readSource,
 });
 await moduleHost.initBuiltins({ config, persistent: !!modulesDir, records: () => recordStore });
-surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore() });
+surfaceService = createSurfaceService({ store: surfaceStore, registry: moduleHost.registry, notebooks: notebookStore(), models: () => moduleHost.models ?? null });
 // A UVA store that cannot start (for example a history too long to open within
 // the engine's startup limit) must never keep the whole server down: the legacy
 // canvas does not depend on it.

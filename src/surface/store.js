@@ -70,6 +70,7 @@ export function createSurfaceStore({ dir = "", records = () => null } = {}) {
         seen.add(p.panelId);
         const inst = { panelId: p.panelId, module: p.module.slice(0, 100), panel: p.panel.slice(0, 40), kind: p.kind.slice(0, 20), title: typeof p.title === "string" ? p.title.slice(0, 60) : p.panel, open: p.open === true };
         if (typeof p.notebook === "string" && notebookMap.has(p.notebook)) inst.notebook = notebookMap.get(p.notebook);
+        if (p.kind === "module-view" && typeof p.view === "string" && /^[a-z][a-z0-9-]{0,30}$/.test(p.view)) inst.view = p.view; // instance bindings are not carried: ids belong to the server they were made on
         doc.panels.push(inst);
       }
       const ids = doc.panels.filter((p) => p.open).map((p) => p.panelId);

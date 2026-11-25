@@ -6,7 +6,7 @@
 // reconcile, profileFor ...) are inlined from src/surface/geometry.js.
 // Everything is drawn with createElement/textContent: server and module text
 // never reaches innerHTML, so a result can never inject markup or script.
-const wb={surface:null,notebooks:{},profile:"desktop",key:null,loading:false,els:new Map(),calc:new Map(),chain:Promise.resolve(),drag:null,menu:null,domain:[-10,10]};
+const wb={surface:null,notebooks:{},moduleViews:{},profile:"desktop",key:null,loading:false,els:new Map(),calc:new Map(),chain:Promise.resolve(),drag:null,menu:null,domain:[-10,10]};
 const wbEl=document.querySelector("#wb"),wbArea=document.querySelector("#wb-area"),wbBar=document.querySelector("#wb-bar");
 const h=(tag,attrs={},...kids)=>{const e=document.createElement(tag);
  for(const [k,v] of Object.entries(attrs??{})){if(v===false||v==null)continue;if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else if(v===true)e.setAttribute(k,"");else e.setAttribute(k,String(v));}
@@ -44,6 +44,7 @@ function setSurface(r){
  if(r.kind!=="estampes.surface")return;
  wb.surface={surfaceId:r.surfaceId,revision:r.revision,panels:r.panels,layouts:r.layouts,available:r.available};
  wb.notebooks=r.notebooks??{};
+ wb.moduleViews=r.moduleViews??{};
  wb.profile=wbProfileNow();
  renderWB();
 }
@@ -81,7 +82,7 @@ function renderWB(){
  const solo=open.length<=1;
  wbEl.classList.toggle("solo",solo);wbEl.classList.toggle("mobile",mobile);wbEl.classList.toggle("windows",!solo&&!mobile);
  // Panels that closed leave the DOM; the canvas panel is static markup.
- for(const [id,el] of wb.els){if(!open.some(p=>p.panelId===id)&&id!=="p:canvas"){el.remove();wb.els.delete(id);wb.calc.delete(id);}}
+ for(const [id,el] of wb.els){if(!open.some(p=>p.panelId===id)&&id!=="p:canvas"){el.remove();wb.els.delete(id);wb.calc.delete(id);mv.delete(id);}}
  for(const p of open){
   if(!wb.els.has(p.panelId))wb.els.set(p.panelId,p.panelId==="p:canvas"?canvasPanel(p):buildPanel(p));
   const el=wb.els.get(p.panelId);if(el.parentNode!==wbArea)wbArea.append(el);
@@ -95,6 +96,7 @@ function renderWB(){
  }
  renderBar(open,lay,mobile,solo);
  for(const p of open)if(p.kind==="calculator")renderCalc(p);
+ for(const p of open)if(p.kind==="module-view")renderModuleView(p);
 }
 function decoratePanel(el,p){
  const lay=layoutNow(),pl=lay.placements[p.panelId];
@@ -124,7 +126,7 @@ function renderBar(open,lay,mobile,solo){
    launch.append(h("button",{class:"wb-graph","data-graph":"show",title:t("wb.graph.showTitle"),onclick:()=>wbApply([{op:"open-panel",module:a.module,panel:a.panel}])},t("wb.graph.show")));
    continue;
   }
-  if(a.kind!=="calculator")continue;
+  if(a.kind!=="calculator"&&a.kind!=="module-view")continue;
   const openCount=wb.surface.panels.filter(p=>p.module===a.module&&p.panel===a.panel&&p.open).length;
   const full=openCount>=a.maxInstances,off=!a.enabled;
   launch.append(h("button",{class:"wb-open",disabled:off||full,title:off?t("wb.launch.disabled",{module:a.moduleName}):full?t("wb.launch.alreadyOpen"):t("wb.launch.open",{title:a.title}),onclick:()=>wbApply([{op:"open-panel",module:a.module,panel:a.panel}])},

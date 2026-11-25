@@ -121,7 +121,7 @@ const Capability = z.object({
 // draws every panel itself), so a manifest can never bring HTML, scripts or
 // CSS. An unknown kind is accepted and shown as an inert placeholder.
 export const PANEL_SCHEMA = "estampes.panel/1";
-export const PANEL_KINDS = ["canvas", "graph", "calculator", "property-inspector", "data-table", "log", "form"];
+export const PANEL_KINDS = ["canvas", "graph", "calculator", "property-inspector", "data-table", "log", "form", "module-view"];
 const Size = z.object({ width: z.number().int().min(120).max(2000), height: z.number().int().min(120).max(2000) }).strict();
 const Panel = z.object({
   schema: z.literal(PANEL_SCHEMA),

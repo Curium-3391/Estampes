@@ -6,21 +6,24 @@ import { z } from "zod";
 import { localized } from "../modules/manifest.js";
 import { PROFILES, applyLayoutOp, reconcile, LayoutError, MAX_PANELS } from "./layout.js";
 import { SurfaceError } from "./store.js";
+import { viewPanels } from "./module-views.js";
 
 const OpSchema = z.discriminatedUnion("op", [
-  z.object({ op: z.literal("open-panel"), module: z.string().max(100), panel: z.string().max(40), notebook: z.string().regex(/^nb:[0-9a-f]{12}$/).optional() }).strict(),
+  z.object({ op: z.literal("open-panel"), module: z.string().max(100), panel: z.string().max(40), notebook: z.string().regex(/^nb:[0-9a-f]{12}$/).optional(),
+    // module-view panels: which stored instance of each model the view shows (otherwise the module's latest one)
+    models: z.record(z.string().regex(/^[a-z][a-z0-9_]{0,31}$/), z.string().regex(/^md:[0-9a-f]{12}$/)).refine((o) => Object.keys(o).length <= 8).optional() }).strict(),
   z.object({ op: z.literal("close-panel"), panelId: z.string().max(40) }).strict(),
   z.object({ op: z.literal("layout"), profile: z.enum(PROFILES), layout: z.record(z.string(), z.unknown()) }).strict(),
 ]);
 export const ApplySchema = z.object({ ops: z.array(OpSchema).min(1).max(20) }).strict();
 
-export function createSurfaceService({ store, registry, notebooks }) {
+export function createSurfaceService({ store, registry, notebooks, models = () => null }) {
   const offered = () => {
     const out = [];
     for (const m of registry.list()) for (const p of m.manifest.panels ?? []) {
       out.push({ module: m.manifest.id, moduleName: localized(m.manifest, "name"), moduleState: m.record.state, panel: p });
     }
-    return out;
+    return [...out, ...viewPanels(registry)];
   };
   // The "graph" panel is the Graph view of the canvas panel (the canvas is a
   // photo or a gph: document and is always open), not a window of its own.
@@ -67,7 +70,7 @@ export function createSurfaceService({ store, registry, notebooks }) {
         for (const op of parsed.data.ops) {
           if (op.op === "open-panel") {
             const mod = registry.get(op.module);
-            const desc = mod?.manifest.panels?.find((p) => p.id === op.panel);
+            const desc = offered().find((o) => o.module === op.module && o.panel.id === op.panel)?.panel;
             if (!desc) throw new SurfaceError("no panel " + op.module + "/" + op.panel);
             if (desc.kind === "graph") { showCanvas(doc); continue; }
             const existing = doc.panels.filter((p) => p.module === op.module && p.panel === op.panel);
@@ -78,6 +81,18 @@ export function createSurfaceService({ store, registry, notebooks }) {
             if (doc.panels.length >= MAX_PANELS) throw new SurfaceError("at most " + MAX_PANELS + " panels");
             const n = existing.length + 1;
             const inst = { panelId: "p:" + desc.id.slice(0, 20) + n, module: op.module, panel: desc.id, kind: desc.kind, title: desc.title, open: true };
+            if (desc.kind === "module-view") {
+              inst.view = desc.view;
+              if (op.models) {
+                const mod2 = models();
+                const def = mod.manifest.views.find((v) => v.id === desc.view);
+                for (const [name, id] of Object.entries(op.models)) {
+                  if (!def.reads.includes(name)) throw new SurfaceError("the view " + desc.view + " does not read " + name);
+                  if (!mod2 || !(await mod2.list({ module: op.module, model: name })).some((r) => r.id === id)) throw new SurfaceError("no " + name + " instance " + id + " of " + op.module);
+                }
+                inst.models = op.models;
+              }
+            }
             if (desc.defaultBinding === "surface.casNotebook") inst.notebook = op.notebook ? (await notebooks.get(op.notebook)).id : (await notebooks.create()).id;
             doc.panels.push(inst);
           } else if (op.op === "close-panel") {

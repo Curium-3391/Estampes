@@ -3,6 +3,7 @@
 // clicks; the model gets two small tools to read the surface and to open or
 // close panels on the user's screen. Calculations always go through the
 // module router, so a disabled or ungranted module cannot be used from a panel.
+import { moduleViewsOf } from "./module-views.js";
 import { z } from "zod";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { widgetObjects, sceneRevision } from "../scene/scene-ops.js";
@@ -41,6 +42,13 @@ export function registerSurfaceTools(server, deps) {
   const text = (view) => "Surface " + view.surfaceId + " revision " + view.revision + ": " +
     view.panels.filter((p) => p.open).map((p) => p.panelId + " (" + p.kind + ")").join(", ");
 
+  // For the assistant: which module views are open and which stored instances they show (no payloads, no values).
+  const viewsBrief = async (view) => {
+    const full = await moduleViewsOf({ view, registry: host.registry, models: host.models });
+    const rows = Object.entries(full).map(([panelId, v]) => ({ panelId, module: v.module, view: v.view, ...(v.unavailable ? { unavailable: v.unavailable } : { bound: v.bound }) }));
+    return rows.length ? { views: rows } : {};
+  };
+
   registerAppTool(server, "surface_get_state", {
     title: "Read the surface",
     description: "Panels, layouts and open calculator notebooks of the Visual Surface, for the Estampes widget.",
@@ -51,7 +59,7 @@ export function registerSurfaceTools(server, deps) {
     try {
       if (args.imageId) await ensureImage(args.imageId);
       const view = await service.state(keyOf(args));
-      return { content: [{ type: "text", text: text(view) }], structuredContent: { kind: "estampes.surface", ...view, notebooks: await notebooksOf(view, { full: true, cells: 50 }) } };
+      return { content: [{ type: "text", text: text(view) }], structuredContent: { kind: "estampes.surface", ...view, notebooks: await notebooksOf(view, { full: true, cells: 50 }), moduleViews: await moduleViewsOf({ view, registry: host.registry, models: host.models }) } };
     } catch (error) { return fail(error); }
   });
 
@@ -68,7 +76,7 @@ export function registerSurfaceTools(server, deps) {
     try {
       if (imageId) await ensureImage(imageId);
       const view = await service.apply(keyOf({ imageId, workspaceId }), { ops, expectedRevision, idempotencyKey });
-      return { content: [{ type: "text", text: text(view) }], structuredContent: { kind: "estampes.surface", ...view, notebooks: await notebooksOf(view, { full: true, cells: 50 }) } };
+      return { content: [{ type: "text", text: text(view) }], structuredContent: { kind: "estampes.surface", ...view, notebooks: await notebooksOf(view, { full: true, cells: 50 }), moduleViews: await moduleViewsOf({ view, registry: host.registry, models: host.models }) } };
     } catch (error) { return fail(error); }
   });
 
@@ -147,7 +155,7 @@ export function registerSurfaceTools(server, deps) {
       const view = await service.state(keyOf(args));
       const notebooks = await notebooksOf(view, { cells: args.cells });
       const compact = { surfaceId: view.surfaceId, revision: view.revision, panels: view.panels.map((p) => ({ panelId: p.panelId, kind: p.kind, module: p.module, open: p.open, moduleState: p.moduleState, ...(p.notebook ? { notebook: p.notebook } : {}) })),
-        available: view.available, notebooks,
+        available: view.available, notebooks, ...(await viewsBrief(view)),
         // #85: instances of module-owned data (no values; read one with the module's models.get through execute_module).
         ...(await modelIndex()) };
       return { content: [{ type: "text", text: JSON.stringify(compact) }], structuredContent: { kind: "estampes.surface_state", ...compact } };
