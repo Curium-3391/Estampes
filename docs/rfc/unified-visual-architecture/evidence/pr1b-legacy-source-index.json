@@ -186,11 +186,11 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "897bb04d515963c22d3888063d1382b21ec4b4581a1d207d34950fdd7be51c9c"
+      "sha256": "83766ffc4edc071a6b29cbd333298f1662b250dbca290d378df9ae43669a52ad"
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "166aa47d8797638ada39104ab8e817fa92739be8418449e02aaf42992451ccb2"
+      "sha256": "4f0514317b66164147c453aaf4abd55584cb4987eb602e99cedecabfacef83c9"
     },
     {
       "path": "src/modules/packages.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "5caf97897abebff8be2ad9122002b6576b275c7c1a73c0408a89fb1e7b495918"
+      "sha256": "f4a2f8a3c57160b7d74926be5cb4bdfe4bef7c65ac57ef231416774b891c8e21"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -966,6 +966,16 @@
       "files": [
         "server.js",
         "src/bundle.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user: \u597d (#86 F0/F1 started)",
+      "reason": "#86 F1-1: optional outputSchema, enforced in the router",
+      "files": [
+        "src/modules/manifest.js",
+        "src/modules/mcp-tools.js",
+        "src/modules/router.js"
       ]
     }
   ]

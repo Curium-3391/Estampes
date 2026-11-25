@@ -39,7 +39,7 @@ const sha = (s) => createHash("sha256").update(s).digest("hex");
 // The hash of what a caller must send and may get: it changes whenever the
 // input schema, target or permissions of the capability change.
 export function schemaHash(manifest, cap) {
-  return sha(stable({ input: cap.inputSchema, target: manifest.v2?.targets[cap.id] ?? cap.target, permissions: capabilityPermissions(manifest, cap), ...(manifest.v2?.derives?.[cap.id] ? { derives: manifest.v2.derives[cap.id] } : {}) })).slice(0, 16);
+  return sha(stable({ input: cap.inputSchema, target: manifest.v2?.targets[cap.id] ?? cap.target, permissions: capabilityPermissions(manifest, cap), ...(manifest.v2?.derives?.[cap.id] ? { derives: manifest.v2.derives[cap.id] } : {}), ...(manifest.v2?.outputs?.[cap.id] ? { output: manifest.v2.outputs[cap.id] } : {}) })).slice(0, 16);
 }
 
 export function buildIndex(mods, lang = "zh-TW") {

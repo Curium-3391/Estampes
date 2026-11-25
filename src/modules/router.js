@@ -222,6 +222,12 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           const parsed = OutputSchema.safeParse(raw ?? {});
           if (!parsed.success) throw new ModuleError("module output is not valid: " + parsed.error.issues[0].message + " at " + parsed.error.issues[0].path.join("."), "output");
           output = parsed.data;
+          // #86 F1: a declared outputSchema is a promise about `data`; a result that breaks it is refused before anything is applied.
+          const promised = manifest.v2?.outputs?.[capId];
+          if (promised && !jobId) {
+            try { validateValue(promised, output.data ?? {}, "data"); }
+            catch (error) { throw new ModuleError(capId + " returned data that does not fit its outputSchema: " + error.message, "output"); }
+          }
         } catch (error) {
           audit.record({ kind: "run.failed", module: manifest.id, capability: capId, canvas: entry?.imageId, ms: Date.now() - started, error: String(error?.message || error).slice(0, 300) });
           throw error instanceof ModuleError ? error : new ModuleError(manifest.id + " " + capId + " failed: " + (error?.message || error), "run");

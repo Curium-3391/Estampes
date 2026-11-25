@@ -136,7 +136,7 @@ export function registerModuleTools(server, deps) {
       if (!mod) throw new Error("no module " + module + "; call list_modules");
       const m = mod.manifest;
       const caps = allCapabilities(m).map((c) => ({ id: c.id, title: c.title, description: c.description, target: m.v2?.targets[c.id] ?? c.target,
-        permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(c.async ? { async: true } : {}),
+        permissions: capabilityPermissions(m, c), inputSchema: c.inputSchema, ...(m.v2?.outputs?.[c.id] ? { outputSchema: m.v2.outputs[c.id] } : {}), ...(c.async ? { async: true } : {}),
         ...(c.profile ? { profile: c.profile } : {}), ...(c.examples ? { examples: c.examples.map(({ description, params }) => ({ description, params })) } : {}) }));
       if (capability !== undefined) {
         const one = caps.find((c) => c.id === capability);

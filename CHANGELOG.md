@@ -4,6 +4,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Typed results for Flow (#86 F1-1): a module/2 capability may declare an optional `outputSchema` for its result's `data` (same bounded subset as `inputSchema`; enforced at run time; shown in `get_module_capabilities`; part of `schemaHash`; not for background jobs), and `src/modules/schema-compat.js` compares two shapes (is this output field assignable to that input field). Capabilities without it are unchanged. No Flow graph, tool or UI yet.
 - Author's guide for module data and views: `docs/modules/MODELS-AND-VIEWS.md` (models, writes, declarative views, linking models to drawn objects, export/bundles, what runs today: built-in modules only).
 - Models in bundles (#85 V3-B): a workspace bundle carries the instances its surface's views are bound to as `models.json` (extras; format stays `estampes.bundle/1`, no history). Import restores them under their own ids for installed modules that read that data version, never overwriting an existing id, and reports what it skipped. `import_workspace_bundle` results gain an optional `models` count. Panel bindings are not carried.
 - Models linked to canvas objects (#85 V3-A): a `broadcast` may now accompany `models` in one result, so a model change can mark the derived objects drawn from that instance stale (`sourceRef` = instance id, `sourceRevision` = its revision) and a refresh redraws them. Models with scene operations or derived objects are still refused. No new field or tool.
