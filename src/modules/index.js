@@ -19,8 +19,9 @@ import { createAdmin } from "./admin.js";
 import * as graph from "../builtin-modules/graph/index.js";
 import * as astrometry from "../builtin-modules/astrometry/index.js";
 import * as cas from "../builtin-modules/cas/index.js";
+import * as flow from "../builtin-modules/flow/index.js";
 
-export const BUILTIN_MODULES = [graph, astrometry, cas];
+export const BUILTIN_MODULES = [graph, astrometry, cas, flow];
 
 // canvases: { ensure(imageId), create(options), save(entry, history) }
 // adminKey: from admin.js; without it (and without storage) changes that

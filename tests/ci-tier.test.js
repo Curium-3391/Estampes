@@ -71,6 +71,7 @@ test("CI selects a tier from the complete PR diff and defaults to full", t => {
     ["public/visual-surface.html", "full"],
     ["public/workbench.js", "full"],
     ["public/module-view.js", "full"],
+    ["public/flow-view.js", "full"],
     ["src/surface/widget-source.js", "full"],
     ["src/uva/README.md", "full"],
     [".github/workflows/pr-baseline.yml", "full"],

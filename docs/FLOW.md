@@ -2,7 +2,7 @@
 
 A Flow connects module capabilities into a small graph: the typed result of one capability feeds an input of another, and a change upstream marks what depends on it stale. It builds on what exists: capability manifests ([Modules](MODULES.md)), the derived-binding vocabulary ([Derived bindings](DERIVED-BINDINGS.md)) and the router that runs every capability with its permission checks. It does **not** replace derived bindings (those keep tying a drawn object to its source); they stay separate.
 
-Status: the graph format, its static checks, a runner, storage and two MCP tools (`get_flow`, `edit_flow`) exist (F1). There is no Flow view yet. Everything is tested in-process with invented modules; it has not been tried on a real ChatGPT or Claude host.
+Status: the graph format, its static checks, a runner, storage and two MCP tools (`get_flow`, `edit_flow`) exist (F1). The Flow view (F2) shows and runs them. Everything is tested in-process with invented modules; it has not been tried on a real ChatGPT or Claude host.
 
 ## What exists
 
@@ -23,6 +23,14 @@ A flow is a UVA record of kind `flow` (`fl:<12 hex>`, `src/flow/store.js`), so i
 - **Run** (`edit_flow` with `action: "run"`) recomputes the stale nodes through the router and keeps the results in the record, but only if the graph is still the revision the run started from. One run per flow at a time. Results of one flow are limited to 256 KB; a larger set is not kept and the run says so.
 - Limits: at most 32 flows; a flow cannot be deleted yet (there is no record delete in the store). Flows need the UVA store; without it the tools say so and change nothing.
 
+## The Flow view (F2)
+
+Flow is a built-in `estampes.module/2` module (`org.estampes.flow`, `src/builtin-modules/flow/`) with one view, drawn by a second renderer type, `flow-graph` (`estampes.renderer.flow-graph/1`). This is the #85 view contract unchanged: the view declares its `actions` (the module's capabilities `flow_list`, `flow_get`, `flow_create`, `flow_edit`, `flow_undo`, `flow_run`, which call the same flow service as the tools), and the widget (`public/flow-view.js`) calls them through `execute_module` with every check that has. The module needs no permission and keeps no data of its own; it gets the flow service from the host when the UVA store runs, and says so (and changes nothing) when it does not. Its capabilities are for the view; a flow that contained one would only find it busy.
+
+What a person sees and can do: the flow drawn as columns of step cards (a step is one column after the steps that feed it, with its state: up to date, needs a run, blocked, failed, and a short result), the connections as a list, whether the flow is valid (the problems listed with where), and a flow picker. They can **run** it, **undo** the last change they made, create a new flow, select a step to change its literal inputs, or remove a step. **Building** a flow (adding steps, connecting them) is the assistant's job with `edit_flow`; the person sees the same graph. Nothing the person is doing (the selected step, a half-typed value) is stored, and which flow a panel shows is not remembered across a reload yet.
+
+Not verified: the view is tested with a scripted fake host (tests/flow-view-e2e.test.js) and the module in-process (tests/flow-module.test.js); it has not been tried on real ChatGPT or Claude. Literal inputs travel as JSON text (`paramsJson`) because the capability input schema subset has no free-form object.
+
 ## Not yet
 
-Deleting a flow, running a node as soon as a person edits it, a Flow view on the module-view contract (F2), background-job nodes, nodes that work on a document (drawing), streaming, and loops. See issue #86.
+Deleting a flow, running a node as soon as a person edits it, drawing wires and adding or connecting steps by hand, remembering which flow a panel shows, background-job nodes, nodes that work on a document (drawing), streaming, and loops. See issue #86.

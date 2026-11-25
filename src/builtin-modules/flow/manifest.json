@@ -1,0 +1,321 @@
+{
+  "schema": "estampes.module/2",
+  "id": "org.estampes.flow",
+  "name": "Flow",
+  "nameI18n": {
+    "zh-TW": "流程"
+  },
+  "description": "Connect module capabilities into a flow: a typed result of one feeds an input of another, and a change upstream marks what depends on it stale. This module is the Flow view's own access to flows (the assistant uses the get_flow and edit_flow tools); its capabilities are not meant as steps of a flow.",
+  "descriptionI18n": {
+    "zh-TW": "把各模組的能力連成流程：一個能力的有型別結果餵給另一個能力的輸入，上游改變時依賴它的就變成過期。本模組是「流程」檢視自己使用流程的入口（助理用 get_flow 與 edit_flow 工具）；它的能力不是用來當流程的步驟。"
+  },
+  "version": "1.0.0",
+  "publisher": {
+    "name": "Estampes Project",
+    "url": "https://github.com/Curium-3391/Estampes"
+  },
+  "license": "MPL-2.0",
+  "source": "https://github.com/Curium-3391/Estampes/tree/main/src/builtin-modules/flow",
+  "category": "diagram",
+  "coreCompatibility": ">=0.10.0 <1.0.0",
+  "runtime": {
+    "kind": "builtin",
+    "entry": "flow",
+    "abi": 1
+  },
+  "permissions": [],
+  "capabilities": [
+    {
+      "id": "flow_list",
+      "title": "List flows",
+      "titleI18n": {
+        "zh-TW": "列出流程"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "List the stored flows (id, name, revision, node and edge counts). Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
+      "id": "flow_get",
+      "title": "Read a flow",
+      "titleI18n": {
+        "zh-TW": "讀取流程"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "Read one flow: graph, revision, validity, the plan and each node's last result (shortened). Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fl:[0-9a-f]{12}$",
+            "maxLength": 15
+          }
+        }
+      }
+    },
+    {
+      "id": "flow_create",
+      "title": "Create a flow",
+      "titleI18n": {
+        "zh-TW": "建立流程"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "Create an empty flow with a name.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "commandId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    {
+      "id": "flow_edit",
+      "title": "Edit a flow",
+      "titleI18n": {
+        "zh-TW": "編輯流程"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "Change a flow with named operations against the revision you read; if it changed since, nothing is applied.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "expectedRevision",
+          "ops"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fl:[0-9a-f]{12}$",
+            "maxLength": 15
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ops": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "add_node",
+                    "remove_node",
+                    "set_params",
+                    "connect",
+                    "disconnect"
+                  ]
+                },
+                "node": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "module",
+                    "capability"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "maxLength": 24
+                    },
+                    "module": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "capability": {
+                      "type": "string",
+                      "maxLength": 48
+                    },
+                    "paramsJson": {
+                      "type": "string",
+                      "maxLength": 4096,
+                      "description": "literal inputs as a JSON object text"
+                    }
+                  }
+                },
+                "id": {
+                  "type": "string",
+                  "maxLength": 24
+                },
+                "from": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "node",
+                    "port"
+                  ],
+                  "properties": {
+                    "node": {
+                      "type": "string",
+                      "maxLength": 24
+                    },
+                    "port": {
+                      "type": "string",
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "to": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "node",
+                    "port"
+                  ],
+                  "properties": {
+                    "node": {
+                      "type": "string",
+                      "maxLength": 24
+                    },
+                    "port": {
+                      "type": "string",
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "paramsJson": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "description": "literal inputs as a JSON object text"
+                }
+              }
+            }
+          },
+          "commandId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    {
+      "id": "flow_undo",
+      "title": "Undo a flow edit",
+      "titleI18n": {
+        "zh-TW": "復原流程編輯"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "Undo the edit whose command id is `of`, only while it is still the latest change.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "of"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fl:[0-9a-f]{12}$",
+            "maxLength": 15
+          },
+          "of": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "commandId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    {
+      "id": "flow_run",
+      "title": "Run a flow",
+      "titleI18n": {
+        "zh-TW": "執行流程"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "Run the nodes that are stale, in dependency order, through each module's own checks. Results are kept only if the flow did not change meanwhile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fl:[0-9a-f]{12}$",
+            "maxLength": 15
+          }
+        }
+      }
+    }
+  ],
+  "views": [
+    {
+      "id": "flow",
+      "title": "Flow",
+      "titleI18n": {
+        "zh-TW": "流程"
+      },
+      "reads": [],
+      "actions": [
+        "flow_list",
+        "flow_get",
+        "flow_create",
+        "flow_edit",
+        "flow_undo",
+        "flow_run"
+      ],
+      "renderer": {
+        "type": "flow-graph",
+        "schema": "estampes.renderer.flow-graph/1",
+        "payload": {
+          "actions": {
+            "list": "flow_list",
+            "get": "flow_get",
+            "create": "flow_create",
+            "edit": "flow_edit",
+            "undo": "flow_undo",
+            "run": "flow_run"
+          }
+        }
+      }
+    }
+  ]
+}

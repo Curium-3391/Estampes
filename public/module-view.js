@@ -94,6 +94,7 @@ function mvDraw(p){
 }
 function renderModuleView(p){
  const def=wb.moduleViews?.[p.panelId],s=mvState(p.panelId);
+ if(def?.renderer?.type==="flow-graph")return renderFlowView(p);// the Flow view (public/flow-view.js)
  mvDraw(p);
  if(def&&!def.unavailable&&p.moduleState==="enabled"&&s.loaded!==mvBoundKey(def)){s.loaded=mvBoundKey(def);mvLoad(p);}
 }
@@ -103,5 +104,8 @@ setInterval(()=>{
  const open=openPanels().filter(p=>p.kind==="module-view");
  if(!open.length)return;
  if(open.some(p=>{const d=wb.moduleViews?.[p.panelId];return d&&!d.unavailable&&p.moduleState==="enabled"&&d.reads.some(m=>!d.bound?.[m]);}))return void wbLoad();
- for(const p of open)if(!mvState(p.panelId).busy)mvLoad(p);
+ for(const p of open){
+  if(wb.moduleViews?.[p.panelId]?.renderer?.type==="flow-graph"){if(!fvState(p.panelId).busy)fvLoad(p);continue;}
+  if(!mvState(p.panelId).busy)mvLoad(p);
+ }
 },5000);
