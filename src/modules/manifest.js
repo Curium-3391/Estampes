@@ -3,6 +3,7 @@
 // untrusted input (it can come from a package): it is validated strictly,
 // unknown fields are refused, and its texts are only ever shown as data.
 import { z } from "zod";
+import { checkRenderer } from "./renderers.js";
 import { checkSchema } from "./json-schema.js";
 import { PERMISSION_NAMES } from "./permissions.js";
 import { isVersion, parseRange, satisfies } from "./semver.js";
@@ -28,6 +29,8 @@ const V1_TARGET = { none: "none", document: "canvas", "document-or-new": "canvas
 // that domain; trust comes from the package signature (see packages.js).
 export const MODULE_ID = /^[a-z][a-z0-9-]{0,30}(\.[a-z0-9][a-z0-9-]{0,30}){2,5}$/;
 export const CAPABILITY_ID = /^[a-z][a-z0-9_]{0,47}$/;
+// Ids that contain a dot (for example models.list) are the host's own; no capability id can, so a module can never shadow one.
+export const MODEL_ID = /^[a-z][a-z0-9_]{0,31}$/;
 
 const Text = (max) => z.string().max(max).refine((s) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(s), "control characters are not allowed");
 const I18n = (max) => z.record(z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/), Text(max)).refine((o) => Object.keys(o).length <= 8, "at most 8 languages");
@@ -185,7 +188,33 @@ const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend
   // #174: capabilities of OTHER modules this one may call through ctx.use. The call only returns what that capability computes (scene
   // operations); this module applies them as its own result. Built-in modules only for now. Never itself.
   uses: z.array(z.object({ module: z.string().regex(MODULE_ID), capability: z.string().regex(CAPABILITY_ID) }).strict()).max(4).optional(),
+  // #85 V1: the model types (manifest `models`) this capability may write. It returns `models` in its output instead of `operations`; the two
+  // cannot be mixed in one answer. A capability that writes needs module.storage.write.
+  writes: z.array(z.string().regex(MODEL_ID)).max(8).optional(),
 });
+
+// #85 V1: the data a module owns, declared as types. An instance (md:<hex>) is made at run time and lives in its own UVA record,
+// independent of any canvas or view. `dataVersion` is the version this module writes; `readsVersions` lists the older versions it can still
+// read (default: only its own), and an instance of any other version is kept untouched and not opened.
+const ModelType = z.object({
+  id: z.string().regex(MODEL_ID),
+  title: Text(60).optional(), titleI18n: I18n(60).optional(),
+  dataVersion: z.number().int().min(1).max(1000),
+  readsVersions: z.array(z.number().int().min(1).max(1000)).max(8).optional(),
+  schema: z.record(z.string(), z.unknown()),
+  maxBytes: z.number().int().min(256).max(65536).default(16384),
+  maxInstances: z.number().int().min(1).max(64).default(32),
+}).strict();
+// A view says what it reads and may ask for, not how it is drawn: `renderer` picks the drawing (src/modules/renderers.js).
+const View = z.object({
+  id: z.string().regex(/^[a-z][a-z0-9-]{0,30}$/),
+  title: Text(60), titleI18n: I18n(60).optional(),
+  reads: z.array(z.string().regex(MODEL_ID)).max(8).default([]),
+  actions: z.array(z.string().regex(CAPABILITY_ID)).max(16).default([]),
+  // Short-lived state of the drawing (a drag, a running simulation). Never stored by the core.
+  ephemeral: z.object({ schema: z.record(z.string(), z.unknown()) }).strict().optional(),
+  renderer: z.object({ type: z.string().regex(/^[a-z][a-z0-9-]{0,30}$/), schema: z.string().max(80), payload: z.record(z.string(), z.unknown()) }).strict(),
+}).strict();
 export const ManifestSchemaV2 = ManifestSchema.omit({ schema: true, runtime: true, capabilities: true }).extend({
   schema: z.literal(MODULE_SCHEMA_V2),
   runtime: z.object({
@@ -194,6 +223,8 @@ export const ManifestSchemaV2 = ManifestSchema.omit({ schema: true, runtime: tru
     abi: z.number().int().min(1).max(1000),
   }).strict(),
   capabilities: z.array(CapabilityV2).min(1).max(32),
+  models: z.array(ModelType).max(8).optional(),
+  views: z.array(View).max(8).optional(),
 });
 
 // The v1-shaped view the shared checks run on: the same permissions, the
@@ -213,7 +244,8 @@ export function runtimeManifest(m) {
   const derives = Object.fromEntries(m.capabilities.filter((c) => c.derives).map((c) => [c.id, c.derives.refresh]));
   const adopt = Object.fromEntries(m.capabilities.filter((c) => c.derives?.adopt).map((c) => [c.id, c.derives.adopt]));
   const uses = Object.fromEntries(m.capabilities.filter((c) => c.uses?.length).map((c) => [c.id, c.uses]));
-  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}) } };
+  const writes = Object.fromEntries(m.capabilities.filter((c) => c.writes?.length).map((c) => [c.id, c.writes]));
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}), ...(Object.keys(writes).length ? { writes } : {}) } };
 }
 
 // What changed between two ABI versions of a module, for the Store.
@@ -322,6 +354,40 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
       if (adopt.inputSchema?.properties?.canvas?.type !== "string") throw new ManifestError(where + ".adopt: " + adopt.id + " must accept the string field canvas in its inputSchema");
     }
   });
+  if (isV2) {
+    const modelIds = new Set();
+    (original.models ?? []).forEach((md, i) => {
+      const where = "manifest.models[" + i + "] (" + md.id + ")";
+      if (modelIds.has(md.id)) throw new ManifestError(where + ": duplicate id");
+      modelIds.add(md.id);
+      try { checkSchema(md.schema, where + ".schema"); } catch (error) { throw new ManifestError(error.message); }
+      if (md.schema.type !== "object") throw new ManifestError(where + ".schema: must be an object schema");
+      if (new Set(md.readsVersions ?? []).size !== (md.readsVersions ?? []).length) throw new ManifestError(where + ".readsVersions: duplicate version");
+      if ((md.readsVersions ?? []).some((v) => v > md.dataVersion)) throw new ManifestError(where + ".readsVersions: a module cannot read a version newer than its own dataVersion");
+    });
+    if (modelIds.size && !m.permissions.includes("module.storage.write")) throw new ManifestError("manifest.permissions: declaring models needs module.storage.write");
+    original.capabilities.forEach((c, i) => {
+      const where = "manifest.capabilities[" + i + "] (" + c.id + ")";
+      for (const w of c.writes ?? []) if (!modelIds.has(w)) throw new ManifestError(where + ".writes: no model " + w + " in manifest.models");
+      if (c.writes?.length) {
+        if (!c.needs.includes("module.storage.write")) throw new ManifestError(where + ": a capability that writes models needs module.storage.write");
+        if (c.async) throw new ManifestError(where + ": a background job cannot write models yet");
+      }
+    });
+    const viewIds = new Set();
+    (original.views ?? []).forEach((v, i) => {
+      const where = "manifest.views[" + i + "] (" + v.id + ")";
+      if (viewIds.has(v.id)) throw new ManifestError(where + ": duplicate id");
+      viewIds.add(v.id);
+      for (const r of v.reads) if (!modelIds.has(r)) throw new ManifestError(where + ".reads: no model " + r + " in manifest.models");
+      for (const a of v.actions) if (!ids.has(a)) throw new ManifestError(where + ".actions: no capability " + a);
+      if (v.ephemeral) {
+        try { checkSchema(v.ephemeral.schema, where + ".ephemeral.schema"); } catch (error) { throw new ManifestError(error.message); }
+        if (v.ephemeral.schema.type !== "object") throw new ManifestError(where + ".ephemeral.schema: must be an object schema");
+      }
+      try { checkRenderer(v.renderer); } catch (error) { throw new ManifestError(where + ".renderer: " + error.message); }
+    });
+  }
   const panelIds = new Set();
   (m.panels ?? []).forEach((pn, i) => {
     const where = "manifest.panels[" + i + "] (" + pn.id + ")";

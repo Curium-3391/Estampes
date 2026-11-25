@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "3717729e9ca9b1504bdfa04622b78b61451ed6e8daa3d926218a049f11687592"
+      "sha256": "8da19f82aa5f908d5be7c116466734b7646535d1107e8b6fd540a7572402bd85"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -868,6 +868,15 @@
         "src/modules/router.js"
       ],
       "previousSha256": "91c99295fd8c61b73e97b71d9cd3706a1e4561aba31f6ef71a4b1fbcdf062a2c"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user approval 2026-11-25 04:41 (#85 V1 may start)",
+      "reason": "#85 V1-1: models, writes and views in the module/2 manifest",
+      "files": [
+        "src/modules/manifest.js"
+      ],
+      "previousSha256": "3717729e9ca9b1504bdfa04622b78b61451ed6e8daa3d926218a049f11687592"
     }
   ]
 }
