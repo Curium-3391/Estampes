@@ -46,7 +46,7 @@
   "files": [
     {
       "path": "server.js",
-      "sha256": "29e7ecdc54f376e2165658e850e89766c0f7ba17657135c338e627d0760dca9a"
+      "sha256": "d592236d4df9e68a65dd83f9e878c63f58ffa4c48ce8e471dc71c7895426fd86"
     },
     {
       "path": "src/assessment.js",
@@ -70,7 +70,7 @@
     },
     {
       "path": "src/bundle.js",
-      "sha256": "34d5a94352e0027c364211c55f2c04f721bbf36c8697239c33755e52b4de9505"
+      "sha256": "4b9e2f8d1673ce36c8fa3a9c27eb03d63e0c597fad2561d9329f0f079df6f1b7"
     },
     {
       "path": "src/canvas-state.js",
@@ -958,6 +958,15 @@
         "src/modules/router.js"
       ],
       "previousSha256": "cf11a61d514eb8d4823e5ce2e4edbc40789c5216d2426c79904ea0c16d879288"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user: \u90fd\u505a (#85 V3 A+B+C)",
+      "reason": "#85 V3-B: bundles carry model instances",
+      "files": [
+        "server.js",
+        "src/bundle.js"
+      ]
     }
   ]
 }

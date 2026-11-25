@@ -10,6 +10,7 @@
 //   sets/<n>.json          one annotation set: layers, marks, links, rejected claims, objects
 //   surface.json           (optional) the Visual Surface: open panels and one layout per device profile
 //   notebooks/<n>.json     (optional) calculator notebooks the surface shows: definitions, cells, Graph links
+//   models.json            (optional) module model instances the surface's views are bound to (data only; #85 V3-B)
 //
 // Marks, layers, claims and links are copied as they are: nothing is
 // flattened, re-recognised or re-numbered, so every mark stays selectable and
@@ -34,7 +35,7 @@ import { cleanNameFields } from "./i18n/names.js";
 import { resolveRef, workspaceItems, inspectWorkspace, forkFromData, adoptWorkspace, bundleWorkspace, MAX_ITEMS, WORKSPACE_PROTOCOL, assetInfo, ensureSet } from "./workspace.js";
 
 export const BUNDLE_FORMAT = "estampes.bundle/1";
-const MAX_MARKS_PER_SET = 5000, MAX_LAYERS = 200, MAX_LINKS = 5000, MAX_NOTEBOOKS = 20;
+const MAX_MARKS_PER_SET = 5000, MAX_LAYERS = 200, MAX_LINKS = 5000, MAX_NOTEBOOKS = 20, MAX_MODELS = 64;
 const sha = (buf) => createHash("sha256").update(buf).digest("hex");
 const json = (v) => Buffer.from(JSON.stringify(v, null, 1));
 const EXT = { jpeg: "jpg", jpg: "jpg", png: "png", webp: "webp", gif: "gif", tiff: "tif", heif: "heic", avif: "avif" };
@@ -96,6 +97,8 @@ export async function exportBundle(ref, { version = "dev", fileNames = true, ext
   if (books.length) {
     extraInfo.notebooks = books.map((nb, n) => { add("notebooks/" + (n + 1) + ".json", json(nb)); return { id: nb.id, file: "notebooks/" + (n + 1) + ".json", cells: nb.cells?.length ?? 0 }; });
   }
+  const modelItems = (extras?.models ?? []).slice(0, MAX_MODELS);
+  if (modelItems.length) { add("models.json", json(modelItems)); extraInfo.models = { file: "models.json", count: modelItems.length }; }
   const check = await inspectWorkspace(doc);
   const bundleId = sha(Buffer.from(listed.map((f) => f.path + ":" + f.sha256).sort().join("\n"))).slice(0, 16);
   const manifest = {
@@ -397,10 +400,13 @@ async function importBundleOnce(buffer, { name, collision = "reuse", allowPartia
   const verified = adopted.check.ok && !mismatch.length && !unsupported.length;
   // Surface and notebooks ride along as untrusted data; the server installs
   // them (see installBundleExtras) once the workspace exists.
-  const extras = { surface: null, notebooks: [], imageIds: Object.fromEntries(idMap) };
+  const extras = { surface: null, notebooks: [], models: [], imageIds: Object.fromEntries(idMap) };
   const ex = manifest.extras;
   if (ex && typeof ex === "object") {
     if (typeof ex.surface === "string" && files.has(ex.surface)) { try { extras.surface = parse(ex.surface); } catch { warnings.push("The surface in the bundle could not be read; it was left out."); } }
+    if (typeof ex.models?.file === "string" && files.has(ex.models.file)) {
+      try { const m = parse(ex.models.file); extras.models = Array.isArray(m) ? m.slice(0, MAX_MODELS) : []; } catch { warnings.push("The model instances in the bundle could not be read; they were left out."); }
+    }
     for (const n of (Array.isArray(ex.notebooks) ? ex.notebooks : []).slice(0, MAX_NOTEBOOKS)) {
       if (typeof n?.file !== "string" || !files.has(n.file)) continue;
       try { extras.notebooks.push({ id: String(n.id), raw: parse(n.file) }); } catch { warnings.push("A calculator notebook in the bundle could not be read; it was left out."); }
