@@ -125,3 +125,48 @@ test("a module that is disabled while it runs writes nothing", async (t) => {
   await assert.rejects(s.call("save"), (e) => e.code === "revoked");
   assert.deepEqual(await s.h.models.list({ module: MOD }), []);
 });
+
+// ---- V1-3b: the host's own read capabilities, discovery, and the instance index ----
+import { buildIndex, searchCapabilities } from "../src/modules/search.js";
+import { hostCapabilities } from "../src/modules/model-capabilities.js";
+
+test("models.list and models.get are the host's: found by search, run through execute_module, bounded, own data only", async (t) => {
+  const s = await setup(t, (c) => (c === "save" ? create(1, 0) : {}));
+  const made = (await s.call("save")).models.created[0].id;
+  await s.call("save");
+  const found = searchCapabilities(buildIndex(s.h.registry.list()), { query: "models.list", state: "enabled", limit: 20 });
+  assert.ok(found.results.some((r) => r.module === MOD && r.capability === "models.list"), "discoverable");
+  const list = await s.call("models.list");
+  assert.equal(list.data.total, 2);
+  assert.equal(list.data.instances[0].value, undefined, "a listing carries no values");
+  assert.equal((await s.call("models.list", { model: "note" })).data.total, 0);
+  const one = await s.call("models.get", { model: "adder", id: made });
+  assert.deepEqual(one.data.instance.value, { a: 1, b: 0 });
+  assert.equal(one.data.instance.revision, 1);
+  await assert.rejects(s.call("models.get", { model: "adder" }), (e) => e.code === "input");
+  await assert.rejects(s.call("models.get", { model: "note", id: made }), (e) => e.code === "wrong-type");
+  await assert.rejects(s.call("models.get", { model: "adder", id: "md:000000000000" }), (e) => e.code === "not-found");
+});
+
+test("the host capabilities obey the module's state and grants, like any capability", async (t) => {
+  const s = await setup(t, (c) => (c === "save" ? create() : {}));
+  await s.call("save");
+  const plan = await s.h.lifecycle.prepare("disable", MOD); await s.h.lifecycle.commit(plan.planId, { consent: plan.consent });
+  await assert.rejects(s.call("models.list"), (e) => e.code === "disabled");
+});
+
+test("a module without models gets no host capabilities, and a module cannot declare a capability that shadows one", async (t) => {
+  assert.deepEqual(hostCapabilities({ v2: {} }), []);
+  assert.deepEqual(hostCapabilities({ v2: { models: {} } }), []);
+  const { validateManifest, ManifestError } = await import("../src/modules/manifest.js");
+  const bad = { ...manifest, capabilities: [cap("models.list")] };
+  assert.throws(() => validateManifest(bad, { v2: true, builtin: true }), (e) => e instanceof ManifestError);
+});
+
+test("the instance index lists every instance without values and says what state its module is in", async (t) => {
+  const s = await setup(t, (c) => (c === "save" ? create() : {}));
+  await s.call("save");
+  const rows = await s.h.models.index();
+  assert.equal(rows.length, 1);
+  assert.deepEqual(Object.keys(rows[0]).sort(), ["bytes", "dataVersion", "id", "model", "module", "revision", "updatedAt"]);
+});

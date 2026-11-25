@@ -190,7 +190,7 @@
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "108ceb1d0d9e51c9ee159457779d0c6b94b06a8d077785f2051708dafcc969ff"
+      "sha256": "166aa47d8797638ada39104ab8e817fa92739be8418449e02aaf42992451ccb2"
     },
     {
       "path": "src/modules/packages.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "7f3c2632fca22fd6bb1a00b7d5c22c9f159ec10a3f553c004a84ff452fcc6799"
+      "sha256": "cf11a61d514eb8d4823e5ce2e4edbc40789c5216d2426c79904ea0c16d879288"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -302,7 +302,7 @@
     },
     {
       "path": "src/surface/mcp-tools.js",
-      "sha256": "f5c53a5b89d4322475d3538f9274c9237c3e3093b8c16a98382af6435f177cf7"
+      "sha256": "c7f2cc65e7374a60105b69821f8c81331e7c85b99a05b791be85ed8a1431531a"
     },
     {
       "path": "src/surface/refresh.js",
@@ -887,6 +887,16 @@
         "src/modules/manifest.js",
         "src/modules/mcp-tools.js",
         "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (2026-11-25, 12:56 Taipei: start V1 in small reversible PRs)",
+      "reason": "#85 V1-3b: host read capabilities models.list/get in the router and discovery, instance index in the surface state",
+      "files": [
+        "src/modules/mcp-tools.js",
+        "src/modules/router.js",
+        "src/surface/mcp-tools.js"
       ]
     }
   ]

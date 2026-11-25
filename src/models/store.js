@@ -118,6 +118,17 @@ export function createModelStore({ records, total = DEFAULT_TOTAL, now = () => n
       return out;
     },
 
+    // Every instance of every module, without values, for the surface state (bounded by `limit`).
+    async index({ limit = 100 } = {}) {
+      const out = [];
+      for (const id of await records.list("model")) {
+        if (out.length >= limit) break;
+        const r = await records.read("model", id);
+        if (r) out.push({ id: r.id, module: r.owner.module, model: r.type.model, dataVersion: r.type.dataVersion, revision: r.revision, bytes: bytes(r.value), updatedAt: r.updatedAt });
+      }
+      return out;
+    },
+
     // One change over one or more instances. changes: [{ id, type, expectedRevision, value }]. All or nothing.
     async commit({ module, commandId, by = "assistant", changes }) {
       if (!commandId) throw new ModelError("a change needs a command id", "input");

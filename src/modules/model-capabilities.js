@@ -1,0 +1,36 @@
+// #85 V1-3b: the two read capabilities the host provides for every module that declares `models[]`: `models.list` and `models.get`.
+//
+// They are the host's, not the module's: a module author writes no code for them, and they cannot be shadowed, because a capability id
+// of a module never contains a dot (the manifest's id pattern) while these always do. They are found like any capability
+// (search_capabilities, get_module_capabilities) and run through execute_module with every check an ordinary capability gets: the module
+// must be enabled and hold `module.storage.write`. They read only the module's own instances and their output is bounded (a listing
+// never carries values; one value is at most the type's maxBytes). Reading data of a disabled, removed or incompatible module is a
+// separate path that does not depend on running the module (V1-4); these never loosen what a module may do.
+export const HOST_PERMISSIONS = ["module.storage.write"];
+const LIST_MAX = 100;
+
+export function hostCapabilities(manifest) {
+  const types = manifest.v2?.models;
+  if (!types || !Object.keys(types).length) return [];
+  const names = Object.keys(types);
+  const model = { type: "string", enum: names, description: "A model type of this module: " + names.join(", ") };
+  return [
+    { id: "models.list", host: "models", title: "List stored instances", description: "List this module's stored model instances (id, type, revision, size, update time; no values). Read-only; answered by the host, not by the module.",
+      target: "none", permissions: HOST_PERMISSIONS, needs: HOST_PERMISSIONS, inputSchema: { type: "object", properties: { model }, additionalProperties: false } },
+    { id: "models.get", host: "models", title: "Read one stored instance", description: "Read one stored model instance of this module, with its value and revision. Quote the revision when changing it. Read-only; answered by the host, not by the module.",
+      target: "none", permissions: HOST_PERMISSIONS, needs: HOST_PERMISSIONS, inputSchema: { type: "object", properties: { model, id: { type: "string", pattern: "^md:[0-9a-f]{12}$" } }, required: ["model", "id"], additionalProperties: false } },
+  ];
+}
+
+// The manifest's own capabilities and the host's, for discovery and for running.
+export const allCapabilities = (manifest) => [...manifest.capabilities, ...hostCapabilities(manifest)];
+
+export async function runHostCapability({ store, manifest, capability, input }) {
+  const types = manifest.v2.models;
+  if (capability === "models.list") {
+    const rows = await store.list({ module: manifest.id, ...(input.model ? { model: input.model } : {}) });
+    return { summary: rows.length + " instance" + (rows.length === 1 ? "" : "s"), data: { instances: rows.slice(0, LIST_MAX), total: rows.length, ...(rows.length > LIST_MAX ? { omitted: rows.length - LIST_MAX } : {}) } };
+  }
+  const one = await store.read({ module: manifest.id, type: types[input.model], id: input.id });
+  return { summary: one.model + " " + one.id + " revision " + one.revision, data: { instance: one } };
+}
