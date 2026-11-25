@@ -46,7 +46,7 @@
   "files": [
     {
       "path": "server.js",
-      "sha256": "d592236d4df9e68a65dd83f9e878c63f58ffa4c48ce8e471dc71c7895426fd86"
+      "sha256": "631d835eef5ad97cc799ae723ebd558618aab89ffddab79db90d7ab187ca32e0"
     },
     {
       "path": "src/assessment.js",
@@ -170,7 +170,7 @@
     },
     {
       "path": "src/modules/index.js",
-      "sha256": "7359c20a2031bd97af19da6e72b1cc3dbaf8322f92f0a706fe5b37956c1d2ece"
+      "sha256": "e691de40f9aba6658f95419e12b6843cbd697aa1e5e198ea93aaa3c1d9328bb7"
     },
     {
       "path": "src/modules/jobs.js",
@@ -190,7 +190,7 @@
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "4f0514317b66164147c453aaf4abd55584cb4987eb602e99cedecabfacef83c9"
+      "sha256": "5e9a2198a85190ccf961f512aabfc2fbbbee6e8708cd1178d78347c975c3d95d"
     },
     {
       "path": "src/modules/packages.js",
@@ -976,6 +976,16 @@
         "src/modules/manifest.js",
         "src/modules/mcp-tools.js",
         "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user 2026-11-25 \u300c\u505a\u300d (start Flow F2, Flow View on the #85 view contract)",
+      "reason": "Register the built-in Flow module (org.estampes.flow) in the built-in module list (#86 F2)",
+      "files": [
+        "server.js",
+        "src/modules/index.js",
+        "src/modules/mcp-tools.js"
       ]
     }
   ]

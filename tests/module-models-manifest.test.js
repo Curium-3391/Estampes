@@ -73,7 +73,7 @@ test("a view names models and actions that exist", () => {
 });
 
 test("the renderer is chosen by type: an unknown type is refused (fail closed), and the declarative one takes a tree or {}", () => {
-  let m = base(); m.views[0].renderer.type = "sandboxed-web"; refused(m, /not supported by this server \(supported: declarative\)/);
+  let m = base(); m.views[0].renderer.type = "sandboxed-web"; refused(m, /not supported by this server \(supported: declarative, flow-graph\)/);
   m = base(); m.views[0].renderer.schema = "estampes.renderer.declarative/9"; refused(m, /renderer\.schema must be/);
   m = base(); m.views[0].renderer.payload = { tree: [] }; refused(m, /must be \{\} or \{ root \}/);
   m = base(); delete m.views[0].renderer.payload; refused(m, /payload/);

@@ -12,7 +12,7 @@ function tierForPath(path) {
   if (/^tests\/(?:persistence-|uva-|documents?-|pr1d-|storage\.|workspace|bundle|backup-restore|canvas-(?:state|history|save)|compose\.)/.test(path)) return "full";
   if (/^tests\/[^/]+\.test\.js$/.test(path)) return "fast";
   // These widget assets own document polling and persisted canvas edits.
-  if (/^public\/(?:visual-surface\.html|workbench\.js|module-view\.js)$/.test(path)) return "full";
+  if (/^public\/(?:visual-surface\.html|workbench\.js|module-view\.js|flow-view\.js)$/.test(path)) return "full";
   if (/^(public\/|examples\/|cas-service\/|src\/(?:cas|builtin-modules|modules)\/)/.test(path)) return "fast";
   if (/^src\/image\/(?:engines|geometry|measure|ops-extra|pdf|quality|register|segment|view)\.js$/.test(path)) return "fast";
 
