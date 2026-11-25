@@ -12,6 +12,8 @@ import { localized } from "./manifest.js";
 import { plotContext } from "./plot-context.js";
 import { register, sourceChanged, markStale, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
 import { deliverBroadcast } from "../documents/derived-broadcast.js";
+import { ModelError } from "../models/store.js";
+import { randomBytes } from "node:crypto";
 
 // A string in a v2 module's input that names a document (an image, a Graph
 // or a copy of either) other than the one it was pointed at.
@@ -27,6 +29,8 @@ function otherDocument(value, own, depth = 0) {
 export class ModuleError extends Error {
   constructor(message, code = "invalid") { super(message); this.code = code; }
 }
+// A model-store refusal as the router's own error, keeping the store's code (conflict, limit, schema, ...).
+const asModuleError = (error) => (error instanceof ModelError ? Object.assign(new ModuleError(error.message, error.code === "conflict" ? "conflict" : error.code === "schema" ? "output" : error.code), error.details ? { details: error.details } : {}) : error);
 
 const OutputSchema = z.object({
   operations: z.array(z.unknown()).max(64).default([]),
@@ -41,6 +45,12 @@ const OutputSchema = z.object({
   derived: z.array(z.object({ object: z.string().regex(/^(\$[A-Za-z][A-Za-z0-9_-]{0,31}|o\d{1,6})$/), sourceRef: z.string().min(1).max(200),
     sourceRevision: z.number().int().positive(), inputsHash: z.string().regex(/^[0-9a-f]{64}$/), stale: z.boolean().optional() }).strict()).max(50).optional(),
   broadcast: z.array(z.object({ event: z.literal("source-changed"), sourceRef: z.string().min(1).max(200).optional() }).strict()).max(50).optional(),
+  // module/2 only (#85 V1-3). Changes to the module's own model instances: either updates of existing instances (`id`, with the
+  // `expectedRevision` they were made against; all of them or none) or one new instance (`ref`). Never together with `operations`.
+  models: z.array(z.union([
+    z.object({ id: z.string().regex(/^md:[0-9a-f]{12}$/), model: z.string().regex(/^[a-z][a-z0-9_]{0,31}$/), expectedRevision: z.number().int().positive(), value: z.unknown() }).strict(),
+    z.object({ ref: z.string().regex(/^\$[A-Za-z][A-Za-z0-9_-]{0,31}$/), model: z.string().regex(/^[a-z][a-z0-9_]{0,31}$/), value: z.unknown() }).strict(),
+  ])).min(1).max(8).optional(),
 }).strict();
 
 // What a module sees of its target canvas: its kind (a Graph document or an
@@ -65,7 +75,7 @@ function canvasContext(entry, moduleId, granted, v2 = false) {
 // canvases: { ensure(imageId), create(options), save(entry, history) }
 // jobs: from jobs.js. egress / readSource are optional host services handed to
 // built-in modules (never to other runtimes) when their grant allows.
-export function createRouter({ registry, audit, canvases, runtimes, jobs = null, egress = null, readSource = null, derivedIndex = null }) {
+export function createRouter({ registry, audit, canvases, runtimes, jobs = null, egress = null, readSource = null, derivedIndex = null, models = null }) {
   const DEFAULT_JOB_MS = 10 * 60 * 1000;
   return {
     jobs,
@@ -168,6 +178,16 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           return { operations: parsed.data.operations, ...(parsed.data.summary ? { summary: parsed.data.summary } : {}), ...(parsed.data.method ? { method: parsed.data.method } : {}) };
         };
       }
+      // #85 V1-3: a module reads its own model instances (never another module's). Needs module.storage.write, which declaring models requires.
+      const modelTypes = manifest.v2?.models;
+      const modelStore = () => { const store = models?.(); if (!store) throw new ModuleError("model storage is not available on this server", "unavailable"); return store; };
+      if (modelTypes && effective.includes("module.storage.write")) {
+        const typeOf = (name) => modelTypes[name] ?? (() => { throw new ModuleError(manifest.id + " declares no model " + JSON.stringify(name), "input"); })();
+        ctx.models = {
+          list: async (name) => { typeOf(name); return modelStore().list({ module: manifest.id, model: name }); },
+          read: async (name, id) => { try { return await modelStore().read({ module: manifest.id, type: typeOf(name), id }); } catch (error) { throw asModuleError(error); } },
+        };
+      }
       // The original image of the target canvas, for built-in modules and for
       // http modules that declare a multipart file (sent only through egress).
       if ((builtin || mod.runtime.kind === "http") && effective.includes("asset.read.selected") && readSource && entry) ctx.readSource = () => readSource(entry.imageId);
@@ -213,6 +233,24 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         if (targetKey() !== targetAtStart) {
           audit.record({ kind: "run.late", module: manifest.id, capability: capId, canvas: entry?.imageId, why: "target changed", ms: Date.now() - started });
           throw new ModuleError("the object changed while it was being updated; its result was not applied", "conflict");
+        }
+        // Model changes (#85 V1-3): module/2, declared (`writes`), never mixed with scene operations (the two stores cannot commit together), and
+        // checked before anything is applied or written.
+        const wantsModels = output.models?.length > 0;
+        let modelChanges = null;
+        if (wantsModels) {
+          if (!manifest.v2) throw new ModuleError(capId + " returned models, which only module/2 modules may", "output");
+          const allowed = manifest.v2.writes?.[capId];
+          if (!allowed?.length) throw new ModuleError(capId + " returned models but does not declare writes in its manifest", "output");
+          if (output.operations.length || output.derived?.length || output.broadcast?.length) throw new ModuleError(capId + " returned models together with scene operations, derived or broadcast; a result is one or the other", "output");
+          if (internal) throw new ModuleError(capId + " returned models in a refresh, preview or adoption", "output");
+          for (const c of output.models) if (!allowed.includes(c.model)) throw new ModuleError(capId + " may not write model " + c.model + " (writes: " + allowed.join(", ") + ")", "output");
+          const creates = output.models.filter((c) => c.ref), updates = output.models.filter((c) => c.id);
+          if (creates.length && updates.length) throw new ModuleError("a result either creates one instance or updates existing ones, not both", "output");
+          if (creates.length > 1) throw new ModuleError("a result creates at most one instance", "output");
+          if (new Set(updates.map((c) => c.id)).size !== updates.length) throw new ModuleError("an instance appears twice in one result", "output");
+          if (jobId) throw new ModuleError("a background job cannot write models", "output");
+          modelChanges = { creates, updates };
         }
         // Derived objects and broadcasts: module/2 only, declared in the manifest, checked before anything is applied.
         const wantsDerived = output.derived?.length > 0, wantsBroadcast = output.broadcast?.length > 0;
@@ -260,6 +298,25 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
           if (hit) throw new ModuleError(capId + " tried to " + hit.op.split(".")[1] + " " + hit.id + ", which the user edited; leave it, or create a separate object", "user-edited");
         }
         let scene = { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: seen };
+        // Model changes land here, after every late-effect check above: updates in one all-or-nothing commit, or one new instance.
+        let modelResult = null;
+        if (modelChanges) {
+          const store = modelStore(), commandId = "run-" + randomBytes(8).toString("hex");
+          try {
+            if (modelChanges.creates.length) {
+              const c = modelChanges.creates[0];
+              const made = await store.create({ module: manifest.id, type: modelTypes[c.model], value: c.value, commandId, by: "module" });
+              modelResult = { status: "applied", created: [{ ref: c.ref, id: made.id }], instances: [made], commandId };
+            } else {
+              const done = await store.commit({ module: manifest.id, commandId, by: "module", changes: modelChanges.updates.map((c) => ({ id: c.id, type: modelTypes[c.model], expectedRevision: c.expectedRevision, value: c.value })) });
+              modelResult = { status: done.status, created: [], instances: done.instances, commandId };
+            }
+          } catch (error) {
+            audit.record({ kind: "run.rejected", module: manifest.id, capability: capId, error: String(error?.message || error).slice(0, 300) });
+            throw asModuleError(error);
+          }
+          audit.record({ kind: "run.models", module: manifest.id, capability: capId, instances: modelResult.instances.map((i) => i.id), commandId });
+        }
         if (output.operations.length) {
           if (!entry) throw new ModuleError(capId + " returned scene operations but has no canvas", "output");
           try {
@@ -321,7 +378,7 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         const ms = Date.now() - started;
         audit.record({ kind: "run", module: manifest.id, capability: capId, canvas: entry?.imageId, createdCanvas,
           created: scene.created.length, updated: scene.updated.length, deleted: scene.deleted.length, ms, ...(jobId ? { job: jobId } : {}) });
-        return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ...(derivedResult ? { derived: derivedResult } : {}), ms };
+        return { module: manifest, capability: cap, entry, createdCanvas, scene, summary: output.summary, data: output.data, ...(derivedResult ? { derived: derivedResult } : {}), ...(modelResult ? { models: modelResult } : {}), ms };
       };
 
       if (!cap.async) return work(true, null);
