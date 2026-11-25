@@ -4,6 +4,7 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Models in bundles (#85 V3-B): a workspace bundle carries the instances its surface's views are bound to as `models.json` (extras; format stays `estampes.bundle/1`, no history). Import restores them under their own ids for installed modules that read that data version, never overwriting an existing id, and reports what it skipped. `import_workspace_bundle` results gain an optional `models` count. Panel bindings are not carried.
 - Models linked to canvas objects (#85 V3-A): a `broadcast` may now accompany `models` in one result, so a model change can mark the derived objects drawn from that instance stale (`sourceRef` = instance id, `sourceRevision` = its revision) and a refresh redraws them. Models with scene operations or derived objects are still refused. No new field or tool.
 - Module views on touch screens (#85 V3): focus ring, 44px tap targets on coarse pointers, rows wrap on narrow screens; tested at 375px with a scripted fake host.
 - Module views in the widget (#85 V2-3): `public/module-view.js` draws a `module-view` panel from its declarative tree (stack, text, readout, toggle, number, select, button) using only created elements and text; controls run the view's actions via `execute_module`, values come from `models.get`, refreshed every 5 s and after actions. Disabled/unavailable views show a note. `public/module-view.js` is CI tier full. Tested with a scripted fake host only.

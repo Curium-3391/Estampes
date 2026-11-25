@@ -106,6 +106,30 @@ export function createModelStore({ records, total = DEFAULT_TOTAL, now = () => n
       return view(record);
     },
 
+    // #85 V3-B: puts an instance from a bundle on this server under the id it had (derived objects name it as their source). Never
+    // overwrites: an id that is already here is left exactly as it is and reported. The value is checked against the module's type now;
+    // history starts again at revision 1 (a bundle does not carry history).
+    async restore({ module, type, id, value }) {
+      if (typeof id !== "string" || !/^md:[0-9a-f]{12}$/.test(id)) throw new ModelError("not an instance id", "invalid");
+      const have = await records.read("model", id);
+      if (have) return { status: "exists", same: have.owner.module === module && have.type.model === type.id && sigOf(have.value) === sigOf(value) };
+      const checked = checkValue(type, value);
+      const existing = await api.list({ module, model: type.id, raw: true });
+      if (existing.length >= (type.maxInstances ?? 32)) throw new ModelError(module + " already has " + existing.length + " " + type.id + " instances (the type allows " + (type.maxInstances ?? 32) + ")", "limit");
+      if ((await records.list("model")).length >= total) throw new ModelError("the store holds the most model instances it allows (" + total + ")", "limit");
+      const at = now();
+      const record = { schema: MODEL_SCHEMA, id, owner: { module }, type: { model: type.id, dataVersion: type.dataVersion }, revision: 1, createdAt: at, updatedAt: at, value: checked,
+        history: [{ revision: 1, commandId: "import:" + id, by: "import", at, kind: "create", sig: sigOf(checked) }] };
+      await records.writeMany([{ kind: "model", id, value: record, line: { kind: "create", commandId: "import:" + id } }]);
+      return { status: "restored", instance: view(record) };
+    },
+
+    // One instance as a bundle carries it (owner, type, revision, value; no history), or null. Needs no module to be loaded.
+    async peek(id) {
+      const r = typeof id === "string" ? await records.read("model", id) : null;
+      return r ? { id: r.id, module: r.owner.module, model: r.type.model, dataVersion: r.type.dataVersion, revision: r.revision, value: clone(r.value) } : null;
+    },
+
     async read({ module, type, id }) { return view(open(await records.read("model", id), type, module)); },
 
     // Instances of one module (and type). Values are not included.

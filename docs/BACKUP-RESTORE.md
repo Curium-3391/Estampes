@@ -33,7 +33,7 @@ node scripts/verify-backup-restore.mjs
 | `access-key` | The connector key (mode 600) | Yes, to keep the same connector URL |
 | `admin-key` | The administrator key that approves module installs (mode 600) | Yes |
 
-Module model instances live in the UVA store, so a backup of `/uva-beta` has them; workspace bundles do not carry them yet. To take them out as JSON without running any module, stop the server and run `node scripts/export-models.mjs /data /uva-beta` (see [Modules](MODULES.md)).
+Module model instances live in the UVA store, so a backup of `/uva-beta` has them; a workspace bundle carries only the instances that a view on the workspace's surface is bound to (`models.json`; value and revision, no history), and a backup of `/uva-beta` is still the complete copy. To take them out as JSON without running any module, stop the server and run `node scripts/export-models.mjs /data /uva-beta` (see [Modules](MODULES.md)).
 
 Not in the folder: the calculator container (it keeps no data), the cloudflared tunnel address, and your `.env` file. Keep `.env` in your own backup.
 
