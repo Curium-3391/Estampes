@@ -22,7 +22,7 @@ The SymPy service (`cas-service/`) stays a separate, network-disabled process re
 
 ## Where the calculator still shows in host code (the inventory)
 
-- `src/builtin-modules/cas/index.js` imports `../graph/index.js` and calls `graph.run("plot_function" | "update_plot")`. **A private dependency; to be replaced** (174-2).
+- `src/builtin-modules/cas/index.js` imports `../graph/index.js` and calls `graph.run("plot_function" | "update_plot")`. **A private dependency; replaced in 174-2:** the calculator now declares `uses` for Graph's `plot_function` and `update_plot` in its manifest and calls them through `ctx.use`. Graph must be enabled for plotting.
 - `src/modules/index.js`: static list of built-in modules. Intended; built-ins are registered this way.
 - `server.js`: builds the SymPy client and the notebook store, passes them to the module (`configureCas`), reports `casStatus` in health, includes notebooks in bundle export/import, and gives the calculator's surface tool the client. Calculator-specific wiring; candidate for module-declared initialization (174-4).
 - `src/surface/refresh.js`, `src/surface/mcp-tools.js`: the calculator panel's own tool (`surface_cas`) and refresh button. First-party panel code; allowed to name the module.

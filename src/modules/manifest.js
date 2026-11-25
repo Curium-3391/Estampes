@@ -182,6 +182,9 @@ const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend
   // lists, for one document (input: { canvas }), the objects this capability made before bindings
   // existed, so the core can record them as bindings.
   derives: z.object({ refresh: z.string().regex(CAPABILITY_ID), adopt: z.string().regex(CAPABILITY_ID).optional() }).strict().optional(),
+  // #174: capabilities of OTHER modules this one may call through ctx.use. The call only returns what that capability computes (scene
+  // operations); this module applies them as its own result. Built-in modules only for now. Never itself.
+  uses: z.array(z.object({ module: z.string().regex(MODULE_ID), capability: z.string().regex(CAPABILITY_ID) }).strict()).max(4).optional(),
 });
 export const ManifestSchemaV2 = ManifestSchema.omit({ schema: true, runtime: true, capabilities: true }).extend({
   schema: z.literal(MODULE_SCHEMA_V2),
@@ -209,7 +212,8 @@ export function runtimeManifest(m) {
   if (m.schema !== MODULE_SCHEMA_V2) return m;
   const derives = Object.fromEntries(m.capabilities.filter((c) => c.derives).map((c) => [c.id, c.derives.refresh]));
   const adopt = Object.fromEntries(m.capabilities.filter((c) => c.derives?.adopt).map((c) => [c.id, c.derives.adopt]));
-  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}) } };
+  const uses = Object.fromEntries(m.capabilities.filter((c) => c.uses?.length).map((c) => [c.id, c.uses]));
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}) } };
 }
 
 // What changed between two ABI versions of a module, for the Store.
@@ -294,6 +298,9 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
       throw new ManifestError(where + (c.operations ? ": operations are only for the declarative runtime" : ": the declarative runtime needs operations"));
     }
     if (c.operations && JSON.stringify(c.operations).length > 64 * 1024) throw new ManifestError(where + ".operations: larger than 64 KB");
+  });
+  m.capabilities.forEach((c, i) => {
+    if (c.uses?.some((u) => u.module === m.id)) throw new ManifestError("manifest.capabilities[" + i + "] (" + c.id + ").uses: a module does not list itself; call its own capability directly");
   });
   m.capabilities.forEach((c, i) => {
     if (!c.derives) return;

@@ -552,7 +552,17 @@
       "derives": {
         "refresh": "refresh_plot",
         "adopt": "adopt_plots"
-      }
+      },
+      "uses": [
+        {
+          "module": "org.estampes.graph",
+          "capability": "plot_function"
+        },
+        {
+          "module": "org.estampes.graph",
+          "capability": "update_plot"
+        }
+      ]
     },
     {
       "id": "refresh_plot",
@@ -586,7 +596,13 @@
             "description": "the plot's object id"
           }
         }
-      }
+      },
+      "uses": [
+        {
+          "module": "org.estampes.graph",
+          "capability": "update_plot"
+        }
+      ]
     },
     {
       "id": "adopt_plots",

@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "0700b2799fd0c0b319a809ca938bdbfcf7f7f59fe5e0a4685f19ebd18ad27c4c"
+      "sha256": "a467b574f12e933b1846b934cab8d30b44a06b2955f6fbbaa9c9369d63d9593c"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "5b6870609131f50a68ccb8fee90dc41d1627da70703109e8da9e46b5fc69709a"
+      "sha256": "3717729e9ca9b1504bdfa04622b78b61451ed6e8daa3d926218a049f11687592"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "5859cbe904e361c013588968ce901ed8b99c0d48f1b697ff71edf6b3f5a7810a"
+      "sha256": "53c6d6cb0b30e83a59d6adb549cb83d02919a4f33920a825ec3044a11b0ab4fd"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -849,6 +849,25 @@
         "src/builtin-modules/cas/index.js"
       ],
       "previousSha256": "20437bc64aa19d89406b618419dde9761463410109f8b6c24911e3812e849485"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user decision card 2026-11-25: removable built-in module",
+      "reason": "174-2: CAS reaches Graph through manifest uses and ctx.use",
+      "files": [
+        "src/builtin-modules/cas/index.js",
+        "src/modules/manifest.js",
+        "src/modules/router.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "user decision card 2026-11-25",
+      "reason": "174-2",
+      "files": [
+        "src/modules/router.js"
+      ],
+      "previousSha256": "91c99295fd8c61b73e97b71d9cd3706a1e4561aba31f6ef71a4b1fbcdf062a2c"
     }
   ]
 }
