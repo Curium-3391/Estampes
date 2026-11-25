@@ -386,7 +386,7 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
         try { checkSchema(v.ephemeral.schema, where + ".ephemeral.schema"); } catch (error) { throw new ManifestError(error.message); }
         if (v.ephemeral.schema.type !== "object") throw new ManifestError(where + ".ephemeral.schema: must be an object schema");
       }
-      try { checkRenderer(v.renderer); } catch (error) { throw new ManifestError(where + ".renderer: " + error.message); }
+      try { checkRenderer(v.renderer, { view: v, models: Object.fromEntries((original.models ?? []).map((t) => [t.id, t])), actions: Object.fromEntries(original.capabilities.map((c) => [c.id, c])) }); } catch (error) { throw new ManifestError(where + ".renderer: " + error.message); }
     });
   }
   const panelIds = new Set();
