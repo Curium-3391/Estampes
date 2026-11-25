@@ -4,8 +4,9 @@
 // closed expression parser and all limits live in cas-service/.
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { CasClientError } from "../../cas/client.js";
-import { cellSummary } from "../../cas/notebooks.js";
+import { join } from "node:path";
+import { CasClientError, createCasClient } from "../../cas/client.js";
+import { cellSummary, createNotebooks } from "../../cas/notebooks.js";
 import { BridgeError, checkPlottable } from "../../cas/bridge.js";
 import { FUNCTIONS } from "../../scene/expression.js";
 import { canvasObjects } from "../../scene/scene-ops.js";
@@ -15,12 +16,23 @@ export const manifest = JSON.parse(readFileSync(new URL("./manifest.json", impor
 // server.js (or a test) supplies { client, notebooks } once at start-up.
 let deps = { client: null, notebooks: null };
 export const notebookStore = () => deps.notebooks;
+export const casClient = () => deps.client;
 export const configure = (next) => { deps = { ...deps, ...next }; };
 export const casStatus = async () => {
   if (!deps.client) return { available: false, reason: "no calculator service is configured (ESTAMPES_CAS_SOCKET)" };
   try { const h = await deps.client.health(); return { available: true, engine: h.engine, operations: h.operations, limits: h.limits }; }
   catch (error) { return { available: false, reason: error.message }; }
 };
+
+// Built-in module hooks (#174-4): the host calls `init` once after the module host exists and reads `health` for /healthz, so the server's
+// start-up code does not build the calculator's service client or notebook store itself.
+//   context: { config (casSocket, storageDir), persistent (a writable storage folder), records: () => the UVA record store or null }
+export const healthKey = "cas";
+export function init({ config, persistent, records }) {
+  configure({ client: createCasClient({ socketPath: config.casSocket }),
+    notebooks: createNotebooks({ dir: persistent ? join(config.storageDir, "cas", "notebooks") : "", records }) });
+}
+export const health = async () => { const cas = await casStatus(); return cas.available ? { available: true, engine: cas.engine } : { available: false, reason: cas.reason }; };
 
 const RESERVED_NAMES = new Set(["pi", "e", "E", "I", "oo", "inf", "infinity", "nan", "x_", ...Object.keys(FUNCTIONS), "deg", "rad", "matrix", "Matrix", "factorial", "gamma", "root", "binomial", "gcd", "lcm"]);
 const needBackend = () => {

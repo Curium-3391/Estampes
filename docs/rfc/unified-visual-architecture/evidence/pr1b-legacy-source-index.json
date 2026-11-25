@@ -46,7 +46,7 @@
   "files": [
     {
       "path": "server.js",
-      "sha256": "5d8caf93cc6b7701d917c11e97b752df84284b652b0b624da16846147b9a4bff"
+      "sha256": "de203389f7af26d1f1b872824e1e14fa1b8b0b22b51a87615ffb3cca0ad3f41a"
     },
     {
       "path": "src/assessment.js",
@@ -62,7 +62,7 @@
     },
     {
       "path": "src/builtin-modules/cas/index.js",
-      "sha256": "a467b574f12e933b1846b934cab8d30b44a06b2955f6fbbaa9c9369d63d9593c"
+      "sha256": "f5cf5f48622f400d608a26b1a0517b785b2aa648cd73791672babc4f424a0fbb"
     },
     {
       "path": "src/builtin-modules/graph/index.js",
@@ -170,7 +170,7 @@
     },
     {
       "path": "src/modules/index.js",
-      "sha256": "07dc7b824dad797b021544e19813c6c9f12ced6ce45f7c7f2401aa23a201ee8b"
+      "sha256": "7359c20a2031bd97af19da6e72b1cc3dbaf8322f92f0a706fe5b37956c1d2ece"
     },
     {
       "path": "src/modules/jobs.js",
@@ -897,6 +897,16 @@
         "src/modules/mcp-tools.js",
         "src/modules/router.js",
         "src/surface/mcp-tools.js"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (2026-11-25, 12:56 Taipei: '174-4\u7b4985\u505a\u5b8c\u5f8c\u7e7c\u7e8c'; 05:44 UTC: finish everything)",
+      "reason": "#174-4: optional built-in module hooks init/health; the calculator's start-up and health wiring moved out of server.js",
+      "files": [
+        "server.js",
+        "src/builtin-modules/cas/index.js",
+        "src/modules/index.js"
       ]
     }
   ]

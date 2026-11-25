@@ -48,6 +48,22 @@ export async function createModuleHost({ storageDir = "", coreVersion, canvases,
   await derivedIndex.load();
   host.derivedIndex = derivedIndex;
   host.derivedState = newDerivedState();
+  // Optional hooks of built-in modules (#174-4): `init(context)` once, after the host exists; `health()` for /healthz under `healthKey`.
+  // A hook that throws never stops the host or another module: init errors are logged to the audit, a failed health reads as unavailable.
+  host.initBuiltins = async (context) => {
+    for (const b of builtins) {
+      if (typeof b.init !== "function") continue;
+      try { await b.init(context); } catch (error) { audit.record({ kind: "builtin.init-failed", module: b.manifest.id, error: String(error?.message || error).slice(0, 300) }); }
+    }
+  };
+  host.health = async () => {
+    const out = {};
+    for (const b of builtins) {
+      if (typeof b.health !== "function" || typeof b.healthKey !== "string") continue;
+      out[b.healthKey] = await Promise.resolve(b.health()).catch((error) => ({ available: false, reason: String(error?.message || error).slice(0, 200) }));
+    }
+    return out;
+  };
   host.router = createRouter({ registry, audit, canvases, runtimes, jobs, egress, readSource, derivedIndex, models: () => host.models ?? null });
   return host;
 }
