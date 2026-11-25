@@ -25,13 +25,15 @@ node scripts/verify-backup-restore.mjs
 
 | Path | Content | Needed to restore your work? |
 | --- | --- | --- |
-| `/uva-beta` (the whole folder) | The UVA store: images, canvases (marks, layers, links, reviews, scene objects), copies, change logs, workspaces, panel layouts, calculator notebooks | **Yes** |
+| `/uva-beta` (the whole folder) | The UVA store: images, canvases (marks, layers, links, reviews, scene objects), copies, change logs, workspaces, panel layouts, calculator notebooks, data kept by modules (model instances, #85) | **Yes** |
 | `/data/uva-pending/` | Changes acknowledged but not yet committed into the UVA store | **Yes** (they are newer than the store) |
 | `/data/images/`, `/data/workspaces/`, `/data/surfaces/`, `/data/cas/notebooks/` | Data from before the UVA store; moved in on first open and no longer written. With `ESTAMPES_CANVAS_STORE=legacy` these are the only copy | Yes, keep them with the rest |
 | `/data/documents/` | Stored PDFs | Yes, if you use PDF pages |
 | `modules/` | `registry.json` (what is enabled and granted), `audit.jsonl`, `secrets.json`, installed `packages/`, `trusted-keys.json`, `inbox/`, `approvals/` | Yes, to keep modules enabled and their keys |
 | `access-key` | The connector key (mode 600) | Yes, to keep the same connector URL |
 | `admin-key` | The administrator key that approves module installs (mode 600) | Yes |
+
+Module model instances live in the UVA store, so a backup of `/uva-beta` has them; workspace bundles do not carry them yet. To take them out as JSON without running any module, stop the server and run `node scripts/export-models.mjs /data /uva-beta` (see [Modules](MODULES.md)).
 
 Not in the folder: the calculator container (it keeps no data), the cloudflared tunnel address, and your `.env` file. Keep `.env` in your own backup.
 
