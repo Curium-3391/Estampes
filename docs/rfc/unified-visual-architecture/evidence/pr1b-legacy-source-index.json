@@ -46,7 +46,7 @@
   "files": [
     {
       "path": "server.js",
-      "sha256": "de203389f7af26d1f1b872824e1e14fa1b8b0b22b51a87615ffb3cca0ad3f41a"
+      "sha256": "29e7ecdc54f376e2165658e850e89766c0f7ba17657135c338e627d0760dca9a"
     },
     {
       "path": "src/assessment.js",
@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "fae0ab05e150c6fb5192116c87719cd1483de8d1a8fd450df069b526b118c72b"
+      "sha256": "897bb04d515963c22d3888063d1382b21ec4b4581a1d207d34950fdd7be51c9c"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -302,7 +302,7 @@
     },
     {
       "path": "src/surface/mcp-tools.js",
-      "sha256": "c7f2cc65e7374a60105b69821f8c81331e7c85b99a05b791be85ed8a1431531a"
+      "sha256": "8482723d6c2f8a981b6b2ed369489f881c98eb856de84f6557c3a2b6c3db957a"
     },
     {
       "path": "src/surface/refresh.js",
@@ -310,11 +310,11 @@
     },
     {
       "path": "src/surface/service.js",
-      "sha256": "607da44d030b7d284fd2cc2f232ce8337d139a8cd98b8df27cff86b389c32b1b"
+      "sha256": "db6bbb71c448fd1ffd88d1e00d8ffe954da75a8d057723214ae4c1ff154c44fa"
     },
     {
       "path": "src/surface/store.js",
-      "sha256": "d4366772f797cf6b80d5c3890ac592f2100bdb08ed8358d179bbe41a984e0628"
+      "sha256": "331c577a091ec8fa0a7045424b55212fdab63a1c093c4d1431799896310aec98"
     },
     {
       "path": "src/surface/widget-source.js",
@@ -917,6 +917,18 @@
         "src/modules/manifest.js"
       ],
       "previousSha256": "1edc88fcb1d5b525406dab4c26f6e80bb9f0091ae94d35d62473e69c826de812"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (2026-11-25 17:21 Taipei: '\u597d\u7e7c\u7e8c' to V2)",
+      "reason": "#85 V2-2: module views offered and opened as surface panels, surface state carries the view contract",
+      "files": [
+        "server.js",
+        "src/modules/manifest.js",
+        "src/surface/mcp-tools.js",
+        "src/surface/service.js",
+        "src/surface/store.js"
+      ]
     }
   ]
 }

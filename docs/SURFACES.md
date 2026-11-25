@@ -46,3 +46,9 @@ The widget side (window manager, calculator panel) is described in [WORKBENCH.md
 ## Limits of this version
 
 The Graph panel and the photo canvas share one viewport (`p:canvas`); a second, independent Graph viewport is not implemented. Single-user trust boundary: two widgets of the same user cannot overwrite each other silently (revision check), but there is no multi-user editing. Opening the `graph` panel (button or `manage_surface_panels`) therefore does not add a window: it brings `p:canvas` forward, restoring it if minimized or covered by a maximized window.
+
+## Module views as panels (#85 V2-2)
+
+A view declared in a module/2 manifest (`views[]`, see [Modules](MODULES.md)) is offered as a panel of kind `module-view` with id `view-<view id>` (up to 4 open at once), without the module writing a `panels[]` entry. Opening it is an ordinary surface action: it needs the module enabled, never enables it and grants nothing. The surface stores on the panel only which view it shows (`view`) and, if the open op named them (`models: { <model id>: <instance id> }`, checked against the module's own instances), which instance of each model it is bound to; bundles carry the view but not instance bindings, which belong to the server they were made on.
+
+`surface_get_state` and `surface_apply` (the widget's app-only tools) add `moduleViews` for open module-view panels: the view's `reads`, `actions` and renderer envelope, and for each model the bound instance (the explicit one, else the module's most recently changed instance, else none) and up to 20 instances to choose from. The assistant's `get_surface_state` adds only `views`: each open view's panel, module, view and bound instances (no payload, no values). Values are read through the host's `models.get` capability. A panel whose module is disabled keeps its place and its data; one whose module or view is gone shows as unavailable. Nothing draws the panel yet (V2-3).
