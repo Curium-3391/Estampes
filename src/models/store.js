@@ -15,45 +15,24 @@
 //
 // The history (the last few commands per instance, with the value each replaced) is bounded by size, so a record stays far below the
 // UVA document limit. A command id older than that history is no longer recognised.
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { validateValue } from "../modules/json-schema.js";
+import { clone, bytes, sigOf, trimHistory, claimStore, createLocks, staleOf } from "../records/revisioned.js";
 
 export const MODEL_SCHEMA = "estampes.model/1";
-const HISTORY_BYTES = 256 * 1024, HISTORY_MAX = 20;
 const DEFAULT_TOTAL = 128;
 
 export class ModelError extends Error {
   constructor(message, code, details) { super(message); this.name = "ModelError"; this.code = code; if (details) this.details = details; }
 }
-const clone = (v) => JSON.parse(JSON.stringify(v));
-const bytes = (v) => Buffer.byteLength(JSON.stringify(v));
-const sigOf = (v) => createHash("sha256").update(JSON.stringify(v)).digest("hex").slice(0, 32);
-
-const stores = new WeakMap();
 
 // records: the record store (read / writeMany / list). total: most instances over all modules (the UVA store shares one document
 // limit with canvases, workspaces and notebooks, so models may not use it all). now: a clock for display times only.
 export function createModelStore({ records, total = DEFAULT_TOTAL, now = () => new Date().toISOString() }) {
   if (!records) throw new Error("a model store needs the record store");
-  if (stores.has(records)) throw new ModelError("a model store already exists over these records; a second writer would not see its locks", "single-writer");
-  const locks = new Map();
-  stores.set(records, true);
-
-  // Runs fn while holding the locks of ids, taken in sorted order.
-  async function withLocks(ids, fn) {
-    const sorted = [...new Set(ids)].sort(), releases = [];
-    try {
-      for (const id of sorted) {
-        const before = locks.get(id) ?? Promise.resolve();
-        let release; const mine = new Promise((r) => { release = r; });
-        const chained = before.then(() => mine);
-        locks.set(id, chained);
-        await before;
-        releases.push(() => { release(); if (locks.get(id) === chained) locks.delete(id); });
-      }
-      return await fn();
-    } finally { for (const r of releases.reverse()) r(); }
-  }
+  const refused = claimStore(records, "model");
+  if (refused) throw new ModelError(refused, "single-writer");
+  const withLocks = createLocks();
 
   const fresh = async () => {
     for (let i = 0; i < 20; i++) {
@@ -80,10 +59,7 @@ export function createModelStore({ records, total = DEFAULT_TOTAL, now = () => n
     if (bytes(out) > (type.maxBytes ?? 16384)) throw new ModelError("the value is larger than the type's maxBytes (" + (type.maxBytes ?? 16384) + ")", "limit");
     return out;
   };
-  const trim = (history, type) => {
-    const room = Math.max(1, Math.min(HISTORY_MAX, Math.floor(HISTORY_BYTES / Math.max(1, type.maxBytes ?? 16384))));
-    return history.slice(-room);
-  };
+  const trim = (history, type) => trimHistory(history, type.maxBytes ?? 16384);
   const view = (r) => ({ id: r.id, module: r.owner.module, model: r.type.model, dataVersion: r.type.dataVersion, revision: r.revision, value: clone(r.value), updatedAt: r.updatedAt });
 
   const api = {
@@ -170,7 +146,7 @@ export function createModelStore({ records, total = DEFAULT_TOTAL, now = () => n
           return { status: "already-applied", instances: current.map(view) };
         }
         // Every precondition is checked before anything is written.
-        const stale = changes.filter((c, i) => c.expectedRevision !== current[i].revision).map((c) => ({ id: c.id, expectedRevision: c.expectedRevision, revision: current.find((r) => r.id === c.id).revision }));
+        const stale = staleOf(changes, current);
         if (stale.length) throw new ModelError("changed since revision " + stale.map((s) => s.id + "@" + s.expectedRevision).join(", ") + "; read it again and retry", "conflict", { stale });
         const at = now();
         const entries = changes.map((c, i) => {
