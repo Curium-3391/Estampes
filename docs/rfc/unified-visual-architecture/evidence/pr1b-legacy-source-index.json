@@ -186,7 +186,7 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "1edc88fcb1d5b525406dab4c26f6e80bb9f0091ae94d35d62473e69c826de812"
+      "sha256": "fae0ab05e150c6fb5192116c87719cd1483de8d1a8fd450df069b526b118c72b"
     },
     {
       "path": "src/modules/mcp-tools.js",
@@ -908,6 +908,15 @@
         "src/builtin-modules/cas/index.js",
         "src/modules/index.js"
       ]
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (2026-11-25 17:21 Taipei: '\u597d\u7e7c\u7e8c' to V2)",
+      "reason": "#85 V2-1: the declarative renderer's payload is validated against the view's reads, actions and the model schemas",
+      "files": [
+        "src/modules/manifest.js"
+      ],
+      "previousSha256": "1edc88fcb1d5b525406dab4c26f6e80bb9f0091ae94d35d62473e69c826de812"
     }
   ]
 }

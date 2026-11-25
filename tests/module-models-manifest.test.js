@@ -72,10 +72,10 @@ test("a view names models and actions that exist", () => {
   m = base(); m.views[0].ephemeral = { schema: { type: "object", properties: {} } }; refused(m, /additionalProperties/);
 });
 
-test("the renderer is chosen by type: an unknown type is refused (fail closed), and the declarative one is not drawn yet", () => {
+test("the renderer is chosen by type: an unknown type is refused (fail closed), and the declarative one takes a tree or {}", () => {
   let m = base(); m.views[0].renderer.type = "sandboxed-web"; refused(m, /not supported by this server \(supported: declarative\)/);
   m = base(); m.views[0].renderer.schema = "estampes.renderer.declarative/9"; refused(m, /renderer\.schema must be/);
-  m = base(); m.views[0].renderer.payload = { tree: [] }; refused(m, /not available yet; leave payload empty/);
+  m = base(); m.views[0].renderer.payload = { tree: [] }; refused(m, /must be \{\} or \{ root \}/);
   m = base(); delete m.views[0].renderer.payload; refused(m, /payload/);
 });
 
