@@ -88,7 +88,7 @@ The scientific calculator runs SymPy in a **separate container** (`cas-service/`
 
 ## Extending Estampes
 
-The public extension surface is the module manifest and package format, the scene operations and object types, the MCP tools and HTTP endpoints, and the data formats (`estampes.visual/2`, `estampes.workspace/1`, `estampes.bundle/1`). Everything under `src/` and the widget internals can change in any release; modules never import them. Details and a code tour: [Development guide](DEVELOPMENT.md#public-extension-interfaces-versus-internals).
+The public extension surface is the module manifest and package format, the scene operations and object types, the MCP tools and HTTP endpoints, and the data formats (`estampes.visual/2`, `estampes.workspace/1`, `estampes.bundle/1`). Everything under `src/` and the widget internals can change in any release; modules never import them. Details and a code tour: [Development guide](DEVELOPMENT.md#public-extension-interfaces-versus-internals). Built-in modules may use more than that (they run in the server process); where the calculator's integration is allowed to stay private and where it is not is recorded in [The calculator's boundary](CAS-BOUNDARY.md).
 
 ## Constraints that shaped the design
 
