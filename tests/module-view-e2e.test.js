@@ -13,7 +13,7 @@ const ROOT = { type: "stack", children: [
   { type: "readout", label: "Cout", model: "fa", path: "/cout", format: "bit" }] };
 const ok = (data) => ({ content: [{ type: "text", text: "ok" }], structuredContent: { kind: "estampes.module_result", status: "ok", data } });
 
-function script({ enabled = true, unavailable = false } = {}) {
+function script({ enabled = true, unavailable = false, active = false } = {}) {
   const inst = { id: "md:0123456789ab", revision: 1, value: { a: false, b: false, cin: false, sum: 0, cout: 0 } };
   const calls = [];
   const intercept = async (params, call) => {
@@ -32,7 +32,7 @@ function script({ enabled = true, unavailable = false } = {}) {
     if (params.name === "surface_get_state") {
       const r = await call(params), sc = structuredClone(r.structuredContent), id = "p:view-fa0";
       sc.panels.push({ panelId: id, kind: "module-view", module: MOD, panel: "view-fa", view: "fa", open: true, title: "Full adder", moduleState: enabled ? "enabled" : "disabled" });
-      for (const lay of Object.values(sc.layouts)) { lay.order.push(id); lay.placements[id] = { mode: "normal", rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, z: 5 }; }
+      for (const lay of Object.values(sc.layouts)) { lay.order.push(id); if (active) lay.active = id; lay.placements[id] = { mode: "normal", rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, z: 5 }; }
       sc.moduleViews = { [id]: unavailable ? { unavailable: true, reads: [] } : { module: MOD, view: "fa", reads: ["fa"], actions: ["set"], bound: { fa: inst.id }, instances: { fa: [inst.id] }, renderer: { type: "declarative", schema: "estampes.renderer.declarative/1", payload: { root: ROOT } } } };
       return { content: r.content, structuredContent: sc };
     }
@@ -92,5 +92,22 @@ test("a change made elsewhere shows after the refresh button", { skip: noBrowser
     sc.inst.value.sum = 1; sc.inst.revision++;
     await ui.frame.locator(".mv-refresh").click();
     await ui.page.waitForFunction(() => document.querySelector("iframe").contentDocument.querySelector(".mv output")?.textContent === "1", null, { timeout: 10000 });
+  } finally { await s.close(); }
+});
+
+test("on a phone-sized touch screen the view fits without sideways scrolling and its controls are large enough to tap", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false }); await s.enable(["org.estampes.graph"]);
+  try {
+    const sc = script({ active: true });
+    const canvas = await s.call("execute_module", { module: "org.estampes.graph", capability: "plot_function", params: { expression: "x" }, newCanvas: { kind: "graph" } });
+    const imageId = (JSON.stringify(canvas.structuredContent).match(/gph:[0-9a-f]{16}/) ?? [])[0];
+    const ui = await s.open({ imageId, intercept: sc.intercept, viewport: { width: 375, height: 700 }, touch: true });
+    await ui.frame.locator(".mv output").first().waitFor({ timeout: 30000 });
+    const inner = ui.page.frames().find((f) => f !== ui.page.mainFrame());
+    const m = await inner.evaluate(() => ({ over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      small: [...document.querySelectorAll(".mv input[type=checkbox]")].map((e) => Math.min(e.getBoundingClientRect().width, e.getBoundingClientRect().height)) }));
+    assert.ok(m.over <= 1, "no horizontal overflow: " + m.over);
+    assert.ok(m.small.length === 3 && m.small.every((x) => x >= 24), JSON.stringify(m.small));
+    assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });

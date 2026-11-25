@@ -157,6 +157,10 @@ body:not(.fullscreen) #wb:not(.windows) #surface{height:var(--wb-h,auto);max-hei
 .mv input[type=number],.mv select{font:inherit;color:CanvasText;background:Canvas;border:1px solid #8887;border-radius:8px;padding:6px 8px;min-width:0}
 .mv-btn{padding:6px 12px}
 .mv-text{margin:0}
+.mv input:focus-visible,.mv select:focus-visible,.mv button:focus-visible{outline:2px solid Highlight;outline-offset:2px}
+.mv-stack[data-dir="row"]{flex-wrap:wrap}
+@media (pointer:coarse){.mv input[type=checkbox]{width:28px;height:28px}.mv input[type=number],.mv select,.mv-btn,.mv .wb-mini{min-height:44px;min-width:44px}.mv-row{min-height:44px}}
+@media (max-width:520px){.mv-stack[data-dir="row"]{grid-auto-flow:row;grid-auto-columns:auto}}
 .mv-note[data-kind="error"]{color:#C0392B}
 .wb-panel[data-state="disabled"] .mv{opacity:.6}
 /* ---- calculator ---- */
