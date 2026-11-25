@@ -38,5 +38,5 @@ Notebook ids and revisions, link records (`cellRevision`), stale and recompute s
 
 1. This page (174-1).
 2. The calculator asks the host for Graph's drawing operations through a declared use of a capability instead of importing Graph (174-2).
-3. Tests for the calculator being absent: disabled, removed, service down, re-enabled (174-3).
+3. Tests for the calculator being absent: disabled, removed, service down, re-enabled (174-3, `tests/cas-absence.test.js`; done). They cover the module host; the wiring still in `server.js` is not exercised there.
 4. Moving the calculator's server wiring behind module-declared hooks, only if 174-2 and 174-3 show it is worth it (174-4).
