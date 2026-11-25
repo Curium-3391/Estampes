@@ -245,7 +245,8 @@ export function runtimeManifest(m) {
   const adopt = Object.fromEntries(m.capabilities.filter((c) => c.derives?.adopt).map((c) => [c.id, c.derives.adopt]));
   const uses = Object.fromEntries(m.capabilities.filter((c) => c.uses?.length).map((c) => [c.id, c.uses]));
   const writes = Object.fromEntries(m.capabilities.filter((c) => c.writes?.length).map((c) => [c.id, c.writes]));
-  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}), ...(Object.keys(writes).length ? { writes } : {}) } };
+  const models = Object.fromEntries((m.models ?? []).map((t) => [t.id, t]));
+  return { ...v1View(m), schema: MODULE_SCHEMA_V2, v2: { abi: m.runtime.abi, targets: Object.fromEntries(m.capabilities.map((c) => [c.id, c.target])), ...(Object.keys(derives).length ? { derives } : {}), ...(Object.keys(adopt).length ? { adopt } : {}), ...(Object.keys(uses).length ? { uses } : {}), ...(Object.keys(writes).length ? { writes } : {}), ...(Object.keys(models).length ? { models } : {}) } };
 }
 
 // What changed between two ABI versions of a module, for the Store.

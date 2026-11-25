@@ -48,6 +48,6 @@ export async function createModuleHost({ storageDir = "", coreVersion, canvases,
   await derivedIndex.load();
   host.derivedIndex = derivedIndex;
   host.derivedState = newDerivedState();
-  host.router = createRouter({ registry, audit, canvases, runtimes, jobs, egress, readSource, derivedIndex });
+  host.router = createRouter({ registry, audit, canvases, runtimes, jobs, egress, readSource, derivedIndex, models: () => host.models ?? null });
   return host;
 }

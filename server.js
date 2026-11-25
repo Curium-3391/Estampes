@@ -66,6 +66,7 @@ const intakeImage = (bytes, options) => intakeImageFile(bytes, options);
 let recordStore = null;
 import { registerUvaTools } from "./src/uva/mcp-tools.js";
 import { createRecordStore } from "./src/uva/record-store.js";
+import { createModelStore } from "./src/models/store.js";
 import { createModuleHost } from "./src/modules/index.js";
 import { resolveAdminKey } from "./src/modules/admin.js";
 import sharp from "sharp";
@@ -3274,6 +3275,8 @@ if (uvaService.enabled && uvaService.canvasStore) {
     .catch((error) => { log("error", "[record-store] could not start; workspaces, surfaces and notebooks stay in legacy storage", { error: String(error?.message || error) }); return null; });
   // Both stores or neither: canvases and the workspaces naming them stay together.
   if (canvasStore && recordStore) { useCanvasStore(canvasStore); useRecords(recordStore); }
+  // #85 V1-3: module-owned model instances live in the record store; without it modules that write models are told storage is unavailable.
+  if (canvasStore && recordStore) moduleHost.models = createModelStore({ records: recordStore });
   else if (canvasStore) { await canvasStore.close(); canvasStore = null; }
   if (canvasStore) log("info", "[canvas-store] canvases, images, workspaces, surfaces and notebooks live only in UVA; no legacy file is written (scripts/uva-to-legacy.mjs writes them back out)", { directory: config.uvaBetaDir, recovering: canvasStore.recovered.length + recordStore.recovered.length });
 }

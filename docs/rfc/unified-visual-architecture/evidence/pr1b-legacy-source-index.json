@@ -170,7 +170,7 @@
     },
     {
       "path": "src/modules/index.js",
-      "sha256": "c865e07f0cdb23396d8e3d3afb0654efee239d474e486cc7e2fee8a491e1e740"
+      "sha256": "07dc7b824dad797b021544e19813c6c9f12ced6ce45f7c7f2401aa23a201ee8b"
     },
     {
       "path": "src/modules/jobs.js",
@@ -186,11 +186,11 @@
     },
     {
       "path": "src/modules/manifest.js",
-      "sha256": "8da19f82aa5f908d5be7c116466734b7646535d1107e8b6fd540a7572402bd85"
+      "sha256": "1edc88fcb1d5b525406dab4c26f6e80bb9f0091ae94d35d62473e69c826de812"
     },
     {
       "path": "src/modules/mcp-tools.js",
-      "sha256": "fc30bc8c42d322f32a62f2739f76a7ad35fd82bc5e8cea5863c70f511436071f"
+      "sha256": "108ceb1d0d9e51c9ee159457779d0c6b94b06a8d077785f2051708dafcc969ff"
     },
     {
       "path": "src/modules/packages.js",
@@ -206,7 +206,7 @@
     },
     {
       "path": "src/modules/router.js",
-      "sha256": "53c6d6cb0b30e83a59d6adb549cb83d02919a4f33920a825ec3044a11b0ab4fd"
+      "sha256": "7f3c2632fca22fd6bb1a00b7d5c22c9f159ec10a3f553c004a84ff452fcc6799"
     },
     {
       "path": "src/modules/runtimes/builtin.js",
@@ -877,6 +877,17 @@
         "src/modules/manifest.js"
       ],
       "previousSha256": "3717729e9ca9b1504bdfa04622b78b61451ed6e8daa3d926218a049f11687592"
+    },
+    {
+      "date": "2026-11-23",
+      "authorizedBy": "Curium (2026-11-25, 12:56 Taipei: start V1 in small reversible PRs)",
+      "reason": "#85 V1-3: model changes in the router (output models, ctx.models), v2.models in the runtime manifest, models in the execute_module result, model store wired in the module host",
+      "files": [
+        "src/modules/index.js",
+        "src/modules/manifest.js",
+        "src/modules/mcp-tools.js",
+        "src/modules/router.js"
+      ]
     }
   ]
 }
