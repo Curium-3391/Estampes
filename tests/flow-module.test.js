@@ -46,7 +46,7 @@ async function setup(t) {
 test("the Flow module's manifest is valid and declares the flow-graph view over its own capabilities", () => {
   const m = validateManifest(flowModule.manifest, { coreVersion: "0.10.0", v2: true, builtin: true });
   assert.equal(m.views[0].renderer.type, "flow-graph");
-  assert.deepEqual(Object.keys(m.views[0].renderer.payload.actions).sort(), ["create", "edit", "get", "list", "run", "steps", "undo"]);
+  assert.deepEqual(Object.keys(m.views[0].renderer.payload.actions).sort(), ["archive", "create", "edit", "get", "list", "run", "steps", "undo"]);
   const bad = structuredClone(flowModule.manifest);
   bad.views[0].renderer.payload.actions.run = "flow_nope";
   assert.throws(() => validateManifest(bad, { coreVersion: "0.10.0", v2: true, builtin: true }), /payload\.actions\.run must name one of the view's actions/);
@@ -54,8 +54,8 @@ test("the Flow module's manifest is valid and declares the flow-graph view over 
   badSteps.views[0].renderer.payload.actions.steps = "flow_nope";
   assert.throws(() => validateManifest(badSteps, { coreVersion: "0.10.0", v2: true, builtin: true }), /payload\.actions\.steps must name one of the view's actions/);
   const without = structuredClone(flowModule.manifest);
-  delete without.views[0].renderer.payload.actions.steps;
-  validateManifest(without, { coreVersion: "0.10.0", v2: true, builtin: true }); // `steps` is optional
+  delete without.views[0].renderer.payload.actions.steps; delete without.views[0].renderer.payload.actions.archive;
+  validateManifest(without, { coreVersion: "0.10.0", v2: true, builtin: true }); // `steps` and `archive` are optional
   bad.views[0].renderer.payload = { actions: flowModule.manifest.views[0].renderer.payload.actions, extra: 1 };
   assert.throws(() => validateManifest(bad, { coreVersion: "0.10.0", v2: true, builtin: true }), /payload\.extra/);
 });
@@ -88,6 +88,16 @@ test("flow_steps offers what a flow can run: enabled modules, no document, answe
   assert.deepEqual(steps.map((x) => x.module + " " + x.capability), [RC + " cutoff"]);
   assert.deepEqual(steps[0].inputs, [{ name: "r", type: "number", required: true }, { name: "c", type: "number", required: true }]);
   assert.deepEqual(steps[0].outputs, [{ name: "fc", type: "number", required: true }]);
+});
+
+test("flow_archive hides a flow from flow_list unless asked, and flow_list says which are archived", async (t) => {
+  const { call } = await setup(t);
+  const { id } = await call("flow_create", { name: "RC" });
+  assert.equal((await call("flow_archive", { id, archived: true })).archived, true);
+  assert.deepEqual((await call("flow_list", {})).flows, []);
+  assert.equal((await call("flow_list", { includeArchived: true })).flows[0].archived, true);
+  assert.equal((await call("flow_archive", { id, archived: false })).archived, undefined);
+  assert.equal((await call("flow_list", {})).flows.length, 1);
 });
 
 test("a stale edit, a bad paramsJson and a missing store each say so and change nothing", async (t) => {

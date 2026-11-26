@@ -890,5 +890,9 @@
   "wb.flow.noSteps": "目前沒有模組提供流程可以執行的能力。",
   "wb.flow.srcNone": "— 未設定 —",
   "wb.flow.srcLiteral": "我自己輸入的值",
-  "wb.flow.required": "必填"
+  "wb.flow.required": "必填",
+  "wb.flow.archive": "封存",
+  "wb.flow.restore": "還原",
+  "wb.flow.showArchived": "顯示已封存",
+  "wb.flow.archivedTag": "已封存"
 }

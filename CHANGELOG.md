@@ -4,6 +4,8 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Archive flows (#86): `edit_flow` `archive` / `restore` (and the Flow view's Archive button and "show archived" list) hide a flow without losing it; archived flows do not count against the 32-flow limit (all flow records together are capped at 128, since the record store cannot remove a record yet) and cannot be edited or run until restored. `get_flow` lists archived flows with `includeArchived`. Real deletion is not done. Scripted-host and in-process tests only.
+
 - Flow view (#86 F2b): a person can add a step (new read-only capability `flow_steps` lists what a flow can run), set each input of a step to nothing, a typed value or another step's output, and the panel remembers which flow it shows (viewer's browser storage). `steps` is an optional entry of the `flow-graph` renderer payload. Scripted-host browser tests only.
 
 - Flow view (#86 F2): built-in module `org.estampes.flow` (view over the flow service) and a second view renderer type, `flow-graph` (`estampes.renderer.flow-graph/1`), on the #85 view contract. A person sees a flow as columns of step cards with their state and results, can run it, undo, change a step's inputs and remove a step; the assistant builds flows with `edit_flow`. Scripted-host browser tests only. See docs/FLOW.md.

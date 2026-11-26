@@ -7,7 +7,7 @@ import { applyOps } from "../src/flow/edit.js";
 
 const MOD = "org.estampes.flow", FID = "fl:0123456789ab";
 const ok = (data) => ({ content: [{ type: "text", text: "ok" }], structuredContent: { kind: "estampes.module_result", status: "ok", data } });
-const ACTIONS = { list: "flow_list", get: "flow_get", steps: "flow_steps", create: "flow_create", edit: "flow_edit", undo: "flow_undo", run: "flow_run" };
+const ACTIONS = { list: "flow_list", get: "flow_get", steps: "flow_steps", archive: "flow_archive", create: "flow_create", edit: "flow_edit", undo: "flow_undo", run: "flow_run" };
 
 const STEPS = [
   { module: "org.example.rc", capability: "cutoff", title: "RC cutoff", inputs: [{ name: "r", type: "number", required: true }, { name: "c", type: "number", required: true }], outputs: [{ name: "fc", type: "number", required: true }] },
@@ -15,13 +15,15 @@ const STEPS = [
 
 // A scripted host whose flow is a real graph edited by the real edit operations (src/flow/edit.js), starting empty.
 function builder({ remembered = null } = {}) {
-  const st = { rev: 1, flow: { schema: "estampes.flow/1", nodes: [], edges: [] }, calls: [] };
-  const view = () => ({ id: FID, name: "Built", revision: st.rev, updatedAt: "2026-11-26T00:00:00Z", flow: st.flow, valid: true, order: st.flow.nodes.map((n) => n.id), plan: {}, results: {}, running: false });
+  const st = { rev: 1, flow: { schema: "estampes.flow/1", nodes: [], edges: [] }, calls: [], archived: false };
+  const view = () => ({ id: FID, name: "Built", revision: st.rev, updatedAt: "2026-11-26T00:00:00Z", ...(st.archived ? { archived: true } : {}), flow: st.flow, valid: true, order: st.flow.nodes.map((n) => n.id), plan: {}, results: {}, running: false });
   const intercept = async (params, call) => {
     if (params.name === "execute_module" && params.arguments.module === MOD) {
       const { capability, params: p } = params.arguments;
       st.calls.push([capability, p]);
-      if (capability === "flow_list") return ok({ flows: [{ id: FID, name: "Built", revision: st.rev, nodes: st.flow.nodes.length, edges: st.flow.edges.length, updatedAt: "2026-11-26T00:00:00Z" }] });
+      if (capability === "flow_archive") { st.archived = p.archived; return ok({ status: "applied", ...view() }); }
+      if (capability === "flow_list" && st.archived && !p.includeArchived) return ok({ flows: [] });
+      if (capability === "flow_list") return ok({ flows: [{ id: FID, name: "Built", ...(st.archived ? { archived: true } : {}), revision: st.rev, nodes: st.flow.nodes.length, edges: st.flow.edges.length, updatedAt: "2026-11-26T00:00:00Z" }] });
       if (capability === "flow_steps") return ok({ steps: STEPS, truncated: false });
       if (capability === "flow_get") return ok(view());
       if (capability === "flow_edit") {
@@ -162,6 +164,24 @@ test("a person adds steps, connects an output to an input and gives another inpu
     await ui.frame.locator('.fv-input[data-port="fc"] select').selectOption("");
     await ui.page.waitForFunction(() => !document.querySelector("iframe").contentDocument.querySelector(".fv-edges"), null, { timeout: 10000 });
     assert.deepEqual(sc.st.flow.edges, []);
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
+
+test("a flow can be archived (it leaves the list) and restored from the archived list", { skip: noBrowser, timeout: 120000 }, async () => {
+  const sc = builder(), { s, ui } = await open(sc);
+  try {
+    await ui.frame.locator(".fv-archive").waitFor({ timeout: 30000 });
+    await ui.frame.locator(".fv-archive").click();
+    await ui.frame.locator(".fv-state").waitFor({ state: "detached", timeout: 10000 });
+    assert.equal(sc.st.archived, true);
+    await ui.frame.locator(".fv-showarch-box").check();
+    await ui.frame.locator(".fv-archive").filter({ hasText: /Restore|還原/ }).waitFor({ timeout: 10000 });
+    assert.equal(await ui.frame.locator(".fv-add-toggle").isDisabled(), true, "an archived flow cannot be changed");
+    assert.equal(await ui.frame.locator(".fv-run").isDisabled(), true);
+    await ui.frame.locator(".fv-archive").click();
+    await ui.frame.locator(".fv-archive").filter({ hasText: /Archive|封存/ }).waitFor({ timeout: 10000 });
+    assert.equal(sc.st.archived, false);
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });
