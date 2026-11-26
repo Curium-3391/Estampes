@@ -4,6 +4,8 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Store plans (#195, rest): plans for package installs, updates, rollbacks and uninstalls (and the inbox list) show the module's localized name (`nameI18n`) like the catalog does, and a refused administrator approval names the plan id to approve. The plan reuse that keeps an approval valid across a widget reload was already in place.
+
 - Archive flows (#86): `edit_flow` `archive` / `restore` (and the Flow view's Archive button and "show archived" list) hide a flow without losing it; archived flows do not count against the 32-flow limit (all flow records together are capped at 128, since the record store cannot remove a record yet) and cannot be edited or run until restored. `get_flow` lists archived flows with `includeArchived`. Real deletion is not done. Scripted-host and in-process tests only.
 
 - Flow view (#86 F2b): a person can add a step (new read-only capability `flow_steps` lists what a flow can run), set each input of a step to nothing, a typed value or another step's output, and the panel remembers which flow it shows (viewer's browser storage). `steps` is an optional entry of the `flow-graph` renderer payload. Scripted-host browser tests only.
