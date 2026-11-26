@@ -23,7 +23,7 @@ import { createHash, createPublicKey, createPrivateKey, sign as edSign, verify a
 import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { validateManifest, runtimeManifest, abiChange, ManifestError, MODULE_ID } from "./manifest.js";
+import { validateManifest, runtimeManifest, abiChange, ManifestError, MODULE_ID, localized } from "./manifest.js";
 import { riskOf, permissionDiff } from "./permissions.js";
 import { LifecycleError } from "./lifecycle.js";
 import { applySceneOps } from "../scene/scene-ops.js";
@@ -227,7 +227,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const bytes = await readFile(join(inbox, name));
         const v = verifyBundle(bytes, verifyOptions());
         const installed = registry.record(v.manifest.id);
-        out.push({ id: v.manifest.id, name: v.manifest.name, version: v.manifest.version, file: name, origin: "inbox", signed: !!v.signer,
+        out.push({ id: v.manifest.id, name: localized(v.manifest, "name"), version: v.manifest.version, file: name, origin: "inbox", signed: !!v.signer,
           signer: v.signer?.publisher, digest: v.digest, installed: registry.has(v.manifest.id) && registry.get(v.manifest.id).source === "package" ? installed.version : null });
       } catch (error) { out.push({ id: name, name, version: "", file: name, origin: "inbox", error: String(error?.message || error) }); }
     }
@@ -336,7 +336,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const v = await findInInbox(id, options.version);
         const requested = v.manifest.permissions;
         const risk = !v.signer ? "high" : riskOf(requested);
-        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff: permissionDiff([], requested), risk, requiresAdmin: true, abi: abiChange(undefined, v.manifest.v2?.abi),
+        return { name: localized(v.manifest, "name"), toVersion: v.manifest.version, requested, diff: permissionDiff([], requested), risk, requiresAdmin: true, abi: abiChange(undefined, v.manifest.v2?.abi),
           notes: ["Package digest " + v.digest.slice(0, 16) + "…", ...(v.signer ? ["Signed by " + v.signer.publisher + " (" + v.signer.keyId + ")"] : []), ...v.warnings],
           dataFlow: v.manifest.network ? "Requests go to " + v.manifest.network.allow.join(", ") + ". " + v.manifest.network.dataFlow : null,
           options: { id, version: v.manifest.version, digest: v.digest } };
@@ -367,7 +367,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const fromKey = mod.package?.keyId ?? null, toKey = v.signer?.keyId ?? null;
         const signer = { from: fromKey, to: toKey, changed: fromKey !== toKey };
         const risk = !v.signer || signer.changed ? "high" : riskOf(diff.added.length ? diff.added : []);
-        return { name: v.manifest.name, toVersion: v.manifest.version, requested, diff, risk, requiresAdmin: true, abi: abiChange(mod.manifest.v2?.abi, v.manifest.v2?.abi), signer,
+        return { name: localized(v.manifest, "name"), toVersion: v.manifest.version, requested, diff, risk, requiresAdmin: true, abi: abiChange(mod.manifest.v2?.abi, v.manifest.v2?.abi), signer,
           notes: [...(signer.changed ? ["The signing key changed (" + (fromKey ?? "unsigned") + " → " + (toKey ?? "unsigned") + "): confirm you trust the new signer before approving."] : []), ...(diff.added.length ? ["The new version asks for more permissions; approving this grants them."] : []), "Previous version " + mod.record.version + " stays available for rollback.",
             "Package digest " + v.digest.slice(0, 16) + "…", ...v.warnings],
           dataFlow: v.manifest.network ? "Requests go to " + v.manifest.network.allow.join(", ") + ". " + v.manifest.network.dataFlow : null,
@@ -397,7 +397,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         const prev = (mod.record.previous ?? []).at(-1);
         if (mod.source !== "package" || !prev) throw new LifecycleError(mod.manifest.id + " has no earlier version to go back to", "noop");
         const v = await loadVersion(mod.manifest.id, prev.version, prev.sha256);
-        return { name: v.manifest.name, toVersion: prev.version, requested: v.manifest.permissions, diff: permissionDiff(mod.record.granted ?? [], v.manifest.permissions),
+        return { name: localized(v.manifest, "name"), toVersion: prev.version, requested: v.manifest.permissions, diff: permissionDiff(mod.record.granted ?? [], v.manifest.permissions),
           risk: "low", requiresAdmin: false, notes: ["Restores the exact bytes of " + prev.version + " that were verified earlier."], options: { id: mod.manifest.id, version: prev.version, digest: prev.sha256, from: mod.record.version } };
       },
       async commit(mod, plan) {
@@ -415,7 +415,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
     uninstall: {
       async prepare(mod) {
         if (mod.source !== "package") throw new LifecycleError(mod.manifest.id + " is built in; disable it instead", "noop");
-        return { name: mod.manifest.name, toVersion: null, requested: [], diff: permissionDiff(mod.record.granted ?? [], []), risk: "low", requiresAdmin: false,
+        return { name: localized(mod.manifest, "name"), toVersion: null, requested: [], diff: permissionDiff(mod.record.granted ?? [], []), risk: "low", requiresAdmin: false,
           notes: ["Objects this module already put on canvases stay; they are not deleted.", "Downloaded versions stay on disk so it can be installed again."] };
       },
       async commit(mod) {

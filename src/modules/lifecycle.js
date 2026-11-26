@@ -7,6 +7,7 @@
 import { randomBytes } from "node:crypto";
 import { permissionDiff, riskOf, describePermission } from "./permissions.js";
 import { sameSecret } from "../security.js";
+import { localized } from "./manifest.js";
 
 export const ACTIONS = ["enable", "disable"];
 const PLAN_TTL_MS = 15 * 60 * 1000, MAX_PLANS = 100;
@@ -80,7 +81,7 @@ export function createLifecycle({ registry, audit, admin = null, actions = {} })
       const plan = {
         fingerprint: sameChange,
         planId: "plan_" + randomBytes(9).toString("base64url"), action, module: moduleId,
-        name: details.name ?? mod?.manifest.name, fromVersion: mod?.record?.version ?? null, toVersion: details.toVersion ?? null,
+        name: details.name ?? (mod ? localized(mod.manifest, "name") : undefined), fromVersion: mod?.record?.version ?? null, toVersion: details.toVersion ?? null,
         permissions: { requested: details.requested ?? [], added: added.map(describePermission), removed: details.diff?.removed ?? [] },
         risk, requiresAdmin, notes: details.notes ?? [], dataFlow: details.dataFlow ?? null, ...(details.abi && details.abi.kind !== "none" ? { abi: details.abi } : {}), ...(details.signer ? { signer: details.signer } : {}),
         status: "pending", createdAt: new Date(now).toISOString(), expiresAt: new Date(now + PLAN_TTL_MS).toISOString(),
@@ -111,7 +112,7 @@ export function createLifecycle({ registry, audit, admin = null, actions = {} })
           const ok = await admin.verify(proof, planId);
           if (!ok) {
             audit.record({ kind: "plan.refused", module: plan.module, planId, reason: "admin" });
-            throw new LifecycleError("administrator approval is missing or wrong", "admin");
+            throw new LifecycleError("administrator approval for " + planId + " is missing, expired or wrong; approve this plan id on the server (node scripts/estampes-module.js approve " + planId + ") and confirm again", "admin");
           }
           approvedBy = ok.via ?? "admin";
         }

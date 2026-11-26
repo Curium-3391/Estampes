@@ -437,3 +437,25 @@ test("environment secret names cannot collide between module ids", async () => {
   assert.equal(await secrets.get("org.example.a-b", "api_key"), "one");
   assert.equal(await secrets.get("org.example.a.b", "api_key"), null);
 });
+
+test("#195: a reloaded Store asks for the same install again, gets the plan the administrator approved, and shows the localized name", async () => {
+  const s = await setup();
+  await s.put("callout-1", sign(v("1.0.0", { nameI18n: { "zh-TW": "標註框" } })));
+  const h = await s.boot();
+  assert.equal((await h.packages.available())[0].name, "標註框");
+  // Store widget presses Install; the administrator approves that plan on the server.
+  const first = await h.lifecycle.prepare("install", "org.example.callout", {}, { by: "store" });
+  assert.equal(h.lifecycle.publicPlan(first).name, "標註框");
+  await writeApproval(s.storage, s.key, first.planId);
+  // The widget reloads (its copy of the plan and consent are gone) and the person presses Install again.
+  const again = await h.lifecycle.prepare("install", "org.example.callout", {}, { by: "store" });
+  assert.equal(again.planId, first.planId);
+  const done = await h.lifecycle.commit(again.planId, { consent: again.consent });
+  assert.equal(done.result.state, "installed");
+  // Without an approval, the error names the plan id the administrator must approve.
+  const off = await h.lifecycle.prepare("uninstall", "org.example.callout", {}, { by: "store" });
+  assert.equal(off.name, "標註框");
+  const s2 = await setup(); await s2.put("c", sign(v("1.0.0"))); const h2 = await s2.boot();
+  const p2 = await h2.lifecycle.prepare("install", "org.example.callout", {}, { by: "store" });
+  await assert.rejects(h2.lifecycle.commit(p2.planId, { consent: p2.consent }), new RegExp("approve " + p2.planId));
+});
