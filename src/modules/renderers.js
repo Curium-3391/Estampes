@@ -14,13 +14,14 @@ renderers.set("declarative", {
 });
 
 // #86 F2: the Flow view's renderer. Its payload only maps what the drawing needs to the view's own actions (it carries no tree, code or style).
-const FLOW_ACTIONS = ["list", "get", "create", "edit", "undo", "run"];
+const FLOW_ACTIONS = ["list", "get", "create", "edit", "undo", "run"], FLOW_OPTIONAL = ["steps"]; // without `steps` the view cannot offer a step list
 function validateFlowGraph(payload, ctx) {
   const map = payload?.actions;
   if (!map || typeof map !== "object" || Array.isArray(map)) throw new Error("payload.actions must map " + FLOW_ACTIONS.join(", ") + " to actions of the view");
   for (const k of Object.keys(payload)) if (k !== "actions") throw new Error("payload." + k + " is not part of estampes.renderer.flow-graph/1");
-  for (const k of Object.keys(map)) if (!FLOW_ACTIONS.includes(k)) throw new Error("payload.actions." + k + " is not one of " + FLOW_ACTIONS.join(", "));
+  for (const k of Object.keys(map)) if (![...FLOW_ACTIONS, ...FLOW_OPTIONAL].includes(k)) throw new Error("payload.actions." + k + " is not one of " + [...FLOW_ACTIONS, ...FLOW_OPTIONAL].join(", "));
   for (const k of FLOW_ACTIONS) if (typeof map[k] !== "string" || !ctx.view.actions.includes(map[k])) throw new Error("payload.actions." + k + " must name one of the view's actions");
+  for (const k of FLOW_OPTIONAL) if (map[k] !== undefined && (typeof map[k] !== "string" || !ctx.view.actions.includes(map[k]))) throw new Error("payload.actions." + k + " must name one of the view's actions");
 }
 renderers.set("flow-graph", { schema: "estampes.renderer.flow-graph/1", validate: validateFlowGraph });
 
