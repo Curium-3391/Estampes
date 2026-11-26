@@ -2,11 +2,13 @@
 // change, run it. It joins the pieces (store, edit operations, static checks, runner) and adds nothing of its own to the contracts: a run is one
 // `router.execute` per node, so every node keeps the router's permission and validation checks.
 import { applyOps } from "./edit.js";
-import { validateFlow } from "./graph.js";
+import { validateFlow, describeNode } from "./graph.js";
+import { inputPorts, outputPorts } from "../modules/schema-compat.js";
 import { plan, runFlow } from "./run.js";
 import { FlowError } from "./store.js";
 
-const RESULT_PREVIEW = 2000, BRIEF_PREVIEW = 240;
+const RESULT_PREVIEW = 2000, BRIEF_PREVIEW = 240, MAX_STEPS = 200;
+const typeOf = (schema) => schema?.type ?? (schema?.oneOf ? "oneOf" : "?");
 
 export function createFlowService({ store, registry, router, now = () => new Date().toISOString() }) {
   const running = new Map();
@@ -26,7 +28,25 @@ export function createFlowService({ store, registry, router, now = () => new Dat
       ...(p?.ok ? { plan: p.nodes } : {}), results, running: running.has(f.id) };
   }
 
+  // What a person could add as a step: the capabilities of enabled modules that a flow can run (no document, answers at once), with the
+  // fields they take and give. Read from the manifests; `exclude` leaves out modules whose capabilities are not meant as steps.
+  function steps({ exclude = [] } = {}) {
+    const out = [];
+    for (const mod of registry.list()) {
+      if (mod.record.state !== "enabled" || exclude.includes(mod.manifest.id)) continue;
+      for (const c of mod.manifest.capabilities) {
+        const d = describeNode(registry, { module: mod.manifest.id, capability: c.id });
+        if (!d || d.target !== "none" || d.async) continue;
+        out.push({ module: d.module, capability: d.capability, title: c.title,
+          inputs: inputPorts(d.inputSchema).map((x) => ({ name: x.name, type: typeOf(x.schema), required: x.required })),
+          outputs: outputPorts(d.outputSchema).map((x) => ({ name: x.name, type: typeOf(x.schema), required: x.required })) });
+      }
+    }
+    return { steps: out.slice(0, MAX_STEPS), truncated: out.length > MAX_STEPS };
+  }
+
   return {
+    steps,
     list: () => store.list(),
     get: async (id, opts) => present(await store.read(id), opts),
     create: async ({ name, commandId, by, brief }) => present(await store.create({ name, commandId, by }), { brief }),

@@ -883,5 +883,12 @@
   "wb.flow.status.fresh": "up to date",
   "wb.flow.status.stale": "needs a run",
   "wb.flow.status.blocked": "blocked",
-  "wb.flow.status.error": "failed"
+  "wb.flow.status.error": "failed",
+  "wb.flow.addStep": "Add a step",
+  "wb.flow.pickStep": "Step to add",
+  "wb.flow.addStepGo": "Add",
+  "wb.flow.noSteps": "No module offers a capability that a flow can run yet.",
+  "wb.flow.srcNone": "— not set —",
+  "wb.flow.srcLiteral": "a value I type",
+  "wb.flow.required": "required"
 }

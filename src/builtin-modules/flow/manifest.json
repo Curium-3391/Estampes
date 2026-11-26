@@ -66,6 +66,22 @@
       }
     },
     {
+      "id": "flow_steps",
+      "title": "List available steps",
+      "titleI18n": {
+        "zh-TW": "列出可用的步驟"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "List the capabilities that can be a step of a flow (enabled modules, no document needed, answer at once) with their inputs and outputs. Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    {
       "id": "flow_create",
       "title": "Create a flow",
       "titleI18n": {
@@ -297,6 +313,7 @@
       "actions": [
         "flow_list",
         "flow_get",
+        "flow_steps",
         "flow_create",
         "flow_edit",
         "flow_undo",
@@ -312,7 +329,8 @@
             "create": "flow_create",
             "edit": "flow_edit",
             "undo": "flow_undo",
-            "run": "flow_run"
+            "run": "flow_run",
+            "steps": "flow_steps"
           }
         }
       }

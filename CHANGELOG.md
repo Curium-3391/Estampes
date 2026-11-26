@@ -4,6 +4,8 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Flow view (#86 F2b): a person can add a step (new read-only capability `flow_steps` lists what a flow can run), set each input of a step to nothing, a typed value or another step's output, and the panel remembers which flow it shows (viewer's browser storage). `steps` is an optional entry of the `flow-graph` renderer payload. Scripted-host browser tests only.
+
 - Flow view (#86 F2): built-in module `org.estampes.flow` (view over the flow service) and a second view renderer type, `flow-graph` (`estampes.renderer.flow-graph/1`), on the #85 view contract. A person sees a flow as columns of step cards with their state and results, can run it, undo, change a step's inputs and remove a step; the assistant builds flows with `edit_flow`. Scripted-host browser tests only. See docs/FLOW.md.
 - Flows you can store, edit and run (#86 F1-4): new record kind `flow` (`fl:<id>`) in the UVA record store; tools `get_flow` and `edit_flow` (create, edit by named operations with `expectedRevision`, undo, run). A run keeps per-node results only for the graph revision it started from. The revision/lock/command-id logic that model instances used is now shared (`src/records/revisioned.js`); model behaviour is unchanged. Not yet: delete a flow, Flow view. In-process tests only. See docs/FLOW.md.
 - Flow runner (#86 F1-3): `runFlow` runs a validated flow node by node through the router, recomputes only what changed (input hashes), cuts off when a result is unchanged, blocks what depends on a failed node while keeping its last good data, and stops cleanly on cancel; `plan` previews it. Library and tests only.

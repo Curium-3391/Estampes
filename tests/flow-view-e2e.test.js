@@ -3,10 +3,38 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
+import { applyOps } from "../src/flow/edit.js";
 
 const MOD = "org.estampes.flow", FID = "fl:0123456789ab";
 const ok = (data) => ({ content: [{ type: "text", text: "ok" }], structuredContent: { kind: "estampes.module_result", status: "ok", data } });
-const ACTIONS = { list: "flow_list", get: "flow_get", create: "flow_create", edit: "flow_edit", undo: "flow_undo", run: "flow_run" };
+const ACTIONS = { list: "flow_list", get: "flow_get", steps: "flow_steps", create: "flow_create", edit: "flow_edit", undo: "flow_undo", run: "flow_run" };
+
+const STEPS = [
+  { module: "org.example.rc", capability: "cutoff", title: "RC cutoff", inputs: [{ name: "r", type: "number", required: true }, { name: "c", type: "number", required: true }], outputs: [{ name: "fc", type: "number", required: true }] },
+  { module: "org.example.plot", capability: "response", title: "Response plot", inputs: [{ name: "fc", type: "number", required: true }], outputs: [{ name: "peak", type: "number", required: true }] }];
+
+// A scripted host whose flow is a real graph edited by the real edit operations (src/flow/edit.js), starting empty.
+function builder({ remembered = null } = {}) {
+  const st = { rev: 1, flow: { schema: "estampes.flow/1", nodes: [], edges: [] }, calls: [] };
+  const view = () => ({ id: FID, name: "Built", revision: st.rev, updatedAt: "2026-11-26T00:00:00Z", flow: st.flow, valid: true, order: st.flow.nodes.map((n) => n.id), plan: {}, results: {}, running: false });
+  const intercept = async (params, call) => {
+    if (params.name === "execute_module" && params.arguments.module === MOD) {
+      const { capability, params: p } = params.arguments;
+      st.calls.push([capability, p]);
+      if (capability === "flow_list") return ok({ flows: [{ id: FID, name: "Built", revision: st.rev, nodes: st.flow.nodes.length, edges: st.flow.edges.length, updatedAt: "2026-11-26T00:00:00Z" }] });
+      if (capability === "flow_steps") return ok({ steps: STEPS, truncated: false });
+      if (capability === "flow_get") return ok(view());
+      if (capability === "flow_edit") {
+        if (p.expectedRevision !== st.rev) throw new Error("changed since revision " + p.expectedRevision);
+        st.flow = applyOps(st.flow, p.ops.map(({ paramsJson, ...op }) => ({ ...op, ...(paramsJson !== undefined ? { params: JSON.parse(paramsJson) } : {}), ...(op.node && paramsJson === undefined ? {} : {}) })));
+        st.rev++;
+        return ok({ commandId: p.commandId, status: "applied", ...view() });
+      }
+    }
+    return script().intercept(params, call);
+  };
+  return { st, intercept, remembered };
+}
 
 function script({ valid = true, active = false } = {}) {
   const st = { rev: 1, r: 1000, fresh: false, last: null, calls: [] };
@@ -99,6 +127,41 @@ test("on a phone-sized touch screen the flow fits without sideways scrolling", {
       small: [...document.querySelectorAll(".fv-node, .fv-run")].map((e) => e.getBoundingClientRect().height) }));
     assert.ok(m.over <= 1, "no horizontal overflow: " + m.over);
     assert.ok(m.small.every((x) => x >= 40), JSON.stringify(m.small));
+    assert.deepEqual(ui.errors, []);
+  } finally { await s.close(); }
+});
+
+test("a person adds steps, connects an output to an input and gives another input a value", { skip: noBrowser, timeout: 120000 }, async () => {
+  const sc = builder(), { s, ui } = await open(sc);
+  try {
+    await ui.frame.locator(".fv-add-toggle").waitFor({ timeout: 30000 });
+    await ui.frame.locator(".fv-add-toggle").click();
+    await ui.frame.locator(".fv-add select").selectOption({ label: "RC cutoff — org.example.rc · cutoff" });
+    await ui.frame.locator(".fv-add-go").click();
+    await ui.frame.locator('.fv-node[data-node="cutoff"]').waitFor({ timeout: 10000 });
+    await ui.frame.locator(".fv-add-toggle").click();
+    await ui.frame.locator(".fv-add select").selectOption({ label: "Response plot — org.example.plot · response" });
+    await ui.frame.locator(".fv-add-go").click();
+    await ui.frame.locator('.fv-node[data-node="response"]').waitFor({ timeout: 10000 });
+    assert.deepEqual(sc.st.flow.nodes.map((n) => n.id), ["cutoff", "response"]);
+    // response.fc <- cutoff.fc
+    await ui.frame.locator('.fv-input[data-port="fc"] select').selectOption("cutoff.fc");
+    await ui.page.waitForFunction(() => document.querySelector("iframe").contentDocument.querySelectorAll(".fv-edges li").length === 1, null, { timeout: 10000 });
+    assert.deepEqual(sc.st.flow.edges, [{ from: { node: "cutoff", port: "fc" }, to: { node: "response", port: "fc" } }]);
+    // cutoff.r as a typed value
+    await ui.frame.locator('.fv-node[data-node="cutoff"]').click();
+    await ui.frame.locator('.fv-input[data-port="r"] select').selectOption("=literal");
+    await ui.page.waitForFunction(() => document.querySelector("iframe").contentDocument.querySelector('.fv-input[data-port="r"] input'), null, { timeout: 10000 });
+    assert.deepEqual(sc.st.flow.nodes[0].params, { r: 0 });
+    const r = ui.frame.locator('.fv-input[data-port="r"] input');
+    await r.fill("1000"); await r.dispatchEvent("change");
+    await ui.page.waitForFunction(() => document.querySelector("iframe").contentDocument.querySelector(".fv-state")?.textContent.includes("5"), null, { timeout: 10000 });
+    assert.deepEqual(sc.st.flow.nodes[0].params, { r: 1000 });
+    // disconnect again: not set
+    await ui.frame.locator('.fv-node[data-node="response"]').click();
+    await ui.frame.locator('.fv-input[data-port="fc"] select').selectOption("");
+    await ui.page.waitForFunction(() => !document.querySelector("iframe").contentDocument.querySelector(".fv-edges"), null, { timeout: 10000 });
+    assert.deepEqual(sc.st.flow.edges, []);
     assert.deepEqual(ui.errors, []);
   } finally { await s.close(); }
 });

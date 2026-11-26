@@ -883,5 +883,12 @@
   "wb.flow.status.fresh": "最新",
   "wb.flow.status.stale": "需要執行",
   "wb.flow.status.blocked": "被擋住",
-  "wb.flow.status.error": "失敗"
+  "wb.flow.status.error": "失敗",
+  "wb.flow.addStep": "加入步驟",
+  "wb.flow.pickStep": "要加入的步驟",
+  "wb.flow.addStepGo": "加入",
+  "wb.flow.noSteps": "目前沒有模組提供流程可以執行的能力。",
+  "wb.flow.srcNone": "— 未設定 —",
+  "wb.flow.srcLiteral": "我自己輸入的值",
+  "wb.flow.required": "必填"
 }
