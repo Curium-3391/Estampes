@@ -207,9 +207,9 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
         scopes: (Array.isArray(k.scopes) && k.scopes.length ? k.scopes : []).map(String).slice(0, 8) });
     }
   };
-  // ESTAMPES_MODULE_V2=on allows estampes.module/2 packages (UVA Phase 5A). It is read each time a
-  // package is checked, so it applies to a running host; `moduleV2` overrides it (tests).
-  const verifyOptions = () => ({ trusted, allowUnsigned, coreVersion, reserved, v2: moduleV2 ?? String(process.env.ESTAMPES_MODULE_V2 ?? "").toLowerCase() === "on" });
+  // estampes.module/2 packages are allowed unless ESTAMPES_MODULE_V2 is off, 0 or false (UVA Phase 5A; on by default since U2). It is read
+  // each time a package is checked, so it applies to a running host; `moduleV2` overrides it (tests).
+  const verifyOptions = () => ({ trusted, allowUnsigned, coreVersion, reserved, v2: moduleV2 ?? !["off", "0", "false", "no"].includes(String(process.env.ESTAMPES_MODULE_V2 ?? "").trim().toLowerCase()) });
   const lock = { async read() { return readJson(lockFile, { schema: "estampes.module-lock/1", modules: {} }); },
     async write(data) { await mkdir(dir, { recursive: true }); await atomicWrite(lockFile, JSON.stringify(data, null, 2)); } };
   const versionDir = (id, version) => join(store, id, version);

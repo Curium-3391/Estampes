@@ -191,6 +191,10 @@ const CapabilityV2 = Capability.omit({ permissions: true, target: true }).extend
   // #85 V1: the model types (manifest `models`) this capability may write. It returns `models` in its output instead of `operations`; the two
   // cannot be mixed in one answer. A capability that writes needs module.storage.write.
   writes: z.array(z.string().regex(MODEL_ID)).max(8).optional(),
+  // Declarative runtime only (module/2): instead of `operations`, a template for the model changes this capability makes. Entries have the
+  // same shape as a result's `models` ({ref, model, value} for one new instance, or {id, model, expectedRevision, value} for updates), with
+  // {"$param": name} placeholders filled from the validated input. The router checks the result like any other: `writes`, revision, schema.
+  models: z.array(z.record(z.string(), z.unknown())).min(1).max(8).optional(),
   // #86 F1: the shape of `data` in this capability's result, in the same bounded schema subset as inputSchema (an object schema, closed, strings
   // and arrays bounded). It is what lets a Flow connect one capability's output to another's input with a type check. A capability that does
   // not declare it cannot be an upstream node. Declared, it is enforced: a result whose data does not fit is refused as an `output` error.
@@ -337,8 +341,19 @@ export function validateManifest(raw, { coreVersion, v2 = false, builtin = false
       if (JSON.stringify(c.request).length > 16 * 1024) throw new ManifestError(where + ".request: larger than 16 KB");
     }
     if (c.response?.operations && JSON.stringify(c.response.operations).length > 64 * 1024) throw new ManifestError(where + ".response.operations: larger than 64 KB");
-    if ((m.runtime.kind === "declarative") !== !!c.operations) {
-      throw new ManifestError(where + (c.operations ? ": operations are only for the declarative runtime" : ": the declarative runtime needs operations"));
+    if (c.models && (m.runtime.kind !== "declarative" || c.operations)) throw new ManifestError(where + ".models: only a declarative capability may have a models template, and not together with operations");
+    if ((m.runtime.kind === "declarative") !== !!(c.operations || c.models)) {
+      throw new ManifestError(where + (c.operations ? ": operations are only for the declarative runtime" : ": the declarative runtime needs operations (or, for module/2, models)"));
+    }
+    if (c.models) {
+      if (c.target !== "none") throw new ManifestError(where + ".models: a capability that writes models works on no document (target none)");
+      if (JSON.stringify(c.models).length > 16 * 1024) throw new ManifestError(where + ".models: larger than 16 KB");
+      c.models.forEach((t, j) => {
+        if (typeof t.model !== "string" || !(c.writes ?? []).includes(t.model)) throw new ManifestError(where + ".models[" + j + "].model: must be a literal model id listed in this capability's writes");
+        const ok = Object.keys(t).every((k) => ["model", "value", "ref", "id", "expectedRevision"].includes(k)) && (t.ref !== undefined) !== (t.id !== undefined) && t.value !== undefined && ((t.id !== undefined) === (t.expectedRevision !== undefined));
+        if (!ok) throw new ManifestError(where + ".models[" + j + "]: use {ref, model, value} for a new instance or {id, model, expectedRevision, value} for an update");
+      });
+      if (!c.writes?.length) throw new ManifestError(where + ".models: list the models it writes in writes");
     }
     if (c.operations && JSON.stringify(c.operations).length > 64 * 1024) throw new ManifestError(where + ".operations: larger than 64 KB");
   });
