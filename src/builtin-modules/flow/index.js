@@ -24,12 +24,13 @@ const cmd = (given) => given ?? "cmd_" + randomBytes(8).toString("hex");
 export async function run(capability, p) {
   const f = need();
   switch (capability) {
-    case "flow_list": { const list = await f.list(); return { data: { flows: list }, summary: list.length + " flow(s)" }; }
+    case "flow_list": { const list = await f.list({ includeArchived: p.includeArchived === true }); return { data: { flows: list }, summary: list.length + " flow(s)" }; }
     case "flow_steps": { const r = f.steps({ exclude: [manifest.id] }); return { data: r, summary: r.steps.length + " step(s)" }; }
     case "flow_get": return { data: await f.get(p.id, { brief: true }) };
     case "flow_create": return { data: await f.create({ name: p.name, commandId: cmd(p.commandId), by: "person" }) };
     case "flow_edit": { const id = cmd(p.commandId); return { data: { commandId: id, ...(await f.edit({ id: p.id, expectedRevision: p.expectedRevision, commandId: id, ops: p.ops.map(opOf), by: "person", brief: true })) } }; }
     case "flow_undo": return { data: await f.undo({ id: p.id, commandId: p.of, undoCommandId: cmd(p.commandId), by: "person", brief: true }) };
+    case "flow_archive": return { data: await f.archive({ id: p.id, archived: p.archived, brief: true }) };
     case "flow_run": return { data: await f.run({ id: p.id, brief: true }) };
     default: throw new Error("unknown capability " + capability);
   }

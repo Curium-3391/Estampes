@@ -5,7 +5,7 @@
 // The assistant builds flows with edit_flow; the person sees and edits the same graph. Every action is one of the view's own capabilities through execute_module, so every check
 // there applies. Nothing the person is doing (the selected node, a half-typed value) is stored.
 const fv=new Map();// panelId -> { flows, id, data, busy, msg, kind, sel, last, loaded }
-const fvState=id=>{let s=fv.get(id);if(!s){s={flows:[],id:null,data:null,busy:false,msg:"",kind:"",sel:null,last:null,loaded:false,steps:null,adding:false,pick:""};fv.set(id,s);}return s;};
+const fvState=id=>{let s=fv.get(id);if(!s){s={flows:[],id:null,data:null,busy:false,msg:"",kind:"",sel:null,last:null,loaded:false,steps:null,adding:false,pick:"",showArchived:false};fv.set(id,s);}return s;};
 const fvCmd=()=>"ui_"+Math.random().toString(16).slice(2,14);
 async function fvCall(p,def,key,params){
  const r=await wbCall("execute_module",{module:p.module,capability:def.renderer.payload.actions[key],params});
@@ -38,7 +38,7 @@ async function fvLoad(p){
  const def=wb.moduleViews?.[p.panelId],s=fvState(p.panelId);
  if(!def||def.unavailable||p.moduleState!=="enabled")return;
  try{
-  const list=(await fvCall(p,def,"list",{})).flows;
+  const list=(await fvCall(p,def,"list",s.showArchived?{includeArchived:true}:{})).flows;
   if(!s.loaded&&!s.id)s.id=fvRemembered(p);
   const id=s.id&&list.some(f=>f.id===s.id)?s.id:list.slice().sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]?.id??null;
   const data=id?await fvCall(p,def,"get",{id}):null;
@@ -70,7 +70,7 @@ const fvNodeText=(n,r)=>{
 };
 // The input element for one literal of a step.
 function fvEditor(p,def,s,node,k,uid){
- const params=node.params??{},v=params[k],off=s.busy||p.moduleState!=="enabled";
+ const params=node.params??{},v=params[k],off=s.busy||p.moduleState!=="enabled"||!!s.data?.archived;
  const set=val=>fvEdit(p,def,[{op:"set_params",id:node.id,paramsJson:JSON.stringify({...params,[k]:val})}]);
  let inp;
  if(typeof v==="boolean"){inp=h("input",{type:"checkbox",id:uid,disabled:off,onchange:e=>set(e.target.checked)});inp.checked=v;}
@@ -83,7 +83,7 @@ const fvUid=(p,node,k)=>"fv-"+p.panelId.replace(/[^a-z0-9]/gi,"")+"-"+node.id+"-
 // A step's inputs. For each one: not set, a value typed here, or another step's output. A step whose module is not offered any more still
 // shows (and keeps editing) the literals it has.
 function fvParams(p,def,s,node){
- const flow=s.data.flow,info=fvStepOf(s,node),params=node.params??{},off=s.busy||p.moduleState!=="enabled";
+ const flow=s.data.flow,info=fvStepOf(s,node),params=node.params??{},off=s.busy||p.moduleState!=="enabled"||!!s.data?.archived;
  if(!info){
   const keys=Object.keys(params);
   if(!keys.length)return h("p",{class:"wb-note"},t("wb.flow.noParams"));
@@ -116,7 +116,7 @@ function fvParams(p,def,s,node){
 }
 // The "add a step" row: choose from what the enabled modules offer; the new step starts with no inputs set.
 function fvAdder(p,def,s){
- const off=s.busy||p.moduleState!=="enabled",steps=s.steps??[];
+ const off=s.busy||p.moduleState!=="enabled"||!!s.data?.archived,steps=s.steps??[];
  if(!steps.length)return h("p",{class:"wb-note"},t("wb.flow.noSteps"));
  const key=x=>x.module+" "+x.capability;
  if(!s.pick||!steps.some(x=>key(x)===s.pick))s.pick=key(steps[0]);
@@ -134,14 +134,16 @@ function fvDraw(p){
  const note=text=>body.replaceChildren(h("div",{class:"mv fv"},h("p",{class:"wb-note mv-note",role:"status"},text)));
  if(!def||def.unavailable)return note(t("wb.view.unavailable"));
  if(p.moduleState!=="enabled")return note(t("wb.view.moduleOff"));
- const d=s.data,off=s.busy;
+ const d=s.data,off=s.busy,ro=off||!!d?.archived;
  const bar=h("div",{class:"mv-bar fv-bar"},
   h("select",{"aria-label":t("wb.flow.pick"),disabled:off||!s.flows.length,onchange:async e=>{s.id=e.target.value;fvRemember(p,s.id);s.sel=null;s.last=null;s.data=null;await fvLoad(p);}},
-   s.flows.map(f=>h("option",{value:f.id,selected:f.id===s.id},f.name))),
+   s.flows.map(f=>h("option",{value:f.id,selected:f.id===s.id},f.name+(f.archived?" ("+t("wb.flow.archivedTag")+")":"")))),
   h("button",{class:"wb-mini mv-btn",type:"button",disabled:off,onclick:()=>fvDo(p,def,async()=>{const r=await fvCall(p,def,"create",{name:t("wb.flow.newName",{n:s.flows.length+1}),commandId:fvCmd()});s.id=r.id;fvRemember(p,r.id);s.sel=null;s.last=null;return r;})},t("wb.flow.new")),
-  def.renderer.payload.actions.steps?h("button",{class:"wb-mini mv-btn fv-add-toggle",type:"button","aria-expanded":String(s.adding),disabled:off||!d,onclick:async()=>{s.adding=!s.adding;if(s.adding)await fvLoadSteps(p,def);fvDraw(p);}},"+ "+t("wb.flow.addStep")):null,
-  h("button",{class:"wb-mini mv-btn fv-run",type:"button",disabled:off||!d||!d.valid,onclick:()=>fvDo(p,def,()=>fvCall(p,def,"run",{id:s.id}),r=>t("wb.flow.ran",{ran:r.ran.length,reused:r.reused.length,failed:r.failed.length,blocked:r.blocked.length})+(r.resultsKept?"":" "+t("wb.flow.notKept")))},"▶ "+t("wb.flow.run")),
-  h("button",{class:"wb-mini mv-btn",type:"button",disabled:off||!s.last,onclick:()=>fvDo(p,def,async()=>{const r=await fvCall(p,def,"undo",{id:s.id,of:s.last});s.last=null;return r;})},"↶ "+t("wb.flow.undo")),
+  def.renderer.payload.actions.steps?h("button",{class:"wb-mini mv-btn fv-add-toggle",type:"button","aria-expanded":String(s.adding),disabled:ro||!d,onclick:async()=>{s.adding=!s.adding;if(s.adding)await fvLoadSteps(p,def);fvDraw(p);}},"+ "+t("wb.flow.addStep")):null,
+  def.renderer.payload.actions.archive&&d?h("button",{class:"wb-mini mv-btn fv-archive",type:"button",disabled:s.busy||p.moduleState!=="enabled",onclick:()=>fvDo(p,def,async()=>{const r=await fvCall(p,def,"archive",{id:s.id,archived:!d.archived});s.sel=null;s.last=null;return r;})},d.archived?t("wb.flow.restore"):t("wb.flow.archive")):null,
+  h("button",{class:"wb-mini mv-btn fv-run",type:"button",disabled:off||!d||!d.valid||d.archived,onclick:()=>fvDo(p,def,()=>fvCall(p,def,"run",{id:s.id}),r=>t("wb.flow.ran",{ran:r.ran.length,reused:r.reused.length,failed:r.failed.length,blocked:r.blocked.length})+(r.resultsKept?"":" "+t("wb.flow.notKept")))},"▶ "+t("wb.flow.run")),
+  h("button",{class:"wb-mini mv-btn",type:"button",disabled:ro||!s.last,onclick:()=>fvDo(p,def,async()=>{const r=await fvCall(p,def,"undo",{id:s.id,of:s.last});s.last=null;return r;})},"↶ "+t("wb.flow.undo")),
+  def.renderer.payload.actions.archive?h("label",{class:"fv-showarch"},h("input",{type:"checkbox",class:"fv-showarch-box",checked:s.showArchived,onchange:e=>{s.showArchived=e.target.checked;s.forceDraw=true;fvLoad(p).finally(()=>{s.forceDraw=false;});}}),t("wb.flow.showArchived")):null,
   h("button",{class:"wb-mini mv-refresh",type:"button",title:t("wb.view.refresh"),"aria-label":t("wb.view.refresh"),onclick:async()=>{await fvLoadSteps(p,def);fvLoad(p);}},"↻"));
  const parts=[bar];
  if(!s.loaded)parts.push(h("p",{class:"wb-note mv-note",role:"status"},"…"));
@@ -168,7 +170,7 @@ function fvDraw(p){
     fvParams(p,def,s,sel),
     r?.message?h("p",{class:"wb-note","data-kind":"error"},r.message):null,
     r?.data!==undefined||r?.dataPreview?h("pre",{class:"fv-result"},r.data!==undefined?JSON.stringify(r.data,null,1):r.dataPreview):null,
-    h("button",{class:"wb-mini mv-btn",type:"button",disabled:off,onclick:()=>{const id=sel.id;s.sel=null;fvEdit(p,def,[{op:"remove_node",id}]);}},t("wb.flow.remove"))));
+    h("button",{class:"wb-mini mv-btn",type:"button",disabled:ro,onclick:()=>{const id=sel.id;s.sel=null;fvEdit(p,def,[{op:"remove_node",id}]);}},t("wb.flow.remove"))));
   }
  }
  parts.push(h("p",{class:"wb-note mv-note","data-kind":s.kind,role:"status","aria-live":"polite"},s.msg));

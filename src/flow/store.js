@@ -10,6 +10,9 @@ import { emptyState } from "./run.js";
 import { clone, bytes, sigOf, trimHistory, claimStore, createLocks, staleOf } from "../records/revisioned.js";
 
 export const FLOW_RECORD_SCHEMA = "estampes.flow-record/1";
+// `total` is the most flows in use; archived ones (hidden, kept) do not count against it, but all records together stay under `total * ARCHIVE_FACTOR`
+// because no record can be removed from the store yet.
+const ARCHIVE_FACTOR = 4;
 export const FLOW_LIMITS = { total: 32, flowBytes: 65536, resultBytes: 262144, nameChars: 80 };
 
 export class FlowError extends Error {
@@ -42,9 +45,11 @@ export function createFlowStore({ records, total = FLOW_LIMITS.total, now = () =
     return name.trim();
   };
   const need = (r) => { if (!r) throw new FlowError("no such flow", "not-found"); return r; };
-  const view = (r) => ({ id: r.id, name: r.name, revision: r.revision, flow: clone(r.flow), results: clone(r.results), updatedAt: r.updatedAt });
+  const view = (r) => ({ id: r.id, name: r.name, revision: r.revision, flow: clone(r.flow), results: clone(r.results), updatedAt: r.updatedAt, archived: !!r.archived });
   const idOk = (id) => typeof id === "string" && /^fl:[0-9a-f]{12}$/.test(id);
   const read = async (id) => need(idOk(id) ? await records.read("flow", id) : null);
+  // A change to the graph is for a flow in use: an archived one is restored first.
+  const live = (r) => { if (r.archived) throw new FlowError("this flow is archived; restore it first", "archived"); return r; };
 
   return {
     async create({ name, flow = emptyFlow(), commandId, by = "assistant" }) {
@@ -59,7 +64,10 @@ export function createFlowStore({ records, total = FLOW_LIMITS.total, now = () =
             return view(r);
           }
         }
-        if (ids.length >= total) throw new FlowError("the store holds the most flows it allows (" + total + ")", "limit");
+        if (ids.length >= total * ARCHIVE_FACTOR) throw new FlowError("the store holds the most flows it can keep (" + total * ARCHIVE_FACTOR + ", archived ones included)", "limit");
+        let active = 0;
+        for (const id of ids) if (!(await records.read("flow", id))?.archived) active++;
+        if (active >= total) throw new FlowError("the store holds the most flows it allows (" + total + "); archive one first", "limit");
         const id = await fresh(), at = now();
         const record = { schema: FLOW_RECORD_SCHEMA, id, name: nm, revision: 1, createdAt: at, updatedAt: at, flow: graph, results: emptyState(),
           history: [{ revision: 1, commandId: commandId ?? null, by, at, kind: "create", sig: sigOf({ name: nm, flow: graph }) }] };
@@ -70,12 +78,12 @@ export function createFlowStore({ records, total = FLOW_LIMITS.total, now = () =
 
     async read(id) { return view(await read(id)); },
 
-    // Every flow, without graphs.
-    async list() {
+    // Every flow in use, without graphs (archived ones too with `includeArchived`).
+    async list({ includeArchived = false } = {}) {
       const out = [];
       for (const id of await records.list("flow")) {
         const r = await records.read("flow", id);
-        if (r) out.push({ id: r.id, name: r.name, revision: r.revision, nodes: r.flow.nodes.length, edges: r.flow.edges.length, updatedAt: r.updatedAt });
+        if (r && (includeArchived || !r.archived)) out.push({ id: r.id, name: r.name, revision: r.revision, nodes: r.flow.nodes.length, edges: r.flow.edges.length, updatedAt: r.updatedAt, ...(r.archived ? { archived: true } : {}) });
       }
       return out;
     },
@@ -95,6 +103,7 @@ export function createFlowStore({ records, total = FLOW_LIMITS.total, now = () =
       const graph = checkGraph(flow);
       return withLocks([id], async () => {
         const r = await read(id), done = r.history.find((h) => h.commandId === commandId && h.kind === "write");
+        if (!done) live(r);
         if (done) {
           if (done.sig !== sigOf(request)) throw new FlowError("the command id " + commandId + " was used for a different change", "duplicate-command");
           return { status: "already-applied", flow: view(r) };
@@ -114,6 +123,7 @@ export function createFlowStore({ records, total = FLOW_LIMITS.total, now = () =
       if (!undoCommandId) throw new FlowError("an undo needs its own command id", "input");
       return withLocks([id], async () => {
         const r = await read(id), mine = r.history.find((h) => h.commandId === commandId);
+        live(r);
         if (!mine) throw new FlowError("no change with command id " + commandId + " in this flow's history", "not-found");
         if (r.history.some((h) => h.commandId === undoCommandId && h.kind === "undo")) return { status: "already-applied", flow: view(r) };
         if (mine.kind !== "write") throw new FlowError("a creation cannot be undone", "unsupported");
@@ -122,6 +132,25 @@ export function createFlowStore({ records, total = FLOW_LIMITS.total, now = () =
         const next = { ...r, revision: r.revision + 1, updatedAt: at, flow: back,
           history: trimHistory([...r.history, { revision: r.revision + 1, commandId: undoCommandId, by, at, kind: "undo", of: commandId, before: r.flow }], bytes(back)) };
         await records.writeMany([{ kind: "flow", id, value: next, line: { kind: "undo", commandId: undoCommandId, of: commandId, revision: next.revision } }]);
+        return { status: "applied", flow: view(next) };
+      });
+    },
+
+    // Hides a flow from the list and from use (archived: true), or brings it back (false). Nothing is lost: the graph, its history and results stay as
+    // they were, and the revision does not change. Setting what it already is changes nothing, so a retry is harmless.
+    async archive({ id, archived }) {
+      if (typeof archived !== "boolean") throw new FlowError("archived is true or false", "input");
+      return withLocks([id], async () => {
+        const r = await read(id);
+        if (!!r.archived === archived) return { status: "unchanged", flow: view(r) };
+        if (!archived) {
+          let active = 0;
+          for (const other of await records.list("flow")) if (!(await records.read("flow", other))?.archived) active++;
+          if (active >= total) throw new FlowError("the store holds the most flows it allows (" + total + "); archive another first", "limit");
+        }
+        const next = { ...r, updatedAt: now() };
+        if (archived) next.archived = true; else delete next.archived;
+        await records.writeMany([{ kind: "flow", id, value: next, line: { kind: archived ? "archive" : "restore", revision: r.revision } }]);
         return { status: "applied", flow: view(next) };
       });
     },

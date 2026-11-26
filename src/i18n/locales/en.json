@@ -890,5 +890,9 @@
   "wb.flow.noSteps": "No module offers a capability that a flow can run yet.",
   "wb.flow.srcNone": "— not set —",
   "wb.flow.srcLiteral": "a value I type",
-  "wb.flow.required": "required"
+  "wb.flow.required": "required",
+  "wb.flow.archive": "Archive",
+  "wb.flow.restore": "Restore",
+  "wb.flow.showArchived": "Show archived",
+  "wb.flow.archivedTag": "archived"
 }

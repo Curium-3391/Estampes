@@ -33,12 +33,16 @@
       },
       "target": "none",
       "needs": [],
-      "description": "List the stored flows (id, name, revision, node and edge counts). Read-only.",
+      "description": "List the stored flows (id, name, revision, node and edge counts); archived ones only with includeArchived. Read-only.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
         "required": [],
-        "properties": {}
+        "properties": {
+          "includeArchived": {
+            "type": "boolean"
+          }
+        }
       }
     },
     {
@@ -243,6 +247,34 @@
       }
     },
     {
+      "id": "flow_archive",
+      "title": "Archive or restore a flow",
+      "titleI18n": {
+        "zh-TW": "封存或還原流程"
+      },
+      "target": "none",
+      "needs": [],
+      "description": "Hide a flow (archived: true) or bring it back (false). Nothing is lost; an archived flow cannot be edited or run.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "archived"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fl:[0-9a-f]{12}$",
+            "maxLength": 15
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
       "id": "flow_undo",
       "title": "Undo a flow edit",
       "titleI18n": {
@@ -316,6 +348,7 @@
         "flow_steps",
         "flow_create",
         "flow_edit",
+        "flow_archive",
         "flow_undo",
         "flow_run"
       ],
@@ -330,7 +363,8 @@
             "edit": "flow_edit",
             "undo": "flow_undo",
             "run": "flow_run",
-            "steps": "flow_steps"
+            "steps": "flow_steps",
+            "archive": "flow_archive"
           }
         }
       }

@@ -35,7 +35,7 @@ function fakeService() {
     async syncRecord({ key, value, seq, log }) { held.set(key, { value, seq, log, valueHash: hashJson(value) }); return { status: "created", sourceHash: hashJson(value), logHash: hashJson(log ?? []), seq }; },
   };
 }
-async function setup(t) {
+async function setup(t, { total } = {}) {
   process.env.ESTAMPES_MODULE_V2 = "on";
   const storage = await mkdtemp(join(tmpdir(), "flow-store-"));
   t.after(() => rm(storage, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }));
@@ -52,7 +52,7 @@ async function setup(t) {
   for (const id of [RC, PLOT]) { const p = await host.lifecycle.prepare("enable", id); await host.lifecycle.commit(p.planId, { consent: p.consent }); }
   const records = await createRecordStore({ service: fakeService(), storageDir: storage, idleMs: 600000, retryEveryMs: 0 });
   t.after(() => records.close());
-  const store = createFlowStore({ records });
+  const store = createFlowStore({ records, ...(total ? { total } : {}) });
   host.flows = createFlowService({ store, registry: host.registry, router: host.router });
   const tools = new Map();
   registerModuleTools({ registerTool: (name, spec, handler) => tools.set(name, handler), registerResource() {} },
@@ -190,4 +190,33 @@ test("with the real UVA service: a flow and its results survive a restart", asyn
   assert.equal(r.flow.nodes[0].id, "rc1");
   assert.equal(r.results.nodes.rc1.data.fc, 1);
   assert.equal((await b.store.undo({ id: f.id, commandId: "e1", undoCommandId: "u1" })).flow.revision, 3, "history survived too");
+});
+
+test("archive hides a flow and keeps it whole; it cannot be edited or run until restored; it frees room under the limit", async (t) => {
+  const s = await setup(t, { total: 2 });
+  const mk = async (name) => (await s.tool("edit_flow", { action: "create", name })).structuredContent;
+  const a = await mk("A"), b = await mk("B");
+  await s.tool("edit_flow", { action: "edit", id: a.id, expectedRevision: 1, ops: BUILD });
+  await assert.rejects(s.flows.create({ name: "C" }), /archive one first/);
+  const gone = await s.tool("edit_flow", { action: "archive", id: a.id });
+  assert.equal(gone.structuredContent.archived, true);
+  assert.equal(gone.structuredContent.revision, 2, "archiving is not a change of the graph");
+  assert.deepEqual((await s.tool("get_flow", {})).structuredContent.flows.map((f) => f.name), ["B"]);
+  assert.deepEqual((await s.tool("get_flow", { includeArchived: true })).structuredContent.flows.map((f) => f.name).sort(), ["A", "B"]);
+  assert.equal((await s.tool("get_flow", { id: a.id })).structuredContent.flow.nodes.length, 3, "an archived flow can still be read");
+  await s.tool("edit_flow", { action: "archive", id: a.id }); // again: nothing changes
+  const c = await mk("C");
+  assert.match(c.id, /^fl:/);
+  const refused = await s.tool("edit_flow", { action: "edit", id: a.id, expectedRevision: 2, ops: [{ op: "remove_node", id: "label" }] });
+  assert.match(refused.content[0].text, /archived; restore it first/);
+  assert.match((await s.tool("edit_flow", { action: "run", id: a.id })).content[0].text, /archived; restore it first/);
+  assert.equal(s.calls.length, 0);
+  // Restoring needs room: B and C are in use.
+  assert.match((await s.tool("edit_flow", { action: "restore", id: a.id })).content[0].text, /archive another first/);
+  await s.tool("edit_flow", { action: "archive", id: b.id });
+  const back = await s.tool("edit_flow", { action: "restore", id: a.id });
+  assert.equal(back.structuredContent.archived, undefined);
+  assert.equal(back.structuredContent.flow.nodes.length, 3);
+  const ran = await s.tool("edit_flow", { action: "run", id: a.id });
+  assert.deepEqual(ran.structuredContent.ran, ["rc1", "plot", "label"]);
 });

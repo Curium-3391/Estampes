@@ -24,7 +24,7 @@ export function createFlowService({ store, registry, router, now = () => new Dat
       results[id] = { status: r.status, revision: r.revision, at: r.at, ...(r.code ? { code: r.code, message: r.message } : {}), ...(r.by ? { by: r.by } : {}),
         ...(data === undefined ? {} : data.length <= cut ? { data: r.data } : { dataPreview: data.slice(0, cut), truncated: true }) };
     }
-    return { id: f.id, name: f.name, revision: f.revision, updatedAt: f.updatedAt, flow: f.flow, valid: checked.ok, ...(checked.ok ? { order: checked.order } : { errors: checked.errors.slice(0, 20) }),
+    return { id: f.id, name: f.name, revision: f.revision, updatedAt: f.updatedAt, ...(f.archived ? { archived: true } : {}), flow: f.flow, valid: checked.ok, ...(checked.ok ? { order: checked.order } : { errors: checked.errors.slice(0, 20) }),
       ...(p?.ok ? { plan: p.nodes } : {}), results, running: running.has(f.id) };
   }
 
@@ -47,7 +47,13 @@ export function createFlowService({ store, registry, router, now = () => new Dat
 
   return {
     steps,
-    list: () => store.list(),
+    list: (opts) => store.list(opts),
+    // Archive (hide, keep) or restore a flow. Not while it runs.
+    async archive({ id, archived, brief }) {
+      if (running.has(id)) throw new FlowError("this flow is running; archive it when the run is done", "busy");
+      const r = await store.archive({ id, archived });
+      return { status: r.status, ...present(r.flow, { brief }) };
+    },
     get: async (id, opts) => present(await store.read(id), opts),
     create: async ({ name, commandId, by, brief }) => present(await store.create({ name, commandId, by }), { brief }),
     async edit({ id, expectedRevision, commandId, ops, by, brief }) {
@@ -66,6 +72,7 @@ export function createFlowService({ store, registry, router, now = () => new Dat
     async run({ id, signal = null, brief = false }) {
       if (running.has(id)) throw new FlowError("this flow is already running", "busy");
       const cur = await store.read(id);
+      if (cur.archived) throw new FlowError("this flow is archived; restore it first", "archived");
       const checked = validateFlow(cur.flow, registry);
       if (!checked.ok) throw new FlowError("the flow cannot run: " + checked.errors.slice(0, 3).map((e) => e.path + " " + e.message).join("; "), "invalid", { errors: checked.errors.slice(0, 20) });
       running.set(id, true);

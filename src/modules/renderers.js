@@ -14,7 +14,7 @@ renderers.set("declarative", {
 });
 
 // #86 F2: the Flow view's renderer. Its payload only maps what the drawing needs to the view's own actions (it carries no tree, code or style).
-const FLOW_ACTIONS = ["list", "get", "create", "edit", "undo", "run"], FLOW_OPTIONAL = ["steps"]; // without `steps` the view cannot offer a step list
+const FLOW_ACTIONS = ["list", "get", "create", "edit", "undo", "run"], FLOW_OPTIONAL = ["steps", "archive"]; // without them the view cannot offer a step list or archiving
 function validateFlowGraph(payload, ctx) {
   const map = payload?.actions;
   if (!map || typeof map !== "object" || Array.isArray(map)) throw new Error("payload.actions must map " + FLOW_ACTIONS.join(", ") + " to actions of the view");
