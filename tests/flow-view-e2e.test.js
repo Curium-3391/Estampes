@@ -103,7 +103,7 @@ test("a flow is drawn in columns by dependency; a person changes an input and ru
     await ui.frame.locator('.fv-node[data-status="fresh"]').first().waitFor({ timeout: 10000 });
     assert.equal(await ui.frame.locator('.fv-node[data-status="fresh"]').count(), 3);
     assert.match(await ui.frame.locator('.fv-node[data-node="label"] .fv-out').textContent(), /peak 1/);
-    await ui.frame.getByRole("button", { name: /Undo|復原/ }).click();
+    await ui.frame.locator("button.mv-btn").filter({ hasText: /Undo|復原/ }).click();
     await ui.page.waitForFunction(() => document.querySelector("iframe").contentDocument.querySelector('.fv-node[data-node="rc1"]'), null, { timeout: 10000 });
     assert.ok(sc.st.calls.some(([c, p]) => c === "flow_undo" && p.of === edit[1].commandId), "undo names the edit it undoes");
     assert.deepEqual(ui.errors, []);
