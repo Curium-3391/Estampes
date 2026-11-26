@@ -123,6 +123,7 @@ export const declarativeRuntime = {
   kind: "declarative",
   async run(mod, capability, params) {
     const cap = mod.manifest.capabilities.find((c) => c.id === capability);
+    if (cap.models) return { operations: [], models: fillTemplate(cap.models, params), summary: cap.title ?? capability, method: "declarative template" };
     return { operations: fillTemplate(cap.operations, params), summary: cap.title ?? capability, method: "declarative template" };
   },
 };

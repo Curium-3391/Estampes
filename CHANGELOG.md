@@ -4,6 +4,8 @@ The version in `package.json` is the single source of truth. Earlier milestone d
 
 ## Unreleased
 
+- Package modules can keep data (U2 of the sandboxed-view plan): a declarative `estampes.module/2` capability may have a `models` template instead of `operations`, so a signed package writes its own model instances through the router's existing checks (`writes`, revision, schema, size). Also, `estampes.module/2` packages are now **allowed by default**; set `ESTAMPES_MODULE_V2=off` to turn them off again. Installing still needs a trusted signature, consent and the administrator's approval. In-process tests only.
+
 - Store plans (#195, rest): plans for package installs, updates, rollbacks and uninstalls (and the inbox list) show the module's localized name (`nameI18n`) like the catalog does, and a refused administrator approval names the plan id to approve. The plan reuse that keeps an approval valid across a widget reload was already in place.
 
 - Archive flows (#86): `edit_flow` `archive` / `restore` (and the Flow view's Archive button and "show archived" list) hide a flow without losing it; archived flows do not count against the 32-flow limit (all flow records together are capped at 128, since the record store cannot remove a record yet) and cannot be edited or run until restored. `get_flow` lists archived flows with `includeArchived`. Real deletion is not done. Scripted-host and in-process tests only.

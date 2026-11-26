@@ -2,7 +2,7 @@
 
 How a module keeps its own data (**models**), shows it as a panel (**views**), and links it to what is drawn on a canvas. This is the guide; the exact rules are in [Modules](../MODULES.md) and [Surfaces](../SURFACES.md).
 
-**Who can use this today.** Only a module whose runtime can return `models` can write data, and that is the **built-in** runtime. Declarative and http modules answer with scene operations only, and the WebAssembly runtime is not available for `estampes.module/2`. So this guide describes the contract, and the working examples are the tests named below (invented modules, run in-process and in a fake-host browser, not on a real ChatGPT or Claude). Do not plan a package module around it yet.
+**Who can use this today.** A module whose runtime can return `models` can write data: the **built-in** runtime, and a signed **declarative** package through a `models` template on a capability (see [Modules](../MODULES.md)). Http modules answer with scene operations only, and the WebAssembly runtime is not available for `estampes.module/2`. The working examples are the tests named below (invented modules, run in-process and in a fake-host browser, not on a real ChatGPT or Claude). A declarative package can write and read its data; a package cannot yet draw a view of its own beyond the built-in renderers.
 
 ## The three kinds of state
 
@@ -53,6 +53,7 @@ An object a capability draws from an instance is an ordinary **derived object** 
 
 ## Examples that run
 
+- `tests/module-declarative-models.test.js`: a signed declarative package creating and updating its own instance.
 - `tests/declarative-view.test.js`, `tests/module-models-router.test.js`: the contract and the write path.
 - `tests/module-view-e2e.test.js`: a full adder drawn from a declarative tree, all eight input combinations (scripted host).
 - `tests/module-models-derived.test.js`: a model change making a drawn object stale and a refresh redrawing it.
