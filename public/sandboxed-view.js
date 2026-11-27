@@ -158,12 +158,10 @@ async function svSync(id){
  try{inst=await svRead(p,def);}catch(err){if(err.code!=="stale")svSay(id,t("wb.view.failed",{message:String(err.message||err)}),"error");return;}
  if(s.gen!==gen)return;
  if((inst?.revision??null)===(s.inst?.revision??null)&&(inst?.id??null)===(s.inst?.id??null))return;
- // A report waiting in the throttle window was based on the revision before this frame's own write; when this change is exactly that write (next revision of the same
- // instance), the report moves on to it. Any other change leaves the report on its old revision, so the store refuses it as stale.
- if(s.own&&inst&&s.report?.basis&&s.report.basis.id===inst.id&&s.report.basis.revision===s.basis?.revision&&inst.revision===s.basis.revision+1)s.report.basis={id:inst.id,revision:inst.revision};
  s.inst=inst;s.basis=inst?{id:inst.id,revision:inst.revision}:null;svSend(s,"changed",{revision:inst?.revision??null,data:inst?.value??null,own:s.own});s.own=false;
 }
-async function svRefreshAfter(id){const s=sv.get(id);if(!s)return;s.own=true;await wbLoad();await svSync(id);}
+// own is set only while this refresh reads the instance, so an action that changed nothing (or failed) leaves no mark that a later outside edit could be mistaken for.
+async function svRefreshAfter(id){const s=sv.get(id);if(!s)return;s.own=true;try{await wbLoad();await svSync(id);}finally{s.own=false;}}
 // Actions and reports run one at a time, in order; at most SV.queue wait. A job belongs to the frame it was queued for: after that frame is stopped,
 // closed or reloaded it does not run, and what it was doing is not delivered to a newer frame. job(live) gets live(), true while its frame is current.
 function svEnqueue(id,job,onFull){
@@ -219,8 +217,18 @@ function svFlushReport(id){
   const params={[rp.param??"data"]:value};
   if(basis){params.id=basis.id;params.revision=basis.revision;}
   if(JSON.stringify(params).length>SV.paramBytes*2){svDrop(s,"size");return;}
-  try{await wbCall("execute_module",{module:p.module,capability:rp.action,params});}
+  let wrote=false;
+  try{await wbCall("execute_module",{module:p.module,capability:rp.action,params});wrote=true;}
   catch(err){if(err.code!=="stale"&&live())svSay(id,t("wb.view.failed",{message:String(err.message||err)}),"error");}
+  // Only this write moves a waiting report on. It was checked against basis.revision, so if the instance is now exactly the next revision nothing else has written since;
+  // a later or different revision means somebody else did, and the waiting report stays on its old revision and is refused as stale. Actions do not move reports on.
+  if(wrote&&live()&&s.report){
+   try{
+    const now=await svRead(p,def);
+    const mine=now&&(basis?now.id===basis.id&&now.revision===basis.revision+1:now.revision===1);
+    if(mine&&(s.report.basis?.id??null)===(basis?.id??null)&&(s.report.basis?.revision??null)===(basis?.revision??null))s.report.basis={id:now.id,revision:now.revision};
+   }catch{}
+  }
   if(live())await svRefreshAfter(id);
  },()=>{s.flushQueued=false;});
 }

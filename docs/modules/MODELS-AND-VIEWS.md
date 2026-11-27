@@ -91,7 +91,7 @@ A view can name `renderer.type: "sandboxed-web"` (`estampes.renderer.sandboxed-w
 
 An action runs through `execute_module` with every check an ordinary call has; the frame sees no other capability, module or session. A message over 64 KB, more than 30 a second, or of an unknown type is dropped and counted (`data-dropped` on the view). What the engine in the frame does (loading, running, reading a node) stays in the frame; only an action or a report ever becomes stored data, and a running simulation is never stored.
 
-**Delivery.** The widget fetches the files through the module's host capability `ui.get` (one chunk of at most 192 KB per call, answered from the verified package). That is one transport, measured at 14.7 s for 1.3 MB on claude.ai web in #220 when each call is an app-only call, so a faster one is expected; it sits behind `wb.svTransport`, so replacing it changes neither the manifest nor the renderer.
+**Delivery.** The widget fetches the files through the module's host capability `ui.get` (one chunk per call, sized so the whole result stays inside `ESTAMPES_MAX_RESULT_CHARS`, about 49 KB with the default, answered from the verified package). That is one transport, measured at 14.7 s for 1.3 MB on claude.ai web in #220 when each call is an app-only call, so a faster one is expected; it sits behind `wb.svTransport`, so replacing it changes neither the manifest nor the renderer.
 
 **Not there**: network access from the frame, loading code from a URL, a consent screen inside the frame, a live round trip from the assistant into a running frame, Service Workers and Web Workers, and streaming state. The test is `tests/sandboxed-view-e2e.test.js` (a scripted host in Chromium) and `tests/sandboxed-view.test.js` (manifest, package, `ui.get`).
 

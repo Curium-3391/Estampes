@@ -15,6 +15,7 @@ import { createBlankCanvas } from "../src/scene/blank-canvas.js";
 import { ensureImage } from "../src/storage.js";
 import { createRecordStore } from "../src/uva/record-store.js";
 import { createModelStore } from "../src/models/store.js";
+import { config } from "../src/config.js";
 import { hashJson } from "../src/documents/validation.js";
 
 const ID = "org.example.circuit";
@@ -96,9 +97,10 @@ test("ui.get serves the verified package file in chunks, with a digest of the wh
   assert.equal(first.data.size, big.length);
   assert.equal(first.data.sha256, sha(big));
   assert.equal(first.data.done, false);
-  const second = await s.call("ui.get", { path: "ui/big.txt", offset: Buffer.from(first.data.chunk, "base64").length });
-  assert.equal(second.data.done, true);
-  assert.equal(Buffer.from(first.data.chunk, "base64").toString() + Buffer.from(second.data.chunk, "base64").toString(), big);
+  let got = Buffer.alloc(0), r = first, calls = 1;
+  for (; calls < 100; calls++) { got = Buffer.concat([got, Buffer.from(r.data.chunk, "base64")]); if (r.data.done) break; r = await s.call("ui.get", { path: "ui/big.txt", offset: got.length }); }
+  assert.ok(calls > 1, "a 200 KB file needs more than one chunk");
+  assert.equal(got.toString(), big);
   await assert.rejects(() => s.call("ui.get", { path: "ui/missing.js" }), /no UI file/);
   await assert.rejects(() => s.call("ui.get", { path: "ui/index.html", offset: 99999 }), /past the end/);
 });
@@ -118,4 +120,19 @@ test("without the granted permission a module's frame files are not served", asy
   const s = await setup(t);
   await s.approve("install");
   await assert.rejects(() => s.call("ui.get", { path: "ui/index.html" }), /only the user can enable it/i);
+});
+
+test("a ui.get chunk fits the server's result budget even when it is sent twice", async (t) => {
+  const big = "B".repeat(300 * 1024);
+  const s = await setup(t, manifest({}, { ...PAYLOAD, assets: ["ui/app.js", "ui/big.txt"] }), { ...FILES, "ui/big.txt": { encoding: "utf8", content: big } });
+  await s.approve("install"); await s.approve("enable");
+  const first = await s.call("ui.get", { path: "ui/big.txt" });
+  // text content and structured content each carry the data once, as the module tools build a result
+  const wire = JSON.stringify({ content: [{ type: "text", text: "x ui.get: " + first.summary + " " + JSON.stringify(first.data) }], structuredContent: { data: first.data } });
+  assert.ok(wire.length <= config.maxResultChars, wire.length + " characters against a budget of " + config.maxResultChars);
+  assert.ok(first.data.chunk.length > 20000, "a chunk is still a useful size");
+  // the whole file still arrives, in order
+  let got = Buffer.alloc(0), r = first;
+  for (let i = 0; i < 100; i++) { got = Buffer.concat([got, Buffer.from(r.data.chunk, "base64")]); if (r.data.done) break; r = await s.call("ui.get", { path: "ui/big.txt", offset: got.length }); }
+  assert.equal(got.toString(), big);
 });

@@ -53,6 +53,7 @@ function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled =
         return ok({ path: p.path, size: b.length, sha256: sha(b), offset: p.offset, chunk: chunk.toString("base64"), done: p.offset + chunk.length >= b.length });
       }
       if (capability === "models.get") return ok({ instance: { ...inst, value: { ...inst.value } } });
+      if (capability === "save" && p.noop) return ok({ unchanged: true });
       if (capability === "save") {
         if (slowSave) await new Promise((r) => setTimeout(r, slowSave));
         if (p.revision !== undefined && p.revision !== inst.revision) throw new Error("conflict");
@@ -272,5 +273,24 @@ test("a report that waits behind this frame's own slow save is based on that sav
     const saves = sc.calls.filter(([c]) => c === "save").map(([, p]) => p);
     assert.deepEqual(saves.map((p) => [p.data, p.revision]), [["A", 1], ["B", 2]]);
     assert.equal(sc.inst.value.text, "B");
+  } finally { await s.close(); }
+});
+
+test("an action that changed nothing does not make a later outside edit look like this frame's own write", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script({ interval: 15000 });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    await f.evaluate(() => estampes.report({ text: "first" }));
+    await f.waitForFunction(() => document.getElementById("out").textContent === "changed:first:own", null, { timeout: 15000 });
+    await f.evaluate(() => estampes.report({ text: "second" }));              // pending in the throttle window
+    await f.evaluate(() => estampes.action("save", { noop: true }));          // runs, changes nothing
+    sc.inst.value.text = "edited elsewhere"; sc.inst.revision++;               // exactly one revision ahead of what the frame knows
+    await f.waitForFunction(() => document.getElementById("out").textContent.startsWith("changed:edited elsewhere"), null, { timeout: 20000 });
+    await ui.frame.locator(".sv-status[data-kind=error]").waitFor({ timeout: 30000 });
+    assert.equal(sc.inst.value.text, "edited elsewhere", "the outside edit was not overwritten");
   } finally { await s.close(); }
 });

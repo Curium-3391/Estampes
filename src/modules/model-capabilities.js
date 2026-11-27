@@ -7,13 +7,19 @@
 // never carries values; one value is at most the type's maxBytes). Reading data of a disabled, removed or incompatible module is a
 // separate path that does not depend on running the module (V1-4); these never loosen what a module may do.
 import { createHash } from "node:crypto";
+import { config } from "../config.js";
 export const HOST_PERMISSIONS = ["module.storage.write"];
 const LIST_MAX = 100;
 
 // U3: the host also serves the files of a sandboxed-web view (`ui.get`), one bounded chunk per call. This is one transport for them: the widget asks
 // through a small loader (public/sandboxed-view.js), so a faster path for large UIs can replace it without touching the renderer or the manifest.
 export const UI_PERMISSIONS = ["ui.sandboxed-frame"];
-export const UI_CHUNK_BYTES = 192 * 1024;
+// A chunk is sent twice (the text of the result and its structured content, base64 each), and the server replaces a result over `maxResultChars` with an error, so the
+// raw size of a chunk follows that budget (default 145000 characters gives about 49 KB); with no budget (0) it is 192 KB.
+export function uiChunkBytes(maxChars = config.maxResultChars) {
+  if (!(maxChars > 0)) return 192 * 1024;
+  return Math.max(1024, Math.floor(((maxChars - 6000) / 2) * 0.75 * 0.95));
+}
 const uiCapability = { id: "ui.get", host: "ui", title: "Read one file of a sandboxed view", description: "Read one chunk of a package file that a sandboxed-web view of this module shows (base64). Answered by the host from the verified package; used by the widget, not for the assistant to call.",
   target: "none", permissions: UI_PERMISSIONS, needs: UI_PERMISSIONS, inputSchema: { type: "object", properties: { path: { type: "string", maxLength: 120 }, offset: { type: "integer", minimum: 0 } }, required: ["path"], additionalProperties: false } };
 const hasSandboxedView = (manifest) => (manifest.views ?? []).some((v) => v.renderer?.type === "sandboxed-web");
@@ -53,6 +59,6 @@ export function runUiCapability({ files, input }) {
   const bytes = Buffer.from(f.content, f.encoding === "base64" ? "base64" : "utf8");
   const offset = input.offset ?? 0;
   if (offset > bytes.length) throw Object.assign(new Error("offset is past the end of the file"), { code: "input" });
-  const chunk = bytes.subarray(offset, offset + UI_CHUNK_BYTES);
+  const chunk = bytes.subarray(offset, offset + uiChunkBytes());
   return { summary: input.path + " " + offset + "+" + chunk.length + " of " + bytes.length, data: { path: input.path, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), offset, chunk: chunk.toString("base64"), done: offset + chunk.length >= bytes.length } };
 }
