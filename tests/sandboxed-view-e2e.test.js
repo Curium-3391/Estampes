@@ -53,7 +53,7 @@ function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled =
         return ok({ path: p.path, size: b.length, sha256: sha(b), offset: p.offset, chunk: chunk.toString("base64"), done: p.offset + chunk.length >= b.length });
       }
       if (capability === "models.get") return ok({ instance: { ...inst, value: { ...inst.value } } });
-      if (capability === "save" && p.noop) return ok({ unchanged: true });
+      if (capability === "save" && p.noop) { if (slowSave) await new Promise((r) => setTimeout(r, slowSave)); return ok({ unchanged: true }); }
       if (capability === "save") {
         if (slowSave) await new Promise((r) => setTimeout(r, slowSave));
         if (p.revision !== undefined && p.revision !== inst.revision) throw new Error("conflict");
@@ -292,5 +292,19 @@ test("an action that changed nothing does not make a later outside edit look lik
     await f.waitForFunction(() => document.getElementById("out").textContent.startsWith("changed:edited elsewhere"), null, { timeout: 20000 });
     await ui.frame.locator(".sv-status[data-kind=error]").waitFor({ timeout: 30000 });
     assert.equal(sc.inst.value.text, "edited elsewhere", "the outside edit was not overwritten");
+  } finally { await s.close(); }
+});
+
+test("a report that finds the action queue full is tried again instead of being lost", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script({ slowSave: 300 });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    await f.evaluate(() => { for (let i = 0; i < 9; i++) estampes.action("save", { noop: true }).catch(() => {}); estampes.report({ text: "kept" }); });
+    await f.waitForFunction(() => document.getElementById("out").textContent.startsWith("changed:kept"), null, { timeout: 30000 });
+    assert.equal(sc.inst.value.text, "kept");
   } finally { await s.close(); }
 });

@@ -230,7 +230,9 @@ function svFlushReport(id){
    }catch{}
   }
   if(live())await svRefreshAfter(id);
- },()=>{s.flushQueued=false;});
+ },()=>{ // the queue is full: the report stays pending and is tried again shortly
+  s.flushQueued=false;clearTimeout(s.timer);s.timer=setTimeout(()=>{s.timer=null;svFlushReport(id);},500);
+ });
 }
 function svOnMessage(id,ev){
  const s=sv.get(id),def=wb.moduleViews?.[id];if(!s||!def||ev.target!==s.port)return;
