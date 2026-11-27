@@ -66,6 +66,7 @@ An input schema says what a capability accepts, not whether it is the right tool
 | `cas.compute` | medium | Use the local SymPy calculator service (sends only expressions; no internet) |
 | `network.request.approved` | high | Send requests to its listed hosts (may upload images) |
 | `module.secrets` | high | Use administrator-provided secrets |
+| `ui.sandboxed-frame` | high | Run the module's own HTML/JS for a `sandboxed-web` view in an isolated frame (see [Module data and views](modules/MODELS-AND-VIEWS.md#6-draw-a-view-with-your-own-web-page-sandboxed-web)) |
 
 The grant is stored when you approve enabling. The router checks it on every call.
 

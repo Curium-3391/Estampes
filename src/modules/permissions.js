@@ -13,6 +13,7 @@ export const PERMISSIONS = Object.freeze({
   "module.storage.write": { risk: "medium", zh: t("perm.moduleStorageWrite", undefined, "zh-TW"), en: t("perm.moduleStorageWrite", undefined, "en") },
   "cas.compute": { risk: "medium", zh: t("perm.casCompute", undefined, "zh-TW"), en: t("perm.casCompute", undefined, "en") },
   "network.request.approved": { risk: "high", zh: t("perm.networkRequestApproved", undefined, "zh-TW"), en: t("perm.networkRequestApproved", undefined, "en") },
+  "ui.sandboxed-frame": { risk: "high", zh: t("perm.uiSandboxedFrame", undefined, "zh-TW"), en: t("perm.uiSandboxedFrame", undefined, "en") },
   "module.secrets": { risk: "high", zh: t("perm.moduleSecrets", undefined, "zh-TW"), en: t("perm.moduleSecrets", undefined, "en") },
 });
 export const PERMISSION_NAMES = Object.keys(PERMISSIONS);

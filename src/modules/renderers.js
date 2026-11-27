@@ -5,6 +5,7 @@
 // before the tree existed stays valid). A type nobody registered is refused (fail closed); adding one later is an additive
 // change gated by `coreCompatibility`.
 import { validateDeclarative } from "./declarative-view.js";
+import { validateSandboxedWeb } from "./sandboxed-view.js";
 export const MAX_PAYLOAD_BYTES = 64 * 1024;
 
 const renderers = new Map();
@@ -24,6 +25,9 @@ function validateFlowGraph(payload, ctx) {
   for (const k of FLOW_OPTIONAL) if (map[k] !== undefined && (typeof map[k] !== "string" || !ctx.view.actions.includes(map[k]))) throw new Error("payload.actions." + k + " must name one of the view's actions");
 }
 renderers.set("flow-graph", { schema: "estampes.renderer.flow-graph/1", validate: validateFlowGraph });
+
+// U3: a view drawn by the module's own HTML/JS in an isolated frame (sandboxed-view.js). The payload is configuration only; the code is in the signed package.
+renderers.set("sandboxed-web", { schema: "estampes.renderer.sandboxed-web/1", validate: validateSandboxedWeb });
 
 // For tests and, later, hosts that add a renderer. Returns a function that removes it again.
 export function registerRenderer(type, { schema, validate }) {

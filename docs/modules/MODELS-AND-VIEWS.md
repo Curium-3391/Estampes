@@ -2,7 +2,7 @@
 
 How a module keeps its own data (**models**), shows it as a panel (**views**), and links it to what is drawn on a canvas. This is the guide; the exact rules are in [Modules](../MODULES.md) and [Surfaces](../SURFACES.md).
 
-**Who can use this today.** A module whose runtime can return `models` can write data: the **built-in** runtime, and a signed **declarative** package through a `models` template on a capability (see [Modules](../MODULES.md)). Http modules answer with scene operations only, and the WebAssembly runtime is not available for `estampes.module/2`. The working examples are the tests named below (invented modules, run in-process and in a fake-host browser, not on a real ChatGPT or Claude). A declarative package can write and read its data; a package cannot yet draw a view of its own beyond the built-in renderers.
+**Who can use this today.** A module whose runtime can return `models` can write data: the **built-in** runtime, and a signed **declarative** package through a `models` template on a capability (see [Modules](../MODULES.md)). Http modules answer with scene operations only, and the WebAssembly runtime is not available for `estampes.module/2`. The working examples are the tests named below (invented modules, run in-process and in a fake-host browser, not on a real ChatGPT or Claude). A declarative package can write and read its data, and can draw a view with its own web page in an isolated frame (section 6). A view drawn that way has been tested only in Chromium with a scripted host; it has not been run on ChatGPT, Claude desktop or mobile, or a non-Chromium browser.
 
 ## The three kinds of state
 
@@ -59,6 +59,42 @@ An object a capability draws from an instance is an ordinary **derived object** 
 - `tests/module-models-derived.test.js`: a model change making a drawn object stale and a refresh redrawing it.
 - `tests/model-bundle.test.js`: instances in a bundle.
 
+## 6. Draw a view with your own web page (`sandboxed-web`)
+
+A view can name `renderer.type: "sandboxed-web"` (`estampes.renderer.sandboxed-web/1`). The widget then runs a page from your package in an isolated frame. The manifest carries configuration only; the code is files of the signed package.
+
+```json
+"permissions": ["module.storage.write", "ui.sandboxed-frame"],
+"views": [{ "id": "panel", "title": "Circuit", "reads": ["circuit"], "actions": ["save_circuit"],
+  "renderer": { "type": "sandboxed-web", "schema": "estampes.renderer.sandboxed-web/1", "payload": {
+    "entry": "ui/index.html", "assets": ["ui/app.js", "ui/app.css"], "shims": ["memory-storage", "no-service-worker"],
+    "state": { "model": "circuit", "report": { "action": "save_circuit", "path": "/text", "minIntervalMs": 2000 } } } } }]
+```
+
+- `ui.sandboxed-frame` is a **high-risk** permission: the Store shows it as such and an administrator approves it. It carries no network, storage or canvas right.
+- `entry` and `assets` are package files under `ui/` (at most 12 assets, 1.5 MB in all; `.js .css .json .svg .png .jpg .webp .gif .woff2 .txt`). Nothing is loaded from a URL. The widget inlines the scripts, styles and images the entry page names with a relative `src` or `href`; anything else it names is dropped. A script in `<head>` runs before `<body>` exists, so put it at the end of `<body>` or wait for `DOMContentLoaded`.
+- `shims` are small fixes the host injects before your code, from a fixed list: `memory-storage` (in-memory `localStorage` / `sessionStorage`, because an opaque origin has none) and `no-service-worker` (removes `navigator.serviceWorker`). You can name none and ship a patched build instead.
+- `state` says where the frame's state is kept: `report.action` must be one of the view's actions and must write `state.model`. The frame's state at JSON pointer `path` is sent to that action as input `param` (default `data`), with `id` and `revision` of the bound instance when there is one, at most once per `minIntervalMs` (500 to 60000). The assistant reads it with `models.get`; the instance's `updatedAt` and `revision` come from the store, so they say when it was last reported and the frame cannot forge them. An open frame is told about a change made elsewhere at the next refresh (about every 5 seconds).
+
+**What the host fixes, whatever the module says.** The frame is `sandbox="allow-scripts"` and nothing else (the widget reads the attribute back and refuses any other value), so it has an opaque origin: no cookies, no access to the widget or the session. Its document has a CSP with `connect-src`, `frame-src`, `worker-src` and `form-action` set to `'none'` and only the scripts the host hashed allowed (no `eval`). Before anything runs, every file is checked against the size and SHA-256 the server computed from the verified package; a mismatch is not loaded. One frame per view, four panels at most.
+
+**The channel** is one `MessageChannel` per frame, versioned `estampes.ui/1`; inside the frame it is `window.estampes`:
+
+| Direction | Type | Content |
+| --- | --- | --- |
+| frame to host | `ready` | `estampes.ready()` when the page can take data |
+| host to frame | `init` | `{ locale, view, title, actions, instance: {id, revision} or null, revision, data }` |
+| host to frame | `changed` | `{ revision, data, own }` (`own`: this frame's own action or report caused it) |
+| frame to host | `action` | `estampes.action(name, params, expectedRevision)` returns a promise; `name` must be one of the view's `actions` |
+| frame to host | `report` | `estampes.report(data)` (throttled, see `state`) |
+| host to frame | `result` / `error` | the answer to an action; `error.code` is `not-allowed`, `input`, `conflict`, `busy` or the module's own |
+
+An action runs through `execute_module` with every check an ordinary call has; the frame sees no other capability, module or session. A message over 64 KB, more than 30 a second, or of an unknown type is dropped and counted (`data-dropped` on the view). What the engine in the frame does (loading, running, reading a node) stays in the frame; only an action or a report ever becomes stored data, and a running simulation is never stored.
+
+**Delivery.** The widget fetches the files through the module's host capability `ui.get` (one chunk of at most 192 KB per call, answered from the verified package). That is one transport, measured at 14.7 s for 1.3 MB on claude.ai web in #220 when each call is an app-only call, so a faster one is expected; it sits behind `wb.svTransport`, so replacing it changes neither the manifest nor the renderer.
+
+**Not there**: network access from the frame, loading code from a URL, a consent screen inside the frame, a live round trip from the assistant into a running frame, Service Workers and Web Workers, and streaming state. The test is `tests/sandboxed-view-e2e.test.js` (a scripted host in Chromium) and `tests/sandboxed-view.test.js` (manifest, package, `ui.get`).
+
 ## What is not there yet
 
-No delete or undo of an instance's creation, one new instance per result, no reading another module's instances, no model data in a view's canvas selection, and no renderer other than `declarative`.
+No delete or undo of an instance's creation, one new instance per result, no reading another module's instances, and no model data in a view's canvas selection.
