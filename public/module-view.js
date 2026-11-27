@@ -95,6 +95,7 @@ function mvDraw(p){
 function renderModuleView(p){
  const def=wb.moduleViews?.[p.panelId],s=mvState(p.panelId);
  if(def?.renderer?.type==="flow-graph")return renderFlowView(p);// the Flow view (public/flow-view.js)
+ if(def?.renderer?.type==="sandboxed-web")return renderSandboxedView(p);// a module's own web view in an isolated frame (public/sandboxed-view.js)
  mvDraw(p);
  if(def&&!def.unavailable&&p.moduleState==="enabled"&&s.loaded!==mvBoundKey(def)){s.loaded=mvBoundKey(def);mvLoad(p);}
 }
@@ -106,6 +107,7 @@ setInterval(()=>{
  if(open.some(p=>{const d=wb.moduleViews?.[p.panelId];return d&&!d.unavailable&&p.moduleState==="enabled"&&d.reads.some(m=>!d.bound?.[m]);}))return void wbLoad();
  for(const p of open){
   if(wb.moduleViews?.[p.panelId]?.renderer?.type==="flow-graph"){if(!fvState(p.panelId).busy)fvLoad(p);continue;}
+  if(wb.moduleViews?.[p.panelId]?.renderer?.type==="sandboxed-web"){svSync(p.panelId);continue;}
   if(!mvState(p.panelId).busy)mvLoad(p);
  }
 },5000);

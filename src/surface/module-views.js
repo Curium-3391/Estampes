@@ -3,6 +3,7 @@
 // A view declared in a module/2 manifest (`views[]`) is offered as a panel of kind `module-view`; opening it is an ordinary surface action (it
 // never enables the module or grants anything). The surface keeps only which view a panel shows and, optionally, which stored instance of each
 // model it is bound to; what the view reads and does comes from the manifest and the instances, so nothing here is a second copy of it.
+import { createHash } from "node:crypto";
 import { localized } from "../modules/manifest.js";
 
 export const MODULE_VIEW_KIND = "module-view";
@@ -35,7 +36,16 @@ export async function moduleViewsOf({ view, registry, models }) {
       instances[name] = rows.slice(0, 20).map((r) => ({ id: r.id, revision: r.revision, dataVersion: r.dataVersion }));
       bound[name] = p.models?.[name] && rows.some((r) => r.id === p.models[name]) ? p.models[name] : rows[0]?.id ?? null;
     }
-    out[p.panelId] = { module: p.module, view: def.id, title: localized(def, "title"), reads: def.reads, actions: def.actions, renderer: def.renderer, bound, instances,
+    // A sandboxed-web view: which files the widget must fetch (through the module's host capability ui.get) and the digest each must have.
+    let frame;
+    if (def.renderer?.type === "sandboxed-web") {
+      const ui = mod.runtime?.ui ?? {}, pl = def.renderer.payload;
+      frame = { capability: "ui.get", entry: pl.entry, files: [pl.entry, ...(pl.assets ?? [])].filter((f) => ui[f]).map((f) => {
+        const bytes = Buffer.from(ui[f].content, ui[f].encoding === "base64" ? "base64" : "utf8");
+        return { path: f, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+      }) };
+    }
+    out[p.panelId] = { module: p.module, view: def.id, title: localized(def, "title"), reads: def.reads, actions: def.actions, renderer: def.renderer, ...(frame ? { frame } : {}), bound, instances,
       models: Object.fromEntries((mod.manifest.models ?? []).filter((t) => def.reads.includes(t.id)).map((t) => [t.id, { dataVersion: t.dataVersion }])) };
   }
   return out;

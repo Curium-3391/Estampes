@@ -82,7 +82,7 @@ function renderWB(){
  const solo=open.length<=1;
  wbEl.classList.toggle("solo",solo);wbEl.classList.toggle("mobile",mobile);wbEl.classList.toggle("windows",!solo&&!mobile);
  // Panels that closed leave the DOM; the canvas panel is static markup.
- for(const [id,el] of wb.els){if(!open.some(p=>p.panelId===id)&&id!=="p:canvas"){el.remove();wb.els.delete(id);wb.calc.delete(id);mv.delete(id);}}
+ for(const [id,el] of wb.els){if(!open.some(p=>p.panelId===id)&&id!=="p:canvas"){el.remove();wb.els.delete(id);wb.calc.delete(id);mv.delete(id);if(typeof svDispose==="function"){svDispose(id);sv.delete(id);}}}
  for(const p of open){
   if(!wb.els.has(p.panelId))wb.els.set(p.panelId,p.panelId==="p:canvas"?canvasPanel(p):buildPanel(p));
   const el=wb.els.get(p.panelId);if(el.parentNode!==wbArea)wbArea.append(el);

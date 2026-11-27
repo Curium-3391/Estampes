@@ -23,6 +23,7 @@ import { createHash, createPublicKey, createPrivateKey, sign as edSign, verify a
 import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
+import { uiFilesOf } from "./sandboxed-view.js";
 import { validateManifest, runtimeManifest, abiChange, ManifestError, MODULE_ID, localized } from "./manifest.js";
 import { riskOf, permissionDiff } from "./permissions.js";
 import { LifecycleError } from "./lifecycle.js";
@@ -91,6 +92,8 @@ export function verifyBundle(bytes, { trusted = new Map(), allowUnsigned = false
   if (manifest.runtime.kind === "wasm") {
     try { checkWasmPackage(manifest, bundle.files); } catch (error) { throw new ManifestError("WebAssembly module: " + error.message); }
   }
+  let ui = {};
+  try { ui = uiFilesOf(manifest, bundle.files); } catch (error) { throw new ManifestError(error.message); }
   const digest = digestOf(bundle), warnings = [];
   let signer = null;
   if (bundle.signature) {
@@ -108,7 +111,7 @@ export function verifyBundle(bytes, { trusted = new Map(), allowUnsigned = false
   } else {
     throw new ManifestError("the package is not signed, and this server only installs packages signed by a trusted key");
   }
-  return { bundle, manifest: runtimeManifest(manifest), digest, signer, warnings };
+  return { bundle, manifest: runtimeManifest(manifest), digest, signer, warnings, ui };
 }
 
 async function atomicWrite(path, data, mode) {
@@ -268,7 +271,7 @@ export function createPackages({ dir, registry, audit, runtimes, coreVersion, tr
     if (expectedDigest && v.digest !== expectedDigest) throw new LifecycleError("stored package " + id + " " + version + " no longer matches its lock entry", "integrity");
     return v;
   }
-  const runtimeFor = (v) => (v.manifest.runtime.kind === "wasm" ? { kind: "wasm", wasm: wasmFileOf(v.manifest, v.bundle.files) } : { kind: v.manifest.runtime.kind });
+  const runtimeFor = (v) => ({ ...(v.manifest.runtime.kind === "wasm" ? { kind: "wasm", wasm: wasmFileOf(v.manifest, v.bundle.files) } : { kind: v.manifest.runtime.kind }), ...(Object.keys(v.ui ?? {}).length ? { ui: v.ui } : {}) });
   const infoOf = (v, extra = {}) => ({ sha256: v.digest, keyId: v.signer?.keyId ?? null, signer: v.signer?.publisher ?? null, ...extra });
 
   // At startup: bring installed packages back, re-verifying each.

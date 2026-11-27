@@ -13,7 +13,7 @@ import { plotContext } from "./plot-context.js";
 import { register, sourceChanged, markStale, bindingsOf, MAX_DERIVED_PER_CANVAS } from "../documents/derived-coordinator.js";
 import { deliverBroadcast } from "../documents/derived-broadcast.js";
 import { ModelError } from "../models/store.js";
-import { allCapabilities, runHostCapability } from "./model-capabilities.js";
+import { allCapabilities, runHostCapability, runUiCapability } from "./model-capabilities.js";
 import { randomBytes } from "node:crypto";
 
 // A string in a v2 module's input that names a document (an image, a Graph
@@ -107,6 +107,14 @@ export function createRouter({ registry, audit, canvases, runtimes, jobs = null,
         if (imageId || newCanvas) throw new ModuleError(capId + " does not work on a canvas; leave canvas and newCanvas out");
         let out;
         try { out = await runHostCapability({ store: modelStore(), manifest, capability: capId, input }); } catch (error) { throw asModuleError(error); }
+        audit.record({ kind: "run.host", module: manifest.id, capability: capId, ms: Date.now() - started });
+        return { module: manifest, capability: cap, entry: null, createdCanvas: false, scene: { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: null }, summary: out.summary, data: out.data, ms: Date.now() - started };
+      }
+      // ui.get (a sandboxed-web view's files): answered by the host from the verified package, after the same checks.
+      if (cap.host === "ui") {
+        if (imageId || newCanvas) throw new ModuleError(capId + " does not work on a canvas; leave canvas and newCanvas out");
+        let out;
+        try { out = runUiCapability({ files: mod.runtime?.ui, input }); } catch (error) { throw error instanceof ModuleError ? error : new ModuleError(error.message, error.code ?? "input"); }
         audit.record({ kind: "run.host", module: manifest.id, capability: capId, ms: Date.now() - started });
         return { module: manifest, capability: cap, entry: null, createdCanvas: false, scene: { created: [], updated: [], deleted: [], published: [], refs: {}, notes: [], revision: null }, summary: out.summary, data: out.data, ms: Date.now() - started };
       }

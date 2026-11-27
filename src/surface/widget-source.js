@@ -17,6 +17,7 @@ export const workbenchSource = () => [
   readFileSync(join(ROOT, "public", "calculator.js"), "utf8"),
   readFileSync(join(ROOT, "public", "module-view.js"), "utf8"),
   readFileSync(join(ROOT, "public", "flow-view.js"), "utf8"),
+  readFileSync(join(ROOT, "public", "sandboxed-view.js"), "utf8"),
 ].join("\n");
 
 // The shared document store (poll/reconcile rules) is page-level, outside every viewer: a plain

@@ -41,7 +41,8 @@
     "public/module-store.html",
     "src/modules/admin.js",
     "src/oauth.js",
-    "src/modules/json-schema.js"
+    "src/modules/json-schema.js",
+    "src/modules/permissions.js"
   ],
   "files": [
     {
@@ -986,6 +987,14 @@
         "server.js",
         "src/modules/index.js",
         "src/modules/mcp-tools.js"
+      ]
+    },
+    {
+      "date": "2026-11-27",
+      "authorizedBy": "user decision card 2026-11-27 (\u6388\u6b0a\u52a0\u5165) adding src/modules/permissions.js to authorizedIntegrationSeams",
+      "reason": "U3 sandboxed-web renderer: the new high-risk permission ui.sandboxed-frame is listed in src/modules/permissions.js; other legacy source fingerprints stay intact",
+      "files": [
+        "src/modules/permissions.js"
       ]
     }
   ]
