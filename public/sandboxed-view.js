@@ -224,7 +224,9 @@ function svFlushReport(id){
   // a later or different revision means somebody else did, and the waiting report stays on its old revision and is refused as stale. Actions do not move reports on.
   if(wrote&&live()&&s.report){
    try{
-    const now=await svRead(p,def);
+    // The first write of an empty view made the instance: the binding that names it is read again before anything is compared.
+    if(!basis)await wbLoad();
+    const now=await svRead(p,wb.moduleViews?.[id]??def);
     const mine=now&&(basis?now.id===basis.id&&now.revision===basis.revision+1:now.revision===1);
     if(mine&&(s.report.basis?.id??null)===(basis?.id??null)&&(s.report.basis?.revision??null)===(basis?.revision??null))s.report.basis={id:now.id,revision:now.revision};
    }catch{}

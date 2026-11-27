@@ -38,8 +38,8 @@ const FILES = { "ui/index.html": Buffer.from(HTML), "ui/app.js": Buffer.from(JS)
 const ok = (data) => ({ content: [{ type: "text", text: "ok" }], structuredContent: { kind: "estampes.module_result", status: "ok", data } });
 const PAYLOAD = { entry: "ui/index.html", assets: ["ui/app.js", "ui/app.css", "ui/dot.png"], shims: ["memory-storage", "no-service-worker"], state: { model: "doc", report: { action: "save", path: "/text", minIntervalMs: 500 } } };
 
-function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled = true, interval = PAYLOAD.state.report.minIntervalMs, slowSave = 0 } = {}) {
-  const inst = { id: "md:0123456789ab", revision: 1, value: { text: "one" } };
+function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled = true, interval = PAYLOAD.state.report.minIntervalMs, slowSave = 0, empty = false } = {}) {
+  const inst = { id: "md:0123456789ab", revision: 1, value: { text: "one" }, exists: !empty };
   const calls = [];
   const meta = Object.entries(files).map(([path, b]) => ({ path, bytes: b.length, sha256: sha(b) }));
   const intercept = async (params, call) => {
@@ -52,10 +52,11 @@ function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled =
         const chunk = b.subarray(p.offset, p.offset + 97);
         return ok({ path: p.path, size: b.length, sha256: sha(b), offset: p.offset, chunk: chunk.toString("base64"), done: p.offset + chunk.length >= b.length });
       }
-      if (capability === "models.get") return ok({ instance: { ...inst, value: { ...inst.value } } });
+      if (capability === "models.get") { if (!inst.exists) throw new Error("no such instance"); return ok({ instance: { id: inst.id, revision: inst.revision, value: { ...inst.value } } }); }
       if (capability === "save" && p.noop) { if (slowSave) await new Promise((r) => setTimeout(r, slowSave)); return ok({ unchanged: true }); }
       if (capability === "save") {
         if (slowSave) await new Promise((r) => setTimeout(r, slowSave));
+        if (!inst.exists && p.id === undefined) { inst.exists = true; inst.revision = 1; inst.value.text = p.data ?? p.text; return ok({ created: true }); }
         if (p.revision !== undefined && p.revision !== inst.revision) throw new Error("conflict");
         inst.value.text = p.data ?? p.text; inst.revision++;
         return ok({ saved: true });
@@ -65,7 +66,7 @@ function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled =
       const r = await call(params), sc = structuredClone(r.structuredContent), id = "p:view-sv0";
       sc.panels.push({ panelId: id, kind: "module-view", module: MOD, panel: "view-sv", view: "sv", open: true, title: "Web view", moduleState: enabled ? "enabled" : "disabled" });
       for (const lay of Object.values(sc.layouts)) { lay.order.push(id); lay.placements[id] = { mode: "normal", rect: { x: 0.2, y: 0, w: 0.8, h: 1 }, z: 5 }; }
-      sc.moduleViews = { [id]: { module: MOD, view: "sv", title: "Web view", reads: ["doc"], actions: ["save"], bound: { doc: inst.id }, instances: { doc: [inst.id] },
+      sc.moduleViews = { [id]: { module: MOD, view: "sv", title: "Web view", reads: ["doc"], actions: ["save"], bound: { doc: inst.exists ? inst.id : null }, instances: { doc: inst.exists ? [inst.id] : [] },
         renderer: { type: "sandboxed-web", schema: "estampes.renderer.sandboxed-web/1", payload: { ...PAYLOAD, shims, state: { ...PAYLOAD.state, report: { ...PAYLOAD.state.report, minIntervalMs: interval } } } }, frame: { capability: "ui.get", entry: "ui/index.html", files: meta } } };
       return { content: r.content, structuredContent: sc };
     }
@@ -306,5 +307,23 @@ test("a report that finds the action queue full is tried again instead of being 
     await f.evaluate(() => { for (let i = 0; i < 9; i++) estampes.action("save", { noop: true }).catch(() => {}); estampes.report({ text: "kept" }); });
     await f.waitForFunction(() => document.getElementById("out").textContent.startsWith("changed:kept"), null, { timeout: 30000 });
     assert.equal(sc.inst.value.text, "kept");
+  } finally { await s.close(); }
+});
+
+test("the first report of an empty view creates the instance, and a report waiting behind it is saved on top of it", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script({ empty: true, interval: 500, slowSave: 1500 });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    assert.equal(await f.evaluate(() => window.__init.instance), null, "nothing stored yet");
+    await f.evaluate(() => estampes.report({ text: "A" }));
+    await ui.page.waitForTimeout(900);
+    await f.evaluate(() => estampes.report({ text: "B" }));
+    await f.waitForFunction(() => document.getElementById("out").textContent.startsWith("changed:B"), null, { timeout: 30000 });
+    const saves = sc.calls.filter(([c]) => c === "save").map(([, p]) => p);
+    assert.deepEqual(saves.map((p) => [p.data, p.id, p.revision]), [["A", undefined, undefined], ["B", sc.inst.id, 1]]);
   } finally { await s.close(); }
 });
