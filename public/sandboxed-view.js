@@ -4,7 +4,8 @@
 //   - the frame is `sandbox="allow-scripts"` and nothing else (no same-origin, forms, popups, top navigation); it is read back and a different
 //     value discards the frame;
 //   - its document carries a CSP with no network (connect-src, frame-src, worker-src and form-action are 'none') and lets only scripts run whose
-//     sha256 the host computed from bytes it checked against the package digest;
+//     sha256 the host computed from bytes it checked against the package digest. CSP does not cover the frame navigating itself, so the widget also
+//     adds frame-src about: to its own document (svLockFrames) and stops a frame that loads a second time;
 //   - the only way out is one MessageChannel (estampes.ui/1): ready, action, report in; init, changed, result, error out. Messages are size- and
 //     rate-limited and anything unknown is dropped and counted. An action can only be one of the view's own `actions`, through execute_module
 //     with every check that has; the frame sees no session, no other module and no other capability.
@@ -25,8 +26,17 @@ const SV_BRIDGE="(function(){var port=null,handlers={},seq=0,pending={},q=[];"+
  "window.estampes={on:function(t,f){(handlers[t]=handlers[t]||[]).push(f);},ready:function(){send('ready',{});},"+
  "action:function(action,params,expectedRevision){return new Promise(function(ok,no){var id=send('action',{action:action,params:params||{},expectedRevision:expectedRevision});pending[id]={ok:ok,no:no};});},"+
  "report:function(data){send('report',{data:data});}};})();";
+// CSP cannot stop a frame from navigating itself (location.href = "https://...?" + data). The navigation of a nested frame is checked against the frame-src of the
+// document that holds it, so the widget adds a frame-src that allows only about: (the srcdoc page) to itself, once, before the first frame exists. A second load
+// of a frame means it navigated anyway (a host that ignores the policy): the frame is then stopped.
+let svLocked=false;
+function svLockFrames(){
+ if(svLocked)return;
+ const m=document.createElement("meta");m.setAttribute("http-equiv","Content-Security-Policy");m.setAttribute("content","frame-src about:");
+ document.head.append(m);svLocked=true;
+}
 const sv=new Map();// panelId -> state of one frame
-const svState=id=>{let s=sv.get(id);if(!s){s={key:null,phase:"idle",stopped:false,frame:null,port:null,root:null,status:null,msg:"",inst:null,own:false,ready:false,times:[],dropped:{rate:0,size:0,shape:0,type:0,denied:0},queue:0,chain:Promise.resolve(),report:null,reportAt:0,timer:null,watchdog:null,gen:0};sv.set(id,s);}return s;};
+const svState=id=>{let s=sv.get(id);if(!s){s={key:null,phase:"idle",stopped:false,frame:null,port:null,root:null,status:null,msg:"",inst:null,basis:null,own:false,ready:false,times:[],dropped:{rate:0,size:0,shape:0,type:0,denied:0},queue:0,chain:Promise.resolve(),report:null,reportAt:0,timer:null,watchdog:null,gen:0};sv.set(id,s);}return s;};
 const svPanel=id=>openPanels().find(p=>p.panelId===id);
 const svKey=def=>JSON.stringify([def.module,def.view,def.frame?.files,def.renderer?.payload]);
 function svDispose(id){
@@ -147,15 +157,20 @@ async function svSync(id){
  try{inst=await svRead(p,def);}catch(err){if(err.code!=="stale")svSay(id,t("wb.view.failed",{message:String(err.message||err)}),"error");return;}
  if(s.gen!==gen)return;
  if((inst?.revision??null)===(s.inst?.revision??null)&&(inst?.id??null)===(s.inst?.id??null))return;
- s.inst=inst;svSend(s,"changed",{revision:inst?.revision??null,data:inst?.value??null,own:s.own});s.own=false;
+ // A report waiting in the throttle window was based on the revision before this frame's own write; when this change is exactly that write (next revision of the same
+ // instance), the report moves on to it. Any other change leaves the report on its old revision, so the store refuses it as stale.
+ if(s.own&&inst&&s.report?.basis&&s.report.basis.id===inst.id&&s.report.basis.revision===s.basis?.revision&&inst.revision===s.basis.revision+1)s.report.basis={id:inst.id,revision:inst.revision};
+ s.inst=inst;s.basis=inst?{id:inst.id,revision:inst.revision}:null;svSend(s,"changed",{revision:inst?.revision??null,data:inst?.value??null,own:s.own});s.own=false;
 }
 async function svRefreshAfter(id){const s=sv.get(id);if(!s)return;s.own=true;await wbLoad();await svSync(id);}
-// Actions and reports run one at a time, in order; at most SV.queue wait.
+// Actions and reports run one at a time, in order; at most SV.queue wait. A job belongs to the frame it was queued for: after that frame is stopped,
+// closed or reloaded it does not run, and what it was doing is not delivered to a newer frame. job(live) gets live(), true while its frame is current.
 function svEnqueue(id,job,onFull){
  const s=sv.get(id);if(!s)return;
  if(s.queue>=SV.queue){onFull?.();return;}
+ const gen=s.gen,live=()=>s.gen===gen&&s.port!==null;
  s.queue++;
- s.chain=s.chain.then(job).catch(()=>{}).finally(()=>{s.queue--;});
+ s.chain=s.chain.then(()=>live()?job(live):undefined).catch(()=>{}).finally(()=>{if(s.gen===gen)s.queue--;});
 }
 // What was dropped is counted per frame and shown as data-dropped on the view (for support and tests; it is not a message to the frame).
 function svDrop(s,kind){s.dropped[kind]++;if(s.root)s.root.dataset.dropped=JSON.stringify(s.dropped);}
@@ -167,19 +182,20 @@ function svAction(id,m){
  const params=m.params??{};
  if(!svPlain(params)||JSON.stringify(params).length>SV.paramBytes)return svDeny(id,s,m,"input","params must be a plain object of at most "+SV.paramBytes+" characters");
  if(m.expectedRevision!==undefined&&m.expectedRevision!==null&&m.expectedRevision!==(s.inst?.revision??null))return svDeny(id,s,m,"conflict","the stored data changed since the frame read it");
- svEnqueue(id,async()=>{
+ svEnqueue(id,async live=>{
   try{
    const r=await wbCall("execute_module",{module:p.module,capability:m.action,params});
    const data=r.data!==undefined&&JSON.stringify(r.data).length<=SV.resultBytes?r.data:undefined;
-   svSend(s,"result",{replyTo:m.id,...(data!==undefined?{data}:{})});
-  }catch(err){if(err.code!=="stale")svSend(s,"error",{replyTo:m.id,code:String(err.code||"failed"),message:String(err.message||err).slice(0,300)});}
-  await svRefreshAfter(id);
+   if(live())svSend(s,"result",{replyTo:m.id,...(data!==undefined?{data}:{})});
+  }catch(err){if(err.code!=="stale"&&live())svSend(s,"error",{replyTo:m.id,code:String(err.code||"failed"),message:String(err.message||err).slice(0,300)});}
+  if(live())await svRefreshAfter(id);
  },()=>svDeny(id,s,m,"busy","too many actions waiting"));
 }
 // A report: the frame's latest state, kept at most once per minIntervalMs, written by the view's own action (never by the host directly).
 function svReport(id,m){
  const s=sv.get(id),def=wb.moduleViews?.[id];if(!s||!def||!def.renderer.payload.state)return;
- s.report={data:m.data};
+ // The report is based on the instance and revision the frame was last told about, not on what the host has seen since: a later edit then makes it conflict instead of being overwritten.
+ s.report={data:m.data,basis:s.basis};
  const rp=def.renderer.payload.state.report,wait=Math.max(0,(rp.minIntervalMs??2000)-(Date.now()-s.reportAt));
  if(s.timer)return;
  s.timer=setTimeout(()=>{s.timer=null;svFlushReport(id);},wait);
@@ -187,18 +203,20 @@ function svReport(id,m){
 function svFlushReport(id){
  const s=sv.get(id),def=wb.moduleViews?.[id],p=svPanel(id);
  if(!s||!def||!p||!s.report||p.moduleState!=="enabled")return;
- const {data}=s.report;s.report=null;s.reportAt=Date.now();
+ const {data,basis}=s.report;s.report=null;s.reportAt=Date.now();
  const rp=def.renderer.payload.state.report;
  let value=data;
  if(rp.path!==""){value=mvPointer(data,rp.path);}
  if(value===undefined)return;
+ // A report based on "no instance yet" must not create a second one when an instance has appeared since; the frame is told about it and reports again.
+ if(!basis&&s.inst){svSay(id,t("wb.sv.staleReport"),"error");return;}
  const params={[rp.param??"data"]:value};
- if(s.inst){params.id=s.inst.id;params.revision=s.inst.revision;}
+ if(basis){params.id=basis.id;params.revision=basis.revision;}
  if(JSON.stringify(params).length>SV.paramBytes*2){svDrop(s,"size");return;}
- svEnqueue(id,async()=>{
+ svEnqueue(id,async live=>{
   try{await wbCall("execute_module",{module:p.module,capability:rp.action,params});}
-  catch(err){if(err.code!=="stale")svSay(id,t("wb.view.failed",{message:String(err.message||err)}),"error");}
-  await svRefreshAfter(id);
+  catch(err){if(err.code!=="stale"&&live())svSay(id,t("wb.view.failed",{message:String(err.message||err)}),"error");}
+  if(live())await svRefreshAfter(id);
  });
 }
 function svOnMessage(id,ev){
@@ -214,6 +232,7 @@ function svOnMessage(id,ev){
  if(m.type==="ready"){
   if(s.ready)return;
   s.ready=true;clearTimeout(s.watchdog);svSay(id,"","");
+  s.basis=s.inst?{id:s.inst.id,revision:s.inst.revision}:null;
   svSend(s,"init",{locale:(typeof i18nLocale==="function"?i18nLocale():"")||"",view:def.view,title:def.title,actions:def.actions,revision:s.inst?.revision??null,instance:s.inst?{id:s.inst.id,revision:s.inst.revision}:null,data:s.inst?.value??null});
   return;
  }
@@ -226,7 +245,7 @@ async function svStart(id){
  const s=svState(id),p=svPanel(id),def=wb.moduleViews?.[id];
  if(!p||!def||def.unavailable||!def.frame||s.phase!=="idle"||s.stopped)return;
  const el=wb.els.get(id),body=el?.querySelector(".wb-body");if(!body)return;
- const gen=++s.gen;s.phase="loading";
+ const gen=++s.gen;s.phase="loading";s.msg="";
  const bar=h("div",{class:"sv-bar"},
   h("button",{class:"wb-mini sv-reload",type:"button",title:t("wb.sv.reload"),"aria-label":t("wb.sv.reload"),onclick:()=>{svDispose(id);const q=svState(id);q.stopped=false;q.inst=null;svStart(id);}},"↻"),
   h("button",{class:"wb-mini sv-stop",type:"button",title:t("wb.sv.stop"),"aria-label":t("wb.sv.stop"),onclick:()=>{svDispose(id);const q=svState(id);q.stopped=true;svDraw(id);}},"■"));
@@ -247,7 +266,13 @@ async function svStart(id){
   const ch=new MessageChannel();
   s.port=ch.port1;s.frame=frame;s.phase="running";
   ch.port1.onmessage=ev=>svOnMessage(id,ev);
-  frame.addEventListener("load",()=>{if(s.gen===gen)try{frame.contentWindow.postMessage({type:"estampes.ui/port"},"*",[ch.port2]);}catch{}},{once:true});
+  let loads=0;
+  frame.addEventListener("load",()=>{
+   if(s.gen!==gen)return;
+   if(++loads>1){svDispose(id);const q=svState(id);q.stopped=true;q.msg=t("wb.sv.navigated");svDraw(id);return;}
+   try{frame.contentWindow.postMessage({type:"estampes.ui/port"},"*",[ch.port2]);}catch{}
+  });
+  svLockFrames();
   frame.srcdoc=html;
   s.root.insertBefore(frame,s.status);
   s.watchdog=setTimeout(()=>{if(s.gen===gen&&!s.ready){svSay(id,t("wb.sv.noReady"),"error");}},SV.readyMs);
@@ -259,7 +284,7 @@ async function svStart(id){
 function svDraw(id){
  const el=wb.els.get(id),body=el?.querySelector(".wb-body"),s=svState(id);if(!body)return;
  if(s.stopped){
-  body.replaceChildren(h("div",{class:"sv"},h("p",{class:"wb-note mv-note",role:"status"},t("wb.sv.stopped")),
+  body.replaceChildren(h("div",{class:"sv"},h("p",{class:"wb-note mv-note",role:"status"},s.msg||t("wb.sv.stopped")),
    h("button",{class:"wb-mini sv-reload",type:"button",onclick:()=>{s.stopped=false;s.inst=null;svStart(id);}},t("wb.sv.reload"))));
 }
 }

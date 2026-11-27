@@ -800,6 +800,8 @@
   "wb.sv.loading": "正在載入檢視…",
   "wb.sv.stop": "停止這個檢視",
   "wb.sv.reload": "重新載入這個檢視",
+  "wb.sv.staleReport": "檢視回報的同時，儲存的資料已經改變，因此這次回報沒有存入；它會依新資料重新回報。",
+  "wb.sv.navigated": "檢視試圖離開自己的頁面，已被停止。",
   "wb.sv.stopped": "這個檢視已停止。",
   "wb.sv.noReady": "檢視還沒有回應；若一直是空白，請重新載入。",
   "wb.sv.mismatch": "檔案 {path} 與已安裝的套件不符，因此沒有載入檢視。",

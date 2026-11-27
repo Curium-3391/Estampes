@@ -3,6 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { createServer } from "node:http";
 import { startStack, noBrowser } from "./helpers/widget-host.js";
 
 const MOD = "org.example.sandboxed";
@@ -10,6 +11,7 @@ const sha = (b) => createHash("sha256").update(b).digest("hex");
 const HTML = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="app.css"></head><body><p id="out">waiting</p><button id="save">save</button><img id="pic" src="dot.png"><script src="app.js"></script></body></html>';
 const CSS = "#out{color:rgb(1,2,3)}";
 const JS = `
+window.__go = (u) => { location.href = u; };
 window.__csp = [];
 document.addEventListener("securitypolicyviolation", (e) => window.__csp.push({ dir: e.violatedDirective }));
 try { window.__evalAtLoad = String(eval("1+1")); } catch (e) { window.__evalAtLoad = "blocked"; }
@@ -36,7 +38,7 @@ const FILES = { "ui/index.html": Buffer.from(HTML), "ui/app.js": Buffer.from(JS)
 const ok = (data) => ({ content: [{ type: "text", text: "ok" }], structuredContent: { kind: "estampes.module_result", status: "ok", data } });
 const PAYLOAD = { entry: "ui/index.html", assets: ["ui/app.js", "ui/app.css", "ui/dot.png"], shims: ["memory-storage", "no-service-worker"], state: { model: "doc", report: { action: "save", path: "/text", minIntervalMs: 500 } } };
 
-function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled = true } = {}) {
+function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled = true, interval = PAYLOAD.state.report.minIntervalMs, slowSave = 0 } = {}) {
   const inst = { id: "md:0123456789ab", revision: 1, value: { text: "one" } };
   const calls = [];
   const meta = Object.entries(FILES).map(([path, b]) => ({ path, bytes: b.length, sha256: sha(b) }));
@@ -52,6 +54,7 @@ function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled =
       }
       if (capability === "models.get") return ok({ instance: { ...inst, value: { ...inst.value } } });
       if (capability === "save") {
+        if (slowSave) await new Promise((r) => setTimeout(r, slowSave));
         if (p.revision !== undefined && p.revision !== inst.revision) throw new Error("conflict");
         inst.value.text = p.data ?? p.text; inst.revision++;
         return ok({ saved: true });
@@ -62,7 +65,7 @@ function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled =
       sc.panels.push({ panelId: id, kind: "module-view", module: MOD, panel: "view-sv", view: "sv", open: true, title: "Web view", moduleState: enabled ? "enabled" : "disabled" });
       for (const lay of Object.values(sc.layouts)) { lay.order.push(id); lay.placements[id] = { mode: "normal", rect: { x: 0.2, y: 0, w: 0.8, h: 1 }, z: 5 }; }
       sc.moduleViews = { [id]: { module: MOD, view: "sv", title: "Web view", reads: ["doc"], actions: ["save"], bound: { doc: inst.id }, instances: { doc: [inst.id] },
-        renderer: { type: "sandboxed-web", schema: "estampes.renderer.sandboxed-web/1", payload: { ...PAYLOAD, shims } }, frame: { capability: "ui.get", entry: "ui/index.html", files: meta } } };
+        renderer: { type: "sandboxed-web", schema: "estampes.renderer.sandboxed-web/1", payload: { ...PAYLOAD, shims, state: { ...PAYLOAD.state, report: { ...PAYLOAD.state.report, minIntervalMs: interval } } } }, frame: { capability: "ui.get", entry: "ui/index.html", files: meta } } };
       return { content: r.content, structuredContent: sc };
     }
     return undefined;
@@ -184,4 +187,61 @@ test("a disabled module shows a note and loads nothing; stopping a view disposes
       }
     } finally { await s.close(); }
   }
+});
+
+test("a frame cannot send data out by navigating itself, and a frame that navigates anyway is stopped", { skip: noBrowser, timeout: 120000 }, async () => {
+  const hits = [];
+  const sink = createServer((req, res) => { hits.push(req.url); res.end("x"); });
+  await new Promise((r) => sink.listen(0, "127.0.0.1", r));
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script();
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    await f.evaluate((u) => { window.__go(u); }, "http://127.0.0.1:" + sink.address().port + "/leak?d=" + encodeURIComponent("one"));
+    await ui.page.waitForTimeout(1500);
+    assert.deepEqual(hits, [], "the destination was never asked");
+    await ui.frame.locator(".sv-reload").waitFor({ timeout: 10000 });
+    assert.equal(await ui.frame.locator("iframe.sv-frame").count(), 0, "the frame that tried to leave its page was stopped");
+    assert.match(await ui.frame.locator(".sv .mv-note").textContent(), /leave its page|離開自己的頁面/);
+  } finally { sink.close(); await s.close(); }
+});
+
+test("a report keeps the revision the frame saw: an edit made elsewhere makes it a refused conflict, not an overwrite", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script({ interval: 15000 });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    await f.evaluate(() => estampes.report({ text: "first" }));       // goes at once (nothing reported before)
+    await f.waitForFunction(() => document.getElementById("out").textContent === "changed:first:own", null, { timeout: 15000 });
+    await f.evaluate(() => estampes.report({ text: "second" }));      // waits in the throttle window, based on the revision after "first"
+    sc.inst.value.text = "edited elsewhere"; sc.inst.revision++;      // someone else changes the data meanwhile
+    await f.waitForFunction(() => document.getElementById("out").textContent === "changed:edited elsewhere", null, { timeout: 20000 });
+    await ui.frame.locator(".sv-status[data-kind=error]").waitFor({ timeout: 30000 });
+    const saves = sc.calls.filter(([c]) => c === "save").map(([, p]) => p);
+    assert.equal(saves.length, 2);
+    assert.equal(saves[1].revision, 2, "the report carried the revision it was based on, not the newer one");
+    assert.equal(sc.inst.value.text, "edited elsewhere", "the other edit was not overwritten");
+  } finally { await s.close(); }
+});
+
+test("stopping a view cancels the actions still waiting behind a slow one", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script({ slowSave: 1500 });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    await f.evaluate(() => { for (let i = 0; i < 3; i++) estampes.action("save", { data: "a" + i }).catch(() => {}); });
+    await ui.page.waitForTimeout(300);
+    await ui.frame.locator(".sv-stop").click();
+    await ui.page.waitForTimeout(5000);
+    assert.equal(sc.calls.filter(([c]) => c === "save").length, 1, "only the action already running finished; the queued ones never ran");
+  } finally { await s.close(); }
 });
