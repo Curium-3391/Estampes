@@ -41,7 +41,7 @@ const PAYLOAD = { entry: "ui/index.html", assets: ["ui/app.js", "ui/app.css", "u
 function script({ files = FILES, shims = PAYLOAD.shims, tamper = null, enabled = true, interval = PAYLOAD.state.report.minIntervalMs, slowSave = 0 } = {}) {
   const inst = { id: "md:0123456789ab", revision: 1, value: { text: "one" } };
   const calls = [];
-  const meta = Object.entries(FILES).map(([path, b]) => ({ path, bytes: b.length, sha256: sha(b) }));
+  const meta = Object.entries(files).map(([path, b]) => ({ path, bytes: b.length, sha256: sha(b) }));
   const intercept = async (params, call) => {
     if (params.name === "execute_module" && params.arguments.module === MOD) {
       const { capability, params: p } = params.arguments;
@@ -243,5 +243,34 @@ test("stopping a view cancels the actions still waiting behind a slow one", { sk
     await ui.frame.locator(".sv-stop").click();
     await ui.page.waitForTimeout(5000);
     assert.equal(sc.calls.filter(([c]) => c === "save").length, 1, "only the action already running finished; the queued ones never ran");
+  } finally { await s.close(); }
+});
+
+test("a package script with CRLF line endings runs: the hash covers the text the frame will execute", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const crlf = { ...FILES, "ui/app.js": Buffer.from(JS.replace(/\n/g, "\r\n")), "ui/app.css": Buffer.from(CSS + "\r\n") };
+    const sc = script({ files: crlf });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    await inner(ui).waitForFunction(() => window.__init, null, { timeout: 15000 });
+  } finally { await s.close(); }
+});
+
+test("a report that waits behind this frame's own slow save is based on that save, not on the old revision", { skip: noBrowser, timeout: 120000 }, async () => {
+  const s = await startStack({ cas: false });
+  try {
+    const sc = script({ interval: 500, slowSave: 1800 });
+    const ui = await openIt(s, sc);
+    await ui.frame.locator("iframe.sv-frame").waitFor({ timeout: 30000 });
+    const f = inner(ui);
+    await f.waitForFunction(() => window.__init, null, { timeout: 15000 });
+    await f.evaluate(() => estampes.report({ text: "A" }));
+    await ui.page.waitForTimeout(900);                                // the save of A is still running; the throttle window has passed
+    await f.evaluate(() => estampes.report({ text: "B" }));
+    await f.waitForFunction(() => document.getElementById("out").textContent.startsWith("changed:B"), null, { timeout: 30000 });
+    const saves = sc.calls.filter(([c]) => c === "save").map(([, p]) => p);
+    assert.deepEqual(saves.map((p) => [p.data, p.revision]), [["A", 1], ["B", 2]]);
+    assert.equal(sc.inst.value.text, "B");
   } finally { await s.close(); }
 });

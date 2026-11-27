@@ -36,12 +36,12 @@ function svLockFrames(){
  document.head.append(m);svLocked=true;
 }
 const sv=new Map();// panelId -> state of one frame
-const svState=id=>{let s=sv.get(id);if(!s){s={key:null,phase:"idle",stopped:false,frame:null,port:null,root:null,status:null,msg:"",inst:null,basis:null,own:false,ready:false,times:[],dropped:{rate:0,size:0,shape:0,type:0,denied:0},queue:0,chain:Promise.resolve(),report:null,reportAt:0,timer:null,watchdog:null,gen:0};sv.set(id,s);}return s;};
+const svState=id=>{let s=sv.get(id);if(!s){s={key:null,phase:"idle",stopped:false,frame:null,port:null,root:null,status:null,msg:"",inst:null,basis:null,flushQueued:false,own:false,ready:false,times:[],dropped:{rate:0,size:0,shape:0,type:0,denied:0},queue:0,chain:Promise.resolve(),report:null,reportAt:0,timer:null,watchdog:null,gen:0};sv.set(id,s);}return s;};
 const svPanel=id=>openPanels().find(p=>p.panelId===id);
 const svKey=def=>JSON.stringify([def.module,def.view,def.frame?.files,def.renderer?.payload]);
 function svDispose(id){
  const s=sv.get(id);if(!s)return;
- s.gen++;clearTimeout(s.timer);clearTimeout(s.watchdog);
+ s.gen++;clearTimeout(s.timer);s.timer=null;s.flushQueued=false;clearTimeout(s.watchdog);
  try{s.port?.close();}catch{}
  s.frame?.remove();
  s.frame=null;s.port=null;s.ready=false;s.phase="idle";s.report=null;s.root=null;s.status=null;s.queue=0;s.chain=Promise.resolve();
@@ -101,9 +101,10 @@ async function svLoadFiles(p,def){
 const svMime={png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif",svg:"image/svg+xml",woff2:"font/woff2"};
 const svEsc=(txt,tag)=>txt.replace(new RegExp("</("+tag+")","gi"),"<\\/$1");
 function svB64(bytes){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));return btoa(s);}
+// Line endings are normalized to LF first, as the HTML parser will do when the frame reads its srcdoc, so the CSP hash covers the text that runs.
 // Builds the frame document: the entry page with its named scripts, styles and images inlined, the host's CSP first, then the shims and the bridge.
 async function svBuild(def,files){
- const pl=def.renderer.payload,dec=new TextDecoder("utf-8"),base=pl.entry.replace(/[^/]*$/,"");
+ const pl=def.renderer.payload,dec={decode:b=>new TextDecoder("utf-8").decode(b).replace(/\r\n?/g,"\n")},base=pl.entry.replace(/[^/]*$/,"");
  const resolve=ref=>{if(!ref||/^([a-z][a-z0-9+.-]*:|\/)/i.test(ref))return null;const o=[];for(const seg of (base+ref.split(/[?#]/)[0]).split("/")){if(seg==="..")o.pop();else if(seg&&seg!==".")o.push(seg);}return o.join("/");};
  const doc=new DOMParser().parseFromString(dec.decode(files.get(pl.entry)),"text/html");
  for(const el of [...doc.querySelectorAll("base,meta[http-equiv],link[rel~=icon],link[rel~=preload],link[rel~=prefetch],iframe,object,embed")])el.remove();
@@ -200,24 +201,28 @@ function svReport(id,m){
  if(s.timer)return;
  s.timer=setTimeout(()=>{s.timer=null;svFlushReport(id);},wait);
 }
+// A flush only queues the write; what is written is decided when its turn comes, after the writes before it and their synchronisation are done (so a report
+// that waited behind this frame's own slow write is based on that write's revision, while an edit made elsewhere still leaves it on the old one and refused).
 function svFlushReport(id){
  const s=sv.get(id),def=wb.moduleViews?.[id],p=svPanel(id);
- if(!s||!def||!p||!s.report||p.moduleState!=="enabled")return;
- const {data,basis}=s.report;s.report=null;s.reportAt=Date.now();
+ if(!s||!def||!p||!s.report||s.flushQueued||p.moduleState!=="enabled")return;
  const rp=def.renderer.payload.state.report;
- let value=data;
- if(rp.path!==""){value=mvPointer(data,rp.path);}
- if(value===undefined)return;
- // A report based on "no instance yet" must not create a second one when an instance has appeared since; the frame is told about it and reports again.
- if(!basis&&s.inst){svSay(id,t("wb.sv.staleReport"),"error");return;}
- const params={[rp.param??"data"]:value};
- if(basis){params.id=basis.id;params.revision=basis.revision;}
- if(JSON.stringify(params).length>SV.paramBytes*2){svDrop(s,"size");return;}
+ s.reportAt=Date.now();s.flushQueued=true;
  svEnqueue(id,async live=>{
+  s.flushQueued=false;
+  if(!s.report)return;
+  const {data,basis}=s.report;s.report=null;
+  const value=rp.path===""?data:mvPointer(data,rp.path);
+  if(value===undefined)return;
+  // A report based on "no instance yet" must not create a second one when an instance has appeared since; the frame is told about it and reports again.
+  if(!basis&&s.inst){svSay(id,t("wb.sv.staleReport"),"error");return;}
+  const params={[rp.param??"data"]:value};
+  if(basis){params.id=basis.id;params.revision=basis.revision;}
+  if(JSON.stringify(params).length>SV.paramBytes*2){svDrop(s,"size");return;}
   try{await wbCall("execute_module",{module:p.module,capability:rp.action,params});}
   catch(err){if(err.code!=="stale"&&live())svSay(id,t("wb.view.failed",{message:String(err.message||err)}),"error");}
   if(live())await svRefreshAfter(id);
- });
+ },()=>{s.flushQueued=false;});
 }
 function svOnMessage(id,ev){
  const s=sv.get(id),def=wb.moduleViews?.[id];if(!s||!def||ev.target!==s.port)return;
@@ -245,7 +250,7 @@ async function svStart(id){
  const s=svState(id),p=svPanel(id),def=wb.moduleViews?.[id];
  if(!p||!def||def.unavailable||!def.frame||s.phase!=="idle"||s.stopped)return;
  const el=wb.els.get(id),body=el?.querySelector(".wb-body");if(!body)return;
- const gen=++s.gen;s.phase="loading";s.msg="";
+ const gen=++s.gen;s.phase="loading";s.msg="";s.flushQueued=false;
  const bar=h("div",{class:"sv-bar"},
   h("button",{class:"wb-mini sv-reload",type:"button",title:t("wb.sv.reload"),"aria-label":t("wb.sv.reload"),onclick:()=>{svDispose(id);const q=svState(id);q.stopped=false;q.inst=null;svStart(id);}},"↻"),
   h("button",{class:"wb-mini sv-stop",type:"button",title:t("wb.sv.stop"),"aria-label":t("wb.sv.stop"),onclick:()=>{svDispose(id);const q=svState(id);q.stopped=true;svDraw(id);}},"■"));
