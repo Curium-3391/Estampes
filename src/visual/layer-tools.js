@@ -9,7 +9,7 @@ export function registerLayerTools(server, { ensureSet, saveCanvas }) {
   server.registerTool('get_visual_layers', {
     title: 'Read shared layer appearance',
     description: 'Read stable layer IDs, author, bottom-to-top order, opacity, shared visibility, locks and the canvas revision. Workspace copies require setId from get_workspace_state or canvasReads. View-local hiddenLayers may additionally hide a layer. Blend modes and brightness/contrast are not layer properties.',
-    inputSchema: z.object(target), annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: z.object(target),
   }, async args => {
     try { const state = layerState(await load(args)); return { content: [{ type: 'text', text: JSON.stringify(state) }], structuredContent: state }; }
     catch (error) { return errorResult(error); }
@@ -20,7 +20,7 @@ export function registerLayerTools(server, { ensureSet, saveCanvas }) {
     inputSchema: z.object({ ...target, expectedRevision: z.string().regex(/^cv:[0-9a-f]{24}$/), action: z.enum(['apply', 'undo', 'redo']).default('apply'),
       layers: z.array(z.object({ id: z.string().regex(/^L\d{1,6}$/), opacity: z.number().min(0).max(1).optional(), visible: z.boolean().optional() }).strict()).max(60).default([]),
       order: z.array(z.string().regex(/^L\d{1,6}$/)).max(200).optional(),
-    }).strict(), annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    }).strict(),
   }, async args => {
     try {
       const entry = await load(args), oldLayers = entry.layers, oldHistory = entry.layerHistory;

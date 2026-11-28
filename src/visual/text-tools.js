@@ -88,7 +88,7 @@ export function registerTextTools(server, { ensureSet, saveCanvas }) {
       if (v.action === "create") need(!v.id && v.props?.text?.trim() && v.props.x !== undefined && v.props.y !== undefined, "Create needs text, x and y, and no id");
       if (v.action === "update") need(v.props && Object.keys(v.props).length, "Update needs props");
       if (v.action === "delete") need(!v.props, "Delete takes no props");
-    }), annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }, _meta: { ui: { visibility: ["app"] } },
+    }), _meta: { ui: { visibility: ["app"] } },
   }, async args => {
     let entry, restore;
     try {

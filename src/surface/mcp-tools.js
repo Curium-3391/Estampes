@@ -53,7 +53,6 @@ export function registerSurfaceTools(server, deps) {
     title: "Read the surface",
     description: "Panels, layouts and open calculator notebooks of the Visual Surface, for the Estampes widget.",
     inputSchema: z.object({ ...Where }),
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ["app"] } },
   }, async (args) => {
     try {
@@ -70,7 +69,6 @@ export function registerSurfaceTools(server, deps) {
       ...Where, expectedRevision: z.number().int().min(1).optional(), idempotencyKey: z.string().min(1).max(64).optional(),
       ops: z.array(z.record(z.string(), z.unknown())).min(1).max(20),
     }),
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ["app"] } },
   }, async ({ imageId, workspaceId, expectedRevision, idempotencyKey, ops }) => {
     try {
@@ -88,7 +86,6 @@ export function registerSurfaceTools(server, deps) {
       params: z.record(z.string(), z.unknown()).refine((o) => JSON.stringify(o).length <= 20000, "params too large"),
       expectedSceneRevision: z.number().int().min(0).optional(),
     }),
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ["app"] } },
   }, async ({ imageId, capability, params, expectedSceneRevision }) => {
     try {
@@ -124,7 +121,6 @@ export function registerSurfaceTools(server, deps) {
     title: "Stop a calculation",
     description: "Cancel the calculator job with this id, if it is still running.",
     inputSchema: z.object({ job: z.string().regex(/^[0-9a-f]{8,32}$/) }),
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ["app"] } },
   }, async ({ job }) => {
     try {
@@ -148,7 +144,6 @@ export function registerSurfaceTools(server, deps) {
     title: "Read the Visual Surface state",
     description: "What the user has open on the Estampes Visual Surface: panels (canvas/Graph, scientific calculator), which are open, and every calculator cell with its exact result, status (exact, approximate, complex, conditional, partial, undefined), freshness (fresh/stale/error) and the Graph objects drawn from it. Read this instead of asking the user what they typed into the calculator. Results here were computed by SymPy; do not restate them differently.",
     inputSchema: z.object({ ...Where, cells: z.number().int().min(1).max(100).default(30) }),
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, async (args) => {
     try {
       if (args.imageId) await ensureImage(args.imageId);
@@ -178,7 +173,6 @@ export function registerSurfaceTools(server, deps) {
       panelId: z.string().max(40).optional().describe("close: instance id such as p:calculator1"),
       notebook: z.string().regex(/^nb:[0-9a-f]{12}$/).optional().describe("open calculator: show this existing notebook instead of a new one"),
     }),
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { resourceUri: deps.visualUri } },
   }, async ({ imageId, workspaceId, action, module, panel, panelId, notebook }) => {
     try {

@@ -33,6 +33,7 @@ import { config, configWarnings, log } from "./src/config.js";
 import { VISUAL_PROTOCOL, canvasDocument } from "./src/protocol.js";
 import { watchQuickTunnel } from "./src/tunnel.js";
 import { SERVER_INSTRUCTIONS, withErrorProvenance } from "./src/tool-guidance.js";
+import { annotationsFor } from "./src/tool-annotations.js";
 import { resolveAccessKey, sameSecret, clientIp, exportSignature, exportAllowed } from "./src/security.js";
 import {
   WORKSPACE_PROTOCOL, MAX_ITEMS, getWorkspace, ensureSet, createWorkspace, editWorkspace, previewTransfer, commitTransfer, undoChange, resolveRef, workspaceDocument, workspaceItems,
@@ -761,7 +762,7 @@ function makeServer() {
   // Every tool result goes through the host size cap (src/result-budget.js);
   // errors also say which tool replied (src/tool-guidance.js, #87).
   const register = server.registerTool.bind(server);
-  server.registerTool = (name, cfg, handler) => register(name, cfg, async (...args) => {
+  server.registerTool = (name, cfg, handler) => register(name, { ...cfg, annotations: annotationsFor(name) }, async (...args) => {
     let result;
     // A thrown error becomes the same error result the SDK would make, plus the note.
     try { result = await handler(...args); } catch (error) { if (error?.name === "ProtocolError") throw error; return withErrorProvenance(name, { isError: true, content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }] }); }
@@ -805,7 +806,6 @@ function makeServer() {
         target: z.number(),
         x: z.number(),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { resourceUri: WIDGET } },
     },
     async ({ target }) => ({
@@ -840,11 +840,6 @@ function makeServer() {
         x: z.number(),
         y: z.number(),
       }),
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
       // App-only actions must not advertise a widget of their own to ChatGPT.
       // The UI is rendered exclusively by show_number_line.
       _meta: { ui: { visibility: ["app"] } },
@@ -976,7 +971,6 @@ function makeServer() {
         awaitingUpload: z.boolean().optional(),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       _meta: { ui: { resourceUri: VISUAL_URI }, "openai/fileParams": ["image", "marksFile", "pairImage"] },
     },
     async ({ image, imageUrl, imageId, scene, marksFile, annotations, views, priorUserAnnotations, findings, remove, reset, layer, coordinateFrame, verify,
@@ -1140,7 +1134,6 @@ function makeServer() {
         object: z.string().regex(/^o\d{1,6}$/).optional().describe("An image layer's object id: its full PNG"),
         offset: z.number().int().min(0).default(0),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, setId, view, object, offset }) => {
@@ -1188,7 +1181,6 @@ function makeServer() {
         offset: z.number().int().min(0),
         data: z.string().max(400_000).regex(/^[A-Za-z0-9+/=]*$/),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ uploadId, fileName, total, offset, data }) => {
@@ -1247,7 +1239,6 @@ function makeServer() {
         pairImageId: ImageIdSchema.optional(),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Reload a whole workspace (imageId = its first image)"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, setId, part, pairImageId, workspaceId }) => {
@@ -1332,7 +1323,6 @@ function makeServer() {
           sinceRevision: z.object({ epoch: z.string().max(40), counter: z.number().int().min(0), hash: z.string().max(80) }).optional(),
         })).min(1).max(MAX_POLLED_DOCUMENTS),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ documents }) => {
@@ -1381,7 +1371,6 @@ function makeServer() {
         documentId: z.string().regex(/^((?:img|gph):[0-9a-f]{16}(#c[0-9a-f]{12})?|ws:[0-9a-f]{16})$/),
         commandIds: z.array(z.string().regex(COMMAND_ID)).min(1).max(24),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ documentId, commandIds }) => {
@@ -1424,7 +1413,6 @@ function makeServer() {
         pairImageId: ImageIdSchema.optional().describe("Right-hand image of a paired view"),
         history: z.number().int().min(0).max(200).default(0).describe("How many recent changes to include (needs server storage)"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, pairImageId, history }) => {
       try {
@@ -1487,7 +1475,6 @@ function makeServer() {
         from: z.array(WorkspaceRef).max(8).default([]).describe("Workspaces or canvases whose images (with their marks) to include, linked"),
         idempotencyKey: IdempotencyKey,
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
       _meta: { "openai/fileParams": ["images"] },
     },
     async ({ name, images, imageUrls, canvases, labels, from, idempotencyKey }) => {
@@ -1523,7 +1510,6 @@ function makeServer() {
         expectedRevision: z.number().int().min(0).optional(),
         idempotencyKey: IdempotencyKey,
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
       _meta: { "openai/fileParams": ["images"] },
     },
     async ({ workspaceId, name, images, imageUrls, canvases, labels, remove, arrange, order, autoLayout, expectedRevision, idempotencyKey }) => {
@@ -1579,7 +1565,6 @@ function makeServer() {
         source: WorkspaceRef.describe("Where they come from"),
         ...TransferFields,
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ target, source, items, mode, removeFromSource, commit, previewId, idempotencyKey }) => {
       try { return await transfer({ source, target, items, mode, removeFromSource }, { commit, previewId, idempotencyKey }); }
@@ -1597,7 +1582,6 @@ function makeServer() {
         name: z.string().max(60).optional().describe("Name of the new workspace"),
         ...TransferFields,
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ source, name, items, mode, removeFromSource, commit, previewId, idempotencyKey }) => {
       try { return await transfer({ source, target: "new", items, mode, removeFromSource, name }, { commit, previewId, idempotencyKey }); }
@@ -1611,7 +1595,6 @@ function makeServer() {
       title: "Undo a workspace change",
       description: "Undo one create/edit/merge/split/move by the undoToken it returned. Every workspace it touched goes back to how it was; a workspace it created is removed (its images and marks are kept). Refused if one of them changed again since: undo the later change first. Marks drawn with present_visual are not affected.",
       inputSchema: z.object({ workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/), undoToken: z.string().regex(/^u-[0-9a-f]{12}$/) }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ workspaceId, undoToken }) => {
       try {
@@ -1630,7 +1613,6 @@ function makeServer() {
       title: "Export a workspace as a .estampes bundle",
       description: "Make a portable .estampes file of a workspace (or a canvas / paired view, which becomes a workspace first): every image, and every canvas's marks, layers, claims and links as editable DATA (nothing is flattened). The user can open it on another Estampes server with import_workspace_bundle. Returns a download link and the manifest. It contains no access key, link or chat content. Set fileNames:false to leave original file names out.",
       inputSchema: z.object({ workspace: WorkspaceRef, fileNames: z.boolean().default(true) }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ workspace, fileNames }) => {
       try {
@@ -1667,7 +1649,6 @@ function makeServer() {
         collision: z.enum(["reuse", "copy"]).default("reuse"),
         allowPartial: z.boolean().default(false).describe("Default false: a bundle with invalid marks or totals that disagree with its manifest is refused and nothing is created. true imports the valid part and reports what was dropped."),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
       _meta: { "openai/fileParams": ["file"] },
     },
     async ({ file, bundleUrl, name, collision, allowPartial }) => {
@@ -1695,7 +1676,6 @@ function makeServer() {
       title: "Read a workspace",
       description: "Return an Estampes workspace as one " + WORKSPACE_PROTOCOL + " JSON document: its items (which image, which canvas, placement), the images, every canvas's layers and marks (geometry normalized to its own image, author, note, claim state, where a copy came from), links between items, rejected claims, the recent undo tokens and a CHECK of the totals. A single canvas (imageId) or a paired view (imageId+pairImageId) is returned in the same shape. Read-only.",
       inputSchema: z.object({ workspace: WorkspaceRef, history: z.number().int().min(0).max(200).default(0) }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ workspace, history }) => {
       try {
@@ -1723,7 +1703,6 @@ function makeServer() {
         region: RegionSchema,
         maxSide: z.number().int().min(256).max(2048).default(1600),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, region, maxSide }) => {
@@ -1777,7 +1756,6 @@ function makeServer() {
         event:z.record(z.string(),z.unknown()),
         chatMessage:z.string(),
       }),
-      annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{visibility:["app"]}},
     },
     async ({scene,imageId,pairImageId,workspaceId,annotations,intent,note,replyQuote,gestureDecisions,hiddenLayers},ctx)=>{
@@ -1873,7 +1851,6 @@ function makeServer() {
         review: z.enum([...LINK_REVIEW, "unreviewed"]),
         reason: z.string().max(200).optional(),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, pairImageId, workspaceId, fromItem, toItem, linkId, review, reason }) => {
@@ -1918,7 +1895,6 @@ function makeServer() {
         reason: z.string().max(200).optional(),
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional(), item: WorkspaceItemId.optional(),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, markId, review, reason, workspaceId, item }) => {
@@ -1957,7 +1933,6 @@ function makeServer() {
         workspaceId: z.string().regex(/^ws:[0-9a-f]{16}$/).optional().describe("Workspace view: the strokes are on the canvas of this workspace's `item`"),
         item: WorkspaceItemId.optional(),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, memberIds, verdict, workspaceId, item }) => {
@@ -2018,7 +1993,6 @@ function makeServer() {
         commandId: z.string().regex(COMMAND_ID).optional()
           .describe("Made by the widget for one user action and reused when it retries. The same id with the same edits is applied once; a second call returns the current canvas with replayed: true."),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ imageId, pairImageId, workspaceId, layers, order, marks, remove, history: step, commandId }) => {
@@ -2212,7 +2186,6 @@ function makeServer() {
         evidenceCount:z.literal(3),
         modelVisionStatus:z.literal("host-dependent-unverified"),
       }),
-      annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
     },
     async ({scene,imageId,revision,focus,padding})=>{
       try {
@@ -2279,7 +2252,6 @@ function makeServer() {
         }),
         rendered:z.object({width:z.number(),height:z.number(),mimeType:z.literal("image/png")}),
       }),
-      annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
       _meta:{ui:{resourceUri:EVIDENCE_URI},"openai/outputTemplate":EVIDENCE_URI},
     },
     async ({scene,imageId,revision,focus,padding})=>{
@@ -2332,7 +2304,6 @@ function makeServer() {
         source: z.enum(["chat-file", "url"]),
         coordinateSystem: z.literal("normalized-top-left"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       _meta: { "openai/fileParams": ["image"] },
     },
     async ({ image, imageUrl }) => {
@@ -2384,7 +2355,6 @@ function makeServer() {
     title:"Add an independent image/canvas layer",
     description:"Promote the base image into an editable layer, optionally copy another canvas and its public objects/marks as independent layers. PNG transparency is preserved. Source is never modified. sourceSet can identify a workspace copy. region positions the copied content in destination normalized coordinates.",
     inputSchema:z.object({imageId:ImageIdSchema,sourceImageId:ImageIdSchema.optional(),sourceSet:z.string().regex(/^c[0-9a-f]{12}$/).optional(),region:RegionSchema.optional()}),
-    annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},
   },async({imageId,sourceImageId,sourceSet,region})=>{
     try{
       if(sourceSet&&!sourceImageId)throw Error("sourceSet requires sourceImageId");
@@ -2403,7 +2373,6 @@ function makeServer() {
       format: z.enum(["png", "webp"]).default("png"), labels: z.enum(["none", "all"]).default("none"),
       hiddenLayers: z.array(z.string().regex(/^L\d+$/)).max(200).default([]),
       expectedRevision: z.string().regex(/^cv:[0-9a-f]{24}$/).optional() }),
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, async ({ imageId, setId, ...options }) => {
     try {
       const entry = await ensureSet(imageId + (setId ? "#" + setId : ""));
@@ -2440,7 +2409,6 @@ function makeServer() {
         derivedView: DerivedViewSchema.optional(),
         delivery: z.record(z.string(), z.unknown()).optional(),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, region, ops, geometry, sampling, output }) => {
       try {
@@ -2468,7 +2436,6 @@ function makeServer() {
         output: OutputSpecSchema.optional().describe("Different delivered size or codec (gives a new derivedViewId)"),
         includeImage: z.boolean().default(true),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, derivedViewId, output, includeImage }) => {
       try {
@@ -2496,7 +2463,6 @@ function makeServer() {
       title: "Describe an image source",
       description: "Report what Estampes knows about a loaded image without returning pixels: source file format, size before and after EXIF orientation, colour space, bit depth, alpha, ICC profile, density, the SHA-256 source asset id, the working copy's size, the coordinate spaces and the matrices between them, and the processed views made so far. Use it to decide whether native-resolution processing can show more than the working copy.",
       inputSchema: z.object({ imageId: ImageIdSchema }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId }) => {
       try {
@@ -2542,7 +2508,6 @@ function makeServer() {
         direction: z.enum(["a-to-b", "b-to-a"]).default("a-to-b"),
         includeMatches: z.boolean().default(true).describe("Return an image with the matched points drawn"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, otherImageId, method, landmarks, model, mirror, mapPoints, direction, includeMatches }) => {
       try {
@@ -2575,7 +2540,6 @@ function makeServer() {
         mode: z.enum(["overlay", "difference", "checkerboard", "matches"]).default("overlay"),
         maxSide: z.number().int().min(256).max(1600).default(1024),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ registrationId, mode, maxSide }) => {
       try {
@@ -2604,7 +2568,6 @@ function makeServer() {
         sampling: SamplingSchema.optional(),
         clippingMap: z.boolean().default(false),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, region, sampling, clippingMap: wantMap }) => {
       try {
@@ -2644,7 +2607,6 @@ function makeServer() {
         length: z.number().positive(), unit: z.enum(UNITS.filter((u) => u !== "px")),
         lengthUncertainty: z.number().min(0).optional().describe("Uncertainty of the stated length, same unit"),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ imageId, derivedViewId, units, points, length, unit, lengthUncertainty }) => {
       try {
@@ -2670,7 +2632,6 @@ function makeServer() {
         points: z.array(z.object({ x: z.number().finite(), y: z.number().finite() })).min(2).max(128),
         pointPrecisionPx: z.number().min(0.1).max(50).optional().describe("Your estimate of how well you placed the points, in pixels of the measurement space"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, derivedViewId, units, kind, points, pointPrecisionPx }) => {
       try {
@@ -2703,7 +2664,6 @@ function makeServer() {
         dpi: z.number().int().min(36).max(MAX_DPI).default(150),
         text: z.boolean().default(false),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       _meta: { "openai/fileParams": ["pdf"] },
     },
     async ({ pdf, pdfUrl, documentSha256, pageIndex, dpi, text }) => {
@@ -2756,7 +2716,6 @@ function makeServer() {
         sampling: SamplingSchema.optional(),
         params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}).describe("Engine parameters, see the engine list"),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, engine, derivedViewId, region, sampling, params }) => {
       try {
@@ -2798,7 +2757,6 @@ function makeServer() {
         rows: z.number(), cols: z.number(),
         cellCenters: z.record(z.string(), z.object({ x: z.number(), y: z.number() })),
       }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ imageId, region, rows, cols }) => {
       try {

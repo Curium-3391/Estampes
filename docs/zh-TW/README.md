@@ -2,6 +2,8 @@
 
 **人與 AI 在同一張圖上指著說話。**
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/curium-3391-estampes-gzwn2t?v=555a26cb79941f5f59b88979b3085efa)](https://m8ven.ai/mcp/curium-3391-estampes-gzwn2t?s=readme)
+
 [English](../../README.md) · 繁體中文
 
 名稱取自德布西的鋼琴曲集《版畫》（*Estampes*, 1903）。
