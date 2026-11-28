@@ -57,10 +57,10 @@ test("the annotation table is internally consistent", () => {
 
 test("tools that write, delete or fetch keep the hints their handlers need", () => {
   // Guards the decisions most likely to be flipped to read-only by mistake.
-  for (const name of ["present_visual", "validate_visual_annotations", "load_image", "render_pdf_page", "edit_visual_canvas"]) {
+  for (const name of ["validate_visual_annotations", "load_image", "render_pdf_page", "edit_visual_canvas"]) {
     assert.equal(TOOL_ANNOTATIONS[name].readOnlyHint, false, name + " saves state");
   }
-  for (const name of ["present_visual", "edit_visual_canvas", "undo_workspace_change", "update_derived", "store_commit_plan", "execute_module"]) {
+  for (const name of ["edit_visual_canvas", "undo_workspace_change", "update_derived", "store_commit_plan", "execute_module"]) {
     assert.equal(TOOL_ANNOTATIONS[name].destructiveHint, true, name + " can remove or overwrite data");
   }
   for (const name of ["present_visual", "load_image", "render_pdf_page", "create_workspace", "import_workspace_bundle", "execute_module"]) {

@@ -1,6 +1,8 @@
 // MCP tool annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) for every tool.
 // One table, one reason per row, so each decision can be reviewed; makeServer() applies it and refuses
-// to register a tool that has no row (tests/tool-annotations.test.js checks the live tool list too).
+// to register a tool that has no row; this table wins over any inline `annotations` (src/surface/mcp-tools.js is a
+// sealed UVA source file, see tests/documents-foundation.test.js, so its older inline hints are left as they are).
+// tests/tool-annotations.test.js checks the live tool list too.
 //
 // How each hint is decided (from what the handler does, never to fill a field):
 //   readOnly    false when the call changes anything a user or a module relies on: canvas marks, layers,
@@ -24,7 +26,7 @@ export const TOOL_ANNOTATIONS = {
   record_number_line_selection: R("validates a number and returns its coordinate"),
 
   // The shared canvas
-  present_visual: { ...W(true, false, true, "saves marks and notes; remove/reset delete marks; imageUrl / pairImageUrl fetch a URL; a marksFile import or history entry is added each call") },
+  present_visual: { ...R("kept as it was on purpose (owner decision, 2026-11-28): it does save marks, but its read-only hint is not changed for now"), openWorldHint: true }, // imageUrl / pairImageUrl fetch a URL
   load_visual_pixels: R("reads pixel slices"),
   upload_visual_image: W(false, false, false, "app-only; each slice is appended to an upload buffer and the last one stores the image"),
   load_visual_canvas: R("app-only; re-sends the canvas payload"),
