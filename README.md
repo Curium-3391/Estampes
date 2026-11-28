@@ -2,6 +2,8 @@
 
 **Point at the same image, together with AI, without leaving the conversation.**
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/curium-3391-estampes-gzwn2t?v=555a26cb79941f5f59b88979b3085efa)](https://m8ven.ai/mcp/curium-3391-estampes-gzwn2t?s=readme)
+
 [繁體中文說明](docs/zh-TW/README.md) · [Quick start](docs/QUICKSTART.md) · [Deployment](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
 Estampes is an open-source plugin for ChatGPT and Claude: an MCP server with MCP Apps widgets that shows your picture as a shared canvas inside the chat. The AI draws on the original image, you draw back on the same canvas, and both sides refer to the same marks across turns. It works with any image (photos, scans, handwriting, book pages, diagrams, maps, drawings), and **each person runs their own server**.

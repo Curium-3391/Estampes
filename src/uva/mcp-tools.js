@@ -47,6 +47,6 @@ export function registerUvaTools(server,{service,exportLink,maxResultChars=14500
   server.registerTool('uva_store',{
     title:'Estampes UVA store',
     description:'Read-only view of the UVA store where canvases, workspaces, panel layouts and calculator notebooks are committed. status: store health, commit counts, and per canvas/record whether the legacy file matches, the durable pending seq and the committed seq (diagnostics.mirror). list: the canvas documents. open {documentId}: one document and its revision. render {documentId,sceneId?}: its pixels. export {documentId}: an editable logical archive with its images, as a download URL. Large results: read the rest with read_chunk {transportId, offset: transport.next}. Edit canvases with the canvas tools, never here.',
-    inputSchema:UvaStoreInput,annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
+    inputSchema:UvaStoreInput,
   },run('assistant'));
 }
